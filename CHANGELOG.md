@@ -8,6 +8,27 @@ is the public record of the work completed before the first GitHub release.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- French README and French setup/release documentation for XTTS, ComfyUI and
+  release workflows.
+
+### Changed
+
+- Replaced the app logo and favicon with SVG assets and regenerated Tauri
+  application icons.
+
+### Fixed
+
+- Fixed Rust 1.95 Clippy compatibility for the public CI toolchain.
+- Fixed Windows audio edit paths after trim/cut operations, made edited audio
+  originals visible next to the edited file, and kept those backup files out of
+  media scans unless they are explicitly referenced by the project.
+
+---
+
 ## [0.8.9] - 2026-05-18
 
 Public GitHub release preparation.

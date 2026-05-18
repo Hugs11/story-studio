@@ -14,6 +14,13 @@ function revokeObjectUrlSoon(url) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function normalizeFsPath(path) {
+  if (typeof path !== 'string') return '';
+  const trimmed = path.trim();
+  if (trimmed.startsWith('\\\\?\\UNC\\')) return `\\\\${trimmed.slice(8)}`;
+  return trimmed.startsWith('\\\\?\\') ? trimmed.slice(4) : trimmed;
+}
+
 export function useLocalFile(path) {
   const [url, setUrl] = useState(null);
   const urlRef = useRef(null);
@@ -29,6 +36,7 @@ export function useLocalFile(path) {
     }
 
     let cancelled = false;
+    const readablePath = normalizeFsPath(path);
 
     function clearCurrentUrl() {
       revokeObjectUrlSoon(urlRef.current);
@@ -37,11 +45,11 @@ export function useLocalFile(path) {
     }
 
     async function loadCurrentPath({ allowThrottle = false } = {}) {
-      const ext = path.split('.').pop().toLowerCase();
+      const ext = readablePath.split('.').pop().toLowerCase();
       const mime = MIME[ext] || 'application/octet-stream';
 
       try {
-        const nextSnapshot = await readPathSnapshot(path, {
+        const nextSnapshot = await readPathSnapshot(readablePath, {
           maxAgeMs: allowThrottle ? FILE_REFRESH_THROTTLE_MS : 0,
         });
         if (cancelled) return;
@@ -56,7 +64,7 @@ export function useLocalFile(path) {
         const shouldReload = !urlRef.current || didPathSnapshotChange(previousSnapshot, nextSnapshot);
         if (!shouldReload) return;
 
-        const data = await readFile(path);
+        const data = await readFile(readablePath);
         if (cancelled) return;
         const objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
         revokeObjectUrlSoon(urlRef.current);

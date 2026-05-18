@@ -4,4 +4,5 @@ pub mod fs_pack_reader;
 pub mod imported_pack;
 pub mod lunii_zip_validator;
 pub(crate) mod network;
+pub mod paths;
 pub mod temp;

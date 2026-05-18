@@ -1,4 +1,5 @@
 import { visitProjectEntries } from './projectModel';
+import { isOriginalBackup } from '../utils/mediaConventions';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -22,6 +23,12 @@ function mediaKind(path) {
   return 'other';
 }
 
+function auditPath(path) {
+  const value = String(path || '');
+  if (value.startsWith('\\\\?\\UNC\\')) return `\\\\${value.slice(8)}`;
+  return value.replace(/^\\\\\?\\/, '');
+}
+
 // 'ai' = ComfyUI/XTTS result · 'recorded' = enregistrements/ · 'imported' = fichiers-importes/ · 'project' = referenced in project node · 'library' = extra standalone path
 function detectOrigin(path, source) {
   if (source === 'XTTS' || source === 'ComfyUI') return 'ai';
@@ -34,7 +41,11 @@ function detectOrigin(path, source) {
 
 function addMedia(map, path, label, source, field, statusByPath = {}, isProjectRef = false, entryId = null) {
   if (!hasPath(path)) return;
-  const key = path.replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase();
+  // Backups d'édition audio (`*.original.{ext}`) : masqués sauf s'ils sont explicitement
+  // référencés par une entrée projet (pour ne jamais rendre invisible une référence existante).
+  if (!isProjectRef && isOriginalBackup(path)) return;
+  const checkedPath = auditPath(path);
+  const key = checkedPath.replace(/\\/g, '/').toLowerCase();
   const existing = map.get(key);
   const usage = { label, source, field, ...(entryId ? { entryId } : {}) };
   if (existing) {
@@ -59,7 +70,7 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
     usedCount: 1,
     projectUsedCount: isProjectRef ? 1 : 0,
     inProject: isProjectRef,
-    exists: statusByPath[path] !== false,
+    exists: statusByPath[path] !== false && statusByPath[checkedPath] !== false,
   });
 }
 
