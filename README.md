@@ -1,7 +1,7 @@
 > 🇬🇧 **English** | [🇫🇷 Français](README.fr.md)
 
 <p align="center">
-  <img src="public/logostory.png" alt="Story Studio" width="120">
+  <img src="public/logostory.svg" alt="Story Studio" width="120">
 </p>
 
 <h1 align="center">Story Studio</h1>
