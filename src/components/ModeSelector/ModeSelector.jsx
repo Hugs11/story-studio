@@ -38,7 +38,7 @@ export function ModeSelector({
         <div className="mode-brand-block">
           <Tooltip text="Créé pour Armand, pour que les histoires prennent vie." placement="above">
             <img
-              src="/logostory.png"
+              src="/logostory.svg"
               alt="Story Studio"
               className="mode-selector-logo"
             />

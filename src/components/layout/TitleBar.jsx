@@ -6,7 +6,7 @@ import { isTauriRuntime } from '../../utils/tauriRuntime';
 function AppMark() {
   return (
     <span className="chrome-app-mark" aria-hidden="true">
-      <img src="/favicon.png" alt="" className="chrome-app-mark-img" />
+      <img src="/favicon.svg" alt="" className="chrome-app-mark-img" />
     </span>
   );
 }
