@@ -489,6 +489,12 @@ function MediaTile({
         <div className="media-thumb-wrap">
           <MediaThumb item={item} compact={view === 'list'} />
           <UsageBadge count={item.projectUsedCount} />
+          {!item.exists && (
+            <span
+              className="media-missing-badge"
+              title={`Fichier introuvable :\n${cleanPath(item.path)}`}
+            >!</span>
+          )}
           {duration && view !== 'list' && (
             <span className="media-duration-badge">{duration}</span>
           )}
@@ -533,9 +539,6 @@ function MediaTile({
           </span>
         )}
 
-        {!item.exists && view === 'list' && (
-          <span className="media-missing-badge">!</span>
-        )}
       </div>
       {ctxMenu && (
         <ContextMenu

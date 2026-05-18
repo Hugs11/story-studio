@@ -53,6 +53,7 @@ import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger } from './utils/logger';
 import { isTauriRuntime } from './utils/tauriRuntime';
+import { isOriginalBackup } from './utils/mediaConventions';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
@@ -109,16 +110,22 @@ function classifyOsDroppedFiles(paths) {
   const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm']);
   const IMAGES = new Set(['png', 'jpg', 'jpeg', 'webp']);
   const ARCHIVES = new Set(['zip', '7z']);
+  // Backups d'édition audio (`*.original.{ext}`) ignorés silencieusement.
+  const filtered = paths.filter((p) => !isOriginalBackup(p));
   return {
-    audio: paths.filter((p) => AUDIO.has(ext(p))),
-    images: paths.filter((p) => IMAGES.has(ext(p))),
-    archives: paths.filter((p) => ARCHIVES.has(ext(p))),
+    audio: filtered.filter((p) => AUDIO.has(ext(p))),
+    images: filtered.filter((p) => IMAGES.has(ext(p))),
+    archives: filtered.filter((p) => ARCHIVES.has(ext(p))),
   };
 }
 
 const AUDIO_ENTRY_FIELDS = ['audio', 'itemAudio', 'afterPlaybackPromptAudio'];
 function mediaPathKey(path) {
-  return String(path || '').replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase();
+  const value = String(path || '');
+  const normalized = value.startsWith('\\\\?\\UNC\\')
+    ? `\\\\${value.slice(8)}`
+    : value.replace(/^\\\\\?\\/, '');
+  return normalized.replace(/\\/g, '/').toLowerCase();
 }
 
 function markEntryAudioSkipSilence(entry) {

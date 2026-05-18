@@ -5,6 +5,7 @@ use std::process::Command;
 
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::imported_pack::validate_existing_pack_path as validate_supported_pack_path;
+use crate::support::paths::path_for_frontend;
 use crate::support::temp::TEMP_IMAGES_DIR;
 
 pub(crate) const MANAGED_PROJECT_DIRS: [&str; 4] = [
@@ -78,7 +79,10 @@ pub(crate) fn ensure_managed_project_file(
 /// Valide que `dest_dir` est situé directement sous `<workspace_dir>/zips-extraits/`.
 /// Retourne le chemin canonique sûr, construit depuis la base validée + le seul
 /// composant nom de `dest_dir` (toute tentative de traversée est neutralisée).
-pub(crate) fn validate_unpack_dest_dir(dest_dir: &str, workspace_dir: &str) -> Result<PathBuf, String> {
+pub(crate) fn validate_unpack_dest_dir(
+    dest_dir: &str,
+    workspace_dir: &str,
+) -> Result<PathBuf, String> {
     let zips_base = PathBuf::from(workspace_dir).join("zips-extraits");
     fs::create_dir_all(&zips_base)
         .map_err(|e| format!("Impossible de créer zips-extraits : {}", e))?;
@@ -181,9 +185,7 @@ pub(crate) fn save_recording(
 
     fs::write(&file_path, data)
         .map_err(|e| format!("Impossible de sauvegarder l'enregistrement : {}", e))?;
-    let path_str = file_path.to_string_lossy().to_string();
-    let path_str = path_str.strip_prefix(r"\\?\").map(|s| s.to_string()).unwrap_or(path_str);
-    Ok(path_str)
+    Ok(path_for_frontend(&file_path.to_string_lossy()))
 }
 
 pub fn scan_unused_files(
@@ -212,13 +214,18 @@ pub fn scan_unused_files(
             if !path.is_file() {
                 continue;
             }
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            // Les backups visibles `{stem}.original{-N}.{ext}` sont des dérivés d'édition audio :
+            // on ne les propose jamais à la suppression, même si aucune entrée projet ne les référence.
+            if is_original_backup(&name) {
+                continue;
+            }
             let canonical = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
             if !used_normalized.contains(&canonical) {
                 let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
-                let name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default();
                 total_size += size;
                 unused_files.push(CleanupFile {
                     path: path.to_string_lossy().into_owned(),
@@ -292,8 +299,10 @@ pub fn delete_workspace_media_file(path: &str, workspace_dir: &str) -> Result<()
             Err(_) => continue,
         };
         if target_canonical.starts_with(&managed_canonical) {
-            return fs::remove_file(&target_canonical)
-                .map_err(|e| format!("Suppression impossible : {}", e));
+            fs::remove_file(&target_canonical)
+                .map_err(|e| format!("Suppression impossible : {}", e))?;
+            cascade_delete_audio_edit_artifacts(&target_canonical, &managed_canonical);
+            return Ok(());
         }
     }
 
@@ -302,6 +311,88 @@ pub fn delete_workspace_media_file(path: &str, workspace_dir: &str) -> Result<()
         DELETABLE_WORKSPACE_DIRS.join(", workspace/"),
         target_canonical.display()
     ))
+}
+
+/// Après suppression d'un média édité, nettoie les artefacts liés :
+/// - les sauvegardes originales siblings (`{stem}.original{-N}.{ext}`) dans le même dossier ;
+/// - le sidecar JSON `.story-studio-audio-edits/{filename}.edit.json` ;
+/// - les anciennes sauvegardes legacy `.story-studio-audio-edits/{filename}.original*`;
+/// - le dot-folder `.story-studio-audio-edits/` s'il devient vide.
+///
+/// Toutes les opérations sont strictement bornées au dossier managé (`managed_canonical`)
+/// pour éviter toute fuite hors du workspace. Les erreurs sont best-effort : si un artefact
+/// ne peut pas être supprimé, on continue silencieusement.
+fn cascade_delete_audio_edit_artifacts(target: &Path, managed_canonical: &Path) {
+    let Some(parent) = target.parent() else {
+        return;
+    };
+    // Garantie supplémentaire : le parent doit être à l'intérieur du dossier managé validé.
+    if !parent.starts_with(managed_canonical) {
+        return;
+    }
+    let Some(stem) = target.file_stem().and_then(OsStr::to_str) else {
+        return;
+    };
+    let target_ext = target.extension().and_then(OsStr::to_str).unwrap_or("");
+    let Some(file_name) = target.file_name().and_then(OsStr::to_str) else {
+        return;
+    };
+
+    // 1) Sauvegardes siblings `{stem}.original{-N}.{ext}` dans le même dossier.
+    if let Ok(entries) = fs::read_dir(parent) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(OsStr::to_str) else {
+                continue;
+            };
+            if !is_original_backup(name) {
+                continue;
+            }
+            // Vérifie que le stem du backup correspond au stem du média supprimé,
+            // et que l'extension est la même (évite de supprimer un backup d'un autre fichier).
+            let backup_stem = match path.file_stem().and_then(OsStr::to_str) {
+                Some(value) => value,
+                None => continue,
+            };
+            let backup_base = backup_stem
+                .rsplit_once('.')
+                .map(|(base, _)| base)
+                .unwrap_or(backup_stem);
+            let backup_ext = path.extension().and_then(OsStr::to_str).unwrap_or("");
+            if backup_base == stem && backup_ext.eq_ignore_ascii_case(target_ext) {
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
+
+    // 2) Sidecar `.story-studio-audio-edits/{filename}.edit.json` + sauvegardes legacy.
+    let dot_folder = parent.join(AUDIO_EDIT_DIR);
+    if let Ok(dot_canonical) = fs::canonicalize(&dot_folder) {
+        if dot_canonical.starts_with(managed_canonical) {
+            let sidecar = dot_canonical.join(format!("{}.edit.json", file_name));
+            let _ = fs::remove_file(&sidecar);
+            // Legacy : tout fichier `{file_name}.original*` dans le dot-folder.
+            if let Ok(entries) = fs::read_dir(&dot_canonical) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if !path.is_file() {
+                        continue;
+                    }
+                    let Some(name) = path.file_name().and_then(OsStr::to_str) else {
+                        continue;
+                    };
+                    if name.starts_with(&format!("{}.original", file_name)) {
+                        let _ = fs::remove_file(&path);
+                    }
+                }
+            }
+            // Nettoyage best-effort : retirer le dot-folder s'il est vide.
+            let _ = fs::remove_dir(&dot_canonical);
+        }
+    }
 }
 
 const AUDIO_ASSEMBLY_EXTENSIONS: &[&str] = &["mp3", "ogg", "wav", "m4a", "webm", "flac", "aac"];
@@ -553,10 +644,7 @@ pub fn concat_audio_files(
             .map_err(|e| format!("Impossible de préparer la liste d'assemblage : {}", e))?;
 
         run_ffmpeg_concat_audio(&ffmpeg, &list_path, &output_path)?;
-        let path_str = output_path.to_string_lossy().to_string();
-        // fs::canonicalize on Windows prepends \\?\ — strip it so JS path checks work correctly
-        let path_str = path_str.strip_prefix(r"\\?\").map(|s| s.to_string()).unwrap_or(path_str);
-        Ok(path_str)
+        Ok(path_for_frontend(&output_path.to_string_lossy()))
     })();
 
     let _ = fs::remove_dir_all(&temp_dir);
@@ -686,14 +774,69 @@ fn audio_edit_sidecar_path(path: &Path) -> Result<PathBuf, String> {
     Ok(audio_edit_dir_for(path)?.join(format!("{}.edit.json", audio_edit_file_name(path)?)))
 }
 
+/// Chemin de sauvegarde de l'original, en sibling visible du fichier édité.
+///
+/// Convention : `{stem}.original.{ext}` à côté du fichier édité, ignoré par la
+/// médiathèque et les flux d'import/scan (cf. `isOriginalBackup` côté JS et
+/// `is_original_backup` côté Rust).
+///
+/// En cas de collision (le fichier existe déjà — autre édité du même stem, ou fichier
+/// utilisateur légitime), on bascule sur `{stem}.original-2.{ext}`, puis `-3`, etc.
 fn audio_edit_original_path(path: &Path, source_ext: &str) -> Result<PathBuf, String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Impossible de déterminer le dossier audio.".to_string())?;
+    let stem = path
+        .file_stem()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| "Nom de fichier audio invalide.".to_string())?;
     let ext = source_ext.trim().trim_start_matches('.');
-    let suffix = if ext.is_empty() {
-        "original".to_string()
-    } else {
-        format!("original.{}", ext)
+
+    let build = |suffix: &str| -> PathBuf {
+        let name = if ext.is_empty() {
+            format!("{}.original{}", stem, suffix)
+        } else {
+            format!("{}.original{}.{}", stem, suffix, ext)
+        };
+        parent.join(name)
     };
-    Ok(audio_edit_dir_for(path)?.join(format!("{}.{}", audio_edit_file_name(path)?, suffix)))
+
+    let preferred = build("");
+    if !preferred.exists() {
+        return Ok(preferred);
+    }
+    for n in 2..=999 {
+        let candidate = build(&format!("-{}", n));
+        if !candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    Err("Trop de variantes d'originaux existent déjà pour ce fichier audio.".to_string())
+}
+
+/// Détecte si un nom de fichier correspond à la convention de backup `{stem}.original{-N}.{ext}`.
+///
+/// Utilisé pour exclure ces fichiers des scans et imports.
+pub fn is_original_backup(file_name: &str) -> bool {
+    // On cherche un segment ".original" ou ".original-<chiffres>" juste avant l'extension finale.
+    let trimmed = file_name;
+    let dot = match trimmed.rfind('.') {
+        Some(pos) => pos,
+        None => return false,
+    };
+    let stem = &trimmed[..dot];
+    let last_dot = match stem.rfind('.') {
+        Some(pos) => pos,
+        None => return false,
+    };
+    let candidate = &stem[last_dot + 1..];
+    if candidate == "original" {
+        return true;
+    }
+    if let Some(rest) = candidate.strip_prefix("original-") {
+        return !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit());
+    }
+    false
 }
 
 fn read_audio_edit_sidecar(path: &Path) -> Option<AudioEditSidecar> {
@@ -719,6 +862,52 @@ fn audio_edit_source_for(input: &Path) -> PathBuf {
         .map(|sidecar| PathBuf::from(sidecar.original_path))
         .filter(|path| path.is_file())
         .unwrap_or_else(|| input.to_path_buf())
+}
+
+fn is_expected_audio_original_path(input: &Path, original: &Path) -> bool {
+    let Some(input_parent) = input.parent() else {
+        return false;
+    };
+    let Some(input_file_name) = input.file_name().and_then(OsStr::to_str) else {
+        return false;
+    };
+    let Some(input_stem) = input.file_stem().and_then(OsStr::to_str) else {
+        return false;
+    };
+
+    let Ok(input_parent_canonical) = fs::canonicalize(input_parent) else {
+        return false;
+    };
+    let Ok(original_canonical) = fs::canonicalize(original) else {
+        return false;
+    };
+
+    if original_canonical.parent() == Some(input_parent_canonical.as_path()) {
+        let Some(original_name) = original_canonical.file_name().and_then(OsStr::to_str) else {
+            return false;
+        };
+        if !is_original_backup(original_name) {
+            return false;
+        }
+        let Some(original_stem) = original_canonical.file_stem().and_then(OsStr::to_str) else {
+            return false;
+        };
+        let original_base = original_stem
+            .rsplit_once('.')
+            .map(|(base, _)| base)
+            .unwrap_or(original_stem);
+        return original_base == input_stem;
+    }
+
+    let legacy_dir = input_parent_canonical.join(AUDIO_EDIT_DIR);
+    if original_canonical.parent() == Some(legacy_dir.as_path()) {
+        let Some(original_name) = original_canonical.file_name().and_then(OsStr::to_str) else {
+            return false;
+        };
+        return original_name.starts_with(&format!("{}.original", input_file_name));
+    }
+
+    false
 }
 
 fn clamp_fade(value: f64, max_duration: f64) -> f64 {
@@ -791,7 +980,7 @@ pub fn trim_audio(
         }
 
         Ok(TrimAudioResult {
-            output_path: input_path.to_string(),
+            output_path: path_for_frontend(input_path),
             path_changed: false,
             original_path: None,
         })
@@ -800,7 +989,8 @@ pub fn trim_audio(
             Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
             None => {
                 let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour découper un fichier externe.".to_string()
+                    "Définissez un emplacement de travail pour découper un fichier externe."
+                        .to_string()
                 })?;
                 project_dir_from_save_path(sp)?.join("fichiers-importes")
             }
@@ -824,7 +1014,7 @@ pub fn trim_audio(
         )?;
 
         Ok(TrimAudioResult {
-            output_path: out_path.to_string_lossy().to_string(),
+            output_path: path_for_frontend(&out_path.to_string_lossy()),
             path_changed: true,
             original_path: None,
         })
@@ -896,7 +1086,7 @@ pub fn cut_audio(
         }
 
         Ok(TrimAudioResult {
-            output_path: input_path.to_string(),
+            output_path: path_for_frontend(input_path),
             path_changed: false,
             original_path: None,
         })
@@ -905,7 +1095,8 @@ pub fn cut_audio(
             Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
             None => {
                 let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour couper un fichier externe.".to_string()
+                    "Définissez un emplacement de travail pour couper un fichier externe."
+                        .to_string()
                 })?;
                 project_dir_from_save_path(sp)?.join("fichiers-importes")
             }
@@ -928,14 +1119,18 @@ pub fn cut_audio(
         )?;
 
         Ok(TrimAudioResult {
-            output_path: out_path.to_string_lossy().to_string(),
+            output_path: path_for_frontend(&out_path.to_string_lossy()),
             path_changed: true,
             original_path: None,
         })
     }
 }
 
-pub fn audio_edit_info(input_path: &str, save_path: Option<&str>, workspace_dir: Option<&str>) -> Result<AudioEditInfo, String> {
+pub fn audio_edit_info(
+    input_path: &str,
+    save_path: Option<&str>,
+    workspace_dir: Option<&str>,
+) -> Result<AudioEditInfo, String> {
     let input = validate_existing_file_path(input_path, "Fichier audio")?;
     if save_path.is_some() || workspace_dir.is_some() {
         let _ = is_in_trim_dir(input_path, workspace_dir, save_path)?;
@@ -946,18 +1141,14 @@ pub fn audio_edit_info(input_path: &str, save_path: Option<&str>, workspace_dir:
         .map(|value| PathBuf::from(&value.original_path))
         .filter(|path| path.is_file());
     let source_path = if sidecar.as_ref().map(|value| value.mode.as_str()) == Some("chain") {
-        input.to_string_lossy().to_string()
+        path_for_frontend(&input.to_string_lossy())
     } else {
-        original_path
-            .as_ref()
-            .unwrap_or(&input)
-            .to_string_lossy()
-            .to_string()
+        path_for_frontend(&original_path.as_ref().unwrap_or(&input).to_string_lossy())
     };
 
     Ok(AudioEditInfo {
         original_available: original_path.is_some(),
-        original_path: original_path.map(|path| path.to_string_lossy().to_string()),
+        original_path: original_path.map(|path| path_for_frontend(&path.to_string_lossy())),
         source_path,
         mode: sidecar.as_ref().map(|value| value.mode.clone()),
         start_sec: sidecar.as_ref().map(|value| value.start_sec),
@@ -990,16 +1181,31 @@ pub fn restore_audio_original(
     }
     let sidecar = read_audio_edit_sidecar(&input)
         .ok_or_else(|| "Aucun original enregistré pour cet audio.".to_string())?;
+    // L'original peut être soit en sibling visible (nouvelle convention),
+    // soit dans `.story-studio-audio-edits/` (legacy). Les deux cas sont gérés
+    // par `validate_existing_file_path` qui canonicalise et vérifie l'existence.
     let original = validate_existing_file_path(&sidecar.original_path, "Audio original")?;
     fs::copy(&original, &input)
         .map_err(|e| format!("Impossible de restaurer l'audio original : {}", e))?;
-    if let Ok(sidecar_path) = audio_edit_sidecar_path(&input) {
-        let _ = fs::remove_file(sidecar_path);
+    let sidecar_parent = audio_edit_sidecar_path(&input)
+        .ok()
+        .and_then(|sidecar_path| {
+            let parent = sidecar_path.parent().map(Path::to_path_buf);
+            let _ = fs::remove_file(&sidecar_path);
+            parent
+        });
+    // Nettoyage du fichier original désormais redondant (best-effort), uniquement
+    // si le chemin correspond bien à une sauvegarde générée par Story Studio.
+    if is_expected_audio_original_path(&input, &original) {
+        let _ = fs::remove_file(&original);
+    }
+    if let Some(parent) = sidecar_parent {
+        let _ = fs::remove_dir(parent); // best-effort si vide
     }
     Ok(TrimAudioResult {
-        output_path: input.to_string_lossy().to_string(),
+        output_path: path_for_frontend(&input.to_string_lossy()),
         path_changed: false,
-        original_path: Some(original.to_string_lossy().to_string()),
+        original_path: Some(path_for_frontend(&original.to_string_lossy())),
     })
 }
 
@@ -1035,7 +1241,7 @@ pub fn preview_audio_edit(
         cut_fade_sec,
         "wav",
     )?;
-    Ok(output.to_string_lossy().to_string())
+    Ok(path_for_frontend(&output.to_string_lossy()))
 }
 
 pub fn commit_audio_preview(
@@ -1068,7 +1274,8 @@ pub fn commit_audio_preview(
             Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
             None => {
                 let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour éditer un fichier externe.".to_string()
+                    "Définissez un emplacement de travail pour éditer un fichier externe."
+                        .to_string()
                 })?;
                 project_dir_from_save_path(sp)?.join("fichiers-importes")
             }
@@ -1135,9 +1342,9 @@ pub fn commit_audio_preview(
     )?;
 
     Ok(TrimAudioResult {
-        output_path: final_path.to_string_lossy().to_string(),
+        output_path: path_for_frontend(&final_path.to_string_lossy()),
         path_changed,
-        original_path: Some(original_path.to_string_lossy().to_string()),
+        original_path: Some(path_for_frontend(&original_path.to_string_lossy())),
     })
 }
 
@@ -1177,7 +1384,8 @@ pub fn apply_audio_edit(
             Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
             None => {
                 let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour éditer un fichier externe.".to_string()
+                    "Définissez un emplacement de travail pour éditer un fichier externe."
+                        .to_string()
                 })?;
                 project_dir_from_save_path(sp)?.join("fichiers-importes")
             }
@@ -1250,9 +1458,9 @@ pub fn apply_audio_edit(
     )?;
 
     Ok(TrimAudioResult {
-        output_path: final_path.to_string_lossy().to_string(),
+        output_path: path_for_frontend(&final_path.to_string_lossy()),
         path_changed,
-        original_path: Some(original_path.to_string_lossy().to_string()),
+        original_path: Some(path_for_frontend(&original_path.to_string_lossy())),
     })
 }
 
@@ -1615,7 +1823,10 @@ mod tests {
         let written_path = PathBuf::from(&written);
         let expected_recordings_dir = project_dir.join("enregistrements");
 
-        assert!(!written.starts_with(r"\\?\"), "path must not have UNC prefix");
+        assert!(
+            !written.starts_with(r"\\?\"),
+            "path must not have UNC prefix"
+        );
         assert_eq!(
             written_path.parent(),
             Some(expected_recordings_dir.as_path())
@@ -1670,16 +1881,14 @@ mod tests {
 
     #[test]
     fn concat_audio_files_requires_two_inputs_before_ffmpeg() {
-        let err = concat_audio_files("C:/projet/test.mbah", &[], "sortie.mp3", 0.0, None).unwrap_err();
+        let err =
+            concat_audio_files("C:/projet/test.mbah", &[], "sortie.mp3", 0.0, None).unwrap_err();
         assert!(err.contains("au moins deux"));
     }
 
     fn path_without_windows_extended_prefix(path: &Path) -> String {
         let value = path.to_string_lossy().into_owned();
-        value
-            .strip_prefix(r"\\?\")
-            .unwrap_or(&value)
-            .to_string()
+        value.strip_prefix(r"\\?\").unwrap_or(&value).to_string()
     }
 
     #[test]
@@ -1765,8 +1974,7 @@ mod tests {
         for dir in DELETABLE_WORKSPACE_DIRS {
             fs::create_dir_all(workspace.join(dir)).expect("create managed workspace dir");
         }
-        fs::create_dir_all(workspace.join("zips-extraits"))
-            .expect("create zips-extraits dir");
+        fs::create_dir_all(workspace.join("zips-extraits")).expect("create zips-extraits dir");
         workspace
     }
 
@@ -1885,7 +2093,10 @@ mod tests {
 
         let err = delete_workspace_media_file(target.to_str().unwrap(), "   ").unwrap_err();
         assert!(err.contains("Workspace non défini"));
-        assert!(target.exists(), "file must not be deleted when workspace empty");
+        assert!(
+            target.exists(),
+            "file must not be deleted when workspace empty"
+        );
 
         fs::remove_dir_all(workspace).expect("cleanup");
     }
@@ -1901,5 +2112,243 @@ mod tests {
         assert!(err.contains("introuvable") || err.contains("inaccessible"));
 
         fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn is_original_backup_matches_convention() {
+        assert!(is_original_backup("song.original.mp3"));
+        assert!(is_original_backup("song.original-2.mp3"));
+        assert!(is_original_backup("song.original-42.flac"));
+        assert!(is_original_backup(r"C:\path\to\song.original.mp3"));
+
+        assert!(!is_original_backup("song.mp3"));
+        assert!(!is_original_backup("song.originals.mp3"));
+        assert!(!is_original_backup("song.original-.mp3"));
+        assert!(!is_original_backup("song.original-a.mp3"));
+        assert!(!is_original_backup("original.mp3"));
+        assert!(!is_original_backup(""));
+    }
+
+    #[test]
+    fn audio_edit_original_path_returns_visible_sibling() {
+        let dir = temp_project_dir("orig_sibling");
+        fs::create_dir_all(&dir).expect("create dir");
+        let edited = dir.join("song.mp3");
+        write_temp_file(&edited, b"edited");
+
+        let path = audio_edit_original_path(&edited, "mp3").expect("compute original path");
+        assert_eq!(path, dir.join("song.original.mp3"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn audio_edit_original_path_handles_collision() {
+        let dir = temp_project_dir("orig_collision");
+        fs::create_dir_all(&dir).expect("create dir");
+        let edited = dir.join("song.mp3");
+        write_temp_file(&edited, b"edited");
+        // Simule un original déjà présent.
+        write_temp_file(&dir.join("song.original.mp3"), b"existing");
+
+        let path = audio_edit_original_path(&edited, "mp3").expect("compute original path");
+        assert_eq!(path, dir.join("song.original-2.mp3"));
+
+        // Et avec deux collisions :
+        write_temp_file(&dir.join("song.original-2.mp3"), b"existing-2");
+        let path = audio_edit_original_path(&edited, "mp3").expect("compute original path");
+        assert_eq!(path, dir.join("song.original-3.mp3"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn delete_workspace_media_file_cascade_removes_sibling_backup_and_sidecar() {
+        let workspace = temp_workspace_with_dirs("delete_cascade");
+        let imports = workspace.join("fichiers-importes");
+        let edited = imports.join("song.mp3");
+        let backup = imports.join("song.original.mp3");
+        let dot_folder = imports.join(AUDIO_EDIT_DIR);
+        fs::create_dir_all(&dot_folder).expect("create dot folder");
+        let sidecar = dot_folder.join("song.mp3.edit.json");
+        write_temp_file(&edited, b"edited");
+        write_temp_file(&backup, b"original");
+        fs::write(&sidecar, b"{}").expect("write sidecar");
+
+        delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+            .expect("delete should succeed");
+
+        assert!(!edited.exists(), "main file removed");
+        assert!(!backup.exists(), "sibling backup cascade-removed");
+        assert!(!sidecar.exists(), "sidecar cascade-removed");
+        assert!(!dot_folder.exists(), "empty dot folder cleaned up");
+
+        fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn delete_workspace_media_file_cascade_removes_legacy_hidden_backup() {
+        let workspace = temp_workspace_with_dirs("delete_cascade_legacy");
+        let imports = workspace.join("fichiers-importes");
+        let edited = imports.join("song.mp3");
+        let dot_folder = imports.join(AUDIO_EDIT_DIR);
+        fs::create_dir_all(&dot_folder).expect("create dot folder");
+        let legacy_backup = dot_folder.join("song.mp3.original.mp3");
+        let sidecar = dot_folder.join("song.mp3.edit.json");
+        write_temp_file(&edited, b"edited");
+        write_temp_file(&legacy_backup, b"legacy original");
+        fs::write(&sidecar, b"{}").expect("write sidecar");
+
+        delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+            .expect("delete should succeed");
+
+        assert!(!edited.exists());
+        assert!(
+            !legacy_backup.exists(),
+            "legacy hidden backup cascade-removed"
+        );
+        assert!(!sidecar.exists());
+        assert!(!dot_folder.exists());
+
+        fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn delete_workspace_media_file_does_not_touch_unrelated_originals() {
+        let workspace = temp_workspace_with_dirs("delete_isolation");
+        let imports = workspace.join("fichiers-importes");
+        let edited = imports.join("song.mp3");
+        let unrelated_backup = imports.join("other.original.mp3");
+        write_temp_file(&edited, b"edited");
+        write_temp_file(&unrelated_backup, b"unrelated");
+
+        delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+            .expect("delete should succeed");
+
+        assert!(!edited.exists());
+        assert!(
+            unrelated_backup.exists(),
+            "backup of an unrelated file must NOT be touched"
+        );
+
+        fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn restore_audio_original_supports_legacy_hidden_backup() {
+        let workspace = temp_workspace_with_dirs("restore_legacy");
+        let imports = workspace.join("fichiers-importes");
+        let edited = imports.join("song.mp3");
+        let legacy_backup = imports.join(AUDIO_EDIT_DIR).join("song.mp3.original.mp3");
+        write_temp_file(&edited, b"edited");
+        write_temp_file(&legacy_backup, b"original");
+        write_audio_edit_sidecar(
+            &edited,
+            &AudioEditSidecar {
+                original_path: legacy_backup.to_string_lossy().to_string(),
+                mode: "trim".to_string(),
+                start_sec: 0.0,
+                end_sec: 1.0,
+                fade_in_sec: 0.0,
+                fade_out_sec: 0.0,
+                cut_fade_sec: 0.0,
+            },
+        )
+        .expect("write sidecar");
+        let sidecar = audio_edit_sidecar_path(&edited).expect("sidecar path");
+
+        restore_audio_original(
+            edited.to_str().unwrap(),
+            None,
+            Some(workspace.to_str().unwrap()),
+        )
+        .expect("restore original");
+
+        assert_eq!(fs::read(&edited).expect("read restored"), b"original");
+        assert!(!legacy_backup.exists(), "legacy backup should be consumed");
+        assert!(!sidecar.exists(), "sidecar should be removed");
+        assert!(
+            !imports.join(AUDIO_EDIT_DIR).exists(),
+            "empty legacy dot folder should be cleaned"
+        );
+
+        fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn restore_audio_original_does_not_delete_unexpected_external_original() {
+        let workspace = temp_workspace_with_dirs("restore_external_guard");
+        let imports = workspace.join("fichiers-importes");
+        let outside = temp_project_dir("restore_external_source");
+        let edited = imports.join("song.mp3");
+        let external_original = outside.join("external.mp3");
+        write_temp_file(&edited, b"edited");
+        write_temp_file(&external_original, b"external original");
+        write_audio_edit_sidecar(
+            &edited,
+            &AudioEditSidecar {
+                original_path: external_original.to_string_lossy().to_string(),
+                mode: "trim".to_string(),
+                start_sec: 0.0,
+                end_sec: 1.0,
+                fade_in_sec: 0.0,
+                fade_out_sec: 0.0,
+                cut_fade_sec: 0.0,
+            },
+        )
+        .expect("write sidecar");
+
+        restore_audio_original(
+            edited.to_str().unwrap(),
+            None,
+            Some(workspace.to_str().unwrap()),
+        )
+        .expect("restore original");
+
+        assert_eq!(
+            fs::read(&edited).expect("read restored"),
+            b"external original"
+        );
+        assert!(
+            external_original.exists(),
+            "restore must not delete a sidecar path outside expected backup locations"
+        );
+
+        fs::remove_dir_all(workspace).expect("cleanup workspace");
+        fs::remove_dir_all(outside).expect("cleanup outside");
+    }
+
+    #[test]
+    fn scan_unused_files_skips_original_backups() {
+        let dir = temp_project_dir("scan_unused");
+        fs::create_dir_all(dir.join("fichiers-importes")).expect("create imports");
+        let save_path = dir.join("story.mbah");
+        fs::write(&save_path, b"{}").expect("create mbah");
+
+        let used = dir.join("fichiers-importes").join("song.mp3");
+        let backup = dir.join("fichiers-importes").join("song.original.mp3");
+        let unused = dir.join("fichiers-importes").join("orphan.mp3");
+        write_temp_file(&used, b"a");
+        write_temp_file(&backup, b"b");
+        write_temp_file(&unused, b"c");
+
+        let result = scan_unused_files(
+            save_path.to_str().unwrap(),
+            &[used.to_string_lossy().into()],
+        )
+        .expect("scan");
+
+        let names: Vec<&str> = result
+            .unused_files
+            .iter()
+            .map(|f| f.name.as_str())
+            .collect();
+        assert!(names.contains(&"orphan.mp3"), "orphan must be flagged");
+        assert!(
+            !names.contains(&"song.original.mp3"),
+            "backup must not be flagged as unused"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 }

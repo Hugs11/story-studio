@@ -234,6 +234,10 @@ fn scan_dir_recursive(dir: &std::path::Path) -> Result<Vec<ScanEntry>, String> {
                 });
             }
         } else {
+            // Ignorer les backups visibles d'édition audio (`{stem}.original{-N}.{ext}`)
+            if project_files::is_original_backup(&name) {
+                continue;
+            }
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
@@ -294,6 +298,14 @@ fn collect_media_files_recursive(dir: &std::path::Path, out: &mut Vec<String>) {
         if path.is_dir() {
             collect_media_files_recursive(&path, out);
         } else {
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            // Ignorer les backups visibles d'édition audio (`{stem}.original{-N}.{ext}`)
+            if project_files::is_original_backup(&name) {
+                continue;
+            }
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
