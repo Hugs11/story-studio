@@ -1,0 +1,70 @@
+.tog {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--control-border) 72%, transparent);
+  padding: 0;
+  margin: 0;
+  background: var(--control-border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.12s, box-shadow 0.12s;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.tog:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-border-secondary) 70%, var(--color-accent));
+  border-color: var(--control-border-hover);
+}
+
+.tog.on {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.tog.on:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.tog:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.tog:disabled {
+  cursor: not-allowed;
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+}
+
+.tog-thumb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  transition: left 0.2s;
+  display: block;
+  pointer-events: none;
+}
+
+.tog.on .tog-thumb { left: 14px; }
+
+.tog:disabled .tog-thumb {
+  background: var(--control-disabled-text);
+}
+
+.tog.mixed {
+  background: color-mix(in srgb, var(--color-border-secondary) 60%, var(--color-accent) 40%);
+  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--control-border));
+}
+.tog.mixed .tog-thumb { left: 8px; }

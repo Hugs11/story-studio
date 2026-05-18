@@ -1,0 +1,216 @@
+.sd-generate-box {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.sd-generate-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.sd-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+
+.sd-field { display: flex; flex-direction: column; }
+
+.sd-loading, .sd-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding: 8px 0;
+}
+
+/* Workflow cards */
+.sd-workflow-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sd-workflow-card {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  padding: 9px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.1s;
+}
+
+.sd-workflow-card:hover {
+  border-color: var(--color-border-secondary);
+}
+
+.sd-workflow-card.selected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-background-secondary));
+}
+
+.sd-workflow-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.sd-workflow-desc {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.sd-workflow-tag {
+  margin-top: 5px;
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+  border: 0.5px solid var(--color-accent);
+}
+
+/* Image de référence */
+.sd-ref-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.sd-ref-toggle input {
+  margin: 0;
+}
+
+.sd-ref-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sd-ref-name {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+/* Prompt */
+.sd-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 7px 9px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.sd-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Variantes */
+.sd-variants-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sd-variants-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+/* Avancé */
+.sd-advanced {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  padding-top: 10px;
+}
+
+.sd-advanced-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 0;
+}
+
+.sd-advanced-toggle:hover { color: var(--color-text-primary); }
+
+.sd-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sd-param-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sd-param-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  min-width: 80px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.sd-param-value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.sd-slider {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.sd-seed-input {
+  width: 90px;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  padding: 3px 7px;
+}
+
+.sd-seed-input:focus { outline: none; border-color: var(--color-accent); }
+
+.sd-error {
+  font-size: 11px;
+  color: #e05555;
+  padding: 6px 0;
+}
+
+/* Footer */
+.modal-footer {
+  padding: 10px 16px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

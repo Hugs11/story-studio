@@ -1,0 +1,148 @@
+/* Modal éditeur d'images — layout */
+.image-editor-box {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 620px;
+  max-width: 95vw;
+}
+
+/* Corps : canvas à gauche, filtres à droite */
+.image-editor-body {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+/* Zone canvas */
+.image-editor-canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.image-editor-canvas {
+  width: 320px;
+  height: 240px;
+  display: block;
+  cursor: grab;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.image-editor-canvas:active { cursor: grabbing; }
+
+.image-editor-canvas-hint {
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+}
+
+.image-editor-fit-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.image-editor-fit-btns .btn-xs {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7);
+}
+
+.image-editor-fit-btns .btn-xs:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.image-editor-error {
+  color: #E24B4A;
+  font-size: 12px;
+  padding: 8px;
+}
+
+/* Panneau filtres */
+.image-editor-filters {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  border-left: 0.5px solid var(--color-border-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.filter-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.filter-slider {
+  flex: 1;
+  height: 3px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.filter-value {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  min-width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-toggle {
+  justify-content: space-between;
+}
+
+.filter-advanced-toggle {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  margin-top: 2px;
+}
+
+.filter-advanced-toggle:hover { color: var(--color-text-primary); }
+
+.filter-reset {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+/* Footer */
+.modal-footer {
+  padding: 10px 16px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

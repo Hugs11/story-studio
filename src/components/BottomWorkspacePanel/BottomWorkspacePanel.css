@@ -1,0 +1,104 @@
+.bottom-workspace-panel {
+  /* height set via inline style (resizable, default 270px) */
+  min-height: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-primary);
+  border-top: 0.5px solid var(--color-border-tertiary);
+  min-width: 0;
+  position: relative;
+}
+
+.bottom-workspace-resize-handle {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 10;
+}
+
+.bottom-workspace-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-border-secondary);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.bottom-workspace-resize-handle:hover::after {
+  opacity: 1;
+}
+
+.bottom-workspace-tabs {
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 8px;
+  background: var(--color-background-primary);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+}
+
+.bottom-workspace-tabs button {
+  height: 30px;
+  border: none;
+  border-top: 2px solid transparent;
+  border-radius: 5px 5px 0 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.bottom-workspace-tabs button.is-active {
+  background: var(--color-background-tertiary);
+  border-top-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.bottom-workspace-tabs button span {
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-secondary);
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.bottom-workspace-spacer {
+  flex: 1;
+}
+
+.bottom-workspace-close {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.bottom-workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}

@@ -1,0 +1,261 @@
+# Changelog
+
+This changelog is intentionally concise. It summarizes the main public features
+added to Story Studio over time, without mirroring every internal commit.
+
+The project will be published on GitHub with a clean public history; this file
+is the public record of the work completed before the first GitHub release.
+
+---
+
+## [0.8.9] - 2026-05-18
+
+Public GitHub release preparation.
+
+- Professional open-source repository metadata: README, contribution guide,
+  security policy, release checklist, issue templates and pull request template.
+- Simplified public changelog focused on major user-facing features.
+- Repository cleanup for public distribution, including ignored local artifacts,
+  bundled binary notices and screenshot guidance.
+
+---
+
+## [0.8.8] - 2026-05
+
+Media workspace and editor polish.
+
+- Media manager with grid/list views, metadata columns, tags, usage counters,
+  quick preview, sorting, filtering and multi-selection.
+- Audio assembly workflow for combining multiple audio files into one MP3.
+- Drag and drop from Windows Explorer into the project tree and media library.
+- AI generation queue panel for local XTTS and ComfyUI jobs.
+- Floating simulator improvements for diagram and editor workflows.
+- Tree panel color tags, collapsible folders, descendant counters and refreshed
+  vector icons.
+- FLAC support in audio pickers, metadata probing and pack generation.
+
+---
+
+## [0.8.7] - 2026-05
+
+Round-trip import/export and advanced audio editing.
+
+- Folder import workflow that creates one story per audio file.
+- Persistent pack-name bar with community naming convention support.
+- Advanced import support for complex Lunii ZIP graphs and preserved native
+  story structures.
+- End-of-story prompt editing, including OK/Home controls and multi-step
+  playback sequences.
+- Native auto-next story generation.
+- Audio editor with waveform seeking, trim previews, cuts, fades, zoom and
+  keyboard shortcuts.
+
+---
+
+## [0.8.6] - 2026-05
+
+Audio editing and large-pack handling.
+
+- Waveform-based audio trim editor powered by WaveSurfer.
+- Lazy audio loading for better performance on large projects.
+- Position-aware drag and drop indicators in the story tree.
+- Increased archive import limits for very large community packs.
+- Automatic image resizing to Lunii-compatible 320x240 assets during export.
+
+---
+
+## [0.8.5] - 2026-05
+
+Search, cleanup and usability tools.
+
+- Structure search with configurable keyboard shortcut.
+- Project cleanup tool for detecting unused managed files.
+- "Show in Explorer" actions for media fields and tree nodes.
+- Optional compact diagram inside the editor panel.
+- Image generation dialog improvements, including root cover as reference image.
+
+---
+
+## [0.8.4] - 2026-04
+
+User preferences and interface customization.
+
+- Configurable keyboard shortcuts.
+- Light, dark and system theme preference.
+- Redesigned home screen with recent projects.
+- Richer tooltips and clearer required-media states.
+- AI generation panel improvements for generated images and audio.
+
+---
+
+## [0.8.3] - 2026-04
+
+Save system and diagram refinement.
+
+- More reliable project save flow and asset copy handling.
+- More compact full-diagram view for larger packs.
+- Resizable render queue panel.
+- Clearer navigation badges for return targets and end nodes.
+
+---
+
+## [0.8.2] - 2026-04
+
+Security hardening.
+
+- Safer ComfyUI launcher execution.
+- ZIP extraction constrained to managed project folders.
+- Local-only network validation for XTTS and ComfyUI services.
+- Safer validation of generated images, imported ZIPs and bundled tool usage.
+
+---
+
+## [0.8.1] - 2026-04
+
+Open-source groundwork.
+
+- Contribution guide, security policy, issue templates and pull request template.
+- Developer command aliases for Tauri workflows.
+- README prerequisites and project file documentation.
+- Expanded `.gitignore` for local configuration and generated artifacts.
+
+---
+
+## [0.8.0] - 2026-04
+
+Licensing and public distribution preparation.
+
+- MIT license added for the Story Studio source code.
+- Third-party notices added for bundled binaries and copied icon assets.
+- Initial Tauri filesystem and command security review.
+
+---
+
+## [0.7.9] - 2026-03
+
+Render queue and story endings.
+
+- Background render queue for generating multiple packs sequentially.
+- Explicit end-of-story node support in the graph model.
+- Audio option to trim leading and trailing silence during export.
+
+---
+
+## [0.7.8] - 2026-02
+
+Editor refinement.
+
+- Broad UX and layout polish across the editor.
+- Stability improvements for pack editing workflows.
+
+---
+
+## [0.7.6] - 2026-01
+
+Pack generation reliability.
+
+- Fixed asset role collisions so regenerated packs keep distinct story content.
+
+---
+
+## [0.7.5] - 2026-01
+
+Diagram editing and navigation.
+
+- Full diagram multi-select, group editing, clipboard and context menu support.
+- Sequential story navigation with configurable next-story targets.
+- Shared tooltip system for richer inline help.
+
+---
+
+## [0.7.4] - 2025-04
+
+Compatibility validation.
+
+- Lunii compatibility validator for checking generated pack structure.
+- Audio conversion fixes around bundled ffmpeg workflows.
+
+---
+
+## [0.7.3] - 2025-04
+
+Editor layout polish.
+
+- Unified media panel layout across node editors.
+- Streamlined story and menu image controls.
+- Refined app chrome and export naming.
+
+---
+
+## [0.7.2] - 2025-04
+
+Performance pass.
+
+- React rendering optimizations for larger projects.
+- Faster project indexing and lookup behavior.
+- Import path fixes after asset extraction.
+
+---
+
+## [0.7.0] - 2025-04
+
+Navigation workflow.
+
+- Return-target workflow after story playback.
+- Full pack flow diagram.
+- Background XTTS queue that applies generated voice clips to target fields.
+
+---
+
+## [0.6.0] - 2025-03
+
+Native generation and local AI integrations.
+
+- Native Rust pack engine replacing the previous Studio-Pack-Generator flow.
+- Direct `.zip` and `.7z` pack import without Java.
+- XTTS voice generation and ComfyUI image generation integrations.
+- Copy/cut/paste in the story tree.
+- Embedded MP3 cover-art import.
+
+---
+
+## [0.5.1] - 2025-02
+
+Project format refinement.
+
+- Project file extension changed from `.lunii` to `.mbah`.
+- More accurate dirty-check behavior before prompting to save.
+
+---
+
+## [0.5.0] - 2025-02
+
+Media creation tools.
+
+- Built-in image editor with crop, pan, zoom and color filters.
+- Automatic text-image generation from node names.
+- Pack simulator with ZIP support, audio playback and night-mode preview.
+- Microphone recording workflow.
+
+---
+
+## [0.4.0] - 2025-01
+
+Tauri desktop foundation.
+
+- Rust/Tauri backend replacing the previous Node.js layer.
+- Project store with undo history.
+- Real-time validation panel.
+- Drag-and-drop story tree reordering.
+- Multi-file import for audio and ZIP assets.
+
+---
+
+## [0.3.0] - 2024-12
+
+Initial application.
+
+- Graphical editor for Lunii story packs.
+- Simple story and multi-pack project modes.
+- Menu, story and ZIP node editing.
+- Lunii-compatible ZIP generation through the original generator workflow.

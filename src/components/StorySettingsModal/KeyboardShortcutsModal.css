@@ -1,0 +1,131 @@
+.keyboard-shortcuts-modal {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+}
+
+.keyboard-shortcuts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.keyboard-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  overflow-x: hidden;
+}
+
+.keyboard-shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-background-primary);
+}
+
+.keyboard-shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.keyboard-shortcut-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.keyboard-shortcut-capture {
+  min-width: 150px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.keyboard-shortcut-capture:hover,
+.keyboard-shortcut-capture:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.keyboard-shortcut-capture.is-capturing {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.keyboard-shortcuts-message {
+  color: #ffb86b;
+  font-size: 12px;
+}
+
+.keyboard-shortcuts-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.keyboard-shortcuts-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.keyboard-shortcuts-fixed-badge {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-tertiary);
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.keyboard-shortcuts-fixed-note {
+  margin-top: -6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.keyboard-shortcut-keys {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  max-width: 220px;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 4px 7px;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+}

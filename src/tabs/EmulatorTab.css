@@ -1,0 +1,409 @@
+.emu-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-tertiary);
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+.lunii-sim {
+  width: min(680px, 100%);
+  max-width: 100%;
+  background: #3DC8BE;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  transition: opacity 0.16s ease, box-shadow 0.16s ease;
+}
+
+.lunii-sim.is-transparent-preview {
+  opacity: 0.42;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+
+.lunii-sim.is-transparent-preview:hover,
+.lunii-sim.is-transparent-preview:focus-within {
+  opacity: 0.78;
+}
+
+.lunii-top-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px 0;
+}
+
+.lunii-top-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lunii-chip-btn,
+.lunii-close-btn,
+.lunii-drag-handle {
+  border: none;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  color: #0d4b46;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  height: 24px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.lunii-chip-btn:hover,
+.lunii-close-btn:hover,
+.lunii-drag-handle:hover,
+.lunii-chip-btn.is-active {
+  background: rgba(255,255,255,0.42);
+}
+
+.lunii-chip-btn:not(.is-active) {
+  color: rgba(13, 75, 70, 0.62);
+  text-decoration: line-through;
+}
+
+.lunii-close-btn {
+  width: 24px;
+  padding: 0;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.lunii-drag-handle {
+  width: 28px;
+  padding: 0;
+  cursor: grab;
+  letter-spacing: -2px;
+  flex-shrink: 0;
+}
+
+.lunii-drag-handle:active {
+  cursor: grabbing;
+}
+
+.lunii-playback-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+
+.lunii-playback-time {
+  min-width: 36px;
+  font-size: 12px;
+  color: rgba(8, 58, 54, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+
+.lunii-playback-slider {
+  flex: 1;
+  accent-color: #7A3800;
+  cursor: pointer;
+}
+
+.lunii-playback-jump {
+  border: none;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.28);
+  color: #0d4b46;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.lunii-playback-jump:hover {
+  background: rgba(255,255,255,0.4);
+}
+
+.lunii-playback-jump:active {
+  transform: scale(0.97);
+}
+
+/* Corps principal — hauteur fixe pour maintenir les proportions d'origine */
+.lunii-body {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: clamp(16px, 3.6vw, 24px) clamp(14px, 3.6vw, 24px) clamp(18px, 4vw, 28px);
+  height: clamp(260px, 49vw, 336px);
+}
+
+/* Roue gauche */
+.lunii-wheel-zone {
+  flex-shrink: 0;
+  margin-right: clamp(12px, 3vw, 24px);
+}
+
+.lunii-wheel {
+  width: clamp(112px, 25vw, 170px);
+  height: clamp(112px, 25vw, 170px);
+  border-radius: 50%;
+  background: #F5A623;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.2);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+}
+
+.lunii-wheel:active { transform: scale(0.97); }
+
+/* Zones clic gauche/droite invisibles sur la roue */
+.lunii-wheel-left, .lunii-wheel-right {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+}
+.lunii-wheel-left { left: 0; border-radius: 170px 0 0 170px; }
+.lunii-wheel-right { right: 0; border-radius: 0 170px 170px 0; }
+
+/* Écran */
+.lunii-screen-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lunii-screen {
+  background: #3DC8BE;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  position: relative;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+  width: clamp(160px, 32vw, 220px);
+  flex-shrink: 0;
+}
+
+/* L'image utilise screen blend : le noir devient transparent,
+   les personnages blancs ressortent sur le fond teal */
+.lunii-story-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  display: block;
+}
+
+.lunii-story-img--empty {
+  width: 100%;
+  height: 100%;
+}
+
+/* Texte en overlay bas d'écran */
+.lunii-screen-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 5px 9px 6px;
+  background: rgba(15, 80, 75, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.lunii-screen-title {
+  font-size: 11px;
+  color: #e8faf9;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lunii-screen-sub {
+  font-size: 9px;
+  color: #a0ddd9;
+  margin-top: 1px;
+}
+
+/* Boutons droite */
+.lunii-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 2vw, 14px);
+  margin-left: clamp(12px, 3vw, 24px);
+  flex-shrink: 0;
+}
+
+.lunii-btn-round {
+  width: clamp(44px, 8.6vw, 58px);
+  height: clamp(44px, 8.6vw, 58px);
+  border-radius: 50%;
+  border: none;
+  background: #F5A623;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.25);
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, background 0.1s;
+  color: #7A3800;
+  font-weight: 700;
+}
+
+.lunii-btn-round:hover { background: #E8960F; }
+.lunii-btn-round:active { transform: scale(0.92); box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+
+.lunii-btn-ok {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+/* Aide en bas */
+.lunii-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* Carte de transfert */
+.lunii-transfer-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  margin-top: 4px;
+  max-width: 100%;
+}
+
+.lunii-transfer-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.lunii-transfer-links {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.lunii-transfer-link {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: none;
+  border: 0.5px solid var(--color-accent);
+  border-radius: var(--border-radius-md);
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lunii-transfer-link:hover {
+  background: var(--color-accent-light);
+}
+
+/* ── Barre de mode projet / ZIP ─────────────────────────────────────── */
+
+.emu-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 3px;
+}
+
+.emu-mode-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: calc(var(--border-radius-lg) - 2px);
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.emu-mode-btn:hover { background: var(--color-background-secondary); }
+.emu-mode-btn.active {
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+/* Nom du ZIP chargé (dans la mode bar) */
+.emu-zip-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 0 8px;
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bouton désactivé */
+.lunii-btn-round:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .emu-screen {
+    justify-content: flex-start;
+    padding: 12px;
+  }
+
+  .lunii-body {
+    height: auto;
+    padding: 18px 16px 22px;
+  }
+
+  .lunii-wheel-zone {
+    margin-right: 14px;
+  }
+
+  .lunii-wheel {
+    width: 132px;
+    height: 132px;
+  }
+
+  .lunii-wheel-left {
+    border-radius: 132px 0 0 132px;
+  }
+
+  .lunii-wheel-right {
+    border-radius: 0 132px 132px 0;
+  }
+
+  .lunii-screen {
+    width: min(220px, 34vw);
+  }
+
+  .lunii-buttons {
+    margin-left: 14px;
+    gap: 10px;
+  }
+
+  .lunii-btn-round {
+    width: 50px;
+    height: 50px;
+  }
+}

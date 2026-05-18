@@ -1,0 +1,87 @@
+.floating-simulator {
+  position: absolute;
+  z-index: 24;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 96px));
+  aspect-ratio: 1 / 0.62;
+  min-width: 360px;
+  max-width: calc(100vw - 96px);
+  pointer-events: auto;
+  touch-action: none;
+  container-type: size;
+}
+
+.floating-simulator .lunii-sim {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-simulator .lunii-body {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  padding: clamp(12px, 3.2cqw, 24px) clamp(12px, 3.2cqw, 24px) clamp(14px, 3.4cqw, 28px);
+}
+
+.floating-simulator .lunii-wheel-zone {
+  margin-right: clamp(10px, 2.8cqw, 24px);
+}
+
+.floating-simulator .lunii-wheel {
+  width: clamp(88px, min(25cqw, 42cqh), 170px);
+  height: clamp(88px, min(25cqw, 42cqh), 170px);
+}
+
+.floating-simulator .lunii-screen {
+  width: clamp(120px, min(35cqw, 52cqh), 220px);
+}
+
+.floating-simulator .lunii-buttons {
+  gap: clamp(7px, 1.9cqw, 14px);
+  margin-left: clamp(10px, 2.8cqw, 24px);
+}
+
+.floating-simulator .lunii-btn-round {
+  width: clamp(38px, min(8.6cqw, 13cqh), 58px);
+  height: clamp(38px, min(8.6cqw, 13cqh), 58px);
+}
+
+.floating-simulator .lunii-hint,
+.floating-simulator .lunii-transfer-card,
+.floating-simulator .emu-mode-bar {
+  display: none;
+}
+
+.floating-simulator-resize {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, transparent 0 42%, rgba(13, 75, 70, 0.82) 42% 50%, transparent 50% 62%, rgba(13, 75, 70, 0.82) 62% 70%, transparent 70%);
+  cursor: nwse-resize;
+  opacity: 0.7;
+}
+
+.floating-simulator-resize:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 720px) {
+  .floating-simulator {
+    top: 54px;
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+    width: auto;
+    transform: none;
+  }
+}

@@ -1,0 +1,300 @@
+/* Largeurs des colonnes — partagées entre topbar, tabbar et workspace */
+:root {
+  --col-left: clamp(180px, 18vw, 280px);
+  --col-right: clamp(150px, 14vw, 220px);
+  --center-content-max: 980px;
+  --bg0: #111116;
+  --bg1: #18181f;
+  --bg2: #1e1e27;
+  --bg3: #26262f;
+  --border: #2a2a36;
+  --borderLt: #36364a;
+  --text: #ddd9f2;
+  --muted: #6e6c8a;
+  --accent: oklch(0.72 0.15 50);
+  --accentDim: oklch(0.72 0.15 50 / 0.12);
+  --accentBorder: oklch(0.72 0.15 50 / 0.35);
+}
+
+/* Thème clair — suit les préférences système Windows */
+:root {
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F5F5F5;
+  --color-background-tertiary: #EBEBEB;
+  --color-border-tertiary: #E0E0E0;
+  --color-border-secondary: #C8C8C8;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+  --color-accent: #185FA5;
+  --color-accent-light: #E6F1FB;
+  --color-accent-contrast: #FFFFFF;
+  --color-accent-hover: #0C447C;
+  --color-scrollbar-track: #11151a;
+  --color-scrollbar-thumb: #2b3138;
+  --color-scrollbar-thumb-hover: #3a434d;
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+  --font-sans: 'Space Grotesk', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  /* Tokens d'interaction — boutons et controles (theme clair) */
+  --control-bg: #FFFFFF;
+  --control-bg-subtle: #F5F6F8;
+  --control-bg-hover: #EEF3F8;
+  --control-bg-active: #E4ECF5;
+  --control-border: #C8D0DA;
+  --control-border-hover: color-mix(in srgb, var(--color-accent) 46%, #C8D0DA);
+  --control-text: #171923;
+  --control-text-muted: #667085;
+
+  --control-disabled-bg: #F1F3F6;
+  --control-disabled-border: #D9DEE7;
+  --control-disabled-text: #8A94A3;
+
+  --primary-disabled-bg: #E8ECF2;
+  --primary-disabled-border: #D4DBE5;
+  --primary-disabled-text: #7F8997;
+
+  --focus-ring: #185FA5;
+  --focus-ring-soft: rgba(24, 95, 165, 0.18);
+
+  --danger: #D33F3E;
+  --color-danger: var(--danger);
+  --danger-text: #B42318;
+  --danger-bg: #FDECEC;
+  --danger-bg-hover: #FBDADA;
+  --danger-border: #E56B6A;
+  --danger-border-hover: color-mix(in srgb, var(--danger) 82%, #C8D0DA);
+}
+
+/* Thème sombre automatique */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary: var(--bg1);
+    --color-background-secondary: var(--bg2);
+    --color-background-tertiary: var(--bg0);
+    --color-border-tertiary: var(--border);
+    --color-border-secondary: var(--borderLt);
+    --color-text-primary: var(--text);
+    --color-text-secondary: color-mix(in srgb, var(--text) 68%, transparent);
+    --color-text-tertiary: var(--muted);
+    --color-accent: var(--accent);
+    --color-accent-light: var(--accentDim);
+    --color-accent-contrast: var(--bg0);
+    --color-accent-hover: oklch(0.77 0.16 55);
+    --color-scrollbar-track: var(--bg0);
+    --color-scrollbar-thumb: var(--bg3);
+    --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+
+    /* Tokens d'interaction — boutons et controles (theme sombre auto) */
+    --control-bg: var(--bg2);
+    --control-bg-subtle: color-mix(in srgb, var(--bg2) 78%, var(--bg0));
+    --control-bg-hover: color-mix(in srgb, var(--bg3) 86%, white);
+    --control-bg-active: var(--bg3);
+    --control-border: var(--borderLt);
+    --control-border-hover: color-mix(in srgb, var(--accent) 55%, var(--borderLt));
+    --control-text: var(--text);
+    --control-text-muted: color-mix(in srgb, var(--text) 72%, transparent);
+
+    --control-disabled-bg: color-mix(in srgb, var(--bg2) 72%, var(--bg0));
+    --control-disabled-border: color-mix(in srgb, var(--borderLt) 56%, transparent);
+    --control-disabled-text: color-mix(in srgb, var(--text) 42%, transparent);
+
+    --primary-disabled-bg: color-mix(in srgb, var(--accent) 22%, var(--bg2));
+    --primary-disabled-border: color-mix(in srgb, var(--accent) 32%, var(--borderLt));
+    --primary-disabled-text: color-mix(in srgb, var(--text) 55%, transparent);
+
+    --focus-ring: color-mix(in srgb, var(--accent) 72%, white);
+    --focus-ring-soft: color-mix(in srgb, var(--accent) 28%, transparent);
+
+    --danger: #e35a58;
+    --color-danger: var(--danger);
+    --danger-text: #FF9A96;
+    --danger-bg: color-mix(in srgb, #e35a58 14%, var(--bg2));
+    --danger-bg-hover: color-mix(in srgb, #e35a58 24%, var(--bg2));
+    --danger-border: color-mix(in srgb, #e35a58 60%, var(--borderLt));
+    --danger-border-hover: color-mix(in srgb, #e35a58 82%, var(--borderLt));
+  }
+}
+
+/* Préférence explicite de thème : système / sombre / clair */
+:root {
+  color-scheme: light;
+  --bg0: #F5F6F8;
+  --bg1: #FFFFFF;
+  --bg2: #EEF0F4;
+  --bg3: #E1E5EB;
+  --border: #D5DAE3;
+  --borderLt: #C2C9D4;
+  --text: #171923;
+  --muted: #667085;
+  --accent: oklch(0.72 0.15 50);
+  --accentDim: oklch(0.72 0.15 50 / 0.12);
+  --accentBorder: oklch(0.72 0.15 50 / 0.35);
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F5F5F5;
+  --color-background-tertiary: #EBEBEB;
+  --color-border-tertiary: #E0E0E0;
+  --color-border-secondary: #C8C8C8;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+  --color-accent: #185FA5;
+  --color-accent-light: #E6F1FB;
+  --color-accent-contrast: #FFFFFF;
+  --color-accent-hover: #0C447C;
+  --color-scrollbar-track: #F0F2F5;
+  --color-scrollbar-thumb: #C4CBD5;
+  --color-scrollbar-thumb-hover: #AEB7C4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg0: #111116;
+    --bg1: #18181f;
+    --bg2: #1e1e27;
+    --bg3: #26262f;
+    --border: #2a2a36;
+    --borderLt: #36364a;
+    --text: #ddd9f2;
+    --muted: #6e6c8a;
+    --accent: oklch(0.72 0.15 50);
+    --accentDim: oklch(0.72 0.15 50 / 0.12);
+    --accentBorder: oklch(0.72 0.15 50 / 0.35);
+    --color-background-primary: var(--bg1);
+    --color-background-secondary: var(--bg2);
+    --color-background-tertiary: var(--bg0);
+    --color-border-tertiary: var(--border);
+    --color-border-secondary: var(--borderLt);
+    --color-text-primary: var(--text);
+    --color-text-secondary: color-mix(in srgb, var(--text) 68%, transparent);
+    --color-text-tertiary: var(--muted);
+    --color-accent: var(--accent);
+    --color-accent-light: var(--accentDim);
+    --color-accent-contrast: var(--bg0);
+    --color-accent-hover: oklch(0.77 0.16 55);
+    --color-scrollbar-track: var(--bg0);
+    --color-scrollbar-thumb: var(--bg3);
+    --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg0: #111116;
+  --bg1: #18181f;
+  --bg2: #1e1e27;
+  --bg3: #26262f;
+  --border: #2a2a36;
+  --borderLt: #36364a;
+  --text: #ddd9f2;
+  --muted: #6e6c8a;
+  --accent: oklch(0.72 0.15 50);
+  --accentDim: oklch(0.72 0.15 50 / 0.12);
+  --accentBorder: oklch(0.72 0.15 50 / 0.35);
+  --color-background-primary: var(--bg1);
+  --color-background-secondary: var(--bg2);
+  --color-background-tertiary: var(--bg0);
+  --color-border-tertiary: var(--border);
+  --color-border-secondary: var(--borderLt);
+  --color-text-primary: var(--text);
+  --color-text-secondary: color-mix(in srgb, var(--text) 68%, transparent);
+  --color-text-tertiary: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accentDim);
+  --color-accent-contrast: var(--bg0);
+  --color-accent-hover: oklch(0.77 0.16 55);
+  --color-scrollbar-track: var(--bg0);
+  --color-scrollbar-thumb: var(--bg3);
+  --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+
+  /* Tokens d'interaction — boutons et controles (theme sombre force) */
+  --control-bg: var(--bg2);
+  --control-bg-subtle: color-mix(in srgb, var(--bg2) 78%, var(--bg0));
+  --control-bg-hover: color-mix(in srgb, var(--bg3) 86%, white);
+  --control-bg-active: var(--bg3);
+  --control-border: var(--borderLt);
+  --control-border-hover: color-mix(in srgb, var(--accent) 55%, var(--borderLt));
+  --control-text: var(--text);
+  --control-text-muted: color-mix(in srgb, var(--text) 72%, transparent);
+
+  --control-disabled-bg: color-mix(in srgb, var(--bg2) 72%, var(--bg0));
+  --control-disabled-border: color-mix(in srgb, var(--borderLt) 56%, transparent);
+  --control-disabled-text: color-mix(in srgb, var(--text) 42%, transparent);
+
+  --primary-disabled-bg: color-mix(in srgb, var(--accent) 22%, var(--bg2));
+  --primary-disabled-border: color-mix(in srgb, var(--accent) 32%, var(--borderLt));
+  --primary-disabled-text: color-mix(in srgb, var(--text) 55%, transparent);
+
+  --focus-ring: color-mix(in srgb, var(--accent) 72%, white);
+  --focus-ring-soft: color-mix(in srgb, var(--accent) 28%, transparent);
+
+  --danger: #e35a58;
+  --color-danger: var(--danger);
+  --danger-text: #FF9A96;
+  --danger-bg: color-mix(in srgb, #e35a58 14%, var(--bg2));
+  --danger-bg-hover: color-mix(in srgb, #e35a58 24%, var(--bg2));
+  --danger-border: color-mix(in srgb, #e35a58 60%, var(--borderLt));
+  --danger-border-hover: color-mix(in srgb, #e35a58 82%, var(--borderLt));
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg0: #F5F6F8;
+  --bg1: #FFFFFF;
+  --bg2: #EEF0F4;
+  --bg3: #E1E5EB;
+  --border: #D5DAE3;
+  --borderLt: #C2C9D4;
+  --text: #171923;
+  --muted: #667085;
+  --accent: oklch(0.72 0.15 50);
+  --accentDim: oklch(0.72 0.15 50 / 0.12);
+  --accentBorder: oklch(0.72 0.15 50 / 0.35);
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F5F5F5;
+  --color-background-tertiary: #EBEBEB;
+  --color-border-tertiary: #E0E0E0;
+  --color-border-secondary: #C8C8C8;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+  --color-accent: #185FA5;
+  --color-accent-light: #E6F1FB;
+  --color-accent-contrast: #FFFFFF;
+  --color-accent-hover: #0C447C;
+  --color-scrollbar-track: #F0F2F5;
+  --color-scrollbar-thumb: #C4CBD5;
+  --color-scrollbar-thumb-hover: #AEB7C4;
+
+  /* Tokens d'interaction — boutons et controles (theme clair force) */
+  --control-bg: #FFFFFF;
+  --control-bg-subtle: #F5F6F8;
+  --control-bg-hover: #EEF3F8;
+  --control-bg-active: #E4ECF5;
+  --control-border: #C8D0DA;
+  --control-border-hover: color-mix(in srgb, var(--color-accent) 46%, #C8D0DA);
+  --control-text: #171923;
+  --control-text-muted: #667085;
+
+  --control-disabled-bg: #F1F3F6;
+  --control-disabled-border: #D9DEE7;
+  --control-disabled-text: #8A94A3;
+
+  --primary-disabled-bg: #E8ECF2;
+  --primary-disabled-border: #D4DBE5;
+  --primary-disabled-text: #7F8997;
+
+  --focus-ring: #185FA5;
+  --focus-ring-soft: rgba(24, 95, 165, 0.18);
+
+  --danger: #D33F3E;
+  --color-danger: var(--danger);
+  --danger-text: #B42318;
+  --danger-bg: #FDECEC;
+  --danger-bg-hover: #FBDADA;
+  --danger-border: #E56B6A;
+  --danger-border-hover: color-mix(in srgb, var(--danger) 82%, #C8D0DA);
+}

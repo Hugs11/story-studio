@@ -1,0 +1,59 @@
+.delete-dialog-body {
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delete-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+
+.delete-option:hover { background: var(--color-surface-2); }
+
+.delete-option input[type="radio"] {
+  margin-top: 2px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.delete-opt-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.delete-opt-sub {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.delete-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.delete-remember input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.delete-dialog-footer {
+  padding: 10px 20px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
