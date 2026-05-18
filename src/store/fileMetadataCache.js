@@ -7,7 +7,10 @@ const inflightPathSnapshots = new Map();
 let statPermissionAvailable = true;
 
 function normalizePath(path) {
-  return typeof path === 'string' ? path.trim() : '';
+  if (typeof path !== 'string') return '';
+  const trimmed = path.trim();
+  if (trimmed.startsWith('\\\\?\\UNC\\')) return `\\\\${trimmed.slice(8)}`;
+  return trimmed.startsWith('\\\\?\\') ? trimmed.slice(4) : trimmed;
 }
 
 function normalizeTimeMs(value) {
