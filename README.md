@@ -1,10 +1,8 @@
 > 🇬🇧 **English** | [🇫🇷 Français](README.fr.md)
 
 <p align="center">
-  <img src="public/logostory.svg" alt="Story Studio" width="120">
+  <img src="public/logostory.svg" alt="Story Studio" width="240">
 </p>
-
-<h1 align="center">Story Studio</h1>
 
 <p align="center">
   A modern Windows desktop editor for creating, aggregating, testing and exporting Lunii-compatible story packs.
