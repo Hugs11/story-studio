@@ -219,7 +219,7 @@ fn scan_dir_recursive(dir: &std::path::Path) -> Result<Vec<ScanEntry>, String> {
         .filter_map(|e| e.ok())
         .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
         .collect();
-    raw.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    raw.sort_by_key(|a| a.0.to_lowercase());
 
     let mut entries = Vec::new();
     for (name, path) in raw {

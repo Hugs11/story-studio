@@ -775,10 +775,7 @@ pub fn watch_progress_sync(
         ));
     }
 
-    loop {
-        let Some(text) = read_ws_frame(&mut stream)? else {
-            break;
-        };
+    while let Some(text) = read_ws_frame(&mut stream)? {
         if text.is_empty() {
             continue;
         }
