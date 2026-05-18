@@ -13,6 +13,7 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
   <a href="CHANGELOG.md"><img alt="Version 0.8.9" src="https://img.shields.io/badge/version-0.8.9-2F80ED.svg"></a>
+  <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
@@ -25,10 +26,18 @@ ZIP files from one desktop application.
 > Story Studio is a community tool. It is not affiliated with, endorsed by, or
 > sponsored by Lunii.
 
+## Beta Status
+
+Story Studio is currently in beta. The app is usable, but it may still contain
+bugs, edge cases and compatibility issues with some community packs. Please keep
+backup copies of important projects and report reproducible problems through
+GitHub issues.
+
 ## At a Glance
 
 | | |
 |---|---|
+| **Status** | Beta |
 | **Platform** | Windows desktop |
 | **Project format** | `.mbah` |
 | **Export format** | Lunii-compatible ZIP packs |
