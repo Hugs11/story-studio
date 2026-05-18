@@ -1,0 +1,329 @@
+/* ── Panneau principal ─────────────────────────────────────────────────────── */
+
+.rq-panel {
+  position: fixed;
+  bottom: 33px; /* au-dessus de la bottombar */
+  left: 0;
+  right: 0;
+  height: var(--rq-panel-height, 340px);
+  min-height: 120px;
+  max-height: calc(100vh - 72px);
+  background: var(--color-background-primary);
+  border-top: 1px solid var(--color-border-primary, rgba(255,255,255,0.1));
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  z-index: 500;
+}
+
+.rq-panel.is-embedded {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  box-shadow: none;
+  border-top: none;
+  z-index: auto;
+}
+
+.rq-panel-resize-handle {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 9px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.rq-panel-resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 52px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--color-border-tertiary, rgba(255,255,255,0.16));
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.rq-panel-resize-handle:hover::before,
+.rq-panel-resizing .rq-panel-resize-handle::before {
+  opacity: 1;
+  background: var(--color-accent, #6ea8fe);
+}
+
+.rq-panel-resizing {
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.rq-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-border-tertiary, rgba(255,255,255,0.07));
+  flex-shrink: 0;
+}
+
+.rq-panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rq-panel-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-accent, #6ea8fe);
+  background: color-mix(in srgb, var(--color-accent, #6ea8fe) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent, #6ea8fe) 30%, transparent);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+.rq-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rq-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.rq-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Job card ──────────────────────────────────────────────────────────────── */
+
+.rq-job {
+  border-bottom: 1px solid var(--color-border-tertiary, rgba(255,255,255,0.06));
+}
+
+.rq-job:last-child {
+  border-bottom: none;
+}
+
+.rq-job-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rq-job-header:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.rq-job-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rq-job-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.rq-job-folder {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.rq-job-time {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.rq-job-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rq-chevron {
+  font-size: 9px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Badges statut ─────────────────────────────────────────────────────────── */
+
+.rq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.rq-badge-pending {
+  color: var(--color-text-secondary);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.rq-badge-running {
+  color: var(--color-accent, #6ea8fe);
+  background: color-mix(in srgb, var(--color-accent, #6ea8fe) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent, #6ea8fe) 25%, transparent);
+}
+
+.rq-badge-done {
+  color: #4caf80;
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.25);
+}
+
+.rq-badge-error {
+  color: #e57373;
+  background: rgba(229, 115, 115, 0.12);
+  border: 1px solid rgba(229, 115, 115, 0.25);
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────────── */
+
+.rq-spinner {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: rq-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rq-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Détail / logs ─────────────────────────────────────────────────────────── */
+
+.rq-job-detail {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rq-job-logs {
+  max-height: 140px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.rq-log-line {
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.rq-log-error {
+  color: #e57373;
+}
+
+.rq-log-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  font-family: inherit;
+}
+
+.rq-job-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rq-result-path {
+  font-size: 11px;
+  color: #4caf80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.rq-remove-btn {
+  opacity: 0.6;
+}
+
+.rq-remove-btn:hover {
+  opacity: 1;
+}
+
+/* ── Bouton bottombar ──────────────────────────────────────────────────────── */
+
+.rq-bottombar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.rq-bottombar-btn:hover {
+  background: rgba(255,255,255,0.09);
+  color: var(--color-text-primary);
+}
+
+.rq-bottombar-btn.is-active {
+  background: color-mix(in srgb, var(--color-accent, #6ea8fe) 15%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent, #6ea8fe) 30%, transparent);
+  color: var(--color-accent, #6ea8fe);
+}
+
+.rq-bottombar-btn.has-active {
+  color: var(--color-accent, #6ea8fe);
+  border-color: color-mix(in srgb, var(--color-accent, #6ea8fe) 30%, transparent);
+}

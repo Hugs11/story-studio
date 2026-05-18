@@ -1,0 +1,568 @@
+/* ── Tree shell ─────────────────────────────────────────────────────────── */
+.tree-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tree {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0 48px 0;
+}
+
+/* ── Search bar ─────────────────────────────────────────────────────────── */
+.tree-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+}
+
+.tree-search-icon {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tree-search-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.tree-search-input:focus {
+  border-color: var(--color-accent);
+  background: var(--color-background-primary);
+}
+
+.tree-search-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.tree-search-clear {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--color-text-tertiary);
+}
+
+.tree-search-clear:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── End-node separator ─────────────────────────────────────────────────── */
+.tree-end-node-sep {
+  flex-shrink: 0;
+  height: 1px;
+  background: var(--border, #333);
+  margin: 4px 8px;
+  opacity: 0.5;
+}
+
+/* ── Tree item — main layout ────────────────────────────────────────────── */
+.tree-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 27px;
+  padding: 0;          /* horizontal indent applied via inline style */
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tree-item:focus {
+  outline: none;
+}
+
+/* ── Chevron zone (14 × 27 px) ──────────────────────────────────────────── */
+.tree-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 3px;
+  transition: background 0.1s, color 0.1s;
+}
+
+/* CSS right-pointing arrow via border trick */
+.tree-chevron::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 3.5px 0 3.5px 5px;
+  border-color: transparent transparent transparent currentColor;
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tree-chevron.tree-chevron--expanded::before {
+  transform: rotate(90deg);
+}
+
+/* Separate hover for chevron zone only */
+.tree-chevron:hover {
+  background: var(--bg3);
+  color: var(--text);
+  border-radius: 3px;
+}
+
+/* Spacer for non-menu items (keeps icon alignment with menu icon) */
+.tree-chevron-spacer {
+  flex-shrink: 0;
+  width: 14px;
+  height: 100%;
+}
+
+/* ── Item body (icon + label + badges + dot) ────────────────────────────── */
+.tree-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-right: 8px;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ── Hover — two separate zones ─────────────────────────────────────────── */
+/* Body hover: subtle tint when hovering the row (but not the chevron) */
+.tree-item:hover .tree-item-body {
+  background: color-mix(in srgb, var(--bg3) 40%, transparent);
+}
+
+/* Cancel body tint when the chevron itself is hovered */
+.tree-item:has(.tree-chevron:hover) .tree-item-body {
+  background: transparent;
+}
+
+/* No extra hover on already-selected items */
+.tree-item.active:hover .tree-item-body {
+  background: transparent;
+}
+
+/* ── Selection state ─────────────────────────────────────────────────────── */
+.tree-item.active {
+  background: var(--color-accent-light);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.tree-item.active .ti-label {
+  color: var(--color-accent);
+}
+
+.tree-item.active .tree-chevron {
+  color: var(--color-accent);
+}
+
+/* ── Ancestor highlight (parent of a selected node) ─────────────────────── */
+.tree-item.ancestor-sel {
+  background: color-mix(in srgb, var(--color-accent-light) 50%, transparent);
+}
+
+/* ── Icon and label ─────────────────────────────────────────────────────── */
+.ti-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.tree-item.is-colored {
+  background: color-mix(in srgb, var(--tree-node-color) 36%, transparent);
+}
+
+.tree-item.is-colored:hover {
+  background: color-mix(in srgb, var(--tree-node-color) 46%, transparent);
+}
+
+.tree-item.is-colored.active {
+  background: color-mix(in srgb, var(--tree-node-color) 50%, var(--color-accent-light));
+}
+
+.tree-item.is-colored .tree-item-body,
+.tree-item.is-colored:hover .tree-item-body,
+.tree-item.is-colored.active .tree-item-body {
+  background: transparent;
+  box-shadow: none;
+}
+
+.tree-item.active .ti-icon {
+  color: var(--color-accent);
+}
+
+.ti-label {
+  flex: 1 1 auto;
+  min-width: 30px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: inherit;
+}
+
+/* ── DnD — insert-before/after lines ────────────────────────────────────── */
+.tree-item.insert-before::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tree-item.insert-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── DnD — drop-target (drop inside a folder) ───────────────────────────── */
+.tree-item.drop-target,
+.tree-item.is-drop-over {
+  outline: 1.5px dashed var(--color-accent);
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+
+/* Count badge: shows total direct children when folder is collapsed */
+.badge-count {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg3);
+  color: var(--muted);
+  border: 0.5px solid var(--border);
+}
+
+.badge-zip {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #EF9F27 12%, transparent);
+  color: color-mix(in srgb, #EF9F27 90%, currentColor);
+  border: 0.5px solid color-mix(in srgb, #EF9F27 50%, transparent);
+}
+
+.badge-nav {
+  display: block;
+  max-width: 52px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 0.5px solid;
+  white-space: nowrap;
+}
+
+.tree-item-body > .tooltip-wrap {
+  flex: 0 99 auto;
+  min-width: 0;
+  max-width: 52px;
+  overflow: hidden;
+}
+
+/* Nav badges — light mode */
+.badge-nav--return {
+  background: #E7F4E8;
+  color: #1F6A32;
+  border-color: #6FB27A;
+}
+
+.badge-nav--home {
+  background: #E8F0FB;
+  color: #285A96;
+  border-color: #79A7E0;
+}
+
+.badge-nav--continuation {
+  background: #FFF3E2;
+  color: #9A5B00;
+  border-color: #EF9F27;
+}
+
+.badge-nav--graph {
+  background: #EEF0FB;
+  color: #3D4CAC;
+  border-color: #8994D4;
+}
+
+.badge-nav--end-node {
+  background: #F3EDF2;
+  color: #714B67;
+  border-color: #B58AA9;
+}
+
+.badge-nav--end-night {
+  background: #F1E9FF;
+  color: #6840A3;
+  border-color: #A982E0;
+}
+
+.badge-nav--error {
+  background: #FCEBEB;
+  color: #B42318;
+  border-color: #E24B4A;
+}
+
+.badge-nav--warn {
+  background: #FFF3E2;
+  color: #9A5B00;
+  border-color: #EF9F27;
+}
+
+/* Nav badges — dark mode (via prefers-color-scheme) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .badge-nav--return {
+    background: #102217;
+    color: #8FD39A;
+    border-color: #3D7D48;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--home {
+    background: #112033;
+    color: #9CC2F0;
+    border-color: #426D9F;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--continuation {
+    background: #2B1A00;
+    color: #F6C06A;
+    border-color: #EF9F27;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--graph {
+    background: #151B3B;
+    color: #9AA5E8;
+    border-color: #4A5AAC;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--end-node {
+    background: #211821;
+    color: #D7B9CF;
+    border-color: #7B5C73;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--end-night {
+    background: #21162F;
+    color: #D4B7FF;
+    border-color: #7650A7;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--error {
+    background: #2A0808;
+    color: #FF9A96;
+    border-color: #E24B4A;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--warn {
+    background: #2B1A00;
+    color: #F6C06A;
+    border-color: #EF9F27;
+  }
+}
+
+/* Nav badges — dark theme explicit */
+:root[data-theme="dark"] .badge-nav--return {
+  background: #102217;
+  color: #8FD39A;
+  border-color: #3D7D48;
+}
+
+:root[data-theme="dark"] .badge-nav--home {
+  background: #112033;
+  color: #9CC2F0;
+  border-color: #426D9F;
+}
+
+:root[data-theme="dark"] .badge-nav--continuation {
+  background: #2B1A00;
+  color: #F6C06A;
+  border-color: #EF9F27;
+}
+
+:root[data-theme="dark"] .badge-nav--graph {
+  background: #151B3B;
+  color: #9AA5E8;
+  border-color: #4A5AAC;
+}
+
+:root[data-theme="dark"] .badge-nav--end-node {
+  background: #211821;
+  color: #D7B9CF;
+  border-color: #7B5C73;
+}
+
+:root[data-theme="dark"] .badge-nav--end-night {
+  background: #21162F;
+  color: #D4B7FF;
+  border-color: #7650A7;
+}
+
+:root[data-theme="dark"] .badge-nav--error {
+  background: #2A0808;
+  color: #FF9A96;
+  border-color: #E24B4A;
+}
+
+:root[data-theme="dark"] .badge-nav--warn {
+  background: #2B1A00;
+  color: #F6C06A;
+  border-color: #EF9F27;
+}
+
+/* ── Multi-select bar ───────────────────────────────────────────────────── */
+.tree-multisel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: var(--color-accent-light);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  font-size: 11px;
+  color: var(--color-accent);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.tree-multisel-del {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.tree-multisel-del:hover:not(:disabled) {
+  background: var(--danger-bg-hover);
+  border-color: var(--danger-border-hover);
+  color: var(--danger-text);
+}
+
+.tree-multisel-del:focus-visible {
+  outline: 2px solid var(--danger-border-hover);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+.tree-multisel-del:disabled {
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ── Hover record button (legacy, kept for compatibility) ───────────────── */
+.ti-record-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s;
+  color: var(--color-text-primary);
+}
+
+.tree-item:hover .ti-record-btn {
+  opacity: 0.7;
+}
+
+.tree-item:hover .ti-record-btn:hover {
+  opacity: 1;
+}
+
+/* ── Add buttons (legacy) ───────────────────────────────────────────────── */
+.tree-add-btn {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 4px 8px;
+  margin: 1px 5px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tree-add-btn:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-accent);
+}
+
+.tree-add-menu {
+  margin-top: 4px;
+  padding-left: 8px;
+}
+
+/* ── OS file drop overlay ───────────────────────────────────────────────── */
+.tree-os-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(61, 155, 233, 0.1);
+  border: 2px dashed #3d9be9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 50;
+  font-size: 0.8rem;
+  color: #3d9be9;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}

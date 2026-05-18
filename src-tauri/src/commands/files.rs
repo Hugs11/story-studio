@@ -1,0 +1,337 @@
+use crate::services::project_files;
+use crate::support::lunii_zip_validator::{validate_lunii_zip, LuniiZipValidationReport};
+
+#[tauri::command]
+pub fn save_recording(
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+    filename: String,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    project_files::save_recording(
+        save_path.as_deref(),
+        workspace_dir.as_deref(),
+        &filename,
+        &data,
+    )
+}
+
+#[tauri::command]
+pub fn delete_file(path: String, save_path: Option<String>) -> Result<(), String> {
+    project_files::delete_file(&path, save_path.as_deref())
+}
+
+#[tauri::command]
+pub fn delete_workspace_media_file(path: String, workspace_dir: String) -> Result<(), String> {
+    project_files::delete_workspace_media_file(&path, &workspace_dir)
+}
+
+#[tauri::command]
+pub async fn concat_audio_files(
+    save_path: String,
+    input_paths: Vec<String>,
+    output_file_name: String,
+    silence_between_sec: f64,
+    workspace_dir: Option<String>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::concat_audio_files(
+            &save_path,
+            &input_paths,
+            &output_file_name,
+            silence_between_sec,
+            workspace_dir.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+pub fn extract_audio_embedded_image(audio_path: String) -> Result<Option<String>, String> {
+    project_files::extract_audio_embedded_image(&audio_path)
+}
+
+#[tauri::command]
+pub fn scan_unused_project_files(
+    save_path: String,
+    used_paths: Vec<String>,
+) -> Result<project_files::CleanupScanResult, String> {
+    project_files::scan_unused_files(&save_path, &used_paths)
+}
+
+#[tauri::command]
+pub fn delete_unused_project_files(paths: Vec<String>, save_path: String) -> Result<usize, String> {
+    project_files::delete_unused_files(&paths, &save_path)
+}
+
+#[tauri::command]
+pub async fn trim_audio(
+    input_path: String,
+    start_sec: f64,
+    end_sec: f64,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::TrimAudioResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::trim_audio(&input_path, start_sec, end_sec, save_path.as_deref(), workspace_dir.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+pub async fn cut_audio(
+    input_path: String,
+    cut_start: f64,
+    cut_end: f64,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::TrimAudioResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::cut_audio(&input_path, cut_start, cut_end, save_path.as_deref(), workspace_dir.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+pub async fn audio_edit_info(
+    input_path: String,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::AudioEditInfo, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::audio_edit_info(&input_path, save_path.as_deref(), workspace_dir.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn preview_audio_edit(
+    input_path: String,
+    mode: String,
+    start_sec: f64,
+    end_sec: f64,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+    fade_in_sec: f64,
+    fade_out_sec: f64,
+    cut_fade_sec: f64,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::preview_audio_edit(
+            &input_path,
+            &mode,
+            start_sec,
+            end_sec,
+            save_path.as_deref(),
+            workspace_dir.as_deref(),
+            fade_in_sec,
+            fade_out_sec,
+            cut_fade_sec,
+        )
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn apply_audio_edit(
+    input_path: String,
+    mode: String,
+    start_sec: f64,
+    end_sec: f64,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+    fade_in_sec: f64,
+    fade_out_sec: f64,
+    cut_fade_sec: f64,
+) -> Result<project_files::TrimAudioResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::apply_audio_edit(
+            &input_path,
+            &mode,
+            start_sec,
+            end_sec,
+            save_path.as_deref(),
+            workspace_dir.as_deref(),
+            fade_in_sec,
+            fade_out_sec,
+            cut_fade_sec,
+        )
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+pub async fn commit_audio_preview(
+    input_path: String,
+    preview_path: String,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::TrimAudioResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::commit_audio_preview(&input_path, &preview_path, save_path.as_deref(), workspace_dir.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
+pub async fn restore_audio_original(
+    input_path: String,
+    save_path: Option<String>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::TrimAudioResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::restore_audio_original(&input_path, save_path.as_deref(), workspace_dir.as_deref())
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanEntry {
+    #[serde(rename = "type")]
+    pub entry_type: &'static str,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<ScanEntry>,
+}
+
+const AUDIO_EXTENSIONS: &[&str] = &["mp3", "ogg", "wav", "m4a", "webm", "flac"];
+const ARCHIVE_EXTENSIONS: &[&str] = &["zip", "7z"];
+const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "bmp", "gif"];
+
+fn scan_dir_recursive(dir: &std::path::Path) -> Result<Vec<ScanEntry>, String> {
+    let read_dir = std::fs::read_dir(dir)
+        .map_err(|e| format!("Impossible de lire {} : {}", dir.display(), e))?;
+
+    let mut raw: Vec<(String, std::path::PathBuf)> = read_dir
+        .filter_map(|e| e.ok())
+        .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
+        .collect();
+    raw.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+
+    let mut entries = Vec::new();
+    for (name, path) in raw {
+        if path.is_dir() {
+            let children = scan_dir_recursive(&path)?;
+            if !children.is_empty() {
+                entries.push(ScanEntry {
+                    entry_type: "folder",
+                    name,
+                    path: None,
+                    children,
+                });
+            }
+        } else {
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            let entry_type = if AUDIO_EXTENSIONS.contains(&ext.as_str()) {
+                "audio"
+            } else if ARCHIVE_EXTENSIONS.contains(&ext.as_str()) {
+                "zip"
+            } else {
+                continue;
+            };
+            entries.push(ScanEntry {
+                entry_type,
+                name,
+                path: Some(path.to_string_lossy().to_string()),
+                children: Vec::new(),
+            });
+        }
+    }
+    Ok(entries)
+}
+
+#[tauri::command]
+pub fn scan_import_folder(folder_path: String) -> Result<ScanEntry, String> {
+    let root = std::path::PathBuf::from(&folder_path);
+    if !root.is_dir() {
+        return Err(format!("Dossier introuvable : {}", folder_path));
+    }
+    let name = root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Dossier importé")
+        .to_string();
+    let children = scan_dir_recursive(&root)?;
+    Ok(ScanEntry {
+        entry_type: "folder",
+        name,
+        path: None,
+        children,
+    })
+}
+
+fn collect_media_files_recursive(dir: &std::path::Path, out: &mut Vec<String>) {
+    let Ok(read_dir) = std::fs::read_dir(dir) else { return };
+    let mut entries: Vec<std::path::PathBuf> = read_dir
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .collect();
+    entries.sort_by(|a, b| {
+        a.file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase()
+            .cmp(&b.file_name().unwrap_or_default().to_string_lossy().to_lowercase())
+    });
+    for path in entries {
+        if path.is_dir() {
+            collect_media_files_recursive(&path, out);
+        } else {
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            if AUDIO_EXTENSIONS.contains(&ext.as_str())
+                || IMAGE_EXTENSIONS.contains(&ext.as_str())
+                || ARCHIVE_EXTENSIONS.contains(&ext.as_str())
+            {
+                out.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+}
+
+#[tauri::command]
+pub fn list_folder_media_files(folder_path: String) -> Result<Vec<String>, String> {
+    let root = std::path::PathBuf::from(&folder_path);
+    if !root.is_dir() {
+        return Err(format!("Dossier introuvable : {}", folder_path));
+    }
+    let mut files = Vec::new();
+    collect_media_files_recursive(&root, &mut files);
+    Ok(files)
+}
+
+#[tauri::command]
+pub fn validate_lunii_zip_cmd(zip_path: String) -> LuniiZipValidationReport {
+    match project_files::validate_existing_pack_path(&zip_path) {
+        Ok(canonical) => validate_lunii_zip(&canonical.to_string_lossy()),
+        Err(e) => LuniiZipValidationReport {
+            zip_path,
+            valid: false,
+            issues: vec![crate::support::lunii_zip_validator::ValidationIssue {
+                severity: "error".to_string(),
+                code: "INVALID_PATH".to_string(),
+                message: e,
+            }],
+        },
+    }
+}

@@ -1,0 +1,61 @@
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-bubble {
+  position: fixed;
+  background: var(--color-surface-2, #2a2a2a);
+  color: var(--color-text, #e0e0e0);
+  border: 1px solid var(--color-border, #3a3a3a);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  width: fit-content;
+  max-width: 500px;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.tooltip-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: var(--tooltip-arrow-left, 16px);
+  border: 5px solid transparent;
+  border-bottom-color: var(--color-border, #3a3a3a);
+  transform: translateX(-50%);
+}
+
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: var(--tooltip-arrow-left, 16px);
+  border: 5px solid transparent;
+  border-bottom-color: var(--color-surface-2, #2a2a2a);
+  transform: translateX(-50%);
+}
+
+.tooltip-bubble.is-wrap {
+  max-width: 420px;
+}
+
+.tooltip-bubble.is-above::before {
+  top: 100%;
+  bottom: auto;
+  border-bottom-color: transparent;
+  border-top-color: var(--color-border, #3a3a3a);
+}
+
+.tooltip-bubble.is-above::after {
+  top: calc(100% - 1px);
+  bottom: auto;
+  border-bottom-color: transparent;
+  border-top-color: var(--color-surface-2, #2a2a2a);
+}

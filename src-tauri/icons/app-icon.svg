@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#FF8040"/>
+      <stop offset="100%" stop-color="#E85510"/>
+    </linearGradient>
+    <linearGradient id="device" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0EAE4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond arrondi orange -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+
+  <!-- Corps de la Lunii (boîtier arrondi) -->
+  <rect x="96" y="128" width="320" height="256" rx="48" fill="url(#device)"/>
+
+  <!-- Grande roue de navigation — la feature distinctive de la Lunii -->
+  <circle cx="256" cy="288" r="100" fill="#E85510"/>
+  <circle cx="256" cy="288" r="72" fill="white"/>
+  <circle cx="256" cy="288" r="26" fill="#E85510"/>
+
+  <!-- Petit écran / bandeau en haut du boîtier -->
+  <rect x="128" y="148" width="256" height="76" rx="20" fill="#FFD4B8"/>
+
+  <!-- Ondes audio sur l'écran -->
+  <rect x="176" y="168" width="10" height="36" rx="5" fill="#E85510"/>
+  <rect x="198" y="158" width="10" height="56" rx="5" fill="#E85510"/>
+  <rect x="220" y="165" width="10" height="42" rx="5" fill="#E85510"/>
+  <rect x="242" y="154" width="10" height="64" rx="5" fill="#E85510"/>
+  <rect x="264" y="162" width="10" height="48" rx="5" fill="#E85510"/>
+  <rect x="286" y="168" width="10" height="36" rx="5" fill="#E85510"/>
+  <rect x="308" y="164" width="10" height="44" rx="5" fill="#E85510"/>
+
+  <!-- Flèche gauche sur la roue -->
+  <polygon points="188,288 208,270 208,306" fill="white" opacity="0.7"/>
+  <!-- Flèche droite sur la roue -->
+  <polygon points="324,288 304,270 304,306" fill="white" opacity="0.7"/>
+</svg>

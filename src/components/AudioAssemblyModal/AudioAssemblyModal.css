@@ -1,0 +1,230 @@
+.audio-assembly-modal {
+  width: min(640px, 92vw);
+  max-height: 86vh;
+}
+
+.audio-assembly-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  overflow: auto;
+  color: var(--color-text-primary);
+}
+
+.audio-assembly-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.audio-assembly-note {
+  font-size: 11px;
+  color: #f5d060;
+  background: rgba(245, 208, 96, 0.08);
+  border: 0.5px solid rgba(245, 208, 96, 0.28);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+
+.audio-assembly-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audio-assembly-section h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+
+.audio-assembly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 6px;
+  padding: 6px;
+  background: var(--color-background-tertiary);
+}
+
+.audio-assembly-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 48px 26px 26px 26px;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  user-select: none;
+}
+
+.audio-assembly-grip {
+  color: var(--color-text-tertiary);
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.audio-assembly-row.is-dragging {
+  opacity: 0.35;
+}
+
+.audio-assembly-row {
+  position: relative;
+}
+
+.audio-assembly-row.is-drag-over-above::before,
+.audio-assembly-row.is-drag-over-below::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.audio-assembly-row.is-drag-over-above::before { top: -3px; }
+.audio-assembly-row.is-drag-over-below::after  { bottom: -3px; }
+
+.audio-assembly-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  user-select: text;
+  cursor: text;
+}
+
+.audio-assembly-duration {
+  color: var(--color-text-tertiary);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  text-align: right;
+}
+
+.audio-assembly-icon-btn {
+  width: 26px;
+  height: 24px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.audio-assembly-icon-btn:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.audio-assembly-icon-btn:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.audio-assembly-icon-btn.is-danger {
+  color: #e05555;
+}
+
+.audio-assembly-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.audio-assembly-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.audio-assembly-field.is-inline {
+  flex-direction: row;
+  align-items: center;
+  padding-left: 22px;
+}
+
+.audio-assembly-field input {
+  height: 30px;
+  border-radius: 5px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  padding: 0 9px;
+  outline: none;
+}
+
+.audio-assembly-field input:focus {
+  border-color: var(--color-accent);
+}
+
+.audio-assembly-field.is-inline input {
+  width: 82px;
+}
+
+.audio-assembly-destination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.audio-assembly-destination strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.audio-assembly-error {
+  font-size: 12px;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border: 0.5px solid rgba(248, 113, 113, 0.25);
+  border-radius: 5px;
+  padding: 8px 10px;
+  line-height: 1.4;
+}
+
+.audio-assembly-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.audio-assembly-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.audio-assembly-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: audio-assembly-spin 0.75s linear infinite;
+}
+
+@keyframes audio-assembly-spin {
+  to { transform: rotate(360deg); }
+}

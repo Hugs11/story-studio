@@ -1,0 +1,110 @@
+.record-modal {
+  width: 320px;
+}
+
+.record-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px;
+  min-height: 140px;
+  justify-content: center;
+}
+
+.record-countdown {
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--color-accent);
+  line-height: 1;
+  animation: pulse-num 1s ease-in-out infinite;
+}
+
+@keyframes pulse-num {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.record-pulse {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #E24B4A;
+  animation: pulse-rec 1s ease-in-out infinite;
+}
+
+@keyframes pulse-rec {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(226,75,74,0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(226,75,74,0); }
+}
+
+.record-timer {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.record-preview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+.record-preview-icon-svg {
+  width: 40px;
+  height: 40px;
+}
+
+.record-hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.record-name-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.record-name-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface-secondary, #1e1e1e);
+  border: 1px solid var(--color-border, #444);
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  padding: 5px 8px;
+  font-family: monospace;
+}
+
+.record-name-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.record-name-ext {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.record-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-danger {
+  background: #E24B4A;
+  color: white;
+  border-color: #E24B4A;
+}
+
+.btn-danger:hover {
+  background: #c93b3a;
+}

@@ -1,0 +1,200 @@
+.images-side-by-side {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.root-image-col {
+  flex: 0 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.root-image-sublabel {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+}
+
+.root-image-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.root-image-heading .media-col-header {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.root-image-mode {
+  flex-shrink: 0;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg-subtle);
+}
+
+.root-image-mode-btn {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--control-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+}
+
+.root-image-mode-btn:hover {
+  color: var(--control-text);
+}
+
+.root-image-mode-btn.is-active {
+  background: var(--control-bg);
+  color: var(--control-text);
+  box-shadow: inset 0 0 0 1px var(--control-border);
+}
+
+.root-image-mode-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.root-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.root-name-input {
+  min-height: 36px;
+}
+
+.root-convention-btn {
+  min-width: 220px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 38%, var(--color-border-secondary));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-background-secondary));
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.root-convention-btn:hover {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-background-secondary));
+  border-color: var(--color-accent);
+}
+
+.images-side-by-side > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.name-gen {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--color-background-secondary) 84%, var(--color-background-primary));
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 86%, transparent);
+}
+
+.name-gen-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.name-gen-grid label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.name-gen-opt {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.name-gen-preview {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 86%, transparent);
+  overflow: hidden;
+}
+
+.name-gen-preview-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.name-gen-preview-value {
+  min-width: 0;
+  font-size: 11px;
+  color: var(--color-accent-light, var(--color-accent));
+  font-family: var(--font-mono, monospace);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .root-image-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .root-image-mode {
+    align-self: flex-start;
+    max-width: 100%;
+  }
+
+  .root-image-mode-btn {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .images-side-by-side {
+    flex-direction: column;
+  }
+
+  .root-name-row {
+    flex-direction: column;
+  }
+
+  .root-convention-btn {
+    min-width: 0;
+    min-height: 36px;
+  }
+
+  .name-gen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .name-gen-grid label {
+    text-align: left;
+  }
+}

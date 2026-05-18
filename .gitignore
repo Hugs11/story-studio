@@ -1,0 +1,68 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+
+# Story Studio local projects, generated assets and diagnostic dumps
+*.mbah
+fichiers-importes/
+enregistrements/
+voix-generees/
+images-generees/
+zips-extraits/
+exports/
+*_assets/
+fidelity-dump/
+*.original.story.json
+*.generated.story.json
+*.project.json
+
+# Local agent / assistant instructions (not part of the public repo)
+AGENTS.md
+CLAUDE.md
+Documentation/
+docs/internal/
+
+# Local environment overrides
+*.local
+.env
+.env.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Third-party binaries at repo root (not committed — see src-tauri/tools/)
+tools/*.exe
+tools/*.dll
+
+# Claude Code project settings (local only)
+.claude/
+
+# Debug screenshots et artefacts de session MCP/Playwright
+/app-*.png
+modal-*.png
+tooltip-*.png
+story-editor.png
+center-scrolled.png
+.playwright-mcp/
+
+# Backups projet générés à l'exécution
+sauvegardes/
+.story-studio-backups/
