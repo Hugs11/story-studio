@@ -1,174 +1,176 @@
-# Guide d'installation — Images IA (ComfyUI)
+> 🇬🇧 **English** | [🇫🇷 Français](comfyui-setup.fr.md)
 
-> **Version** : Story Studio 0.8.7 · Windows 10/11 · Dernière mise à jour : 2026-05-16
+# Setup guide — AI images (ComfyUI)
 
-ComfyUI est un outil de génération d'images par intelligence artificielle (basé sur Stable Diffusion). Il produit des illustrations pour tes histoires à partir de descriptions textuelles, directement sur ton ordinateur.
+> **Version**: Story Studio 0.8.7 · Windows 10/11 · Last updated: 2026-05-16
 
-Cet outil est optionnel. Story Studio fonctionne parfaitement sans lui — tu peux toujours utiliser tes propres images.
+ComfyUI is an AI image generation tool (based on Stable Diffusion). It produces illustrations for your stories from text descriptions, directly on your computer.
+
+This tool is optional. Story Studio works perfectly fine without it — you can always use your own images.
 
 ---
 
-## Prérequis système
+## System requirements
 
-| Élément | Minimum | Recommandé |
+| Item | Minimum | Recommended |
 |---|---|---|
-| Système | Windows 10 64-bit | Windows 11 64-bit |
-| RAM | 8 Go | 16 Go |
-| GPU NVIDIA | 4 Go VRAM | 8 Go VRAM+ |
-| Espace disque | 10 Go libres | 30 Go libres |
+| OS | Windows 10 64-bit | Windows 11 64-bit |
+| RAM | 8 GB | 16 GB |
+| NVIDIA GPU | 4 GB VRAM | 8 GB VRAM+ |
+| Disk space | 10 GB free | 30 GB free |
 
-> **Sans GPU NVIDIA** : ComfyUI peut fonctionner sur CPU mais la génération dure plusieurs minutes par image. Ce n'est praticable que pour des tests occasionnels. Pour un usage régulier, un GPU NVIDIA est fortement recommandé.
+> **Without an NVIDIA GPU**: ComfyUI can run on CPU but generation takes several minutes per image. This is only practical for occasional tests. For regular usage, an NVIDIA GPU is strongly recommended.
 
 ---
 
-## 1. Installation de ComfyUI
+## 1. Install ComfyUI
 
-La manière la plus simple sur Windows est d'utiliser le **pack portable officiel** de ComfyUI.
+The easiest way on Windows is to use the **official portable pack** of ComfyUI.
 
-**Étape 1** — Va sur la page GitHub de ComfyUI :
+**Step 1** — Go to the ComfyUI GitHub page:
 `https://github.com/comfyanonymous/ComfyUI`
 
-**Étape 2** — Dans la section **Releases** (colonne de droite), télécharge la dernière version du fichier nommé :
-- `ComfyUI_windows_portable_nvidia.7z` (pour GPU NVIDIA)
-- ou `ComfyUI_windows_portable_cpu.7z` (pour CPU uniquement)
+**Step 2** — In the **Releases** section (right column), download the latest version of the file named:
+- `ComfyUI_windows_portable_nvidia.7z` (for NVIDIA GPU)
+- or `ComfyUI_windows_portable_cpu.7z` (for CPU only)
 
-[SCREENSHOT: Page GitHub ComfyUI avec la section Releases et le fichier portable surligné]
+[SCREENSHOT: ComfyUI GitHub page with the Releases section and the portable file highlighted]
 
-**Étape 3** — Extrais l'archive dans le dossier de ton choix, par exemple `D:\ComfyUI\`.
+**Step 3** — Extract the archive into the folder of your choice, e.g. `D:\ComfyUI\`.
 
-[SCREENSHOT: Explorateur Windows montrant D:\ComfyUI\ après extraction]
+[SCREENSHOT: Windows Explorer showing D:\ComfyUI\ after extraction]
 
-**Étape 4** — Dans le dossier extrait, tu trouves un fichier :
-- `run_nvidia_gpu.bat` (pour GPU)
-- ou `run_cpu.bat` (pour CPU)
+**Step 4** — In the extracted folder, you'll find a file:
+- `run_nvidia_gpu.bat` (for GPU)
+- or `run_cpu.bat` (for CPU)
 
-**Garde le chemin complet de ce fichier** — tu en auras besoin dans Story Studio.
-
----
-
-## 2. Télécharger un modèle d'image
-
-ComfyUI sans modèle ne peut pas générer d'images. Tu dois en télécharger au moins un.
-
-**Pour les histoires Lunii (images 320×240, style dessin)**, un modèle adapté est par exemple **Dreamshaper** ou **Deliberate** (modèles Stable Diffusion 1.5).
-
-1. Va sur [civitai.com](https://civitai.com) ou [huggingface.co](https://huggingface.co)
-2. Cherche un modèle SD 1.5 au style cartoon/illustration
-3. Télécharge le fichier `.safetensors`
-4. Copie-le dans : `D:\ComfyUI\ComfyUI\models\checkpoints\`
-
-[SCREENSHOT: Dossier models\checkpoints\ avec un fichier .safetensors visible]
+**Keep the full path to this file** — you'll need it in Story Studio.
 
 ---
 
-## 3. Premier lancement manuel (test)
+## 2. Download an image model
 
-1. Double-clique sur `run_nvidia_gpu.bat` (ou `run_cpu.bat`)
-2. Une fenêtre noire s'ouvre avec des logs — laisse-la ouverte
-3. Quand tu vois `To see the GUI go to: http://127.0.0.1:8188`, ComfyUI est prêt
-4. Tu peux ouvrir ce lien dans ton navigateur pour vérifier
+ComfyUI without a model can't generate images. You need to download at least one.
 
-[SCREENSHOT: Fenêtre CMD avec le message "To see the GUI go to: http://127.0.0.1:8188"]
+**For Lunii stories (320×240 illustrations, drawing style)**, a suitable model is for example **Dreamshaper** or **Deliberate** (Stable Diffusion 1.5 models).
+
+1. Go to [civitai.com](https://civitai.com) or [huggingface.co](https://huggingface.co)
+2. Look for an SD 1.5 model with a cartoon/illustration style
+3. Download the `.safetensors` file
+4. Copy it into: `D:\ComfyUI\ComfyUI\models\checkpoints\`
+
+[SCREENSHOT: models\checkpoints\ folder with a visible .safetensors file]
 
 ---
 
-## 4. Connexion à Story Studio
+## 3. First manual launch (test)
 
-[SCREENSHOT: Story Studio — onglet Options, section "Génération d'images IA — ComfyUI"]
+1. Double-click `run_nvidia_gpu.bat` (or `run_cpu.bat`)
+2. A black window opens with logs — leave it open
+3. When you see `To see the GUI go to: http://127.0.0.1:8188`, ComfyUI is ready
+4. You can open this link in your browser to verify
 
-1. Ouvre Story Studio → onglet **Options**
-2. Dans la section **Génération d'images IA — ComfyUI** :
-   - Active le toggle **"Activer la génération d'images IA"**
-3. Configure les champs :
+[SCREENSHOT: CMD window with the message "To see the GUI go to: http://127.0.0.1:8188"]
 
-| Champ | Valeur | Description |
+---
+
+## 4. Connect to Story Studio
+
+[SCREENSHOT: Story Studio — Options tab, "AI image generation — ComfyUI" section]
+
+1. Open Story Studio → **Options** tab
+2. In the **AI image generation — ComfyUI** section:
+   - Enable the **"Enable AI image generation"** toggle
+3. Configure the fields:
+
+| Field | Value | Description |
 |---|---|---|
-| **URL du serveur ComfyUI** | `http://127.0.0.1:8188` | Ne change que si tu as modifié le port |
-| **Fichier de démarrage (.bat)** | ex. `D:\ComfyUI\run_nvidia_gpu.bat` | Chemin vers le .bat de lancement |
-| **Démarrer ComfyUI automatiquement** | À ton choix | Lance le .bat si ComfyUI ne répond pas |
+| **ComfyUI server URL** | `http://127.0.0.1:8188` | Only change if you modified the port |
+| **Startup file (.bat)** | e.g. `D:\ComfyUI\run_nvidia_gpu.bat` | Path to the launch .bat |
+| **Start ComfyUI automatically** | Your choice | Launches the .bat if ComfyUI doesn't respond |
 
-4. Clique sur **"Tester ComfyUI"**
+4. Click **"Test ComfyUI"**
 
-Si tout va bien : **"ComfyUI accessible et prêt."**
-
----
-
-## 5. Démarrage automatique
-
-Avec **"Démarrer ComfyUI automatiquement"** activé et le chemin du `.bat` renseigné, Story Studio lance ComfyUI lui-même si nécessaire au moment où tu demandes une image.
-
-> **Note** : ComfyUI met généralement 30–90 secondes à démarrer. Story Studio attend jusqu'à 60 secondes avant d'afficher une erreur.
+If all is well: **"ComfyUI reachable and ready."**
 
 ---
 
-## 6. Importer un workflow
+## 5. Auto-start
 
-Story Studio fonctionne avec des **workflows ComfyUI** — des recettes qui définissent comment générer les images. Des workflows sont fournis intégrés dans l'application.
+With **"Start ComfyUI automatically"** enabled and the `.bat` path filled in, Story Studio launches ComfyUI itself if necessary when you request an image.
 
-Pour importer un workflow personnalisé :
-
-1. Dans ComfyUI (navigateur), configure ton workflow comme tu le souhaites
-2. Active le **mode développeur** : Settings → Enable Dev Mode Options
-
-[SCREENSHOT: ComfyUI Settings avec "Enable Dev Mode Options" coché]
-
-3. Exporte le workflow en **API format** (fichier `*-api.json`)
-4. Crée ou obtiens un fichier de configuration Story Studio (`*.config.json`) qui décrit les paramètres exposés
-5. Dans Story Studio → Options → section ComfyUI :
-   - Clique **"Choisir \*-api.json…"** → sélectionne ton export ComfyUI
-   - Clique **"Choisir \*.config.json…"** → sélectionne le fichier de config
-   - Clique **"Importer"**
-
-[SCREENSHOT: Section "Importer un workflow custom" avec les deux boutons de sélection et le bouton Importer]
-
-Le workflow apparaît dans la liste des workflows disponibles.
+> **Note**: ComfyUI typically takes 30–90 seconds to start. Story Studio waits up to 60 seconds before showing an error.
 
 ---
 
-## 7. Utiliser ComfyUI dans l'éditeur
+## 6. Import a workflow
 
-Une fois activé, un bouton **"✨ Générer IA"** apparaît sous chaque champ image de l'éditeur.
+Story Studio works with **ComfyUI workflows** — recipes that define how images are generated. Workflows are provided embedded in the application.
 
-[SCREENSHOT: Champ image dans l'éditeur avec le bouton "Générer IA"]
+To import a custom workflow:
 
-1. Clique sur ce bouton
-2. Choisis un workflow dans la liste
-3. Rédige un prompt (description de l'image en anglais pour de meilleurs résultats)
-4. Clique sur **Générer** — l'image est automatiquement enregistrée dans ton espace de travail et apparaît dans la file de rendu en bas de l'écran
-5. Clique sur l'image générée pour l'utiliser directement dans le projet
+1. In ComfyUI (browser), configure your workflow as you wish
+2. Enable **developer mode**: Settings → Enable Dev Mode Options
 
-> **Format attendu** : Story Studio génère des images au format 320×240 pixels (format Lunii). Les workflows intégrés s'en chargent automatiquement.
+[SCREENSHOT: ComfyUI Settings with "Enable Dev Mode Options" checked]
 
----
+3. Export the workflow in **API format** (`*-api.json` file)
+4. Create or obtain a Story Studio configuration file (`*.config.json`) describing the exposed parameters
+5. In Story Studio → Options → ComfyUI section:
+   - Click **"Pick \*-api.json…"** → select your ComfyUI export
+   - Click **"Pick \*.config.json…"** → select the config file
+   - Click **"Import"**
 
-## Erreurs courantes
+[SCREENSHOT: "Import a custom workflow" section with the two selection buttons and the Import button]
 
-**"ComfyUI ne répond pas sur http://127.0.0.1:8188"**
-ComfyUI n'est pas lancé.
-→ Lance le `.bat` manuellement ou active le démarrage automatique avec le chemin du `.bat` renseigné.
-
-**ComfyUI démarre mais ne génère pas d'image**
-Il manque probablement un modèle dans `models\checkpoints\`.
-→ Télécharge un modèle `.safetensors` et place-le dans ce dossier (voir section 2).
-
-**Les images générées sont floues ou incohérentes**
-Le modèle n'est pas adapté ou le prompt est trop vague.
-→ Essaie un modèle différent, ou précise le style dans le prompt (ex. "children book illustration, flat colors, simple background").
-
-**"Démarrage… (peut prendre jusqu'à 60s)" puis erreur**
-ComfyUI est trop long à démarrer ou le `.bat` est incorrect.
-→ Vérifie le chemin du `.bat` dans les Options. Lance-le manuellement pour voir si des erreurs apparaissent dans la fenêtre CMD.
-
-**Erreur lors de l'import d'un workflow**
-Le fichier API JSON n'est pas au bon format.
-→ Dans ComfyUI (navigateur), assure-toi d'activer le **mode développeur** (Settings → Enable Dev Mode Options) avant d'exporter en API format.
+The workflow appears in the list of available workflows.
 
 ---
 
-## Utiliser ComfyUI et XTTS en même temps
+## 7. Use ComfyUI in the editor
 
-Si tu utilises les deux outils simultanément sur un PC avec un seul GPU :
+Once enabled, a **"✨ Generate AI"** button appears under each image field of the editor.
 
-- **XTTS** et **ComfyUI** se partagent la mémoire GPU
-- Cela peut provoquer des ralentissements ou des erreurs de mémoire
-- **Solution recommandée** : dans Story Studio → Options → XTTS, active **"Forcer le CPU"** — XTTS utilise alors le processeur et laisse le GPU entièrement disponible pour ComfyUI
+[SCREENSHOT: Image field in the editor with the "Generate AI" button]
+
+1. Click this button
+2. Pick a workflow from the list
+3. Write a prompt (image description in English for better results)
+4. Click **Generate** — the image is automatically saved in your workspace and appears in the render queue at the bottom of the screen
+5. Click the generated image to use it directly in the project
+
+> **Expected format**: Story Studio generates images at 320×240 pixels (Lunii format). The embedded workflows handle this automatically.
+
+---
+
+## Common errors
+
+**"ComfyUI not responding at http://127.0.0.1:8188"**
+ComfyUI isn't running.
+→ Launch the `.bat` manually, or enable auto-start with the `.bat` path filled in.
+
+**ComfyUI starts but doesn't generate any image**
+A model is probably missing in `models\checkpoints\`.
+→ Download a `.safetensors` model and place it in that folder (see section 2).
+
+**Generated images are blurry or incoherent**
+The model isn't suitable, or the prompt is too vague.
+→ Try a different model, or specify the style in the prompt (e.g. "children book illustration, flat colors, simple background").
+
+**"Starting… (may take up to 60s)" then an error**
+ComfyUI takes too long to start, or the `.bat` is incorrect.
+→ Check the `.bat` path in Options. Launch it manually to see if errors appear in the CMD window.
+
+**Error when importing a workflow**
+The API JSON file isn't in the right format.
+→ In ComfyUI (browser), make sure to enable **developer mode** (Settings → Enable Dev Mode Options) before exporting in API format.
+
+---
+
+## Using ComfyUI and XTTS at the same time
+
+If you use both tools simultaneously on a PC with a single GPU:
+
+- **XTTS** and **ComfyUI** share GPU memory
+- This can cause slowdowns or out-of-memory errors
+- **Recommended workaround**: in Story Studio → Options → XTTS, enable **"Force CPU"** — XTTS then uses the CPU and leaves the GPU fully available for ComfyUI

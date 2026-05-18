@@ -1,103 +1,105 @@
-# Guide d'installation — Voix IA (XTTS)
+> 🇬🇧 **English** | [🇫🇷 Français](xtts-setup.fr.md)
 
-> **Version** : Story Studio 0.8.7 · Windows 10/11 · Dernière mise à jour : 2026-05-16
+# Setup guide — AI voice (XTTS)
 
-XTTS est un moteur de synthèse vocale qui tourne **sur ton ordinateur**. Il peut parler en français, anglais, espagnol, allemand, italien et portugais, avec des voix naturelles.
+> **Version**: Story Studio 0.8.7 · Windows 10/11 · Last updated: 2026-05-16
 
-Cet outil est optionnel. Story Studio fonctionne parfaitement sans lui — tu peux toujours utiliser tes propres fichiers audio.
+XTTS is a text-to-speech engine that runs **on your computer**. It can speak in French, English, Spanish, German, Italian and Portuguese, with natural-sounding voices.
+
+This tool is optional. Story Studio works perfectly fine without it — you can always use your own audio files.
 
 ---
 
-## Prérequis système
+## System requirements
 
-| Élément | Minimum | Recommandé |
+| Item | Minimum | Recommended |
 |---|---|---|
-| Système | Windows 10 64-bit | Windows 11 64-bit |
-| RAM | 8 Go | 16 Go |
-| GPU | Pas obligatoire | NVIDIA (4 Go VRAM+) |
-| Espace disque | 5 Go libres | 10 Go libres |
-| Python | 3.10 ou 3.11 | 3.11 |
+| OS | Windows 10 64-bit | Windows 11 64-bit |
+| RAM | 8 GB | 16 GB |
+| GPU | Not required | NVIDIA (4 GB VRAM+) |
+| Disk space | 5 GB free | 10 GB free |
+| Python | 3.10 or 3.11 | 3.11 |
 
-> **Sans GPU NVIDIA** : XTTS fonctionne en mode CPU. La génération est plus lente (30–90 secondes par fichier au lieu de 5–15 s), mais le résultat est identique. Story Studio a une option pour forcer le mode CPU si tu veux laisser le GPU libre pour la génération d'images.
+> **Without an NVIDIA GPU**: XTTS runs in CPU mode. Generation is slower (30–90 seconds per file instead of 5–15 s), but the result is identical. Story Studio has an option to force CPU mode if you want to keep the GPU free for image generation.
 
 ---
 
-## 1. Installation de Python
+## 1. Install Python
 
-Si tu n'as pas Python installé :
+If you don't have Python installed:
 
-1. Va sur [python.org/downloads](https://www.python.org/downloads/) et télécharge Python **3.11**
-2. Lance l'installateur
-3. **Important** : coche la case **"Add Python to PATH"** avant de cliquer sur Installer
+1. Go to [python.org/downloads](https://www.python.org/downloads/) and download Python **3.11**
+2. Run the installer
+3. **Important**: tick the **"Add Python to PATH"** checkbox before clicking Install
 
-[SCREENSHOT: Installateur Python avec la case "Add Python to PATH" cochée en bas]
+[SCREENSHOT: Python installer with the "Add Python to PATH" checkbox ticked at the bottom]
 
-Pour vérifier l'installation, ouvre le **Démarrer**, tape `cmd`, et dans la fenêtre noire qui s'ouvre :
+To verify the installation, open the **Start** menu, type `cmd`, and in the black window that opens:
 
 ```
 python --version
 ```
 
-Tu dois voir quelque chose comme `Python 3.11.9`. Si tu vois une erreur, Python n'est pas correctement installé.
+You should see something like `Python 3.11.9`. If you see an error, Python is not correctly installed.
 
 ---
 
-## 2. Installation du serveur XTTS
+## 2. Install the XTTS server
 
-Story Studio s'attend à trouver XTTS dans un dossier précis. La procédure crée cette structure automatiquement.
+Story Studio expects to find XTTS in a specific folder. The procedure creates that structure automatically.
 
-**Étape 1** — Ouvre une fenêtre **PowerShell en tant qu'administrateur** :
-- Clique droit sur le bouton Démarrer → **Terminal Windows (admin)** ou **Windows PowerShell (admin)**
+**Step 1** — Open a **PowerShell window as administrator**:
+- Right-click the Start button → **Windows Terminal (admin)** or **Windows PowerShell (admin)**
 
-**Étape 2** — Crée le dossier XTTS et entre dedans :
+**Step 2** — Create the XTTS folder and enter it:
 
 ```powershell
 mkdir D:\XTTS
 cd D:\XTTS
 ```
 
-> Tu peux choisir un autre dossier (ex. `C:\XTTS`), mais note-le — tu devras l'indiquer dans Story Studio.
+> You can choose another folder (e.g. `C:\XTTS`), but note it down — you'll need to tell Story Studio where it is.
 
-**Étape 3** — Crée un environnement Python isolé (évite les conflits avec d'autres logiciels) :
+**Step 3** — Create an isolated Python environment (avoids conflicts with other software):
 
 ```powershell
 python -m venv venv
 ```
 
-**Étape 4** — Active cet environnement :
+**Step 4** — Activate the environment:
 
 ```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
-Tu dois voir `(venv)` apparaître au début de la ligne dans PowerShell.
+You should see `(venv)` appear at the start of the PowerShell prompt.
 
-**Étape 5** — Installe le serveur XTTS :
+**Step 5** — Install the XTTS server:
 
 ```powershell
 pip install xtts-api-server
 ```
 
-> Cette étape télécharge plusieurs centaines de Mo. Laisse-la se terminer complètement (3–10 minutes selon ta connexion).
+> This step downloads several hundred MB. Let it complete fully (3–10 minutes depending on your connection).
 
-**Étape 6** — Crée le fichier de démarrage du serveur. Dans PowerShell, dans `D:\XTTS` :
+**Step 6** — Locate the server startup script. In PowerShell, from `D:\XTTS`:
 
 ```powershell
-# Vérifie que tu es bien dans D:\XTTS
+# Confirm you are in D:\XTTS
 Get-Location
 
-# Cherche le script server.py fourni par xtts-api-server
+# Find the server.py script provided by xtts-api-server
 Get-ChildItem -Recurse -Filter "server.py" | Select-Object FullName
 ```
 
-Si `server.py` n'est pas directement dans `D:\XTTS\`, copie-le depuis l'endroit trouvé :
+If `server.py` is not directly inside `D:\XTTS\`, copy it from where it was found:
 
 ```powershell
-# Exemple — adapte le chemin si nécessaire
+# Example — adjust the path if needed
 Copy-Item ".\venv\Lib\site-packages\xtts_api_server\server.py" -Destination ".\server.py"
 ```
 
-**Étape 7** — Crée les dossiers nécessaires :
+**Step 7** — Create the required folders:
 
 ```powershell
 mkdir models
@@ -105,141 +107,141 @@ mkdir voices
 mkdir output
 ```
 
-**Vérification** — Ton dossier `D:\XTTS` doit ressembler à ceci :
+**Verification** — Your `D:\XTTS` folder should look like this:
 
 ```
 D:\XTTS\
-  venv\              ← environnement Python
-  models\            ← modèles IA (téléchargés au 1er lancement)
-  voices\            ← tes voix de référence (optionnel)
-  output\            ← audios générés par XTTS
-  server.py          ← script de démarrage
+  venv\              ← Python environment
+  models\            ← AI models (downloaded on first launch)
+  voices\            ← your reference voices (optional)
+  output\            ← audio files generated by XTTS
+  server.py          ← startup script
 ```
 
-[SCREENSHOT: Explorateur Windows montrant le dossier D:\XTTS avec la structure ci-dessus]
+[SCREENSHOT: Windows Explorer showing the D:\XTTS folder with the structure above]
 
 ---
 
-## 3. Premier lancement manuel (test)
+## 3. First manual launch (test)
 
-Avant de connecter Story Studio, teste que le serveur fonctionne seul :
+Before connecting Story Studio, test that the server works on its own:
 
-1. Dans PowerShell (toujours dans `D:\XTTS`, avec `(venv)` actif) :
+1. In PowerShell (still in `D:\XTTS`, with `(venv)` active):
 
 ```powershell
 python server.py
 ```
 
-2. Tu verras des messages défiler — c'est normal. Le serveur télécharge le modèle XTTS au premier lancement (**environ 2 Go**, une seule fois).
+2. You'll see messages scroll by — that's normal. The server downloads the XTTS model on first launch (**around 2 GB**, only once).
 
-3. Quand tu vois une ligne contenant `Running on http://0.0.0.0:8020` ou similaire, le serveur est prêt.
+3. When you see a line containing `Running on http://0.0.0.0:8020` or similar, the server is ready.
 
-[SCREENSHOT: Fenêtre PowerShell montrant les logs de démarrage XTTS avec la ligne "Running on..."]
+[SCREENSHOT: PowerShell window showing the XTTS startup logs with the "Running on..." line]
 
-4. Pour arrêter le serveur : appuie sur **Ctrl+C** dans PowerShell.
+4. To stop the server: press **Ctrl+C** in PowerShell.
 
-> **Premier lancement** : le téléchargement du modèle peut prendre 5–20 minutes. Les lancements suivants sont rapides (30–60 secondes).
+> **First launch**: downloading the model can take 5–20 minutes. Subsequent launches are quick (30–60 seconds).
 
 ---
 
-## 4. Connexion à Story Studio
+## 4. Connect to Story Studio
 
-[SCREENSHOT: Story Studio — onglet Options, section "Génération de voix locale — XTTS"]
+[SCREENSHOT: Story Studio — Options tab, "Local voice generation — XTTS" section]
 
-1. Ouvre Story Studio
-2. Clique sur l'onglet **Options** (ou **Préférences** si tu passes par le menu)
-3. Dans la section **Génération de voix locale — XTTS** :
-   - Active le toggle **"Activer la génération de voix"**
-4. Les paramètres apparaissent :
+1. Open Story Studio
+2. Click on the **Options** tab (or **Preferences** depending on the menu)
+3. In the **Local voice generation — XTTS** section:
+   - Enable the **"Enable voice generation"** toggle
+4. The settings appear:
 
-| Champ | Valeur par défaut | À modifier si... |
+| Field | Default value | Change if... |
 |---|---|---|
-| **URL du serveur XTTS** | `http://127.0.0.1:8020` | Tu as changé le port dans `server.py` |
-| **Dossier XTTS** | `D:\XTTS` | Tu as installé ailleurs |
-| **Langue par défaut** | Français | Tu veux une autre langue par défaut |
-| **Démarrer XTTS automatiquement** | Activé | — |
-| **Forcer le CPU** | Désactivé | Tu utilises ComfyUI en même temps (GPU partagé) |
+| **XTTS server URL** | `http://127.0.0.1:8020` | You changed the port in `server.py` |
+| **XTTS folder** | `D:\XTTS` | You installed elsewhere |
+| **Default language** | French | You want a different default |
+| **Start XTTS automatically** | Enabled | — |
+| **Force CPU** | Disabled | You use ComfyUI at the same time (shared GPU) |
 
-5. Clique sur **"Tester et actualiser les voix"**
+5. Click **"Test and refresh voices"**
 
-[SCREENSHOT: Bouton "Tester et actualiser les voix" et résultat "Serveur prêt sur GPU CUDA • 3 voix détectée(s)"]
+[SCREENSHOT: "Test and refresh voices" button and result "Server ready on GPU CUDA • 3 voice(s) detected"]
 
-Si tout va bien, tu vois : **"Serveur prêt sur GPU CUDA • N voix détectée(s)"** (ou CPU si pas de GPU).
-
----
-
-## 5. Démarrage automatique
-
-Avec l'option **"Démarrer XTTS automatiquement"** activée, Story Studio lance `server.py` lui-même quand tu demandes une génération de voix, sans que tu aies besoin d'ouvrir PowerShell. Il attend jusqu'à 45 secondes que le serveur soit prêt.
-
-> **Conseil** : laisse cette option activée. Elle te simplifie l'usage au quotidien.
+If all is well, you'll see: **"Server ready on GPU CUDA • N voice(s) detected"** (or CPU if no GPU).
 
 ---
 
-## 6. Ajouter des voix de référence
+## 5. Auto-start
 
-XTTS peut cloner une voix à partir d'un échantillon audio (10–30 secondes de parole claire sans bruit de fond).
+With **"Start XTTS automatically"** enabled, Story Studio launches `server.py` itself when you request a voice generation, without you needing to open PowerShell. It waits up to 45 seconds for the server to be ready.
 
-1. Prépare un fichier WAV de 10 à 30 secondes (enregistrement propre, sans musique ni écho)
-2. Nomme le fichier avec le nom que tu veux donner à la voix, ex. `narrateur.wav`
-3. Copie-le dans `D:\XTTS\voices\`
-4. Dans Story Studio, clique sur **"Tester et actualiser les voix"** — la voix apparaît dans la liste
-
-[SCREENSHOT: Gestionnaire de voix dans Options avec des cases à cocher pour chaque voix]
+> **Tip**: keep this option enabled. It simplifies day-to-day usage.
 
 ---
 
-## 7. Voix favorites
+## 6. Add reference voices
 
-La liste de voix peut être longue. Tu peux cocher uniquement les voix que tu utilises souvent — elles seront les seules proposées dans le modal de génération.
+XTTS can clone a voice from an audio sample (10–30 seconds of clear speech without background noise).
 
----
+1. Prepare a WAV file 10 to 30 seconds long (clean recording, no music, no echo)
+2. Name the file with the voice name you want, e.g. `narrator.wav`
+3. Copy it into `D:\XTTS\voices\`
+4. In Story Studio, click **"Test and refresh voices"** — the voice appears in the list
 
-## 8. Utiliser XTTS dans l'éditeur
-
-Une fois activé, un bouton **"Générer voix"** (ou icône micro avec étoile) apparaît sur chaque champ audio de l'éditeur.
-
-[SCREENSHOT: Champ audio dans l'éditeur avec le bouton de génération de voix]
-
-1. Clique sur ce bouton
-2. Saisis le texte à lire
-3. Choisis une voix dans la liste
-4. Clique sur **Générer** — l'audio est automatiquement enregistré dans ton espace de travail et injecté dans le champ
+[SCREENSHOT: Voice manager in Options with checkboxes for each voice]
 
 ---
 
-## Erreurs courantes
+## 7. Favorite voices
 
-**"Serveur XTTS indisponible sur http://127.0.0.1:8020"**
-Le serveur n'est pas lancé et le démarrage automatique est désactivé, ou le serveur a mis trop longtemps à démarrer.
-→ Active "Démarrer XTTS automatiquement" dans les Options, ou lance `server.py` manuellement avant de générer.
-
-**"Python XTTS introuvable : D:\XTTS\venv\Scripts\python.exe"**
-Story Studio ne trouve pas Python dans le dossier XTTS.
-→ Vérifie que tu as bien créé le `venv` dans `D:\XTTS` (étape 3). Vérifie aussi que le "Dossier XTTS" dans les Options correspond à l'endroit où tu as installé.
-
-**"server.py introuvable dans D:\XTTS"**
-Le fichier `server.py` est absent.
-→ Reprends l'étape 6 de l'installation.
-
-**Le serveur démarre mais aucune voix n'est détectée**
-Le modèle XTTS n'est pas encore téléchargé ou le téléchargement a échoué.
-→ Lance `server.py` manuellement dans PowerShell et attends la fin du téléchargement. Surveille les messages d'erreur éventuels.
-
-**Génération très lente (plusieurs minutes)**
-XTTS tourne en mode CPU.
-→ Si tu as un GPU NVIDIA, vérifie que les drivers CUDA sont à jour (nvidia.com/drivers). Si tu utilises ComfyUI en même temps, l'option "Forcer le CPU" est normale — c'est un compromis voulu.
-
-**"Le fichier XTTS attendu est introuvable dans D:\XTTS\output"**
-Le serveur a généré l'audio mais ne l'a pas mis dans le dossier `output/`.
-→ Vérifie que le dossier `D:\XTTS\output\` existe (étape 7 de l'installation).
+The voice list can be long. You can tick only the voices you use often — those will be the only ones offered in the generation modal.
 
 ---
 
-## Utiliser XTTS et ComfyUI en même temps
+## 8. Use XTTS in the editor
 
-Si tu utilises les deux outils simultanément sur un PC avec un seul GPU :
+Once enabled, a **"Generate voice"** button (or microphone-with-star icon) appears on each audio field of the editor.
 
-- **XTTS** et **ComfyUI** se partagent la mémoire GPU
-- Cela peut provoquer des ralentissements ou des erreurs de mémoire
-- **Solution recommandée** : dans Story Studio → Options → XTTS, active **"Forcer le CPU"** — XTTS utilise alors le processeur et laisse le GPU entièrement disponible pour ComfyUI
+[SCREENSHOT: Audio field in the editor with the voice generation button]
+
+1. Click on this button
+2. Enter the text to read
+3. Pick a voice from the list
+4. Click **Generate** — the audio is automatically saved in your workspace and injected into the field
+
+---
+
+## Common errors
+
+**"XTTS server unavailable at http://127.0.0.1:8020"**
+The server isn't running and auto-start is disabled, or the server took too long to start.
+→ Enable "Start XTTS automatically" in Options, or launch `server.py` manually before generating.
+
+**"XTTS Python not found: D:\XTTS\venv\Scripts\python.exe"**
+Story Studio can't find Python in the XTTS folder.
+→ Check that you correctly created the `venv` in `D:\XTTS` (step 3). Also check that the "XTTS folder" in Options matches where you installed.
+
+**"server.py not found in D:\XTTS"**
+The `server.py` file is missing.
+→ Redo step 6 of the installation.
+
+**The server starts but no voices are detected**
+The XTTS model isn't downloaded yet, or the download failed.
+→ Launch `server.py` manually in PowerShell and wait for the download to complete. Watch for any error messages.
+
+**Very slow generation (several minutes)**
+XTTS is running in CPU mode.
+→ If you have an NVIDIA GPU, check that the CUDA drivers are up to date (nvidia.com/drivers). If you use ComfyUI at the same time, the "Force CPU" option is normal — it's an intentional trade-off.
+
+**"Expected XTTS file not found in D:\XTTS\output"**
+The server generated audio but didn't place it in the `output/` folder.
+→ Check that the `D:\XTTS\output\` folder exists (step 7 of the installation).
+
+---
+
+## Using XTTS and ComfyUI at the same time
+
+If you use both tools simultaneously on a PC with a single GPU:
+
+- **XTTS** and **ComfyUI** share GPU memory
+- This can cause slowdowns or out-of-memory errors
+- **Recommended workaround**: in Story Studio → Options → XTTS, enable **"Force CPU"** — XTTS then uses the CPU and leaves the GPU fully available for ComfyUI

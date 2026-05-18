@@ -60,7 +60,7 @@ visibles et éditables dans un seul espace de travail.
   imbriqués.
 - Agrège des packs ZIP existants dans des collections personnalisées plus
   larges.
-- Importe des packs communautaires et inspecte-les avant de les ré-exporter.
+- Importe des packs communautaires, inspecte-les ou modifie-les avant de les ré-exporter.
 - Édite tes médias sans perdre de vue où chaque fichier est utilisé.
 - Teste la navigation dans le simulateur avant de générer un pack final.
 - Garde tes voix générées, images générées, enregistrements et imports bien
@@ -252,14 +252,14 @@ la référence projet ou bibliothèque médias.
 
 ## Documentation
 
-- [Guide d'installation XTTS](docs/guides/xtts-setup.md)
-- [Guide d'installation ComfyUI](docs/guides/comfyui-setup.md)
-- [Checklist de release](docs/release-checklist.md)
+- [Guide d'installation XTTS](docs/guides/xtts-setup.fr.md)
+- [Guide d'installation ComfyUI](docs/guides/comfyui-setup.fr.md)
+- [Checklist de release](docs/release-checklist.fr.md)
 - [Modèle de sécurité](SECURITY.md)
 - [Mentions tierces](THIRD_PARTY_NOTICES.md)
 - [Changelog](CHANGELOG.md)
 
-> ℹ️ Ces documents annexes sont actuellement uniquement en anglais.
+> ℹ️ Les trois derniers documents (SECURITY, THIRD_PARTY_NOTICES, CHANGELOG) sont uniquement en anglais pour le moment.
 
 ## Roadmap
 
