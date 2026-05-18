@@ -75,9 +75,6 @@ Studio keeps those pieces visible and editable in a single workspace.
 |---|
 | ![Home screen](docs/assets/screenshots/home-dark.png) |
 
-Screenshot naming and privacy guidelines live in
-[docs/assets/screenshots](docs/assets/screenshots/README.md).
-
 ## Features
 
 ### Pack Editing
@@ -236,7 +233,6 @@ project or media library reference only.
 
 - [XTTS setup guide](docs/guides/xtts-setup.md)
 - [ComfyUI setup guide](docs/guides/comfyui-setup.md)
-- [Screenshot guidelines](docs/assets/screenshots/README.md)
 - [Release checklist](docs/release-checklist.md)
 - [Security model](SECURITY.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
