@@ -55,7 +55,7 @@ Studio keeps those pieces visible and editable in a single workspace.
 
 - Build simple stories or structured packs with nested menus.
 - Aggregate existing ZIP packs into larger custom collections.
-- Import community ZIP packs and inspect them before re-export.
+- Import community ZIP packs and inspect or edit them before re-export.
 - Edit media without losing sight of where each file is used.
 - Test navigation in the simulator before generating a final pack.
 - Keep generated voices, generated images, recordings and imports organized in

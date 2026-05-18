@@ -1,3 +1,5 @@
+> 🇬🇧 **English** | [🇫🇷 Français](release-checklist.fr.md)
+
 # Release Checklist
 
 Use this checklist when preparing a public Story Studio release.
