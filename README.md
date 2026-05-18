@@ -1,3 +1,5 @@
+> 🇬🇧 **English** | [🇫🇷 Français](README.fr.md)
+
 <p align="center">
   <img src="public/logostory.png" alt="Story Studio" width="120">
 </p>
