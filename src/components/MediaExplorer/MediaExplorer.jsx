@@ -1025,13 +1025,6 @@ export function MediaExplorer({
           </button>
         </Tooltip>
       )}
-      {onOpenAiQueue && (
-        <Tooltip text="File de génération IA">
-          <button className="btn media-import-btn" type="button" onClick={onOpenAiQueue}>
-            ✦
-          </button>
-        </Tooltip>
-      )}
     </>
   );
 
@@ -1120,13 +1113,8 @@ export function MediaExplorer({
         <div className="media-empty">
           <Package className="media-empty-icon" strokeWidth={1.8} absoluteStrokeWidth />
           <span>Aucun média pour l'instant</span>
-          <p className="media-empty-hint">Génère des images / sons depuis un stage, ou importe tes fichiers — ils apparaîtront ici, prêts à être glissés-déposés.</p>
+          <p className="media-empty-hint">Tes médias importés, générés ou extraits apparaîtront ici, prêts à être glissés-déposés.</p>
           <div className="media-empty-actions">
-            {onOpenAiQueue && (
-              <button className="btn media-empty-btn media-empty-btn--accent" type="button" onClick={onOpenAiQueue}>
-                ✦ Générer avec IA
-              </button>
-            )}
             <button className="btn media-empty-btn" type="button" onClick={onImportMedia || onImportStories}>
               + Importer un fichier
             </button>
