@@ -100,6 +100,7 @@ function mediaPathKey(value) {
 }
 
 function findNextStorySibling(entry, parentMenu, rootEntries) {
+  if (!entry) return null;
   const siblings = parentMenu ? (parentMenu.children ?? []) : (rootEntries ?? []);
   const currentIndex = siblings.findIndex((candidate) => candidate.id === entry.id);
   if (currentIndex < 0) return null;
@@ -141,7 +142,7 @@ function isNightModePrompt(entry, parentMenu, project, rootEntries) {
 }
 
 function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex) {
-  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode);
+  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode);
   const hasNightPrompt = isNightModePrompt(entry, parentMenu, project, rootEntries);
   const hasLocalAfterPlayback = !!entry?.afterPlaybackPromptAudio
     || (entry?.afterPlaybackSequence?.length ?? 0) > 0;
@@ -155,34 +156,17 @@ function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, pro
   const isNightMode = !!project?.globalOptions?.nightMode;
   const targetName = getNavigationTargetName(targetId, projectIndex);
   const compactLabel = getCompactNavigationTargetLabel(targetId, projectIndex);
-  const homeTarget = hasNightPrompt && !entry.afterPlaybackPromptHomeNone
-    ? resolveNavigationTargetId(entry.afterPlaybackPromptHomeTarget, parentMenu)
-    : null;
-  const homeName = homeTarget ? getNavigationTargetName(homeTarget, projectIndex) : null;
+  const nightSuffix = isNightMode ? ' (mode nuit)' : '';
   const title = hasNightPrompt
-    ? `Message du nœud de fin importé${isNightMode ? ' (mode nuit disponible)' : ''} : bouton OK vers "${targetName}". Bouton Home : ${entry.afterPlaybackPromptHomeNone ? 'aucune transition' : `"${homeName ?? targetName}"`}.`
-    : `Nœud de fin${isNightMode ? ' (mode nuit disponible)' : ''} : sortie OK/fin automatique vers "${targetName}".`;
-  const badges = [{
+    ? `Retour modifié : fin de lecture, nœud de fin intégré${nightSuffix} → « ${targetName} »`
+    : `Retour modifié : fin de lecture via nœud de fin${nightSuffix} → « ${targetName} »`;
+
+  return [{
     key: `end-node-return:${targetId}:${targetName}`,
     kind: isNightMode ? 'end-night' : 'end-node',
-    label: `${isNightMode ? '☾' : '■'} ${compactLabel}`,
+    label: isNightMode ? '☾' : '■',
     title,
   }];
-
-  const endNodeHomeTargetId = hasNightPrompt
-    ? homeTarget
-    : resolveEndNodeHomeTargetId(project, entry, parentMenu, rootEntries);
-  if (endNodeHomeTargetId && endNodeHomeTargetId !== targetId) {
-    const endNodeHomeName = getNavigationTargetName(endNodeHomeTargetId, projectIndex);
-    badges.push({
-      key: `end-node-home:${endNodeHomeTargetId}:${endNodeHomeName}`,
-      kind: isNightMode ? 'end-night-home' : 'end-node-home',
-      label: `⌂ ${getCompactNavigationTargetLabel(endNodeHomeTargetId, projectIndex)}`,
-      title: `${hasNightPrompt ? 'Message du nœud de fin importé' : 'Nœud de fin'}${isNightMode ? ' (mode nuit disponible)' : ''} : bouton Home vers "${endNodeHomeName}".`,
-    });
-  }
-
-  return badges;
 }
 
 function getStrongestStatus(issues = []) {
@@ -196,7 +180,7 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
     return [{
       key: 'native-graph',
       kind: 'graph',
-      label: 'Graphe',
+      label: '◇',
       title: 'Graphe interactif natif préservé pour le round-trip.',
     }];
   }
@@ -204,42 +188,47 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
     return [{
       key: 'continuation',
       kind: 'continuation',
-      label: 'Suite',
+      label: '⇒',
       title: `Continuation native importée depuis ${entry.importedContinuation.sourceStoryName || 'une histoire'}.`,
     }];
   }
   if (entry?.type !== 'story') return [];
 
+  const endNodeBadges = getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex);
   const badges = [];
+
   const entryIssues = issuesById.get(entry.id) ?? [];
-  const returnStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
   const homeStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile')));
-  const inheritedReturnTarget = getInheritedReturnTarget(parentMenu);
   const localReturnTarget = resolveNavigationTargetId(entry.returnAfterPlay, parentMenu);
-  if (!isNightModePrompt(entry, parentMenu, project, rootEntries) && entry.returnAfterPlay && localReturnTarget !== inheritedReturnTarget) {
-    const returnName = getNavigationTargetName(localReturnTarget, projectIndex);
-    badges.push({
-      key: `return:${localReturnTarget}:${returnName}`,
-      kind: 'return',
-      status: returnStatus,
-      label: `↩ ${returnName.slice(0, 4)}`,
-      title: `Retour après lecture : "${returnName}"`,
-    });
+  const localHomeTarget = resolveNavigationTargetId(entry.returnOnHome, parentMenu) ?? localReturnTarget;
+
+  if (endNodeBadges.length === 0) {
+    const returnStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
+    const inheritedReturnTarget = getInheritedReturnTarget(parentMenu);
+    if (entry.returnAfterPlay && localReturnTarget !== inheritedReturnTarget) {
+      const returnName = getNavigationTargetName(localReturnTarget, projectIndex);
+      badges.push({
+        key: `return:${localReturnTarget}:${returnName}`,
+        kind: 'return',
+        status: returnStatus,
+        label: '↩',
+        title: `Retour modifié : après lecture → « ${returnName} »`,
+      });
+    }
   }
 
-  const localHomeTarget = resolveNavigationTargetId(entry.returnOnHome, parentMenu) ?? localReturnTarget;
-  if (entry.returnOnHome && localHomeTarget !== localReturnTarget) {
+  if (entry.returnOnHome) {
     const homeName = getNavigationTargetName(localHomeTarget, projectIndex);
     badges.push({
       key: `home:${localHomeTarget}:${homeName}`,
       kind: 'home',
       status: homeStatus,
-      label: `⌂ ${homeName.slice(0, 4)}`,
-      title: `Retour bouton Home : "${homeName}"`,
+      label: '⌂',
+      title: `Retour modifié : bouton Home → « ${homeName} »`,
     });
   }
 
-  badges.push(...getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex));
+  badges.push(...endNodeBadges);
 
   return badges;
 }
@@ -768,7 +757,7 @@ export function TreePanel({
         actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
       }
 
-      const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode);
+      const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
       if (isRootCtx && !hasEndNode) {
         actions.push('sep');
         actions.push({ icon: <IconMoon />, label: 'Ajouter un nœud de fin', fn: () => onAddEndNode?.() });
@@ -959,8 +948,24 @@ export function TreePanel({
     );
   }
 
-  const hasEndNode = projectType === 'pack' && !!(project.nightModeAudio || project.globalOptions?.nightMode);
+  const hasEndNode = projectType === 'pack' && !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
   const nightModeActive = !!project.globalOptions?.nightMode;
+
+  const endNodeHomeBadges = (() => {
+    if (!hasEndNode) return EMPTY_BADGES;
+    const returnTargetId = resolveEndNodeReturnTargetId(project, null, null, rootEntries);
+    const homeTargetId = resolveEndNodeHomeTargetId(project, null, null, rootEntries);
+    if (!homeTargetId || homeTargetId === returnTargetId) return EMPTY_BADGES;
+    const isNightMode = !!project.globalOptions?.nightMode;
+    const homeName = getNavigationTargetName(homeTargetId, projectIndex);
+    const nightSuffix = isNightMode ? ' (mode nuit)' : '';
+    return [{
+      key: `end-node-home:${homeTargetId}:${homeName}`,
+      kind: isNightMode ? 'end-night-home' : 'end-node-home',
+      label: '⌂',
+      title: `Retour modifié : bouton Home du nœud de fin${nightSuffix} → « ${homeName} »`,
+    }];
+  })();
 
   const prevHasEndNodeRef = useRef(hasEndNode);
   useEffect(() => {
@@ -1096,6 +1101,7 @@ export function TreePanel({
                   selected={selectedIds.has(END_NODE_ID)}
                   status={getNodeStatus({ id: END_NODE_ID }, () => getEndNodeValidationStatus(project, pathAudit))}
                   dragging={false}
+                  navigationBadges={endNodeHomeBadges}
                   onSelect={handleNodeSelect}
                   onContextMenu={handleContextMenu}
                 />

@@ -53,7 +53,7 @@ export const MultiEditor = memo(function MultiEditor({
   const onlyStories = storyCount === nodes.length && storyCount > 0;
   const onlyMenus = menuCount === nodes.length && menuCount > 0;
   const allSameType = onlyStories || onlyMenus;
-  const hasEndNode = !!project?.nightModeAudio || !!project?.globalOptions?.nightMode;
+  const hasEndNode = !!project?.nightModeAudio || !!project?.globalOptions?.nightMode || !!project?.globalOptions?.endNode;
 
   const bannerParts = [];
   if (storyCount > 0) bannerParts.push(`${storyCount} histoire${storyCount > 1 ? 's' : ''}`);
@@ -254,7 +254,7 @@ export const MultiEditor = memo(function MultiEditor({
 
       {editableNodes.length > 0 && (
       <div className="card">
-        <div className="card-title">Comportement</div>
+        <div className="card-title">Pendant la lecture</div>
         {CONTROL_KEYS.map(({ key, label, desc }) => {
           const vals = editableNodes.map((n) => n.controlSettings?.[key] ?? getDefaults(n.type)[key] ?? false);
           const unique = [...new Set(vals)];
@@ -275,12 +275,64 @@ export const MultiEditor = memo(function MultiEditor({
             </div>
           );
         })}
+        {onlyStories && (
+          <div className="field-row" style={{ marginTop: 4 }}>
+            <div style={{ flex: 1 }}>
+              <span className="field-label">Accueil</span>
+              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                Destination quand l'enfant appuie sur Accueil pendant la lecture.
+              </div>
+            </div>
+            <select
+              className="field-input"
+              style={{ maxWidth: 220 }}
+              value={getMixedSelectValue('returnOnHome')}
+              onChange={(e) => {
+                if (e.target.value === '__mixed__') return;
+                handleNavChange('returnOnHome', e.target.value);
+              }}
+            >
+              {getMixedSelectValue('returnOnHome') === '__mixed__' && (
+                <option value="__mixed__">Valeurs mixtes — ne pas modifier</option>
+              )}
+              <option value="">Identique fin histoire</option>
+              <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
+              {allMenus.length > 0 && (
+                <optgroup label="Dossiers">
+                  {allMenus.map((m) => (
+                    <option key={`home-${m.id}`} value={encodeMenuNavigationTarget(m.id)}>{m.name || '(sans nom)'}</option>
+                  ))}
+                </optgroup>
+              )}
+              {allStories.length > 0 && (
+                <>
+                  <optgroup label="Histoires">
+                    {allStories.filter((s) => !ids.includes(s.id)).map((s) => (
+                      <option key={`home-s-${s.id}`} value={encodeStoryNavigationTarget(s.id)}>{s.name || '(sans nom)'}</option>
+                    ))}
+                  </optgroup>
+                  {allStories.some((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep) ? (
+                    <optgroup label="Retours de fin importés">
+                      {allStories
+                        .filter((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep)
+                        .map((s) => (
+                          <option key={`home-step-${s.id}`} value={encodeStoryHomeStepNavigationTarget(s.id)}>
+                            Retour de fin - {s.name || '(sans nom)'}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ) : null}
+                </>
+              )}
+            </select>
+          </div>
+        )}
       </div>
       )}
 
       {allSameType && hasEndNode && (onlyStories || onlyMenus) && (
         <div className="card">
-          <div className="card-title">Navigation après lecture</div>
+          <div className="card-title">Après la lecture</div>
           <div
             style={{
               display: 'flex',
@@ -302,14 +354,14 @@ export const MultiEditor = memo(function MultiEditor({
       {allSameType && !hasEndNode && allMenus.length > 0 && (
         <div className="card">
           <div className="card-title">
-            {onlyMenus ? 'Navigation après lecture (défaut enfants)' : 'Navigation après lecture'}
+            {onlyMenus ? 'Après la lecture (défaut enfants)' : 'Après la lecture'}
           </div>
 
           <div className="field-row">
             <div style={{ flex: 1 }}>
-              <span className="field-label">Revenir à</span>
+              <span className="field-label">À la fin de l'histoire, retour vers</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination après la fin de l'histoire ou de la sélection.
+                Destination après la lecture — peut hériter du réglage du dossier parent.
               </div>
             </div>
             <select
@@ -356,58 +408,6 @@ export const MultiEditor = memo(function MultiEditor({
             </select>
           </div>
 
-          {onlyStories && (
-            <div className="field-row" style={{ marginTop: 10 }}>
-              <div style={{ flex: 1 }}>
-                <span className="field-label">Bouton Accueil</span>
-                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                  Par défaut, suit la même destination que la fin d'histoire.
-                </div>
-              </div>
-              <select
-                className="field-input"
-                style={{ maxWidth: 220 }}
-                value={getMixedSelectValue('returnOnHome')}
-                onChange={(e) => {
-                  if (e.target.value === '__mixed__') return;
-                  handleNavChange('returnOnHome', e.target.value);
-                }}
-              >
-                {getMixedSelectValue('returnOnHome') === '__mixed__' && (
-                  <option value="__mixed__">Valeurs mixtes — ne pas modifier</option>
-                )}
-                <option value="">Même destination que la fin d'histoire</option>
-                <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-                {allMenus.length > 0 && (
-                  <optgroup label="Dossiers">
-                    {allMenus.map((m) => (
-                      <option key={`home-${m.id}`} value={encodeMenuNavigationTarget(m.id)}>{m.name || '(sans nom)'}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {allStories.length > 0 && (
-                  <>
-                    <optgroup label="Histoires">
-                      {allStories.filter((s) => !ids.includes(s.id)).map((s) => (
-                        <option key={`home-s-${s.id}`} value={encodeStoryNavigationTarget(s.id)}>{s.name || '(sans nom)'}</option>
-                      ))}
-                    </optgroup>
-                    {allStories.some((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep) ? (
-                      <optgroup label="Retours de fin importés">
-                        {allStories
-                          .filter((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep)
-                          .map((s) => (
-                            <option key={`home-step-${s.id}`} value={encodeStoryHomeStepNavigationTarget(s.id)}>
-                              Retour de fin - {s.name || '(sans nom)'}
-                            </option>
-                          ))}
-                      </optgroup>
-                    ) : null}
-                  </>
-                )}
-              </select>
-            </div>
-          )}
         </div>
       )}
 

@@ -55,6 +55,7 @@ function normalizeOptions(options) {
     selectNext: options?.selectNext ?? false,
     nightMode: options?.nightMode ?? false,
     aiImageGen: options?.aiImageGen ?? false,
+    endNode: options?.endNode ?? false,
   };
 }
 

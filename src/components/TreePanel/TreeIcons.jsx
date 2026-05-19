@@ -172,6 +172,45 @@ export function IconTrash() {
   );
 }
 
+export function IconReturn() {
+  return (
+    <SVG>
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+    </SVG>
+  );
+}
+
+export function IconSquareFilled() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14" height="14" viewBox="0 0 24 24"
+      aria-hidden="true"
+      style={{ display: 'block', flexShrink: 0 }}
+    >
+      <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconDiamond() {
+  return (
+    <SVG>
+      <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z" />
+    </SVG>
+  );
+}
+
+export function IconArrowRight() {
+  return (
+    <SVG>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </SVG>
+  );
+}
+
 // Lookup map keyed by string identifier (safe for memo comparison)
 export const ICON_BY_KEY = {
   moon: IconMoon,

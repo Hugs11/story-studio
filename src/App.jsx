@@ -1676,6 +1676,7 @@ export default function App() {
   }
 
   function handleAddEndNode() {
+    store.updateGlobalOption('endNode', true);
     store.setSelectedId('end-node');
   }
 
@@ -1684,6 +1685,7 @@ export default function App() {
     store.updateRootMedia('nightModeReturn', null);
     store.updateRootMedia('nightModeHomeReturn', null);
     store.updateGlobalOption('nightMode', false);
+    store.updateGlobalOption('endNode', false);
     store.setSelectedId('root');
   }
 
