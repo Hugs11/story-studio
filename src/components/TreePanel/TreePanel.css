@@ -291,216 +291,76 @@
   border: 0.5px solid color-mix(in srgb, #EF9F27 50%, transparent);
 }
 
+.ti-badges {
+  flex-shrink: 0;
+  width: 52px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .badge-nav {
-  display: block;
-  max-width: 52px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-  font-size: 9px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  border: 0.5px solid;
-  white-space: nowrap;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid;
 }
 
-.tree-item-body > .tooltip-wrap {
-  flex: 0 99 auto;
-  min-width: 0;
-  max-width: 52px;
-  overflow: hidden;
+.badge-nav svg {
+  width: 14px;
+  height: 14px;
 }
 
-/* Nav badges — light mode */
+/* Palette sémantique oklch — identique maquette, s'adapte au fond (pas de media query) */
 .badge-nav--return {
-  background: #E7F4E8;
-  color: #1F6A32;
-  border-color: #6FB27A;
+  color: oklch(0.80 0.16 150);
+  background: color-mix(in oklch, oklch(0.80 0.16 150) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.80 0.16 150) 35%, transparent);
 }
-
 .badge-nav--home {
-  background: #E8F0FB;
-  color: #285A96;
-  border-color: #79A7E0;
+  color: oklch(0.78 0.13 240);
+  background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);
 }
-
-.badge-nav--continuation {
-  background: #FFF3E2;
-  color: #9A5B00;
-  border-color: #EF9F27;
-}
-
-.badge-nav--graph {
-  background: #EEF0FB;
-  color: #3D4CAC;
-  border-color: #8994D4;
-}
-
 .badge-nav--end-node {
-  background: #F3EDF2;
-  color: #714B67;
-  border-color: #B58AA9;
+  color: oklch(0.83 0.14 75);
+  background: color-mix(in oklch, oklch(0.83 0.14 75) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.83 0.14 75) 35%, transparent);
 }
-
-.badge-nav--end-night {
-  background: #F1E9FF;
-  color: #6840A3;
-  border-color: #A982E0;
-}
-
 .badge-nav--end-node-home {
-  background: #EFF2FA;
-  color: #4F5573;
-  border-color: #A2A8C5;
-  border-style: dashed;
+  color: oklch(0.74 0.16 35);
+  background: color-mix(in oklch, oklch(0.74 0.16 35) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.74 0.16 35) 35%, transparent);
 }
-
+.badge-nav--end-night {
+  color: oklch(0.78 0.16 300);
+  background: color-mix(in oklch, oklch(0.78 0.16 300) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.78 0.16 300) 35%, transparent);
+}
 .badge-nav--end-night-home {
-  background: #F6EDFF;
-  color: #7C3D9A;
-  border-color: #C07AE4;
-  border-style: dashed;
+  color: oklch(0.72 0.18 345);
+  background: color-mix(in oklch, oklch(0.72 0.18 345) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.72 0.18 345) 35%, transparent);
 }
-
+.badge-nav--continuation,
+.badge-nav--graph {
+  color: oklch(0.78 0.13 240);
+  background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);
+}
 .badge-nav--error {
-  background: #FCEBEB;
-  color: #B42318;
-  border-color: #E24B4A;
+  color: oklch(0.70 0.22 25);
+  background: color-mix(in oklch, oklch(0.70 0.22 25) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.70 0.22 25) 35%, transparent);
 }
-
 .badge-nav--warn {
-  background: #FFF3E2;
-  color: #9A5B00;
-  border-color: #EF9F27;
-}
-
-/* Nav badges — dark mode (via prefers-color-scheme) */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .badge-nav--return {
-    background: #102217;
-    color: #8FD39A;
-    border-color: #3D7D48;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--home {
-    background: #112033;
-    color: #9CC2F0;
-    border-color: #426D9F;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--continuation {
-    background: #2B1A00;
-    color: #F6C06A;
-    border-color: #EF9F27;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--graph {
-    background: #151B3B;
-    color: #9AA5E8;
-    border-color: #4A5AAC;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--end-node {
-    background: #211821;
-    color: #D7B9CF;
-    border-color: #7B5C73;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--end-night {
-    background: #21162F;
-    color: #D4B7FF;
-    border-color: #7650A7;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--end-node-home {
-    background: #171B28;
-    color: #BCC4E8;
-    border-color: #5E668F;
-    border-style: dashed;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--end-night-home {
-    background: #2A1733;
-    color: #F0B7FF;
-    border-color: #9B5DBB;
-    border-style: dashed;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--error {
-    background: #2A0808;
-    color: #FF9A96;
-    border-color: #E24B4A;
-  }
-
-  :root:not([data-theme="light"]) .badge-nav--warn {
-    background: #2B1A00;
-    color: #F6C06A;
-    border-color: #EF9F27;
-  }
-}
-
-/* Nav badges — dark theme explicit */
-:root[data-theme="dark"] .badge-nav--return {
-  background: #102217;
-  color: #8FD39A;
-  border-color: #3D7D48;
-}
-
-:root[data-theme="dark"] .badge-nav--home {
-  background: #112033;
-  color: #9CC2F0;
-  border-color: #426D9F;
-}
-
-:root[data-theme="dark"] .badge-nav--continuation {
-  background: #2B1A00;
-  color: #F6C06A;
-  border-color: #EF9F27;
-}
-
-:root[data-theme="dark"] .badge-nav--graph {
-  background: #151B3B;
-  color: #9AA5E8;
-  border-color: #4A5AAC;
-}
-
-:root[data-theme="dark"] .badge-nav--end-node {
-  background: #211821;
-  color: #D7B9CF;
-  border-color: #7B5C73;
-}
-
-:root[data-theme="dark"] .badge-nav--end-night {
-  background: #21162F;
-  color: #D4B7FF;
-  border-color: #7650A7;
-}
-
-:root[data-theme="dark"] .badge-nav--end-node-home {
-  background: #171B28;
-  color: #BCC4E8;
-  border-color: #5E668F;
-  border-style: dashed;
-}
-
-:root[data-theme="dark"] .badge-nav--end-night-home {
-  background: #2A1733;
-  color: #F0B7FF;
-  border-color: #9B5DBB;
-  border-style: dashed;
-}
-
-:root[data-theme="dark"] .badge-nav--error {
-  background: #2A0808;
-  color: #FF9A96;
-  border-color: #E24B4A;
-}
-
-:root[data-theme="dark"] .badge-nav--warn {
-  background: #2B1A00;
-  color: #F6C06A;
-  border-color: #EF9F27;
+  color: oklch(0.80 0.17 70);
+  background: color-mix(in oklch, oklch(0.80 0.17 70) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.80 0.17 70) 35%, transparent);
 }
 
 /* ── Multi-select bar ───────────────────────────────────────────────────── */

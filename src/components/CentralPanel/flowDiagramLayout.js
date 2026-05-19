@@ -237,7 +237,11 @@ export function getCompleteLayout(project, compactMode, options = {}) {
     y: group.y + metrics.padY,
   }));
 
-  const hasEndNode = !!project.nightModeAudio;
+  const hasEndNode = !!(
+    project.nightModeAudio
+    || project.globalOptions?.nightMode
+    || project.globalOptions?.endNode
+  );
   const canvasWidth = rootBlock.width + metrics.padX * 2;
   const canvasHeight = rootBlock.height + metrics.padY * 2;
 

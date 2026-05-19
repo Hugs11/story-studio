@@ -32,7 +32,7 @@ export function AfterPlaySection({
   inheritedReturnLabel,
   onUpdate,
 }) {
-  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode);
+  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode);
   const hasPrompt = !!node?.afterPlaybackPromptAudio;
   const usesGlobalEndNodeAudio = !!(
     hasEndNode

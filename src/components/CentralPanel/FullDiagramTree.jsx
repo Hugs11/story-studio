@@ -887,7 +887,7 @@ export function CompleteDiagramTree({
     actions.push({ icon: <FolderPlus />, label: 'Ajouter un dossier', fn: () => onAddMenu?.(menuId) });
     actions.push({ icon: <Music />, label: 'Importer des histoires', fn: () => onAddStory?.(menuId) });
 
-    const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode);
+    const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
     if (nodeType === 'root' && !hasEndNode) {
       actions.push('sep');
       actions.push({ icon: <Moon />, label: 'Ajouter un nœud de fin', fn: () => onAddEndNode?.() });
