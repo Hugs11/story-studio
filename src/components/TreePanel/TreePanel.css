@@ -349,6 +349,20 @@
   border-color: #A982E0;
 }
 
+.badge-nav--end-node-home {
+  background: #EFF2FA;
+  color: #4F5573;
+  border-color: #A2A8C5;
+  border-style: dashed;
+}
+
+.badge-nav--end-night-home {
+  background: #F6EDFF;
+  color: #7C3D9A;
+  border-color: #C07AE4;
+  border-style: dashed;
+}
+
 .badge-nav--error {
   background: #FCEBEB;
   color: #B42318;
@@ -399,6 +413,20 @@
     border-color: #7650A7;
   }
 
+  :root:not([data-theme="light"]) .badge-nav--end-node-home {
+    background: #171B28;
+    color: #BCC4E8;
+    border-color: #5E668F;
+    border-style: dashed;
+  }
+
+  :root:not([data-theme="light"]) .badge-nav--end-night-home {
+    background: #2A1733;
+    color: #F0B7FF;
+    border-color: #9B5DBB;
+    border-style: dashed;
+  }
+
   :root:not([data-theme="light"]) .badge-nav--error {
     background: #2A0808;
     color: #FF9A96;
@@ -447,6 +475,20 @@
   background: #21162F;
   color: #D4B7FF;
   border-color: #7650A7;
+}
+
+:root[data-theme="dark"] .badge-nav--end-node-home {
+  background: #171B28;
+  color: #BCC4E8;
+  border-color: #5E668F;
+  border-style: dashed;
+}
+
+:root[data-theme="dark"] .badge-nav--end-night-home {
+  background: #2A1733;
+  color: #F0B7FF;
+  border-color: #9B5DBB;
+  border-style: dashed;
 }
 
 :root[data-theme="dark"] .badge-nav--error {
