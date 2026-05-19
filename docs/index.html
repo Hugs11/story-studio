@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Story Studio — Créez des packs d'histoires pour votre Lunii</title>
+    <meta
+      name="description"
+      content="Story Studio est un éditeur Windows gratuit pour créer, importer et générer des packs d'histoires compatibles avec la Lunii."
+    />
+    <meta name="theme-color" content="#0c1227" />
+
+    <meta property="og:title" content="Story Studio" />
+    <meta
+      property="og:description"
+      content="Créez des packs d'histoires pour votre Lunii, sans prise de tête."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hugs11.github.io/story-studio/" />
+    <meta property="og:image" content="https://hugs11.github.io/story-studio/logostory.svg" />
+
+    <link rel="icon" type="image/svg+xml" href="logostory.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg: #0c1227;
+        --bg-elev: #131a35;
+        --bg-elev-2: #1a2347;
+        --border: #2a3566;
+        --text: #e7ecff;
+        --muted: #99a3c9;
+        --accent: #f5ae23;
+        --accent-hover: #ffc14d;
+        --violet: #6b7bff;
+        --violet-deep: #4c5cd6;
+        --success: #34d399;
+        --radius: 14px;
+        --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        background-image:
+          radial-gradient(1200px 600px at 80% -10%, rgba(107, 123, 255, 0.18), transparent 60%),
+          radial-gradient(900px 500px at 0% 10%, rgba(245, 174, 35, 0.08), transparent 60%);
+        background-attachment: fixed;
+      }
+
+      a {
+        color: var(--violet);
+        text-decoration: none;
+      }
+      a:hover {
+        color: #93a0ff;
+        text-decoration: underline;
+      }
+
+      .container {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header.site {
+        padding: 28px 0 8px;
+      }
+      header.site .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+      header.site img.logo {
+        height: 56px;
+        width: auto;
+      }
+      header.site .brand {
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.2px;
+      }
+
+      .hero {
+        padding: 60px 0 40px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: 1.1;
+        margin: 0 0 14px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+      }
+      .hero p.tagline {
+        font-size: clamp(17px, 2vw, 20px);
+        color: var(--muted);
+        max-width: 640px;
+        margin: 0 auto 28px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+      .badge .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18); }
+        50% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.08); }
+      }
+
+      .cta-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 16px 28px;
+        background: var(--accent);
+        color: #1a1408;
+        font-weight: 700;
+        font-size: 17px;
+        border: 0;
+        border-radius: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+        box-shadow: 0 8px 28px rgba(245, 174, 35, 0.25);
+      }
+      .btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        color: #1a1408;
+        text-decoration: none;
+      }
+      .btn:disabled {
+        background: var(--bg-elev-2);
+        color: var(--muted);
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+      .btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .cta-meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .cta-meta a {
+        color: var(--muted);
+        text-decoration: underline;
+      }
+      .cta-meta a:hover {
+        color: var(--text);
+      }
+
+      section {
+        padding: 48px 0;
+      }
+      section h2 {
+        font-size: clamp(24px, 3vw, 32px);
+        font-weight: 700;
+        margin: 0 0 28px;
+        letter-spacing: -0.2px;
+      }
+
+      .hero-shot {
+        margin: 36px auto 0;
+        max-width: 1080px;
+        padding: 0 24px;
+      }
+      .hero-shot img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .showcase {
+        display: flex;
+        flex-direction: column;
+        gap: 56px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1.15fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+      .row.reverse {
+        grid-template-columns: 1fr 1.15fr;
+      }
+      .row.reverse .row-media {
+        order: 2;
+      }
+      .row-media img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .row-media img:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+      }
+      .row-text .icon {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(107, 123, 255, 0.15);
+        color: var(--violet);
+        border-radius: 10px;
+        margin-bottom: 14px;
+      }
+      .row-text .icon svg {
+        width: 22px;
+        height: 22px;
+      }
+      .row-text h3 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+      }
+      .row-text p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      @media (max-width: 760px) {
+        .row,
+        .row.reverse {
+          grid-template-columns: 1fr;
+          gap: 18px;
+        }
+        .row.reverse .row-media {
+          order: 0;
+        }
+        .showcase {
+          gap: 40px;
+        }
+      }
+
+      .steps {
+        counter-reset: step;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .step {
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        position: relative;
+      }
+      .step::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        top: -14px;
+        left: 24px;
+        width: 32px;
+        height: 32px;
+        background: var(--accent);
+        color: #1a1408;
+        font-weight: 700;
+        font-size: 15px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 14px rgba(245, 174, 35, 0.3);
+      }
+      .step h3 {
+        margin: 8px 0 6px;
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14.5px;
+      }
+
+      footer.site {
+        padding: 36px 0 48px;
+        border-top: 1px solid var(--border);
+        margin-top: 32px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer.site .container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+      footer.site .disclaimer {
+        max-width: 560px;
+      }
+      footer.site .links {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .error {
+        color: #ffb4b4;
+      }
+
+      @media (max-width: 560px) {
+        header.site {
+          padding-top: 20px;
+        }
+        .hero {
+          padding: 40px 0 24px;
+        }
+        section {
+          padding: 36px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="container">
+        <img class="logo" src="logostory.svg" alt="Story Studio" />
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <div class="badge" id="version-badge" aria-live="polite">
+            <span class="dot"></span>
+            <span id="version-text">Chargement de la dernière version…</span>
+          </div>
+          <h1>Pour créer ou modifier une histoire.</h1>
+          <p class="tagline">
+            Créez des packs d'histoires pour votre Lunii. Story Studio est une
+            app Windows gratuite pour les parents et toutes les personnes qui
+            veulent créer des histoires personnalisées pour leurs enfants.
+          </p>
+
+          <div class="cta-group">
+            <a
+              id="download-btn"
+              class="btn"
+              href="https://github.com/Hugs11/story-studio/releases/latest"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span id="download-label">Télécharger pour Windows</span>
+            </a>
+            <div class="cta-meta" id="download-meta">
+              Windows 10 ou plus récent · Installeur officiel
+            </div>
+          </div>
+        </div>
+        <div class="hero-shot">
+          <img
+            src="assets/screenshots/editor-dark.png"
+            alt="Aperçu de l'éditeur Story Studio"
+            width="1080"
+          />
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="container">
+          <div class="showcase">
+            <div class="row">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/home-dark.png"
+                  alt="Écran d'accueil de Story Studio"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                </span>
+                <h3>Démarrez en quelques secondes</h3>
+                <p>
+                  Un écran d'accueil clair pour retrouver vos projets récents,
+                  importer un pack existant ou en créer un nouveau. Pas de menus
+                  cachés, pas de configuration interminable.
+                </p>
+              </div>
+            </div>
+
+            <div class="row reverse">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/editor-dark.png"
+                  alt="Éditeur visuel avec arbre du projet"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7h18M3 12h18M3 17h12" />
+                  </svg>
+                </span>
+                <h3>Éditeur visuel intuitif</h3>
+                <p>
+                  Organisez menus, sous-menus et histoires dans un arbre clair.
+                  Glissez-déposez vos éléments, copiez-collez, renommez — sans
+                  jamais toucher au code.
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/media-explorer-dark.png"
+                  alt="Explorateur de médias avec filtres et tags"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                  </svg>
+                </span>
+                <h3>Toute votre bibliothèque sous la main</h3>
+                <p>
+                  Audios, images, ZIP : un explorateur unifié avec filtres, tags,
+                  aperçus rapides et compteurs d'utilisation. Vous savez toujours
+                  où chaque fichier est utilisé.
+                </p>
+              </div>
+            </div>
+
+            <div class="row reverse">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/audio-editor-dark.png"
+                  alt="Éditeur audio avec forme d'onde"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                  </svg>
+                </span>
+                <h3>Audio sans complication</h3>
+                <p>
+                  Enregistrez votre voix au micro, coupez, ajoutez des fondus,
+                  assemblez plusieurs fichiers en un seul MP3 — directement dans
+                  l'app, sur la forme d'onde.
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/diagram-simulator-dark.png"
+                  alt="Vue diagramme avec simulateur intégré"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </span>
+                <h3>Testez avant d'exporter</h3>
+                <p>
+                  Visualisez la navigation de votre pack sous forme de diagramme,
+                  et lancez le simulateur intégré pour vérifier le résultat comme
+                  si vous étiez sur la conteuse. Plus de mauvaises surprises
+                  après transfert.
+                </p>
+              </div>
+            </div>
+
+            <div class="row reverse">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/settings-light.png"
+                  alt="Préférences de Story Studio"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </span>
+                <h3>Personnalisez à votre goût</h3>
+                <p>
+                  Thème clair, sombre ou système, raccourcis clavier configurables,
+                  workspace à choisir. Story Studio s'adapte à votre façon de
+                  travailler, pas l'inverse.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="container">
+          <h2>Comment installer</h2>
+          <div class="steps">
+            <div class="step">
+              <h3>Téléchargez l'installeur</h3>
+              <p>
+                Cliquez sur le bouton « Télécharger pour Windows » en haut de la page.
+                Le fichier se trouve ensuite dans votre dossier <em>Téléchargements</em>.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Double-cliquez sur le fichier</h3>
+              <p>
+                Lancez l'installeur (<code>.exe</code>) et suivez les étapes. Windows peut
+                afficher un avertissement SmartScreen : cliquez sur <em>Informations
+                complémentaires</em> puis <em>Exécuter quand même</em>.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Lancez Story Studio</h3>
+              <p>
+                Ouvrez Story Studio depuis le menu Démarrer ou le raccourci créé sur le
+                bureau. Vous pouvez commencer votre premier pack tout de suite.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site">
+      <div class="container">
+        <div class="disclaimer">
+          Story Studio est un outil communautaire gratuit et open source.
+          <strong>Il n'est pas affilié, soutenu ou sponsorisé par Lunii.</strong>
+        </div>
+        <div class="links">
+          <a href="https://github.com/Hugs11/story-studio">Code source (GitHub)</a>
+          <a href="https://github.com/Hugs11/story-studio/issues">Signaler un bug</a>
+          <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var REPO = "Hugs11/story-studio";
+        var API = "https://api.github.com/repos/" + REPO + "/releases/latest";
+        var RELEASES_URL = "https://github.com/" + REPO + "/releases/latest";
+
+        var btn = document.getElementById("download-btn");
+        var label = document.getElementById("download-label");
+        var meta = document.getElementById("download-meta");
+        var versionText = document.getElementById("version-text");
+
+        function formatSize(bytes) {
+          if (!bytes && bytes !== 0) return "";
+          var mb = bytes / (1024 * 1024);
+          return mb >= 1 ? mb.toFixed(1) + " Mo" : (bytes / 1024).toFixed(0) + " Ko";
+        }
+
+        function pickAsset(assets) {
+          if (!assets || !assets.length) return null;
+          // Prefer .exe (NSIS) installer, fallback to .msi
+          var exe = assets.find(function (a) {
+            return /\.exe$/i.test(a.name) && !/\.sig$/i.test(a.name);
+          });
+          if (exe) return exe;
+          var msi = assets.find(function (a) {
+            return /\.msi$/i.test(a.name) && !/\.sig$/i.test(a.name);
+          });
+          return msi || null;
+        }
+
+        function setFallback(message) {
+          versionText.textContent = message || "Voir les versions disponibles";
+          label.textContent = "Voir les téléchargements";
+          btn.setAttribute("href", RELEASES_URL);
+          meta.textContent = "Vous serez redirigé vers la page GitHub Releases.";
+        }
+
+        fetch(API, { headers: { Accept: "application/vnd.github+json" } })
+          .then(function (res) {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          })
+          .then(function (release) {
+            var version = (release.tag_name || release.name || "").replace(/^v/i, "");
+            if (version) {
+              versionText.textContent = "Version " + version + " — Bêta";
+            } else {
+              versionText.textContent = "Dernière version — Bêta";
+            }
+
+            var asset = pickAsset(release.assets || []);
+            if (asset && asset.browser_download_url) {
+              btn.setAttribute("href", asset.browser_download_url);
+              label.textContent = "Télécharger pour Windows";
+              var size = formatSize(asset.size);
+              meta.textContent =
+                "Windows 10 ou plus récent · " +
+                asset.name +
+                (size ? " (" + size + ")" : "");
+            } else {
+              setFallback(version ? "Version " + version + " — Bêta" : null);
+            }
+          })
+          .catch(function () {
+            setFallback();
+          });
+      })();
+    </script>
+  </body>
+</html>
