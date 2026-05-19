@@ -1016,9 +1016,13 @@ struct NightBridgeInstance {
 
 fn normalize_stage_navigation_target(
     stage_id: &str,
+    root_stage_id: &str,
     menu_ids: &HashSet<String>,
     story_stage_map: &HashMap<String, String>,
 ) -> Option<String> {
+    if stage_id == root_stage_id {
+        return Some("root".to_string());
+    }
     resolve_navigation_target_for_stage(stage_id, menu_ids, story_stage_map)
         .and_then(|value| value.as_str().map(str::to_string))
 }
@@ -1026,6 +1030,7 @@ fn normalize_stage_navigation_target(
 fn infer_night_target(
     instances: &[NightBridgeInstance],
     target_for: impl Fn(&NightBridgeInstance) -> Option<&String>,
+    root_stage_id: &str,
     menu_ids: &HashSet<String>,
     story_stage_map: &HashMap<String, String>,
 ) -> Option<String> {
@@ -1042,13 +1047,14 @@ fn infer_night_target(
     }
     let first = targets[0];
     if targets.iter().all(|target| *target == first) {
-        return normalize_stage_navigation_target(first, menu_ids, story_stage_map);
+        return normalize_stage_navigation_target(first, root_stage_id, menu_ids, story_stage_map);
     }
     None
 }
 
 fn detect_imported_night_mode(
     night_mode_available: bool,
+    root_stage_id: &str,
     entries: &[serde_json::Value],
     stages: &HashMap<&str, &serde_json::Value>,
     actions: &HashMap<&str, &serde_json::Value>,
@@ -1120,6 +1126,7 @@ fn detect_imported_night_mode(
     let return_target = infer_night_target(
         &instances,
         |instance| instance.return_stage_id.as_ref(),
+        root_stage_id,
         &menu_ids,
         &story_stage_map,
     )?;
@@ -1129,6 +1136,7 @@ fn detect_imported_night_mode(
     let home_target = infer_night_target(
         &instances,
         |instance| instance.home_stage_id.as_ref(),
+        root_stage_id,
         &menu_ids,
         &story_stage_map,
     );
@@ -2187,8 +2195,14 @@ fn walk_story_doc_to_entries(
         &existing_story_stage_ids,
     );
     let _legacy_advanced_transitions_detected = advanced_transitions_detected;
-    let night_mode_detection =
-        detect_imported_night_mode(night_mode_available, &entries, &stages, &actions, assets);
+    let night_mode_detection = detect_imported_night_mode(
+        night_mode_available,
+        sq_id,
+        &entries,
+        &stages,
+        &actions,
+        assets,
+    );
     let (night_mode_audio, night_mode_return, night_mode_home_return) = night_mode_detection
         .map(|detection| {
             (
@@ -3760,6 +3774,7 @@ mod tests {
                 { "id": "story-2-play-action", "options": ["story-2-night"] },
                 { "id": "story-1-night-action", "options": ["story-2"] },
                 { "id": "story-2-night-action", "options": ["story-2"] },
+                { "id": "night-home-action", "options": ["square"] },
                 { "id": "story-1-home-action", "options": ["story-1"] },
                 { "id": "story-2-home-action", "options": ["story-2"] }
             ],
@@ -3789,7 +3804,7 @@ mod tests {
                     "uuid": "story-1-night",
                     "name": "nightStage",
                     "audio": "night.mp3",
-                    "homeTransition": null,
+                    "homeTransition": { "actionNode": "night-home-action", "optionIndex": 0 },
                     "okTransition": { "actionNode": "story-1-night-action", "optionIndex": 0 },
                     "controlSettings": { "autoplay": true, "wheel": false, "ok": true, "home": true }
                 },
@@ -3812,7 +3827,7 @@ mod tests {
                     "uuid": "story-2-night",
                     "name": "nightStage",
                     "audio": "night.mp3",
-                    "homeTransition": null,
+                    "homeTransition": { "actionNode": "night-home-action", "optionIndex": 0 },
                     "okTransition": { "actionNode": "story-2-night-action", "optionIndex": 0 },
                     "controlSettings": { "autoplay": true, "wheel": false, "ok": true, "home": true }
                 }
@@ -3836,6 +3851,7 @@ mod tests {
         assert_eq!(result["nightMode"].as_bool(), Some(true));
         assert_eq!(result["nightModeAudio"].as_str(), Some("night.mp3"));
         assert_eq!(result["nightModeReturn"].as_str(), Some("next_story"));
+        assert_eq!(result["nightModeHomeReturn"].as_str(), Some("root"));
 
         let entries = result["entries"].as_array().expect("entries");
         assert!(entries
