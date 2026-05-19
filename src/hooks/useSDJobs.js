@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { addProjectPrefix } from '../utils/fileUtils';
 
+const MAX_CONCURRENT_SD_JOBS = 1;
+
 export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
   useEffect(() => {
     let cancelled = false;
@@ -33,32 +35,32 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
   }, []);
 
   useEffect(() => {
-    const pending = sdStore.jobs.filter(j => j.status === 'pending');
-    if (pending.length === 0) return;
-    for (const job of pending) {
-      sdStore.updateJob(job.id, { status: 'submitting', progress: null, progressLabel: null });
-      invoke('comfyui_watch_progress', {
-        settings: sdStore.sdSettings,
-        clientId: job.clientId,
-        jobId: job.id,
-      }).catch(e => console.debug('[ComfyUI progress]', String(e)));
-      invoke('comfyui_submit_job', {
-        settings: sdStore.sdSettings,
-        request: {
-          workflowId: job.workflowId,
-          positivePrompt: job.params.positivePrompt,
-          negativePrompt: job.params.negativePrompt,
-          seed: job.params.seed,
-          steps: job.params.steps,
-          cfg: job.params.cfg,
-          loraStrength: job.params.loraStrength,
-          referenceImagePath: job.params.referenceImagePath || null,
-          clientId: job.clientId,
-        },
-      })
-        .then(promptId => sdStore.updateJob(job.id, { status: 'running', promptId, progress: null, progressLabel: null }))
-        .catch(e => sdStore.updateJob(job.id, { status: 'error', errorMessage: String(e) }));
-    }
+    const active = sdStore.jobs.filter(j => j.status === 'submitting' || j.status === 'running');
+    if (active.length >= MAX_CONCURRENT_SD_JOBS) return;
+    const next = sdStore.jobs.find(j => j.status === 'pending');
+    if (!next) return;
+    sdStore.updateJob(next.id, { status: 'submitting', progress: null, progressLabel: null });
+    invoke('comfyui_watch_progress', {
+      settings: sdStore.sdSettings,
+      clientId: next.clientId,
+      jobId: next.id,
+    }).catch(e => console.debug('[ComfyUI progress]', String(e)));
+    invoke('comfyui_submit_job', {
+      settings: sdStore.sdSettings,
+      request: {
+        workflowId: next.workflowId,
+        positivePrompt: next.params.positivePrompt,
+        negativePrompt: next.params.negativePrompt,
+        seed: next.params.seed,
+        steps: next.params.steps,
+        cfg: next.params.cfg,
+        loraStrength: next.params.loraStrength,
+        referenceImagePath: next.params.referenceImagePath || null,
+        clientId: next.clientId,
+      },
+    })
+      .then(promptId => sdStore.updateJob(next.id, { status: 'running', promptId, progress: null, progressLabel: null }))
+      .catch(e => sdStore.updateJob(next.id, { status: 'error', errorMessage: String(e) }));
   }, [sdStore.jobs]);
 
   useEffect(() => {
