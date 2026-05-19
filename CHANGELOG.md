@@ -23,6 +23,8 @@ is the public record of the work completed before the first GitHub release.
 ### Fixed
 
 - Fixed Rust 1.95 Clippy compatibility for the public CI toolchain.
+- Serialized local XTTS and ComfyUI generation queues to avoid launching many
+  heavy AI jobs at once and exhausting system memory.
 - Fixed Windows audio edit paths after trim/cut operations, made edited audio
   originals visible next to the edited file, and kept those backup files out of
   media scans unless they are explicitly referenced by the project.
