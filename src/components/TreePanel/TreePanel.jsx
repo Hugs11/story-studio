@@ -111,14 +111,24 @@ function getEndNodeFallbackTarget(parentMenu) {
   return resolveNavigationTargetId(parentMenu.returnAfterPlay, parentMenu) ?? parentMenu.id;
 }
 
-function resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries) {
-  const normalized = normalizeNavigationTarget(project?.nightModeReturn);
+function resolveEndNodeConfiguredTargetId(target, entry, parentMenu, rootEntries) {
+  const normalized = normalizeNavigationTarget(target);
   if (!normalized) return null;
   if (isNextStoryNavigationTarget(normalized)) {
     const nextStory = findNextStorySibling(entry, parentMenu, rootEntries);
     return nextStory ? `story:${nextStory.id}` : getEndNodeFallbackTarget(parentMenu);
   }
   return resolveNavigationTargetId(normalized, parentMenu);
+}
+
+function resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries) {
+  return resolveEndNodeConfiguredTargetId(project?.nightModeReturn, entry, parentMenu, rootEntries);
+}
+
+function resolveEndNodeHomeTargetId(project, entry, parentMenu, rootEntries) {
+  const normalized = normalizeNavigationTarget(project?.nightModeHomeReturn);
+  if (!normalized) return resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries);
+  return resolveEndNodeConfiguredTargetId(normalized, entry, parentMenu, rootEntries);
 }
 
 function isNightModePrompt(entry, parentMenu, project, rootEntries) {
@@ -130,17 +140,17 @@ function isNightModePrompt(entry, parentMenu, project, rootEntries) {
   return !!promptTarget && promptTarget === nightTarget;
 }
 
-function getEndNodeNavigationBadge(entry, parentMenu, project, rootEntries, projectIndex) {
+function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex) {
   const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode);
   const hasNightPrompt = isNightModePrompt(entry, parentMenu, project, rootEntries);
   const hasLocalAfterPlayback = !!entry?.afterPlaybackPromptAudio
     || (entry?.afterPlaybackSequence?.length ?? 0) > 0;
-  if (!hasEndNode || entry?.type !== 'story' || !project?.nightModeReturn || (hasLocalAfterPlayback && !hasNightPrompt)) return null;
+  if (!hasEndNode || entry?.type !== 'story' || !project?.nightModeReturn || (hasLocalAfterPlayback && !hasNightPrompt)) return [];
   const targetId = hasNightPrompt
     ? (resolveNavigationTargetId(entry.afterPlaybackPromptOkTarget, parentMenu)
       ?? resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries))
     : resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries);
-  if (!targetId) return null;
+  if (!targetId) return [];
 
   const isNightMode = !!project?.globalOptions?.nightMode;
   const targetName = getNavigationTargetName(targetId, projectIndex);
@@ -152,12 +162,27 @@ function getEndNodeNavigationBadge(entry, parentMenu, project, rootEntries, proj
   const title = hasNightPrompt
     ? `Message du nœud de fin importé${isNightMode ? ' (mode nuit disponible)' : ''} : bouton OK vers "${targetName}". Bouton Home : ${entry.afterPlaybackPromptHomeNone ? 'aucune transition' : `"${homeName ?? targetName}"`}.`
     : `Nœud de fin${isNightMode ? ' (mode nuit disponible)' : ''} : sortie OK/fin automatique vers "${targetName}".`;
-  return {
+  const badges = [{
     key: `end-node-return:${targetId}:${targetName}`,
     kind: isNightMode ? 'end-night' : 'end-node',
     label: `${isNightMode ? '☾' : '■'} ${compactLabel}`,
     title,
-  };
+  }];
+
+  const endNodeHomeTargetId = hasNightPrompt
+    ? homeTarget
+    : resolveEndNodeHomeTargetId(project, entry, parentMenu, rootEntries);
+  if (endNodeHomeTargetId && endNodeHomeTargetId !== targetId) {
+    const endNodeHomeName = getNavigationTargetName(endNodeHomeTargetId, projectIndex);
+    badges.push({
+      key: `end-node-home:${endNodeHomeTargetId}:${endNodeHomeName}`,
+      kind: isNightMode ? 'end-night-home' : 'end-node-home',
+      label: `⌂ ${getCompactNavigationTargetLabel(endNodeHomeTargetId, projectIndex)}`,
+      title: `${hasNightPrompt ? 'Message du nœud de fin importé' : 'Nœud de fin'}${isNightMode ? ' (mode nuit disponible)' : ''} : bouton Home vers "${endNodeHomeName}".`,
+    });
+  }
+
+  return badges;
 }
 
 function getStrongestStatus(issues = []) {
@@ -214,8 +239,7 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
     });
   }
 
-  const endNodeBadge = getEndNodeNavigationBadge(entry, parentMenu, project, rootEntries, projectIndex);
-  if (endNodeBadge) badges.push(endNodeBadge);
+  badges.push(...getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex));
 
   return badges;
 }
