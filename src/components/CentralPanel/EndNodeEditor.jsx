@@ -62,8 +62,7 @@ export function EndNodeEditor({
       <div className="card">
         <div className="card-title">Nœud de fin d'histoire</div>
         <div style={{ padding: '0 16px 12px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          Ce stage est le message joué entre la fin d'une histoire et la destination suivante.
-          Sa sortie passe par le bouton OK, ou automatiquement quand le stage est configuré en lecture automatique.
+          Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante. La lecture est toujours automatique.
         </div>
 
         <div style={{ padding: '0 16px 12px' }}>
@@ -86,14 +85,38 @@ export function EndNodeEditor({
       </div>
 
       <div className="card">
-        <div className="card-title">Navigation après le nœud de fin</div>
+        <div className="card-title">Pendant le nœud de fin</div>
         <div style={{ padding: '0 16px 12px' }}>
-          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 0 }}>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <span className="field-label">Sortie du nœud</span>
+              <span className="field-label">Accueil</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination du bouton OK, ou de la fin automatique si le nœud est en lecture automatique.
-                « Histoire suivante » cible l'histoire suivante du même dossier.
+                Destination quand Home est pressé pendant la lecture du nœud de fin.
+              </div>
+            </div>
+            <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
+              <NavigationTargetSelect
+                value={nightModeHomeReturn ?? ''}
+                onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
+                allMenus={allMenus}
+                allStories={allStories}
+                currentStoryId={null}
+                emptyLabel="Même destination qu'après le nœud de fin"
+                style={targetSelectStyle}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Après le nœud de fin</div>
+        <div style={{ padding: '0 16px 12px' }}>
+          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 0 }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <span className="field-label">À la fin du nœud de fin, retour vers</span>
+              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                Où l'enfant est redirigé après la lecture du message de fin.
               </div>
             </div>
             <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
@@ -104,25 +127,6 @@ export function EndNodeEditor({
                 allStories={allStories}
                 currentStoryId={null}
                 emptyLabel="Réglage par défaut"
-                style={targetSelectStyle}
-              />
-            </div>
-          </div>
-          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginTop: 12, marginBottom: 0 }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <span className="field-label">Accueil du nœud de fin</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination quand Home est pressé pendant ce nœud. Ce réglage ne change pas la sortie OK.
-              </div>
-            </div>
-            <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
-              <NavigationTargetSelect
-                value={nightModeHomeReturn ?? ''}
-                onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
-                allMenus={allMenus}
-                allStories={allStories}
-                currentStoryId={null}
-                emptyLabel="Même destination que Sortie du nœud"
                 style={targetSelectStyle}
               />
             </div>

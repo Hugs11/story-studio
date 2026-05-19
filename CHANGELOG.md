@@ -19,6 +19,11 @@ is the public record of the work completed before the first GitHub release.
 
 - Replaced the app logo and favicon with SVG assets and regenerated Tauri
   application icons.
+- Redesigned navigation badges in the project tree as tinted square icons with
+  a unified OKLCH palette and clearer tooltips.
+- Renamed multi-selection and end-node editor sections to "Pendant la lecture"
+  / "Après la lecture" for a clearer split between active controls and
+  post-playback destinations.
 
 ### Fixed
 
@@ -28,6 +33,10 @@ is the public record of the work completed before the first GitHub release.
 - Fixed Windows audio edit paths after trim/cut operations, made edited audio
   originals visible next to the edited file, and kept those backup files out of
   media scans unless they are explicitly referenced by the project.
+- End-of-story node now appears in the tree, diagram and flow views as soon as
+  it is added from the context menu, even before its audio is configured.
+- Fixed Home navigation badge visibility on stories when an end node is active,
+  and removed a misleading per-story badge that mirrored a global setting.
 
 ---
 

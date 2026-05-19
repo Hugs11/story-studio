@@ -6,9 +6,21 @@ import { StatusDot } from '../common/Badge';
 import { Tooltip } from '../common/Tooltip';
 import {
   IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon, IconStop,
+  IconReturn, IconSquareFilled, IconDiamond, IconArrowRight,
   ICON_BY_KEY,
 } from './TreeIcons';
 import './TreePanel.css';
+
+const BADGE_ICON_BY_KIND = {
+  return: <IconReturn />,
+  home: <IconHouse />,
+  'end-node': <IconSquareFilled />,
+  'end-night': <IconMoon />,
+  'end-node-home': <IconHouse />,
+  'end-night-home': <IconHouse />,
+  graph: <IconDiamond />,
+  continuation: <IconArrowRight />,
+};
 
 function getTreeIndent(level) {
   const safeLevel = Math.max(level, 0);
@@ -124,21 +136,27 @@ function TreeNodeInner({
         <span className="tree-chevron-spacer" />
       )}
       <div className="tree-item-body">
+        <div
+          className="ti-badges"
+          style={navigationBadges.length === 0 && type !== 'story' && type !== 'end-node' ? { width: 0 } : undefined}
+        >
+          {navigationBadges.map((badge) => (
+            <Tooltip key={badge.key} text={badge.title}>
+              <span
+                className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {BADGE_ICON_BY_KIND[badge.kind] ?? badge.label}
+              </span>
+            </Tooltip>
+          ))}
+        </div>
         <span className="ti-icon">{resolvedIcon}</span>
         <span className="ti-label">{label}</span>
         {type === 'zip' && <span className="badge-zip">ZIP</span>}
         {hasToggle && !expanded && childCount > 0 && (
           <span className="badge-count">{childCount}</span>
         )}
-        {navigationBadges.map((badge) => (
-          <Tooltip key={badge.key} text={badge.title}>
-            <span
-              className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
-            >
-              {badge.label}
-            </span>
-          </Tooltip>
-        ))}
         {status && <StatusDot status={status} />}
       </div>
     </div>
