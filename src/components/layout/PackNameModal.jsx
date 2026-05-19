@@ -19,7 +19,7 @@ function parseConventionName(raw) {
   let rest = raw.slice(ageMatch[0].length);
 
   let author = '';
-  let version = '1';
+  let version = '';
   const byIdx = rest.indexOf('[by_');
   if (byIdx !== -1) {
     const byPart = rest.slice(byIdx + 4);
@@ -31,6 +31,12 @@ function parseConventionName(raw) {
       author = byPart.replace(/_/g, ' ').trim();
     }
     rest = rest.slice(0, byIdx);
+  } else {
+    const standaloneV = rest.match(/_[Vv](\d+)$/);
+    if (standaloneV) {
+      version = standaloneV[1];
+      rest = rest.slice(0, rest.length - standaloneV[0].length);
+    }
   }
 
   let producer = '';
@@ -71,7 +77,7 @@ function generateName({ age, title, bonus, author, version, producer }) {
   const t = toUnderscored(title);
   const b = toUnderscored(bonus);
   const a = toUnderscored(author);
-  const v = String(version || '1').replace(/\D/g, '') || '1';
+  const v = String(version || '').replace(/\D/g, '');
   const p = (producer || '').trim();
   const bonusPart = b ? `_(${b})` : '';
   if (!t) return '';
@@ -79,8 +85,9 @@ function generateName({ age, title, bonus, author, version, producer }) {
   const titlePart = p && a && p !== (author || '').trim()
     ? `${p}-${t}${bonusPart ? bonusPart.replace(/^_/, '') : ''}`
     : `${t}${bonusPart}`;
-  if (!a) return `${prefix}${titlePart}`;
-  return `${prefix}${titlePart}[by_${a}_V${v}`;
+  const vSuffix = v ? `_V${v}` : '';
+  if (!a) return `${prefix}${titlePart}${vSuffix}`;
+  return `${prefix}${titlePart}[by_${a}${vSuffix}`;
 }
 
 const AGES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -91,7 +98,7 @@ export function PackNameModal({ open, packName, packDescription = '', packVersio
       const saved = localStorage.getItem('nameGenFields');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { age: '3', title: '', bonus: '', author: '', version: '1', producer: '' };
+    return { age: '3', title: '', bonus: '', author: '', version: '', producer: '' };
   });
   const [description, setDescription] = useState(packDescription);
 
@@ -108,7 +115,7 @@ export function PackNameModal({ open, packName, packDescription = '', packVersio
             title: parsed.title,
             bonus: parsed.bonus,
             author: parsed.author,
-            version: parsed.version || String(packVersion),
+            version: parsed.version || (packVersion > 1 ? String(packVersion) : ''),
             producer: parsed.producer,
           }
         : {
@@ -170,7 +177,7 @@ export function PackNameModal({ open, packName, packDescription = '', packVersio
               className="field-input"
               value={gen.version}
               onChange={(e) => updateGen('version', e.target.value)}
-              onBlur={(e) => { if (!e.target.value) updateGen('version', '1'); }}
+              onBlur={(e) => { if (!e.target.value) updateGen('version', ''); }}
               style={{ width: 80 }}
             />
 
