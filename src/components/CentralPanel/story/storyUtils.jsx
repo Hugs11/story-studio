@@ -1,3 +1,4 @@
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
@@ -14,8 +15,91 @@ import {
   isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from '../../../store/navigationTargets';
+import { CircleX, FolderOpen, Music, Play, RotateCcw } from '../../icons/LucideLocal';
 
 export { NAV_TARGET_NEXT_STORY };
+
+export const NAV_ROOT_LABEL = 'Première entrée du pack';
+
+const NAV_ICON_BY_KIND = {
+  default: RotateCcw,
+  none: CircleX,
+  root: FolderOpen,
+  menu: FolderOpen,
+  story: Music,
+  story_play: Play,
+  story_home_step: Music,
+};
+
+function iconForKind(kind) {
+  return NAV_ICON_BY_KIND[kind] ?? null;
+}
+
+function buildNavigationTargetOptions({
+  value,
+  allMenus = [],
+  allStories = [],
+  currentStoryId = null,
+  includeNone = false,
+  noneLabel = 'Aucune transition',
+  emptyLabel = 'Destination par défaut',
+  includeRoot = true,
+  includeNextStory = true,
+  includeStoryPlay = true,
+}) {
+  const options = [];
+  if (value === '__mixed__') {
+    options.push({
+      value: '__mixed__',
+      label: 'Valeurs mixtes — ne pas modifier',
+      kind: 'default',
+      disabled: true,
+    });
+  }
+  options.push({ value: '', label: emptyLabel, kind: 'default' });
+  if (includeNone) options.push({ value: '__none__', label: noneLabel, kind: 'none' });
+  if (includeRoot) {
+    options.push({ value: 'root', label: NAV_ROOT_LABEL, kind: 'root', group: 'Raccourcis' });
+  }
+  if (includeNextStory) {
+    options.push({ value: NAV_TARGET_NEXT_STORY, label: 'Histoire suivante', kind: 'story', group: 'Raccourcis' });
+  }
+  for (const menu of allMenus) {
+    options.push({
+      value: encodeMenuNavigationTarget(menu.id),
+      label: menu.name || '(sans nom)',
+      kind: 'menu',
+      group: 'Dossiers',
+    });
+  }
+  for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+    options.push({
+      value: encodeStoryNavigationTarget(story.id),
+      label: story.name || '(sans nom)',
+      kind: 'story',
+      group: 'Histoires - titre',
+    });
+  }
+  if (includeStoryPlay) {
+    for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+      options.push({
+        value: encodeStoryPlayNavigationTarget(story.id),
+        label: `Lecture directe - ${story.name || '(sans nom)'}`,
+        kind: 'story_play',
+        group: 'Histoires - lecture directe',
+      });
+    }
+  }
+  for (const story of allStories.filter((s) => s.id !== currentStoryId && s.hasAfterPlaybackHomeStep)) {
+    options.push({
+      value: encodeStoryHomeStepNavigationTarget(story.id),
+      label: `Retour de fin - ${story.name || '(sans nom)'}`,
+      kind: 'story_home_step',
+      group: 'Histoires - retour de fin',
+    });
+  }
+  return options;
+}
 
 export const CONTROL_DEFS = [
   { key: 'autoplay', label: 'Lecture automatique', def: true },
@@ -62,7 +146,7 @@ export function resolveNavigationTargetId(target, currentMenuId = null) {
 }
 
 export function targetNameById(allMenus, allStories, targetId, fallback = 'destination introuvable') {
-  if (targetId === 'root') return 'Début du pack';
+  if (targetId === 'root') return NAV_ROOT_LABEL;
   if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
   if (!targetId) return fallback;
   if (isStoryNavigationTarget(targetId)) {
@@ -77,6 +161,51 @@ export function targetNameById(allMenus, allStories, targetId, fallback = 'desti
   return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
 }
 
+export function NavigationHint({ label }) {
+  if (!label) return null;
+  return (
+    <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4, paddingLeft: 6 }}>
+      ↳ {label}
+    </div>
+  );
+}
+
+// Calcule le texte de hint à afficher sous un NavigationTargetSelect.
+// - Pour un value vide ou "root" → renvoie le défaut résolu (ex: "Quelle histoire... (premier élément du pack)").
+// - Pour "next_story" → renvoie soit le nom de l'histoire suivante si entry est fourni, soit la mention contextuelle.
+// - Pour un menu/story explicite → null (pas de hint nécessaire).
+//
+// Le caller passe `emptyResolvedLabel` qui décrit ce que "vide" signifie dans son contexte
+// (héritage parent vs premier élément du pack vs etc).
+export function getNavigationSelectHint({
+  value,
+  emptyResolvedLabel = null,
+  entry = null,
+  parentMenu = null,
+  project = null,
+  allMenus = [],
+  allStories = [],
+}) {
+  const normalized = normalizeNavigationTarget(value);
+  if (!normalized) return emptyResolvedLabel;
+  if (isRootNavigationTarget(normalized)) {
+    const def = project?.rootEntries?.[0];
+    if (!def) return 'Aucune entrée dans le pack';
+    return `${def.name || '(sans nom)'} (premier élément du pack)`;
+  }
+  if (isNextStoryNavigationTarget(normalized)) {
+    if (!entry) return 'Histoire suivante selon l\'histoire source';
+    const siblings = parentMenu ? (parentMenu.children ?? []) : (project?.rootEntries ?? []);
+    const idx = siblings.findIndex((s) => s.id === entry.id);
+    const next = idx >= 0 ? siblings.slice(idx + 1).find((s) => s.type === 'story') : null;
+    if (next) return next.name || '(sans nom)';
+    // Fallback Rust : si pas d'histoire suivante, retour vers le parent
+    return parentMenu ? `${parentMenu.name || '(sans nom)'} (parent)` : NAV_ROOT_LABEL;
+  }
+  // Explicite — la valeur affichée dans le select est déjà la destination
+  return null;
+}
+
 export function NavigationTargetSelect({
   value,
   onChange,
@@ -87,56 +216,182 @@ export function NavigationTargetSelect({
   noneLabel = 'Aucune transition',
   emptyLabel = 'Destination par défaut',
   style,
+  resolvedDestinationLabel = null,
+  includeRoot = true,
+  includeNextStory = true,
+  includeStoryPlay = true,
+  size = 'default',
 }) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const rootRef = useRef(null);
+  const listboxId = useId();
+  const selectedValue = value ?? '';
+  const options = useMemo(() => buildNavigationTargetOptions({
+    value: selectedValue,
+    allMenus,
+    allStories,
+    currentStoryId,
+    includeNone,
+    noneLabel,
+    emptyLabel,
+    includeRoot,
+    includeNextStory,
+    includeStoryPlay,
+  }), [
+    selectedValue,
+    allMenus,
+    allStories,
+    currentStoryId,
+    includeNone,
+    noneLabel,
+    emptyLabel,
+    includeRoot,
+    includeNextStory,
+    includeStoryPlay,
+  ]);
+  const selectableOptions = useMemo(
+    () => options.filter((option) => !option.disabled),
+    [options],
+  );
+  const selectedOption = options.find((option) => option.value === selectedValue)
+    ?? options.find((option) => option.value === '')
+    ?? options[0];
+  const SelectedIcon = iconForKind(selectedOption?.kind);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const selectedIndex = selectableOptions.findIndex((option) => option.value === selectedValue);
+    setActiveIndex(Math.max(0, selectedIndex));
+  }, [open, selectableOptions, selectedValue]);
+
+  useEffect(() => {
+    if (!open) return;
+    const activeOption = rootRef.current?.querySelector(`[data-option-index="${activeIndex}"]`);
+    activeOption?.scrollIntoView({ block: 'nearest' });
+  }, [open, activeIndex]);
+
+  const selectOption = (option) => {
+    if (!option || option.disabled) return;
+    onChange(option.value || null);
+    setOpen(false);
+  };
+
+  const moveActive = (delta) => {
+    if (selectableOptions.length === 0) return;
+    setActiveIndex((current) => (current + delta + selectableOptions.length) % selectableOptions.length);
+  };
+
+  const handleKeyDown = (event) => {
+    if (!open) {
+      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveActive(1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveActive(-1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setActiveIndex(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      setActiveIndex(Math.max(0, selectableOptions.length - 1));
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectOption(selectableOptions[activeIndex]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+    }
+  };
+
+  const activeOptionId = open && selectableOptions[activeIndex]
+    ? `${listboxId}-option-${activeIndex}`
+    : undefined;
+
+  let previousGroup = null;
+
   return (
-    <select
-      className="field-input"
-      style={style}
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value || null)}
-    >
-      <option value="">{emptyLabel}</option>
-      {includeNone ? <option value="__none__">{noneLabel}</option> : null}
-      <option value="root">Début du pack</option>
-      <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-      {allMenus.length > 0 && (
-        <optgroup label="Dossiers">
-          {allMenus.map((menu) => (
-            <option key={`target-menu-${menu.id}`} value={encodeMenuNavigationTarget(menu.id)}>
-              {menu.name || '(sans nom)'}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      {allStories.length > 0 && (
-        <>
-          <optgroup label="Histoires — titre">
-            {allStories.filter((s) => s.id !== currentStoryId).map((story) => (
-              <option key={`target-story-${story.id}`} value={encodeStoryNavigationTarget(story.id)}>
-                {story.name || '(sans nom)'}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Histoires — lecture directe">
-            {allStories.filter((s) => s.id !== currentStoryId).map((story) => (
-              <option key={`target-story-play-${story.id}`} value={encodeStoryPlayNavigationTarget(story.id)}>
-                Lecture directe — {story.name || '(sans nom)'}
-              </option>
-            ))}
-          </optgroup>
-          {allStories.some((s) => s.id !== currentStoryId && s.hasAfterPlaybackHomeStep) ? (
-            <optgroup label="Histoires — retour de fin">
-              {allStories
-                .filter((s) => s.id !== currentStoryId && s.hasAfterPlaybackHomeStep)
-                .map((story) => (
-                  <option key={`target-story-home-step-${story.id}`} value={encodeStoryHomeStepNavigationTarget(story.id)}>
-                    Retour de fin — {story.name || '(sans nom)'}
-                  </option>
-                ))}
-            </optgroup>
-          ) : null}
-        </>
-      )}
-    </select>
+    <div className="navigation-target-select" style={style}>
+      <div
+        ref={rootRef}
+        className={`navigation-listbox ${open ? 'is-open' : ''} ${size === 'compact' ? 'is-compact' : ''}`}
+      >
+        <button
+          type="button"
+          className="navigation-listbox-trigger"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={activeOptionId}
+          onClick={() => setOpen((current) => !current)}
+          onKeyDown={handleKeyDown}
+        >
+          {SelectedIcon ? <SelectedIcon className="navigation-listbox-icon" strokeWidth={2} /> : null}
+          <span className="navigation-listbox-label">{selectedOption?.label ?? emptyLabel}</span>
+          <span className="navigation-listbox-chevron" aria-hidden="true">⌄</span>
+        </button>
+        {open ? (
+          <div id={listboxId} className="navigation-listbox-popover" role="listbox" tabIndex={-1}>
+            {options.map((option) => {
+              const groupChanged = option.group && option.group !== previousGroup;
+              if (option.group) previousGroup = option.group;
+              const optionIndex = selectableOptions.findIndex((candidate) => candidate.value === option.value);
+              const isActive = optionIndex === activeIndex;
+              const isSelected = option.value === selectedValue;
+              const Icon = iconForKind(option.kind);
+              return (
+                <div key={`${option.group ?? 'top'}:${option.value || 'empty'}`}>
+                  {groupChanged ? <div className="navigation-listbox-group">{option.group}</div> : null}
+                  <button
+                    type="button"
+                    role="option"
+                    id={optionIndex >= 0 ? `${listboxId}-option-${optionIndex}` : undefined}
+                    data-option-index={optionIndex >= 0 ? optionIndex : undefined}
+                    aria-selected={isSelected}
+                    disabled={option.disabled}
+                    className={`navigation-listbox-option ${isActive ? 'is-active' : ''} ${isSelected ? 'is-selected' : ''}`}
+                    onMouseEnter={() => {
+                      if (optionIndex >= 0) setActiveIndex(optionIndex);
+                    }}
+                    onClick={() => selectOption(option)}
+                  >
+                    {Icon ? <Icon className="navigation-listbox-icon" strokeWidth={2} /> : null}
+                    <span className="navigation-listbox-label">{option.label}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+      {resolvedDestinationLabel ? (
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--color-text-tertiary)',
+            marginTop: 4,
+            paddingLeft: 6,
+          }}
+        >
+          ↳ {resolvedDestinationLabel}
+        </div>
+      ) : null}
+    </div>
   );
 }
