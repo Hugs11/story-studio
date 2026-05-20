@@ -29,7 +29,12 @@ import { deepCloneEntry } from '../../store/projectModel';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../store/useSharedClipboard';
 import { getItemValidationStatus, getMenuValidationStatus, getRootValidationStatus, getEndNodeValidationStatus } from '../../store/projectValidation';
-import { NAV_TARGET_NEXT_STORY, decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, isStoryPlayNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
+import {
+  getGeneratedEndNodeHomeNavigation,
+  getGeneratedNavigationTargetName,
+  getGeneratedStoryNavigation,
+  hasVisibleEndNode,
+} from '../../store/generatedNavigation';
 import './TreePanel.css';
 
 const EMPTY_BADGES = [];
@@ -59,105 +64,15 @@ function hasSelectedAncestor(entryId, candidateIds, getParentId) {
   return false;
 }
 
-function resolveNavigationTargetId(target, parentMenu = null) {
-  const normalized = normalizeNavigationTarget(target);
-  if (!normalized) return null;
-  if (isCurrentMenuNavigationTarget(normalized)) return parentMenu?.id ?? null;
-  if (isRootNavigationTarget(normalized)) return 'root';
-  if (isNextStoryNavigationTarget(normalized)) return NAV_TARGET_NEXT_STORY;
-  if (isStoryNavigationTarget(normalized)) return normalized;
-  return decodeNavigationMenuId(normalized);
-}
-
-function getInheritedReturnTarget(parentMenu) {
-  if (!parentMenu) return null;
-  return resolveNavigationTargetId(parentMenu.returnAfterPlay, parentMenu) ?? parentMenu.id;
-}
-
-function getNavigationTargetName(targetId, projectIndex, fallback = 'destination introuvable') {
-  if (targetId === 'root') return 'Racine';
-  if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
-  if (!targetId) return fallback;
-  if (isStoryNavigationTarget(targetId)) {
-    const storyId = decodeNavigationStoryId(targetId);
-    const name = projectIndex?.entryById?.get(storyId)?.name || fallback;
-    if (isStoryHomeStepNavigationTarget(targetId)) return `Retour de fin - ${name}`;
-    if (isStoryPlayNavigationTarget(targetId)) return `Lecture directe - ${name}`;
-    return name;
-  }
-  return projectIndex?.entryById?.get(targetId)?.name || fallback;
-}
-
-function getCompactNavigationTargetLabel(targetId, projectIndex) {
-  const targetName = getNavigationTargetName(targetId, projectIndex, '');
-  return targetName ? targetName.slice(0, 4) : 'Dest';
-}
-
-function mediaPathKey(value) {
-  return typeof value === 'string'
-    ? value.trim().replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase()
-    : '';
-}
-
-function findNextStorySibling(entry, parentMenu, rootEntries) {
-  if (!entry) return null;
-  const siblings = parentMenu ? (parentMenu.children ?? []) : (rootEntries ?? []);
-  const currentIndex = siblings.findIndex((candidate) => candidate.id === entry.id);
-  if (currentIndex < 0) return null;
-  return siblings.slice(currentIndex + 1).find((candidate) => candidate.type === 'story') ?? null;
-}
-
-function getEndNodeFallbackTarget(parentMenu) {
-  if (!parentMenu) return 'root';
-  return resolveNavigationTargetId(parentMenu.returnAfterPlay, parentMenu) ?? parentMenu.id;
-}
-
-function resolveEndNodeConfiguredTargetId(target, entry, parentMenu, rootEntries) {
-  const normalized = normalizeNavigationTarget(target);
-  if (!normalized) return null;
-  if (isNextStoryNavigationTarget(normalized)) {
-    const nextStory = findNextStorySibling(entry, parentMenu, rootEntries);
-    return nextStory ? `story:${nextStory.id}` : getEndNodeFallbackTarget(parentMenu);
-  }
-  return resolveNavigationTargetId(normalized, parentMenu);
-}
-
-function resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries) {
-  return resolveEndNodeConfiguredTargetId(project?.nightModeReturn, entry, parentMenu, rootEntries);
-}
-
-function resolveEndNodeHomeTargetId(project, entry, parentMenu, rootEntries) {
-  const normalized = normalizeNavigationTarget(project?.nightModeHomeReturn);
-  if (!normalized) return resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries);
-  return resolveEndNodeConfiguredTargetId(normalized, entry, parentMenu, rootEntries);
-}
-
-function isNightModePrompt(entry, parentMenu, project, rootEntries) {
-  if (!project?.nightModeAudio || !project?.nightModeReturn || entry?.type !== 'story') return false;
-  if (!entry?.afterPlaybackPromptAudio || (entry?.afterPlaybackSequence?.length ?? 0) > 0) return false;
-  if (mediaPathKey(entry.afterPlaybackPromptAudio) !== mediaPathKey(project.nightModeAudio)) return false;
-  const promptTarget = resolveNavigationTargetId(entry.afterPlaybackPromptOkTarget, parentMenu);
-  const nightTarget = resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries);
-  return !!promptTarget && promptTarget === nightTarget;
-}
-
 function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex) {
-  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode);
-  const hasNightPrompt = isNightModePrompt(entry, parentMenu, project, rootEntries);
-  const hasLocalAfterPlayback = !!entry?.afterPlaybackPromptAudio
-    || (entry?.afterPlaybackSequence?.length ?? 0) > 0;
-  if (!hasEndNode || entry?.type !== 'story' || !project?.nightModeReturn || (hasLocalAfterPlayback && !hasNightPrompt)) return [];
-  const targetId = hasNightPrompt
-    ? (resolveNavigationTargetId(entry.afterPlaybackPromptOkTarget, parentMenu)
-      ?? resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries))
-    : resolveEndNodeReturnTargetId(project, entry, parentMenu, rootEntries);
+  const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
+  const targetId = navigation.endNodeReturn.targetId;
   if (!targetId) return [];
 
-  const isNightMode = !!project?.globalOptions?.nightMode;
-  const targetName = getNavigationTargetName(targetId, projectIndex);
-  const compactLabel = getCompactNavigationTargetLabel(targetId, projectIndex);
+  const isNightMode = navigation.endNodeReturn.isNightMode;
+  const targetName = getGeneratedNavigationTargetName(targetId, projectIndex);
   const nightSuffix = isNightMode ? ' (mode nuit)' : '';
-  const title = hasNightPrompt
+  const title = navigation.endNodeReturn.isImportedPrompt
     ? `Retour modifié : fin de lecture, nœud de fin intégré${nightSuffix} → « ${targetName} »`
     : `Retour modifié : fin de lecture via nœud de fin${nightSuffix} → « ${targetName} »`;
 
@@ -194,21 +109,19 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
   }
   if (entry?.type !== 'story') return [];
 
+  const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
   const endNodeBadges = getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex);
   const badges = [];
 
   const entryIssues = issuesById.get(entry.id) ?? [];
   const homeStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile')));
-  const localReturnTarget = resolveNavigationTargetId(entry.returnAfterPlay, parentMenu);
-  const localHomeTarget = resolveNavigationTargetId(entry.returnOnHome, parentMenu) ?? localReturnTarget;
 
-  if (endNodeBadges.length === 0) {
+  if (!navigation.directReturn.isBypassedByEndNode) {
     const returnStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
-    const inheritedReturnTarget = getInheritedReturnTarget(parentMenu);
-    if (entry.returnAfterPlay && localReturnTarget !== inheritedReturnTarget) {
-      const returnName = getNavigationTargetName(localReturnTarget, projectIndex);
+    if (navigation.directReturn.isModified) {
+      const returnName = getGeneratedNavigationTargetName(navigation.directReturn.targetId, projectIndex);
       badges.push({
-        key: `return:${localReturnTarget}:${returnName}`,
+        key: `return:${navigation.directReturn.targetId}:${returnName}`,
         kind: 'return',
         status: returnStatus,
         label: '↩',
@@ -217,14 +130,58 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
     }
   }
 
-  if (entry.returnOnHome) {
-    const homeName = getNavigationTargetName(localHomeTarget, projectIndex);
+  if (!navigation.endNodeReturn.isImportedPrompt && navigation.promptReturn.isConfigured && navigation.promptReturn.targetId) {
+    const promptReturnName = getGeneratedNavigationTargetName(navigation.promptReturn.targetId, projectIndex);
     badges.push({
-      key: `home:${localHomeTarget}:${homeName}`,
-      kind: 'home',
+      key: `prompt-return:${navigation.promptReturn.targetId}:${promptReturnName}`,
+      kind: 'prompt-return',
+      status: navigation.promptReturn.isInactive ? 'warn' : null,
+      label: '↩',
+      title: navigation.promptReturn.isImportedNightPrompt
+        ? `Retour modifié : fin de lecture, message du nœud de fin intégré → « ${promptReturnName} »`
+        : `Retour modifié : fin de lecture via message de fin → « ${promptReturnName} »`,
+    });
+  }
+
+  if (navigation.storyHome.isNone) {
+    badges.push({
+      key: 'home:none',
+      kind: 'home-none',
       status: homeStatus,
       label: '⌂',
-      title: `Retour modifié : bouton Home → « ${homeName} »`,
+      title: 'Retour modifié : bouton Home pendant la lecture → aucune transition',
+    });
+  } else if (navigation.storyHome.isConfigured) {
+    const homeName = getGeneratedNavigationTargetName(navigation.storyHome.targetId, projectIndex);
+    badges.push({
+      key: `home:${navigation.storyHome.targetId}:${homeName}`,
+      kind: 'home',
+      status: navigation.storyHome.isInactive ? 'warn' : homeStatus,
+      label: '⌂',
+      title: navigation.storyHome.isInactive
+        ? `Retour modifié : bouton Home configuré vers « ${homeName} », mais le bouton Accueil est désactivé pendant la lecture`
+        : `Retour modifié : bouton Home → « ${homeName} »`,
+    });
+  }
+
+  if (navigation.promptHome.isNone) {
+    badges.push({
+      key: 'prompt-home:none',
+      kind: 'prompt-home-none',
+      status: navigation.promptHome.isInactive ? 'warn' : null,
+      label: '⌂',
+      title: 'Retour modifié : bouton Home du message de fin → aucune transition',
+    });
+  } else if (navigation.promptHome.isConfigured) {
+    const promptHomeName = getGeneratedNavigationTargetName(navigation.promptHome.targetId, projectIndex);
+    badges.push({
+      key: `prompt-home:${navigation.promptHome.targetId}:${promptHomeName}`,
+      kind: 'prompt-home',
+      status: navigation.promptHome.isInactive ? 'warn' : null,
+      label: '⌂',
+      title: navigation.promptHome.isInactive
+        ? `Retour modifié : bouton Home du message de fin configuré vers « ${promptHomeName} », mais le bouton Accueil est désactivé sur ce message`
+        : `Retour modifié : bouton Home du message de fin → « ${promptHomeName} »`,
     });
   }
 
@@ -757,7 +714,7 @@ export function TreePanel({
         actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
       }
 
-      const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
+      const hasEndNode = hasVisibleEndNode(project);
       if (isRootCtx && !hasEndNode) {
         actions.push('sep');
         actions.push({ icon: <IconMoon />, label: 'Ajouter un nœud de fin', fn: () => onAddEndNode?.() });
@@ -948,20 +905,17 @@ export function TreePanel({
     );
   }
 
-  const hasEndNode = projectType === 'pack' && !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
+  const hasEndNode = projectType === 'pack' && hasVisibleEndNode(project);
   const nightModeActive = !!project.globalOptions?.nightMode;
 
   const endNodeHomeBadges = (() => {
-    if (!hasEndNode) return EMPTY_BADGES;
-    const returnTargetId = resolveEndNodeReturnTargetId(project, null, null, rootEntries);
-    const homeTargetId = resolveEndNodeHomeTargetId(project, null, null, rootEntries);
-    if (!homeTargetId || homeTargetId === returnTargetId) return EMPTY_BADGES;
-    const isNightMode = !!project.globalOptions?.nightMode;
-    const homeName = getNavigationTargetName(homeTargetId, projectIndex);
-    const nightSuffix = isNightMode ? ' (mode nuit)' : '';
+    const homeNavigation = getGeneratedEndNodeHomeNavigation(project);
+    if (!hasEndNode || !homeNavigation?.targetId) return EMPTY_BADGES;
+    const homeName = getGeneratedNavigationTargetName(homeNavigation.targetId, projectIndex);
+    const nightSuffix = homeNavigation.isNightMode ? ' (mode nuit)' : '';
     return [{
-      key: `end-node-home:${homeTargetId}:${homeName}`,
-      kind: isNightMode ? 'end-night-home' : 'end-node-home',
+      key: `end-node-home:${homeNavigation.targetId}:${homeName}`,
+      kind: homeNavigation.isNightMode ? 'end-night-home' : 'end-node-home',
       label: '⌂',
       title: `Retour modifié : bouton Home du nœud de fin${nightSuffix} → « ${homeName} »`,
     }];

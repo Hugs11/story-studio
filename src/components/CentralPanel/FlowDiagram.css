@@ -707,6 +707,12 @@
   stroke: color-mix(in srgb, #9aa8b6 56%, var(--color-text-tertiary) 44%);
 }
 
+.fd-complete-line--return.fd-complete-line--contextual {
+  stroke: color-mix(in srgb, #ffc66d 68%, var(--color-text-tertiary) 32%);
+  stroke-dasharray: 2 5;
+  opacity: 0.68;
+}
+
 .fd-complete-line--return.is-related {
   stroke: color-mix(in srgb, #8dc2ff 82%, white 18%);
   stroke-width: 1.35;

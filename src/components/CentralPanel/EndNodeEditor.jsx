@@ -26,6 +26,8 @@ export function EndNodeEditor({
   nightModeActive,
   nightModeReturn,
   nightModeHomeReturn,
+  nightModeReturnResolvedLabel = null,
+  nightModeHomeReturnResolvedLabel = null,
   projectName,
   savePath,
   allMenus = [],
@@ -101,8 +103,9 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Même destination qu'après le nœud de fin"
+                emptyLabel="Réglage par défaut"
                 style={targetSelectStyle}
+                resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
               />
             </div>
           </div>
@@ -128,6 +131,7 @@ export function EndNodeEditor({
                 currentStoryId={null}
                 emptyLabel="Réglage par défaut"
                 style={targetSelectStyle}
+                resolvedDestinationLabel={nightModeReturnResolvedLabel}
               />
             </div>
           </div>

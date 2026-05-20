@@ -13,11 +13,15 @@ import './TreePanel.css';
 
 const BADGE_ICON_BY_KIND = {
   return: <IconReturn />,
+  'prompt-return': <IconReturn />,
   home: <IconHouse />,
+  'home-none': <IconHouse />,
   'end-node': <IconSquareFilled />,
   'end-night': <IconMoon />,
   'end-node-home': <IconHouse />,
   'end-night-home': <IconHouse />,
+  'prompt-home': <IconHouse />,
+  'prompt-home-none': <IconHouse />,
   graph: <IconDiamond />,
   continuation: <IconArrowRight />,
 };

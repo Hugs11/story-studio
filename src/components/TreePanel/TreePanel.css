@@ -321,10 +321,30 @@
   background: color-mix(in oklch, oklch(0.80 0.16 150) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.80 0.16 150) 35%, transparent);
 }
+.badge-nav--prompt-return {
+  color: oklch(0.76 0.13 185);
+  background: color-mix(in oklch, oklch(0.76 0.13 185) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.76 0.13 185) 35%, transparent);
+}
 .badge-nav--home {
   color: oklch(0.78 0.13 240);
   background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);
+}
+.badge-nav--home-none {
+  color: oklch(0.74 0.16 35);
+  background: color-mix(in oklch, oklch(0.74 0.16 35) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.74 0.16 35) 35%, transparent);
+}
+.badge-nav--prompt-home {
+  color: oklch(0.74 0.13 190);
+  background: color-mix(in oklch, oklch(0.74 0.13 190) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.74 0.13 190) 35%, transparent);
+}
+.badge-nav--prompt-home-none {
+  color: oklch(0.72 0.15 25);
+  background: color-mix(in oklch, oklch(0.72 0.15 25) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.72 0.15 25) 35%, transparent);
 }
 .badge-nav--end-node {
   color: oklch(0.83 0.14 75);

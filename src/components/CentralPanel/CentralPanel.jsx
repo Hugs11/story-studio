@@ -4,6 +4,14 @@ import { EndNodeEditor } from './EndNodeEditor';
 import { PackNameBar } from './PackNameBar';
 import { END_NODE_ID } from '../TreePanel/TreePanel';
 import { collectAllStories } from '../../store/projectModel';
+import {
+  CONTEXTUAL_NEXT_STORY_TARGET,
+  getDefaultPackEntryDestination,
+  getGeneratedNavigationTargetName,
+  resolveNavigationTargetId,
+} from '../../store/generatedNavigation';
+import { isNextStoryNavigationTarget, isRootNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
+import { NAV_ROOT_LABEL } from './story/storyUtils';
 import './CentralPanel.css';
 
 const FlowDiagram = lazy(() => import('./FlowDiagram').then((module) => ({ default: module.FlowDiagram })));
@@ -69,6 +77,46 @@ export function CentralPanel({
     [project, projectIndex],
   );
 
+  const defaultPackEntry = useMemo(
+    () => getDefaultPackEntryDestination(project),
+    [project],
+  );
+  const defaultPackEntryLabel = defaultPackEntry
+    ? `${defaultPackEntry.name} (premier élément du pack)`
+    : NAV_ROOT_LABEL;
+  // Étiquette pour le défaut GLOBAL du nœud de fin : la destination effective
+  // est contextuelle (chaque story retombe sur sa propre destination de fin).
+  // On ne peut donc pas afficher une cible unique sans mentir.
+  const endNodeContextualDefaultLabel = 'Suit la destination de fin de chaque histoire';
+
+  const resolveExplicitTargetLabel = (normalized) => {
+    if (isNextStoryNavigationTarget(normalized)) {
+      return getGeneratedNavigationTargetName(CONTEXTUAL_NEXT_STORY_TARGET, projectIndex);
+    }
+    if (isRootNavigationTarget(normalized)) return defaultPackEntryLabel;
+    return null;
+  };
+
+  const endNodeReturnResolvedLabel = useMemo(() => {
+    const normalized = normalizeNavigationTarget(project.nightModeReturn);
+    if (!normalized) return endNodeContextualDefaultLabel;
+    return resolveExplicitTargetLabel(normalized);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.nightModeReturn, defaultPackEntryLabel, projectIndex]);
+
+  const endNodeHomeResolvedLabel = useMemo(() => {
+    const normalized = normalizeNavigationTarget(project.nightModeHomeReturn);
+    if (!normalized) {
+      const fallback = normalizeNavigationTarget(project.nightModeReturn);
+      if (!fallback) return endNodeContextualDefaultLabel;
+      const fallbackLabel = resolveExplicitTargetLabel(fallback)
+        ?? getGeneratedNavigationTargetName(resolveNavigationTargetId(fallback, null), projectIndex);
+      return `${fallbackLabel} (suit le réglage de fin)`;
+    }
+    return resolveExplicitTargetLabel(normalized);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.nightModeHomeReturn, project.nightModeReturn, defaultPackEntryLabel, projectIndex]);
+
   if (!isMultiSelect && selectedId === END_NODE_ID) {
     return (
       <div className="panel-center">
@@ -79,6 +127,8 @@ export function CentralPanel({
             nightModeActive={!!project.globalOptions?.nightMode}
             nightModeReturn={project.nightModeReturn ?? null}
             nightModeHomeReturn={project.nightModeHomeReturn ?? null}
+            nightModeReturnResolvedLabel={endNodeReturnResolvedLabel}
+            nightModeHomeReturnResolvedLabel={endNodeHomeResolvedLabel}
             projectName={project.name}
             savePath={project.savePath}
             allMenus={allMenus}

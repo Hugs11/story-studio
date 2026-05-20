@@ -3,19 +3,26 @@ import { AudioField } from '../AudioField';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import {
-  encodeMenuNavigationTarget,
-  encodeStoryHomeStepNavigationTarget,
-  encodeStoryNavigationTarget,
+  decodeNavigationStoryId,
+  isStoryHomeStepNavigationTarget,
+  isStoryNavigationTarget,
+  isStoryPlayNavigationTarget,
 } from '../../../store/navigationTargets';
+import {
+  getDefaultPackEntryDestination,
+  getGeneratedStoryNavigation,
+} from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
   SEQUENCE_CONTROL_DEFAULTS,
-  NAV_TARGET_NEXT_STORY,
+  NavigationHint,
   NavigationTargetSelect,
+  getNavigationSelectHint,
+  NAV_ROOT_LABEL,
   normalizeSequenceStep,
 } from './storyUtils';
 import { EndSequenceEditor } from './EndSequenceEditor';
-import { Moon } from '../../icons/LucideLocal';
+import { FolderOpen, Moon, Music } from '../../icons/LucideLocal';
 
 function mediaPathKey(value) {
   return typeof value === 'string'
@@ -44,6 +51,35 @@ export function AfterPlaySection({
   const afterPlaybackHomeStep = node.afterPlaybackHomeStep
     ? normalizeSequenceStep(node.afterPlaybackHomeStep, 0)
     : null;
+
+  // Quand l'histoire passe par le nœud de fin, on calcule sa destination finale
+  // réellement générée pour cette histoire précise. On utilise `effectiveTargetId`
+  // qui reflète le fallback Rust `compute_night_bridge_targets` quand
+  // `nightModeReturn` est vide (retombée sur le retour propre de l'histoire).
+  const endNodeFinalDestination = (() => {
+    if (!hasEndNode || node?.type !== 'story') return null;
+    const navigation = getGeneratedStoryNavigation(node, parentMenu, project, project?.rootEntries ?? []);
+    if (!navigation.endNodeReturn.isActive) return null;
+    const targetId = navigation.endNodeReturn.effectiveTargetId;
+    if (!targetId) return null;
+    if (targetId === 'root') {
+      const defaultDest = getDefaultPackEntryDestination(project);
+      if (!defaultDest) return { name: NAV_ROOT_LABEL, type: 'menu' };
+      return { name: defaultDest.name, type: defaultDest.type };
+    }
+    if (isStoryNavigationTarget(targetId)) {
+      const storyId = decodeNavigationStoryId(targetId);
+      const story = allStories.find((s) => s.id === storyId);
+      const prefix = isStoryPlayNavigationTarget(targetId)
+        ? 'Lecture directe - '
+        : isStoryHomeStepNavigationTarget(targetId)
+          ? 'Retour de fin - '
+          : '';
+      return { name: `${prefix}${story?.name ?? 'Histoire'}`, type: 'story' };
+    }
+    const menu = allMenus.find((m) => m.id === targetId);
+    return menu ? { name: menu.name, type: 'menu' } : null;
+  })();
   const hasSequence = afterPlaybackSequence.length > 0;
   const hasAdvancedContent = hasPrompt || hasSequence;
 
@@ -277,58 +313,41 @@ export function AfterPlaySection({
 
       {/* Destination de retour */}
       {allMenus.length > 0 && !hasEndNode && (
-        <div className="field-row" style={{ marginTop: 10 }}>
+        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
             <span className="field-label">À la fin de l'histoire, retour vers</span>
             <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
               Destination après la lecture — peut hériter du réglage du dossier parent.
             </div>
           </div>
-          <select
-            className="field-input"
-            style={{ maxWidth: 220 }}
+          <div style={{ maxWidth: 220, width: '100%' }}>
+          <NavigationTargetSelect
             value={node.returnAfterPlay ?? ''}
-            onChange={(e) => onUpdate({ returnAfterPlay: e.target.value || null })}
-          >
-            <option value="">{inheritedReturnLabel}</option>
-            <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-            {allMenus.length > 0 && (
-              <optgroup label="Dossiers">
-                {allMenus.map((menu) => (
-                  <option key={menu.id} value={encodeMenuNavigationTarget(menu.id)}>
-                    {menu.name || '(sans nom)'}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {allStories.length > 0 && (
-              <>
-                <optgroup label="Histoires">
-                  {allStories.filter((s) => s.id !== node.id).map((story) => (
-                    <option key={story.id} value={encodeStoryNavigationTarget(story.id)}>
-                      {story.name || '(sans nom)'}
-                    </option>
-                  ))}
-                </optgroup>
-                {allStories.some((s) => s.id !== node.id && s.hasAfterPlaybackHomeStep) ? (
-                  <optgroup label="Retours de fin importés">
-                    {allStories
-                      .filter((s) => s.id !== node.id && s.hasAfterPlaybackHomeStep)
-                      .map((story) => (
-                        <option key={`return-home-step-${story.id}`} value={encodeStoryHomeStepNavigationTarget(story.id)}>
-                          Retour de fin — {story.name || '(sans nom)'}
-                        </option>
-                      ))}
-                  </optgroup>
-                ) : null}
-              </>
-            )}
-          </select>
+            onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
+            allMenus={allMenus}
+            allStories={allStories}
+            currentStoryId={node.id}
+            emptyLabel={inheritedReturnLabel}
+            includeRoot={false}
+            includeStoryPlay={false}
+          />
+          <NavigationHint
+            label={getNavigationSelectHint({
+              value: node.returnAfterPlay,
+              emptyResolvedLabel: inheritedReturnLabel,
+              entry: node,
+              parentMenu,
+              project,
+              allMenus,
+              allStories,
+            })}
+          />
+          </div>
         </div>
       )}
 
       {hasEndNode && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', flexWrap: 'wrap' }}>
           <span className="field-label">Destination</span>
           <span
             style={{
@@ -345,6 +364,29 @@ export function AfterPlaySection({
           >
             <Moon style={{ width: 14, height: 14 }} /> Passe par le nœud de fin du pack
           </span>
+          {endNodeFinalDestination && (
+            <>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>→</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  padding: '4px 10px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {endNodeFinalDestination.type === 'story'
+                  ? <Music style={{ width: 14, height: 14 }} />
+                  : <FolderOpen style={{ width: 14, height: 14 }} />}
+                {endNodeFinalDestination.name}
+              </span>
+            </>
+          )}
         </div>
       )}
 
