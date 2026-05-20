@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { NodeEditorContent } from './NodeEditorContent';
 import { EndNodeEditor } from './EndNodeEditor';
-import { PackNameBar } from './PackNameBar';
 import { END_NODE_ID } from '../TreePanel/TreePanel';
 import { collectAllStories } from '../../store/projectModel';
 import {
@@ -129,7 +128,7 @@ export function CentralPanel({
             nightModeHomeReturn={project.nightModeHomeReturn ?? null}
             nightModeReturnResolvedLabel={endNodeReturnResolvedLabel}
             nightModeHomeReturnResolvedLabel={endNodeHomeResolvedLabel}
-            projectName={project.name}
+            projectName={project.projectName}
             savePath={project.savePath}
             allMenus={allMenus}
             allStories={allStories}
@@ -184,7 +183,6 @@ export function CentralPanel({
 
   return (
     <div className="panel-center">
-      {projectType === 'pack' && <PackNameBar packName={project.name} packDescription={project.packDescription ?? ''} packVersion={project.packVersion ?? 1} packMinAge={project.packMinAge ?? ''} packConventionSource={project.packConventionSource ?? ''} onUpdateRoot={onUpdateRoot} />}
       <div className="center-body">
         <NodeEditorContent
           node={node}

@@ -7,6 +7,7 @@ import {
   createMenuEntry,
   createStoryEntry,
   createZipEntry,
+  DEFAULT_PACK_METADATA,
   findEntryById,
   findParentMenuId,
   insertEntryAfter,
@@ -45,7 +46,8 @@ const ENTRY_NAVIGATION_FIELDS = [
 
 const DEFAULT_PROJECT = normalizeProjectData({
   version: 1,
-  name: '',
+  projectName: '',
+  packMetadata: DEFAULT_PACK_METADATA,
   rootName: 'Menu racine',
   projectType: null, // null = non choisi, 'simple' | 'pack'
   rootAudio: null,
@@ -324,7 +326,17 @@ export function useProjectStore() {
   }, [setProject]);
 
   const updateProjectName = useCallback((name) => {
-    setProject(p => ({ ...p, name }));
+    setProject(p => ({ ...p, projectName: name }));
+  }, [setProject]);
+
+  const updatePackMetadata = useCallback((fields) => {
+    setProject(p => ({
+      ...p,
+      packMetadata: {
+        ...(p.packMetadata ?? DEFAULT_PACK_METADATA),
+        ...(fields ?? {}),
+      },
+    }));
   }, [setProject]);
 
   const updateRootMedia = useCallback((field, value) => {
@@ -371,7 +383,9 @@ export function useProjectStore() {
       const promotedName = typeof menu.name === 'string' ? menu.name.trim() : '';
       const next = {
         ...p,
-        ...(promotedName ? { name: promotedName } : {}),
+        ...(promotedName && p.projectType === 'pack'
+          ? { packMetadata: { ...(p.packMetadata ?? DEFAULT_PACK_METADATA), title: promotedName, namingMode: 'convention' } }
+          : {}),
         rootAudio: menu.audio ?? p.rootAudio,
         rootImage: menu.image ?? p.rootImage,
         thumbnailImage: p.thumbnailImage ?? menu.image ?? p.rootImage,
@@ -401,7 +415,7 @@ export function useProjectStore() {
       const currentEntries = p.rootEntries ?? [];
       if (!currentEntries.length) return p;
       const newMenu = createMenuEntry({
-        name: p.rootName || p.name || 'Pack',
+        name: p.rootName || p.packMetadata?.title || p.projectName || 'Pack',
         audio: p.rootAudio ?? null,
         image: p.rootImage ?? null,
         children: currentEntries,
@@ -542,7 +556,7 @@ export function useProjectStore() {
     activeTab, setActiveTab,
     canUndo, undo, canRedo, redo,
     setProjectType, updateStoryAudio,
-    updateProjectName, updateRootMedia, updateGlobalOption,
+    updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
     addStory, addZip, updateItem, bulkUpdateItems, bulkDeleteItems, deleteItem, replaceZipWithEntries,
     pasteEntriesToMenu, cutPasteEntriesToMenu, duplicateEntry,

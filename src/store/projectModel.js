@@ -1,4 +1,20 @@
-import { normalizeNavigationTarget } from './navigationTargets';
+import { normalizeNavigationTarget } from './navigationTargets.js';
+import { getExportPackName, parseConventionName } from '../utils/packConvention.js';
+
+export const PROJECT_SCHEMA_VERSION = 3;
+
+export const DEFAULT_PACK_METADATA = Object.freeze({
+  title: '',
+  author: '',
+  version: 1,
+  minAge: '3',
+  producer: '',
+  bonus: '',
+  description: '',
+  namingMode: 'convention',
+  legacyExportName: '',
+  legacyName: '',
+});
 
 function makeId() {
   return crypto.randomUUID();
@@ -585,6 +601,8 @@ export function buildProjectIndex(project) {
 }
 
 function normalizeBaseProject(project = {}) {
+  const packMetadata = normalizePackMetadata(project.packMetadata ?? buildPackMetadataFromLegacy(project));
+  const projectName = cleanProjectName(project.projectName || project.name, '');
   let rootEntries = Array.isArray(project.rootEntries)
     ? project.rootEntries.map(normalizeEntry)
     : legacyRootEntries(project);
@@ -601,12 +619,12 @@ function normalizeBaseProject(project = {}) {
   const nativeTitle = nativeGraph?.document?.title;
 
   return {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     version: Math.max(project.version ?? 1, rootEntries.length > 0 ? 2 : 1),
-    packVersion: Math.max(1, Math.floor(project.packVersion ?? 1)),
-    packDescription: project.packDescription ?? '',
-    packMinAge: project.packMinAge ?? '',
-    packConventionSource: project.packConventionSource ?? '',
-    name: project.name || (typeof nativeTitle === 'string' ? nativeTitle : ''),
+    projectName,
+    packMetadata: packMetadata.title
+      ? packMetadata
+      : normalizePackMetadata({ ...packMetadata, title: typeof nativeTitle === 'string' ? nativeTitle : '' }),
     rootName: project.rootName ?? (projectType === 'pack' ? 'Menu racine' : ''),
     projectType,
     rootAudio: normalizeLocalFilePath(project.rootAudio),
@@ -802,6 +820,122 @@ function extractEntry(entries, entryId) {
   return null;
 }
 
+function basenameWithoutExtension(path) {
+  return String(path || '')
+    .replace(/\\/g, '/')
+    .replace(/.*\//, '')
+    .replace(/\.[^/.]+$/, '');
+}
+
+function cleanProjectName(value, fallback = 'Nouveau projet') {
+  const cleaned = String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/[<>:"/\\|?*]/g, ' ')
+    // Préserve les underscores simples (autorisés dans les noms de fichiers),
+    // ne réduit que les séquences multiples issues de sanitisation amont.
+    .replace(/_{2,}/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120)
+    .trim();
+  return cleaned || fallback;
+}
+
+function normalizePackVersion(value) {
+  const parsed = Number.parseInt(String(value ?? '').replace(/\D/g, ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function normalizePackMinAge(value) {
+  const parsed = String(value ?? '').match(/\d+/)?.[0] ?? '';
+  return parsed || DEFAULT_PACK_METADATA.minAge;
+}
+
+export function normalizePackMetadata(value = {}) {
+  const metadata = value && typeof value === 'object' ? value : {};
+  const namingMode = metadata.namingMode === 'legacy' ? 'legacy' : 'convention';
+  return {
+    title: String(metadata.title ?? '').trim(),
+    author: String(metadata.author ?? '').trim(),
+    version: normalizePackVersion(metadata.version),
+    minAge: normalizePackMinAge(metadata.minAge ?? metadata.age),
+    producer: String(metadata.producer ?? '').trim(),
+    bonus: String(metadata.bonus ?? '').trim(),
+    description: String(metadata.description ?? '').trim(),
+    namingMode,
+    legacyExportName: String(metadata.legacyExportName ?? '').trim(),
+    legacyName: String(metadata.legacyName ?? '').trim(),
+  };
+}
+
+function buildPackMetadataFromLegacy(project = {}) {
+  const oldName = String(project.name ?? '').trim();
+  const source = String(project.packConventionSource ?? '').trim();
+  const parsed = parseConventionName(oldName) ?? parseConventionName(source);
+
+  if (parsed) {
+    return normalizePackMetadata({
+      ...parsed,
+      version: project.packVersion ?? parsed.version,
+      minAge: project.packMinAge || parsed.minAge,
+      description: project.packDescription ?? '',
+      namingMode: 'convention',
+      legacyName: oldName,
+    });
+  }
+
+  return normalizePackMetadata({
+    title: oldName,
+    version: project.packVersion ?? 1,
+    minAge: project.packMinAge || DEFAULT_PACK_METADATA.minAge,
+    description: project.packDescription ?? '',
+    namingMode: oldName ? 'legacy' : 'convention',
+    legacyExportName: oldName,
+    legacyName: oldName,
+  });
+}
+
+export function migrateProjectData(rawData = {}, { savePath = null } = {}) {
+  const source = rawData && typeof rawData === 'object' ? rawData : {};
+  const hasNewMetadata = source.packMetadata && typeof source.packMetadata === 'object';
+  const packMetadata = normalizePackMetadata(
+    hasNewMetadata
+      ? {
+          ...source.packMetadata,
+          version: source.packMetadata.version ?? source.packVersion,
+          minAge: source.packMetadata.minAge ?? source.packMinAge,
+          description: source.packMetadata.description ?? source.packDescription,
+        }
+      : buildPackMetadataFromLegacy(source),
+  );
+
+  const saveStem = basenameWithoutExtension(savePath);
+  const legacyName = String(source.name ?? '').trim();
+  const legacyNameIsConvention = !!parseConventionName(legacyName);
+  const localLegacyName = legacyName && !legacyNameIsConvention ? legacyName : '';
+  const projectName = cleanProjectName(
+    source.projectName || saveStem || localLegacyName,
+    'nouveau-projet',
+  );
+
+  const {
+    name: _name,
+    packVersion: _packVersion,
+    packDescription: _packDescription,
+    packMinAge: _packMinAge,
+    packConventionSource: _packConventionSource,
+    ...rest
+  } = source;
+
+  return {
+    ...rest,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    projectName,
+    packMetadata,
+  };
+}
+
 function walkEntries(entries, visitor, ancestors = []) {
   for (const entry of entries ?? []) {
     visitor(entry, ancestors);
@@ -820,6 +954,17 @@ export function projectToSerializable(project) {
   return {
     ...normalized,
     version: Math.max(normalized.version ?? 1, 2),
+  };
+}
+
+export function projectToRustExport(project) {
+  const serializable = projectToSerializable(project);
+  const packMetadata = normalizePackMetadata(serializable.packMetadata);
+  return {
+    ...serializable,
+    name: getExportPackName(packMetadata),
+    packVersion: packMetadata.version,
+    packDescription: packMetadata.description,
   };
 }
 

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { open as openDialog, ask } from '@tauri-apps/plugin-dialog';
+import { openPath } from '@tauri-apps/plugin-opener';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { sanitizeImportedEntries, sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
@@ -23,6 +24,7 @@ import {
   collectTransferableProjectFiles,
   transferProjectFilesToProject,
   autoSaveNewProject,
+  projectToRustExport,
 } from './store/projectIO';
 import { getLastExportDir, saveLastExportDir, pickMultipleAudioOrZip, pickMultipleMediaFiles, pickFolder } from './store/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
@@ -54,6 +56,8 @@ import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger } from './utils/logger';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { isOriginalBackup } from './utils/mediaConventions';
+import { getExportPackName, parseConventionName } from './utils/packConvention';
+import { getProjectFilePrefix } from './utils/projectPrefix';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
@@ -67,6 +71,7 @@ const EmulatorTab = lazy(() => import('./tabs/EmulatorTab').then((module) => ({ 
 const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
 const StorySettingsModal = lazy(() => import('./components/StorySettingsModal/StorySettingsModal').then((module) => ({ default: module.StorySettingsModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
+const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
 
 function renderDeferred(children, fallback = null) {
   return (
@@ -156,7 +161,13 @@ function isProjectDirty(project) {
   visitProjectEntries(project, (entry) => {
     if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'menu') hasEntries = true;
   });
-  return !!project.name || !!project.rootAudio || !!project.rootImage || hasEntries;
+  return !!project.projectName || !!project.rootAudio || !!project.rootImage || hasEntries;
+}
+
+function hasExplicitExportPackName(project) {
+  const metadata = project?.packMetadata ?? {};
+  if (metadata.namingMode === 'legacy') return !!String(metadata.legacyExportName || '').trim();
+  return !!String(metadata.title || '').trim();
 }
 
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
@@ -252,6 +263,7 @@ export default function App() {
   const [bottomPanelTab, setBottomPanelTab] = useState(() => localStorage.getItem('bottomPanelTab') || 'media');
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [storySettingsOpen, setStorySettingsOpen] = useState(false);
+  const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = useState(() => localStorage.getItem('copyImportedFiles') === 'true');
   const [workspaceDir, setWorkspaceDirState] = useState(() => localStorage.getItem('storyStudioWorkspaceDir') || '');
@@ -543,7 +555,7 @@ export default function App() {
 
   function handleSDGenerate(workflowId, workflowName, params) {
     sdStore.addJob(workflowId, workflowName, params, {
-      projectName: store.project.name || '',
+      projectName: getProjectFilePrefix(store.project, store.savePath),
       fieldId: sdGenerateContext?.fieldId || null,
     });
     handleOpenAiQueue();
@@ -718,8 +730,9 @@ export default function App() {
       }
     }
 
-    addUsage(store.project?.rootImage, store.project?.name || 'Accueil', 'image d’accueil');
-    addUsage(store.project?.thumbnailImage, store.project?.name || 'Accueil', 'vignette');
+    const rootLabel = store.project?.projectName || store.project?.packMetadata?.title || 'Accueil';
+    addUsage(store.project?.rootImage, rootLabel, 'image d’accueil');
+    addUsage(store.project?.thumbnailImage, rootLabel, 'vignette');
 
     for (const flatEntry of projectIndex.flatEntries ?? []) {
       const entry = flatEntry.entry ?? flatEntry;
@@ -747,7 +760,7 @@ export default function App() {
       target: job.target || null,
       request: job.request,
       settings: { ...xttsSettings },
-      projectName: store.project.name || '',
+      projectName: getProjectFilePrefix(store.project, store.savePath),
     });
     handleOpenAiQueue();
   }
@@ -762,23 +775,9 @@ export default function App() {
     setAutoSavedPath(null);
     sdStore.clearDone();
     xttsStore.clearDone();
-    // Effacer les champs spécifiques au projet (titre, bonus, producteur) dans la convention de nommage
-    try {
-      const saved = JSON.parse(localStorage.getItem('nameGenFields') || '{}');
-      localStorage.setItem('nameGenFields', JSON.stringify({ ...saved, title: '', bonus: '', producer: '' }));
-    } catch {}
   }
 
-  async function handleGenerate() {
-    if (pathAuditPending) {
-      alert('Vérification des fichiers du projet en cours. Attendez une seconde puis réessayez.');
-      return;
-    }
-    const validationErrors = getGenerateErrors(store.project, pathAudit);
-    if (validationErrors.length > 0) {
-      alert(`Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`);
-      return;
-    }
+  async function resolveDefaultExportDir() {
     let defaultPath = getLastExportDir();
     if (!defaultPath) {
       const ws = workspaceDirRef.current || localStorage.getItem('storyStudioWorkspaceDir') || '';
@@ -787,26 +786,80 @@ export default function App() {
         if (exportsDir) defaultPath = exportsDir;
       }
     }
+    return defaultPath;
+  }
+
+  async function handleGenerate(projectOverride = null) {
+    const projectForGeneration = projectOverride && !projectOverride?.preventDefault
+      ? projectOverride
+      : store.project;
+    if (projectForGeneration.projectType === 'pack' && !hasExplicitExportPackName(projectForGeneration)) {
+      setPackMetadataOpen(true);
+      return;
+    }
+    if (pathAuditPending) {
+      alert('Vérification des fichiers du projet en cours. Attendez une seconde puis réessayez.');
+      return;
+    }
+    const validationErrors = getGenerateErrors(projectForGeneration, pathAudit);
+    if (validationErrors.length > 0) {
+      alert(`Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`);
+      return;
+    }
+    const defaultPath = await resolveDefaultExportDir();
     const outputFolder = await openDialog({ directory: true, multiple: false, title: 'Dossier de sortie du pack', defaultPath });
     if (!outputFolder) return;
     saveLastExportDir(outputFolder);
     renderQueue.addJob({
-      projectName: store.project.name || '(sans nom)',
+      projectName: projectForGeneration.projectName || '(sans nom)',
       savePath: store.savePath ?? null,
-      projectJson: JSON.stringify(store.project),
+      projectJson: JSON.stringify(projectToRustExport(projectForGeneration)),
       outputFolder,
     });
   }
 
-  const handleUpdateRoot = useCallback(({ name, rootName, packVersion, packDescription, packMinAge }) => {
-    if (name !== undefined) store.updateProjectName(name);
-    if (rootName !== undefined || packVersion !== undefined || packDescription !== undefined || packMinAge !== undefined) {
+  async function handleOpenExportFolder() {
+    const dir = getLastExportDir() || await resolveDefaultExportDir();
+    if (!dir) {
+      alert("Aucun dossier d'export connu pour le moment.");
+      return;
+    }
+    try {
+      await openPath(dir);
+    } catch (error) {
+      alert(`Impossible d'ouvrir le dossier d'export : ${error}`);
+    }
+  }
+
+  async function handleSavePackMetadata(draft, { generate = false } = {}) {
+    const projectForAction = {
+      ...store.project,
+      packMetadata: { ...(store.project.packMetadata ?? {}), ...draft },
+    };
+    if (!generate) {
+      store.setProject(projectForAction);
+      setPackMetadataOpen(false);
+      return;
+    }
+    const result = await handleSaveProject({
+      projectOverride: projectForAction,
+      returnResult: true,
+    });
+    if (!result?.project) return;
+    setPackMetadataOpen(false);
+    if (generate) await handleGenerate(result.project);
+  }
+
+  const handleUpdateRoot = useCallback(({ projectName, name, rootName, packMetadata }) => {
+    const nextProjectName = projectName ?? name;
+    if (nextProjectName !== undefined) store.updateProjectName(nextProjectName);
+    if (rootName !== undefined || packMetadata !== undefined) {
       store.setProject(p => ({
         ...p,
         ...(rootName !== undefined ? { rootName } : {}),
-        ...(packVersion !== undefined ? { packVersion } : {}),
-        ...(packDescription !== undefined ? { packDescription } : {}),
-        ...(packMinAge !== undefined ? { packMinAge } : {}),
+        ...(packMetadata !== undefined
+          ? { packMetadata: { ...(p.packMetadata ?? {}), ...packMetadata } }
+          : {}),
       }));
     }
   }, [store.updateProjectName, store.setProject]);
@@ -866,7 +919,7 @@ export default function App() {
     try {
       const targetWorkspace = ws || await getWorkspaceDir();
       if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-      return await copyMediaToWorkspace(filePath, targetWorkspace, 'fichiers-importes', store.project.name);
+      return await copyMediaToWorkspace(filePath, targetWorkspace, 'fichiers-importes', getProjectFilePrefix(store.project, savePathRef.current));
     } catch (e) {
       logger.error('[maybeCopyToProject] échec copie:', e);
       return filePath;
@@ -1080,7 +1133,7 @@ export default function App() {
       async (sourcePath) => {
         const targetWorkspace = workspaceDir || await getWorkspaceDir();
         if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-        return copyMediaToWorkspace(sourcePath, targetWorkspace, 'fichiers-importes', store.project.name);
+        return copyMediaToWorkspace(sourcePath, targetWorkspace, 'fichiers-importes', getProjectFilePrefix(store.project, savePathRef.current));
       },
       pathAudit,
     );
@@ -1425,27 +1478,45 @@ export default function App() {
         ? entries.map(markEntryAudioSkipSilence)
         : entries);
       const zipFilename = (zipItem.zipPath || '').split(/[\\/]/).pop().replace(/\.(zip|7z)$/i, '');
+      const rawTitle = String(result?.title || '').trim();
+      const parsedZipFilename = parseConventionName(zipFilename);
+      const parsedPackName = parseConventionName(rawTitle) ?? parsedZipFilename;
       const isZipConvention = /^\d+\+\]/.test(zipFilename);
-      const isTitleConvention = /^\d+\+\]/.test(result?.title || '');
-      const packName = (result?.title && (isTitleConvention || !isZipConvention))
-        ? sanitizeImportedName(result.title, zipItem.name || 'Pack importé')
+      const isTitleConvention = /^\d+\+\]/.test(rawTitle);
+      const packName = (rawTitle && (isTitleConvention || !isZipConvention))
+        ? sanitizeImportedName(rawTitle, zipItem.name || 'Pack importé')
         : sanitizeImportedName(zipFilename || zipItem.name, 'Pack importé');
-      const zipAgeMatch = (zipFilename || zipItem.name || '').match(/^(\d+)\+\]/);
-      const packMinAge = zipAgeMatch ? zipAgeMatch[1] : '';
+      const packMetadata = parsedPackName
+        ? {
+            ...parsedPackName,
+            version: result?.packVersion ?? parsedPackName.version,
+            description: result?.packDescription ?? '',
+            namingMode: 'convention',
+          }
+        : {
+            title: packName,
+            author: '',
+            version: result?.packVersion ?? 1,
+            minAge: ((zipFilename || zipItem.name || '').match(/^(\d+)\+\]/)?.[1]) || '3',
+            producer: '',
+            bonus: '',
+            description: result?.packDescription ?? '',
+            namingMode: 'convention',
+            legacyExportName: '',
+            legacyName: '',
+          };
       const isBlankProject = menuId == null
-        && (store.project.rootEntries ?? []).length === 1
-        && !store.project.name
+        && (store.project.rootEntries ?? []).length <= 1
+        && !store.project.projectName?.trim()
+        && !store.project.packMetadata?.title
         && !store.project.rootAudio
         && !store.project.rootImage;
       let nextProject = isBlankProject
         ? {
             ...store.project,
             projectType: 'pack',
-            name: packName,
-            packVersion: result?.packVersion ?? 1,
-            packDescription: result?.packDescription ?? '',
-            packMinAge,
-            packConventionSource: isZipConvention ? zipFilename : '',
+            projectName: parsedZipFilename ? '' : sanitizeImportedName(zipFilename || packName, 'Pack importe'),
+            packMetadata,
             rootAudio: result?.rootAudio ?? null,
             rootImage: result?.rootImage ?? null,
             thumbnailImage: result?.thumbnailImage ?? result?.rootImage ?? null,
@@ -1508,7 +1579,7 @@ export default function App() {
     return handleSaveProject();
   }
 
-  async function handleSaveProject({ silent = false } = {}) {
+  async function handleSaveProject({ silent = false, projectOverride = null, returnResult = false } = {}) {
     if (isSavingRef.current) return null;
     isSavingRef.current = true;
     let progressStarted = false;
@@ -1522,7 +1593,8 @@ export default function App() {
       }
     }
     try {
-      let result = await saveProject(store.project, store.savePath, onProgress, {
+      const projectToSave = projectOverride ?? store.project;
+      let result = await saveProject(projectToSave, store.savePath, onProgress, {
         autosave: silent,
         backupLimit: autoSaveEnabled ? autoSaveBackupLimit : 0,
         mediaTags: store.mediaTags,
@@ -1550,7 +1622,7 @@ export default function App() {
         }
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);
-        return result.path;
+        return returnResult ? result : result.path;
       }
       setSaveProgress(null);
       return null;
@@ -1724,16 +1796,14 @@ export default function App() {
   const projectDirty = savedSnapshotRef.current === null
     ? isProjectDirty(store.project)
     : JSON.stringify(store.project) !== savedSnapshotRef.current;
-  // Title bar shows the file stem when saved (manual or auto), pack title otherwise.
-  const titleBarName = store.savePath
-    ? store.savePath.replace(/\\/g, '/').replace(/.*\//, '').replace(/\.mbah$/i, '')
-    : autoSavedPath
-      ? autoSavedPath.replace(/\\/g, '/').replace(/.*\//, '').replace(/\.mbah$/i, '')
-      : (store.project.name?.trim() || null);
+  const titleBarName = store.project.projectName?.trim() || null;
   const canImportStories = (store.activeTab === 'edit' || store.activeTab === 'diagram') && store.project.projectType === 'pack';
   const canAddFolder = canImportStories;
   const canRecord = canImportStories;
   const shortcutLabels = useMemo(() => getShortcutLabelMap(keyboardShortcuts), [keyboardShortcuts]);
+  const effectiveProjectFilePrefix = getProjectFilePrefix(store.project, store.savePath);
+  const exportPackName = getExportPackName(store.project.packMetadata);
+  const lastExportDir = getLastExportDir();
 
   function handleToolbarRecord() {
     setToolbarRecordOpen(true);
@@ -1769,7 +1839,7 @@ export default function App() {
   return (
     <ProjectContext.Provider value={{
       savePath: store.savePath,
-      projectName: store.project.name || '',
+      projectName: effectiveProjectFilePrefix,
       workspaceDir,
       globalOptions: store.project.globalOptions,
       xttsSettings,
@@ -1789,10 +1859,13 @@ export default function App() {
     <div className="app">
       <TitleBar
         projectName={titleBarName}
+        packMetadata={projectType === 'pack' ? store.project.packMetadata : null}
+        packCoverImage={projectType === 'pack' ? (store.project.thumbnailImage || store.project.rootImage) : null}
         isDirty={projectDirty}
         hasSavePath={!!(store.savePath || autoSavedPath)}
         saveState={saveToast}
         showProjectMeta={projectType !== null}
+        onOpenPackMetadata={projectType === 'pack' ? () => setPackMetadataOpen(true) : null}
         onOpenCredits={() => setCreditsOpen(true)}
       />
 
@@ -1813,6 +1886,10 @@ export default function App() {
           canRecord={canRecord}
           onOpenStorySettings={() => setStorySettingsOpen(true)}
           onGenerate={handleGenerate}
+          onOpenPackMetadata={projectType === 'pack' ? () => setPackMetadataOpen(true) : null}
+          onOpenExportFolder={handleOpenExportFolder}
+          exportPackName={exportPackName}
+          generateShortcut={shortcutLabels.generate}
         />
       )}
 
@@ -1967,7 +2044,7 @@ export default function App() {
               onRemoveMediaTag={store.removeMediaTag}
               onDeleteMedia={handleDeleteMedia}
               savePath={store.savePath}
-              projectName={store.project.name || ''}
+              projectName={effectiveProjectFilePrefix}
               onMediaCreated={handleMediaCreated}
             />
           )}
@@ -2006,7 +2083,7 @@ export default function App() {
         <RecordModal
           savePath={store.savePath}
           workspaceDir={workspaceDir}
-          projectName={store.project.name}
+          projectName={effectiveProjectFilePrefix}
           onSaved={handleToolbarRecordSaved}
           onClose={() => setToolbarRecordOpen(false)}
         />
@@ -2019,6 +2096,20 @@ export default function App() {
           globalOptions={store.project.globalOptions}
           onClose={() => setStorySettingsOpen(false)}
           onUpdateOption={handleUpdateGlobalOption}
+        />,
+      )}
+
+      {packMetadataOpen && renderDeferred(
+        <PackNameModal
+          open={packMetadataOpen}
+          packMetadata={store.project.packMetadata}
+          project={store.project}
+          coverImage={store.project.thumbnailImage || store.project.rootImage}
+          exportFolder={lastExportDir}
+          generateDisabled={!canGenerate}
+          onSave={(draft) => handleSavePackMetadata(draft, { generate: false })}
+          onSaveAndGenerate={(draft) => handleSavePackMetadata(draft, { generate: true })}
+          onClose={() => setPackMetadataOpen(false)}
         />,
       )}
 

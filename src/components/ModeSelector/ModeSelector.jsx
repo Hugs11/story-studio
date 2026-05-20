@@ -89,7 +89,7 @@ export function ModeSelector({
               >
                 <span className={`mode-recent-dot tone-${index % 5}`} />
                 <span className="mode-recent-copy">
-                  <span className="mode-recent-name">{project.name}</span>
+                  <span className="mode-recent-name">{project.projectName || project.name}</span>
                   <span className="mode-recent-type">{projectTypeLabel(project.projectType)}</span>
                 </span>
                 <span className="mode-recent-date">{formatRecentDate(project.updatedAt)}</span>

@@ -1,9 +1,9 @@
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, copyFile, mkdir, rename, remove, exists, readDir } from '@tauri-apps/plugin-fs';
-import { sanitizeProjectPrefix } from '../utils/projectPrefix';
+import { getProjectFilePrefix, sanitizeProjectPrefix } from '../utils/projectPrefix';
 import { TEMP_IMAGES_DIR, LEGACY_TEMP_IMAGES_DIR } from '../utils/tempDirs';
-import { normalizeProjectData, projectToSerializable, visitProjectEntries } from './projectModel';
+import { migrateProjectData, normalizeProjectData, projectToRustExport, projectToSerializable, visitProjectEntries } from './projectModel';
 
 const PROJECT_OPEN_KEYS = ['lastOpenProjectDir', 'lastProjectDir'];
 const PROJECT_SAVE_KEYS = ['lastSaveProjectDir', 'lastProjectDir'];
@@ -67,6 +67,25 @@ function basenameWithoutExtension(path) {
     .replace(/\.[^/.]+$/, '');
 }
 
+function projectNameFromPath(path) {
+  return basenameWithoutExtension(path).trim();
+}
+
+function isFallbackProjectName(value) {
+  const normalized = String(value || '')
+    .trim()
+    .normalize('NFKC')
+    .toLowerCase();
+  return !normalized || ['nouveau-projet', 'nouveau projet', 'mon-projet', 'mon projet', 'projet'].includes(normalized);
+}
+
+function withLocalProjectNameForPath(project, path, { force = false } = {}) {
+  const stem = projectNameFromPath(path);
+  if (!stem) return project;
+  if (!force && !isFallbackProjectName(project?.projectName)) return project;
+  return { ...project, projectName: stem };
+}
+
 export function getRecentProjects() {
   try {
     const raw = localStorage.getItem(RECENT_PROJECTS_KEY);
@@ -84,7 +103,8 @@ export function rememberRecentProject(project, path) {
   const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
   const nextEntry = {
     path,
-    name: project?.name?.trim() || basenameWithoutExtension(path) || 'Projet sans nom',
+    projectName: project?.projectName?.trim() || basenameWithoutExtension(path) || 'Projet sans nom',
+    name: project?.projectName?.trim() || basenameWithoutExtension(path) || 'Projet sans nom',
     projectType: project?.projectType || 'pack',
     updatedAt: Date.now(),
   };
@@ -398,6 +418,8 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   };
 }
 
+export { projectToRustExport };
+
 async function uniquePathInDir(dir, fileName) {
   let candidate = `${dir}/${fileName}`;
   if (!(await exists(candidate))) return candidate;
@@ -479,7 +501,7 @@ async function persistTempImages(project, projectPath, workspaceDir = null) {
     if (entry?.type === 'story' && isTempImage(entry.itemImage)) cloneCollect.push({ obj: entry, key: 'itemImage' });
   });
 
-  const prefix = sanitizeProjectPrefix(project.name || projectBaseName);
+  const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(projectBaseName);
   for (const { obj, key } of cloneCollect) {
     const src = obj[key];
     const filename = src.replace(/.*[\\/]/, '');
@@ -500,7 +522,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     const lastDir = getStoredDir(PROJECT_SAVE_KEYS) ?? getStoredDir(PROJECT_OPEN_KEYS);
     const workspaceAutosaveDir = ws ? `${ws}/${AUTOSAVE_DIR_NAME}` : null;
     const defaultDir = workspaceAutosaveDir ?? lastDir;
-    const suggestedName = (project.name || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
+    const suggestedName = (project.projectName || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
     const chosenPath = await save({
       filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
       defaultPath: defaultDir ? `${defaultDir}/${suggestedName}.mbah` : `${suggestedName}.mbah`,
@@ -517,11 +539,14 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   onProgress?.('Enregistrement du projet...');
   const mbahDir = getProjectDir(path);
   const resolvedWs = options.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
+  const projectForPath = options.autosave
+    ? project
+    : withLocalProjectNameForPath(project, path);
   // During autosave never move temp images — they'd land next to the autosave file, not the real project.
   // persistTempImages only runs on explicit saves so assets end up beside the user's chosen .mbah.
   const projectWithImages = options.autosave
-    ? projectToSerializable(normalizeProjectData(project))
-    : await persistTempImages(project, path, resolvedWs);
+    ? projectToSerializable(normalizeProjectData(projectForPath))
+    : await persistTempImages(projectForPath, path, resolvedWs);
   const projectToSave = {
     ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, mbahDir)),
     mediaTags: relativizeTagKeys(options.mediaTags ?? {}, mbahDir),
@@ -541,7 +566,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
 }
 
 export async function saveProjectAs(project, currentSavePath, onProgress = null, mediaTags = {}, options = {}, mediaLibraryPaths = []) {
-  const safeCurrentName = (project.name || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
+  const safeCurrentName = (project.projectName || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
   const ws = options.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
   const workspaceAutosaveDir = ws ? `${ws}/${AUTOSAVE_DIR_NAME}` : null;
   const defaultDir = currentSavePath
@@ -561,7 +586,8 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 
   const resolvedWs = options?.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
   onProgress?.('Décollage vers la lune...');
-  const projectWithImages = await persistTempImages(project, newPath, resolvedWs);
+  const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
+  const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
   const projectToSave = {
     ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, newProjectDir)),
     mediaTags: relativizeTagKeys(mediaTags, newProjectDir),
@@ -606,7 +632,8 @@ export async function loadProjectFromPath(path) {
     ? rawData.mediaLibraryPaths.map((p) => fromProjectRelative(p, mbahDir))
     : [];
   const withAbsolutePaths = mapProjectPaths(rawData, (p) => fromProjectRelative(p, mbahDir));
-  return { data: normalizeProjectData(withAbsolutePaths), path, mediaTags, mediaLibraryPaths };
+  const migrated = migrateProjectData(withAbsolutePaths, { savePath: path });
+  return { data: normalizeProjectData(migrated), path, mediaTags, mediaLibraryPaths };
 }
 
 export function getExtractedZipsDir(workspaceDir) {
@@ -700,7 +727,7 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
   }
 
   const fallbackName = savePath ? getFileName(savePath).replace(/\.mbah$/i, '') : 'projet';
-  const projectName = (serializable.name || fallbackName || 'projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_') || 'projet';
+  const projectName = (serializable.projectName || fallbackName || 'projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_') || 'projet';
   const projectPath = `${destinationDir}/${projectName.replace(/\.mbah$/i, '')}-consolidee.mbah`;
   const projectToSave = mapProjectPaths(serializable, (p) => toProjectRelative(p, destinationDir));
   await writeProjectFileAtomic(projectPath, JSON.stringify(projectToSave, null, 2));
@@ -724,7 +751,7 @@ export async function autoSaveNewProject(project, workspaceDir, options = {}) {
   const autosaveDir = `${workspaceDir}/${AUTOSAVE_DIR_NAME}`;
   await mkdir(autosaveDir, { recursive: true });
 
-  const safeName = (project.name || 'nouveau-projet').trim()
+  const safeName = (project.projectName || 'nouveau-projet').trim()
     .replace(/[<>:"/\\|?*\[\]+]/g, '_')
     .replace(/\s+/g, '-')
     .toLowerCase() || 'nouveau-projet';

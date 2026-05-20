@@ -213,7 +213,9 @@ export function getCompleteLayout(project, compactMode, options = {}) {
   const rootBlock = buildLayoutBlock({
     id: 'root',
     type: 'root',
-    name: project.rootName || project.name || 'Nom du pack',
+    name: project.projectType === 'simple'
+      ? (project.projectName || 'Mon histoire')
+      : (project.packMetadata?.title || project.projectName || 'Nom du pack'),
     children: project.rootEntries ?? [],
   }, metrics, options);
 

@@ -11,6 +11,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
   const nativeGraph = node.nativeGraph ?? null;
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
+  const rootTitle = node.packMetadata?.title || node.projectName || '';
 
   function setSameImage(v) {
     onUpdateMedia('sameImage', v);
@@ -21,7 +22,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
 
   function handleGenerateTextImage() {
     setTextImgModal({
-      defaultText: node.name || '',
+      defaultText: rootTitle,
       onConfirm: (path) => {
         onUpdateMedia('rootImage', path);
         if (sameImage) onUpdateMedia('thumbnailImage', path);
@@ -32,7 +33,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
 
   function handleGenerateThumbnailTextImage() {
     setTextImgModal({
-      defaultText: node.name || '',
+      defaultText: rootTitle,
       onConfirm: (path) => {
         onUpdateMedia('thumbnailImage', path);
         onUpdateMedia('autoGenerateRootImage', false);
@@ -84,7 +85,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
       <div className="card">
         <div className="card-title-row">
           <div className="card-title">Menu Racine</div>
-          <div className="card-copy card-copy--inline">Visible dans le menu principal quand on parcourt les histoires</div>
+          <div className="card-copy card-copy--inline">Page d'accueil du pack</div>
         </div>
 
         {projectType === 'pack' ? (
@@ -108,7 +109,11 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
         <div className="root-image-heading">
           <div className="media-col-header">
             Image
-            <span className="media-col-subtitle">Couverture du pack (320×240)</span>
+            <span className="media-col-subtitle">
+              {sameImage
+                ? 'Affichée sur la Lunii et utilisée comme image de catalogue (320×240)'
+                : 'Une image pour la Lunii, une pour les catalogues'}
+            </span>
           </div>
           {renderImageModeControl()}
         </div>
@@ -153,8 +158,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 label="Titre audio"
                 description="Entendu dans le menu principal"
                 file={node.rootAudio}
-                ttsTextSuggestion={node.name || ''}
-                ttsFilenameHint={`titre-${node.name || 'projet'}`}
+                ttsTextSuggestion={rootTitle}
+                ttsFilenameHint={`titre-${rootTitle || 'projet'}`}
                 xttsTarget={{ kind: 'root', field: 'rootAudio' }}
                 onPick={(f) => onUpdateMedia('rootAudio', f)}
                 onClear={() => onUpdateMedia('rootAudio', null)}
@@ -165,7 +170,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
           <>
             <div className="images-side-by-side">
               <div className="root-image-col">
-                <div className="root-image-sublabel">Boîte à Histoires</div>
+                <div className="root-image-sublabel">Écran Lunii (320×240)</div>
                 <ImageField
                   align="start"
                   accentLabel
@@ -185,7 +190,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 />
               </div>
               <div className="root-image-col">
-                <div className="root-image-sublabel">STUdio / LuniiQt</div>
+                <div className="root-image-sublabel">Vignette bibliothèque</div>
                 <ImageField
                   align="start"
                   accentLabel
@@ -214,8 +219,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 label="Titre audio"
                 description="Entendu dans le menu principal"
                 file={node.rootAudio}
-                ttsTextSuggestion={node.name || ''}
-                ttsFilenameHint={`titre-${node.name || 'projet'}`}
+                ttsTextSuggestion={rootTitle}
+                ttsFilenameHint={`titre-${rootTitle || 'projet'}`}
                 xttsTarget={{ kind: 'root', field: 'rootAudio' }}
                 onPick={(f) => onUpdateMedia('rootAudio', f)}
                 onClear={() => onUpdateMedia('rootAudio', null)}
@@ -235,14 +240,14 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             label="Histoire complète"
             description="Écoutée quand l'enfant valide son choix"
             file={node.storyAudio}
-            ttsFilenameHint={`histoire-complete-${node.name || 'histoire'}`}
+            ttsFilenameHint={`histoire-complete-${node.projectName || 'histoire'}`}
             xttsTarget={{ kind: 'rootStory', field: 'audio' }}
             onPick={(f) => {
               const autoName = f.split(/[\\/]/).pop()
                 .replace(/\.(mp3|ogg|wav|m4a)$/i, '')
                 .replace(/[-_]/g, ' ').trim();
               onUpdateStoryAudio(f);
-              if (!node.name) onUpdateRoot({ name: autoName });
+              if (!node.projectName) onUpdateRoot({ projectName: autoName });
             }}
             onClear={() => onUpdateStoryAudio(null)}
           />
