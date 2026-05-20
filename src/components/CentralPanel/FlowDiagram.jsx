@@ -167,7 +167,7 @@ function DiagramTree({ project, projectIndex, selectedId, expandedStories, setEx
         <EmptyDiagramState onImportStories={onImportStories} />
       ) : (
         <Branch
-          entry={{ id: 'root', type: 'root', name: project.rootName || project.name || 'Nom du pack' }}
+          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.packMetadata?.title || project.projectName || 'Nom du pack') }}
           rootEntries={project.rootEntries ?? []}
           selectedId={selectedId}
           expandedStories={expandedStories}
@@ -394,7 +394,7 @@ export function FlowDiagram({
                 nightModeActive={!!project.globalOptions?.nightMode}
                 nightModeReturn={project.nightModeReturn ?? null}
                 nightModeHomeReturn={project.nightModeHomeReturn ?? null}
-                projectName={project.name}
+                projectName={project.projectName}
                 savePath={project.savePath}
                 allMenus={allMenus}
                 allStories={allStories ?? []}

@@ -5,3 +5,15 @@ export function sanitizeProjectPrefix(name) {
     .toLowerCase()
     .slice(0, 40);
 }
+
+function stem(path) {
+  return String(path || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    ?.replace(/\.[^/.]+$/, '') || '';
+}
+
+export function getProjectFilePrefix(project, savePath = null) {
+  return sanitizeProjectPrefix(project?.projectName || stem(savePath) || 'nouveau-projet');
+}
