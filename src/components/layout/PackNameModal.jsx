@@ -1,213 +1,308 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { exists } from '@tauri-apps/plugin-fs';
+import { CircleCheck, Image, Package, TriangleAlert } from '../icons/LucideLocal';
+import { Tooltip } from '../common/Tooltip';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import '../CentralPanel/RootEditor.css';
+import { useLocalFile } from '../../store/useLocalFile';
+import { generateConventionName, getExportPackName } from '../../utils/packConvention';
 
-function toUnderscored(str) {
-  return (str || '').trim().replace(/\s+/g, '_');
+const AGE_CHIPS = ['2', '3', '6', '9', '12'];
+
+function normalizeVersion(value) {
+  const parsed = Number.parseInt(String(value || '').replace(/\D/g, ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function extractAgeFromName(name) {
-  const m = (name || '').match(/^(\d+)\+\]/);
-  return m ? m[1] : '';
+function defaultDraft(packMetadata = {}) {
+  return {
+    title: '',
+    author: '',
+    version: 1,
+    minAge: '3',
+    producer: '',
+    bonus: '',
+    description: '',
+    namingMode: 'convention',
+    legacyExportName: '',
+    legacyName: '',
+    ...packMetadata,
+  };
 }
 
-function parseConventionName(raw) {
-  if (!raw) return null;
-  const ageMatch = raw.match(/^(\d+)\+\]/);
-  if (!ageMatch) return null;
-  const age = ageMatch[1];
-  let rest = raw.slice(ageMatch[0].length);
+function normalizeDraft(draft) {
+  const namingMode = draft.namingMode === 'legacy' ? 'legacy' : 'convention';
+  return {
+    ...draft,
+    title: String(draft.title || '').trim(),
+    author: String(draft.author || '').trim(),
+    producer: String(draft.producer || '').trim(),
+    bonus: String(draft.bonus || '').trim(),
+    description: String(draft.description || '').trim(),
+    minAge: String(draft.minAge || '3').replace(/\D/g, '') || '3',
+    version: normalizeVersion(draft.version),
+    namingMode,
+  };
+}
 
-  let author = '';
-  let version = '';
-  const byIdx = rest.indexOf('[by_');
-  if (byIdx !== -1) {
-    const byPart = rest.slice(byIdx + 4);
-    const vMatch = byPart.match(/[_-][Vv](\d+)$/);
-    if (vMatch) {
-      version = vMatch[1];
-      author = byPart.slice(0, byPart.length - vMatch[0].length).replace(/_/g, ' ').trim();
-    } else {
-      author = byPart.replace(/_/g, ' ').trim();
-    }
-    rest = rest.slice(0, byIdx);
-  } else {
-    const standaloneV = rest.match(/_[Vv](\d+)$/);
-    if (standaloneV) {
-      version = standaloneV[1];
-      rest = rest.slice(0, rest.length - standaloneV[0].length);
-    }
-  }
+function countStats(project) {
+  let stories = 0;
+  let media = 0;
 
-  let producer = '';
-  let core = rest;
-  const prodSep = rest.indexOf('_-_');
-  if (prodSep !== -1) {
-    producer = rest.slice(0, prodSep).replace(/_/g, ' ').trim();
-    core = rest.slice(prodSep + 3);
-  } else {
-    const singleDash = rest.match(/^([A-Za-z][A-Za-z_À-ž]+)-([A-Za-z].+)$/);
-    if (singleDash) {
-      producer = singleDash[1].replace(/_/g, ' ').trim();
-      core = singleDash[2];
+  function countMedia(...values) {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) media += 1;
     }
   }
 
-  let bonus = '';
-  let title = core;
-  const bonusParen = core.match(/_\((.+)\)$/);
-  if (bonusParen) {
-    bonus = bonusParen[1].replace(/_/g, ' ').trim();
-    title = core.slice(0, core.length - bonusParen[0].length);
-  } else {
-    const lastDash = core.lastIndexOf('-');
-    if (lastDash !== -1) {
-      const potBonus = core.slice(lastDash + 1).replace(/_/g, ' ').trim();
-      if (potBonus && /^\d/.test(potBonus)) {
-        bonus = potBonus;
-        title = core.slice(0, lastDash);
-      }
+  countMedia(project?.rootAudio, project?.rootImage, project?.thumbnailImage, project?.nightModeAudio);
+  function walk(entries = []) {
+    for (const entry of entries) {
+      if (entry.type === 'story' || entry.type === 'zip') stories += 1;
+      countMedia(entry.audio, entry.image, entry.itemAudio, entry.itemImage, entry.zipPath, entry.coverAudio, entry.coverImage);
+      if (entry.type === 'menu') walk(entry.children || []);
     }
   }
-
-  return { age, title: title.replace(/_/g, ' ').trim(), bonus, author, version, producer };
+  walk(project?.rootEntries || []);
+  return { stories, media };
 }
 
-function generateName({ age, title, bonus, author, version, producer }) {
-  const t = toUnderscored(title);
-  const b = toUnderscored(bonus);
-  const a = toUnderscored(author);
-  const v = String(version || '').replace(/\D/g, '');
-  const p = (producer || '').trim();
-  const bonusPart = b ? `_(${b})` : '';
-  if (!t) return '';
-  const prefix = `${age || '3'}+]`;
-  const titlePart = p && a && p !== (author || '').trim()
-    ? `${p}-${t}${bonusPart ? bonusPart.replace(/^_/, '') : ''}`
-    : `${t}${bonusPart}`;
-  const vSuffix = v ? `_V${v}` : '';
-  if (!a) return `${prefix}${titlePart}${vSuffix}`;
-  return `${prefix}${titlePart}[by_${a}${vSuffix}`;
+function filenameTokens(exportName) {
+  if (!exportName) return [{ kind: 'empty', text: 'Titre requis pour générer le nom exporté', insert: '' }];
+  const tokens = [];
+  let rest = String(exportName || '');
+  const ageMatch = rest.match(/^(\d+\+\])/);
+  if (ageMatch) {
+    const value = ageMatch[1];
+    tokens.push({ kind: 'age', text: value, insert: value.replace(/\]$/, '') });
+    rest = rest.slice(value.length);
+  }
+
+  const authorIndex = rest.indexOf('[by_');
+  const body = authorIndex === -1 ? rest : rest.slice(0, authorIndex);
+  const byPart = authorIndex === -1 ? '' : rest.slice(authorIndex);
+  if (body) tokens.push({ kind: 'title', text: body, insert: body.replace(/_/g, ' ') });
+
+  if (byPart) {
+    const versionMatch = byPart.match(/([_-]V\d+)$/i);
+    const author = versionMatch ? byPart.slice(0, byPart.length - versionMatch[1].length) : byPart;
+    if (author) tokens.push({ kind: 'author', text: author, insert: author.replace(/^\[by_/, '').replace(/_/g, ' ') });
+    if (versionMatch) tokens.push({ kind: 'version', text: versionMatch[1], insert: versionMatch[1].replace(/[^\d]/g, '') });
+  }
+
+  tokens.push({ kind: 'ext', text: '.zip', insert: '' });
+  return tokens;
 }
 
-const AGES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
-export function PackNameModal({ open, packName, packDescription = '', packVersion = 1, packMinAge = '', packConventionSource = '', onUpdatePackName, onClose }) {
-  const [gen, setGen] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nameGenFields');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return { age: '3', title: '', bonus: '', author: '', version: '', producer: '' };
-  });
-  const [description, setDescription] = useState(packDescription);
-
+export function PackNameModal({
+  open,
+  packMetadata = {},
+  project = null,
+  coverImage = null,
+  exportFolder = null,
+  generateDisabled = false,
+  onSave,
+  onSaveAndGenerate,
+  onClose,
+}) {
+  const [draft, setDraft] = useState(() => defaultDraft(packMetadata));
+  const [saving, setSaving] = useState(null);
+  const [collision, setCollision] = useState('unknown');
+  const coverUrl = useLocalFile(coverImage);
   useEscapeKey(open, onClose);
 
   useEffect(() => {
     if (open) {
-      setDescription(packDescription);
-      const parsed = parseConventionName(packConventionSource);
-      const agePrefill = (parsed?.age) || packMinAge || extractAgeFromName(packName);
-      const next = parsed
-        ? {
-            age: parsed.age,
-            title: parsed.title,
-            bonus: parsed.bonus,
-            author: parsed.author,
-            version: parsed.version || (packVersion > 1 ? String(packVersion) : ''),
-            producer: parsed.producer,
-          }
-        : {
-            ...gen,
-            ...(agePrefill ? { age: agePrefill } : {}),
-            ...(packName && !gen.title.trim() ? { title: packName.replace(/^\d+\+\]/, '').trim() } : {}),
-            ...(packVersion > 1 ? { version: String(packVersion) } : {}),
-          };
-      setGen(next);
-      localStorage.setItem('nameGenFields', JSON.stringify(next));
+      setDraft(defaultDraft(packMetadata));
+      setSaving(null);
     }
-  }, [open]);
+  }, [open, packMetadata]);
+
+  const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
+  const exportName = useMemo(() => {
+    if (normalizedDraft.namingMode === 'legacy' && normalizedDraft.legacyExportName) {
+      return getExportPackName(normalizedDraft);
+    }
+    return generateConventionName(normalizedDraft);
+  }, [normalizedDraft]);
+  const tokens = useMemo(() => filenameTokens(exportName), [exportName]);
+  const stats = useMemo(() => countStats(project), [project]);
+  const hasExportName = normalizedDraft.namingMode === 'legacy'
+    ? !!normalizedDraft.legacyExportName
+    : !!normalizedDraft.title;
+
+  useEffect(() => {
+    if (!open || !exportFolder || !exportName) {
+      setCollision('unknown');
+      return undefined;
+    }
+    let cancelled = false;
+    const fullPath = `${exportFolder.replace(/[\\/]+$/, '')}/${exportName}.zip`;
+    exists(fullPath)
+      .then((found) => {
+        if (!cancelled) setCollision(found ? 'collision' : 'free');
+      })
+      .catch(() => {
+        if (!cancelled) setCollision('unknown');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, exportFolder, exportName]);
 
   if (!open) return null;
 
-  function updateGen(field, value) {
-    const next = { ...gen, [field]: value };
-    setGen(next);
-    localStorage.setItem('nameGenFields', JSON.stringify(next));
-    const newName = generateName(next);
-    if (newName) onUpdatePackName({ name: newName, packVersion: parseInt(next.version, 10) || 1, packDescription: description, packMinAge: next.age });
-    else if (field === 'age') onUpdatePackName({ packMinAge: value });
+  function updateField(field, value) {
+    setDraft((current) => ({
+      ...current,
+      [field]: field === 'version' ? normalizeVersion(value) : value,
+      namingMode: 'convention',
+    }));
   }
 
-  function updateDescription(value) {
-    setDescription(value);
-    onUpdatePackName({ packDescription: value });
+  async function submit(kind) {
+    const payload = normalizeDraft(draft);
+    setSaving(kind);
+    try {
+      if (kind === 'generate') await onSaveAndGenerate?.(payload);
+      else await onSave?.(payload);
+    } finally {
+      setSaving(null);
+    }
   }
 
-  const generatedName = generateName(gen);
+  const collisionText = collision === 'collision'
+    ? 'Un ZIP du même nom existe déjà'
+    : collision === 'free'
+      ? 'Nom disponible dans le dernier dossier'
+      : exportFolder
+        ? 'Statut du nom en cours de vérification'
+        : "Aucun dossier d'export choisi";
+  const generateButtonDisabled = !!saving || !hasExportName || generateDisabled;
+  const generateButtonTooltip = saving
+    ? 'Une action est déjà en cours.'
+    : !hasExportName
+      ? 'Renseigne le titre du pack avant de générer.'
+      : generateDisabled
+        ? 'Corrige les erreurs du projet avant de pouvoir générer le pack.'
+        : 'Appliquer les métadonnées et générer le pack.';
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span>Convention de nommage communautaire</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div style={{ padding: '16px 20px 20px', display: 'grid', gap: 12 }}>
-          <div className="name-gen-grid">
-            <label>Âge minimum</label>
-            <select value={gen.age} onChange={(e) => updateGen('age', e.target.value)} className="field-input">
-              {AGES.map((a) => <option key={a} value={a}>{a}+</option>)}
-            </select>
-
-            <label>Titre de l'histoire</label>
-            <input className="field-input" placeholder="Les aventures de Léa" value={gen.title} onChange={(e) => updateGen('title', e.target.value)} />
-
-            <label>Bonus <span style={{ fontSize: 10, opacity: 0.6 }}>(facultatif)</span></label>
-            <input className="field-input" placeholder="8 chapitres" value={gen.bonus} onChange={(e) => updateGen('bonus', e.target.value)} />
-
-            <label>Auteur / Créateur</label>
-            <input className="field-input" placeholder="MonPseudo" value={gen.author} onChange={(e) => updateGen('author', e.target.value)} />
-
-            <label>Version</label>
-            <input
-              type="number"
-              min="1"
-              className="field-input"
-              value={gen.version}
-              onChange={(e) => updateGen('version', e.target.value)}
-              onBlur={(e) => { if (!e.target.value) updateGen('version', ''); }}
-              style={{ width: 80 }}
-            />
-
-            <label>Producteur <span style={{ fontSize: 10, opacity: 0.6 }}>(si différent de l'auteur)</span></label>
-            <input className="field-input" placeholder="RTL, France Inter…" value={gen.producer} onChange={(e) => updateGen('producer', e.target.value)} />
+    <div className="modal-overlay pack-meta-overlay" onClick={onClose}>
+      <div className="pack-meta-modal" onClick={(event) => event.stopPropagation()}>
+        <header className="pack-meta-header">
+          <span className="pack-meta-header-icon"><Package className="chrome-icon" strokeWidth={2} absoluteStrokeWidth /></span>
+          <div className="pack-meta-heading">
+            <span className="pack-meta-eyebrow">Métadonnées du pack</span>
+            <h2 title={exportName || undefined}>{exportName || 'Métadonnées du pack'}</h2>
+            <p>Ces informations s'affichent dans la liseuse et constituent le nom du fichier exporté.</p>
           </div>
+          <button className="modal-close pack-meta-close" onClick={onClose} aria-label="Fermer">×</button>
+        </header>
 
-          {generatedName && (
-            <div className="name-gen-preview">
-              <span className="name-gen-preview-label">Aperçu :</span>
-              <code className="name-gen-preview-value">{generatedName}</code>
+        <div className="pack-meta-body">
+          <aside className="pack-meta-cover-panel">
+            <span className="pack-meta-cover-label">Couverture</span>
+            <div className="pack-meta-cover">
+              {coverUrl ? <img src={coverUrl} alt="" /> : <Image className="pack-meta-cover-empty" strokeWidth={1.7} absoluteStrokeWidth />}
             </div>
-          )}
+            <div className="pack-meta-cover-copy">
+              <span>{coverUrl ? 'Définie dans la bibliothèque' : 'Aucune image racine définie'}</span>
+              <small>non éditable ici</small>
+            </div>
+          </aside>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Description / Changelog</label>
-            <textarea
-              className="field-input"
-              value={description}
-              onChange={e => updateDescription(e.target.value)}
-              placeholder=""
-              rows={4}
-              style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 12 }}
-            />
+          <section className="pack-meta-form">
+            <div className="pack-meta-field-row">
+              <label>Titre du pack</label>
+              <input className="pack-meta-input" value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder="Les histoires de Mini-loup" />
+            </div>
+
+            <div className="pack-meta-field-row">
+              <label>Âge minimum</label>
+              <div className="pack-meta-age-chips">
+                {AGE_CHIPS.map((age) => (
+                  <button
+                    key={age}
+                    type="button"
+                    className={`pack-meta-age-chip ${String(draft.minAge) === age ? 'is-active' : ''}`}
+                    onClick={() => updateField('minAge', age)}
+                  >
+                    {age}+
+                  </button>
+                ))}
+                <input
+                  className="pack-meta-input pack-meta-age-other"
+                  value={draft.minAge || ''}
+                  onChange={(event) => updateField('minAge', event.target.value)}
+                  aria-label="Âge minimum personnalisé"
+                  placeholder="autre..."
+                />
+              </div>
+            </div>
+
+            <div className="pack-meta-field-row">
+              <label>Auteur</label>
+              <input className="pack-meta-input" value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder="funkyfoenky" />
+            </div>
+
+            <div className="pack-meta-field-row">
+              <label>Version</label>
+              <div className="pack-meta-version-grid">
+                <input className="pack-meta-input pack-meta-version-input" type="number" min="1" value={draft.version || 1} onChange={(event) => updateField('version', event.target.value)} />
+                <div className="pack-meta-inline-field">
+                  <span>Producteur</span>
+                  <input className="pack-meta-input" value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder="RTL, France Inter... (facultatif)" />
+                </div>
+              </div>
+            </div>
+
+            <div className="pack-meta-field-row">
+              <label>Bonus <span>facultatif</span></label>
+              <input className="pack-meta-input" value={draft.bonus || ''} onChange={(event) => updateField('bonus', event.target.value)} placeholder="ex. 8 chapitres" />
+            </div>
+
+            <div className="pack-meta-field-row is-textarea">
+              <label>Description <span>changelog</span></label>
+              <textarea className="pack-meta-input pack-meta-textarea" value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder="Public visé, contenu, changements depuis la version précédente..." />
+            </div>
+          </section>
+        </div>
+
+        <div className="pack-meta-preview">
+          <div className="pack-meta-preview-head">
+            <span className="pack-meta-preview-label">Nom exporté</span>
+            <div className={`pack-meta-status is-${collision}`}>
+              {collision === 'collision' ? <TriangleAlert className="chrome-icon" strokeWidth={2} absoluteStrokeWidth /> : <CircleCheck className="chrome-icon" strokeWidth={2} absoluteStrokeWidth />}
+              <span>{collisionText}</span>
+            </div>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={onClose}>Valider</button>
+          <div className="pack-meta-filename" title={exportName ? `${exportName}.zip` : ''}>
+            {tokens.map((token, index) => (
+              <span key={`${token.kind}-${index}-${token.text}`} className={`pack-meta-token is-${token.kind}`}>{token.text}</span>
+            ))}
           </div>
         </div>
+
+        <footer className="pack-meta-footer">
+          <div className="pack-meta-summary">
+            <strong>{stats.stories}</strong> histoire{stats.stories > 1 ? 's' : ''}
+            <span>{stats.media} média{stats.media > 1 ? 's' : ''} lié{stats.media > 1 ? 's' : ''}</span>
+          </div>
+          <div className="pack-meta-actions">
+            <button className="btn" onClick={onClose} disabled={saving}>Annuler</button>
+            <button className="btn" onClick={() => submit('save')} disabled={saving}>{saving === 'save' ? 'Application...' : 'Appliquer les métadonnées'}</button>
+            <Tooltip text={generateButtonTooltip} wrap>
+              <button
+                className="btn btn-primary"
+                onClick={() => submit('generate')}
+                disabled={generateButtonDisabled}
+                aria-label={generateButtonTooltip}
+              >
+                {saving === 'generate' ? 'Préparation...' : 'Appliquer & générer'}
+              </button>
+            </Tooltip>
+          </div>
+        </footer>
       </div>
     </div>
   );

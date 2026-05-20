@@ -6,6 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useLocalFile } from '../store/useLocalFile';
 import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryNavigationTarget, isStoryPlayNavigationTarget, normalizeNavigationTarget } from '../store/navigationTargets';
 import { Tooltip } from '../components/common/Tooltip';
+import { getExportPackName } from '../utils/packConvention';
 import './EmulatorTab.css';
 
 const TRANSFER_TOOLS = [
@@ -909,7 +910,11 @@ export function ProjectSimulator({
   }
 
   const displayTitle =
-    state === 'cover' ? (project.name || 'Nom de mon histoire') :
+    state === 'cover' ? (
+      project.packMetadata?.title
+        ? getExportPackName(project.packMetadata)
+        : (project.projectName || 'Nom de mon histoire')
+    ) :
     state === 'sequence' ? (activeSequenceStep?.name || activeStory?.name || 'Fin de lecture') :
     isSimple ? (simpleStory?.name || '—') :
     (currentEntry?.name || '—');

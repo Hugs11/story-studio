@@ -1019,7 +1019,9 @@ export function TreePanel({
             <TreeNode
               id="root"
               type="root"
-              label={projectType === 'pack' ? (project.rootName?.trim() || 'Menu racine') : (project.name || 'Mon histoire')}
+              label={projectType === 'pack'
+                ? (project.packMetadata?.title || project.projectName || 'Menu racine')
+                : (project.projectName || 'Mon histoire')}
               level={0}
               selected={selectedIds.has('root')}
               color={project.treeColor}

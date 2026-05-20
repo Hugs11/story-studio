@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { PackNameModal } from './PackNameModal';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { Image as ImageIcon } from '../icons/LucideLocal';
+import { useLocalFile } from '../../store/useLocalFile';
+import { Tooltip } from '../common/Tooltip';
 
 function AppMark() {
   return (
@@ -52,11 +54,18 @@ function ChevronIcon() {
   );
 }
 
-export function TitleBar({ projectName, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenCredits = null, packName = null, packDescription = '', packVersion = 1, packMinAge = '', onUpdatePackName = null }) {
+export function TitleBar({ projectName, packMetadata = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null }) {
   const currentWindow = useMemo(() => (isTauriRuntime() ? getCurrentWindow() : null), []);
   const [isMaximizing, setIsMaximizing] = useState(false);
-  const [showConventionModal, setShowConventionModal] = useState(false);
+  const packCoverUrl = useLocalFile(packCoverImage);
   const displayProjectName = projectName || 'Nouveau projet';
+  const packStoryName = packMetadata?.title || '';
+  const packDisplayName = packStoryName || 'Métadonnées du pack';
+  const packMetaLine = `${packMetadata?.minAge || '3'}+ · v${packMetadata?.version || 1}`;
+  const projectTooltip = `Nom du projet : « ${displayProjectName} »`;
+  const packTooltip = packStoryName
+    ? `« ${packStoryName} » — Modifier le nom et les métadonnées du pack`
+    : 'Renseigner le nom et les métadonnées du pack';
   const showSaveIndicator = isDirty || hasSavePath || saveState === 'ok';
   const saveIndicatorClass = (isDirty && saveState !== 'ok')
     ? 'chrome-titlebar-status is-dirty'
@@ -84,43 +93,40 @@ export function TitleBar({ projectName, isDirty, hasSavePath = false, saveState 
           {showProjectMeta ? (
             <>
               <span className="chrome-titlebar-chevron"><ChevronIcon /></span>
-              <span className="chrome-titlebar-project" title={displayProjectName}>{displayProjectName}</span>
-              {showSaveIndicator && <span className={saveIndicatorClass} title={saveIndicatorTitle} />}
+              <Tooltip text={projectTooltip}>
+                <span className="chrome-titlebar-project">{displayProjectName}</span>
+              </Tooltip>
+              {showSaveIndicator && (
+                <Tooltip text={saveIndicatorTitle}>
+                  <span className={saveIndicatorClass} />
+                </Tooltip>
+              )}
             </>
           ) : null}
         </div>
+        {showProjectMeta && packMetadata ? (
+          <>
+            <span className="chrome-titlebar-chevron" aria-hidden="true"><ChevronIcon /></span>
+            <Tooltip text={packTooltip}>
+              <button
+                className="chrome-titlebar-pack-recap"
+                onClick={onOpenPackMetadata}
+                disabled={!onOpenPackMetadata}
+              >
+              <span className="chrome-titlebar-pack-thumb">
+                {packCoverUrl ? <img src={packCoverUrl} alt="" /> : <ImageIcon className="chrome-icon" strokeWidth={1.8} absoluteStrokeWidth />}
+              </span>
+              <span className="chrome-titlebar-pack-text">
+                <span className="chrome-titlebar-pack-title">{packDisplayName}</span>
+                <span className="chrome-titlebar-pack-meta">{packMetaLine}</span>
+              </span>
+              </button>
+            </Tooltip>
+          </>
+        ) : null}
       </div>
 
-      {packName !== null && onUpdatePackName ? (
-        <div className="chrome-titlebar-center">
-          <div className="chrome-titlebar-spacer" data-tauri-drag-region />
-          <input
-            className="chrome-pack-name-input"
-            value={packName}
-            onChange={(e) => onUpdatePackName({ name: e.target.value })}
-            placeholder="Nom du pack"
-          />
-          <button
-            className={`pack-name-convention-btn${showConventionModal ? ' active' : ''}`}
-            onClick={() => setShowConventionModal(true)}
-            title="Nom avancé et métadonnées"
-          >
-            ✦
-          </button>
-          <div className="chrome-titlebar-spacer" data-tauri-drag-region />
-          <PackNameModal
-            open={showConventionModal}
-            packName={packName}
-            packDescription={packDescription}
-            packVersion={packVersion}
-            packMinAge={packMinAge}
-            onUpdatePackName={onUpdatePackName}
-            onClose={() => setShowConventionModal(false)}
-          />
-        </div>
-      ) : (
-        <div className="chrome-titlebar-spacer" data-tauri-drag-region />
-      )}
+      <div className="chrome-titlebar-spacer" data-tauri-drag-region />
 
       <div className="chrome-window-controls">
         {onOpenCredits ? (

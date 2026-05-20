@@ -37,6 +37,28 @@ is the public record of the work completed before the first GitHub release.
 - The story editor's "Après la lecture" card now chains a second pill showing
   the destination reached after the end-node bridge
   (`Passe par le nœud de fin du pack → Mini Loup à l'école`).
+- Separated the project name (local identity used for file prefixes, window
+  title and the `.mbah` filename) from the published pack name (community
+  convention with age, title, author, version, producer, bonus). The pack
+  card in the central panel has been removed; pack metadata is now edited
+  through a dedicated modal opened from the title bar or the toolbar split
+  button. Existing projects are migrated automatically on load — the legacy
+  free-text pack name is parsed into structured fields or preserved as a
+  legacy export name.
+- Refactored the title bar into a breadcrumb (Story Studio › project name ›
+  pack title) with a clickable pack recap that opens the metadata modal, a
+  save indicator, and consistent project tooltips on every element.
+- Replaced the central "Générer le pack" CTA with a split button in the
+  toolbar offering "Generate now", "Edit metadata…" and "Open export folder".
+- File prefixes for imported media, recordings, XTTS output, ComfyUI output
+  and audio assemblies now derive from the project name (short and stable)
+  instead of the full conventional pack name, producing shorter and more
+  identifiable filenames.
+- Root editor card "Menu Racine" rewords the image section: subtitle adapts
+  to the chosen mode ("Affichée sur la Lunii et utilisée comme image de
+  catalogue (320×240)" vs "Une image pour la Lunii, une pour les
+  catalogues"), and the split slots are renamed "Écran Lunii (320×240)" and
+  "Vignette bibliothèque" instead of device-specific labels.
 
 ### Fixed
 
