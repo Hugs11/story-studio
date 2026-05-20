@@ -5,7 +5,7 @@ import { NativeGraphEditor } from './NativeGraphEditor';
 import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { TriangleAlert } from '../icons/LucideLocal';
-import { encodeMenuNavigationTarget } from '../../store/navigationTargets';
+import { NavigationTargetSelect } from './story/storyUtils';
 import './CentralPanel.css';
 
 export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpdate, onDelete }) {
@@ -184,19 +184,18 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
                 {"Réglage utilisé par les histoires de ce dossier qui n'ont pas de destination spécifique."}
               </div>
             </div>
-            <select
-              className="field-input"
-              style={{ maxWidth: 180 }}
+            <NavigationTargetSelect
               value={node.returnAfterPlay ?? ''}
-              onChange={(e) => onUpdate({ returnAfterPlay: e.target.value || null })}
-            >
-              <option value="">Ce dossier (défaut)</option>
-              {allMenus
-                .filter((m) => m.id !== node.id)
-                .map((m) => (
-                  <option key={m.id} value={encodeMenuNavigationTarget(m.id)}>{m.name || '(sans nom)'}</option>
-                ))}
-            </select>
+              onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
+              allMenus={allMenus.filter((m) => m.id !== node.id)}
+              allStories={[]}
+              currentStoryId={null}
+              emptyLabel="Ce dossier (défaut)"
+              includeRoot={false}
+              includeNextStory={false}
+              includeStoryPlay={false}
+              style={{ maxWidth: 180 }}
+            />
           </div>
           <div
             style={{

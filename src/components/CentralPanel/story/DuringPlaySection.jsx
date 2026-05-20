@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
-import {
-  encodeMenuNavigationTarget,
-  encodeStoryHomeStepNavigationTarget,
-  encodeStoryNavigationTarget,
-} from '../../../store/navigationTargets';
-import { NAV_TARGET_NEXT_STORY } from './storyUtils';
+import { NavigationTargetSelect } from './storyUtils';
 
 const TITLE_CONTROL_DEFAULTS = {
   autoplay: false,
@@ -61,46 +56,18 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
               <Tooltip text={`Destination quand l'enfant appuie sur Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`} placement="above">
                 <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>Accueil</span>
               </Tooltip>
-              <select
-              className="field-input"
-              style={{ flex: 1, minWidth: 0, fontSize: 11, padding: '2px 4px' }}
-              value={node.returnOnHome ?? ''}
-              onChange={(e) => onUpdate({ returnOnHome: e.target.value || null, returnOnHomeNone: false })}
-            >
-              <option value="">Identique fin histoire</option>
-              <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-              {allMenus.length > 0 && (
-                <optgroup label="Dossiers">
-                  {allMenus.map((menu) => (
-                    <option key={`home-${menu.id}`} value={encodeMenuNavigationTarget(menu.id)}>
-                      {menu.name || '(sans nom)'}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {allStories.length > 0 && (
-                <>
-                  <optgroup label="Histoires">
-                    {allStories.filter((s) => s.id !== node.id).map((story) => (
-                      <option key={`home-s-${story.id}`} value={encodeStoryNavigationTarget(story.id)}>
-                        {story.name || '(sans nom)'}
-                      </option>
-                    ))}
-                  </optgroup>
-                  {allStories.some((s) => s.id !== node.id && s.hasAfterPlaybackHomeStep) && (
-                    <optgroup label="Retours de fin importés">
-                      {allStories
-                        .filter((s) => s.id !== node.id && s.hasAfterPlaybackHomeStep)
-                        .map((story) => (
-                          <option key={`home-step-${story.id}`} value={encodeStoryHomeStepNavigationTarget(story.id)}>
-                            Retour de fin — {story.name || '(sans nom)'}
-                          </option>
-                        ))}
-                    </optgroup>
-                  )}
-                </>
-              )}
-            </select>
+              <NavigationTargetSelect
+                value={node.returnOnHome ?? ''}
+                onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
+                allMenus={allMenus}
+                allStories={allStories}
+                currentStoryId={node.id}
+                emptyLabel="Identique fin histoire"
+                includeRoot={false}
+                includeStoryPlay={false}
+                size="compact"
+                style={{ flex: 1, minWidth: 0 }}
+              />
             </>
           )}
           <Toggle

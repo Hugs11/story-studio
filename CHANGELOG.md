@@ -14,6 +14,8 @@ is the public record of the work completed before the first GitHub release.
 
 - French README and French setup/release documentation for XTTS, ComfyUI and
   release workflows.
+- GitHub Pages landing site under `docs/` introducing the project with
+  screenshots and feature highlights.
 
 ### Changed
 
@@ -24,6 +26,17 @@ is the public record of the work completed before the first GitHub release.
 - Renamed multi-selection and end-node editor sections to "Pendant la lecture"
   / "Après la lecture" for a clearer split between active controls and
   post-playback destinations.
+- Replaced native dropdowns in every navigation destination field with a custom
+  listbox showing Lucide icons (folder, music, play) consistent with the
+  project tree, grouped by category and keyboard-accessible.
+- Renamed the "Début du pack" destination to "Première entrée du pack" to match
+  what the firmware actually navigates to.
+- Each navigation dropdown now shows the resolved destination inline
+  (e.g. `↳ Quelle histoire... (premier élément du pack)`) so users see where a
+  default or contextual setting actually leads.
+- The story editor's "Après la lecture" card now chains a second pill showing
+  the destination reached after the end-node bridge
+  (`Passe par le nœud de fin du pack → Mini Loup à l'école`).
 
 ### Fixed
 
@@ -37,6 +50,15 @@ is the public record of the work completed before the first GitHub release.
   it is added from the context menu, even before its audio is configured.
 - Fixed Home navigation badge visibility on stories when an end node is active,
   and removed a misleading per-story badge that mirrored a global setting.
+- Preserved the per-pack end-node Home return target when loading packs from
+  disk so imported community packs keep their configured night-mode home.
+- Allowed pack metadata to specify a version number without requiring an
+  author field.
+- Simplified empty-state actions in the media explorer.
+- Navigation destinations shown in editors and diagrams now reflect the actual
+  generated behavior, including the `autoNext` next-story shortcut, contextual
+  `next_story` resolution per source story, and the end-node fallback that
+  inherits each story's own return target when no global destination is set.
 
 ---
 

@@ -17,6 +17,7 @@ import {
 } from '../../store/navigationTargets';
 import { AfterPlaySection } from './story/AfterPlaySection';
 import { DuringPlaySection } from './story/DuringPlaySection';
+import { NAV_ROOT_LABEL } from './story/storyUtils';
 import { TriangleAlert } from '../icons/LucideLocal';
 import './CentralPanel.css';
 
@@ -33,7 +34,7 @@ function resolveNavigationTargetId(target, currentMenuId = null) {
 }
 
 function targetNameById(allMenus, allStories, targetId, fallback = 'destination introuvable') {
-  if (targetId === 'root') return 'Début du pack';
+  if (targetId === 'root') return NAV_ROOT_LABEL;
   if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
   if (!targetId) return fallback;
   if (isStoryNavigationTarget(targetId)) {
@@ -82,7 +83,7 @@ function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEff
   if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) {
     return `Réglage par défaut (${parentMenu.name || 'ce dossier'})`;
   }
-  if (isRootNavigationTarget(inheritedTargetId)) return 'Réglage par défaut (Début du pack)';
+  if (isRootNavigationTarget(inheritedTargetId)) return `Réglage par défaut (${NAV_ROOT_LABEL})`;
   const name = targetNameById(allMenus, allStories, resolveNavigationTargetId(inheritedTargetId, parentMenu.id));
   return `Réglage par défaut (${name})`;
 }

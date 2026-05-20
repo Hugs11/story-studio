@@ -1,15 +1,10 @@
 import { memo, useMemo, useState } from 'react';
 import { Toggle } from '../common/Toggle';
 import { findEntryById } from '../../store/projectModel';
-import {
-  NAV_TARGET_NEXT_STORY,
-  encodeMenuNavigationTarget,
-  encodeStoryHomeStepNavigationTarget,
-  encodeStoryNavigationTarget,
-} from '../../store/navigationTargets';
 import { useProjectContext } from '../../store/ProjectContext';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { Moon } from '../icons/LucideLocal';
+import { NavigationTargetSelect } from './story/storyUtils';
 
 const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
@@ -283,48 +278,21 @@ export const MultiEditor = memo(function MultiEditor({
                 Destination quand l'enfant appuie sur Accueil pendant la lecture.
               </div>
             </div>
-            <select
-              className="field-input"
-              style={{ maxWidth: 220 }}
+            <div style={{ maxWidth: 220, width: '100%' }}>
+            <NavigationTargetSelect
               value={getMixedSelectValue('returnOnHome')}
-              onChange={(e) => {
-                if (e.target.value === '__mixed__') return;
-                handleNavChange('returnOnHome', e.target.value);
+              onChange={(target) => {
+                if (target === '__mixed__') return;
+                handleNavChange('returnOnHome', target);
               }}
-            >
-              {getMixedSelectValue('returnOnHome') === '__mixed__' && (
-                <option value="__mixed__">Valeurs mixtes — ne pas modifier</option>
-              )}
-              <option value="">Identique fin histoire</option>
-              <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-              {allMenus.length > 0 && (
-                <optgroup label="Dossiers">
-                  {allMenus.map((m) => (
-                    <option key={`home-${m.id}`} value={encodeMenuNavigationTarget(m.id)}>{m.name || '(sans nom)'}</option>
-                  ))}
-                </optgroup>
-              )}
-              {allStories.length > 0 && (
-                <>
-                  <optgroup label="Histoires">
-                    {allStories.filter((s) => !ids.includes(s.id)).map((s) => (
-                      <option key={`home-s-${s.id}`} value={encodeStoryNavigationTarget(s.id)}>{s.name || '(sans nom)'}</option>
-                    ))}
-                  </optgroup>
-                  {allStories.some((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep) ? (
-                    <optgroup label="Retours de fin importés">
-                      {allStories
-                        .filter((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep)
-                        .map((s) => (
-                          <option key={`home-step-${s.id}`} value={encodeStoryHomeStepNavigationTarget(s.id)}>
-                            Retour de fin - {s.name || '(sans nom)'}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ) : null}
-                </>
-              )}
-            </select>
+              allMenus={allMenus}
+              allStories={allStories.filter((s) => !ids.includes(s.id))}
+              currentStoryId={null}
+              emptyLabel="Identique fin histoire"
+              includeRoot={false}
+              includeStoryPlay={false}
+            />
+            </div>
           </div>
         )}
       </div>
@@ -364,48 +332,21 @@ export const MultiEditor = memo(function MultiEditor({
                 Destination après la lecture — peut hériter du réglage du dossier parent.
               </div>
             </div>
-            <select
-              className="field-input"
-              style={{ maxWidth: 220 }}
+            <div style={{ maxWidth: 220, width: '100%' }}>
+            <NavigationTargetSelect
               value={getMixedSelectValue('returnAfterPlay')}
-              onChange={(e) => {
-                if (e.target.value === '__mixed__') return;
-                handleNavChange('returnAfterPlay', e.target.value);
+              onChange={(target) => {
+                if (target === '__mixed__') return;
+                handleNavChange('returnAfterPlay', target);
               }}
-            >
-              {getMixedSelectValue('returnAfterPlay') === '__mixed__' && (
-                <option value="__mixed__">Valeurs mixtes — ne pas modifier</option>
-              )}
-              <option value="">Réglage par défaut (hérité)</option>
-              <option value={NAV_TARGET_NEXT_STORY}>Histoire suivante</option>
-              {allMenus.length > 0 && (
-                <optgroup label="Dossiers">
-                  {allMenus.map((m) => (
-                    <option key={m.id} value={encodeMenuNavigationTarget(m.id)}>{m.name || '(sans nom)'}</option>
-                  ))}
-                </optgroup>
-              )}
-              {onlyStories && allStories.length > 0 && (
-                <>
-                  <optgroup label="Histoires">
-                    {allStories.filter((s) => !ids.includes(s.id)).map((s) => (
-                      <option key={s.id} value={encodeStoryNavigationTarget(s.id)}>{s.name || '(sans nom)'}</option>
-                    ))}
-                  </optgroup>
-                  {allStories.some((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep) ? (
-                    <optgroup label="Retours de fin importés">
-                      {allStories
-                        .filter((s) => !ids.includes(s.id) && s.hasAfterPlaybackHomeStep)
-                        .map((s) => (
-                          <option key={`home-step-${s.id}`} value={encodeStoryHomeStepNavigationTarget(s.id)}>
-                            Retour de fin - {s.name || '(sans nom)'}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ) : null}
-                </>
-              )}
-            </select>
+              allMenus={allMenus}
+              allStories={onlyStories ? allStories.filter((s) => !ids.includes(s.id)) : []}
+              currentStoryId={null}
+              emptyLabel="Réglage par défaut (hérité)"
+              includeRoot={false}
+              includeStoryPlay={false}
+            />
+            </div>
           </div>
 
         </div>

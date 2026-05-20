@@ -1,4 +1,10 @@
-import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
+import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
+import {
+  CONTEXTUAL_NEXT_STORY_TARGET,
+  getGeneratedEndNodeReturnNavigation,
+  getGeneratedStoryNavigation,
+  resolveGeneratedTargetForStory,
+} from '../../store/generatedNavigation';
 import { findEntryById, findEntryPath, findParentMenuId } from '../../store/projectModel';
 
 export const ICONS = { root: '📦', menu: '📂', story: '🎵', zip: '🗜', 'end-node': '🌙' };
@@ -288,14 +294,17 @@ export function getCompleteLayout(project, compactMode, options = {}) {
   };
 }
 
-function resolveEntryNavigationTarget(target, parentMenu = null) {
-  const normalized = normalizeNavigationTarget(target);
-  if (!normalized) return null;
-  if (isRootNavigationTarget(normalized)) return 'root';
-  if (isCurrentMenuNavigationTarget(normalized)) return parentMenu?.id ?? null;
-  if (isNextStoryNavigationTarget(normalized)) return null;
-  if (isStoryNavigationTarget(normalized)) return decodeNavigationStoryId(normalized);
-  return decodeNavigationMenuId(normalized);
+function diagramNodeIdFromGeneratedTarget(targetId) {
+  if (!targetId || targetId === CONTEXTUAL_NEXT_STORY_TARGET) return null;
+  if (targetId === 'root') return 'root';
+  if (isStoryNavigationTarget(targetId)) return decodeNavigationStoryId(targetId);
+  return targetId;
+}
+
+function resolveStoryDiagramTarget(target, entry, parentMenu, rootEntries, fallbackTarget = null) {
+  return diagramNodeIdFromGeneratedTarget(
+    resolveGeneratedTargetForStory(target, entry, parentMenu, rootEntries, fallbackTarget),
+  );
 }
 
 function storyTargetMode(target) {
@@ -305,22 +314,32 @@ function storyTargetMode(target) {
   return normalized.startsWith('story_play:') ? 'story_play' : 'story';
 }
 
-function collectNavigationTransitions(entries, parentMenu = null, transitions = [], hasEndNode = false, projectType = null) {
+function collectNavigationTransitions(entries, parentMenu = null, transitions = [], hasEndNode = false, project = null, rootEntries = entries) {
+  const projectType = project?.projectType ?? null;
   for (const entry of entries ?? []) {
     if (entry.type === 'story') {
+      const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
       const sequence = entry.afterPlaybackSequence ?? [];
       const hasSequence = sequence.length > 0;
       const hasPrompt = !!entry.afterPlaybackPromptAudio;
       let effectiveReturnTarget = null;
-      const explicitReturnTarget = resolveEntryNavigationTarget(entry.returnAfterPlay, parentMenu);
-      const inheritedTarget = resolveEntryNavigationTarget(parentMenu?.returnAfterPlay, parentMenu);
+      const inheritedTarget = parentMenu?.returnAfterPlay
+        ? resolveStoryDiagramTarget(parentMenu.returnAfterPlay, entry, parentMenu, rootEntries, parentMenu.id)
+        : null;
+      const generatedReturnTarget = diagramNodeIdFromGeneratedTarget(navigation.directReturn.targetId);
+      const explicitReturnTarget = entry.returnAfterPlay && generatedReturnTarget
+        ? generatedReturnTarget
+        : null;
       const fallbackReturnTarget = explicitReturnTarget
+        ?? generatedReturnTarget
         ?? inheritedTarget
         ?? (projectType !== 'simple' ? (parentMenu?.id ?? 'root') : null);
 
       if (hasSequence) {
         const lastStep = sequence[sequence.length - 1];
-        const configuredReturnTarget = resolveEntryNavigationTarget(lastStep?.okTarget, parentMenu);
+        const configuredReturnTarget = lastStep?.okTarget
+          ? resolveStoryDiagramTarget(lastStep.okTarget, entry, parentMenu, rootEntries, fallbackReturnTarget)
+          : null;
         const targetForMode = lastStep?.okTarget
           ?? entry.returnAfterPlay
           ?? parentMenu?.returnAfterPlay
@@ -338,19 +357,25 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         }
         for (const step of sequence) {
           if (step?.homeNone) continue;
-          const homeTarget = resolveEntryNavigationTarget(step?.homeTarget, parentMenu);
+          const homeTarget = step?.homeTarget
+            ? resolveStoryDiagramTarget(step.homeTarget, entry, parentMenu, rootEntries, effectiveReturnTarget)
+            : null;
           if (homeTarget && homeTarget !== effectiveReturnTarget) {
             transitions.push({ from: entry.id, to: homeTarget, kind: 'home', source: 'sequence' });
           }
         }
       } else if (hasPrompt) {
-        effectiveReturnTarget = resolveEntryNavigationTarget(entry.afterPlaybackPromptOkTarget, parentMenu) ?? fallbackReturnTarget;
+        effectiveReturnTarget = (entry.afterPlaybackPromptOkTarget
+          ? resolveStoryDiagramTarget(entry.afterPlaybackPromptOkTarget, entry, parentMenu, rootEntries, fallbackReturnTarget)
+          : null) ?? fallbackReturnTarget;
         if (effectiveReturnTarget) {
           transitions.push({ from: entry.id, to: effectiveReturnTarget, kind: 'return', source: entry.afterPlaybackPromptOkTarget ? 'prompt' : 'implicit' });
         }
         const promptHomeTarget = entry.afterPlaybackPromptHomeNone
           ? null
-          : resolveEntryNavigationTarget(entry.afterPlaybackPromptHomeTarget, parentMenu);
+          : entry.afterPlaybackPromptHomeTarget
+            ? resolveStoryDiagramTarget(entry.afterPlaybackPromptHomeTarget, entry, parentMenu, rootEntries, effectiveReturnTarget)
+            : null;
         if (promptHomeTarget && promptHomeTarget !== effectiveReturnTarget) {
           transitions.push({ from: entry.id, to: promptHomeTarget, kind: 'home', source: 'prompt' });
         }
@@ -362,9 +387,14 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
           effectiveReturnTarget = explicitReturnTarget;
           transitions.push({ from: entry.id, to: explicitReturnTarget, kind: 'return', source: 'configured' });
         } else {
-          if (inheritedTarget) {
-            effectiveReturnTarget = inheritedTarget;
-            transitions.push({ from: entry.id, to: inheritedTarget, kind: 'return', source: 'inherited' });
+          if (generatedReturnTarget && projectType !== 'simple') {
+            effectiveReturnTarget = generatedReturnTarget;
+            transitions.push({
+              from: entry.id,
+              to: generatedReturnTarget,
+              kind: 'return',
+              source: inheritedTarget ? 'inherited' : 'implicit',
+            });
           } else if (projectType !== 'simple') {
             effectiveReturnTarget = parentMenu?.id ?? 'root';
             transitions.push({ from: entry.id, to: effectiveReturnTarget, kind: 'return', source: 'implicit' });
@@ -372,7 +402,9 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         }
       }
 
-      const homeTarget = resolveEntryNavigationTarget(entry.returnOnHome, parentMenu);
+      const homeTarget = entry.returnOnHome
+        ? resolveStoryDiagramTarget(entry.returnOnHome, entry, parentMenu, rootEntries, effectiveReturnTarget)
+        : null;
       if (homeTarget && homeTarget !== effectiveReturnTarget) {
         transitions.push({ from: entry.id, to: homeTarget, kind: 'home', source: 'configured' });
       }
@@ -380,7 +412,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
     }
 
     if (entry.type === 'menu') {
-      collectNavigationTransitions(entry.children ?? [], entry, transitions, hasEndNode, projectType);
+      collectNavigationTransitions(entry.children ?? [], entry, transitions, hasEndNode, project, rootEntries);
     }
   }
 
@@ -390,7 +422,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
 export function getCompleteNavigationEdges(project, layout) {
   const nodeMap = new Map(layout.nodes.map((node) => [node.entry.id, node]));
 
-  const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], layout.hasEndNode, project.projectType)
+  const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], layout.hasEndNode, project, project.rootEntries ?? [])
     .map((edge) => {
       const from = nodeMap.get(edge.from);
       const to = nodeMap.get(edge.to);
@@ -420,25 +452,63 @@ export function getCompleteNavigationEdges(project, layout) {
   if (layout.hasEndNode) {
     const endNode = nodeMap.get(END_NODE_ID);
     if (endNode) {
-      const returnTargetId = resolveEntryNavigationTarget(project.nightModeReturn) ?? 'root';
-      const returnTarget = nodeMap.get(returnTargetId) ?? nodeMap.get('root');
-      if (returnTarget) {
-        const rx = returnTarget.x + returnTarget.width / 2;
-        const ry = returnTarget.y + returnTarget.height;
-        const ex = endNode.x + endNode.width / 2;
-        const ey = endNode.y;
+      const endNodeReturn = getGeneratedEndNodeReturnNavigation(project);
+      let contextualReturnCount = 0;
+      if (endNodeReturn?.isContextual) {
+        const collectContextualEndNodeEdges = (entries, parentMenu = null) => {
+          for (const entry of entries ?? []) {
+            if (entry.type === 'story') {
+              const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, project.rootEntries ?? []);
+              if (!navigation.usesEndNode || !navigation.endNodeReturn.effectiveTargetId) continue;
+              const to = diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId);
+              if (to) contextualReturnCount += 1;
+            } else if (entry.type === 'menu') {
+              collectContextualEndNodeEdges(entry.children ?? [], entry);
+            }
+          }
+        };
+        collectContextualEndNodeEdges(project.rootEntries ?? []);
+      }
+
+      const endNodeEdges = contextualReturnCount > 0
+        ? [{
+          to: END_NODE_ID,
+          source: 'contextual',
+          label: endNodeReturn?.isDefaultContextual
+            ? `Fin -> destination de chaque histoire (${contextualReturnCount} cible${contextualReturnCount > 1 ? 's' : ''})`
+            : `Fin -> histoire suivante (${contextualReturnCount} cible${contextualReturnCount > 1 ? 's' : ''})`,
+          selfLoop: true,
+        }]
+        : endNodeReturn ? [{
+          to: diagramNodeIdFromGeneratedTarget(endNodeReturn?.targetId) ?? 'root',
+          source: endNodeReturn?.isExplicit ? 'configured' : 'implicit',
+        }] : [];
+
+      const seenEndNodeTargets = new Set();
+      for (const edge of endNodeEdges) {
+        if (seenEndNodeTargets.has(edge.to)) continue;
+        seenEndNodeTargets.add(edge.to);
+        const returnTarget = edge.selfLoop ? endNode : (nodeMap.get(edge.to) ?? nodeMap.get('root'));
+        if (!returnTarget) continue;
+        const ex = edge.selfLoop ? endNode.x + endNode.width : endNode.x + endNode.width / 2;
+        const ey = edge.selfLoop ? endNode.y + endNode.height / 2 : endNode.y;
+        const rx = edge.selfLoop ? endNode.x : returnTarget.x + returnTarget.width / 2;
+        const ry = edge.selfLoop ? endNode.y + endNode.height / 2 : returnTarget.y + returnTarget.height;
         const controlOffset = Math.max(80, Math.abs(ey - ry) * 0.4);
         regularEdges.push({
           from: END_NODE_ID,
-          to: returnTargetId,
+          to: edge.to,
           kind: 'return',
-          source: project.nightModeReturn ? 'configured' : 'implicit',
+          source: edge.source,
+          label: edge.label,
           x1: ex,
           y1: ey + endNode.height,
           x2: rx,
           y2: ry,
-          c1y: ey + endNode.height + controlOffset,
-          c2y: ry - controlOffset,
+          c1y: edge.selfLoop ? ey + controlOffset : ey + endNode.height + controlOffset,
+          c2y: edge.selfLoop ? ry + controlOffset : ry - controlOffset,
+          labelX: edge.selfLoop ? endNode.x + endNode.width / 2 : undefined,
+          labelY: edge.selfLoop ? endNode.y + endNode.height + 18 : undefined,
         });
       }
     }
