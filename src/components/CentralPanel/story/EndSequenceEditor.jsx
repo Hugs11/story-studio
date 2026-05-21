@@ -166,7 +166,7 @@ export function EndSequenceEditor({
                       <div style={{ flex: 1 }}>
                         <span className="field-label">Bouton OK (dernière étape)</span>
                         <div className="sequence-help">
-                          Choisir "lecture directe" pour éviter de rejouer le titre de l'histoire suivante.
+                          Choisir l'option « Lecture directe » d'une histoire pour la lancer sans rejouer son audio de sélection.
                         </div>
                       </div>
                       <NavigationTargetSelect
@@ -234,12 +234,12 @@ export function EndSequenceEditor({
         </button>
       </div>
 
-      {/* Écran d'attente (afterPlaybackHomeStep) */}
+      {/* Réaction au bouton Accueil (afterPlaybackHomeStep) */}
       <div className="end-summary" style={{ marginTop: 12 }}>
         <div>
-          <div className="end-summary-title">Écran d'attente</div>
+          <div className="end-summary-title">Réaction au bouton Accueil</div>
           <div className="end-summary-copy">
-            Affiché quand le bouton Accueil est pressé pendant la lecture, avant la fin de l'histoire.
+            Étape jouée si l'enfant appuie sur le bouton Accueil pendant l'histoire, avant qu'elle ne se termine.
           </div>
         </div>
         <button
@@ -261,12 +261,12 @@ export function EndSequenceEditor({
               className="field-input sequence-step-name"
               value={homeStep.name || ''}
               onChange={(e) => updateHomeStep({ name: e.target.value })}
-              placeholder="Écran d'attente"
+              placeholder="Réaction au bouton Accueil"
             />
           </div>
           <AudioField
             accentLabel
-            label="Audio de l'écran d'attente"
+            label="Audio joué quand l'enfant appuie sur Accueil"
             file={homeStep.audio}
             ttsTextSuggestion={homeStep.name || node.name || ''}
             ttsFilenameHint={`attente-${node.name || 'histoire'}`}
@@ -277,7 +277,7 @@ export function EndSequenceEditor({
           <ImageField
             accentLabel
             fieldId={`${node.id}:homeStep:image`}
-            label="Image de l'écran d'attente"
+            label="Image affichée pendant la réaction Accueil"
             file={homeStep.image}
             onPick={(file) => updateHomeStep({ image: file })}
             onClear={() => updateHomeStep({ image: null })}

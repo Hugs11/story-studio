@@ -64,14 +64,14 @@ export function EndNodeEditor({
       <div className="card">
         <div className="card-title">Nœud de fin d'histoire</div>
         <div style={{ padding: '0 16px 12px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante. La lecture est toujours automatique.
+          Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante (ex : « Tu veux encore écouter une histoire ? »). La lecture est toujours automatique.
         </div>
 
         <div style={{ padding: '0 16px 12px' }}>
           <AudioField
             label="Audio de fin d'histoire"
             file={nightModeAudio}
-            ttsTextSuggestion="C'est l'heure de dormir. Veux-tu une dernière histoire avant d'aller au lit ?"
+            ttsTextSuggestion="Tu veux encore écouter une histoire ?"
             ttsFilenameHint={`fin-histoire-${projectName || 'projet'}`}
             xttsTarget={{ kind: 'root', field: 'nightModeAudio' }}
             onPick={(file) => onUpdateNightModeAudio(file)}
@@ -93,7 +93,7 @@ export function EndNodeEditor({
             <div style={{ flex: 1, minWidth: 220 }}>
               <span className="field-label">Accueil</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination quand Home est pressé pendant la lecture du nœud de fin.
+                Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du nœud de fin.
               </div>
             </div>
             <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
@@ -143,9 +143,9 @@ export function EndNodeEditor({
         <div style={{ padding: '0 16px 12px' }}>
           <div className="field-row" style={{ marginBottom: 0 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span className="field-label">Activer le mode nuit</span>
+              <span className="field-label">Activer</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Active l'indicateur mode nuit du pack. La navigation réelle reste définie par la sortie du nœud ci-dessus.
+                Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage selon ce drapeau, et certains catalogues l'utilisent pour ranger les packs de coucher à part.
               </div>
             </div>
             <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
@@ -156,7 +156,7 @@ export function EndNodeEditor({
       <div className="card" style={{ borderColor: 'var(--color-danger, #c0392b)' }}>
         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-            Supprimer le nœud de fin et désactiver le mode nuit.
+            Retire le nœud de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
           </div>
           <button className="btn btn-danger" type="button" onClick={handleRemove}>
             Supprimer

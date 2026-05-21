@@ -12,17 +12,17 @@ const TITLE_CONTROL_DEFAULTS = {
 };
 
 const PLAY_CONTROLS = [
-  { key: 'pause',    label: 'Pause',               tip: "Permet de mettre l'histoire en pause pendant la lecture",                              def: false },
-  { key: 'autoplay', label: 'Lecture automatique',  tip: "À la fin de l'audio, la boîte suit automatiquement la transition de fin. Désactive-le si l'enfant doit appuyer sur OK.", def: false },
-  { key: 'wheel',    label: 'Molette',              tip: 'Permet de naviguer avec la molette pendant la lecture',                               def: false },
+  { key: 'pause',    label: 'Pause',               tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
+  { key: 'autoplay', label: 'Lecture automatique',  tip: "À la fin de l'audio, l'histoire passe automatiquement à la suite. Désactive si tu veux que l'enfant appuie sur OK pour continuer.", def: false },
+  { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pendant la lecture (par exemple pour changer d'histoire).", def: false },
 ];
 
 const TITLE_CONTROLS = [
-  { key: 'autoplay', label: 'Lecture automatique', tip: "L'histoire se lance toute seule sans que l'enfant appuie sur OK",       def: false },
-  { key: 'ok',       label: 'Bouton OK',            tip: "L'enfant peut appuyer sur OK pour lancer l'histoire",                   def: true },
-  { key: 'home',     label: 'Bouton Accueil',        tip: 'L\'enfant peut revenir au menu parent avec le bouton Accueil',          def: true },
-  { key: 'pause',    label: 'Bouton pause',          tip: "Permet de mettre en pause l'audio du titre pendant la sélection",      def: false },
-  { key: 'wheel',    label: 'Molette',              tip: 'L\'enfant peut naviguer entre les histoires avec la molette',           def: true },
+  { key: 'autoplay', label: 'Lecture automatique', tip: "L'histoire se lance toute seule à la fin de l'audio de sélection, sans attendre que l'enfant appuie sur OK.", def: false },
+  { key: 'ok',       label: 'Bouton OK',            tip: "L'enfant peut appuyer sur OK pour lancer l'histoire.",                   def: true },
+  { key: 'home',     label: 'Bouton Accueil',        tip: "L'enfant peut revenir au menu parent en appuyant sur le bouton Accueil.", def: true },
+  { key: 'pause',    label: 'Bouton pause',          tip: "L'enfant peut mettre en pause l'audio de sélection.",                    def: false },
+  { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pour parcourir les autres histoires.",   def: true },
 ];
 
 export function DuringPlaySection({ node, allMenus = [], allStories = [], parentMenu = null, effectiveReturnTargetName, onUpdate }) {
@@ -48,12 +48,12 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
         ))}
         <label className="sequence-control">
           {node.returnOnHomeNone ? (
-            <Tooltip text="Le bouton Accueil est désactivé pendant cette lecture : il ne déclenche aucune transition." placement="above" style={{ flex: 1 }}>
+            <Tooltip text="Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire." placement="above" style={{ flex: 1 }}>
               <span>Accueil</span>
             </Tooltip>
           ) : (
             <>
-              <Tooltip text={`Destination quand l'enfant appuie sur Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`} placement="above">
+              <Tooltip text={`Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`} placement="above">
                 <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>Accueil</span>
               </Tooltip>
               <NavigationTargetSelect
@@ -62,7 +62,7 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={node.id}
-                emptyLabel="Identique fin histoire"
+                emptyLabel="Identique à la fin d'histoire"
                 includeRoot={false}
                 includeStoryPlay={false}
                 size="compact"
@@ -81,7 +81,7 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
         <div className="advanced-toggle-copy">
           <div className="field-label">Écran de sélection</div>
           <div className="advanced-toggle-desc">
-            Boutons actifs pendant l'audio de sélection
+            Boutons actifs pendant l'audio de sélection (avant que l'histoire ne se lance)
           </div>
         </div>
         <button
@@ -97,7 +97,7 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
       {showAdvanced && (
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
-            Boutons actifs pendant l'audio de l'écran de sélection
+            Boutons actifs pendant l'audio de sélection (avant que l'histoire ne se lance)
           </div>
           <div className="sequence-controls">
             {TITLE_CONTROLS.map(({ key, label, tip, def }) => (

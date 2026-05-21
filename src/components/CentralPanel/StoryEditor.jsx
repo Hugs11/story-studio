@@ -168,7 +168,7 @@ function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, a
     lines.push(`Fin d'histoire : scénario de fin de ${sequence.length} étape${sequence.length > 1 ? 's' : ''}, puis OK vers ${sequenceOkTargetName || 'la destination configurée'}`);
   } else if (hasPrompt) {
     lines.push(`Fin d'histoire : message audio, puis OK vers ${promptOkTargetName || returnTargetName || 'la destination configurée'}`);
-    lines.push(`Accueil sur le message audio : ${node?.afterPlaybackPromptHomeNone ? 'aucune transition' : `Home vers ${promptHomeTargetName || promptOkTargetName || 'la destination configurée'}`}`);
+    lines.push(`Accueil sur le message audio : ${node?.afterPlaybackPromptHomeNone ? 'aucune transition' : `Accueil vers ${promptHomeTargetName || promptOkTargetName || 'la destination configurée'}`}`);
   } else if (hasEndNode) {
     lines.push("Fin d'histoire : passage par le nœud de fin du pack");
   } else if (autoNextEffective && !isLastInMenu) {
@@ -241,7 +241,7 @@ export const StoryEditor = memo(function StoryEditor({
       <div className="card">
         <div className="card-title-row">
           <div className="card-title">L'histoire</div>
-          <div className="card-copy card-copy--inline">Menu de sélection · Lecture</div>
+          <div className="card-copy card-copy--inline">Nom, image et audios — comment cette histoire apparaît dans le menu et ce qui est joué.</div>
         </div>
 
         <div className="field-row" style={{ marginBottom: 0 }}>
@@ -280,7 +280,10 @@ export const StoryEditor = memo(function StoryEditor({
           </div>
           <div className="media-split-divider" />
           <div className="media-split-right">
-            <div className="media-col-header">Son</div>
+            <div className="media-col-header">
+              Son
+              <span className="media-col-subtitle">Audio de sélection puis lecture de l'histoire</span>
+            </div>
             <AudioField
               accentLabel
               label="Audio de sélection"
@@ -339,7 +342,7 @@ export const StoryEditor = memo(function StoryEditor({
           <div className="card-danger-text">
             <div className="card-danger-title">Supprimer cette histoire</div>
             <div className="card-danger-desc">
-              Toutes les données associées (audio, image, transitions) seront retirées du projet.
+              L'histoire est retirée du pack avec son audio, son image et ses transitions. Les fichiers audio et image restent disponibles dans la médiathèque pour être réutilisés.
             </div>
           </div>
           <button className="btn btn-danger-outline" onClick={onDelete}>
