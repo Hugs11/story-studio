@@ -59,6 +59,9 @@ is the public record of the work completed before the first GitHub release.
   catalogue (320×240)" vs "Une image pour la Lunii, une pour les
   catalogues"), and the split slots are renamed "Écran Lunii (320×240)" and
   "Vignette bibliothèque" instead of device-specific labels.
+- Replaced the persistent right-side validation panel with a compact toolbar
+  validation pill that groups blocking issues and jumps directly to the
+  affected node.
 
 ### Fixed
 
@@ -81,6 +84,8 @@ is the public record of the work completed before the first GitHub release.
   generated behavior, including the `autoNext` next-story shortcut, contextual
   `next_story` resolution per source story, and the end-node fallback that
   inherits each story's own return target when no global destination is set.
+- Validation issue selection now closes the toolbar dropdown immediately, and
+  its keyboard handling no longer intercepts keys outside the validation menu.
 
 ---
 

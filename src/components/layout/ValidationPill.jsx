@@ -102,6 +102,7 @@ export function ValidationPill({
       if (!wrapRef.current?.contains(e.target)) onOpenChange?.(false);
     }
     function onKeyDown(e) {
+      if (!wrapRef.current?.contains(e.target)) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onOpenChange?.(false);
@@ -121,7 +122,7 @@ export function ValidationPill({
         const item = flat[activeIndex];
         if (item) {
           e.preventDefault();
-          onSelectIssue?.(item.issue.id);
+          selectIssue(item.issue.id);
         }
       }
     }
@@ -145,13 +146,19 @@ export function ValidationPill({
       ? `Tout est en ordre${shortcutLabel ? ` (${shortcutLabel})` : ''}`
       : 'Vérification des fichiers en cours…';
 
+  function selectIssue(issueId) {
+    if (!issueId) return;
+    onSelectIssue?.(issueId);
+    onOpenChange?.(false);
+  }
+
   function handlePillClick() {
     if (state !== 'errors') return;
     onOpenChange?.(!open);
   }
 
   function handleItemClick(item) {
-    onSelectIssue?.(item.issue.id);
+    selectIssue(item.issue.id);
   }
 
   return (
