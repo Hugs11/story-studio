@@ -7,7 +7,11 @@ use tauri::Emitter;
 
 #[tauri::command]
 pub async fn comfyui_check(settings: ComfyUiSettings) -> Result<bool, String> {
-    tauri::async_runtime::spawn_blocking(move || ensure_comfyui_sync(&settings).map(|_| true))
+    tauri::async_runtime::spawn_blocking(move || {
+        ensure_comfyui_sync(&settings)
+            .map(|_| true)
+            .inspect_err(|err| log::warn!(target: "comfyui", "comfyui_check failed: {}", err))
+    })
         .await
         .map_err(|e| e.to_string())?
 }
@@ -56,8 +60,10 @@ pub async fn comfyui_submit_job(
     request: SdGenerateRequest,
 ) -> Result<String, String> {
     let (resource_dir, app_data_dir) = resolve_paths(&app)?;
+    log::info!(target: "comfyui", "comfyui_submit_job: workflow='{}'", request.workflow_id);
     tauri::async_runtime::spawn_blocking(move || {
         submit_job_sync(resource_dir, app_data_dir, settings, request)
+            .inspect_err(|err| log::error!(target: "comfyui", "comfyui_submit_job failed: {}", err))
     })
     .await
     .map_err(|e| e.to_string())?

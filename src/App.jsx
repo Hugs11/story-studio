@@ -832,6 +832,7 @@ export default function App() {
     }
     const validationErrors = getGenerateErrors(projectForGeneration, pathAudit);
     if (validationErrors.length > 0) {
+      logger.warn(`generate: blocked by ${validationErrors.length} validation error(s)`);
       alert(`Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`);
       return;
     }
@@ -839,6 +840,7 @@ export default function App() {
     const outputFolder = await openDialog({ directory: true, multiple: false, title: 'Dossier de sortie du pack', defaultPath });
     if (!outputFolder) return;
     saveLastExportDir(outputFolder);
+    logger.info(`generate: queued projectType=${projectForGeneration.projectType} name='${projectForGeneration.projectName}' outputFolder='${outputFolder}'`);
     renderQueue.addJob({
       projectName: projectForGeneration.projectName || '(sans nom)',
       savePath: store.savePath ?? null,
@@ -1219,7 +1221,10 @@ export default function App() {
 
   async function handlePickWorkspaceDir() {
     const chosen = await pickWorkspaceDir();
-    if (chosen) setWorkspaceDirState(chosen);
+    if (chosen) {
+      logger.info(`workspace: switched to '${chosen}'`);
+      setWorkspaceDirState(chosen);
+    }
   }
 
   async function handleVerboseLoggingChange(enabled) {
@@ -1353,6 +1358,7 @@ export default function App() {
   const handleAddStory = useCallback(async () => {
     const files = await pickMultipleAudioOrZip();
     if (files.length === 0) return;
+    logger.info(`import: pick ${files.length} file(s) into root`);
     setImporting({
       name: getImportDisplayName(files[0]),
       index: 0,
@@ -1491,18 +1497,22 @@ export default function App() {
   async function handleImportFolder(targetMenuId = null) {
     const folderPath = await pickFolder();
     if (!folderPath) return;
+    logger.info(`import-folder: '${folderPath}' targetMenuId=${targetMenuId ?? 'root'}`);
     let tree;
     try {
       tree = await invoke('scan_import_folder', { folderPath });
     } catch (e) {
+      logger.error(`import-folder: scan failed for '${folderPath}': ${e}`);
       alert(`Impossible de lire le dossier : ${e}`);
       return;
     }
     const total = countFolderFiles(tree);
     if (total === 0) {
+      logger.warn(`import-folder: empty '${folderPath}'`);
       alert('Aucun fichier audio ou archive trouvé dans ce dossier.');
       return;
     }
+    logger.info(`import-folder: ${total} file(s) found`);
     setImporting({ name: tree.name, index: 0, total, phase: 'Analyse du dossier...' });
     try {
       await processFolderNode(tree, targetMenuId, { value: 0 }, total);
@@ -1667,8 +1677,9 @@ export default function App() {
         setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
       }
     }
+    const projectToSave = projectOverride ?? store.project;
+    logger.info(`save: kind=${silent ? 'auto' : 'manual'} hasPath=${!!store.savePath} projectType=${projectToSave?.projectType || 'none'} entries=${projectToSave?.rootEntries?.length ?? 0}`);
     try {
-      const projectToSave = projectOverride ?? store.project;
       let result = await saveProject(projectToSave, store.savePath, onProgress, {
         autosave: silent,
         backupLimit: autoSaveEnabled ? autoSaveBackupLimit : 0,
@@ -1697,6 +1708,7 @@ export default function App() {
         }
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);
+        logger.info(`save: done path='${result.path}' kind=${silent ? 'auto' : 'manual'}`);
         return returnResult ? result : result.path;
       }
       setSaveProgress(null);
@@ -1754,6 +1766,8 @@ export default function App() {
   saveAsHandlerRef.current = handleSaveProjectAs;
 
   async function applyLoadedProject(result) {
+    const entries = result?.data?.rootEntries?.length ?? 0;
+    logger.info(`load: path='${result.path}' projectType=${result.data?.projectType || 'none'} schemaVersion=${result.data?.schemaVersion ?? '?'} entries=${entries}`);
     store.loadProject(result.data);
     store.setMediaTags(result.mediaTags ?? {});
     store.setSavePath(result.path);
@@ -1804,6 +1818,7 @@ export default function App() {
       const result = await loadProjectFromPath(path);
       await applyLoadedProject(result);
     } catch (e) {
+      logger.error(`load-recent: failed for '${path}': ${e}`);
       setRecentProjects(forgetRecentProject(path));
       alert(`Impossible d'ouvrir ce projet récent :\n${e}`);
     }
