@@ -59,7 +59,7 @@ async function queryPathSnapshot(path) {
   }
 }
 
-export function getCachedPathSnapshot(path) {
+function getCachedPathSnapshot(path) {
   const normalizedPath = normalizePath(path);
   if (!normalizedPath) return null;
   return pathSnapshotCache.get(normalizedPath) ?? null;

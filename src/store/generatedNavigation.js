@@ -21,7 +21,7 @@ export function hasVisibleEndNode(project) {
   );
 }
 
-export function hasGeneratedEndNode(project) {
+function hasGeneratedEndNode(project) {
   return !!project?.nightModeAudio;
 }
 
@@ -60,7 +60,7 @@ export function getGeneratedNavigationTargetName(targetId, projectIndex, fallbac
   return projectIndex?.entryById?.get(targetId)?.name || fallback;
 }
 
-export function findNextStorySibling(entry, parentMenu, rootEntries) {
+function findNextStorySibling(entry, parentMenu, rootEntries) {
   if (!entry) return null;
   const siblings = parentMenu ? (parentMenu.children ?? []) : (rootEntries ?? []);
   const currentIndex = siblings.findIndex((candidate) => candidate.id === entry.id);
@@ -120,7 +120,7 @@ export function resolveGeneratedTargetForStory(target, entry, parentMenu, rootEn
   return resolveNavigationTargetId(normalized, parentMenu);
 }
 
-export function resolveGeneratedEndNodeTarget(target, entry, parentMenu, rootEntries, fallbackTarget = null) {
+function resolveGeneratedEndNodeTarget(target, entry, parentMenu, rootEntries, fallbackTarget = null) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return fallbackTarget;
   if (isNextStoryNavigationTarget(normalized)) {
@@ -131,7 +131,7 @@ export function resolveGeneratedEndNodeTarget(target, entry, parentMenu, rootEnt
   return resolveNavigationTargetId(normalized, parentMenu);
 }
 
-export function isCombinedNightStoryBypass(entry, project) {
+function isCombinedNightStoryBypass(entry, project) {
   return !!(
     project?.nightModeAudio
     && entry?.type === 'story'

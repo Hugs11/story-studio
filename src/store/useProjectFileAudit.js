@@ -6,7 +6,7 @@ function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export function collectProjectPaths(project, projectIndex = null) {
+function collectProjectPaths(project, projectIndex = null) {
   const paths = new Set();
 
   if (hasPath(project?.rootAudio)) paths.add(project.rootAudio);
