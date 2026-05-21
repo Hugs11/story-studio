@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
+import { hasVisibleEndNode } from '../../../store/generatedNavigation';
 import { getNavigationSelectHint, NavigationTargetSelect } from './storyUtils';
 
 const TITLE_CONTROL_DEFAULTS = {
@@ -25,13 +26,18 @@ const TITLE_CONTROLS = [
   { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pour parcourir les autres histoires.",   def: true },
 ];
 
-export function DuringPlaySection({ node, project = null, allMenus = [], allStories = [], parentMenu = null, effectiveReturnTargetName, onUpdate }) {
+export function DuringPlaySection({ node, project = null, allMenus = [], allStories = [], parentMenu = null, onUpdate }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
+  const homeDefaultTargetName = parentMenu?.name || "le menu d'accueil du pack";
+  const endNodeBypassNote = hasVisibleEndNode(project)
+    ? ' (sans passer par le nœud de fin)'
+    : '';
+  const homeResolvedHint = `Retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}`;
   const homeResolvedDestinationLabel = getNavigationSelectHint({
     value: node.returnOnHome ?? '',
-    emptyResolvedLabel: effectiveReturnTargetName ?? null,
+    emptyResolvedLabel: homeResolvedHint,
     entry: node,
     parentMenu,
     project,
@@ -67,7 +73,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
             <Tooltip
               text={node.returnOnHomeNone
                 ? "Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire."
-                : `Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`}
+                : `Destination quand l'enfant appuie sur Accueil pendant la lecture. Par défaut : retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}.`}
               placement="above"
               style={{ flex: 1 }}
             >
@@ -86,7 +92,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={node.id}
-              emptyLabel="Identique à la fin d'histoire"
+              emptyLabel="Comportement par défaut"
               includeRoot={false}
               includeStoryPlay={false}
               size="compact"

@@ -91,6 +91,29 @@ export function AfterPlaySection({
   const promptHomeSelectValue = node.afterPlaybackPromptHomeNone
     ? '__none__'
     : (node.afterPlaybackPromptHomeTarget ?? '');
+  const promptAudioLabel = usesGlobalEndNodeAudio
+    ? 'Audio du nœud de fin'
+    : hasEndNode
+      ? 'Audio de remplacement'
+      : 'Audio de fin';
+  const promptAudioDescription = usesGlobalEndNodeAudio
+    ? "Cette histoire utilise l'audio commun défini dans le Nœud de fin du pack."
+    : hasEndNode
+      ? "Joué à la place du nœud de fin pour cette histoire"
+      : "Joué à la fin de l'histoire";
+  const addPromptTooltip = hasEndNode
+    ? "Pour cette histoire uniquement : un seul audio joué à la fin, à la place du nœud de fin du pack."
+    : "Un seul audio joué à la fin (ex : « Bravo, l'histoire est finie ! »)";
+  const addSequenceTooltip = hasEndNode
+    ? "Pour cette histoire uniquement : plusieurs étapes audio enchaînées à la place du nœud de fin du pack."
+    : 'Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)';
+  const advancedTitle = hasEndNode
+    ? 'Personnaliser pour cette histoire'
+    : 'Message audio après cette histoire';
+  const advancedDescription = hasEndNode
+    ? "Remplacer le nœud de fin du pack par un audio spécifique pour cette histoire seulement. La plupart des packs n'en ont pas besoin."
+    : 'Audio facultatif joué juste après cette histoire — par exemple un mot, une morale, ou une transition vers la suivante.';
+  const advancedCollapsedLabel = hasEndNode ? 'Réglages avancés' : 'Configurer';
 
   useEffect(() => {
     if (hasPrompt || hasSequence) {
@@ -197,12 +220,15 @@ export function AfterPlaySection({
             Retirer
           </button>
         </div>
+        {hasEndNode && !usesGlobalEndNodeAudio && (
+          <div className="sequence-note" style={{ marginBottom: 10 }}>
+            Cette histoire jouera ce message <strong>à la place</strong> du nœud de fin du pack.
+          </div>
+        )}
         <AudioField
           accentLabel
-          label={usesGlobalEndNodeAudio ? 'Audio du nœud de fin' : 'Audio de fin'}
-          description={usesGlobalEndNodeAudio
-            ? "Cette histoire utilise l'audio commun défini dans le Nœud de fin du pack."
-            : "Joué à la fin de l'histoire"}
+          label={promptAudioLabel}
+          description={promptAudioDescription}
           file={node.afterPlaybackPromptAudio}
           required={false}
           ttsFilenameHint={`fin-${node.name || 'histoire'}`}
@@ -253,7 +279,7 @@ export function AfterPlaySection({
                   allMenus={allMenus}
                   allStories={allStories}
                   currentStoryId={node.id}
-                  emptyLabel="Identique à la fin d'histoire"
+                  emptyLabel="Comportement par défaut"
                 />
               </div>
               <div className="field-row" style={{ marginBottom: 0 }}>
@@ -289,12 +315,12 @@ export function AfterPlaySection({
   } else {
     endContent = (
       <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
-        <Tooltip text={"Un seul audio joué à la fin (ex : « Bravo, l'histoire est finie ! »)"} placement="above">
+        <Tooltip text={addPromptTooltip} placement="above">
           <button type="button" className="btn-xs" onClick={() => setShowPromptField(true)}>
             Ajouter un audio de fin
           </button>
         </Tooltip>
-        <Tooltip text="Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)" placement="above">
+        <Tooltip text={addSequenceTooltip} placement="above">
           <button type="button" className="btn-xs" onClick={startSequence}>
             Ajouter un scénario de fin
           </button>
@@ -304,8 +330,6 @@ export function AfterPlaySection({
   }
 
   // ─── Rendu principal ────────────────────────────────────────────────────────
-
-  const advancedDescription = 'Message audio facultatif joué juste après cette histoire (ex : « Tu veux en écouter une autre ? »).';
 
   return (
     <div className="card">
@@ -393,7 +417,7 @@ export function AfterPlaySection({
       {/* Options avancées : message de fin + bouton Accueil */}
       <div className="advanced-toggle-row">
         <div className="advanced-toggle-copy">
-          <div className="field-label">Message de fin</div>
+          <div className="field-label">{advancedTitle}</div>
           <div className="advanced-toggle-desc">
             {advancedDescription}
           </div>
@@ -404,7 +428,7 @@ export function AfterPlaySection({
           aria-expanded={showAdvanced}
           onClick={() => setShowAdvanced((v) => !v)}
         >
-          {showAdvanced ? 'Masquer' : 'Configurer'}
+          {showAdvanced ? 'Masquer' : advancedCollapsedLabel}
         </button>
       </div>
 
@@ -420,9 +444,7 @@ export function AfterPlaySection({
             gap: 12,
           }}
         >
-          {/* Message de fin */}
           <div>
-            <div className="field-label" style={{ marginBottom: 8 }}>Message de fin</div>
             {endContent}
           </div>
         </div>
