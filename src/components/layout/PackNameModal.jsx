@@ -171,12 +171,12 @@ export function PackNameModal({
   }
 
   const collisionText = collision === 'collision'
-    ? 'Un ZIP du même nom existe déjà'
+    ? 'Un ZIP du même nom existe déjà dans le dossier d’export'
     : collision === 'free'
-      ? 'Nom disponible dans le dernier dossier'
+      ? 'Nom disponible dans le dossier d’export'
       : exportFolder
         ? 'Statut du nom en cours de vérification'
-        : "Aucun dossier d'export choisi";
+        : "Aucun dossier d'export disponible";
   const generateButtonDisabled = !!saving || !hasExportName || generateDisabled;
   const generateButtonTooltip = saving
     ? 'Une action est déjà en cours.'
@@ -214,7 +214,7 @@ export function PackNameModal({
           <section className="pack-meta-form">
             <div className="pack-meta-field-row">
               <label>Titre du pack</label>
-              <input className="pack-meta-input" value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder="Les histoires de Mini-loup" />
+              <input className="pack-meta-input" value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder="Titre de mon pack" />
             </div>
 
             <div className="pack-meta-field-row">
@@ -242,7 +242,7 @@ export function PackNameModal({
 
             <div className="pack-meta-field-row">
               <label>Auteur</label>
-              <input className="pack-meta-input" value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder="funkyfoenky" />
+              <input className="pack-meta-input" value={draft.author || ''} onChange={(event) => updateField('author', event.target.value)} placeholder="Nom de l’auteur" />
             </div>
 
             <div className="pack-meta-field-row">

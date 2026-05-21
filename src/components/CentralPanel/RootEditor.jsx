@@ -1,18 +1,46 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
-import { Image as ImageIcon } from '../icons/LucideLocal';
+import { Image as ImageIcon, Info } from '../icons/LucideLocal';
 import './CentralPanel.css';
 import './RootEditor.css';
+
+const SIMPLE_MODE_INFO_DISMISS_KEY = 'storyStudio.simpleModeInfoDismissed';
 
 export const RootEditor = memo(function RootEditor({ node, projectType, onUpdateRoot, onUpdateMedia, onUpdateStoryAudio }) {
   const sameImage = !!node.sameImage;
   const nativeGraph = node.nativeGraph ?? null;
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
-  const rootTitle = node.packMetadata?.title || node.projectName || '';
+  const isSimple = projectType === 'simple';
+  const simpleStoryName = node.packMetadata?.title || node.projectName || '';
+  const rootTitle = isSimple ? simpleStoryName : (node.packMetadata?.title || node.projectName || '');
+
+  const [simpleInfoDismissed, setSimpleInfoDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.localStorage.getItem(SIMPLE_MODE_INFO_DISMISS_KEY) === '1'; }
+    catch { return false; }
+  });
+
+  useEffect(() => {
+    if (!isSimple) return;
+    if (typeof window === 'undefined') return;
+    try {
+      setSimpleInfoDismissed(window.localStorage.getItem(SIMPLE_MODE_INFO_DISMISS_KEY) === '1');
+    } catch { /* ignore */ }
+  }, [isSimple]);
+
+  function dismissSimpleInfo() {
+    setSimpleInfoDismissed(true);
+    try { window.localStorage.setItem(SIMPLE_MODE_INFO_DISMISS_KEY, '1'); }
+    catch { /* ignore */ }
+  }
+
+  function handleSimpleNameChange(nextValue) {
+    onUpdateRoot({ projectName: nextValue, packMetadata: { title: nextValue } });
+  }
 
   function setSameImage(v) {
     onUpdateMedia('sameImage', v);
@@ -88,10 +116,38 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
         </div>
       ) : null}
 
+      {isSimple && !simpleInfoDismissed ? (
+        <div className="simple-mode-info" role="note">
+          <span className="simple-mode-info-icon" aria-hidden="true">
+            <Info className="chrome-icon" strokeWidth={1.9} absoluteStrokeWidth />
+          </span>
+          <div className="simple-mode-info-text">
+            <strong>Mode histoire simple</strong>
+            <span>
+              Tu crées un pack contenant une seule histoire. Pour des menus, plusieurs histoires ou
+              une navigation personnalisée, utilise plutôt le mode « Créer un pack d'histoires ».
+            </span>
+          </div>
+          <button
+            type="button"
+            className="simple-mode-info-dismiss"
+            onClick={dismissSimpleInfo}
+            aria-label="Masquer ce message"
+            title="Masquer ce message"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
       <div className="card root-card">
         <div className="card-title-row">
-          <div className="card-title">Menu Racine</div>
-          <div className="card-copy card-copy--inline">Couverture du pack sur la Lunii — image et audio entendus quand l'enfant fait tourner la molette entre ses différents packs et qu'il s'arrête sur celui-ci.</div>
+          <div className="card-title">{isSimple ? 'Mon histoire' : 'Menu Racine'}</div>
+          <div className="card-copy card-copy--inline">
+            {isSimple
+              ? "Voici la fiche de ton histoire dans le catalogue Lunii : son nom, l'image et l'audio entendus quand l'enfant fait tourner la molette et s'arrête sur ton histoire."
+              : "Couverture du pack sur la Lunii — image et audio entendus quand l'enfant fait tourner la molette entre ses différents packs et qu'il s'arrête sur celui-ci."}
+          </div>
         </div>
 
         {projectType === 'pack' ? (
@@ -108,6 +164,22 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             <span className="root-entry-count">
               {node.rootEntries?.length ?? 0} élément(s)
             </span>
+          </div>
+        ) : null}
+
+        {isSimple ? (
+          <div className="root-card-name-row root-card-name-row--simple">
+            <div className="simple-name-field">
+              <label className="simple-name-label" htmlFor="root-simple-name">Nom de l'histoire</label>
+              <input
+                id="root-simple-name"
+                className="field-input simple-name-input"
+                value={simpleStoryName}
+                onChange={(e) => handleSimpleNameChange(e.target.value)}
+                placeholder="Le loup et l'agneau"
+              />
+              <span className="simple-name-hint">Apparaît dans le catalogue Lunii et donne son nom au fichier ZIP exporté.</span>
+            </div>
           </div>
         ) : null}
 
@@ -225,24 +297,24 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
         </div>
       </div>
 
-      {projectType === 'simple' && (
+      {isSimple && (
         <div className="card">
           <div className="card-title-row">
-            <div className="card-title">Histoire complète</div>
-            <div className="card-copy card-copy--inline">Écoutée quand l'enfant valide son choix</div>
+            <div className="card-title">Récit complet</div>
+            <div className="card-copy card-copy--inline">Le fichier audio joué quand l'enfant valide son choix sur la Lunii — c'est l'histoire en elle-même.</div>
           </div>
           <AudioField
-            label="Histoire complète"
-            description="Écoutée quand l'enfant valide son choix"
+            label="Audio du récit"
+            description="Joué quand l'enfant valide son choix"
             file={node.storyAudio}
-            ttsFilenameHint={`histoire-complete-${node.projectName || 'histoire'}`}
+            ttsFilenameHint={`histoire-complete-${simpleStoryName || 'histoire'}`}
             xttsTarget={{ kind: 'rootStory', field: 'audio' }}
             onPick={(f) => {
               const autoName = f.split(/[\\/]/).pop()
                 .replace(/\.(mp3|ogg|wav|m4a)$/i, '')
                 .replace(/[-_]/g, ' ').trim();
               onUpdateStoryAudio(f);
-              if (!node.projectName) onUpdateRoot({ projectName: autoName });
+              if (!simpleStoryName && autoName) handleSimpleNameChange(autoName);
             }}
             onClear={() => onUpdateStoryAudio(null)}
           />
