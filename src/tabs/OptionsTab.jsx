@@ -582,12 +582,12 @@ export function OptionsTab({
           </div>
           <div className="opts-row">
             <div className="opts-row-info">
-              <div className="opts-row-label">Fichier de log</div>
+              <div className="opts-row-label">Dossier des logs</div>
               <div className="opts-row-sub">
                 {resolvedLogPath ? (
-                  <>Emplacement : <code>{resolvedLogPath}</code></>
+                  <><code>{resolvedLogPath}</code> — fichier courant : <code>story-studio.log</code></>
                 ) : (
-                  <>Le fichier est écrit dans le dossier <code>logs</code> de l'app sous <code>%LOCALAPPDATA%\com.hugs11.story-studio\</code>.</>
+                  <>Sous <code>%LOCALAPPDATA%\com.hugs11.story-studio\logs\</code>. Fichier courant : <code>story-studio.log</code>.</>
                 )}
                 {copiedLogPath ? (
                   <span style={{ color: 'var(--color-accent)', marginLeft: 6 }}>(copié)</span>
