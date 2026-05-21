@@ -2,6 +2,18 @@ import { isTauriRuntime } from './tauriRuntime';
 
 const isDev = import.meta.env.DEV;
 
+const LEVEL_RANK = { off: 0, error: 1, warn: 2, info: 3, debug: 4, trace: 5 };
+let currentLevel = LEVEL_RANK.warn;
+
+export function setLogLevel(level) {
+  const rank = LEVEL_RANK[String(level || '').toLowerCase()];
+  if (typeof rank === 'number') currentLevel = rank;
+}
+
+export function getLogLevel() {
+  return Object.keys(LEVEL_RANK).find((key) => LEVEL_RANK[key] === currentLevel) || 'warn';
+}
+
 let pluginLogPromise = null;
 async function getPluginLog() {
   if (!isTauriRuntime()) return null;
@@ -27,6 +39,8 @@ function stringify(args) {
 }
 
 function forward(method, args) {
+  const required = LEVEL_RANK[method] ?? LEVEL_RANK.error;
+  if (required > currentLevel) return;
   if (isDev) console[method === 'info' ? 'info' : method === 'warn' ? 'warn' : 'error'](...args);
   const payload = stringify(args);
   getPluginLog().then((mod) => {

@@ -53,7 +53,7 @@ import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWo
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
-import { logger, installGlobalErrorHandlers } from './utils/logger';
+import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { isOriginalBackup } from './utils/mediaConventions';
@@ -311,8 +311,10 @@ export default function App() {
   useEffect(() => {
     const detach = installGlobalErrorHandlers();
     const verbose = loadVerboseLoggingPref();
+    const level = verboseLevelName(verbose);
+    setLogLevel(level);
     if (isTauriRuntime()) {
-      invoke('set_log_level', { level: verboseLevelName(verbose) })
+      invoke('set_log_level', { level })
         .then(() => {
           logger.info(`boot: verbose=${verbose} runtime=tauri ua=${navigator.userAgent.slice(0, 80)}`);
         })
