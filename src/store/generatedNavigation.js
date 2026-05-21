@@ -21,7 +21,7 @@ export function hasVisibleEndNode(project) {
   );
 }
 
-function hasGeneratedEndNode(project) {
+export function hasGeneratedEndNode(project) {
   return !!project?.nightModeAudio;
 }
 
@@ -131,7 +131,7 @@ function resolveGeneratedEndNodeTarget(target, entry, parentMenu, rootEntries, f
   return resolveNavigationTargetId(normalized, parentMenu);
 }
 
-function isCombinedNightStoryBypass(entry, project) {
+export function isCombinedNightStoryBypass(entry, project) {
   return !!(
     project?.nightModeAudio
     && entry?.type === 'story'

@@ -208,11 +208,6 @@ export const StoryEditor = memo(function StoryEditor({
   const navigationState = getNavigationState(
     node, parentMenu, allMenus, allStories, autoNextEffective, isLastInMenu,
   );
-  const effectiveReturnTargetId = resolveReturnTarget(node, parentMenu);
-  const effectiveReturnTargetName = effectiveReturnTargetId
-    ? targetNameById(allMenus, allStories, effectiveReturnTargetId, parentMenu?.name || 'ce dossier')
-    : 'le comportement courant';
-
   const [textImgModal, setTextImgModal] = useState(null);
 
   function handleRegenerate() {
@@ -318,7 +313,6 @@ export const StoryEditor = memo(function StoryEditor({
         allMenus={allMenus}
         allStories={allStories}
         parentMenu={parentMenu}
-        effectiveReturnTargetName={effectiveReturnTargetName}
         onUpdate={onUpdate}
       />
 

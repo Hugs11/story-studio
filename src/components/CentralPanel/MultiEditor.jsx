@@ -275,6 +275,7 @@ export const MultiEditor = memo(function MultiEditor({
               <span className="field-label">Accueil</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                 Destination quand l'enfant appuie sur Accueil pendant la lecture.
+                Par défaut : retour direct au menu parent{hasEndNode ? ' (sans passer par le nœud de fin)' : ''}.
               </div>
             </div>
             <div style={{ maxWidth: 220, width: '100%' }}>
@@ -287,7 +288,7 @@ export const MultiEditor = memo(function MultiEditor({
               allMenus={allMenus}
               allStories={allStories.filter((s) => !ids.includes(s.id))}
               currentStoryId={null}
-              emptyLabel="Identique à la fin d'histoire"
+              emptyLabel="Comportement par défaut"
               includeRoot={false}
               includeStoryPlay={false}
             />
