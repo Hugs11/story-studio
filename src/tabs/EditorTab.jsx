@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TreePanel } from '../components/TreePanel/TreePanel';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
-import { ValidationPanel } from '../components/ValidationPanel/ValidationPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
 
@@ -159,14 +158,6 @@ export function EditorTab({
           onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
           onRemoveEndNode={onRemoveEndNode}
           showCentralDiagram={showCentralDiagram}
-        />
-
-        <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-right', '--col-right', -1)} />
-
-        <ValidationPanel
-          validationIssues={validationIssues}
-          projectType={projectType}
-          onSelect={onSelect}
         />
 
         <FloatingSimulator

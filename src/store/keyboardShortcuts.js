@@ -43,6 +43,7 @@ export const SHORTCUT_DEFINITIONS = [
   },
   { id: 'generate', label: 'Générer le pack', defaultShortcut: { ctrl: true, shift: true, code: 'Enter', key: 'enter' } },
   { id: 'treeSearch', label: 'Rechercher dans la structure', defaultShortcut: { ctrl: true, shift: false, code: 'KeyF', key: 'f' } },
+  { id: 'toggleValidation', label: 'Ouvrir la validation', defaultShortcut: { ctrl: true, shift: true, code: 'KeyE', key: 'e' } },
 ];
 
 export const DEFAULT_SHORTCUTS = Object.fromEntries(
