@@ -131,6 +131,8 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   if (projectType === 'pack') {
     if (!hasPath(project?.thumbnailImage)) pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque manquante (cocher « même image » ou en choisir une)`);
     else if (isBrokenPath(project?.thumbnailImage, fileAudit)) pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque introuvable ou inaccessible`);
+  } else if (hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
+    pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque introuvable ou inaccessible`);
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
     pushIssue(issues, 'end-node', 'error', `Nœud de fin — audio manquant`);
@@ -319,6 +321,7 @@ export function getRootValidationStatus(project, fileAudit = {}) {
   }
 
   if (project?.projectType === 'simple') {
+    if (hasPath(project?.thumbnailImage) && !isAccessiblePath(project?.thumbnailImage, fileAudit)) return 'error';
     let story = null;
     visitProjectEntries(project, (entry) => {
       if (!story && entry?.type === 'story') story = entry;
