@@ -129,7 +129,3 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
   );
 }
 
-// Réinitialise la préférence mémorisée (appelable depuis les Options si besoin)
-export function resetDeleteAudioPref() {
-  localStorage.removeItem(PREF_KEY);
-}

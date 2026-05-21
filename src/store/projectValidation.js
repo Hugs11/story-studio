@@ -279,10 +279,6 @@ export function getGenerateErrors(project, fileAudit = {}) {
     .map((issue) => issue.text);
 }
 
-export function hasBlockingIssues(project, fileAudit = {}) {
-  return getProjectValidationIssues(project, fileAudit).some((issue) => issue.status === 'error');
-}
-
 export function getItemValidationStatus(item, fileAudit = {}) {
   if (item.type === 'zip') return isAccessiblePath(item.zipPath, fileAudit) ? 'ok' : 'error';
   if (!isAccessiblePath(item.audio, fileAudit)) return 'error';
