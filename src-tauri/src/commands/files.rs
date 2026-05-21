@@ -8,22 +8,29 @@ pub fn save_recording(
     filename: String,
     data: Vec<u8>,
 ) -> Result<String, String> {
+    log::info!(target: "files",
+        "save_recording: name='{}' size={} bytes", filename, data.len());
     project_files::save_recording(
         save_path.as_deref(),
         workspace_dir.as_deref(),
         &filename,
         &data,
     )
+    .inspect_err(|err| log::error!(target: "files", "save_recording failed: {}", err))
 }
 
 #[tauri::command]
 pub fn delete_file(path: String, save_path: Option<String>) -> Result<(), String> {
+    log::info!(target: "files", "delete_file: '{}'", path);
     project_files::delete_file(&path, save_path.as_deref())
+        .inspect_err(|err| log::error!(target: "files", "delete_file failed for '{}': {}", path, err))
 }
 
 #[tauri::command]
 pub fn delete_workspace_media_file(path: String, workspace_dir: String) -> Result<(), String> {
+    log::info!(target: "files", "delete_workspace_media_file: '{}'", path);
     project_files::delete_workspace_media_file(&path, &workspace_dir)
+        .inspect_err(|err| log::error!(target: "files", "delete_workspace_media_file failed for '{}': {}", path, err))
 }
 
 #[tauri::command]
@@ -34,6 +41,9 @@ pub async fn concat_audio_files(
     silence_between_sec: f64,
     workspace_dir: Option<String>,
 ) -> Result<String, String> {
+    log::info!(target: "files",
+        "concat_audio_files: inputs={} output='{}' silence={}s",
+        input_paths.len(), output_file_name, silence_between_sec);
     tauri::async_runtime::spawn_blocking(move || {
         project_files::concat_audio_files(
             &save_path,
@@ -42,6 +52,7 @@ pub async fn concat_audio_files(
             silence_between_sec,
             workspace_dir.as_deref(),
         )
+        .inspect_err(|err| log::error!(target: "files", "concat_audio_files failed: {}", err))
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -73,8 +84,11 @@ pub async fn trim_audio(
     save_path: Option<String>,
     workspace_dir: Option<String>,
 ) -> Result<project_files::TrimAudioResult, String> {
+    log::info!(target: "files",
+        "trim_audio: input='{}' start={}s end={}s", input_path, start_sec, end_sec);
     tauri::async_runtime::spawn_blocking(move || {
         project_files::trim_audio(&input_path, start_sec, end_sec, save_path.as_deref(), workspace_dir.as_deref())
+            .inspect_err(|err| log::error!(target: "files", "trim_audio failed for '{}': {}", input_path, err))
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -88,8 +102,11 @@ pub async fn cut_audio(
     save_path: Option<String>,
     workspace_dir: Option<String>,
 ) -> Result<project_files::TrimAudioResult, String> {
+    log::info!(target: "files",
+        "cut_audio: input='{}' cut={}..{}s", input_path, cut_start, cut_end);
     tauri::async_runtime::spawn_blocking(move || {
         project_files::cut_audio(&input_path, cut_start, cut_end, save_path.as_deref(), workspace_dir.as_deref())
+            .inspect_err(|err| log::error!(target: "files", "cut_audio failed for '{}': {}", input_path, err))
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -188,8 +205,10 @@ pub async fn restore_audio_original(
     save_path: Option<String>,
     workspace_dir: Option<String>,
 ) -> Result<project_files::TrimAudioResult, String> {
+    log::info!(target: "files", "restore_audio_original: '{}'", input_path);
     tauri::async_runtime::spawn_blocking(move || {
         project_files::restore_audio_original(&input_path, save_path.as_deref(), workspace_dir.as_deref())
+            .inspect_err(|err| log::error!(target: "files", "restore_audio_original failed for '{}': {}", input_path, err))
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -263,8 +282,10 @@ fn scan_dir_recursive(dir: &std::path::Path) -> Result<Vec<ScanEntry>, String> {
 
 #[tauri::command]
 pub fn scan_import_folder(folder_path: String) -> Result<ScanEntry, String> {
+    log::info!(target: "files", "scan_import_folder: '{}'", folder_path);
     let root = std::path::PathBuf::from(&folder_path);
     if !root.is_dir() {
+        log::warn!(target: "files", "scan_import_folder: missing path '{}'", folder_path);
         return Err(format!("Dossier introuvable : {}", folder_path));
     }
     let name = root
@@ -272,7 +293,8 @@ pub fn scan_import_folder(folder_path: String) -> Result<ScanEntry, String> {
         .and_then(|n| n.to_str())
         .unwrap_or("Dossier importé")
         .to_string();
-    let children = scan_dir_recursive(&root)?;
+    let children = scan_dir_recursive(&root)
+        .inspect_err(|err| log::error!(target: "files", "scan_import_folder failed for '{}': {}", folder_path, err))?;
     Ok(ScanEntry {
         entry_type: "folder",
         name,
@@ -334,16 +356,20 @@ pub fn list_folder_media_files(folder_path: String) -> Result<Vec<String>, Strin
 
 #[tauri::command]
 pub fn validate_lunii_zip_cmd(zip_path: String) -> LuniiZipValidationReport {
+    log::info!(target: "lunii_validator", "validate_lunii_zip_cmd: '{}'", zip_path);
     match project_files::validate_existing_pack_path(&zip_path) {
         Ok(canonical) => validate_lunii_zip(&canonical.to_string_lossy()),
-        Err(e) => LuniiZipValidationReport {
-            zip_path,
-            valid: false,
-            issues: vec![crate::support::lunii_zip_validator::ValidationIssue {
-                severity: "error".to_string(),
-                code: "INVALID_PATH".to_string(),
-                message: e,
-            }],
-        },
+        Err(e) => {
+            log::warn!(target: "lunii_validator", "validate path rejected '{}': {}", zip_path, e);
+            LuniiZipValidationReport {
+                zip_path,
+                valid: false,
+                issues: vec![crate::support::lunii_zip_validator::ValidationIssue {
+                    severity: "error".to_string(),
+                    code: "INVALID_PATH".to_string(),
+                    message: e,
+                }],
+            }
+        }
     }
 }
