@@ -117,7 +117,6 @@ pub fn run() {
             commands::media_probe::probe_media_files,
             commands::diagnostics::set_log_level,
             commands::diagnostics::get_log_level,
-            commands::diagnostics::get_logs_dir,
             commands::diagnostics::get_current_log_file
         ])
         .run(tauri::generate_context!())
