@@ -167,7 +167,9 @@ function isProjectDirty(project) {
 function hasExplicitExportPackName(project) {
   const metadata = project?.packMetadata ?? {};
   if (metadata.namingMode === 'legacy') return !!String(metadata.legacyExportName || '').trim();
-  return !!String(metadata.title || '').trim();
+  if (String(metadata.title || '').trim()) return true;
+  if (project?.projectType === 'simple') return !!String(project?.projectName || '').trim();
+  return false;
 }
 
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
@@ -801,7 +803,8 @@ export default function App() {
     const projectForGeneration = projectOverride && !projectOverride?.preventDefault
       ? projectOverride
       : store.project;
-    if (projectForGeneration.projectType === 'pack' && !hasExplicitExportPackName(projectForGeneration)) {
+    if ((projectForGeneration.projectType === 'pack' || projectForGeneration.projectType === 'simple')
+      && !hasExplicitExportPackName(projectForGeneration)) {
       setPackMetadataOpen(true);
       return;
     }
@@ -840,9 +843,13 @@ export default function App() {
   }
 
   async function handleSavePackMetadata(draft, { generate = false } = {}) {
+    const nextPackMetadata = { ...(store.project.packMetadata ?? {}), ...draft };
+    const isSimple = store.project.projectType === 'simple';
+    const nextTitle = String(draft?.title ?? '').trim();
     const projectForAction = {
       ...store.project,
-      packMetadata: { ...(store.project.packMetadata ?? {}), ...draft },
+      packMetadata: nextPackMetadata,
+      ...(isSimple && nextTitle ? { projectName: nextTitle } : {}),
     };
     if (!generate) {
       store.setProject(projectForAction);
@@ -1812,6 +1819,14 @@ export default function App() {
   const effectiveProjectFilePrefix = getProjectFilePrefix(store.project, store.savePath);
   const exportPackName = getExportPackName(store.project.packMetadata);
   const lastExportDir = getLastExportDir();
+  const modalExportFolder = (() => {
+    if (lastExportDir) return lastExportDir;
+    const ws = workspaceDirRef.current || (typeof window !== 'undefined' ? localStorage.getItem('storyStudioWorkspaceDir') : '') || '';
+    if (!ws) return null;
+    const trimmed = ws.replace(/[\\/]+$/, '');
+    const sep = ws.includes('\\') ? '\\' : '/';
+    return `${trimmed}${sep}exports`;
+  })();
 
   function handleToolbarRecord() {
     setToolbarRecordOpen(true);
@@ -1869,13 +1884,20 @@ export default function App() {
     <div className="app">
       <TitleBar
         projectName={titleBarName}
-        packMetadata={projectType === 'pack' ? store.project.packMetadata : null}
-        packCoverImage={projectType === 'pack' ? (store.project.thumbnailImage || store.project.rootImage) : null}
+        packMetadata={projectType === 'pack'
+          ? store.project.packMetadata
+          : projectType === 'simple'
+            ? {
+                ...(store.project.packMetadata ?? {}),
+                title: store.project.packMetadata?.title || store.project.projectName || '',
+              }
+            : null}
+        packCoverImage={projectType !== null ? (store.project.thumbnailImage || store.project.rootImage) : null}
         isDirty={projectDirty}
         hasSavePath={!!(store.savePath || autoSavedPath)}
         saveState={saveToast}
         showProjectMeta={projectType !== null}
-        onOpenPackMetadata={projectType === 'pack' ? () => setPackMetadataOpen(true) : null}
+        onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
         onOpenCredits={() => setCreditsOpen(true)}
       />
 
@@ -1896,7 +1918,7 @@ export default function App() {
           canRecord={canRecord}
           onOpenStorySettings={() => setStorySettingsOpen(true)}
           onGenerate={handleGenerate}
-          onOpenPackMetadata={projectType === 'pack' ? () => setPackMetadataOpen(true) : null}
+          onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
           onOpenExportFolder={handleOpenExportFolder}
           exportPackName={exportPackName}
           generateShortcut={shortcutLabels.generate}
@@ -2121,10 +2143,15 @@ export default function App() {
       {packMetadataOpen && renderDeferred(
         <PackNameModal
           open={packMetadataOpen}
-          packMetadata={store.project.packMetadata}
+          packMetadata={projectType === 'simple'
+            ? {
+                ...(store.project.packMetadata ?? {}),
+                title: store.project.packMetadata?.title || store.project.projectName || '',
+              }
+            : store.project.packMetadata}
           project={store.project}
           coverImage={store.project.thumbnailImage || store.project.rootImage}
-          exportFolder={lastExportDir}
+          exportFolder={modalExportFolder}
           generateDisabled={!canGenerate}
           onSave={(draft) => handleSavePackMetadata(draft, { generate: false })}
           onSaveAndGenerate={(draft) => handleSavePackMetadata(draft, { generate: true })}

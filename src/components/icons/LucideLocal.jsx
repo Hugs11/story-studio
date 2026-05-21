@@ -293,6 +293,12 @@ const speechNode = [
   ['path', { d: 'M17 15a3.5 3.5 0 0 0-.025-4.975' }],
 ];
 
+const infoNode = [
+  ['circle', { cx: '12', cy: '12', r: '10' }],
+  ['path', { d: 'M12 16v-4' }],
+  ['path', { d: 'M12 8h.01' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const MonitorPlay = createLocalLucideIcon(monitorPlayNode);
@@ -333,3 +339,4 @@ export const CircleX = createLocalLucideIcon(circleXNode);
 export const TriangleAlert = createLocalLucideIcon(triangleAlertNode);
 export const Settings = createLocalLucideIcon(settingsNode);
 export const Speech = createLocalLucideIcon(speechNode);
+export const Info = createLocalLucideIcon(infoNode);

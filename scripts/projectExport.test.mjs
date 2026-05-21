@@ -54,3 +54,27 @@ test('projectToRustExport preserves a legacy raw export name', () => {
 
   assert.equal(rustExport.name, 'Mon pack perso');
 });
+
+test('projectToRustExport falls back to projectName for simple stories without packMetadata title', () => {
+  const rustExport = projectToRustExport(normalizeProjectData({
+    projectName: 'Le loup et l agneau',
+    packMetadata: { title: '', minAge: '3', version: 1 },
+    projectType: 'simple',
+    globalOptions: {},
+    rootEntries: [],
+  }));
+
+  assert.equal(rustExport.name, '3+]Le_loup_et_l_agneau');
+});
+
+test('projectToRustExport keeps pack mode unaffected when title is empty', () => {
+  const rustExport = projectToRustExport(normalizeProjectData({
+    projectName: 'Mon projet',
+    packMetadata: { title: '', minAge: '3', version: 1 },
+    projectType: 'pack',
+    globalOptions: {},
+    rootEntries: [],
+  }));
+
+  assert.equal(rustExport.name, 'Story Studio');
+});
