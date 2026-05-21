@@ -217,7 +217,7 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                   : <span className="native-graph-target is-empty">Aucune destination</span>}
               </div>
               <div className="native-graph-target-group">
-                <span className="native-graph-target-title">Home</span>
+                <span className="native-graph-target-title">Accueil</span>
                 {homeTargets.length > 0
                   ? homeTargets.map((target) => <span className="native-graph-target" key={target}>{targetName(target)}</span>)
                   : <span className="native-graph-target is-empty">Aucune destination</span>}

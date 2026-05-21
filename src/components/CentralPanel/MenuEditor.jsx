@@ -15,8 +15,8 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
   const destinationHelp = node.returnAfterPlay
-    ? "Toutes les histoires de ce dossier qui n'ont pas de retour spécifique reviendront vers le dossier choisi ci-dessous."
-    : "Par défaut, les histoires de ce dossier reviennent ici. Choisis un autre dossier seulement si tu veux les rediriger ailleurs.";
+    ? "Toutes les histoires de ce dossier qui n'ont pas leur propre destination configurée reviendront vers le dossier choisi ci-dessous."
+    : "Par défaut, à la fin de chaque histoire l'enfant revient sur ce dossier. Choisis un autre dossier seulement si tu veux le rediriger ailleurs.";
 
   const [textImgModal, setTextImgModal] = useState(null);
 
@@ -32,7 +32,7 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
       <div className="card">
         <div className="card-title-row">
           <div className="card-title">Dossier</div>
-          <div className="card-copy card-copy--inline">Menus visibles lorsque l'on navigue dans l'histoire</div>
+          <div className="card-copy card-copy--inline">Page de choix où l'enfant sélectionne une histoire à la molette. Configure ici son nom, son visuel et l'audio d'invitation.</div>
         </div>
 
         <div className="field-row" style={{ marginBottom: 0 }}>
@@ -146,9 +146,9 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
         <div className="card-title">Comportement</div>
         <div className="field-row" style={{ marginBottom: 4 }}>
           <div style={{ flex: 1 }}>
-            <span className="field-label">Sans image personnalisée</span>
+            <span className="field-label">Pas d'image</span>
             <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              N'affiche pas d'illustration lorsque ce menu est sélectionné
+              Ce dossier n'envoie aucune image à la Lunii — l'écran conserve l'affichage précédent pendant la sélection.
             </div>
           </div>
           <Toggle
@@ -157,9 +157,9 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
           />
         </div>
         {[
-          { key: 'wheel',    label: 'Molette de sélection', desc: 'Autorise la molette pour parcourir les choix', def: true },
-          { key: 'autoplay', label: 'Lecture automatique',  desc: "Enchaîne automatiquement sans action de l'enfant", def: false },
-          { key: 'pause',    label: 'Bouton pause',         desc: 'Autorise la pause pendant la sélection', def: false },
+          { key: 'wheel',    label: 'Molette de sélection', desc: 'L\'enfant peut tourner la molette pour choisir une histoire', def: true },
+          { key: 'autoplay', label: 'Lecture automatique',  desc: "L'audio de présentation enchaîne directement sur la première histoire, sans attendre que l'enfant appuie sur OK", def: false },
+          { key: 'pause',    label: 'Bouton pause',         desc: 'L\'enfant peut mettre en pause l\'audio de présentation', def: false },
         ].map(({ key, label, desc, def }) => (
           <div key={key} className="field-row" style={{ marginBottom: 4 }}>
             <div style={{ flex: 1 }}>
@@ -176,12 +176,12 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
 
       {allMenus.length > 1 && node.children?.some(c => c.type !== 'menu') && (
         <div className="card">
-          <div className="card-title">Navigation après lecture par défaut</div>
+          <div className="card-title">Après chaque histoire de ce dossier</div>
           <div className="field-row">
             <div style={{ flex: 1 }}>
-              <span className="field-label">Revenir à</span>
+              <span className="field-label">Destination par défaut</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                {"Réglage utilisé par les histoires de ce dossier qui n'ont pas de destination spécifique."}
+                Où l'enfant retourne quand une histoire de ce dossier se termine, si l'histoire n'a pas sa propre destination configurée.
               </div>
             </div>
             <NavigationTargetSelect
@@ -190,7 +190,7 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
               allMenus={allMenus.filter((m) => m.id !== node.id)}
               allStories={[]}
               currentStoryId={null}
-              emptyLabel="Ce dossier (défaut)"
+              emptyLabel="Reste dans ce dossier"
               includeRoot={false}
               includeNextStory={false}
               includeStoryPlay={false}
