@@ -201,7 +201,7 @@ export function AfterPlaySection({
           accentLabel
           label={usesGlobalEndNodeAudio ? 'Audio du nœud de fin' : 'Audio de fin'}
           description={usesGlobalEndNodeAudio
-            ? "Audio global du nœud de fin utilisé par cette histoire"
+            ? "Cette histoire utilise l'audio commun défini dans le Nœud de fin du pack."
             : "Joué à la fin de l'histoire"}
           file={node.afterPlaybackPromptAudio}
           required={false}
@@ -253,7 +253,7 @@ export function AfterPlaySection({
                   allMenus={allMenus}
                   allStories={allStories}
                   currentStoryId={node.id}
-                  emptyLabel="Même destination que la fin d'histoire"
+                  emptyLabel="Identique à la fin d'histoire"
                 />
               </div>
               <div className="field-row" style={{ marginBottom: 0 }}>
@@ -273,7 +273,7 @@ export function AfterPlaySection({
                   allStories={allStories}
                   currentStoryId={node.id}
                   includeNone
-                  emptyLabel="Même destination que OK"
+                  emptyLabel="Identique au bouton OK"
                 />
               </div>
             </div>
@@ -289,12 +289,12 @@ export function AfterPlaySection({
   } else {
     endContent = (
       <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
-        <Tooltip text="Ajoute une transition audio à la fin de l'histoire" placement="above">
+        <Tooltip text={"Un seul audio joué à la fin (ex : « Bravo, l'histoire est finie ! »)"} placement="above">
           <button type="button" className="btn-xs" onClick={() => setShowPromptField(true)}>
             Ajouter un audio de fin
           </button>
         </Tooltip>
-        <Tooltip text="Ajoute une structure audio complexe à la fin de l'histoire" placement="above">
+        <Tooltip text="Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)" placement="above">
           <button type="button" className="btn-xs" onClick={startSequence}>
             Ajouter un scénario de fin
           </button>
@@ -305,7 +305,7 @@ export function AfterPlaySection({
 
   // ─── Rendu principal ────────────────────────────────────────────────────────
 
-  const advancedDescription = 'Message audio ou scénario joué à la fin de l\'histoire';
+  const advancedDescription = 'Message audio facultatif joué juste après cette histoire (ex : « Tu veux en écouter une autre ? »).';
 
   return (
     <div className="card">
@@ -317,7 +317,7 @@ export function AfterPlaySection({
           <div style={{ flex: 1 }}>
             <span className="field-label">À la fin de l'histoire, retour vers</span>
             <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              Destination après la lecture — peut hériter du réglage du dossier parent.
+              Où l'enfant atterrit quand l'histoire se termine. Par défaut, suit le réglage du dossier parent.
             </div>
           </div>
           <div style={{ maxWidth: 220, width: '100%' }}>
@@ -404,7 +404,7 @@ export function AfterPlaySection({
           aria-expanded={showAdvanced}
           onClick={() => setShowAdvanced((v) => !v)}
         >
-          Réglages avancés
+          {showAdvanced ? 'Masquer' : 'Configurer'}
         </button>
       </div>
 

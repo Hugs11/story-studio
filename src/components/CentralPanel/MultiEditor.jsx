@@ -214,8 +214,7 @@ export const MultiEditor = memo(function MultiEditor({
             <div style={{ flex: 1 }}>
               <span className="field-label">Générer à partir des noms</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Crée séparément les images texte ou les audios de titre.
-                Les ZIP de la sélection sont ignorés.
+                Crée d'un coup une image texte (le nom écrit en gros) ou un audio (le nom prononcé) pour chaque élément sélectionné. Les packs ZIP importés sont ignorés.
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -288,7 +287,7 @@ export const MultiEditor = memo(function MultiEditor({
               allMenus={allMenus}
               allStories={allStories.filter((s) => !ids.includes(s.id))}
               currentStoryId={null}
-              emptyLabel="Identique fin histoire"
+              emptyLabel="Identique à la fin d'histoire"
               includeRoot={false}
               includeStoryPlay={false}
             />
@@ -311,9 +310,11 @@ export const MultiEditor = memo(function MultiEditor({
           >
             <Moon style={{ width: 18, height: 18, flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-              {onlyMenus ? 'Destination par défaut des histoires gérée par le nœud de fin / mode nuit.' : 'Destination après lecture gérée par le nœud de fin / mode nuit.'}
+              {onlyMenus
+                ? 'La destination après chaque histoire est gérée par le nœud de fin du pack.'
+                : 'La destination après lecture est gérée par le nœud de fin du pack.'}
               <br />
-              Modifiez la destination depuis le nœud de fin.
+              Pour la modifier, sélectionne le nœud de fin dans l'arbre à gauche.
             </div>
           </div>
         </div>
@@ -363,7 +364,7 @@ export const MultiEditor = memo(function MultiEditor({
             borderRadius: 10,
           }}
         >
-          Sélection mixte (histoires + dossiers) — seul le comportement est modifiable en groupe.
+          Sélection mixte (histoires et dossiers) — seuls les contrôles de lecture peuvent être modifiés en groupe ici. Pour le reste, sélectionne un seul type d'élément à la fois.
         </div>
       )}
     </>

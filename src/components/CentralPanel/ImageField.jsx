@@ -28,7 +28,7 @@ function SdResultThumb({ path, onPick, onRemove }) {
   );
 }
 
-export function ImageField({ label, file, onPick, onClear, extraActions = [], compact = false, align = 'center', accentLabel = false, fieldId = null }) {
+export function ImageField({ label, file, onPick, onClear, extraActions = [], compact = false, align = 'center', accentLabel = false, fieldId = null, formatHint = 'Format recommandé : 320 × 240 px' }) {
   const { pathAudit, sdSettings, sdJobs, onOpenSDGenerate, onRemoveSdResult, onImportFile } = useProjectContext();
   const aiEnabled = sdSettings?.aiImageGen && !!onOpenSDGenerate;
   const previewUrl = useLocalFile(file);
@@ -129,7 +129,7 @@ export function ImageField({ label, file, onPick, onClear, extraActions = [], co
                 {file && !fileAvailable ? 'Image introuvable' : 'Cliquer pour choisir une image'}
               </span>
               <span className="image-placeholder-text">
-                {file && !fileAvailable ? 'Le fichier lié est inaccessible' : 'Format recommandé : 320 × 240 px'}
+                {file && !fileAvailable ? 'Le fichier lié est inaccessible' : formatHint}
               </span>
             </div>
           )

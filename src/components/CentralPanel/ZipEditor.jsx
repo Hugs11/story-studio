@@ -27,7 +27,7 @@ function ZipCover({ zipPath, coverImage }) {
   if (!url) return null;
   return (
     <div className="image-field" style={{ marginBottom: 12, flex: 'none' }}>
-      <div className="media-label">Vignette du pack</div>
+      <div className="media-label">Vignette catalogue</div>
       <div className="image-drop filled" style={{ cursor: 'default' }}>
         <img src={url} alt="" className="image-preview" />
       </div>
@@ -72,7 +72,7 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
       </div>
 
       <div className="info-box warn">
-        Cette archive est exclue du retraitement audio — elle sera intégrée telle quelle dans le pack final.
+        Ce pack sera inclus tel quel dans l'export final, sans modifications audio.
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

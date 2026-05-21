@@ -73,7 +73,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             <div className="card-copy card-copy--inline">{nativeGraphStageCount} stages · {nativeGraphActionCount} actions</div>
           </div>
           <div className="sequence-note" style={{ margin: '0 16px 12px' }}>
-            Ce pack utilise une structure interactive avec convergences et retours Home explicites. Les stages ci-dessous sont ceux qui seront utilisés pour le round-trip fidèle.
+            Ce pack utilise une structure interactive avec convergences et retours Accueil explicites. Les stages ci-dessous sont ceux qui seront utilisés pour le round-trip fidèle.
           </div>
           <NativeGraphEditor
             graph={nativeGraph}
@@ -85,7 +85,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
       <div className="card">
         <div className="card-title-row">
           <div className="card-title">Menu Racine</div>
-          <div className="card-copy card-copy--inline">Page d'accueil du pack</div>
+          <div className="card-copy card-copy--inline">Couverture du pack sur la Lunii — image et audio entendus quand l'enfant fait tourner la molette entre ses différents packs et qu'il s'arrête sur celui-ci.</div>
         </div>
 
         {projectType === 'pack' ? (
@@ -190,19 +190,20 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 />
               </div>
               <div className="root-image-col">
-                <div className="root-image-sublabel">Vignette bibliothèque</div>
+                <div className="root-image-sublabel">Vignette catalogue</div>
                 <ImageField
                   align="start"
                   accentLabel
                   fieldId="root:thumbnailImage"
                   file={node.thumbnailImage}
+                  formatHint="Format libre — utilisée par STUdio, LuniiQt et les catalogues"
                   extraActions={[
                     {
                       key: 'generate-text',
                       label: 'Générer un texte',
                       icon: '✦',
                       onClick: handleGenerateThumbnailTextImage,
-                      title: "Créer une image texte pour la bibliothèque à partir du nom de l'histoire",
+                      title: "Créer une image texte pour le catalogue à partir du nom de l'histoire",
                     },
                   ]}
                   onPick={(f) => onUpdateMedia('thumbnailImage', f)}
