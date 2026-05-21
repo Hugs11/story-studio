@@ -25,6 +25,7 @@ import {
   updateProjectRootEntries,
 } from './projectModel';
 import { normalizeNavigationTarget } from './navigationTargets';
+import { logger } from '../utils/logger';
 
 function isTextEditingTarget(target) {
   if (!(target instanceof Element)) return false;
@@ -315,6 +316,7 @@ export function useProjectStore() {
       return updateProjectRootEntries({ ...p, projectType: type }, p.rootEntries ?? []);
     });
     setActiveTab('edit');
+    logger.info(`setProjectType: ${type}`);
   }, [setProject]);
 
   const updateStoryAudio = useCallback((audio) => {

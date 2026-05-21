@@ -106,9 +106,15 @@ fn probe_one(path: &str) -> MediaMeta {
 
 #[tauri::command]
 pub async fn probe_media_files(paths: Vec<String>) -> Vec<MediaMeta> {
-    tauri::async_runtime::spawn_blocking(move || -> Vec<MediaMeta> {
+    let count = paths.len();
+    let started = std::time::Instant::now();
+    log::info!(target: "media_probe", "probe_media_files: probing {} files", count);
+    let result = tauri::async_runtime::spawn_blocking(move || -> Vec<MediaMeta> {
         paths.iter().map(|p| probe_one(p)).collect()
     })
     .await
-    .unwrap_or_default()
+    .unwrap_or_default();
+    log::info!(target: "media_probe",
+        "probe_media_files done in {} ms: {} probed", started.elapsed().as_millis(), count);
+    result
 }
