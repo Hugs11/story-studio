@@ -29,19 +29,6 @@ pub fn get_log_level() -> String {
 }
 
 #[tauri::command]
-pub fn get_logs_dir(app: tauri::AppHandle) -> Result<String, String> {
-    let dir = app
-        .path()
-        .app_log_dir()
-        .map_err(|err| format!("Impossible de localiser le dossier de logs : {}", err))?;
-    if !dir.exists() {
-        fs::create_dir_all(&dir)
-            .map_err(|err| format!("Impossible de créer le dossier de logs : {}", err))?;
-    }
-    Ok(dir.to_string_lossy().to_string())
-}
-
-#[tauri::command]
 pub fn get_current_log_file(app: tauri::AppHandle) -> Result<String, String> {
     let dir: PathBuf = app
         .path()

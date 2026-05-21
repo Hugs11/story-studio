@@ -1234,14 +1234,12 @@ export default function App() {
     logger.warn(`logging verbosity changed to ${level}`);
   }
 
-  async function handleOpenLogsDir() {
-    if (!isTauriRuntime()) return;
-    try {
-      const dir = await invoke('get_logs_dir');
-      await openPath(dir);
-    } catch (err) {
-      logger.error('[open-logs-dir] failed:', err);
-      alert("Impossible d'ouvrir le dossier des logs : " + String(err));
+  async function handleResolveLogPath() {
+    if (!isTauriRuntime()) return null;
+    try { return await invoke('get_current_log_file'); }
+    catch (err) {
+      logger.error('[resolve-log-path] failed:', err);
+      return null;
     }
   }
 
@@ -2105,8 +2103,8 @@ export default function App() {
               onShowCentralDiagramChange={setShowCentralDiagram}
               verboseLogging={verboseLogging}
               onVerboseLoggingChange={handleVerboseLoggingChange}
-              onOpenLogsDir={handleOpenLogsDir}
               onCopyLogPath={handleCopyLogPath}
+              onResolveLogPath={handleResolveLogPath}
               project={store.project}
               savePath={store.savePath}
             />,
@@ -2172,8 +2170,8 @@ export default function App() {
           onShowCentralDiagramChange={setShowCentralDiagram}
           verboseLogging={verboseLogging}
           onVerboseLoggingChange={handleVerboseLoggingChange}
-          onOpenLogsDir={handleOpenLogsDir}
           onCopyLogPath={handleCopyLogPath}
+          onResolveLogPath={handleResolveLogPath}
           project={store.project}
           savePath={store.savePath}
           asModal
