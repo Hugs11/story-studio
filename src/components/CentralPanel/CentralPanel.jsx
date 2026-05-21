@@ -129,7 +129,6 @@ export function CentralPanel({
             nightModeReturnResolvedLabel={endNodeReturnResolvedLabel}
             nightModeHomeReturnResolvedLabel={endNodeHomeResolvedLabel}
             projectName={project.projectName}
-            savePath={project.savePath}
             allMenus={allMenus}
             allStories={allStories}
             onUpdateNightModeAudio={onUpdateNightModeAudio}
