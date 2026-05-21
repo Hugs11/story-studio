@@ -11,7 +11,6 @@ import {
   normalizeNavigationTarget,
 } from './navigationTargets.js';
 
-export const GENERATED_END_NODE_ID = 'end-node';
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
 
 export function hasVisibleEndNode(project) {
@@ -34,10 +33,6 @@ export function getDefaultPackEntryDestination(project) {
     name: firstEntry.name || '(sans nom)',
     type: firstEntry.type,
   };
-}
-
-export function isContextualNextStoryTarget(targetId) {
-  return targetId === CONTEXTUAL_NEXT_STORY_TARGET;
 }
 
 export function resolveNavigationTargetId(target, parentMenu = null) {

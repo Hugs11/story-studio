@@ -117,12 +117,6 @@ const packageNode = [
   ['path', { d: 'm7.5 4.27 9 5.15' }],
 ];
 
-const targetNode = [
-  ['circle', { cx: '12', cy: '12', r: '10' }],
-  ['circle', { cx: '12', cy: '12', r: '6' }],
-  ['circle', { cx: '12', cy: '12', r: '2' }],
-];
-
 const slidersHorizontalNode = [
   ['path', { d: 'M10 5H3' }],
   ['path', { d: 'M12 19H3' }],
@@ -310,7 +304,6 @@ export const Save = createLocalLucideIcon(saveNode);
 export const Download = createLocalLucideIcon(downloadNode);
 export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
-export const Target = createLocalLucideIcon(targetNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);
 export const ListTodo = createLocalLucideIcon(listTodoNode);
 export const SwatchBook = createLocalLucideIcon(swatchBookNode);

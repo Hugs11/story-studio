@@ -734,10 +734,6 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
   return { path: projectPath, project: serializable, copiedCount, errors };
 }
 
-export function isWorkspaceManagedPath(path, workspaceDir) {
-  return isManagedWorkspacePath(path, workspaceDir);
-}
-
 export function isAlreadyManagedFile(path, workspaceDir, savePath) {
   if (!hasPath(path)) return false;
   const ws = workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || '';
