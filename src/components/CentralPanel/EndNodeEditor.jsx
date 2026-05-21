@@ -4,6 +4,8 @@ import { AudioField } from './AudioField';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { useProjectContext } from '../../store/ProjectContext';
 import { NavigationTargetSelect } from './story/storyUtils';
+import { TriangleAlert } from '../icons/LucideLocal';
+import './CentralPanel.css';
 
 function canDeleteFromWorkspace(filePath, workspaceDir) {
   if (!filePath || !workspaceDir) return false;
@@ -14,12 +16,8 @@ function canDeleteFromWorkspace(filePath, workspaceDir) {
     .some((d) => file.startsWith(`${dir}/${d}/`));
 }
 
-const targetSelectStyle = {
-  width: '100%',
-  maxWidth: '100%',
-  minWidth: 0,
-  boxSizing: 'border-box',
-};
+const navigationSelectWrapStyle = { maxWidth: 280, width: '100%' };
+const fieldDescStyle = { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 };
 
 export function EndNodeEditor({
   nightModeAudio,
@@ -29,7 +27,6 @@ export function EndNodeEditor({
   nightModeReturnResolvedLabel = null,
   nightModeHomeReturnResolvedLabel = null,
   projectName,
-  savePath,
   allMenus = [],
   allStories = [],
   onUpdateNightModeAudio,
@@ -62,25 +59,25 @@ export function EndNodeEditor({
   return (
     <>
       <div className="card">
-        <div className="card-title">Nœud de fin d'histoire</div>
-        <div style={{ padding: '0 16px 12px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante (ex : « Tu veux encore écouter une histoire ? »). La lecture est toujours automatique.
+        <div className="card-title-row">
+          <div className="card-title">Nœud de fin</div>
+          <div className="card-copy card-copy--inline">
+            Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante (ex : « Tu veux encore écouter une histoire ? »). La lecture est toujours automatique.
+          </div>
         </div>
 
-        <div style={{ padding: '0 16px 12px' }}>
-          <AudioField
-            label="Audio de fin d'histoire"
-            file={nightModeAudio}
-            ttsTextSuggestion="Tu veux encore écouter une histoire ?"
-            ttsFilenameHint={`fin-histoire-${projectName || 'projet'}`}
-            xttsTarget={{ kind: 'root', field: 'nightModeAudio' }}
-            onPick={(file) => onUpdateNightModeAudio(file)}
-            onClear={() => onUpdateNightModeAudio(null)}
-          />
-        </div>
+        <AudioField
+          label="Audio de fin d'histoire"
+          file={nightModeAudio}
+          ttsTextSuggestion="Tu veux encore écouter une histoire ?"
+          ttsFilenameHint={`fin-histoire-${projectName || 'projet'}`}
+          xttsTarget={{ kind: 'root', field: 'nightModeAudio' }}
+          onPick={(file) => onUpdateNightModeAudio(file)}
+          onClear={() => onUpdateNightModeAudio(null)}
+        />
 
         {!hasAudio && (
-          <div className="info-box warn" style={{ margin: '0 16px 12px' }}>
+          <div className="info-box warn">
             Audio requis pour la génération.
           </div>
         )}
@@ -88,77 +85,77 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title">Pendant le nœud de fin</div>
-        <div style={{ padding: '0 16px 12px' }}>
-          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 0 }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <span className="field-label">Accueil</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du nœud de fin.
-              </div>
+        <div className="field-row" style={{ marginBottom: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="field-label">Accueil</span>
+            <div style={fieldDescStyle}>
+              Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du nœud de fin.
             </div>
-            <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
-              <NavigationTargetSelect
-                value={nightModeHomeReturn ?? ''}
-                onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
-                allMenus={allMenus}
-                allStories={allStories}
-                currentStoryId={null}
-                emptyLabel="Réglage par défaut"
-                style={targetSelectStyle}
-                resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
-              />
-            </div>
+          </div>
+          <div style={navigationSelectWrapStyle}>
+            <NavigationTargetSelect
+              value={nightModeHomeReturn ?? ''}
+              onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={null}
+              emptyLabel="Réglage par défaut"
+              resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
+            />
           </div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-title">Après le nœud de fin</div>
-        <div style={{ padding: '0 16px 12px' }}>
-          <div className="field-row" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 0 }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <span className="field-label">À la fin du nœud de fin, retour vers</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Où l'enfant est redirigé après la lecture du message de fin.
-              </div>
+        <div className="field-row" style={{ marginBottom: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="field-label">À la fin du nœud de fin, retour vers</span>
+            <div style={fieldDescStyle}>
+              Où l'enfant est redirigé après la lecture du message de fin.
             </div>
-            <div style={{ width: 320, maxWidth: '42%', minWidth: 220, flexShrink: 0 }}>
-              <NavigationTargetSelect
-                value={nightModeReturn ?? ''}
-                onChange={(value) => onUpdateNightModeReturn?.(value)}
-                allMenus={allMenus}
-                allStories={allStories}
-                currentStoryId={null}
-                emptyLabel="Réglage par défaut"
-                style={targetSelectStyle}
-                resolvedDestinationLabel={nightModeReturnResolvedLabel}
-              />
-            </div>
+          </div>
+          <div style={navigationSelectWrapStyle}>
+            <NavigationTargetSelect
+              value={nightModeReturn ?? ''}
+              onChange={(value) => onUpdateNightModeReturn?.(value)}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={null}
+              emptyLabel="Réglage par défaut"
+              resolvedDestinationLabel={nightModeReturnResolvedLabel}
+            />
           </div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-title">Mode nuit</div>
-        <div style={{ padding: '0 16px 12px' }}>
-          <div className="field-row" style={{ marginBottom: 0 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span className="field-label">Activer</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage selon ce drapeau, et certains catalogues l'utilisent pour ranger les packs de coucher à part.
-              </div>
+        <div className="field-row" style={{ marginBottom: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="field-label">Activer</span>
+            <div style={fieldDescStyle}>
+              Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage selon ce drapeau, et certains catalogues l'utilisent pour ranger les packs de coucher à part.
             </div>
-            <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
           </div>
+          <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
         </div>
       </div>
 
-      <div className="card" style={{ borderColor: 'var(--color-danger, #c0392b)' }}>
-        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-            Retire le nœud de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
+      <div className="card card--danger">
+        <div className="card-danger-header">
+          <TriangleAlert className="card-danger-icon" />
+          <span>Zone sensible</span>
+        </div>
+        <div className="card-danger-divider" />
+        <div className="card-danger-row">
+          <div className="card-danger-text">
+            <div className="card-danger-title">Supprimer le nœud de fin</div>
+            <div className="card-danger-desc">
+              Retire le nœud de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
+            </div>
           </div>
-          <button className="btn btn-danger" type="button" onClick={handleRemove}>
+          <button className="btn btn-danger-outline" type="button" onClick={handleRemove}>
             Supprimer
           </button>
         </div>

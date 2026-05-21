@@ -261,7 +261,7 @@ export function getCompleteLayout(project, compactMode, options = {}) {
       entry: {
         id: END_NODE_ID,
         type: 'end-node',
-        name: 'Nœud de fin d\'histoire',
+        name: 'Nœud de fin',
       },
       x: endNodeX,
       y: endNodeY,
