@@ -79,10 +79,6 @@ That file contains the native pack generation engine. Regressions can produce in
 - Comments: only when the *why* is non-obvious.
 - Markdown: keep headings short, links relative, and release-facing docs easy to scan.
 
-## Releases
-
-Release preparation is documented in [docs/release-checklist.md](docs/release-checklist.md). Do not create release-only changes in feature PRs unless they are part of the intended release notes.
-
 ## License
 
 By submitting a pull request you agree that your contribution will be licensed under the MIT License.
