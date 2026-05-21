@@ -45,8 +45,8 @@ export function OptionsTab({
   onShowCentralDiagramChange,
   verboseLogging = false,
   onVerboseLoggingChange = null,
-  onOpenLogsDir = null,
   onCopyLogPath = null,
+  onResolveLogPath = null,
   project = null,
   savePath = null,
   asModal = false,
@@ -65,7 +65,17 @@ export function OptionsTab({
   const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
   const [xttsLogs, setXttsLogs] = useState([]);
   const [copiedLogPath, setCopiedLogPath] = useState(null);
+  const [resolvedLogPath, setResolvedLogPath] = useState('');
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!onResolveLogPath) return undefined;
+    onResolveLogPath().then((path) => {
+      if (!cancelled && path) setResolvedLogPath(path);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [onResolveLogPath]);
 
   async function handleCopyLogPathClick() {
     if (!onCopyLogPath) return;
@@ -574,20 +584,19 @@ export function OptionsTab({
             <div className="opts-row-info">
               <div className="opts-row-label">Fichier de log</div>
               <div className="opts-row-sub">
-                Les logs sont écrits dans <code>%APPDATA%\com.hugs11.story-studio\logs\story-studio.log</code>.
+                {resolvedLogPath ? (
+                  <>Emplacement : <code>{resolvedLogPath}</code></>
+                ) : (
+                  <>Le fichier est écrit dans le dossier <code>logs</code> de l'app sous <code>%LOCALAPPDATA%\com.hugs11.story-studio\</code>.</>
+                )}
                 {copiedLogPath ? (
-                  <span style={{ color: 'var(--color-accent)', marginLeft: 6 }}>Copié : {copiedLogPath}</span>
+                  <span style={{ color: 'var(--color-accent)', marginLeft: 6 }}>(copié)</span>
                 ) : null}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              <button className="btn" type="button" onClick={onOpenLogsDir} disabled={!onOpenLogsDir}>
-                Ouvrir le dossier
-              </button>
-              <button className="btn" type="button" onClick={handleCopyLogPathClick} disabled={!onCopyLogPath}>
-                Copier le chemin
-              </button>
-            </div>
+            <button className="btn" type="button" onClick={handleCopyLogPathClick} disabled={!onCopyLogPath} style={{ flexShrink: 0 }}>
+              Copier le chemin
+            </button>
           </div>
           <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
             Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement.
