@@ -1,7 +1,6 @@
-/* Largeurs des colonnes — partagées entre topbar, tabbar et workspace */
+/* Largeurs des colonnes — partagées entre topbar et workspace */
 :root {
   --col-left: clamp(180px, 18vw, 280px);
-  --col-right: clamp(150px, 14vw, 220px);
   --center-content-max: 980px;
   --bg0: #111116;
   --bg1: #18181f;

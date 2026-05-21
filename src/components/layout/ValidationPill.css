@@ -1,0 +1,303 @@
+.validation-pill-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.validation-pill {
+  height: 30px;
+  padding: 0 10px 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--danger-border);
+  border-radius: 5px;
+  color: var(--danger-text);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  font-family: inherit;
+}
+
+.validation-pill.is-errors:hover {
+  background: var(--danger-bg);
+}
+
+.validation-pill.is-errors.is-active {
+  background: var(--danger-bg);
+  border-color: var(--danger-border-hover);
+}
+
+.validation-pill.is-ok {
+  border-color: color-mix(in srgb, #5fbf6b 50%, transparent);
+  color: #5fbf6b;
+  cursor: default;
+}
+
+.validation-pill.is-verifying {
+  border-color: var(--color-border-secondary);
+  color: var(--color-text-secondary);
+  cursor: progress;
+}
+
+.validation-pill:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.validation-pill-icon,
+.validation-pill-check,
+.validation-pill-spinner {
+  display: inline-flex;
+  align-items: center;
+}
+
+.validation-pill-spinner {
+  animation: validation-pill-spin 0.9s linear infinite;
+}
+
+@keyframes validation-pill-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.validation-pill-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--danger);
+  color: #1a0707;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.validation-pill-label {
+  white-space: nowrap;
+}
+
+.validation-pill-caret {
+  display: inline-flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--danger) 70%, transparent);
+  transition: transform 0.12s;
+}
+
+.validation-pill-wrap.is-open .validation-pill-caret {
+  transform: rotate(180deg);
+}
+
+/* Dropdown */
+.validation-pill-dd {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 360px;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  animation: validation-pill-dd-in 0.12s ease-out;
+  overflow: hidden;
+}
+
+@keyframes validation-pill-dd-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.validation-pill-dd-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px 10px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  background: linear-gradient(180deg, var(--danger-bg), transparent);
+  flex-shrink: 0;
+}
+
+.validation-pill-dd-icon {
+  color: var(--danger-text);
+  display: inline-flex;
+}
+
+.validation-pill-dd-title {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-pill-dd-title em {
+  color: var(--color-text-tertiary);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.validation-pill-dd-close {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.validation-pill-dd-close:hover {
+  color: var(--color-text-primary);
+  background: var(--control-bg-hover);
+}
+
+.validation-pill-dd-close:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.validation-pill-dd-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 6px;
+  min-height: 0;
+}
+
+.validation-pill-dd-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.validation-pill-dd-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: 3px;
+}
+
+.validation-pill-group-head {
+  padding: 8px 13px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.validation-pill-group-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-pill-group-count {
+  color: var(--color-text-tertiary);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.validation-pill-item {
+  width: 100%;
+  padding: 6px 13px 6px 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.4;
+  position: relative;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.validation-pill-item.is-active {
+  background: var(--color-background-secondary);
+}
+
+.validation-pill-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.validation-pill-item-dot {
+  position: absolute;
+  left: 17px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.validation-pill-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-pill-item-go {
+  color: var(--color-text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+
+.validation-pill-item.is-active .validation-pill-item-go,
+.validation-pill-item:hover .validation-pill-item-go {
+  opacity: 1;
+}
+
+/* Success toast positioned above the generate split button */
+.validation-success-toast {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--color-background-primary);
+  border: 1px solid color-mix(in srgb, #5fbf6b 50%, var(--color-border-secondary));
+  border-radius: 6px;
+  color: #5fbf6b;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  z-index: 150;
+  animation: validation-success-toast-in 0.18s ease-out;
+}
+
+@keyframes validation-success-toast-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

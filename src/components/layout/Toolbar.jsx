@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  CircleCheck,
   Download,
   FilePen,
   FilePlus,
@@ -12,6 +13,7 @@ import {
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
+import { ValidationPill } from './ValidationPill';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
@@ -80,9 +82,26 @@ export function Toolbar({
   onOpenExportFolder,
   exportPackName = '',
   generateShortcut = '',
+  validationIssues = [],
+  pathAuditPending = false,
+  validationOpen = false,
+  onValidationOpenChange,
+  onSelectIssue,
 }) {
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState(false);
   const generateMenuRef = useRef(null);
+  const successToastTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
+  }, []);
+
+  function handleCountZeroTransition() {
+    setSuccessToast(true);
+    if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
+    successToastTimerRef.current = setTimeout(() => setSuccessToast(false), 2200);
+  }
 
   useEffect(() => {
     if (!generateMenuOpen) return undefined;
@@ -188,8 +207,23 @@ export function Toolbar({
       <div className="chrome-toolbar-right">
         {showProjectActions ? (
           <>
+            <ValidationPill
+              validationIssues={validationIssues}
+              pathAuditPending={pathAuditPending}
+              open={validationOpen}
+              onOpenChange={onValidationOpenChange}
+              onSelectIssue={onSelectIssue}
+              onCountZeroTransition={handleCountZeroTransition}
+              shortcutLabel={shortcutLabels.toggleValidation}
+            />
             <span className="chrome-toolbar-sep" />
             <div className="chrome-generate-split" ref={generateMenuRef}>
+              {successToast ? (
+                <div className="validation-success-toast" role="status" aria-live="polite">
+                  <CircleCheck width={13} height={13} aria-hidden="true" />
+                  <span>Pack prêt à générer</span>
+                </div>
+              ) : null}
               <Tooltip text={generateDisabled ? `Corrige les erreurs avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}>
                 <button
                   className="chrome-toolbar-cta chrome-generate-main"

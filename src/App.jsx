@@ -298,6 +298,7 @@ export default function App() {
   const shortcutActionsRef = useRef({});
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
+  const [validationOpen, setValidationOpen] = useState(false);
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
@@ -474,6 +475,13 @@ export default function App() {
         stopShortcut();
         if (!actions.projectActionsVisible || actions.activeTab !== 'edit') return;
         actions.focusTreeSearch?.();
+        return;
+      }
+
+      if (actionId === 'toggleValidation') {
+        if (!actions.projectActionsVisible || !actions.hasValidationErrors) return;
+        stopShortcut();
+        actions.toggleValidation?.();
       }
     }
     window.addEventListener('keydown', handleKeyDown, true);
@@ -1829,11 +1837,13 @@ export default function App() {
     setActiveTab: store.setActiveTab,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
+    toggleValidation: () => setValidationOpen((open) => !open),
     projectActionsVisible: projectType !== null,
     activeTab: store.activeTab,
     canImportStories,
     canAddFolder,
     canGenerate,
+    hasValidationErrors: errors > 0,
   };
 
   return (
@@ -1890,6 +1900,15 @@ export default function App() {
           onOpenExportFolder={handleOpenExportFolder}
           exportPackName={exportPackName}
           generateShortcut={shortcutLabels.generate}
+          validationIssues={validationIssues}
+          pathAuditPending={pathAuditPending}
+          validationOpen={validationOpen}
+          onValidationOpenChange={setValidationOpen}
+          onSelectIssue={(id) => {
+            if (!id) return;
+            store.setActiveTab('edit');
+            store.setSelectedId(id);
+          }}
         />
       )}
 
