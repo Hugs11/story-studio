@@ -135,7 +135,7 @@ export function EndNodeEditor({
           <div style={{ flex: 1, minWidth: 0 }}>
             <span className="field-label">Activer</span>
             <div style={fieldDescStyle}>
-              Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage selon ce drapeau, et certains catalogues l'utilisent pour ranger les packs de coucher à part.
+              Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage, le niveau sonore et le nombre d'histoires que l'enfant peut écouter si le mode nuit est activé sur la Lunii et cette option activée.
             </div>
           </div>
           <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
