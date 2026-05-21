@@ -104,6 +104,30 @@
   border: 0;
 }
 
+.image-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 16px);
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
 /* Placeholder quand pas d'image */
 .image-placeholder {
   width: 100%;

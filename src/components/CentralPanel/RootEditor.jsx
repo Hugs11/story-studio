@@ -3,6 +3,7 @@ import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
+import { Image as ImageIcon } from '../icons/LucideLocal';
 import './CentralPanel.css';
 import './RootEditor.css';
 
@@ -50,6 +51,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
           aria-pressed={sameImage}
           onClick={() => setSameImage(true)}
         >
+          <ImageIcon className="root-image-mode-icon" strokeWidth={2} absoluteStrokeWidth />
           Même image
         </button>
         <button
@@ -58,6 +60,10 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
           aria-pressed={!sameImage}
           onClick={() => setSameImage(false)}
         >
+          <span className="root-image-mode-double" aria-hidden="true">
+            <ImageIcon className="root-image-mode-icon" strokeWidth={2} absoluteStrokeWidth />
+            <ImageIcon className="root-image-mode-icon" strokeWidth={2} absoluteStrokeWidth />
+          </span>
           Images séparées
         </button>
       </div>
@@ -82,15 +88,15 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
         </div>
       ) : null}
 
-      <div className="card">
+      <div className="card root-card">
         <div className="card-title-row">
           <div className="card-title">Menu Racine</div>
           <div className="card-copy card-copy--inline">Couverture du pack sur la Lunii — image et audio entendus quand l'enfant fait tourner la molette entre ses différents packs et qu'il s'arrête sur celui-ci.</div>
         </div>
 
         {projectType === 'pack' ? (
-          <>
-            <div className="field-row" style={{ marginBottom: 0 }}>
+          <div className="root-card-name-row">
+            <div className="field-row" style={{ marginBottom: 0, flex: 1 }}>
               <span className="field-label">Nom</span>
               <input
                 className="field-input"
@@ -98,34 +104,35 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 onChange={(e) => onUpdateRoot({ rootName: e.target.value })}
                 placeholder="Menu racine"
               />
-              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>
-                {node.rootEntries?.length ?? 0} élément(s)
-              </span>
             </div>
-            <div className="card-sep" />
-          </>
-        ) : null}
-
-        <div className="root-image-heading">
-          <div className="media-col-header">
-            Image
-            <span className="media-col-subtitle">
-              {sameImage
-                ? 'Affichée sur la Lunii et utilisée comme image de catalogue (320×240)'
-                : 'Une image pour la Lunii, une pour les catalogues'}
+            <span className="root-entry-count">
+              {node.rootEntries?.length ?? 0} élément(s)
             </span>
           </div>
-          {renderImageModeControl()}
-        </div>
+        ) : null}
 
-        {sameImage ? (
-          <div className="media-split">
-            <div className="media-split-left">
+        <div className="root-media-section">
+          <div className="root-image-heading">
+            <div className="media-col-header">
+              Image
+              <span className="media-col-subtitle">
+                {sameImage
+                  ? 'Cette image sert à la Lunii et à la vignette catalogue. À l’export, la version Lunii est adaptée en 320×240.'
+                  : 'Image affichée sur la Lunii. À l’export, elle est adaptée en 320×240. La vignette catalogue garde sa taille d’origine.'}
+              </span>
+            </div>
+            {renderImageModeControl()}
+          </div>
+
+          {sameImage ? (
+            <div className="root-image-grid root-image-grid--single">
               <ImageField
                 compact
                 accentLabel
                 fieldId="root:coverImage"
                 file={node.rootImage}
+                badge="Lunii + Catalogue"
+                formatHint="Choisis une image : elle sera adaptée en 320 × 240 px à l’export"
                 extraActions={[
                   {
                     key: 'generate-text',
@@ -147,28 +154,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 }}
               />
             </div>
-            <div className="media-split-divider" />
-            <div className="media-split-right">
-              <div className="media-col-header">
-                Son
-                <span className="media-col-subtitle">Titre audio — entendu dans le menu principal</span>
-              </div>
-              <AudioField
-                accentLabel
-                label="Titre audio"
-                description="Entendu dans le menu principal"
-                file={node.rootAudio}
-                ttsTextSuggestion={rootTitle}
-                ttsFilenameHint={`titre-${rootTitle || 'projet'}`}
-                xttsTarget={{ kind: 'root', field: 'rootAudio' }}
-                onPick={(f) => onUpdateMedia('rootAudio', f)}
-                onClear={() => onUpdateMedia('rootAudio', null)}
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="images-side-by-side">
+          ) : (
+            <div className="root-image-grid root-image-grid--split">
               <div className="root-image-col">
                 <div className="root-image-sublabel">Écran Lunii (320×240)</div>
                 <ImageField
@@ -176,6 +163,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                   accentLabel
                   fieldId="root:rootImage"
                   file={node.rootImage}
+                  badge="Lunii · 320×240"
+                  formatHint="Choisis une image : elle sera adaptée en 320 × 240 px à l’export"
                   extraActions={[
                     {
                       key: 'generate-text',
@@ -196,7 +185,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                   accentLabel
                   fieldId="root:thumbnailImage"
                   file={node.thumbnailImage}
-                  formatHint="Format libre — utilisée par STUdio, LuniiQt et les catalogues"
+                  badge="Catalogue · taille libre"
+                  formatHint="Taille libre — utilisée par STUdio, LuniiQt et les catalogues"
                   extraActions={[
                     {
                       key: 'generate-text',
@@ -211,24 +201,28 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                 />
               </div>
             </div>
-            <div style={{ marginTop: 20 }}>
-              <div className="media-col-header">
-                Son
-                <span className="media-col-subtitle">Titre audio — entendu dans le menu principal</span>
-              </div>
-              <AudioField
-                label="Titre audio"
-                description="Entendu dans le menu principal"
-                file={node.rootAudio}
-                ttsTextSuggestion={rootTitle}
-                ttsFilenameHint={`titre-${rootTitle || 'projet'}`}
-                xttsTarget={{ kind: 'root', field: 'rootAudio' }}
-                onPick={(f) => onUpdateMedia('rootAudio', f)}
-                onClear={() => onUpdateMedia('rootAudio', null)}
-              />
-            </div>
-          </>
-        )}
+          )}
+        </div>
+
+        <div className="root-card-divider" />
+
+        <div className="root-audio-section">
+          <div className="media-col-header">
+            Son
+            <span className="media-col-subtitle">Titre audio — entendu dans le menu principal</span>
+          </div>
+          <AudioField
+            accentLabel
+            label="Titre audio"
+            description="Entendu dans le menu principal"
+            file={node.rootAudio}
+            ttsTextSuggestion={rootTitle}
+            ttsFilenameHint={`titre-${rootTitle || 'projet'}`}
+            xttsTarget={{ kind: 'root', field: 'rootAudio' }}
+            onPick={(f) => onUpdateMedia('rootAudio', f)}
+            onClear={() => onUpdateMedia('rootAudio', null)}
+          />
+        </div>
       </div>
 
       {projectType === 'simple' && (

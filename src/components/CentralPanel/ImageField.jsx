@@ -28,7 +28,19 @@ function SdResultThumb({ path, onPick, onRemove }) {
   );
 }
 
-export function ImageField({ label, file, onPick, onClear, extraActions = [], compact = false, align = 'center', accentLabel = false, fieldId = null, formatHint = 'Format recommandé : 320 × 240 px' }) {
+export function ImageField({
+  label,
+  file,
+  onPick,
+  onClear,
+  extraActions = [],
+  compact = false,
+  align = 'center',
+  accentLabel = false,
+  fieldId = null,
+  formatHint = 'Format recommandé : 320 × 240 px',
+  badge = null,
+}) {
   const { pathAudit, sdSettings, sdJobs, onOpenSDGenerate, onRemoveSdResult, onImportFile } = useProjectContext();
   const aiEnabled = sdSettings?.aiImageGen && !!onOpenSDGenerate;
   const previewUrl = useLocalFile(file);
@@ -134,6 +146,7 @@ export function ImageField({ label, file, onPick, onClear, extraActions = [], co
             </div>
           )
         }
+        {badge && showFilledState ? <span className="image-badge">{badge}</span> : null}
         {showFilledState ? (
           <div className="image-overlay">
             <div className="image-overlay-actions">
