@@ -702,48 +702,6 @@
   min-height: 3px;
 }
 
-/* Play button */
-.media-play-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-accent);
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  font-size: 10px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-  padding: 0;
-}
-
-.media-play-btn.is-playing {
-  background: var(--color-accent);
-  color: #fff;
-}
-
-.media-play-overlay {
-  position: absolute;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 2;
-}
-
-.media-tile:hover .media-play-overlay {
-  opacity: 1;
-}
-
-/* In list view, show play button always */
-.media-play-inline {
-  opacity: 1;
-}
-
 /* Pointer-drag ghost */
 .media-drag-ghost {
   position: fixed;
@@ -807,20 +765,6 @@
 .media-empty-btn {
   height: 28px;
   font-size: 12px;
-}
-
-.media-empty-btn.media-empty-btn--accent,
-.media-empty-btn--accent {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--control-bg));
-  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--control-border));
-  color: var(--color-accent);
-}
-
-.media-empty-btn.media-empty-btn--accent:hover:not(:disabled),
-.media-empty-btn--accent:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 24%, var(--control-bg));
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
 
 .media-selection-bar {

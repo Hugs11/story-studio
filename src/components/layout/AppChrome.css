@@ -165,59 +165,6 @@
   min-width: 20px;
 }
 
-.chrome-titlebar-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.chrome-pack-name-input {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 13px;
-  opacity: 0.75;
-  padding: 2px 8px;
-  text-align: center;
-  min-width: 0;
-  width: 280px;
-  max-width: 40vw;
-  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.chrome-pack-name-input:hover {
-  opacity: 1;
-  border-color: color-mix(in srgb, var(--border) 80%, transparent);
-}
-
-.chrome-pack-name-input:focus {
-  outline: none;
-  opacity: 1;
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-
-.chrome-titlebar-center .pack-name-convention-btn {
-  flex-shrink: 0;
-  padding: 0 8px;
-  min-height: 24px;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.chrome-titlebar-center .pack-name-convention-btn:hover,
-.chrome-titlebar-center .pack-name-convention-btn.active {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  border-color: var(--accent);
-}
-
 .chrome-window-controls {
   display: flex;
   align-items: stretch;
@@ -342,20 +289,6 @@
   display: inline-flex;
   align-items: center;
   margin-left: 2px;
-}
-
-.chrome-toolbar-badge {
-  min-width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  padding: 0 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--bg0);
-  background: var(--accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .chrome-toolbar-cta {
@@ -616,32 +549,16 @@
   gap: 12px;
 }
 
-.pack-meta-two-cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px;
-  gap: 10px;
-}
-
 .pack-meta-field {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
 
-.pack-meta-field > span,
-.pack-meta-age-row > span {
+.pack-meta-field > span {
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 650;
-}
-
-.pack-meta-field-wide {
-  grid-column: 1 / -1;
-}
-
-.pack-meta-age-row {
-  display: grid;
-  gap: 6px;
 }
 
 .pack-meta-age-chips {
@@ -1214,10 +1131,6 @@
   .pack-meta-cover-panel {
     grid-template-columns: 96px minmax(0, 1fr);
     align-items: center;
-  }
-
-  .pack-meta-two-cols {
-    grid-template-columns: 1fr;
   }
 
   .pack-meta-footer {

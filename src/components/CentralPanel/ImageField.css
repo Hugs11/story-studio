@@ -14,7 +14,6 @@
 .image-field.is-align-start > .media-label,
 .image-field.is-align-start > .image-drop,
 .image-field.is-align-start > .image-drop-wrap,
-.image-field.is-align-start > .image-actions,
 .image-field.is-align-start > .image-action-row,
 .image-field.is-align-start > .image-sd-results {
   margin-inline: 0;
@@ -29,7 +28,6 @@
 .image-field > .media-label,
 .image-field > .image-drop,
 .image-field > .image-drop-wrap,
-.image-field > .image-actions,
 .image-field > .image-action-row,
 .image-field > .image-sd-results {
   width: var(--image-field-width);
