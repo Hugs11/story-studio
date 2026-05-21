@@ -314,6 +314,7 @@ export const StoryEditor = memo(function StoryEditor({
       {/* Card : Pendant la lecture */}
       <DuringPlaySection
         node={node}
+        project={project}
         allMenus={allMenus}
         allStories={allStories}
         parentMenu={parentMenu}

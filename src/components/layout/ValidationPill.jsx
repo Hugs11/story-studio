@@ -31,7 +31,11 @@ function parseIssue(issue) {
   const error = text.slice(dashIdx + 3);
   const parts = location.split(' / ');
   const nodeName = parts[parts.length - 1] || location;
-  return { groupKey: nodeName, groupLabel: nodeName, label: error };
+  return {
+    groupKey: location,
+    groupLabel: location,
+    label: parts.length > 1 ? `${nodeName} — ${error}` : error,
+  };
 }
 
 function buildGroups(issues) {

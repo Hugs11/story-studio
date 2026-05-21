@@ -25,7 +25,7 @@ const TITLE_CONTROLS = [
   { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pour parcourir les autres histoires.",   def: true },
 ];
 
-export function DuringPlaySection({ node, allMenus = [], allStories = [], parentMenu = null, effectiveReturnTargetName, onUpdate }) {
+export function DuringPlaySection({ node, project = null, allMenus = [], allStories = [], parentMenu = null, effectiveReturnTargetName, onUpdate }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
@@ -34,12 +34,13 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
     emptyResolvedLabel: effectiveReturnTargetName ?? null,
     entry: node,
     parentMenu,
+    project,
     allMenus,
     allStories,
   });
 
   return (
-    <div className="card">
+    <div className="card during-play-card">
       <div className="card-title">Pendant la lecture</div>
 
       <div className="during-play-split">
@@ -114,9 +115,6 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
 
       {showAdvanced && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
-            Boutons actifs pendant l'audio de sélection (avant que l'histoire ne se lance)
-          </div>
           <div className="sequence-controls">
             {TITLE_CONTROLS.map(({ key, label, tip, def }) => (
               <label key={key} className="sequence-control">
