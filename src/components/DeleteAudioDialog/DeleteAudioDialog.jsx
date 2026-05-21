@@ -128,4 +128,3 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
     </div>
   );
 }
-
