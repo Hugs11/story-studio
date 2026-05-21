@@ -24,6 +24,7 @@ function withShortcut(label, shortcut) {
 }
 
 function ToolbarButton({
+  id,
   title,
   label,
   onClick,
@@ -36,6 +37,7 @@ function ToolbarButton({
   return (
     <Tooltip text={title}>
       <button
+        data-toolbar-id={id}
         className={`chrome-toolbar-btn ${active ? 'is-active' : ''} ${iconOnly ? 'is-icon-only' : ''}`}
         onClick={onClick}
         disabled={disabled}
@@ -180,13 +182,13 @@ export function Toolbar({
     <div className="chrome-toolbar">
       <div className="chrome-toolbar-left">
         {primaryGroup.map((item) => (
-          <ToolbarButton key={item.id} title={item.title} label={item.label} onClick={item.onClick} active={item.active}>
+          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} active={item.active}>
             {item.icon}
           </ToolbarButton>
         ))}
         <span className="chrome-toolbar-sep" />
         {projectGroup.map((item) => (
-          <ToolbarButton key={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
+          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
             {item.icon}
           </ToolbarButton>
         ))}
@@ -194,6 +196,7 @@ export function Toolbar({
           <>
             <span className="chrome-toolbar-sep" />
             <ToolbarButton
+              id="settings"
               title={withShortcut("Réglages de l'histoire", shortcutLabels.storySettings)}
               label="Réglages"
               onClick={onOpenStorySettings}
@@ -207,6 +210,7 @@ export function Toolbar({
       <div className="chrome-toolbar-right">
         {showProjectActions ? (
           <>
+            <span className="chrome-toolbar-sep" />
             <ValidationPill
               validationIssues={validationIssues}
               pathAuditPending={pathAuditPending}
@@ -232,7 +236,7 @@ export function Toolbar({
                   aria-label={generateDisabled ? `Corrige les erreurs avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}
                 >
                   <ToolbarIcon Icon={Package} />
-                  Générer le pack
+                  <span className="chrome-generate-main-label">Générer le pack</span>
                 </button>
               </Tooltip>
               <button

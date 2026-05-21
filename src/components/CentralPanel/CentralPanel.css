@@ -87,6 +87,7 @@
 
 /* Card — danger variant */
 .card.card--danger {
+  container-type: inline-size;
   border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   background: var(--color-background-primary);
   box-shadow: none;
@@ -118,11 +119,12 @@
 }
 
 .card-danger-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   padding: 12px 14px;
+  min-width: 0;
 }
 
 .card-danger-text {
@@ -130,6 +132,11 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+.card-danger-row .btn {
+  justify-self: end;
+  max-width: 100%;
 }
 
 .card-danger-title {
@@ -142,6 +149,18 @@
   font-size: 11px;
   color: var(--color-text-tertiary);
   line-height: 1.4;
+}
+
+@container (max-width: 520px) {
+  .card-danger-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .card-danger-row .btn {
+    justify-self: start;
+  }
 }
 
 /* Field */
