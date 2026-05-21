@@ -15,7 +15,7 @@ export const ZOOM_MAX = 1.9;
 export const BUTTON_ZOOM_FACTOR = 1.12;
 export const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 export const DRAG_START_DISTANCE = 6;
-export const COMPLETE_METRICS = {
+const COMPLETE_METRICS = {
   full: { nodeWidth: 100, rootWidth: 120, nodeHeight: 96, colGap: 12, rowGap: 92, rowStackGap: 56, padX: 32, padY: 20, storyRowLimit: 8, structureRowLimit: 4, rootRowLimit: 3 },
   compact: { nodeWidth: 86, rootWidth: 98, nodeHeight: 74, colGap: 8, rowGap: 78, rowStackGap: 46, padX: 28, padY: 16, storyRowLimit: 6, structureRowLimit: 3, rootRowLimit: 2 },
   minimal: { nodeWidth: 68, rootWidth: 84, nodeHeight: 58, colGap: 6, rowGap: 62, rowStackGap: 36, padX: 22, padY: 12, storyRowLimit: 5, structureRowLimit: 2, rootRowLimit: 2 },
@@ -25,7 +25,7 @@ export function countStories(entries) {
   return (entries ?? []).filter((entry) => entry.type === 'story').length;
 }
 
-export function countStructuralNodes(entries) {
+function countStructuralNodes(entries) {
   return (entries ?? []).filter((entry) => entry.type === 'menu' || entry.type === 'zip').length;
 }
 
@@ -80,7 +80,7 @@ function hashTone(value) {
   return Math.abs(hash) % 6;
 }
 
-export function buildLayoutBlock(entry, metrics, options = {}) {
+function buildLayoutBlock(entry, metrics, options = {}) {
   const isRoot = entry.type === 'root';
   const nodeWidth = isRoot ? metrics.rootWidth : metrics.nodeWidth;
   const children = getLayoutChildren(entry, options);

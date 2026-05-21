@@ -29,7 +29,7 @@ function saveProjectDir(key, filePath) {
   if (dir) localStorage.setItem(key, dir);
 }
 
-export async function getDefaultWorkspaceDir() {
+async function getDefaultWorkspaceDir() {
   const docs = await documentDir();
   return join(docs, 'story-studio');
 }
@@ -42,7 +42,7 @@ export async function getWorkspaceDir() {
   return fallback;
 }
 
-export function setWorkspaceDir(path) {
+function setWorkspaceDir(path) {
   if (path?.trim()) localStorage.setItem(WORKSPACE_DIR_KEY, path);
 }
 
