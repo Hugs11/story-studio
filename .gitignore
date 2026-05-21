@@ -38,8 +38,7 @@ docs/internal/
 .env.*
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode/
 .idea
 .DS_Store
 *.suo
@@ -51,6 +50,11 @@ docs/internal/
 # Third-party binaries at repo root (not committed — see src-tauri/tools/)
 tools/*.exe
 tools/*.dll
+
+# Platform icon outputs not used by the Windows-only bundle
+src-tauri/icons/android/
+src-tauri/icons/ios/
+src-tauri/icons/app-icon-source.png
 
 # Claude Code project settings (local only)
 .claude/

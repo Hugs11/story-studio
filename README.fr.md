@@ -252,7 +252,6 @@ la référence projet ou bibliothèque médias.
 
 - [Guide d'installation XTTS](docs/guides/xtts-setup.fr.md)
 - [Guide d'installation ComfyUI](docs/guides/comfyui-setup.fr.md)
-- [Checklist de release](docs/release-checklist.fr.md)
 - [Modèle de sécurité](SECURITY.md)
 - [Mentions tierces](THIRD_PARTY_NOTICES.md)
 - [Changelog](CHANGELOG.md)

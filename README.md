@@ -233,7 +233,6 @@ project or media library reference only.
 
 - [XTTS setup guide](docs/guides/xtts-setup.md)
 - [ComfyUI setup guide](docs/guides/comfyui-setup.md)
-- [Release checklist](docs/release-checklist.md)
 - [Security model](SECURITY.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Changelog](CHANGELOG.md)
