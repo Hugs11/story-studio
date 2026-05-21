@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
-import { NavigationTargetSelect } from './storyUtils';
+import { getNavigationSelectHint, NavigationTargetSelect } from './storyUtils';
 
 const TITLE_CONTROL_DEFAULTS = {
   autoplay: false,
@@ -29,52 +29,70 @@ export function DuringPlaySection({ node, allMenus = [], allStories = [], parent
   const [showAdvanced, setShowAdvanced] = useState(false);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
+  const homeResolvedDestinationLabel = getNavigationSelectHint({
+    value: node.returnOnHome ?? '',
+    emptyResolvedLabel: effectiveReturnTargetName ?? null,
+    entry: node,
+    parentMenu,
+    allMenus,
+    allStories,
+  });
 
   return (
     <div className="card">
       <div className="card-title">Pendant la lecture</div>
 
-      <div className="sequence-controls">
-        {PLAY_CONTROLS.map(({ key, label, tip, def }) => (
-          <label key={key} className="sequence-control">
-            <Tooltip text={tip} placement="above" style={{ flex: 1 }}>
-              <span>{label}</span>
-            </Tooltip>
-            <Toggle
-              on={controls[key] ?? def}
-              onChange={(v) => onUpdate({ controlSettings: { ...controls, [key]: v } })}
-            />
-          </label>
-        ))}
-        <label className="sequence-control">
-          {node.returnOnHomeNone ? (
-            <Tooltip text="Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire." placement="above" style={{ flex: 1 }}>
+      <div className="during-play-split">
+        <div className="during-play-left">
+          <div className="sequence-controls during-play-toggles">
+            {PLAY_CONTROLS.map(({ key, label, tip, def }) => (
+              <label key={key} className="sequence-control">
+                <Tooltip text={tip} placement="above" style={{ flex: 1 }}>
+                  <span>{label}</span>
+                </Tooltip>
+                <Toggle
+                  on={controls[key] ?? def}
+                  onChange={(v) => onUpdate({ controlSettings: { ...controls, [key]: v } })}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="during-play-divider" aria-hidden="true" />
+
+        <div className="during-play-home">
+          <div className="sequence-control during-play-home-head">
+            <Tooltip
+              text={node.returnOnHomeNone
+                ? "Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire."
+                : `Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`}
+              placement="above"
+              style={{ flex: 1 }}
+            >
               <span>Accueil</span>
             </Tooltip>
-          ) : (
-            <>
-              <Tooltip text={`Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture. Par défaut : ${effectiveReturnTargetName || 'la fin configurée de l’histoire'}.`} placement="above">
-                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>Accueil</span>
-              </Tooltip>
-              <NavigationTargetSelect
-                value={node.returnOnHome ?? ''}
-                onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
-                allMenus={allMenus}
-                allStories={allStories}
-                currentStoryId={node.id}
-                emptyLabel="Identique à la fin d'histoire"
-                includeRoot={false}
-                includeStoryPlay={false}
-                size="compact"
-                style={{ flex: 1, minWidth: 0 }}
-              />
-            </>
-          )}
-          <Toggle
-            on={!node.returnOnHomeNone}
-            onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
-          />
-        </label>
+            <Toggle
+              on={!node.returnOnHomeNone}
+              onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
+            />
+          </div>
+
+          {!node.returnOnHomeNone ? (
+            <NavigationTargetSelect
+              value={node.returnOnHome ?? ''}
+              onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={node.id}
+              emptyLabel="Identique à la fin d'histoire"
+              includeRoot={false}
+              includeStoryPlay={false}
+              size="compact"
+              resolvedDestinationLabel={homeResolvedDestinationLabel}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="advanced-toggle-row">

@@ -900,6 +900,73 @@
   color: var(--color-text-secondary);
 }
 
+.during-play-split {
+  display: grid;
+  grid-template-columns: 1fr 1px minmax(260px, 360px);
+  gap: 18px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.during-play-left,
+.during-play-home {
+  min-width: 0;
+}
+
+.during-play-toggles {
+  grid-template-columns: repeat(3, minmax(145px, 1fr));
+  gap: 8px;
+}
+
+.during-play-divider {
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--color-border-secondary) 62%, transparent) 14%,
+    color-mix(in srgb, var(--color-border-secondary) 62%, transparent) 86%,
+    transparent
+  );
+}
+
+.during-play-home {
+  display: flex;
+  flex-direction: column;
+}
+
+.during-play-home-head {
+  margin-bottom: 8px;
+}
+
+.during-play-home .navigation-target-select {
+  width: 100%;
+}
+
+.during-play-home .navigation-listbox.is-compact .navigation-listbox-trigger {
+  min-height: 30px;
+  padding: 5px 8px;
+  gap: 7px;
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border-secondary));
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-background-secondary));
+  font-size: 11.5px;
+}
+
+.during-play-home .navigation-listbox.is-compact .navigation-listbox-trigger:hover,
+.during-play-home .navigation-listbox.is-compact.is-open .navigation-listbox-trigger {
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border-secondary));
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-background-secondary));
+}
+
+.during-play-home .navigation-target-select > div + div {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 7px;
+  padding-left: 2px !important;
+  font-size: 11px !important;
+  line-height: 1.35;
+}
+
 .sequence-targets {
   display: grid;
   gap: 9px;
@@ -998,10 +1065,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   flex-shrink: 0;
   color: var(--color-text-tertiary);
-  font-size: 16px;
-  line-height: 16px;
+  font-size: 0;
+  line-height: 1;
+}
+
+.navigation-listbox-chevron::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .navigation-listbox-popover {
@@ -1352,6 +1429,21 @@
 
   .advanced-toggle-row {
     align-items: flex-start;
+  }
+
+  .during-play-split {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .during-play-divider {
+    height: 1px;
+    width: 100%;
+    background: color-mix(in srgb, var(--color-border-secondary) 55%, transparent);
+  }
+
+  .during-play-toggles {
+    grid-template-columns: 1fr;
   }
 }
 
