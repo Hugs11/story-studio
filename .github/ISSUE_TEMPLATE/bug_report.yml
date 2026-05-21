@@ -51,3 +51,16 @@ body:
       description: |
         Project type (simple story / pack), number of menus/stories, whether it reproduces on a fresh project, etc.
         Attach the `.mbah` project file if it helps (remove audio/images you don't want to share).
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log file
+      description: |
+        Attach the log file to help diagnose the issue. To get a more detailed log, first enable
+        **Preferences → Diagnostic → Detailed logging**, reproduce the bug, then attach the file.
+        Location: `%APPDATA%\com.hugs11.story-studio\logs\story-studio.log` (Windows).
+        Tip: in the app, **Preferences → Diagnostic** has a "Copy path" button.
+        The log may contain local file paths (your username, file names). Review it before posting.
+      placeholder: |
+        Paste relevant lines or attach the .log file.

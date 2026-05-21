@@ -43,6 +43,10 @@ export function OptionsTab({
   onBackToHome,
   showCentralDiagram,
   onShowCentralDiagramChange,
+  verboseLogging = false,
+  onVerboseLoggingChange = null,
+  onOpenLogsDir = null,
+  onCopyLogPath = null,
   project = null,
   savePath = null,
   asModal = false,
@@ -60,7 +64,17 @@ export function OptionsTab({
   const [xttsVoices, setXttsVoices] = useState([]);
   const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
   const [xttsLogs, setXttsLogs] = useState([]);
+  const [copiedLogPath, setCopiedLogPath] = useState(null);
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
+
+  async function handleCopyLogPathClick() {
+    if (!onCopyLogPath) return;
+    const file = await onCopyLogPath();
+    if (file) {
+      setCopiedLogPath(file);
+      setTimeout(() => setCopiedLogPath(null), 2200);
+    }
+  }
 
   useEffect(() => {
     invoke('comfyui_list_workflows')
@@ -541,6 +555,43 @@ export function OptionsTab({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="opts-card">
+          <div className="opts-card-title">Diagnostic</div>
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Journalisation détaillée</div>
+              <div className="opts-row-sub">
+                Enregistre les événements normaux (chargements, sauvegardes, générations) dans le fichier de log,
+                en plus des erreurs. Utile pour partager le contexte d'un bug dans une issue GitHub.
+                Désactivé : seuls les avertissements et erreurs sont enregistrés.
+              </div>
+            </div>
+            <Toggle on={!!verboseLogging} onChange={onVerboseLoggingChange} />
+          </div>
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Fichier de log</div>
+              <div className="opts-row-sub">
+                Les logs sont écrits dans <code>%APPDATA%\com.hugs11.story-studio\logs\story-studio.log</code>.
+                {copiedLogPath ? (
+                  <span style={{ color: 'var(--color-accent)', marginLeft: 6 }}>Copié : {copiedLogPath}</span>
+                ) : null}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button className="btn" type="button" onClick={onOpenLogsDir} disabled={!onOpenLogsDir}>
+                Ouvrir le dossier
+              </button>
+              <button className="btn" type="button" onClick={handleCopyLogPathClick} disabled={!onCopyLogPath}>
+                Copier le chemin
+              </button>
+            </div>
+          </div>
+          <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
+            Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement.
+          </div>
         </div>
 
       </div>

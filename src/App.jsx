@@ -54,7 +54,7 @@ import { useEscapeKey } from './hooks/useEscapeKey';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
-import { loadVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
+import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { isOriginalBackup } from './utils/mediaConventions';
 import { getExportPackName, parseConventionName } from './utils/packConvention';
@@ -279,6 +279,7 @@ export default function App() {
     return Number.isFinite(raw) && raw >= 0 ? raw : 5;
   });
   const [showCentralDiagram, setShowCentralDiagram] = useState(() => localStorage.getItem('showCentralDiagram') === 'true');
+  const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());
   const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
   const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex);
@@ -1221,6 +1222,41 @@ export default function App() {
     if (chosen) setWorkspaceDirState(chosen);
   }
 
+  async function handleVerboseLoggingChange(enabled) {
+    setVerboseLoggingState(enabled);
+    saveVerboseLoggingPref(enabled);
+    const level = verboseLevelName(enabled);
+    setLogLevel(level);
+    if (isTauriRuntime()) {
+      try { await invoke('set_log_level', { level }); }
+      catch (err) { logger.error('[verbose-logging] set_log_level failed:', err); }
+    }
+    logger.warn(`logging verbosity changed to ${level}`);
+  }
+
+  async function handleOpenLogsDir() {
+    if (!isTauriRuntime()) return;
+    try {
+      const dir = await invoke('get_logs_dir');
+      await openPath(dir);
+    } catch (err) {
+      logger.error('[open-logs-dir] failed:', err);
+      alert("Impossible d'ouvrir le dossier des logs : " + String(err));
+    }
+  }
+
+  async function handleCopyLogPath() {
+    if (!isTauriRuntime()) return null;
+    try {
+      const file = await invoke('get_current_log_file');
+      await navigator.clipboard.writeText(file);
+      return file;
+    } catch (err) {
+      logger.error('[copy-log-path] failed:', err);
+      return null;
+    }
+  }
+
   async function handleConsolidateProject() {
     const destinationDir = await openDialog({
       directory: true,
@@ -2067,6 +2103,10 @@ export default function App() {
               onBackToHome={projectType === null ? () => store.setActiveTab('edit') : null}
               showCentralDiagram={showCentralDiagram}
               onShowCentralDiagramChange={setShowCentralDiagram}
+              verboseLogging={verboseLogging}
+              onVerboseLoggingChange={handleVerboseLoggingChange}
+              onOpenLogsDir={handleOpenLogsDir}
+              onCopyLogPath={handleCopyLogPath}
               project={store.project}
               savePath={store.savePath}
             />,
@@ -2130,6 +2170,10 @@ export default function App() {
           onUpdateSdSettings={sdStore.updateSdSettings}
           showCentralDiagram={showCentralDiagram}
           onShowCentralDiagramChange={setShowCentralDiagram}
+          verboseLogging={verboseLogging}
+          onVerboseLoggingChange={handleVerboseLoggingChange}
+          onOpenLogsDir={handleOpenLogsDir}
+          onCopyLogPath={handleCopyLogPath}
           project={store.project}
           savePath={store.savePath}
           asModal
