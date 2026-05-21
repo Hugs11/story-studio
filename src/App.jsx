@@ -1234,10 +1234,17 @@ export default function App() {
     logger.warn(`logging verbosity changed to ${level}`);
   }
 
+  function logDirOf(filePath) {
+    if (typeof filePath !== 'string' || !filePath) return null;
+    return filePath.replace(/[\\/][^\\/]*$/, '') || filePath;
+  }
+
   async function handleResolveLogPath() {
     if (!isTauriRuntime()) return null;
-    try { return await invoke('get_current_log_file'); }
-    catch (err) {
+    try {
+      const file = await invoke('get_current_log_file');
+      return logDirOf(file);
+    } catch (err) {
       logger.error('[resolve-log-path] failed:', err);
       return null;
     }
@@ -1247,8 +1254,10 @@ export default function App() {
     if (!isTauriRuntime()) return null;
     try {
       const file = await invoke('get_current_log_file');
-      await navigator.clipboard.writeText(file);
-      return file;
+      const dir = logDirOf(file);
+      if (!dir) return null;
+      await navigator.clipboard.writeText(dir);
+      return dir;
     } catch (err) {
       logger.error('[copy-log-path] failed:', err);
       return null;
