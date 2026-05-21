@@ -220,25 +220,6 @@ function JobCard({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUsa
   );
 }
 
-export function SDQueueBadge({ pendingCount, hasResults, onClick }) {
-  if (pendingCount === 0 && !hasResults) return null;
-  return (
-    <Tooltip text="File de génération IA" placement="above">
-      <button
-        className={`sd-queue-badge ${pendingCount > 0 ? 'sd-badge-active' : 'sd-badge-done'}`}
-        onClick={onClick}
-      >
-        {pendingCount > 0 ? (
-          <>
-            <span className="sd-spinner sd-spinner-sm" />
-            {pendingCount}
-          </>
-        ) : '✓'} IA
-      </button>
-    </Tooltip>
-  );
-}
-
 export function SDQueuePanel({
   imageJobs = [],
   audioJobs = [],
