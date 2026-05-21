@@ -1,6 +1,6 @@
-export const SD_SETTINGS_KEY = 'sdSettings';
+const SD_SETTINGS_KEY = 'sdSettings';
 
-export const DEFAULT_SD_SETTINGS = {
+const DEFAULT_SD_SETTINGS = {
   serverUrl: 'http://127.0.0.1:8188',
   autoStart: false,
   batPath: '',

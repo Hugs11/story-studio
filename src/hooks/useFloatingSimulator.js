@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-export const SIMULATOR_ASPECT_RATIO = 0.62;
+const SIMULATOR_ASPECT_RATIO = 0.62;
 
 const DEFAULTS = {
   aspectRatio: SIMULATOR_ASPECT_RATIO,

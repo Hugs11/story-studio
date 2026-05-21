@@ -1,5 +1,5 @@
-export const NAV_TARGET_ROOT = 'root';
-export const NAV_TARGET_CURRENT_MENU = 'current_menu';
+const NAV_TARGET_ROOT = 'root';
+const NAV_TARGET_CURRENT_MENU = 'current_menu';
 export const NAV_TARGET_NEXT_STORY = 'next_story';
 const NAV_TARGET_MENU_PREFIX = 'menu:';
 const NAV_TARGET_STORY_PREFIX = 'story:';

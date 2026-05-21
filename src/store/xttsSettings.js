@@ -1,6 +1,6 @@
-export const XTTS_SETTINGS_KEY = 'xttsSettings';
+const XTTS_SETTINGS_KEY = 'xttsSettings';
 
-export const DEFAULT_XTTS_SETTINGS = {
+const DEFAULT_XTTS_SETTINGS = {
   enabled: false,
   serverUrl: 'http://127.0.0.1:8020',
   xttsDir: '',

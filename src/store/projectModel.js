@@ -1,7 +1,7 @@
 import { normalizeNavigationTarget } from './navigationTargets.js';
 import { getExportPackName, parseConventionName } from '../utils/packConvention.js';
 
-export const PROJECT_SCHEMA_VERSION = 3;
+const PROJECT_SCHEMA_VERSION = 3;
 
 export const DEFAULT_PACK_METADATA = Object.freeze({
   title: '',
@@ -852,7 +852,7 @@ function normalizePackMinAge(value) {
   return parsed || DEFAULT_PACK_METADATA.minAge;
 }
 
-export function normalizePackMetadata(value = {}) {
+function normalizePackMetadata(value = {}) {
   const metadata = value && typeof value === 'object' ? value : {};
   const namingMode = metadata.namingMode === 'legacy' ? 'legacy' : 'convention';
   return {
