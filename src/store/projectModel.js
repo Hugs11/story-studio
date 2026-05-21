@@ -960,6 +960,10 @@ export function projectToSerializable(project) {
 export function projectToRustExport(project) {
   const serializable = projectToSerializable(project);
   const packMetadata = normalizePackMetadata(serializable.packMetadata);
+  if (serializable.projectType === 'simple' && !String(packMetadata.title || '').trim()) {
+    const fallback = String(serializable.projectName || '').trim();
+    if (fallback) packMetadata.title = fallback;
+  }
   return {
     ...serializable,
     name: getExportPackName(packMetadata),
