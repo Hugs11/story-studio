@@ -44,8 +44,9 @@ fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     let mut targets = vec![Target::new(TargetKind::LogDir {
         file_name: Some("story-studio".to_string()),
     })];
-    #[cfg(debug_assertions)]
-    targets.push(Target::new(TargetKind::Stdout));
+    if cfg!(debug_assertions) {
+        targets.push(Target::new(TargetKind::Stdout));
+    }
 
     tauri_plugin_log::Builder::new()
         .targets(targets)
