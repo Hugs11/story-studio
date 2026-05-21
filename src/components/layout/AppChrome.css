@@ -216,7 +216,12 @@
   min-width: 0;
 }
 
+.chrome-toolbar-left {
+  flex: 1 1 auto;
+}
+
 .chrome-toolbar-right {
+  flex: 0 0 auto;
   margin-left: auto;
 }
 
@@ -350,6 +355,10 @@
 .chrome-generate-caret-glyph {
   font-size: 12px;
   line-height: 1;
+}
+
+.chrome-generate-main-label {
+  white-space: nowrap;
 }
 
 .chrome-generate-menu {
@@ -1098,6 +1107,49 @@
   }
 }
 
+@media (max-width: 1180px) {
+  .chrome-toolbar {
+    gap: 8px;
+    padding-left: calc(var(--chrome-rail-width) + 10px);
+    padding-right: 10px;
+  }
+
+  .chrome-toolbar-left,
+  .chrome-toolbar-right {
+    gap: 5px;
+  }
+
+  .chrome-toolbar-btn,
+  .chrome-toolbar-cta {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .chrome-toolbar-sep {
+    margin-left: 2px;
+    margin-right: 2px;
+  }
+}
+
+@media (max-width: 1140px) {
+  .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='settings'] .chrome-toolbar-btn-label {
+    display: none;
+  }
+
+  .chrome-toolbar-btn[data-toolbar-id='import'],
+  .chrome-toolbar-btn[data-toolbar-id='folder'],
+  .chrome-toolbar-btn[data-toolbar-id='record'],
+  .chrome-toolbar-btn[data-toolbar-id='settings'] {
+    width: 30px;
+    min-width: 30px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .chrome-titlebar-project {
     max-width: 28vw;
@@ -1122,6 +1174,19 @@
   .chrome-toolbar-cta {
     padding: 0 10px;
     font-size: 12px;
+  }
+
+  .chrome-toolbar-btn-label,
+  .chrome-generate-main-label {
+    display: none;
+  }
+
+  .chrome-toolbar-btn,
+  .chrome-generate-main {
+    width: 30px;
+    min-width: 30px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .pack-meta-body {

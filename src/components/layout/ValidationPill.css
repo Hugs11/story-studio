@@ -301,3 +301,26 @@
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+@media (max-width: 1180px) {
+  .validation-pill {
+    gap: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .validation-pill {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .validation-pill-label {
+    display: none;
+  }
+
+  .validation-pill-dd {
+    width: min(360px, calc(100vw - 24px));
+  }
+}

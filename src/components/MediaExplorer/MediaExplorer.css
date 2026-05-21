@@ -195,18 +195,22 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
 }
 
 /* Scrollable row container — header lives outside so it never scrolls */
 .media-list-scroll {
   flex: 1;
   min-height: 0;
+  overflow-x: visible;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 4px 16px 120px;
+  min-width: max-content;
 }
 
 .media-tile,
@@ -327,6 +331,8 @@
 .me-list-row {
   grid-template-columns: var(--me-grid, 56px 200px 120px 60px 72px 100px 260px 120px 30px);
   gap: 8px;
+  box-sizing: border-box;
+  min-width: max-content;
 }
 
 .me-list-row {
@@ -334,6 +340,7 @@
   padding: 3px 9px;
   display: grid;
   align-items: center;
+  width: 100%;
 }
 
 /* List view header — sibling of .media-list-scroll, never scrolls */
@@ -342,6 +349,7 @@
   align-items: center;
   padding: 3px 25px 5px;
   flex-shrink: 0;
+  width: 100%;
   background: var(--color-background-tertiary);
   border-bottom: 0.5px solid var(--color-border-tertiary);
   font-size: 10px;
@@ -899,12 +907,16 @@
 
 @media (max-width: 980px) {
   .media-toolbar {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .media-search {
+  .media-search-wrap {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .media-toolbar .media-search {
     width: 100%;
-    flex: 1 1 180px;
   }
 }
 
