@@ -339,53 +339,7 @@
   transition: opacity 0.15s;
 }
 
-/* Badge topbar */
-.sd-queue-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: var(--border-radius-md);
-  border: 0.5px solid var(--color-border-secondary);
-  background: transparent;
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  transition: background 0.1s;
-}
-
-.sd-queue-badge:hover { background: var(--color-background-secondary); }
-
-.sd-queue-badge.sd-badge-active {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.sd-queue-badge.sd-badge-done {
-  border-color: #4caf50;
-  color: #4caf50;
-}
-
 /* Progress */
-.sd-spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: sd-spin 0.7s linear infinite;
-}
-
-.sd-spinner-sm {
-  width: 8px;
-  height: 8px;
-}
-
-@keyframes sd-spin {
-  to { transform: rotate(360deg); }
-}
-
 .sd-progress-ring {
   --progress: 0%;
   width: 14px;

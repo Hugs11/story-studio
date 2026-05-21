@@ -428,48 +428,6 @@
   cursor: not-allowed;
 }
 
-/* ── Hover record button (legacy, kept for compatibility) ───────────────── */
-.ti-record-btn {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0 2px;
-  line-height: 1;
-  opacity: 0;
-  transition: opacity 0.12s;
-  color: var(--color-text-primary);
-}
-
-.tree-item:hover .ti-record-btn {
-  opacity: 0.7;
-}
-
-.tree-item:hover .ti-record-btn:hover {
-  opacity: 1;
-}
-
-/* ── Add buttons (legacy) ───────────────────────────────────────────────── */
-.tree-add-btn {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  padding: 4px 8px;
-  margin: 1px 5px;
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.tree-add-btn:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-accent);
-}
-
-.tree-add-menu {
-  margin-top: 4px;
-  padding-left: 8px;
-}
 
 /* ── OS file drop overlay ───────────────────────────────────────────────── */
 .tree-os-drop-overlay {

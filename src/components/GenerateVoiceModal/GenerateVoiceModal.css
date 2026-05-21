@@ -131,33 +131,6 @@
   font-size: 12px;
 }
 
-.tts-tabs {
-  display: flex;
-  gap: 6px;
-}
-
-.tts-tab {
-  flex: 1;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-md);
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  padding: 8px 10px;
-  cursor: pointer;
-}
-
-.tts-tab.active {
-  color: var(--color-text-primary);
-  border-color: var(--color-accent);
-  background: var(--color-accent-light);
-}
-
-.tts-tab:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .tts-status,
 .tts-error {
   padding: 8px 10px;
