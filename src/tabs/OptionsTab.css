@@ -87,16 +87,6 @@
   color: var(--color-text-tertiary);
 }
 
-.global-off-notice {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  padding: 6px 10px;
-  background: var(--color-background-secondary);
-  border-radius: var(--border-radius-md);
-  border-left: 2px solid #EF9F27;
-  margin: 4px 0 6px 0;
-}
-
 .info-box {
   padding: 7px 10px;
   background: var(--color-background-secondary);
@@ -273,77 +263,3 @@
   align-items: center;
 }
 
-.validation-issue-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.validation-issue {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius-sm, 4px);
-  background: var(--color-background-secondary);
-}
-
-.validation-issue.error { border-left: 2px solid #E05555; }
-.validation-issue.warning { border-left: 2px solid #EF9F27; }
-.validation-issue.info { border-left: 2px solid #6b97c4; opacity: 0.75; }
-
-.validation-issue-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-.validation-issue.error .validation-issue-badge { background: #E05555; color: #fff; }
-.validation-issue.warning .validation-issue-badge { background: #EF9F27; color: #fff; }
-.validation-issue.info .validation-issue-badge { background: #6b97c4; color: #fff; }
-
-.validation-issue-code {
-  font-family: monospace;
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-
-.validation-issue-msg {
-  color: var(--color-text-secondary);
-}
-
-.cleanup-file-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 180px;
-  overflow-y: auto;
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: var(--border-radius-sm);
-  padding: 4px 0;
-}
-
-.cleanup-file-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 8px;
-  font-size: 11px;
-}
-
-.cleanup-file-name {
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.cleanup-file-size {
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-  margin-left: 8px;
-}
