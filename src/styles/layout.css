@@ -122,45 +122,6 @@ body {
   margin: 0 2px;
 }
 
-/* Tab bar — 3 sections alignées sur les 3 panneaux */
-.tab-bar-top {
-  display: flex;
-  background: var(--color-background-primary);
-  border-bottom: 0.5px solid var(--color-border-tertiary);
-  flex-shrink: 0;
-  min-width: 0;
-}
-
-.tab-section-left {
-  flex: 0 1 var(--col-left);
-  display: flex;
-  align-items: flex-end;
-  padding-left: 4px;
-  min-width: 0;
-}
-
-.tab-section-center {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  min-width: 0;
-}
-
-.tab-section-right {
-  flex: 0 1 var(--col-right);
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding-right: 4px;
-  min-width: 0;
-}
-
-.tab-section-right--actions {
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-}
 
 .btn-tab-active {
   background: var(--color-accent-light);
@@ -320,30 +281,6 @@ body {
   max-width: min(var(--center-content-max), 100%);
   min-width: 0;
   flex-shrink: 0;
-}
-
-/* Panel droit — validation */
-.panel-right {
-  flex: 0 1 var(--col-right);
-  background: var(--color-background-primary);
-  border-left: 0.5px solid var(--color-border-tertiary);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.panel-right-header {
-  padding: 8px 10px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
-  flex-shrink: 0;
-}
-
-.panel-right-header span {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 /* Bottom bar */
