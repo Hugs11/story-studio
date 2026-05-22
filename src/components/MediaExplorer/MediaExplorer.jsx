@@ -6,7 +6,7 @@ import { mediaDrag } from '../../store/dragState';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useMediaMetadata, fmtSize, fmtHz } from '../../store/useMediaMetadata';
 import { Tooltip } from '../common/Tooltip';
-import { FilePlus, FolderPlus, Package, Play, SwatchBook, SlidersHorizontal, Copy, Scissors, FolderOpen, FolderInput, Trash2, Link2, Download } from '../icons/LucideLocal';
+import { FilePlus, FolderPlus, Package, Play, SwatchBook, SlidersHorizontal, Copy, Scissors, FolderOpen, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { MediaPopover } from './MediaPopover';
@@ -599,6 +599,7 @@ export function MediaExplorer({
   const headerRef = useRef(null);
   const listScrollRef = useRef(null);
   const containerRef = useRef(null);
+  const searchInputRef = useRef(null);
   const lastSelectedIndexRef = useRef(null);
 
   // Popover state — lifted here so arrow-key navigation can move between tiles.
@@ -866,6 +867,19 @@ export function MediaExplorer({
     return () => document.removeEventListener('os-file-drag-zone', onZone);
   }, []);
 
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (!(e.ctrlKey && e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'F'))) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const input = searchInputRef.current;
+      input?.focus();
+      input?.select();
+    }
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, []);
+
   function toggleActiveTag(tag) {
     setActiveTags((prev) => {
       const next = new Set(prev);
@@ -1093,15 +1107,19 @@ export function MediaExplorer({
       <div className="media-toolbar">
         <div className="media-filter-pills">{filterPills}{tagPills}</div>
         <div className="media-search-wrap">
+          <span className="media-search-icon" aria-hidden="true">
+            <Search width={12} height={12} strokeWidth={1.8} />
+          </span>
           <input
+            ref={searchInputRef}
             className="media-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher…"
           />
-          {query && (
+          {query ? (
             <button className="media-search-clear" type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche">×</button>
-          )}
+          ) : null}
         </div>
         <div className="me-toolbar-right">{viewSwitch}{actionButtons}</div>
       </div>

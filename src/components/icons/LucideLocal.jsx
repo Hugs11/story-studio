@@ -299,6 +299,11 @@ const infoNode = [
   ['path', { d: 'M12 8h.01' }],
 ];
 
+const searchNode = [
+  ['circle', { cx: '11', cy: '11', r: '8' }],
+  ['path', { d: 'm21 21-4.3-4.3' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const MonitorPlay = createLocalLucideIcon(monitorPlayNode);
@@ -340,3 +345,4 @@ export const TriangleAlert = createLocalLucideIcon(triangleAlertNode);
 export const Settings = createLocalLucideIcon(settingsNode);
 export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);
+export const Search = createLocalLucideIcon(searchNode);
