@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.8.9" src="https://img.shields.io/badge/version-0.8.9-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -66,6 +66,10 @@ Studio keeps those pieces visible and editable in a single workspace.
 | Diagram and simulator | Media explorer |
 |---|---|
 | ![Diagram view with simulator](docs/assets/screenshots/diagram-simulator-dark.png) | ![Media explorer](docs/assets/screenshots/media-explorer-dark.png) |
+
+| Story editor | Pack metadata |
+|---|---|
+| ![Story editor controls](docs/assets/screenshots/story-editor-dark.png) | ![Pack metadata modal](docs/assets/screenshots/pack-metadata-dark.png) |
 
 | Audio editor | Settings |
 |---|---|
@@ -241,7 +245,7 @@ project or media library reference only.
 
 Near-term priorities:
 
-- Publish the first beta installer from the `v0.8.9` release workflow.
+- Publish the first beta installer from the `v0.9.0` release workflow.
 - Smoke-test a fresh install on Windows before sharing the beta more broadly.
 - Continue improving import/export compatibility with community packs.
 - Keep audio and media workflows approachable for non-technical creators.
