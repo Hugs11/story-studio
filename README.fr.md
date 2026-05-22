@@ -58,23 +58,6 @@ issues.
 | **Workflow** | Éditeur arborescent visuel, agrégation de packs ZIP, navigation par nœuds, explorateur de médias, simulateur |
 | **Vie privée** | App locale, aucun backend hébergé, aucune télémétrie |
 
-## Pourquoi Story Studio ?
-
-Les packs d'histoires deviennent vite difficiles à gérer quand ils contiennent
-beaucoup de menus, d'enregistrements, de packs ZIP importés, d'images
-générées et de règles de navigation. Story Studio garde toutes ces pièces
-visibles et éditables dans un seul espace de travail.
-
-- Construis des histoires simples ou des packs structurés avec menus
-  imbriqués.
-- Agrège des packs ZIP existants dans des collections personnalisées plus
-  larges.
-- Importe des packs communautaires, inspecte-les ou modifie-les avant de les ré-exporter.
-- Édite tes médias sans perdre de vue où chaque fichier est utilisé.
-- Teste la navigation dans le simulateur avant de générer un pack final.
-- Garde tes voix générées, images générées, enregistrements et imports bien
-  rangés dans les dossiers de l'espace de travail.
-
 ## Captures d'écran
 
 ![Éditeur Story Studio](docs/assets/screenshots/editor-features-dark.png)
@@ -97,146 +80,29 @@ visibles et éditables dans un seul espace de travail.
 
 ## Fonctionnalités
 
-### Édition de packs
-
-- Modes projet « histoire simple » et « multi-packs ».
-- Éditeur visuel pour menus racine, menus imbriqués, histoires, entrées ZIP
-  importées et nœuds de fin.
-- Organisation par glisser-déposer dans l'arbre, avec multi-sélection,
-  copier/couper/coller et actions contextuelles.
-- Import de dossier qui peut créer une histoire par fichier audio.
-- Aide à la convention de nommage communautaire pour le titre, les
-  métadonnées et la version du pack.
-- Contrôles de navigation par nœuds pour la lecture, les cibles de retour,
-  le comportement du bouton Home et les flux de fin d'histoire — y compris
-  les nœuds de fin en mode nuit.
-- Vérifications de validation pour les médias manquants courants, les
-  problèmes de navigation et de compatibilité.
-
-### Import, prévisualisation et export
-
-- Import de packs ZIP Lunii.
-- Inspection des packs importés et extraction en entrées de projet
-  éditables.
-- Agrégation de packs ZIP importés avec des menus et histoires natifs.
-- Choix d'appliquer ou non le traitement global de silence début/fin sur
-  l'audio extrait des ZIP.
-- Prévisualisation des projets ou des packs importés dans le simulateur
-  intégré.
-- Génération de packs ZIP compatibles Lunii avec le moteur natif Rust.
-- Mise en file de plusieurs rendus de pack avec suivi des logs depuis la
-  file de rendu.
-- Validation ZIP optionnelle après génération qui signale les problèmes de
-  compatibilité sans bloquer l'export.
-
-### Workflow audio
-
-- Enregistrement micro directement depuis l'app.
-- Édition audio avec rognage/coupes/fondus basés sur la forme d'onde et
-  prévisualisation.
-- Assemblage de plusieurs fichiers audio en un MP3.
-- Insertion optionnelle de silence entre les fichiers assemblés.
-- Import de dossiers de fichiers audio en collections d'histoires.
-- Lecture des pochettes MP3 embarquées quand elles sont présentes.
-- Gestion des voix générées et enregistrements dans l'espace de travail du
-  projet.
-- Intégration locale optionnelle XTTS pour la génération de voix.
-
-### Workflow image et média
-
-- Explorateur de médias pour audio, images et fichiers ZIP.
-- Recherche, filtres, tri, tags, compteurs d'utilisation et aperçus rapides.
-- Glisser des médias dans l'arbre, le diagramme ou les champs de l'éditeur.
-- Recadrage/édition d'images et génération d'images textuelles à partir des
-  noms de nœuds.
-- Redimensionnement automatique des images exportées au format Lunii
-  320×240.
-- Intégration locale optionnelle ComfyUI pour la génération d'images.
-
-### Outils projet et interface
-
-- Écran d'accueil avec projets récents.
-- Modes thème clair, sombre et système.
-- Raccourcis clavier configurables.
-- Autosave, versions de sécurité et outils de consolidation de projet.
-- Vue diagramme complète du pack avec focus de branche et simulateur
-  flottant.
-
-### App desktop, 100 % locale
-
-- Pas de backend hébergé.
-- Pas de télémétrie.
-- Sélection de fichiers large pour les assets choisis par l'utilisateur,
-  avec des écritures protégées pour les dossiers projet gérés.
-- Outils en ligne de commande embarqués pour les opérations audio et ZIP
-  locales.
+- **Éditeur visuel arborescent** avec menus imbriqués, multi-sélection, glisser-déposer et actions contextuelles.
+- **Import de packs ZIP Lunii** : inspection, extraction en projet éditable, agrégation avec vos propres histoires.
+- **Workflow audio intégré** : enregistrement micro, rognage, coupes, fondus, assemblage et insertion de silence.
+- **Workflow image intégré** : recadrage 320×240 automatique, génération d'images textuelles depuis les noms.
+- **Explorateur de médias** avec tags, filtres, compteurs d'utilisation et aperçus rapides.
+- **Simulateur intégré** pour tester la navigation et les nœuds de fin avant export.
+- **Validation et file de rendu** : vérifications de compatibilité et génération en série avec suivi des logs.
+- **Intégrations locales optionnelles** XTTS (voix) et ComfyUI (images).
+- **Confort projet** : autosave, versions de sécurité, raccourcis configurables, thèmes clair/sombre, vue diagramme.
 
 ## Configuration requise
 
-- Windows 10 ou plus récent
-- [Node.js](https://nodejs.org/) 20.19+ ou 22.12+
-- Toolchain [Rust](https://rustup.rs/) stable
-- [Prérequis Tauri v2 Windows](https://v2.tauri.app/start/prerequisites/),
-  dont WebView2
-
-Les binaires embarqués ont leurs propres licences, documentées séparément.
-Voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Windows 10 ou plus récent, avec WebView2. Les binaires tiers embarqués ont
+leurs propres licences — voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Installation
 
-### Télécharger une release
+Téléchargez l'installeur Windows depuis la
+[page GitHub Releases](https://github.com/Hugs11/story-studio/releases/latest)
+une fois la première release publique publiée.
 
-Le chemin d'installation recommandé est l'installeur Windows depuis la page
-GitHub Releases une fois la première release publique publiée.
-
-### Lancer depuis les sources
-
-```powershell
-git clone https://github.com/hugs11/story-studio.git
-cd story-studio
-npm install
-npm run tauri dev
-```
-
-Le serveur de dev utilise le port `1420`. Si ce port est déjà occupé :
-
-```powershell
-npx kill-port 1420
-npm run tauri dev
-```
-
-## Développement
-
-Commandes frontend et desktop :
-
-```powershell
-# Démarrer l'app Tauri desktop avec hot reload
-npm run tauri dev
-
-# Builder uniquement le frontend
-npm run build
-
-# Builder l'app desktop Windows complète
-npm run tauri build
-```
-
-Vérifications Rust :
-
-```powershell
-cd src-tauri
-cargo test --all-targets
-cargo clippy --all-targets -- -D warnings
-```
-
-Les bundles de release sont générés dans :
-
-```text
-src-tauri/target/release/bundle/
-```
-
-Si tu modifies `src-tauri/src/native_pack.rs`, lance les tests Rust. Ce
-fichier contient le moteur natif de génération de packs, où de petites
-régressions peuvent produire des packs invalides.
+Pour compiler depuis les sources ou contribuer, voir
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Fichiers projet et espace de travail
 

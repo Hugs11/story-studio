@@ -57,20 +57,6 @@ GitHub issues.
 | **Workflow** | Visual tree editor, ZIP pack aggregation, node-based navigation, media explorer, simulator |
 | **Privacy model** | Local app, no hosted backend, no telemetry |
 
-## Why Story Studio?
-
-Story packs can become difficult to manage when they contain many menus,
-recordings, imported ZIP packs, generated images and navigation rules. Story
-Studio keeps those pieces visible and editable in a single workspace.
-
-- Build simple stories or structured packs with nested menus.
-- Aggregate existing ZIP packs into larger custom collections.
-- Import community ZIP packs and inspect or edit them before re-export.
-- Edit media without losing sight of where each file is used.
-- Test navigation in the simulator before generating a final pack.
-- Keep generated voices, generated images, recordings and imports organized in
-  project workspace folders.
-
 ## Screenshots
 
 ![Story Studio editor](docs/assets/screenshots/editor-features-dark.png)
@@ -93,135 +79,28 @@ Studio keeps those pieces visible and editable in a single workspace.
 
 ## Features
 
-### Pack Editing
-
-- Simple story and multi-pack project modes.
-- Visual editor for root menus, nested menus, stories, imported ZIP entries and
-  end nodes.
-- Drag-and-drop organization in the story tree, with multi-select,
-  copy/cut/paste and contextual actions.
-- Folder import workflow that can create one story per audio file.
-- Community naming convention helper for pack title, metadata and versioning.
-- Node-based navigation controls for playback, return targets, home behavior
-  and end-of-story flows, including night-mode end nodes.
-- Validation checks for common missing media, navigation and compatibility
-  issues.
-
-### Import, Preview and Export
-
-- Import Lunii ZIP packs.
-- Inspect imported packs and extract them into editable project entries.
-- Aggregate imported ZIP packs with native menus and stories.
-- Choose whether extracted ZIP audio should use the global start/end silence
-  processing.
-- Preview projects or imported packs in the built-in simulator.
-- Generate Lunii-compatible ZIP packs with the native Rust pack engine.
-- Queue multiple pack renders and follow their logs from the render queue.
-- Optional post-generation ZIP validation that reports compatibility issues
-  without blocking the export.
-
-### Audio Workflow
-
-- Record microphone audio directly from the app.
-- Edit audio with waveform-based trimming, cuts, fades and preview.
-- Assemble multiple audio files into one MP3.
-- Optionally insert silence between assembled audio files.
-- Import folders of audio files into story collections.
-- Read embedded MP3 cover art when available.
-- Manage generated voices and recordings inside the project workspace.
-- Optional local XTTS integration for voice generation.
-
-### Image and Media Workflow
-
-- Media explorer for audio, images and ZIP files.
-- Search, filters, sorting, tags, usage counters and quick previews.
-- Drag media into the tree, diagram or editor fields.
-- Crop/edit images and generate text images from node names.
-- Automatically resize exported images to Lunii-compatible 320x240 assets.
-- Optional local ComfyUI integration for image generation.
-
-### Project and Interface Tools
-
-- Recent projects home screen.
-- Light, dark and system theme modes.
-- Configurable keyboard shortcuts.
-- Autosave, safety versions and project consolidation tools.
-- Full-pack diagram view with branch focus and floating simulator support.
-
-### Local-First Desktop App
-
-- No hosted backend.
-- No telemetry.
-- Broad file selection for user-chosen assets, with guarded writes for managed
-  project folders.
-- Bundled command-line tools for local audio and ZIP operations.
+- **Visual tree editor** with nested menus, multi-select, drag-and-drop and contextual actions.
+- **Lunii ZIP pack import**: inspect, extract into an editable project, aggregate with your own stories.
+- **Built-in audio workflow**: microphone recording, trimming, cuts, fades, assembly and silence insertion.
+- **Built-in image workflow**: automatic 320×240 cropping, text-image generation from node names.
+- **Media explorer** with tags, filters, usage counters and quick previews.
+- **Built-in simulator** to test navigation and end nodes before export.
+- **Validation and render queue**: compatibility checks and serial generation with log tracking.
+- **Optional local integrations** XTTS (voice) and ComfyUI (images).
+- **Project comfort**: autosave, safety versions, configurable shortcuts, light/dark themes, full diagram view.
 
 ## Requirements
 
-- Windows 10 or later
-- [Node.js](https://nodejs.org/) 20.19+ or 22.12+
-- [Rust](https://rustup.rs/) stable toolchain
-- [Tauri v2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/),
-  including WebView2
-
-Bundled binaries are documented separately because they keep their own licenses.
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Windows 10 or later, with WebView2. Bundled third-party binaries keep their
+own licenses — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Installation
 
-### Download a Release
+Download the Windows installer from the
+[GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest)
+once the first public release is published.
 
-The recommended installation path will be the Windows installer from the GitHub
-Releases page once the first public release is published.
-
-### Run from Source
-
-```powershell
-git clone https://github.com/hugs11/story-studio.git
-cd story-studio
-npm install
-npm run tauri dev
-```
-
-The dev server uses port `1420`. If that port is already busy:
-
-```powershell
-npx kill-port 1420
-npm run tauri dev
-```
-
-## Development
-
-Frontend and desktop commands:
-
-```powershell
-# Start the Tauri desktop app with hot reload
-npm run tauri dev
-
-# Build the frontend only
-npm run build
-
-# Build the full Windows desktop app
-npm run tauri build
-```
-
-Rust checks:
-
-```powershell
-cd src-tauri
-cargo test --all-targets
-cargo clippy --all-targets -- -D warnings
-```
-
-Release bundles are generated under:
-
-```text
-src-tauri/target/release/bundle/
-```
-
-If you change `src-tauri/src/native_pack.rs`, run the Rust tests. That file
-contains the native pack generation engine, where small regressions can produce
-invalid packs.
+To build from source or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project Files and Workspace
 
