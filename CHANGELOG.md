@@ -16,6 +16,10 @@ is the public record of the work completed before the first GitHub release.
   release workflows.
 - GitHub Pages landing site under `docs/` introducing the project with
   screenshots and feature highlights.
+- Configurable keyboard shortcuts, with shortcuts grouped by context so editor,
+  tree and audio-editor actions can be tuned independently.
+- Diagnostic preferences for beta debugging, including opt-in logs, resolved log
+  paths and clearer bug-report guidance.
 
 ### Changed
 
@@ -62,6 +66,16 @@ is the public record of the work completed before the first GitHub release.
 - Replaced the persistent right-side validation panel with a compact toolbar
   validation pill that groups blocking issues and jumps directly to the
   affected node.
+- Split validation feedback into blocking errors and items still to complete, so
+  the toolbar badge better matches what prevents generation.
+- Unified the media explorer search and filter controls for a quieter, more
+  consistent library workflow.
+- Improved simple-story mode and compact desktop layouts so editor surfaces stay
+  usable on smaller windows.
+- Clarified the story "Après la lecture" card: controls available during
+  playback are separated from end-of-story behavior, automatic end-node routing
+  is shown as a generated-pack fact, and optional custom end messages stay in
+  advanced settings by default.
 
 ### Fixed
 
@@ -86,6 +100,8 @@ is the public record of the work completed before the first GitHub release.
   inherits each story's own return target when no global destination is set.
 - Validation issue selection now closes the toolbar dropdown immediately, and
   its keyboard handling no longer intercepts keys outside the validation menu.
+- Bottom-bar tab pills stay hidden while the side panel is open, avoiding
+  duplicated navigation controls in constrained layouts.
 
 ---
 
