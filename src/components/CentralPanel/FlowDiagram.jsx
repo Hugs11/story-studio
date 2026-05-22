@@ -205,6 +205,7 @@ export function FlowDiagram({
   onSetMenuAsRoot,
   onBulkUpdateItems,
   onBulkDeleteItems,
+  onSetNodeColor,
   onPasteEntries,
   onCutPasteEntries,
   onDuplicate,
@@ -330,6 +331,8 @@ export function FlowDiagram({
         onDeleteMenu={onDeleteMenu}
         onDeleteItem={onDeleteItem}
         onBulkDeleteItems={onBulkDeleteItems}
+        onBulkUpdateItems={onBulkUpdateItems}
+        onSetNodeColor={onSetNodeColor}
         onPasteEntries={onPasteEntries}
         onCutPasteEntries={onCutPasteEntries}
         onDuplicate={onDuplicate}
