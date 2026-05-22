@@ -18,10 +18,22 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-Story Studio helps creators build interactive audio story packs with a visual,
-local-first workflow. Organize menus and stories, manage audio and images,
-preview navigation, aggregate existing ZIP packs and export Lunii-compatible
-ZIP files from one desktop application.
+I was looking for a simple tool to create audio stories for my child. As a
+former video editor, I could never find in existing tools what felt essential
+to me: a visual and straightforward interface that makes building a
+narrative fluid and frictionless, without relying on command-line tools or
+dealing with complex and hard-to-read folder structures. Story Studio was
+born from that need.
+
+An open-source creation tool, it lets you imagine, organize, and export
+interactive audio stories compatible with Lunii devices — in a clear and
+intuitive workspace where every element naturally finds its place. Everything
+stays stored locally on your computer.
+
+Create stories for your story box without juggling between multiple
+applications: import, edit, and crop your images, assemble and trim your
+audio files, organize menus and story navigation, recover existing ZIP packs,
+then easily export to a Lunii-compatible format.
 
 > Story Studio is a community tool. It is not affiliated with, endorsed by, or
 > sponsored by Lunii.

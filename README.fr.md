@@ -18,11 +18,22 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-Story Studio t'aide à construire des packs d'histoires audio interactives avec
-un workflow visuel et 100 % local. Organise tes menus et tes histoires, gère
-ton audio et tes images, prévisualise la navigation, agrège des packs ZIP
-existants et exporte des fichiers ZIP compatibles Lunii — le tout depuis une
-seule application desktop.
+Je cherchais un outil simple pour créer des histoires audio pour mon enfant.
+En tant qu'ancien monteur vidéo, je ne retrouvais pas dans les outils
+existants ce qui me semblait essentiel : une interface visuelle, directe et
+fluide, permettant de construire une narration sans friction, sans avoir à
+passer par des outils en ligne de commande ni manipuler des structures de
+dossiers complexes et peu lisibles. Story Studio est né de ce besoin.
+
+Logiciel open source de création, il permet d'imaginer, organiser et exporter
+des histoires audio interactives compatibles avec votre Lunii — dans un
+espace clair et compréhensible où chaque élément trouve naturellement sa
+place. Toutes vos créations restent stockées localement sur votre ordinateur.
+
+Créez des histoires pour votre boîte à histoires sans jongler entre plusieurs
+logiciels : importez, éditez et recadrez vos images, assemblez et découpez
+vos fichiers audio, organisez vos menus et vos récits, récupérez des packs
+ZIP existants, puis exportez au format compatible Lunii.
 
 > Story Studio est un outil communautaire. Il n'est pas affilié à Lunii, ni
 > soutenu ou sponsorisé par Lunii.
