@@ -40,19 +40,31 @@ function parseIssue(issue) {
 
 function buildGroups(issues) {
   const groupMap = new Map();
-  const flat = [];
   issues.forEach((issue) => {
     const parsed = parseIssue(issue);
-    let group = groupMap.get(parsed.groupKey);
+    const severity = issue?.status === 'error' ? 'error' : 'warning';
+    const groupKey = `${severity}::${parsed.groupKey}`;
+    let group = groupMap.get(groupKey);
     if (!group) {
-      group = { key: parsed.groupKey, label: parsed.groupLabel, items: [] };
-      groupMap.set(parsed.groupKey, group);
+      group = { key: groupKey, label: parsed.groupLabel, severity, items: [] };
+      groupMap.set(groupKey, group);
     }
-    const item = { issue, label: parsed.label, flatIndex: flat.length };
-    group.items.push(item);
-    flat.push(item);
+    group.items.push({ issue, label: parsed.label, severity });
   });
-  return { groups: [...groupMap.values()], flat };
+  // Errors first, then warnings, preserving original ordering inside each severity.
+  const groups = [...groupMap.values()].sort((a, b) => {
+    if (a.severity === b.severity) return 0;
+    return a.severity === 'error' ? -1 : 1;
+  });
+  // Re-index flat positions so keyboard nav follows visual order.
+  const flat = [];
+  groups.forEach((group) => {
+    group.items.forEach((item) => {
+      item.flatIndex = flat.length;
+      flat.push(item);
+    });
+  });
+  return { groups, flat };
 }
 
 export function ValidationPill({
@@ -64,16 +76,27 @@ export function ValidationPill({
   onCountZeroTransition,
   shortcutLabel = '',
 }) {
-  const errors = useMemo(
-    () => validationIssues.filter((i) => i?.status === 'error'),
+  const blockingIssues = useMemo(
+    () => validationIssues.filter((i) => i?.status === 'error' || i?.status === 'warning'),
     [validationIssues],
   );
-  const errorCount = errors.length;
+  const errorCount = useMemo(
+    () => blockingIssues.filter((i) => i.status === 'error').length,
+    [blockingIssues],
+  );
+  const warningCount = blockingIssues.length - errorCount;
+  const totalCount = blockingIssues.length;
 
-  const { groups, flat } = useMemo(() => buildGroups(errors), [errors]);
+  const { groups, flat } = useMemo(() => buildGroups(blockingIssues), [blockingIssues]);
 
-  const state = pathAuditPending ? 'verifying' : errorCount > 0 ? 'errors' : 'ok';
-  const isOpen = open && state === 'errors';
+  const state = pathAuditPending
+    ? 'verifying'
+    : errorCount > 0
+      ? 'errors'
+      : warningCount > 0
+        ? 'warnings'
+        : 'ok';
+  const isOpen = open && (state === 'errors' || state === 'warnings');
 
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -87,14 +110,14 @@ export function ValidationPill({
     if (activeIndex > flat.length - 1) setActiveIndex(Math.max(0, flat.length - 1));
   }, [flat.length, activeIndex]);
 
-  const prevErrorCountRef = useRef(errorCount);
+  const prevTotalCountRef = useRef(totalCount);
   useEffect(() => {
-    if (prevErrorCountRef.current > 0 && errorCount === 0) {
+    if (prevTotalCountRef.current > 0 && totalCount === 0) {
       onCountZeroTransition?.();
       if (open) onOpenChange?.(false);
     }
-    prevErrorCountRef.current = errorCount;
-  }, [errorCount, open, onOpenChange, onCountZeroTransition]);
+    prevTotalCountRef.current = totalCount;
+  }, [totalCount, open, onOpenChange, onCountZeroTransition]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -140,11 +163,18 @@ export function ValidationPill({
     el?.scrollIntoView?.({ block: 'nearest' });
   }, [isOpen, activeIndex]);
 
-  const tooltipText = state === 'errors'
-    ? `${errorCount} erreur${errorCount > 1 ? 's' : ''} à corriger${shortcutLabel ? ` (${shortcutLabel})` : ''}`
-    : state === 'ok'
-      ? `Tout est en ordre${shortcutLabel ? ` (${shortcutLabel})` : ''}`
-      : 'Vérification des fichiers en cours…';
+  const tooltipText = (() => {
+    if (state === 'ok') return `Tout est en ordre${shortcutLabel ? ` (${shortcutLabel})` : ''}`;
+    if (state === 'verifying') return 'Vérification des fichiers en cours…';
+    const shortcutSuffix = shortcutLabel ? ` (${shortcutLabel})` : '';
+    if (errorCount > 0 && warningCount > 0) {
+      return `${errorCount} erreur${errorCount > 1 ? 's' : ''} + ${warningCount} à compléter avant génération${shortcutSuffix}`;
+    }
+    if (errorCount > 0) {
+      return `${errorCount} erreur${errorCount > 1 ? 's' : ''} à corriger${shortcutSuffix}`;
+    }
+    return `${warningCount} élément${warningCount > 1 ? 's' : ''} à compléter avant génération${shortcutSuffix}`;
+  })();
 
   function selectIssue(issueId) {
     if (!issueId) return;
@@ -153,7 +183,7 @@ export function ValidationPill({
   }
 
   function handlePillClick() {
-    if (state !== 'errors') return;
+    if (state !== 'errors' && state !== 'warnings') return;
     onOpenChange?.(!open);
   }
 
@@ -168,14 +198,14 @@ export function ValidationPill({
           type="button"
           className={`validation-pill is-${state} ${isOpen ? 'is-active' : ''}`}
           onClick={handlePillClick}
-          aria-haspopup={state === 'errors' ? 'listbox' : undefined}
-          aria-expanded={state === 'errors' ? isOpen : undefined}
+          aria-haspopup={(state === 'errors' || state === 'warnings') ? 'listbox' : undefined}
+          aria-expanded={(state === 'errors' || state === 'warnings') ? isOpen : undefined}
           aria-label={tooltipText}
         >
-          {state === 'errors' ? (
+          {state === 'errors' || state === 'warnings' ? (
             <>
               <span className="validation-pill-icon"><TriangleAlert width={12} height={12} /></span>
-              <span className="validation-pill-count">{errorCount}</span>
+              <span className="validation-pill-count">{totalCount}</span>
               <span className="validation-pill-label">Validation</span>
               <span className="validation-pill-caret"><ChevronDown size={9} /></span>
             </>
@@ -195,16 +225,22 @@ export function ValidationPill({
 
       {isOpen ? (
         <div
-          className="validation-pill-dd"
+          className={`validation-pill-dd is-${state}`}
           ref={dropdownRef}
           role="listbox"
-          aria-label="Liste des erreurs de validation"
+          aria-label="Liste des éléments de validation"
         >
           <div className="validation-pill-dd-head">
             <span className="validation-pill-dd-icon"><TriangleAlert width={13} height={13} /></span>
             <span className="validation-pill-dd-title">
               VALIDATION
-              <em>· {errorCount} élément{errorCount > 1 ? 's' : ''} à corriger</em>
+              <em>
+                {errorCount > 0 && warningCount > 0
+                  ? `· ${errorCount} erreur${errorCount > 1 ? 's' : ''} + ${warningCount} à compléter`
+                  : errorCount > 0
+                    ? `· ${errorCount} erreur${errorCount > 1 ? 's' : ''} à corriger`
+                    : `· ${warningCount} élément${warningCount > 1 ? 's' : ''} à compléter`}
+              </em>
             </span>
             <button
               type="button"
@@ -216,33 +252,42 @@ export function ValidationPill({
             </button>
           </div>
           <div className="validation-pill-dd-body">
-            {groups.map((group) => (
-              <div key={group.key} className="validation-pill-group">
-                <div className="validation-pill-group-head">
-                  <span className="validation-pill-group-label">{group.label}</span>
-                  <span className="validation-pill-group-count">· {group.items.length}</span>
+            {groups.map((group, groupIdx) => {
+              const prevSeverity = groupIdx > 0 ? groups[groupIdx - 1].severity : null;
+              const isFirstOfSeverity = prevSeverity !== group.severity;
+              return (
+                <div key={group.key} className={`validation-pill-group is-${group.severity}`}>
+                  {isFirstOfSeverity ? (
+                    <div className="validation-pill-severity-head">
+                      {group.severity === 'error' ? 'Erreurs' : 'À compléter'}
+                    </div>
+                  ) : null}
+                  <div className="validation-pill-group-head">
+                    <span className="validation-pill-group-label">{group.label}</span>
+                    <span className="validation-pill-group-count">· {group.items.length}</span>
+                  </div>
+                  {group.items.map((item) => {
+                    const isActive = item.flatIndex === activeIndex;
+                    return (
+                      <button
+                        type="button"
+                        key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
+                        data-flat-idx={item.flatIndex}
+                        className={`validation-pill-item is-${item.severity} ${isActive ? 'is-active' : ''}`}
+                        onClick={() => handleItemClick(item)}
+                        onMouseEnter={() => setActiveIndex(item.flatIndex)}
+                        role="option"
+                        aria-selected={isActive}
+                      >
+                        <span className="validation-pill-item-dot" aria-hidden="true" />
+                        <span className="validation-pill-item-label">{item.label}</span>
+                        <span className="validation-pill-item-go" aria-hidden="true"><ArrowRight size={11} /></span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {group.items.map((item) => {
-                  const isActive = item.flatIndex === activeIndex;
-                  return (
-                    <button
-                      type="button"
-                      key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
-                      data-flat-idx={item.flatIndex}
-                      className={`validation-pill-item ${isActive ? 'is-active' : ''}`}
-                      onClick={() => handleItemClick(item)}
-                      onMouseEnter={() => setActiveIndex(item.flatIndex)}
-                      role="option"
-                      aria-selected={isActive}
-                    >
-                      <span className="validation-pill-item-dot" aria-hidden="true" />
-                      <span className="validation-pill-item-label">{item.label}</span>
-                      <span className="validation-pill-item-go" aria-hidden="true"><ArrowRight size={11} /></span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}

@@ -86,7 +86,7 @@ function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, pro
 
 function getStrongestStatus(issues = []) {
   if (issues.some((issue) => issue.status === 'error')) return 'error';
-  if (issues.some((issue) => issue.status === 'warn')) return 'warn';
+  if (issues.some((issue) => issue.status === 'warn' || issue.status === 'warning')) return 'warn';
   return null;
 }
 

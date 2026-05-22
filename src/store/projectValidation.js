@@ -17,8 +17,15 @@ function labelOrFallback(value, fallback) {
   return (value || '').trim() || fallback;
 }
 
-function pushIssue(issues, id, status, text) {
-  issues.push({ id, status, text });
+// status === 'error'   → vraie erreur structurelle (référence cassée, donnée corrompue)
+// status === 'warning' → projet en construction (champ manquant, fichier introuvable, contenu vide)
+// Les deux bloquent la génération ; seule la couleur d'affichage diffère.
+function pushError(issues, id, text) {
+  issues.push({ id, status: 'error', text });
+}
+
+function pushWarning(issues, id, text) {
+  issues.push({ id, status: 'warning', text });
 }
 
 function collectProjectGraphStats(projectIndex) {
@@ -48,47 +55,47 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
     const storyId = decodeNavigationStoryId(normalized);
     const entry = storyId ? projectIndex.entryById.get(storyId) : null;
     if (!entry || entry.type !== 'story') {
-      pushIssue(issues, id, 'error', `${label} — destination histoire introuvable`);
+      pushError(issues, id, `${label} — destination histoire introuvable`);
     } else if (isStoryHomeStepNavigationTarget(normalized) && !entry.afterPlaybackHomeStep) {
-      pushIssue(issues, id, 'error', `${label} - retour de fin introuvable pour cette histoire`);
+      pushError(issues, id, `${label} - retour de fin introuvable pour cette histoire`);
     }
     return;
   }
   const menuId = decodeNavigationMenuId(normalized);
   if (!menuId || !menuIds.has(menuId)) {
-    pushIssue(issues, id, 'error', `${label} — destination dossier introuvable`);
+    pushError(issues, id, `${label} — destination dossier introuvable`);
   } else if (getPlayableDescendantCount(projectIndex, menuId) === 0) {
-    pushIssue(issues, id, 'error', `${label} — destination dossier vide ou non jouable`);
+    pushError(issues, id, `${label} — destination dossier vide ou non jouable`);
   }
 }
 
 function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
   const isAutoplay = !!item?.controlSettings?.autoplay;
-  if (!hasPath(item?.audio)) pushIssue(issues, item?.id ?? null, 'error', `${name} — histoire manquante`);
-  else if (isBrokenPath(item?.audio, fileAudit)) pushIssue(issues, item?.id ?? null, 'error', `${name} — histoire introuvable ou inaccessible`);
+  if (!hasPath(item?.audio)) pushWarning(issues, item?.id ?? null, `${name} — histoire manquante`);
+  else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — histoire introuvable ou inaccessible`);
   if (!isAutoplay) {
-    if (!hasPath(item?.itemImage)) pushIssue(issues, item?.id ?? null, 'error', `${name} — image manquante`);
-    else if (isBrokenPath(item?.itemImage, fileAudit)) pushIssue(issues, item?.id ?? null, 'error', `${name} — image introuvable ou inaccessible`);
-    if (!hasPath(item?.itemAudio)) pushIssue(issues, item?.id ?? null, 'error', `${name} — audio titre manquant`);
-    else if (isBrokenPath(item?.itemAudio, fileAudit)) pushIssue(issues, item?.id ?? null, 'error', `${name} — audio titre introuvable ou inaccessible`);
+    if (!hasPath(item?.itemImage)) pushWarning(issues, item?.id ?? null, `${name} — image manquante`);
+    else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — image introuvable ou inaccessible`);
+    if (!hasPath(item?.itemAudio)) pushWarning(issues, item?.id ?? null, `${name} — audio titre manquant`);
+    else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — audio titre introuvable ou inaccessible`);
   }
   if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
-    pushIssue(issues, item?.id ?? null, 'error', `${name} — audio de fin d'histoire introuvable ou inaccessible`);
+    pushWarning(issues, item?.id ?? null, `${name} — audio de fin d'histoire introuvable ou inaccessible`);
   }
   for (const [index, step] of (item?.afterPlaybackSequence ?? []).entries()) {
     if (!hasPath(step?.audio)) {
-      pushIssue(issues, item?.id ?? null, 'error', `${name} — audio de fin ${index + 1} manquant`);
+      pushWarning(issues, item?.id ?? null, `${name} — audio de fin ${index + 1} manquant`);
     } else if (isBrokenPath(step.audio, fileAudit)) {
-      pushIssue(issues, item?.id ?? null, 'error', `${name} — audio de fin ${index + 1} introuvable ou inaccessible`);
+      pushWarning(issues, item?.id ?? null, `${name} — audio de fin ${index + 1} introuvable ou inaccessible`);
     }
   }
 }
 
 function validateZipItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
-  if (!hasPath(item?.zipPath)) pushIssue(issues, item?.id ?? null, 'error', `${name} — zip manquant`);
-  else if (isBrokenPath(item?.zipPath, fileAudit)) pushIssue(issues, item?.id ?? null, 'error', `${name} — zip introuvable ou inaccessible`);
+  if (!hasPath(item?.zipPath)) pushWarning(issues, item?.id ?? null, `${name} — zip manquant`);
+  else if (isBrokenPath(item?.zipPath, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — zip introuvable ou inaccessible`);
 }
 
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
@@ -102,49 +109,48 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   const menuIds = new Set(menuMap.keys());
 
   if (!projectType) {
-    pushIssue(issues, 'root', 'error', 'Aucun type de projet selectionne.');
+    pushWarning(issues, 'root', 'Aucun type de projet selectionne.');
     return issues;
   }
 
   for (const warning of project?.importWarnings ?? []) {
-    pushIssue(
+    pushWarning(
       issues,
       warning?.entryId ?? 'root',
-      'error',
       warning?.message || 'Transition importee non modelisee.',
     );
   }
 
   for (const [entryId, count] of entryIdCounts.entries()) {
     if (count > 1) {
-      pushIssue(issues, entryId, 'error', `Identifiant duplique — ${count} elements partagent l'id ${entryId}`);
+      pushError(issues, entryId, `Identifiant duplique — ${count} elements partagent l'id ${entryId}`);
     }
   }
   if (entryIdCounts.has('root')) {
-    pushIssue(issues, 'root', 'error', "Identifiant reserve utilise — aucun element ne doit porter l'id root");
+    pushError(issues, 'root', "Identifiant reserve utilise — aucun element ne doit porter l'id root");
   }
 
-  if (!hasPath(project?.rootAudio)) pushIssue(issues, 'root', 'error', `Menu racine — audio intro manquant`);
-  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushIssue(issues, 'root', 'error', `Menu racine — audio intro introuvable ou inaccessible`);
-  if (!hasPath(project?.rootImage)) pushIssue(issues, 'root', 'error', `Menu racine — image de couverture manquante`);
-  else if (isBrokenPath(project?.rootImage, fileAudit)) pushIssue(issues, 'root', 'error', `Menu racine — image de couverture introuvable ou inaccessible`);
+  if (!hasPath(project?.rootAudio)) pushWarning(issues, 'root', `Menu racine — audio intro manquant`);
+  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', `Menu racine — audio intro introuvable ou inaccessible`);
+  if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', `Menu racine — image de couverture manquante`);
+  else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', `Menu racine — image de couverture introuvable ou inaccessible`);
   if (projectType === 'pack') {
-    if (!hasPath(project?.thumbnailImage)) pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque manquante (cocher « même image » ou en choisir une)`);
-    else if (isBrokenPath(project?.thumbnailImage, fileAudit)) pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque introuvable ou inaccessible`);
+    if (!hasPath(project?.thumbnailImage)) pushWarning(issues, 'root', `Menu racine — image bibliothèque manquante (cocher « même image » ou en choisir une)`);
+    else if (isBrokenPath(project?.thumbnailImage, fileAudit)) pushWarning(issues, 'root', `Menu racine — image bibliothèque introuvable ou inaccessible`);
   } else if (hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
-    pushIssue(issues, 'root', 'error', `Menu racine — image bibliothèque introuvable ou inaccessible`);
+    pushWarning(issues, 'root', `Menu racine — image bibliothèque introuvable ou inaccessible`);
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
-    pushIssue(issues, 'end-node', 'error', `Nœud de fin — audio manquant`);
+    pushWarning(issues, 'end-node', `Nœud de fin — audio manquant`);
   } else if (hasEndNode && isBrokenPath(project?.nightModeAudio, fileAudit)) {
-    pushIssue(issues, 'end-node', 'error', `Nœud de fin — audio introuvable ou inaccessible`);
+    pushWarning(issues, 'end-node', `Nœud de fin — audio introuvable ou inaccessible`);
   }
 
   if (projectType === 'simple') {
     if (!hasPath(firstSimpleStory?.audio)) {
-      pushIssue(issues, 'root', 'error', `${rootName} — histoire manquante`);
+      pushWarning(issues, 'root', `${rootName} — histoire manquante`);
     } else if (isBrokenPath(firstSimpleStory?.audio, fileAudit)) {
-      pushIssue(issues, 'root', 'error', `${rootName} — histoire introuvable ou inaccessible`);
+      pushWarning(issues, 'root', `${rootName} — histoire introuvable ou inaccessible`);
     }
     return issues;
   }
@@ -156,32 +162,32 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     const parentMenu = ancestors.length > 0 ? ancestors[ancestors.length - 1] : null;
     const entryId = typeof entry?.id === 'string' ? entry.id.trim() : '';
     if (!entryId) {
-      pushIssue(issues, null, 'error', `${pathLabel} — identifiant interne manquant`);
+      pushError(issues, null, `${pathLabel} — identifiant interne manquant`);
     } else if (entryId === 'root') {
-      pushIssue(issues, entryId, 'error', `${pathLabel} — identifiant reserve invalide`);
+      pushError(issues, entryId, `${pathLabel} — identifiant reserve invalide`);
     }
     if (entry?.type !== 'menu' && entry?.type !== 'story' && entry?.type !== 'zip') {
-      pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — type d'element non pris en charge`);
+      pushError(issues, entry?.id ?? null, `${pathLabel} — type d'element non pris en charge`);
       return;
     }
 
     if (entry?.type === 'menu') {
       const isSilentImportedContinuation = !!entry?.importedContinuation;
-      if (!hasPath(entry?.audio) && !isSilentImportedContinuation) pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — audio manquant`);
-      else if (isBrokenPath(entry?.audio, fileAudit)) pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — audio introuvable ou inaccessible`);
+      if (!hasPath(entry?.audio) && !isSilentImportedContinuation) pushWarning(issues, entry?.id ?? null, `${pathLabel} — audio manquant`);
+      else if (isBrokenPath(entry?.audio, fileAudit)) pushWarning(issues, entry?.id ?? null, `${pathLabel} — audio introuvable ou inaccessible`);
       if (!hasPath(entry?.image) && !entry?.autoBlackImage) {
-        pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — image manquante`);
+        pushWarning(issues, entry?.id ?? null, `${pathLabel} — image manquante`);
       } else if (isBrokenPath(entry?.image, fileAudit)) {
-        pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — image introuvable ou inaccessible`);
+        pushWarning(issues, entry?.id ?? null, `${pathLabel} — image introuvable ou inaccessible`);
       }
       if (getPlayableDescendantCount(projectIndex, entry.id) === 0) {
-        pushIssue(issues, entry?.id ?? null, 'error', `${pathLabel} — collection vide`);
+        pushWarning(issues, entry?.id ?? null, `${pathLabel} — collection vide`);
       }
       const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, entry?.id ?? null);
       if (hasPath(entry?.returnAfterPlay) && menuReturnTarget !== 'root' && menuReturnTarget && !menuIds.has(menuReturnTarget)) {
-        pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination de retour introuvable`);
+        pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour introuvable`);
       } else if (hasPath(entry?.returnAfterPlay) && menuReturnTarget && menuReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, menuReturnTarget) === 0) {
-        pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination de retour vide ou non jouable`);
+        pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour vide ou non jouable`);
       }
       validateNavigationTarget(
         issues,
@@ -196,16 +202,16 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
 
     const storyReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, parentMenu?.id ?? null);
     if (hasPath(entry?.returnAfterPlay) && storyReturnTarget !== 'root' && storyReturnTarget && !menuIds.has(storyReturnTarget)) {
-      pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination de retour introuvable`);
+      pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour introuvable`);
     } else if (hasPath(entry?.returnAfterPlay) && storyReturnTarget && storyReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, storyReturnTarget) === 0) {
-      pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination de retour vide ou non jouable`);
+      pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour vide ou non jouable`);
     }
 
     const homeReturnTarget = resolveNavigationMenuTarget(entry?.returnOnHome, storyReturnTarget);
     if (hasPath(entry?.returnOnHome) && homeReturnTarget !== 'root' && homeReturnTarget && !menuIds.has(homeReturnTarget)) {
-      pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination bouton Accueil introuvable`);
+      pushError(issues, entry?.id ?? null, `${entryLabel} — destination bouton Accueil introuvable`);
     } else if (hasPath(entry?.returnOnHome) && homeReturnTarget && homeReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, homeReturnTarget) === 0) {
-      pushIssue(issues, entry?.id ?? null, 'error', `${entryLabel} — destination bouton Accueil vide ou non jouable`);
+      pushError(issues, entry?.id ?? null, `${entryLabel} — destination bouton Accueil vide ou non jouable`);
     }
 
     if (!entry?.titleReturnOnHomeNone) {
@@ -268,14 +274,14 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   }, projectIndex);
 
   if (rootPlayableCount === 0) {
-    pushIssue(issues, 'root', 'error', 'Le pack ne contient aucune histoire.');
+    pushWarning(issues, 'root', 'Le pack ne contient aucune histoire.');
   }
   return issues;
 }
 
 export function getGenerateErrors(project, fileAudit = {}) {
   return getProjectValidationIssues(project, fileAudit)
-    .filter((issue) => issue.status === 'error')
+    .filter((issue) => issue.status === 'error' || issue.status === 'warning')
     .map((issue) => issue.text);
 }
 

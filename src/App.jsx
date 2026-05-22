@@ -1879,6 +1879,8 @@ export default function App() {
 
   const { projectType } = store.project;
   const errors = validationIssues.filter((issue) => issue.status === 'error').length;
+  const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
+  const totalIssues = errors + warnings;
 
   const statusText = projectType === null ? 'Choisissez un type de projet'
     : pathAuditPending ? 'Vérification des fichiers...'
@@ -1916,7 +1918,7 @@ export default function App() {
     store.addStory(menuId, path);
     setToolbarRecordOpen(false);
   }
-  const canGenerate = projectType !== null && !pathAuditPending && errors === 0;
+  const canGenerate = projectType !== null && !pathAuditPending && totalIssues === 0;
 
   shortcutActionsRef.current = {
     newProject: handleNewProject,
@@ -2358,10 +2360,35 @@ export default function App() {
       <div className="bottombar">
         <div className="bottom-validation-summary">
           {projectType !== null && !pathAuditPending ? (
-            <span className="bottom-validation-item">
-              <span className={`bottom-validation-dot ${errors > 0 ? 'is-error' : 'is-ok'}`} />
-              <span>{errors > 0 ? `${errors} erreur${errors > 1 ? 's' : ''}` : 'Tout est en ordre'}</span>
-            </span>
+            totalIssues === 0 ? (
+              <span className="bottom-validation-item">
+                <span className="bottom-validation-dot is-ok" />
+                <span>Prêt à générer</span>
+              </span>
+            ) : errors === 0 ? (
+              <span className="bottom-validation-item">
+                <span className="bottom-validation-dot is-warning" />
+                <span>
+                  Il reste {warnings} élément{warnings > 1 ? 's' : ''} à compléter pour pouvoir générer le pack
+                </span>
+              </span>
+            ) : (
+              <span className="bottom-validation-item">
+                <span className="bottom-validation-segment">
+                  <span className="bottom-validation-dot is-error" />
+                  <span>{errors} erreur{errors > 1 ? 's' : ''}</span>
+                </span>
+                {warnings > 0 ? (
+                  <>
+                    <span className="bottom-validation-sep" aria-hidden="true">·</span>
+                    <span className="bottom-validation-segment">
+                      <span className="bottom-validation-dot is-warning" />
+                      <span>{warnings} à compléter</span>
+                    </span>
+                  </>
+                ) : null}
+              </span>
+            )
           ) : null}
         </div>
         <span className="status-text">{statusText}</span>

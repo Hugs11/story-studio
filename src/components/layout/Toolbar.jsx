@@ -228,12 +228,12 @@ export function Toolbar({
                   <span>Pack prêt à générer</span>
                 </div>
               ) : null}
-              <Tooltip text={generateDisabled ? `Corrige les erreurs avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}>
+              <Tooltip text={generateDisabled ? `Complète les éléments manquants avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}>
                 <button
                   className="chrome-toolbar-cta chrome-generate-main"
                   onClick={onGenerate}
                   disabled={generateDisabled}
-                  aria-label={generateDisabled ? `Corrige les erreurs avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}
+                  aria-label={generateDisabled ? `Complète les éléments manquants avant de générer (${shortcutLabels.generate})` : withShortcut('Générer le pack', shortcutLabels.generate)}
                 >
                   <ToolbarIcon Icon={Package} />
                   <span className="chrome-generate-main-label">Générer le pack</span>

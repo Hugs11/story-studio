@@ -179,7 +179,23 @@ body {
 }
 
 .bottom-validation-dot.is-error {
-  background: #e35a58;
+  background: var(--danger);
+}
+
+.bottom-validation-dot.is-warning {
+  background: var(--warning);
+}
+
+.bottom-validation-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bottom-validation-sep {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+  margin: 0 2px;
 }
 
 .bottom-status-pill {
