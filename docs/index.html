@@ -89,7 +89,7 @@
       }
 
       .container {
-        max-width: 980px;
+        max-width: 1280px;
         margin: 0 auto;
         padding: 0 24px;
       }
@@ -103,6 +103,10 @@
         justify-content: center;
         gap: 14px;
       }
+      header.site .badge {
+        align-self: flex-end;
+        margin-bottom: 10px;
+      }
       header.site img.logo {
         height: 56px;
         width: auto;
@@ -114,21 +118,24 @@
       }
 
       .hero {
-        padding: 60px 0 40px;
+        padding: 16px 0 40px;
         text-align: center;
       }
       .hero h1 {
-        font-size: clamp(34px, 5vw, 56px);
-        line-height: 1.1;
-        margin: 0 0 14px;
-        font-weight: 800;
-        letter-spacing: -0.5px;
+        font-size: clamp(24px, 2.3vw, 32px);
+        line-height: 1.3;
+        margin: 0 0 24px;
+        font-weight: 700;
       }
       .hero p.tagline {
-        font-size: clamp(17px, 2vw, 20px);
+        font-size: clamp(13px, 1.2vw, 15px);
+        line-height: 1.6;
         color: var(--muted);
-        max-width: 640px;
-        margin: 0 auto 28px;
+        max-width: 780px;
+        margin: 0 auto 10px;
+      }
+      .hero p.tagline:last-of-type {
+        margin-bottom: 28px;
       }
 
       .badge {
@@ -141,7 +148,6 @@
         border-radius: 999px;
         font-size: 13px;
         color: var(--muted);
-        margin-bottom: 24px;
       }
       .badge .dot {
         width: 8px;
@@ -202,21 +208,6 @@
         color: var(--muted);
       }
 
-      #story {
-        padding: 8px 0 56px;
-      }
-      #story .container {
-        max-width: 720px;
-      }
-      #story p {
-        font-size: 17px;
-        line-height: 1.7;
-        color: var(--muted);
-        margin: 0 0 20px;
-      }
-      #story p:last-child {
-        margin-bottom: 0;
-      }
       .cta-meta a {
         color: var(--muted);
         text-decoration: underline;
@@ -394,7 +385,7 @@
           padding-top: 20px;
         }
         .hero {
-          padding: 40px 0 24px;
+          padding: 12px 0 24px;
         }
         section {
           padding: 36px 0;
@@ -406,20 +397,31 @@
     <header class="site">
       <div class="container">
         <img class="logo" src="logostory.svg" alt="Story Studio" />
+        <div class="badge" id="version-badge" aria-live="polite">
+          <span class="dot"></span>
+          <span id="version-text">Chargement de la dernière version…</span>
+        </div>
       </div>
     </header>
 
     <main>
       <section class="hero">
         <div class="container">
-          <div class="badge" id="version-badge" aria-live="polite">
-            <span class="dot"></span>
-            <span id="version-text">Chargement de la dernière version…</span>
-          </div>
-          <h1>Créez visuellement des histoires audio interactives</h1>
+          <h1>Créez vos histoires audio pour votre Lunii</h1>
           <p class="tagline">
-            Un outil simple, visuel et 100 % local pour imaginer des histoires
-            audio pour votre enfant — compatibles Lunii.
+            Je cherchais un outil simple pour créer des histoires audio pour
+            mon enfant. En tant qu'ancien monteur vidéo, je ne retrouvais pas
+            dans les outils existants ce qui me semblait essentiel : une
+            interface visuelle, directe et fluide, permettant de construire
+            une narration sans friction, sans avoir à passer par des outils en
+            ligne de commande ni manipuler des structures de dossiers
+            complexes et peu lisibles. Story Studio est né de ce besoin.
+          </p>
+          <p class="tagline">
+            Créez des histoires pour votre boîte à histoires sans jongler
+            entre plusieurs logiciels : importez, éditez et recadrez vos
+            images, assemblez et découpez vos fichiers audio, organisez vos
+            menus et vos récits, puis exportez au format compatible Lunii.
           </p>
 
           <div class="cta-group">
@@ -446,34 +448,6 @@
             alt="Aperçu de l'éditeur Story Studio"
             width="1080"
           />
-        </div>
-      </section>
-
-      <section id="story">
-        <div class="container">
-          <p>
-            Je cherchais un outil simple pour créer des histoires audio pour
-            mon enfant. En tant qu'ancien monteur vidéo, je ne retrouvais pas
-            dans les outils existants ce qui me semblait essentiel : une
-            interface visuelle, directe et fluide, permettant de construire
-            une narration sans friction, sans avoir à passer par des outils en
-            ligne de commande ni manipuler des structures de dossiers
-            complexes et peu lisibles. Story Studio est né de ce besoin.
-          </p>
-          <p>
-            Logiciel open source de création, il permet d'imaginer, organiser
-            et exporter des histoires audio interactives compatibles avec
-            votre Lunii — dans un espace clair et compréhensible où chaque
-            élément trouve naturellement sa place. Toutes vos créations
-            restent stockées localement sur votre ordinateur.
-          </p>
-          <p>
-            Créez des histoires pour votre boîte à histoires sans jongler
-            entre plusieurs logiciels : importez, éditez et recadrez vos
-            images, assemblez et découpez vos fichiers audio, organisez vos
-            menus et vos récits, récupérez des packs ZIP existants, puis
-            exportez au format compatible Lunii.
-          </p>
         </div>
       </section>
 

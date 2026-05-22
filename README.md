@@ -32,8 +32,8 @@ stays stored locally on your computer.
 
 Create stories for your story box without juggling between multiple
 applications: import, edit, and crop your images, assemble and trim your
-audio files, organize menus and story navigation, recover existing ZIP packs,
-then easily export to a Lunii-compatible format.
+audio files, organize menus and story navigation, then easily export to a
+Lunii-compatible format.
 
 > Story Studio is a community tool. It is not affiliated with, endorsed by, or
 > sponsored by Lunii.
@@ -134,19 +134,9 @@ project or media library reference only.
 
 ## Roadmap
 
-Near-term priorities:
-
-- Publish the first beta installer from the `v0.9.0` release workflow.
-- Smoke-test a fresh install on Windows before sharing the beta more broadly.
-- Continue improving import/export compatibility with community packs.
-- Keep audio and media workflows approachable for non-technical creators.
-
-Longer-term ideas:
-
-- More guided onboarding for first-time pack creators.
-- Better diagnostics for unusual imported packs.
-- Optional sample project for testing the editor quickly.
-- Expanded documentation for advanced navigation workflows.
+- Exit beta with a polished v1 for Windows.
+- Go multi-platform (macOS and Linux).
+- Adapt the app to support other story-box devices.
 
 ## Contributing
 
