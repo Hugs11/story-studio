@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.8.9" src="https://img.shields.io/badge/version-0.8.9-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -71,6 +71,10 @@ visibles et éditables dans un seul espace de travail.
 | Diagramme et simulateur | Explorateur de médias |
 |---|---|
 | ![Vue diagramme avec simulateur](docs/assets/screenshots/diagram-simulator-dark.png) | ![Explorateur de médias](docs/assets/screenshots/media-explorer-dark.png) |
+
+| Éditeur d'histoire | Métadonnées du pack |
+|---|---|
+| ![Réglages d'une histoire](docs/assets/screenshots/story-editor-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/pack-metadata-dark.png) |
 
 | Éditeur audio | Préférences |
 |---|---|
@@ -262,7 +266,7 @@ la référence projet ou bibliothèque médias.
 
 Priorités à court terme :
 
-- Publier le premier installeur beta depuis le workflow de release `v0.8.9`.
+- Publier le premier installeur beta depuis le workflow de release `v0.9.0`.
 - Smoke-tester une installation fraîche sur Windows avant de partager la
   beta plus largement.
 - Continuer à améliorer la compatibilité import/export avec les packs
