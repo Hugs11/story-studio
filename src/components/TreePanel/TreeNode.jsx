@@ -26,6 +26,8 @@ const BADGE_ICON_BY_KIND = {
   continuation: <IconArrowRight />,
 };
 
+const MAX_VISIBLE_NAVIGATION_BADGES = 2;
+
 function getTreeIndent(level) {
   const safeLevel = Math.max(level, 0);
   return 6 + Math.min(safeLevel, 6) * 12;
@@ -90,6 +92,12 @@ function TreeNodeInner({
 
   const insertClass = showInsertBefore ? 'insert-before' : showInsertAfter ? 'insert-after' : '';
   const hasToggle = type === 'menu';
+  const visibleNavigationBadges = navigationBadges.slice(0, MAX_VISIBLE_NAVIGATION_BADGES);
+  const hiddenNavigationBadges = navigationBadges.slice(MAX_VISIBLE_NAVIGATION_BADGES);
+  const hasHiddenNavigationBadges = hiddenNavigationBadges.length > 0;
+  const hiddenNavigationBadgeTitle = hasHiddenNavigationBadges
+    ? hiddenNavigationBadges.map((badge) => badge.title).join(' · ')
+    : '';
 
   let resolvedIcon;
   if (icon) {
@@ -141,10 +149,10 @@ function TreeNodeInner({
       )}
       <div className="tree-item-body">
         <div
-          className="ti-badges"
+          className={`ti-badges${hasHiddenNavigationBadges ? ' is-compact' : ''}`}
           style={navigationBadges.length === 0 && type !== 'story' && type !== 'end-node' ? { width: 0 } : undefined}
         >
-          {navigationBadges.map((badge) => (
+          {visibleNavigationBadges.map((badge) => (
             <Tooltip key={badge.key} text={badge.title}>
               <span
                 className={`badge-nav badge-nav--${badge.kind}${badge.status ? ` badge-nav--${badge.status}` : ''}`}
@@ -154,6 +162,16 @@ function TreeNodeInner({
               </span>
             </Tooltip>
           ))}
+          {hasHiddenNavigationBadges ? (
+            <Tooltip text={hiddenNavigationBadgeTitle} wrap>
+              <span
+                className="badge-nav badge-nav--more"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                +{hiddenNavigationBadges.length}
+              </span>
+            </Tooltip>
+          ) : null}
         </div>
         <span className="ti-icon">{resolvedIcon}</span>
         <span className="ti-label">{label}</span>

@@ -43,6 +43,9 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
     allMenus,
     allStories,
   });
+  const homeDestinationHintLabel = node.returnOnHome
+    ? homeResolvedDestinationLabel
+    : `Réglage par défaut : ${homeResolvedDestinationLabel}`;
 
   return (
     <div className="card during-play-card">
@@ -95,7 +98,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
               includeRoot={false}
               includeStoryPlay={false}
               size="compact"
-              resolvedDestinationLabel={homeResolvedDestinationLabel}
+              resolvedDestinationLabel={homeDestinationHintLabel}
             />
           ) : null}
         </div>

@@ -299,6 +299,30 @@
   gap: 4px;
 }
 
+.ti-badges.is-compact {
+  gap: 0;
+}
+
+.ti-badges.is-compact .tooltip-wrap:not(:first-child) {
+  margin-left: -8px;
+}
+
+.ti-badges.is-compact .tooltip-wrap {
+  position: relative;
+}
+
+.ti-badges.is-compact .tooltip-wrap:nth-child(1) {
+  z-index: 3;
+}
+
+.ti-badges.is-compact .tooltip-wrap:nth-child(2) {
+  z-index: 2;
+}
+
+.ti-badges.is-compact .tooltip-wrap:nth-child(3) {
+  z-index: 1;
+}
+
 .badge-nav {
   flex-shrink: 0;
   width: 24px;
@@ -308,6 +332,16 @@
   justify-content: center;
   border-radius: 6px;
   border: 1px solid;
+}
+
+.badge-nav--more {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg3) 80%, transparent);
+  border-color: var(--border);
 }
 
 .badge-nav svg {

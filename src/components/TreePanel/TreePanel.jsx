@@ -65,26 +65,6 @@ function hasSelectedAncestor(entryId, candidateIds, getParentId) {
   return false;
 }
 
-function getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex) {
-  const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
-  const targetId = navigation.endNodeReturn.targetId;
-  if (!targetId) return [];
-
-  const isNightMode = navigation.endNodeReturn.isNightMode;
-  const targetName = getGeneratedNavigationTargetName(targetId, projectIndex);
-  const nightSuffix = isNightMode ? ' (mode nuit)' : '';
-  const title = navigation.endNodeReturn.isImportedPrompt
-    ? `Retour modifié : fin de lecture, nœud de fin intégré${nightSuffix} → « ${targetName} »`
-    : `Retour modifié : fin de lecture via nœud de fin${nightSuffix} → « ${targetName} »`;
-
-  return [{
-    key: `end-node-return:${targetId}:${targetName}`,
-    kind: isNightMode ? 'end-night' : 'end-node',
-    label: isNightMode ? '☾' : '■',
-    title,
-  }];
-}
-
 function getStrongestStatus(issues = []) {
   if (issues.some((issue) => issue.status === 'error')) return 'error';
   if (issues.some((issue) => issue.status === 'warn' || issue.status === 'warning')) return 'warn';
@@ -111,13 +91,13 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
   if (entry?.type !== 'story') return [];
 
   const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
-  const endNodeBadges = getEndNodeNavigationBadges(entry, parentMenu, project, rootEntries, projectIndex);
   const badges = [];
 
   const entryIssues = issuesById.get(entry.id) ?? [];
   const homeStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile')));
 
-  if (!navigation.directReturn.isBypassedByEndNode) {
+  const hasAdvancedEndFlow = navigation.hasPrompt || navigation.hasSequence || navigation.usesEndNode;
+  if (!hasAdvancedEndFlow) {
     const returnStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
     if (navigation.directReturn.isModified) {
       const returnName = getGeneratedNavigationTargetName(navigation.directReturn.targetId, projectIndex);
@@ -129,19 +109,6 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
         title: `Retour modifié : après lecture → « ${returnName} »`,
       });
     }
-  }
-
-  if (!navigation.endNodeReturn.isImportedPrompt && navigation.promptReturn.isConfigured && navigation.promptReturn.targetId) {
-    const promptReturnName = getGeneratedNavigationTargetName(navigation.promptReturn.targetId, projectIndex);
-    badges.push({
-      key: `prompt-return:${navigation.promptReturn.targetId}:${promptReturnName}`,
-      kind: 'prompt-return',
-      status: navigation.promptReturn.isInactive ? 'warn' : null,
-      label: '↩',
-      title: navigation.promptReturn.isImportedNightPrompt
-        ? `Retour modifié : fin de lecture, message du nœud de fin intégré → « ${promptReturnName} »`
-        : `Retour modifié : fin de lecture via message de fin → « ${promptReturnName} »`,
-    });
   }
 
   if (navigation.storyHome.isNone) {
@@ -164,29 +131,6 @@ function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, projec
         : `Retour modifié : bouton Home → « ${homeName} »`,
     });
   }
-
-  if (navigation.promptHome.isNone) {
-    badges.push({
-      key: 'prompt-home:none',
-      kind: 'prompt-home-none',
-      status: navigation.promptHome.isInactive ? 'warn' : null,
-      label: '⌂',
-      title: 'Retour modifié : bouton Home du message de fin → aucune transition',
-    });
-  } else if (navigation.promptHome.isConfigured) {
-    const promptHomeName = getGeneratedNavigationTargetName(navigation.promptHome.targetId, projectIndex);
-    badges.push({
-      key: `prompt-home:${navigation.promptHome.targetId}:${promptHomeName}`,
-      kind: 'prompt-home',
-      status: navigation.promptHome.isInactive ? 'warn' : null,
-      label: '⌂',
-      title: navigation.promptHome.isInactive
-        ? `Retour modifié : bouton Home du message de fin configuré vers « ${promptHomeName} », mais le bouton Accueil est désactivé sur ce message`
-        : `Retour modifié : bouton Home du message de fin → « ${promptHomeName} »`,
-    });
-  }
-
-  badges.push(...endNodeBadges);
 
   return badges;
 }
