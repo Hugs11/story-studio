@@ -32,8 +32,8 @@ place. Toutes vos créations restent stockées localement sur votre ordinateur.
 
 Créez des histoires pour votre boîte à histoires sans jongler entre plusieurs
 logiciels : importez, éditez et recadrez vos images, assemblez et découpez
-vos fichiers audio, organisez vos menus et vos récits, récupérez des packs
-ZIP existants, puis exportez au format compatible Lunii.
+vos fichiers audio, organisez vos menus et vos récits, puis exportez au
+format compatible Lunii.
 
 > Story Studio est un outil communautaire. Il n'est pas affilié à Lunii, ni
 > soutenu ou sponsorisé par Lunii.
@@ -141,22 +141,9 @@ la référence projet ou bibliothèque médias.
 
 ## Roadmap
 
-Priorités à court terme :
-
-- Publier le premier installeur beta depuis le workflow de release `v0.9.0`.
-- Smoke-tester une installation fraîche sur Windows avant de partager la
-  beta plus largement.
-- Continuer à améliorer la compatibilité import/export avec les packs
-  communautaires.
-- Garder les workflows audio et média accessibles aux créateurs non
-  techniques.
-
-Idées à plus long terme :
-
-- Onboarding plus guidé pour les premières créations de packs.
-- Meilleurs diagnostics pour les packs importés inhabituels.
-- Projet d'exemple optionnel pour tester l'éditeur rapidement.
-- Documentation étendue pour les workflows de navigation avancés.
+- Sortir de beta avec une v1 polish pour Windows.
+- Passer en multi-plateforme (macOS et Linux).
+- Rendre le logiciel compatible avec d'autres types de boîtes à histoires.
 
 ## Contribuer
 
