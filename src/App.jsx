@@ -2392,46 +2392,44 @@ export default function App() {
           ) : null}
         </div>
         <span className="status-text">{statusText}</span>
-        {projectType !== null && (
+        {projectType !== null && !bottomPanelOpen && (
           <button
-            className={`rq-bottombar-btn${bottomPanelOpen && bottomPanelTab === 'media' ? ' is-active' : ''}`}
+            className="rq-bottombar-btn"
             onClick={() => {
               setBottomPanelTab('media');
-              setBottomPanelOpen((open) => bottomPanelTab === 'media' ? !open : true);
+              setBottomPanelOpen(true);
             }}
           >
             Médias
             <span>({mediaLibraryCount})</span>
           </button>
         )}
-        {projectType !== null && (
+        {projectType !== null && !bottomPanelOpen && (
           <button
-            className={`rq-bottombar-btn${bottomPanelOpen && bottomPanelTab === 'queue' ? ' is-active' : (renderQueue.activeCount > 0 ? ' has-active' : '')}`}
+            className={`rq-bottombar-btn${renderQueue.activeCount > 0 ? ' has-active' : ''}`}
             onClick={() => {
               setBottomPanelTab('queue');
-              setBottomPanelOpen((open) => bottomPanelTab === 'queue' ? !open : true);
+              setBottomPanelOpen(true);
             }}
           >
             {renderQueue.activeCount > 0 && <span className="rq-spinner" style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }} />}
             File de rendu
-            {!bottomPanelOpen && renderQueue.activeCount > 0 && <span className="bottom-status-pill">{renderQueue.activeCount}</span>}
-            {!bottomPanelOpen && renderQueue.activeCount === 0 && renderQueue.hasResults && <span className="bottom-status-pill is-done">✓</span>}
-            {bottomPanelOpen && renderQueue.activeCount > 0 && <span>({renderQueue.activeCount})</span>}
+            {renderQueue.activeCount > 0 && <span className="bottom-status-pill">{renderQueue.activeCount}</span>}
+            {renderQueue.activeCount === 0 && renderQueue.hasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}
-        {projectType !== null && (
+        {projectType !== null && !bottomPanelOpen && (
           <button
-            className={`rq-bottombar-btn${bottomPanelOpen && bottomPanelTab === 'ai' ? ' is-active' : (aiQueueActiveCount > 0 ? ' has-active' : '')}`}
+            className={`rq-bottombar-btn${aiQueueActiveCount > 0 ? ' has-active' : ''}`}
             onClick={() => {
               setBottomPanelTab('ai');
-              setBottomPanelOpen((open) => bottomPanelTab === 'ai' ? !open : true);
+              setBottomPanelOpen(true);
             }}
           >
             {aiQueueActiveCount > 0 && <span className="rq-spinner" style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }} />}
             File IA
-            {!bottomPanelOpen && aiQueueActiveCount > 0 && <span className="bottom-status-pill">{aiQueueActiveCount}</span>}
-            {!bottomPanelOpen && aiQueueActiveCount === 0 && aiQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
-            {bottomPanelOpen && aiQueueActiveCount > 0 && <span>({aiQueueActiveCount})</span>}
+            {aiQueueActiveCount > 0 && <span className="bottom-status-pill">{aiQueueActiveCount}</span>}
+            {aiQueueActiveCount === 0 && aiQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}
         {appVersion && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>v{appVersion}</span>}
