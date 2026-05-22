@@ -30,6 +30,12 @@ function mediaPathKey(value) {
     : '';
 }
 
+function defaultDestinationHintLabel(label) {
+  if (!label) return null;
+  const match = String(label).match(/^Réglage par défaut \((.*)\)$/);
+  return match?.[1] || label;
+}
+
 export function AfterPlaySection({
   node,
   parentMenu,
@@ -83,11 +89,23 @@ export function AfterPlaySection({
   const hasSequence = afterPlaybackSequence.length > 0;
   const hasAdvancedContent = hasPrompt || hasSequence;
 
-  const [showAdvanced, setShowAdvanced] = useState(hasAdvancedContent);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSequenceEditor, setShowSequenceEditor] = useState(false);
   const [showPromptField, setShowPromptField] = useState(false);
 
   const promptControls = node.afterPlaybackPromptControlSettings ?? {};
+  const storyControls = node.controlSettings ?? {};
+  const hasExplicitReturnTarget = !!node.returnAfterPlay;
+  const autoContinuationEnabled = !!(storyControls.autoplay || hasExplicitReturnTarget);
+  const returnDestinationHint = getNavigationSelectHint({
+    value: node.returnAfterPlay,
+    emptyResolvedLabel: inheritedReturnLabel,
+    entry: node,
+    parentMenu,
+    project,
+    allMenus,
+    allStories,
+  });
   const promptHomeSelectValue = node.afterPlaybackPromptHomeNone
     ? '__none__'
     : (node.afterPlaybackPromptHomeTarget ?? '');
@@ -109,25 +127,16 @@ export function AfterPlaySection({
     : 'Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)';
   const advancedTitle = hasEndNode
     ? 'Personnaliser pour cette histoire'
-    : 'Message audio après cette histoire';
+    : 'Réglages avancés';
   const advancedDescription = hasEndNode
     ? "Remplacer le nœud de fin du pack par un audio spécifique pour cette histoire seulement. La plupart des packs n'en ont pas besoin."
-    : 'Audio facultatif joué juste après cette histoire — par exemple un mot, une morale, ou une transition vers la suivante.';
+    : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
   const advancedCollapsedLabel = hasEndNode ? 'Réglages avancés' : 'Configurer';
-
-  useEffect(() => {
-    if (hasPrompt || hasSequence) {
-      setShowAdvanced(true);
-    }
-  }, [node?.id]);
 
   useEffect(() => {
     setShowSequenceEditor(false);
     setShowPromptField(false);
-    setShowAdvanced(
-      !!(node?.afterPlaybackPromptAudio) ||
-      (node?.afterPlaybackSequence ?? []).length > 0,
-    );
+    setShowAdvanced(false);
   }, [node?.id]);
 
   function clearEndAfterPlayback() {
@@ -161,6 +170,15 @@ export function AfterPlaySection({
     setShowSequenceEditor(true);
     setShowPromptField(false);
   }
+
+  function updateAutoContinuation(enabled) {
+    onUpdate({
+      controlSettings: { ...storyControls, autoplay: enabled },
+      ...(enabled ? {} : { returnAfterPlay: null }),
+    });
+  }
+
+  const playbackEndMode = autoContinuationEnabled ? 'auto' : 'stay';
 
   // ─── Contenu "Message de fin" ────────────────────────────────────────────────
 
@@ -335,44 +353,57 @@ export function AfterPlaySection({
     <div className="card">
       <div className="card-title">Après la lecture</div>
 
-      {/* Destination de retour */}
-      {allMenus.length > 0 && !hasEndNode && (
+      {hasEndNode && (
         <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
-            <span className="field-label">À la fin de l'histoire, retour vers</span>
+            <span className="field-label">Fin de l'histoire</span>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              Passage automatique par le nœud de fin du pack
+            </div>
             <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              Où l'enfant atterrit quand l'histoire se termine. Par défaut, suit le réglage du dossier parent.
+              La Lunii continue automatiquement après l'audio de l'histoire pour jouer ce nœud de fin.
             </div>
           </div>
-          <div style={{ maxWidth: 220, width: '100%' }}>
-          <NavigationTargetSelect
-            value={node.returnAfterPlay ?? ''}
-            onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
-            allMenus={allMenus}
-            allStories={allStories}
-            currentStoryId={node.id}
-            emptyLabel={inheritedReturnLabel}
-            includeRoot={false}
-            includeStoryPlay={false}
-          />
-          <NavigationHint
-            label={getNavigationSelectHint({
-              value: node.returnAfterPlay,
-              emptyResolvedLabel: inheritedReturnLabel,
-              entry: node,
-              parentMenu,
-              project,
-              allMenus,
-              allStories,
-            })}
-          />
+        </div>
+      )}
+
+      {!hasEndNode && (
+        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <span className="field-label">Fin de l'histoire</span>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              {autoContinuationEnabled ? 'La Lunii enchaîne vers la destination' : "La Lunii reste sur l'écran de lecture"}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              {autoContinuationEnabled
+                ? "À la fin de l'histoire, la Lunii passe à la destination ci-dessous sans attendre."
+                : "Aucune destination de fin n'est lancée automatiquement. Le bouton Accueil, s'il est actif, reste le chemin de sortie."}
+            </div>
+          </div>
+          <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
+            <button
+              type="button"
+              className={`story-end-mode-btn ${playbackEndMode === 'stay' ? 'is-active' : ''}`}
+              aria-pressed={playbackEndMode === 'stay'}
+              onClick={() => updateAutoContinuation(false)}
+            >
+              Rester sur l'écran
+            </button>
+            <button
+              type="button"
+              className={`story-end-mode-btn ${playbackEndMode === 'auto' ? 'is-active' : ''}`}
+              aria-pressed={playbackEndMode === 'auto'}
+              onClick={() => updateAutoContinuation(true)}
+            >
+              Enchaîner
+            </button>
           </div>
         </div>
       )}
 
       {hasEndNode && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', flexWrap: 'wrap' }}>
-          <span className="field-label">Destination</span>
+          <span className="field-label">Puis destination</span>
           <span
             style={{
               display: 'inline-flex',
@@ -411,6 +442,45 @@ export function AfterPlaySection({
               </span>
             </>
           )}
+        </div>
+      )}
+
+      {allMenus.length > 0 && !hasEndNode && autoContinuationEnabled && (
+        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <span className="field-label">Puis destination</span>
+            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              Où l'enfant atterrit après la sortie automatique. Par défaut, suit le réglage du dossier parent.
+            </div>
+          </div>
+          <div style={{ maxWidth: 220, width: '100%' }}>
+          <NavigationTargetSelect
+            value={node.returnAfterPlay ?? ''}
+            onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
+            allMenus={allMenus}
+            allStories={allStories}
+            currentStoryId={node.id}
+            emptyLabel={inheritedReturnLabel}
+            includeRoot={false}
+            includeStoryPlay={false}
+          />
+          <NavigationHint
+            label={hasExplicitReturnTarget
+              ? returnDestinationHint
+              : `Réglage par défaut : ${defaultDestinationHintLabel(returnDestinationHint)}`}
+          />
+          </div>
+        </div>
+      )}
+
+      {allMenus.length > 0 && !hasEndNode && !autoContinuationEnabled && (
+        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <span className="field-label">Destination</span>
+            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              Non utilisée avec ce mode. Réglage par défaut si enchaînement : {defaultDestinationHintLabel(returnDestinationHint)}.
+            </div>
+          </div>
         </div>
       )}
 

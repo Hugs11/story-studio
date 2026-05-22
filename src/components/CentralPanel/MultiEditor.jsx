@@ -9,11 +9,22 @@ import { NavigationTargetSelect } from './story/storyUtils';
 const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
 
-const CONTROL_KEYS = [
-  { key: 'autoplay', label: 'Lecture automatique', desc: "Enchaîne sans action de l'enfant une fois terminé" },
+const SHARED_DURING_CONTROL_KEYS = [
   { key: 'pause',    label: 'Bouton pause',         desc: 'Autorise la pause pendant la lecture' },
   { key: 'wheel',    label: 'Molette de sélection', desc: 'Autorise la molette pendant la lecture' },
 ];
+
+const MENU_CONTROL_KEYS = [
+  { key: 'wheel',    label: 'Molette de sélection', desc: 'Autorise la molette pour choisir une histoire' },
+  { key: 'autoplay', label: 'Lecture automatique',  desc: "L'audio de présentation enchaîne directement sur la première histoire, sans attendre OK" },
+  { key: 'pause',    label: 'Bouton pause',         desc: "Autorise la pause pendant l'audio de présentation" },
+];
+
+const STORY_AFTER_CONTROL = {
+  key: 'autoplay',
+  label: 'Enchaîner automatiquement',
+  desc: "À la fin de l'histoire, enchaîne vers la destination de fin sans attendre.",
+};
 
 function getDefaults(type) {
   return type === 'menu' ? MENU_DEFAULTS : STORY_DEFAULTS;
@@ -61,6 +72,13 @@ export const MultiEditor = memo(function MultiEditor({
     }));
   }
 
+  function handleStoryAutoContinuationChange(value) {
+    onBulkUpdateItems(editableIds, (entry) => ({
+      controlSettings: { ...entry.controlSettings, autoplay: value },
+      ...(value ? {} : { returnAfterPlay: null }),
+    }));
+  }
+
   function handleNavChange(field, rawValue) {
     onBulkUpdateItems(editableIds, () => ({ [field]: rawValue || null }));
   }
@@ -72,6 +90,8 @@ export const MultiEditor = memo(function MultiEditor({
   }
 
   const batchBusy = batchImageGenerating || batchAudioGenerating;
+  const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
+  const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : 'Pendant la lecture';
 
   function getSelectedVoice() {
     const favoriteVoices = Array.isArray(xttsSettings?.favoriteVoices) ? xttsSettings.favoriteVoices : [];
@@ -248,8 +268,8 @@ export const MultiEditor = memo(function MultiEditor({
 
       {editableNodes.length > 0 && (
       <div className="card">
-        <div className="card-title">Pendant la lecture</div>
-        {CONTROL_KEYS.map(({ key, label, desc }) => {
+        <div className="card-title">{playbackControlTitle}</div>
+        {playbackControlKeys.map(({ key, label, desc }) => {
           const vals = editableNodes.map((n) => n.controlSettings?.[key] ?? getDefaults(n.type)[key] ?? false);
           const unique = [...new Set(vals)];
           const isMixed = unique.length > 1;
@@ -301,6 +321,19 @@ export const MultiEditor = memo(function MultiEditor({
       {allSameType && hasEndNode && (onlyStories || onlyMenus) && (
         <div className="card">
           <div className="card-title">Après la lecture</div>
+          {onlyStories && (
+            <div className="field-row" style={{ marginBottom: 10, alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <span className="field-label">Fin de l'histoire</span>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                  Passage automatique par le nœud de fin du pack
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce nœud de fin.
+                </div>
+              </div>
+            </div>
+          )}
           <div
             style={{
               display: 'flex',
@@ -321,35 +354,90 @@ export const MultiEditor = memo(function MultiEditor({
         </div>
       )}
 
-      {allSameType && !hasEndNode && allMenus.length > 0 && (
+      {allSameType && !hasEndNode && (allMenus.length > 0 || onlyStories) && (
         <div className="card">
           <div className="card-title">
             {onlyMenus ? 'Après la lecture (défaut enfants)' : 'Après la lecture'}
           </div>
 
-          <div className="field-row">
-            <div style={{ flex: 1 }}>
-              <span className="field-label">À la fin de l'histoire, retour vers</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Destination après la lecture — peut hériter du réglage du dossier parent.
+          {onlyStories && (() => {
+            const vals = editableNodes.map((n) => !!(n.controlSettings?.[STORY_AFTER_CONTROL.key] ?? STORY_DEFAULTS.autoplay) || !!n.returnAfterPlay);
+            const unique = [...new Set(vals)];
+            const isMixed = unique.length > 1;
+            const value = isMixed ? false : unique[0];
+
+            return (
+              <div className="field-row">
+                <div style={{ flex: 1 }}>
+                  <span className="field-label">Fin de l'histoire</span>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                    {isMixed
+                      ? 'Comportements différents selon les histoires'
+                      : value
+                        ? 'La Lunii enchaîne vers la destination'
+                        : "La Lunii reste sur l'écran de lecture"}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    {isMixed
+                      ? 'Certaines histoires enchaînent automatiquement, les autres restent sur leur écran de lecture.'
+                      : value
+                        ? STORY_AFTER_CONTROL.desc
+                        : "Aucune destination de fin n'est lancée automatiquement. Le bouton Accueil, s'il est actif, reste le chemin de sortie."}
+                  </div>
+                </div>
+                <div className="story-end-mode" role="group" aria-label="Comportement à la fin des histoires">
+                  <button
+                    type="button"
+                    className={`story-end-mode-btn ${!isMixed && !value ? 'is-active' : ''}`}
+                    aria-pressed={!isMixed && !value}
+                    onClick={() => handleStoryAutoContinuationChange(false)}
+                  >
+                    Rester sur l'écran
+                  </button>
+                  <button
+                    type="button"
+                    className={`story-end-mode-btn ${!isMixed && value ? 'is-active' : ''}`}
+                    aria-pressed={!isMixed && value}
+                    onClick={() => handleStoryAutoContinuationChange(true)}
+                  >
+                    Enchaîner
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {allMenus.length > 0 && (!onlyStories || (() => {
+            const vals = editableNodes.map((n) => !!(n.controlSettings?.[STORY_AFTER_CONTROL.key] ?? STORY_DEFAULTS.autoplay) || !!n.returnAfterPlay);
+            const unique = [...new Set(vals)];
+            return unique.length > 1 || unique[0] === true;
+          })()) && (
+            <div className="field-row">
+              <div style={{ flex: 1 }}>
+                <span className="field-label">{onlyStories ? 'Puis destination' : "À la fin de l'histoire, retour vers"}</span>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  {onlyStories
+                    ? 'Où l’enfant atterrit après la sortie automatique.'
+                    : 'Destination après la lecture — peut hériter du réglage du dossier parent.'}
+                </div>
+              </div>
+              <div style={{ maxWidth: 220, width: '100%' }}>
+              <NavigationTargetSelect
+                value={getMixedSelectValue('returnAfterPlay')}
+                onChange={(target) => {
+                  if (target === '__mixed__') return;
+                  handleNavChange('returnAfterPlay', target);
+                }}
+                allMenus={allMenus}
+                allStories={onlyStories ? allStories.filter((s) => !ids.includes(s.id)) : []}
+                currentStoryId={null}
+                emptyLabel="Réglage par défaut (hérité)"
+                includeRoot={false}
+                includeStoryPlay={false}
+              />
               </div>
             </div>
-            <div style={{ maxWidth: 220, width: '100%' }}>
-            <NavigationTargetSelect
-              value={getMixedSelectValue('returnAfterPlay')}
-              onChange={(target) => {
-                if (target === '__mixed__') return;
-                handleNavChange('returnAfterPlay', target);
-              }}
-              allMenus={allMenus}
-              allStories={onlyStories ? allStories.filter((s) => !ids.includes(s.id)) : []}
-              currentStoryId={null}
-              emptyLabel="Réglage par défaut (hérité)"
-              includeRoot={false}
-              includeStoryPlay={false}
-            />
-            </div>
-          </div>
+          )}
 
         </div>
       )}
