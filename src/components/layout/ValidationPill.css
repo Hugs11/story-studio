@@ -29,6 +29,20 @@
   border-color: var(--danger-border-hover);
 }
 
+.validation-pill.is-warnings {
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.validation-pill.is-warnings:hover {
+  background: var(--warning-bg);
+}
+
+.validation-pill.is-warnings.is-active {
+  background: var(--warning-bg);
+  border-color: var(--warning-border-hover);
+}
+
 .validation-pill.is-ok {
   border-color: color-mix(in srgb, #5fbf6b 50%, transparent);
   color: #5fbf6b;
@@ -72,6 +86,15 @@
   padding: 1px 6px;
   border-radius: 4px;
   line-height: 1.2;
+}
+
+.validation-pill.is-warnings .validation-pill-count {
+  background: var(--warning);
+  color: #2a1a04;
+}
+
+.validation-pill.is-warnings .validation-pill-caret {
+  color: color-mix(in srgb, var(--warning) 70%, transparent);
 }
 
 .validation-pill-label {
@@ -122,9 +145,17 @@
   flex-shrink: 0;
 }
 
+.validation-pill-dd.is-warnings .validation-pill-dd-head {
+  background: linear-gradient(180deg, var(--warning-bg), transparent);
+}
+
 .validation-pill-dd-icon {
   color: var(--danger-text);
   display: inline-flex;
+}
+
+.validation-pill-dd.is-warnings .validation-pill-dd-icon {
+  color: var(--warning-text);
 }
 
 .validation-pill-dd-title {
@@ -251,6 +282,34 @@
   height: 5px;
   border-radius: 50%;
   background: var(--danger);
+}
+
+.validation-pill-item.is-warning .validation-pill-item-dot {
+  background: var(--warning);
+}
+
+.validation-pill-severity-head {
+  padding: 10px 13px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border-tertiary);
+  margin-top: 4px;
+}
+
+.validation-pill-group:first-child .validation-pill-severity-head {
+  border-top: 0;
+  margin-top: 0;
+}
+
+.validation-pill-group.is-error .validation-pill-severity-head {
+  color: var(--danger-text);
+}
+
+.validation-pill-group.is-warning .validation-pill-severity-head {
+  color: var(--warning-text);
 }
 
 .validation-pill-item-label {
