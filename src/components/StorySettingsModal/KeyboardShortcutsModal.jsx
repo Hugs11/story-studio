@@ -1,35 +1,29 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DEFAULT_SHORTCUTS,
   SHORTCUT_DEFINITIONS,
+  SHORTCUT_SCOPES,
   findShortcutConflict,
   formatShortcut,
   resetKeyboardShortcuts,
+  resetKeyboardShortcutsForScope,
   shortcutFromEvent,
 } from '../../store/keyboardShortcuts';
 import './KeyboardShortcutsModal.css';
 
-const AUDIO_EDITOR_SHORTCUTS = [
-  { label: 'Play / Pause',                         keys: ['Espace'] },
-  { label: 'Lecture arrière jog/shuttle',           keys: ['J'] },
-  { label: 'Pause jog/shuttle',                     keys: ['K'] },
-  { label: 'Lecture avant jog/shuttle',             keys: ['L'] },
-  { label: 'Augmenter la vitesse de navette',       keys: ['J répété', 'L répété'] },
-  { label: 'Avancer / reculer de 50 ms avec écoute', keys: ['←', '→'] },
-  { label: 'Aller au début / à la fin',             keys: ['Home', 'End'] },
-  { label: 'Marquer le point d\'entrée',            keys: ['I'] },
-  { label: 'Marquer le point de sortie',            keys: ['O'] },
-  { label: 'Effacer le point d\'entrée',            keys: ['Ctrl+I'] },
-  { label: 'Effacer le point de sortie',            keys: ['Ctrl+O'] },
-  { label: 'Lire depuis le point d\'entrée',        keys: ['Shift+I'] },
-  { label: 'Lire depuis le point de sortie',        keys: ['Shift+O'] },
-  { label: 'Garder la sélection',                   keys: ['Ctrl+G'] },
-  { label: 'Supprimer la sélection',                keys: ['Ctrl+X'] },
-  { label: 'Annuler la modification en attente',    keys: ['Ctrl+Z'] },
-  { label: 'Fermer l\'éditeur audio',               keys: ['Échap'] },
-  { label: 'Zoomer autour de la souris',            keys: ['Ctrl+Molette'] },
-  { label: 'Zoomer / dézoomer autour du curseur',    keys: ['Ctrl++', 'Ctrl+-'] },
-];
+function normalizeFilter(value) {
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function matchesQuery(definition, shortcut, query) {
+  if (!query) return true;
+  const haystack = [
+    definition.label,
+    definition.scope,
+    formatShortcut(shortcut),
+  ].filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return haystack.includes(query);
+}
 
 export function KeyboardShortcutsModal({
   shortcuts,
@@ -38,6 +32,15 @@ export function KeyboardShortcutsModal({
 }) {
   const [captureId, setCaptureId] = useState(null);
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+
+  const normalizedQuery = useMemo(() => normalizeFilter(query.trim()), [query]);
+
+  const sections = useMemo(() => SHORTCUT_SCOPES.map((scope) => {
+    const items = SHORTCUT_DEFINITIONS.filter((d) => d.scope === scope.id)
+      .filter((d) => matchesQuery(d, shortcuts?.[d.id] ?? d.defaultShortcut, normalizedQuery));
+    return { scope, items };
+  }).filter((section) => section.items.length > 0), [shortcuts, normalizedQuery]);
 
   function handleKeyDown(event, definition) {
     if (event.key === 'Escape') {
@@ -55,7 +58,8 @@ export function KeyboardShortcutsModal({
 
     const conflict = findShortcutConflict(shortcuts, definition.id, nextShortcut);
     if (conflict) {
-      setMessage(`Déjà utilisé par "${conflict.label}".`);
+      const scopeLabel = SHORTCUT_SCOPES.find((s) => s.id === conflict.scope)?.label || conflict.scope;
+      setMessage(`Déjà utilisé par « ${conflict.label} » dans ${scopeLabel}.`);
       return;
     }
 
@@ -64,9 +68,15 @@ export function KeyboardShortcutsModal({
     setMessage('');
   }
 
-  function handleReset() {
+  function handleResetAll() {
     const defaults = resetKeyboardShortcuts();
     onChange(defaults);
+    setCaptureId(null);
+    setMessage('');
+  }
+
+  function handleResetScope(scopeId) {
+    onChange(resetKeyboardShortcutsForScope(shortcuts, scopeId));
     setCaptureId(null);
     setMessage('');
   }
@@ -99,56 +109,98 @@ export function KeyboardShortcutsModal({
 
         <div className="keyboard-shortcuts-body">
           <div className="story-settings-lead">
-            Clique sur un raccourci puis presse la nouvelle combinaison. Les raccourcis doivent utiliser Ctrl.
+            Clique sur un raccourci puis presse la nouvelle combinaison. Échap annule la capture.
           </div>
 
-          <div className="keyboard-shortcuts-list">
-            {SHORTCUT_DEFINITIONS.map((definition) => (
-              <div key={definition.id} className="keyboard-shortcut-row">
-                <div className="keyboard-shortcut-info">
-                  <div className="opts-row-label">{definition.label}</div>
-                  <div className="opts-row-sub">Défaut : {formatShortcut(DEFAULT_SHORTCUTS[definition.id])}</div>
+          <input
+            type="search"
+            className="keyboard-shortcuts-search"
+            placeholder="Rechercher un raccourci…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+
+          {sections.length === 0 ? (
+            <div className="keyboard-shortcuts-empty">Aucun raccourci ne correspond à « {query} ».</div>
+          ) : null}
+
+          {sections.map(({ scope, items }) => {
+            const editableInScope = items.some((d) => !d.readOnly);
+            return (
+              <div key={scope.id} className="keyboard-shortcuts-section">
+                <div className="keyboard-shortcuts-section-head">
+                  <div className="keyboard-shortcuts-section-title">
+                    {scope.label}
+                    {scope.id === 'a11y' ? (
+                      <span className="keyboard-shortcuts-fixed-badge">lecture seule</span>
+                    ) : null}
+                  </div>
+                  {editableInScope ? (
+                    <button
+                      type="button"
+                      className="keyboard-shortcuts-section-reset"
+                      onClick={() => handleResetScope(scope.id)}
+                      title={`Restaurer les valeurs par défaut pour « ${scope.label} »`}
+                    >
+                      Réinitialiser
+                    </button>
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  className={`keyboard-shortcut-capture ${captureId === definition.id ? 'is-capturing' : ''}`}
-                  onClick={() => {
-                    setCaptureId(definition.id);
-                    setMessage('');
-                  }}
-                  onKeyDown={(event) => captureId === definition.id && handleKeyDown(event, definition)}
-                >
-                  {captureId === definition.id ? 'Appuie sur un raccourci...' : formatShortcut(shortcuts[definition.id])}
-                </button>
+                {scope.description ? (
+                  <div className="keyboard-shortcuts-section-desc">{scope.description}</div>
+                ) : null}
+                <div className="keyboard-shortcuts-list">
+                  {items.map((definition) => {
+                    const currentShortcut = shortcuts?.[definition.id] ?? definition.defaultShortcut;
+                    if (definition.readOnly) {
+                      return (
+                        <div key={definition.id} className="keyboard-shortcut-row is-readonly">
+                          <div className="keyboard-shortcut-info">
+                            <div className="opts-row-label">{definition.label}</div>
+                            {definition.readOnlyReason ? (
+                              <div className="opts-row-sub">{definition.readOnlyReason}</div>
+                            ) : null}
+                          </div>
+                          <div className="keyboard-shortcut-keys">
+                            <kbd className="kbd">{formatShortcut(definition.defaultShortcut)}</kbd>
+                            {(definition.aliases || []).map((alias, idx) => (
+                              <kbd key={idx} className="kbd">{formatShortcut(alias)}</kbd>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={definition.id} className="keyboard-shortcut-row">
+                        <div className="keyboard-shortcut-info">
+                          <div className="opts-row-label">{definition.label}</div>
+                          <div className="opts-row-sub">
+                            Défaut : {formatShortcut(DEFAULT_SHORTCUTS[definition.id] ?? definition.defaultShortcut)}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`keyboard-shortcut-capture ${captureId === definition.id ? 'is-capturing' : ''}`}
+                          onClick={() => {
+                            setCaptureId(definition.id);
+                            setMessage('');
+                          }}
+                          onKeyDown={(event) => captureId === definition.id && handleKeyDown(event, definition)}
+                        >
+                          {captureId === definition.id ? 'Appuie sur un raccourci…' : formatShortcut(currentShortcut)}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
 
           {message ? <div className="keyboard-shortcuts-message">{message}</div> : null}
 
-          <div className="keyboard-shortcuts-section-title">
-            Éditeur audio
-            <span className="keyboard-shortcuts-fixed-badge">fixe</span>
-          </div>
-          <div className="keyboard-shortcuts-fixed-note">
-            Ces raccourcis sont contextuels à la fenêtre audio. Ils ne sont pas modifiables pour l'instant :
-            le système de personnalisation actuel ne gère que les raccourcis globaux avec Ctrl.
-          </div>
-          <div className="keyboard-shortcuts-list">
-            {AUDIO_EDITOR_SHORTCUTS.map(({ label, keys }) => (
-              <div key={label} className="keyboard-shortcut-row">
-                <div className="keyboard-shortcut-info">
-                  <div className="opts-row-label">{label}</div>
-                </div>
-                <div className="keyboard-shortcut-keys">
-                  {keys.map((k) => <kbd key={k} className="kbd">{k}</kbd>)}
-                </div>
-              </div>
-            ))}
-          </div>
-
           <div className="keyboard-shortcuts-actions">
-            <button className="btn" type="button" onClick={handleReset}>Réinitialiser</button>
+            <button className="btn" type="button" onClick={handleResetAll}>Tout réinitialiser</button>
             <button className="btn btn-primary" type="button" onClick={onClose}>Fermer</button>
           </div>
         </div>

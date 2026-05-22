@@ -1,53 +1,107 @@
 const STORAGE_KEY = 'storyStudioKeyboardShortcuts';
 
-export const SHORTCUT_DEFINITIONS = [
-  { id: 'newProject', label: 'Nouveau projet', defaultShortcut: { ctrl: true, shift: false, code: 'KeyN', key: 'n' } },
-  { id: 'openProject', label: 'Ouvrir un projet', defaultShortcut: { ctrl: true, shift: false, code: 'KeyO', key: 'o' } },
-  { id: 'saveProject', label: 'Sauvegarder le projet', defaultShortcut: { ctrl: true, shift: false, code: 'KeyS', key: 's' } },
-  { id: 'saveAs', label: 'Enregistrer sous', defaultShortcut: { ctrl: true, shift: true, code: 'KeyS', key: 's' } },
-  { id: 'importStories', label: 'Importer des histoires', defaultShortcut: { ctrl: true, shift: false, code: 'KeyI', key: 'i' } },
-  { id: 'addFolder', label: 'Ajouter un dossier', defaultShortcut: { ctrl: true, shift: true, code: 'KeyN', key: 'n' } },
-  {
-    id: 'storySettings',
-    label: "Réglages de l'histoire",
-    defaultShortcut: { ctrl: true, shift: false, code: 'Comma', key: ',' },
-    aliases: [
-      { ctrl: true, shift: false, code: 'KeyM', key: 'm' },
-      { ctrl: true, shift: false, code: 'Period', key: '.' },
-      { ctrl: true, shift: false, code: 'Semicolon', key: ';' },
-    ],
-  },
-  {
-    id: 'tabEdit',
-    label: 'Onglet édition',
-    defaultShortcut: { ctrl: true, shift: false, code: 'Digit1', key: '1' },
-    aliases: [{ ctrl: true, shift: false, code: 'Numpad1', key: '1' }],
-  },
-  {
-    id: 'tabEmulator',
-    label: 'Onglet émulateur',
-    defaultShortcut: { ctrl: true, shift: false, code: 'Digit2', key: '2' },
-    aliases: [{ ctrl: true, shift: false, code: 'Numpad2', key: '2' }],
-  },
-  {
-    id: 'tabDiagram',
-    label: 'Onglet diagramme',
-    defaultShortcut: { ctrl: true, shift: false, code: 'Digit3', key: '3' },
-    aliases: [{ ctrl: true, shift: false, code: 'Numpad3', key: '3' }],
-  },
-  {
-    id: 'tabOptions',
-    label: 'Onglet options',
-    defaultShortcut: { ctrl: true, shift: false, code: 'Digit4', key: '4' },
-    aliases: [{ ctrl: true, shift: false, code: 'Numpad4', key: '4' }],
-  },
-  { id: 'generate', label: 'Générer le pack', defaultShortcut: { ctrl: true, shift: true, code: 'Enter', key: 'enter' } },
-  { id: 'treeSearch', label: 'Rechercher dans la structure', defaultShortcut: { ctrl: true, shift: false, code: 'KeyF', key: 'f' } },
-  { id: 'toggleValidation', label: 'Ouvrir la validation', defaultShortcut: { ctrl: true, shift: true, code: 'KeyE', key: 'e' } },
+// Liste des scopes connus + libellés pour l'UI.
+// L'ordre détermine la priorité de dispatch et l'ordre d'affichage dans la modale.
+export const SHORTCUT_SCOPES = [
+  { id: 'general',     label: 'Général',                  description: 'Actifs partout dans l\'application.' },
+  { id: 'tree',        label: 'Arbre du projet',          description: 'Actifs quand un élément de l\'arbre est sélectionné.' },
+  { id: 'diagram',     label: 'Diagramme',                description: 'Actifs quand un nœud du diagramme est sélectionné.' },
+  { id: 'mediaPanel',  label: 'Panneau Médias',           description: 'Actifs quand le panneau Médias est ouvert.' },
+  { id: 'audioEditor', label: 'Éditeur audio',            description: 'Actifs uniquement dans la fenêtre d\'édition audio.' },
+  { id: 'imageEditor', label: 'Éditeur d\'image',         description: 'Actifs uniquement dans la fenêtre d\'édition d\'image.' },
+  { id: 'a11y',        label: 'Navigation standard',      description: 'Raccourcis ARIA universels. Non modifiables pour préserver l\'accessibilité.' },
 ];
 
+// Définition d'un raccourci.
+// - id : identifiant interne, sert de clé de stockage
+// - label : nom affiché dans la modale
+// - scope : un des SHORTCUT_SCOPES
+// - readOnly : si true, listé dans la modale mais non capturable (a11y, etc.)
+// - defaultShortcut : combinaison par défaut
+// - aliases : combinaisons équivalentes acceptées en plus du raccourci principal
+// - description : sous-titre court (optionnel)
+export const SHORTCUT_DEFINITIONS = [
+  // ── Général ────────────────────────────────────────────────────────────────
+  { id: 'newProject',       scope: 'general', label: 'Nouveau projet',                     defaultShortcut: { ctrl: true, key: 'n', code: 'KeyN' } },
+  { id: 'openProject',      scope: 'general', label: 'Ouvrir un projet',                   defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
+  { id: 'saveProject',      scope: 'general', label: 'Sauvegarder le projet',              defaultShortcut: { ctrl: true, key: 's', code: 'KeyS' } },
+  { id: 'saveAs',           scope: 'general', label: 'Enregistrer sous',                    defaultShortcut: { ctrl: true, shift: true, key: 's', code: 'KeyS' } },
+  { id: 'importStories',    scope: 'general', label: 'Importer des histoires',              defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
+  { id: 'addFolder',        scope: 'general', label: 'Ajouter un dossier',                  defaultShortcut: { ctrl: true, shift: true, key: 'n', code: 'KeyN' } },
+  {
+    id: 'storySettings', scope: 'general', label: 'Réglages de l\'histoire',
+    defaultShortcut: { ctrl: true, key: ',', code: 'Comma' },
+    aliases: [
+      { ctrl: true, key: 'm', code: 'KeyM' },
+      { ctrl: true, key: '.', code: 'Period' },
+      { ctrl: true, key: ';', code: 'Semicolon' },
+    ],
+  },
+  { id: 'tabEdit',          scope: 'general', label: 'Onglet édition',                     defaultShortcut: { ctrl: true, key: '1', code: 'Digit1' }, aliases: [{ ctrl: true, key: '1', code: 'Numpad1' }] },
+  { id: 'tabEmulator',      scope: 'general', label: 'Onglet émulateur',                   defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
+  { id: 'tabDiagram',       scope: 'general', label: 'Onglet diagramme',                   defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
+  { id: 'tabOptions',       scope: 'general', label: 'Onglet options',                     defaultShortcut: { ctrl: true, key: '4', code: 'Digit4' }, aliases: [{ ctrl: true, key: '4', code: 'Numpad4' }] },
+  { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, shift: true, key: 'enter', code: 'Enter' } },
+  { id: 'treeSearch',       scope: 'general', label: 'Rechercher dans la structure',        defaultShortcut: { ctrl: true, key: 'f', code: 'KeyF' } },
+  { id: 'toggleValidation', scope: 'general', label: 'Ouvrir la validation',                defaultShortcut: { ctrl: true, shift: true, key: 'e', code: 'KeyE' } },
+  { id: 'undo',             scope: 'general', label: 'Annuler',                             defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
+  { id: 'redo',             scope: 'general', label: 'Rétablir',                            defaultShortcut: { ctrl: true, shift: true, key: 'z', code: 'KeyZ' } },
+
+  // ── Arbre du projet ───────────────────────────────────────────────────────
+  { id: 'treeCopy',   scope: 'tree', label: 'Copier le(s) nœud(s)',          defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
+  { id: 'treeCut',    scope: 'tree', label: 'Couper le(s) nœud(s)',          defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'treePaste',  scope: 'tree', label: 'Coller',                         defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
+  { id: 'treeDelete', scope: 'tree', label: 'Supprimer le(s) nœud(s)',       defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+
+  // ── Diagramme ─────────────────────────────────────────────────────────────
+  { id: 'diagramCopy',   scope: 'diagram', label: 'Copier le(s) nœud(s)',     defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
+  { id: 'diagramCut',    scope: 'diagram', label: 'Couper le(s) nœud(s)',     defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'diagramPaste',  scope: 'diagram', label: 'Coller',                    defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
+  { id: 'diagramDelete', scope: 'diagram', label: 'Supprimer le(s) nœud(s)',  defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+
+  // ── Panneau Médias ────────────────────────────────────────────────────────
+  { id: 'mediaSearch', scope: 'mediaPanel', label: 'Rechercher dans les médias', defaultShortcut: { ctrl: true, shift: true, key: 'f', code: 'KeyF' } },
+
+  // ── Éditeur audio ─────────────────────────────────────────────────────────
+  { id: 'audioPlayPause',     scope: 'audioEditor', label: 'Lecture / Pause',                 defaultShortcut: { key: ' ', code: 'Space' } },
+  { id: 'audioShuttleBack',   scope: 'audioEditor', label: 'Lecture arrière (jog/shuttle)',   defaultShortcut: { key: 'j', code: 'KeyJ' } },
+  { id: 'audioShuttleStop',   scope: 'audioEditor', label: 'Pause (jog/shuttle)',             defaultShortcut: { key: 'k', code: 'KeyK' } },
+  { id: 'audioShuttleFwd',    scope: 'audioEditor', label: 'Lecture avant (jog/shuttle)',     defaultShortcut: { key: 'l', code: 'KeyL' } },
+  { id: 'audioNudgeBack',     scope: 'audioEditor', label: 'Reculer de 50 ms (avec preview)', defaultShortcut: { key: 'ArrowLeft', code: 'ArrowLeft' } },
+  { id: 'audioNudgeFwd',      scope: 'audioEditor', label: 'Avancer de 50 ms (avec preview)', defaultShortcut: { key: 'ArrowRight', code: 'ArrowRight' } },
+  { id: 'audioGoStart',       scope: 'audioEditor', label: 'Aller au début',                  defaultShortcut: { key: 'Home', code: 'Home' } },
+  { id: 'audioGoEnd',         scope: 'audioEditor', label: 'Aller à la fin',                  defaultShortcut: { key: 'End', code: 'End' } },
+  { id: 'audioMarkIn',        scope: 'audioEditor', label: 'Marquer le point d\'entrée',      defaultShortcut: { key: 'i', code: 'KeyI' } },
+  { id: 'audioMarkOut',       scope: 'audioEditor', label: 'Marquer le point de sortie',      defaultShortcut: { key: 'o', code: 'KeyO' } },
+  { id: 'audioClearIn',       scope: 'audioEditor', label: 'Effacer le point d\'entrée',      defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
+  { id: 'audioClearOut',      scope: 'audioEditor', label: 'Effacer le point de sortie',      defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
+  { id: 'audioPreviewIn',     scope: 'audioEditor', label: 'Lire depuis le point d\'entrée',  defaultShortcut: { shift: true, key: 'i', code: 'KeyI' } },
+  { id: 'audioPreviewOut',    scope: 'audioEditor', label: 'Lire depuis le point de sortie',  defaultShortcut: { shift: true, key: 'o', code: 'KeyO' } },
+  { id: 'audioKeepSelection', scope: 'audioEditor', label: 'Garder la sélection',             defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
+  { id: 'audioCutSelection',  scope: 'audioEditor', label: 'Supprimer la sélection',          defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'audioUndo',          scope: 'audioEditor', label: 'Annuler la modification',          defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
+  { id: 'audioZoomIn',        scope: 'audioEditor', label: 'Zoomer autour du curseur',         defaultShortcut: { ctrl: true, key: '+', code: 'Equal' }, aliases: [{ ctrl: true, key: '=', code: 'Equal' }, { ctrl: true, key: '+', code: 'NumpadAdd' }] },
+  { id: 'audioZoomOut',       scope: 'audioEditor', label: 'Dézoomer autour du curseur',       defaultShortcut: { ctrl: true, key: '-', code: 'Minus' }, aliases: [{ ctrl: true, key: '-', code: 'NumpadSubtract' }] },
+  { id: 'audioClose',         scope: 'audioEditor', label: 'Fermer l\'éditeur audio',          defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer un modal.' },
+
+  // ── Éditeur d'image ───────────────────────────────────────────────────────
+  { id: 'imageClose', scope: 'imageEditor', label: 'Fermer l\'éditeur d\'image', defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer un modal.' },
+
+  // ── Navigation standard (a11y, lecture seule) ─────────────────────────────
+  { id: 'a11yNextItem',     scope: 'a11y', label: 'Élément suivant (arbre, listbox, menu)',    defaultShortcut: { key: 'ArrowDown', code: 'ArrowDown' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yPrevItem',     scope: 'a11y', label: 'Élément précédent (arbre, listbox, menu)',  defaultShortcut: { key: 'ArrowUp', code: 'ArrowUp' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yFirstItem',    scope: 'a11y', label: 'Premier élément (listbox)',                  defaultShortcut: { key: 'Home', code: 'Home' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yLastItem',     scope: 'a11y', label: 'Dernier élément (listbox)',                  defaultShortcut: { key: 'End', code: 'End' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yActivate',     scope: 'a11y', label: 'Activer / valider (bouton, option)',         defaultShortcut: { key: 'Enter', code: 'Enter' }, aliases: [{ key: ' ', code: 'Space' }], readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yClose',        scope: 'a11y', label: 'Fermer un menu / popover / dialogue',        defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle.' },
+  { id: 'a11yMultiSelect',  scope: 'a11y', label: 'Étendre la sélection (arbre, diagramme)',    defaultShortcut: { shift: true, key: 'ArrowDown', code: 'ArrowDown' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },
+  { id: 'a11yToggleSelect', scope: 'a11y', label: 'Ajouter à la sélection (arbre, diagramme)',  defaultShortcut: { ctrl: true, key: 'Click', code: 'Click' }, readOnly: true, readOnlyReason: 'Convention système — non modifiable.' },
+];
+
+const EDITABLE_DEFINITIONS = SHORTCUT_DEFINITIONS.filter((d) => !d.readOnly);
+
 export const DEFAULT_SHORTCUTS = Object.fromEntries(
-  SHORTCUT_DEFINITIONS.map((definition) => [definition.id, normalizeShortcut(definition.defaultShortcut)]),
+  EDITABLE_DEFINITIONS.map((definition) => [definition.id, normalizeShortcut(definition.defaultShortcut)]),
 );
 
 export const DEFAULT_SHORTCUT_LABELS = getShortcutLabelMap(DEFAULT_SHORTCUTS);
@@ -70,7 +124,7 @@ function normalizeShortcut(shortcut) {
 function keyLabelFromCode(code, key) {
   if (code?.startsWith('Key')) return code.slice(3).toUpperCase();
   if (code?.startsWith('Digit')) return code.slice(5);
-  if (code?.startsWith('Numpad')) return code.slice(6);
+  if (code?.startsWith('Numpad')) return code.slice(6).replace(/^([a-z])/, (m) => m.toUpperCase());
   if (code === 'Comma') return ',';
   if (code === 'Period') return '.';
   if (code === 'Semicolon') return ';';
@@ -81,13 +135,30 @@ function keyLabelFromCode(code, key) {
   if (code === 'BracketRight') return ']';
   if (code === 'Minus') return '-';
   if (code === 'Equal') return '=';
+  if (code === 'NumpadAdd') return '+';
+  if (code === 'NumpadSubtract') return '-';
   if (code === 'Enter') return 'Entrée';
   if (code === 'Space') return 'Espace';
+  if (code === 'Escape') return 'Échap';
+  if (code === 'ArrowLeft') return '←';
+  if (code === 'ArrowRight') return '→';
+  if (code === 'ArrowUp') return '↑';
+  if (code === 'ArrowDown') return '↓';
+  if (code === 'Home') return 'Home';
+  if (code === 'End') return 'End';
+  if (code === 'PageUp') return 'Page↑';
+  if (code === 'PageDown') return 'Page↓';
+  if (code === 'Tab') return 'Tab';
+  if (code === 'Delete') return 'Suppr';
+  if (code === 'Backspace') return '⌫';
+  if (code === 'Click') return 'Clic';
+  if (code && code.startsWith('F') && /^F\d+$/.test(code)) return code;
   if (key) return key.length === 1 ? key.toUpperCase() : key;
   return code || '';
 }
 
 export function formatShortcut(shortcut) {
+  if (!shortcut) return '';
   const normalized = normalizeShortcut(shortcut);
   const parts = [];
   if (normalized.ctrl) parts.push('Ctrl');
@@ -113,7 +184,7 @@ export function loadKeyboardShortcuts() {
     if (!raw) return DEFAULT_SHORTCUTS;
     const parsed = JSON.parse(raw);
     return Object.fromEntries(
-      SHORTCUT_DEFINITIONS.map((definition) => [
+      EDITABLE_DEFINITIONS.map((definition) => [
         definition.id,
         normalizeShortcut(parsed?.[definition.id] ?? definition.defaultShortcut),
       ]),
@@ -136,12 +207,27 @@ export function resetKeyboardShortcuts() {
   return DEFAULT_SHORTCUTS;
 }
 
+export function resetKeyboardShortcutsForScope(shortcuts, scope) {
+  const next = { ...shortcuts };
+  for (const definition of EDITABLE_DEFINITIONS) {
+    if (definition.scope === scope) {
+      next[definition.id] = normalizeShortcut(definition.defaultShortcut);
+    }
+  }
+  return next;
+}
+
+// Capture une combinaison de touches depuis un évènement clavier.
+// Refuse les events de touches "modifier-only" (Ctrl seul, Shift seul, etc.).
+// N'exige PAS de modifier — Espace, J, Escape, etc. sont des raccourcis valides.
 export function shortcutFromEvent(event) {
-  if (!event.ctrlKey || event.altKey || event.metaKey) return null;
-  if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return null;
+  if (['Control', 'Shift', 'Alt', 'Meta', 'Dead', 'Unidentified'].includes(event.key)) return null;
+  if (!event.code && !event.key) return null;
   return normalizeShortcut({
-    ctrl: true,
-    shift: !!event.shiftKey,
+    ctrl: event.ctrlKey,
+    shift: event.shiftKey,
+    alt: event.altKey,
+    meta: event.metaKey,
     code: event.code,
     key: event.key,
   });
@@ -157,10 +243,15 @@ function shortcutEquals(left, right) {
     && (a.code ? a.code === b.code : a.key === b.key);
 }
 
+// Conflits limités au même scope : Ctrl+X peut exister en 'tree' ET en 'audioEditor'.
 export function findShortcutConflict(shortcuts, actionId, shortcut) {
-  return SHORTCUT_DEFINITIONS.find((definition) => (
-    definition.id !== actionId && shortcutEquals(shortcuts?.[definition.id], shortcut)
-  ));
+  const target = SHORTCUT_DEFINITIONS.find((d) => d.id === actionId);
+  if (!target) return null;
+  return EDITABLE_DEFINITIONS.find((definition) => (
+    definition.id !== actionId
+    && definition.scope === target.scope
+    && shortcutEquals(shortcuts?.[definition.id] ?? definition.defaultShortcut, shortcut)
+  )) || null;
 }
 
 function shortcutMatchesEvent(event, shortcut) {
@@ -174,8 +265,25 @@ function shortcutMatchesEvent(event, shortcut) {
     || (!!normalized.key && eventKey === normalized.key);
 }
 
-export function findShortcutAction(event, shortcuts) {
+// Snapshot global des raccourcis courants — App.jsx le pousse à chaque update.
+// Permet aux composants enfants de lire les raccourcis sans prop-drilling.
+let CURRENT_SHORTCUTS = DEFAULT_SHORTCUTS;
+
+export function setCurrentShortcuts(shortcuts) {
+  CURRENT_SHORTCUTS = shortcuts || DEFAULT_SHORTCUTS;
+}
+
+export function getCurrentShortcuts() {
+  return CURRENT_SHORTCUTS;
+}
+
+// Recherche une action correspondant à l'évènement.
+// Si `scope` est fourni, ne considère que les raccourcis de ce scope.
+// Sinon, parcourt tous les scopes (utile pour le dispatcher global).
+export function findShortcutAction(event, shortcuts, scope = null) {
   for (const definition of SHORTCUT_DEFINITIONS) {
+    if (definition.readOnly) continue;
+    if (scope && definition.scope !== scope) continue;
     const shortcut = shortcuts?.[definition.id] ?? definition.defaultShortcut;
     if (shortcutMatchesEvent(event, shortcut)) return definition.id;
     if (shortcutEquals(shortcut, definition.defaultShortcut)) {
