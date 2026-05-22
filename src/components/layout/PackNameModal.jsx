@@ -183,7 +183,7 @@ export function PackNameModal({
     : !hasExportName
       ? 'Renseigne le titre du pack avant de générer.'
       : generateDisabled
-        ? 'Corrige les erreurs du projet avant de pouvoir générer le pack.'
+        ? 'Complète les éléments manquants avant de pouvoir générer le pack.'
         : 'Appliquer les métadonnées et générer le pack.';
 
   return (
