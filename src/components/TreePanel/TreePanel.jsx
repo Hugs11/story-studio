@@ -159,7 +159,7 @@ function countDescendants(entry) {
 export function TreePanel({
   project, projectType, selectedId, onSelect, onReorder, onMoveToMenu,
   onAddMenu, onAddStory, onImportFolder, onDeleteMenu, onDeleteItem, onUnpackZip, onSimulateZip,
-  onBulkDeleteItems,
+  onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
   onAddEndNode, onRemoveEndNode, onSimulateNode,
   pathAudit, validationIssues: validationIssuesProp, projectIndex,
@@ -752,13 +752,47 @@ export function TreePanel({
       }
 
       if (isRootCtx || nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
-        const currentColor = isRootCtx ? project.treeColor : getEntry(nodeId)?.treeColor;
+        const isMultiTarget = !isRootCtx && selectedIds.has(nodeId) && selectedIds.size > 1;
+        const colorTargetIds = isMultiTarget
+          ? getTopLevelSelected().filter((id) => id !== 'root')
+          : (isRootCtx ? [] : [nodeId]);
+        const includesRoot = isMultiTarget && selectedIds.has('root');
+
+        let currentColor;
+        if (isMultiTarget) {
+          const colors = colorTargetIds.map((id) => getEntry(id)?.treeColor ?? null);
+          if (includesRoot) colors.push(project.treeColor ?? null);
+          const unique = [...new Set(colors)];
+          currentColor = unique.length === 1 ? unique[0] : '__mixed__';
+        } else if (isRootCtx) {
+          currentColor = project.treeColor ?? null;
+        } else {
+          currentColor = getEntry(nodeId)?.treeColor ?? null;
+        }
+
+        const applyColor = (color) => {
+          if (isMultiTarget) {
+            if (colorTargetIds.length > 0) {
+              onBulkUpdateItems?.(colorTargetIds, () => ({ treeColor: color }));
+            }
+            if (includesRoot) {
+              onSetNodeColor?.('root', 'root', color);
+            }
+          } else {
+            onSetNodeColor?.(nodeId, nodeType, color);
+          }
+        };
+
+        const headerLabel = isMultiTarget
+          ? `Couleur (${colorTargetIds.length + (includesRoot ? 1 : 0)} éléments)`
+          : 'Couleur';
+
         actions.push('sep');
         actions.push({
           type: 'node',
           render: () => (
             <div className="ctx-color-section">
-              <div className="ctx-color-header">Couleur</div>
+              <div className="ctx-color-header">{headerLabel}</div>
               <div className="ctx-color-row">
                 {TREE_COLOR_PALETTE.map((color) => (
                   <button
@@ -768,17 +802,17 @@ export function TreePanel({
                     style={{ backgroundColor: color }}
                     title={color}
                     onClick={() => {
-                      onSetNodeColor?.(nodeId, nodeType, color);
+                      applyColor(color);
                       setCtxMenu(null);
                     }}
                   />
                 ))}
                 <button
                   type="button"
-                  className={`ctx-color-clear${!currentColor ? ' is-active' : ''}`}
-                  title="Aucune couleur"
+                  className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
+                  title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
                   onClick={() => {
-                    onSetNodeColor?.(nodeId, nodeType, null);
+                    applyColor(null);
                     setCtxMenu(null);
                   }}
                 >
@@ -913,14 +947,6 @@ export function TreePanel({
         onDragCancel={() => { setActiveId(null); dropInfoRef.current = EMPTY_DROP_INFO; setDropInfo(EMPTY_DROP_INFO); }}
       >
         <div className="tree-shell" data-os-drop-zone="treepanel">
-          {selectedIds.size > 1 ? (
-            <div className="tree-multisel-bar">
-              <span>{[...selectedIds].filter((id) => id !== 'root').length} éléments sélectionnés</span>
-              <button type="button" className="tree-multisel-del" onClick={deleteSelectedNodes}>
-                Supprimer
-              </button>
-            </div>
-          ) : null}
           {projectType === 'pack' && searchActive ? (
             <div className="tree-search-bar">
               <span className="tree-search-icon">⌕</span>

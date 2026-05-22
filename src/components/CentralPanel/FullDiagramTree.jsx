@@ -23,6 +23,8 @@ import {
   END_NODE_ID,
 } from './flowDiagramLayout';
 
+const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
+
 function useZipCover(zipPath, coverImage) {
   const [url, setUrl] = useState(null);
 
@@ -446,6 +448,8 @@ export function CompleteDiagramTree({
   onDeleteMenu,
   onDeleteItem,
   onBulkDeleteItems,
+  onBulkUpdateItems,
+  onSetNodeColor,
   onPasteEntries,
   onCutPasteEntries,
   onDuplicate,
@@ -957,6 +961,77 @@ export function CompleteDiagramTree({
         label: selectedForDelete.length > 1 ? `Supprimer ${selectedForDelete.length} éléments` : 'Supprimer',
         fn: deleteFn,
         danger: true,
+      });
+    }
+
+    if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
+      const isMultiTarget = selectedIds?.has(nodeId) && selectedIds?.size > 1;
+      const colorTargetIds = isMultiTarget
+        ? getTopLevelSelected(nodeId).filter((id) => id !== 'root')
+        : [nodeId];
+      const includesRoot = isMultiTarget && selectedIds?.has('root');
+
+      let currentColor;
+      if (isMultiTarget) {
+        const colors = colorTargetIds.map((id) => findEntryById(project, id, projectIndex)?.treeColor ?? null);
+        if (includesRoot) colors.push(project.treeColor ?? null);
+        const unique = [...new Set(colors)];
+        currentColor = unique.length === 1 ? unique[0] : '__mixed__';
+      } else {
+        currentColor = entry?.treeColor ?? null;
+      }
+
+      const applyColor = (color) => {
+        if (isMultiTarget) {
+          if (colorTargetIds.length > 0) {
+            onBulkUpdateItems?.(colorTargetIds, () => ({ treeColor: color }));
+          }
+          if (includesRoot) {
+            onSetNodeColor?.('root', 'root', color);
+          }
+        } else {
+          onSetNodeColor?.(nodeId, nodeType, color);
+        }
+      };
+
+      const headerLabel = isMultiTarget
+        ? `Couleur (${colorTargetIds.length + (includesRoot ? 1 : 0)} éléments)`
+        : 'Couleur';
+
+      actions.push('sep');
+      actions.push({
+        type: 'node',
+        render: () => (
+          <div className="ctx-color-section">
+            <div className="ctx-color-header">{headerLabel}</div>
+            <div className="ctx-color-row">
+              {TREE_COLOR_PALETTE.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`ctx-color-dot${currentColor === color ? ' is-active' : ''}`}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                  onClick={() => {
+                    applyColor(color);
+                    setCtxMenu(null);
+                  }}
+                />
+              ))}
+              <button
+                type="button"
+                className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
+                title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
+                onClick={() => {
+                  applyColor(null);
+                  setCtxMenu(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ),
       });
     }
 

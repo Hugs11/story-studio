@@ -8,6 +8,7 @@ import { NavigationTargetSelect } from './story/storyUtils';
 
 const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
+const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
 
 const SHARED_DURING_CONTROL_KEYS = [
   { key: 'pause',    label: 'Bouton pause',         desc: 'Autorise la pause pendant la lecture' },
@@ -70,6 +71,32 @@ export const MultiEditor = memo(function MultiEditor({
     onBulkUpdateItems(editableIds, (entry) => ({
       controlSettings: { ...entry.controlSettings, [key]: value },
     }));
+  }
+
+  const colorableIds = nodes
+    .filter((n) => n.type === 'story' || n.type === 'menu' || n.type === 'zip')
+    .map((n) => n.id);
+
+  function getMixedColor() {
+    const colors = nodes
+      .filter((n) => n.type === 'story' || n.type === 'menu' || n.type === 'zip')
+      .map((n) => n.treeColor ?? null);
+    const unique = [...new Set(colors)];
+    if (unique.length === 0) return null;
+    if (unique.length === 1) return unique[0];
+    return '__mixed__';
+  }
+
+  function handleSetColor(color) {
+    if (colorableIds.length === 0) return;
+    onBulkUpdateItems(colorableIds, () => ({ treeColor: color }));
+  }
+
+  function handleAutoBlackImageChange(value) {
+    onBulkUpdateItems(
+      editableNodes.filter((n) => n.type === 'menu').map((n) => n.id),
+      () => ({ autoBlackImage: value }),
+    );
   }
 
   function handleStoryAutoContinuationChange(value) {
@@ -269,6 +296,27 @@ export const MultiEditor = memo(function MultiEditor({
       {editableNodes.length > 0 && (
       <div className="card">
         <div className="card-title">{playbackControlTitle}</div>
+        {onlyMenus && (() => {
+          const vals = editableNodes.map((n) => !!n.autoBlackImage);
+          const unique = [...new Set(vals)];
+          const isMixed = unique.length > 1;
+          const value = isMixed ? false : unique[0];
+          return (
+            <div className="field-row" style={{ marginBottom: 4 }}>
+              <div style={{ flex: 1 }}>
+                <span className="field-label">Pas d'image</span>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  Ces dossiers n'envoient aucune image à la Lunii — l'écran conserve l'affichage précédent pendant la sélection.
+                </div>
+              </div>
+              <Toggle
+                on={value}
+                mixed={isMixed}
+                onChange={(v) => handleAutoBlackImageChange(v)}
+              />
+            </div>
+          );
+        })()}
         {playbackControlKeys.map(({ key, label, desc }) => {
           const vals = editableNodes.map((n) => n.controlSettings?.[key] ?? getDefaults(n.type)[key] ?? false);
           const unique = [...new Set(vals)];
@@ -456,6 +504,44 @@ export const MultiEditor = memo(function MultiEditor({
           Sélection mixte (histoires et dossiers) — seuls les contrôles de lecture peuvent être modifiés en groupe ici. Pour le reste, sélectionne un seul type d'élément à la fois.
         </div>
       )}
+
+      {colorableIds.length > 0 && (() => {
+        const currentColor = getMixedColor();
+        return (
+          <div className="card">
+            <div className="field-row" style={{ alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <span className="field-label">Couleur</span>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  {currentColor === '__mixed__'
+                    ? `Couleurs différentes sur ${colorableIds.length} éléments — choisir pour uniformiser.`
+                    : `Pastille affichée à gauche du nom dans l'arbre (${colorableIds.length} éléments).`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {TREE_COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`ctx-color-dot${currentColor === color ? ' is-active' : ''}`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                    onClick={() => handleSetColor(color)}
+                  />
+                ))}
+                <button
+                  type="button"
+                  className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
+                  title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
+                  onClick={() => handleSetColor(null)}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 });

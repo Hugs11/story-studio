@@ -417,52 +417,6 @@
   border-color: color-mix(in oklch, oklch(0.80 0.17 70) 35%, transparent);
 }
 
-/* ── Multi-select bar ───────────────────────────────────────────────────── */
-.tree-multisel-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 10px;
-  background: var(--color-accent-light);
-  border-bottom: 0.5px solid var(--color-border-tertiary);
-  font-size: 11px;
-  color: var(--color-accent);
-  flex-shrink: 0;
-  gap: 8px;
-}
-
-.tree-multisel-del {
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: var(--border-radius-md);
-  border: 0.5px solid var(--danger-border);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-
-.tree-multisel-del:hover:not(:disabled) {
-  background: var(--danger-bg-hover);
-  border-color: var(--danger-border-hover);
-  color: var(--danger-text);
-}
-
-.tree-multisel-del:focus-visible {
-  outline: 2px solid var(--danger-border-hover);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 22%, transparent);
-}
-
-.tree-multisel-del:disabled {
-  background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
-  color: var(--control-disabled-text);
-  cursor: not-allowed;
-}
-
-
 /* ── OS file drop overlay ───────────────────────────────────────────────── */
 .tree-os-drop-overlay {
   position: absolute;
