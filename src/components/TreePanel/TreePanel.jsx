@@ -28,6 +28,7 @@ import {
 import { deepCloneEntry } from '../../store/projectModel';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../store/useSharedClipboard';
+import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { getItemValidationStatus, getMenuValidationStatus, getRootValidationStatus, getEndNodeValidationStatus } from '../../store/projectValidation';
 import {
   getGeneratedEndNodeHomeNavigation,
@@ -568,24 +569,26 @@ export function TreePanel({
     const idx = flatNodeIndexById.get(selectedId) ?? -1;
     if (idx === -1) return;
 
+    // Navigation a11y standard — non configurable.
     if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
       e.preventDefault();
       if (idx > 0) handleNodeSelect(flatNodes[idx - 1].id, e.shiftKey ? e : null);
-    } else if (e.key === 'ArrowDown' || e.key === 'Tab') {
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'Tab') {
       e.preventDefault();
       if (idx < flatNodes.length - 1) handleNodeSelect(flatNodes[idx + 1].id, e.shiftKey ? e : null);
-    } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      deleteSelectedNodes();
-    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'c') {
-      e.preventDefault();
-      handleCopy();
-    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'x') {
-      e.preventDefault();
-      handleCut();
-    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'v') {
-      e.preventDefault();
-      handlePaste();
+      return;
     }
+
+    // Raccourcis configurables (scope 'tree').
+    const actionId = findShortcutAction(e, getCurrentShortcuts(), 'tree');
+    if (!actionId) return;
+    e.preventDefault();
+    if (actionId === 'treeCopy') handleCopy();
+    else if (actionId === 'treeCut') handleCut();
+    else if (actionId === 'treePaste') handlePaste();
+    else if (actionId === 'treeDelete') deleteSelectedNodes();
   }
 
   function handleDragEnd(event) {

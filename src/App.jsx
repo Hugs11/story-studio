@@ -5,7 +5,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { open as openDialog, ask } from '@tauri-apps/plugin-dialog';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { sanitizeImportedEntries, sanitizeImportedName, useProjectStore } from './store/projectStore';
+import { isTextEditingTarget, sanitizeImportedEntries, sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
   saveProject,
   saveProjectAs,
@@ -43,6 +43,7 @@ import {
   getShortcutLabelMap,
   loadKeyboardShortcuts,
   saveKeyboardShortcuts,
+  setCurrentShortcuts,
 } from './store/keyboardShortcuts';
 import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
 import { Loader2, TriangleAlert } from './components/icons/LucideLocal';
@@ -343,6 +344,7 @@ export default function App() {
 
   useEffect(() => {
     keyboardShortcutsRef.current = keyboardShortcuts;
+    setCurrentShortcuts(keyboardShortcuts);
     saveKeyboardShortcuts(keyboardShortcuts);
   }, [keyboardShortcuts]);
 
@@ -401,9 +403,10 @@ export default function App() {
     function handleKeyDown(e) {
       if (e.target?.closest?.('.keyboard-shortcuts-modal')) return;
       if (document.querySelector('.audio-editor-modal')) return;
+      if (document.querySelector('.image-editor-box')) return;
 
       const actions = shortcutActionsRef.current;
-      const actionId = findShortcutAction(e, keyboardShortcutsRef.current);
+      const actionId = findShortcutAction(e, keyboardShortcutsRef.current, 'general');
       if (!actionId) return;
       const stopShortcut = () => {
         e.preventDefault();
@@ -502,6 +505,22 @@ export default function App() {
         if (!actions.projectActionsVisible || !actions.hasValidationErrors) return;
         stopShortcut();
         actions.toggleValidation?.();
+        return;
+      }
+
+      if (actionId === 'undo') {
+        if (isTextEditingTarget(e.target)) return;
+        if (!actions.canUndo) return;
+        stopShortcut();
+        actions.undo?.();
+        return;
+      }
+
+      if (actionId === 'redo') {
+        if (isTextEditingTarget(e.target)) return;
+        if (!actions.canRedo) return;
+        stopShortcut();
+        actions.redo?.();
       }
     }
     window.addEventListener('keydown', handleKeyDown, true);
@@ -1930,11 +1949,15 @@ export default function App() {
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
     toggleValidation: () => setValidationOpen((open) => !open),
+    undo: store.undo,
+    redo: store.redo,
     projectActionsVisible: projectType !== null,
     activeTab: store.activeTab,
     canImportStories,
     canAddFolder,
     canGenerate,
+    canUndo: store.canUndo,
+    canRedo: store.canRedo,
     hasValidationErrors: errors > 0,
   };
 

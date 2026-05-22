@@ -27,7 +27,7 @@ import {
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
 
-function isTextEditingTarget(target) {
+export function isTextEditingTarget(target) {
   if (!(target instanceof Element)) return false;
   return !!target.closest('input, textarea, [contenteditable=""], [contenteditable="true"], [role="textbox"]');
 }
@@ -207,22 +207,6 @@ export function useProjectStore() {
       return next;
     });
   }, []);
-
-  // Ctrl+Z / Ctrl+Shift+Z global
-  useEffect(() => {
-    function onKey(e) {
-      if (isTextEditingTarget(e.target)) return;
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
 
   // ── Projet ──────────────────────────────────────────────────────────────────
 

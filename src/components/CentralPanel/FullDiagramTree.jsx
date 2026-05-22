@@ -5,6 +5,7 @@ import { useLocalFile } from '../../store/useLocalFile';
 import { findParentMenuId, findEntryById, findEntryPath, deepCloneEntry } from '../../store/projectModel';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../store/useSharedClipboard';
+import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { Tooltip } from '../common/Tooltip';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Eye, Settings, Play } from '../icons/LucideLocal';
@@ -506,16 +507,14 @@ export function CompleteDiagramTree({
     function onKeyDown(e) {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'diagram');
+      if (!actionId) return;
       const { handleCopy: copy, handleCut: cut, handlePaste: paste, handleDeleteSelection: del, selectedId: sid } = kbHandlersRef.current;
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !(e.ctrlKey || e.metaKey || e.altKey)) {
-        e.preventDefault();
-        del(sid);
-        return;
-      }
-      if (!(e.ctrlKey || e.metaKey) || e.shiftKey) return;
-      if (e.key === 'c') { e.preventDefault(); copy(sid); }
-      else if (e.key === 'x') { e.preventDefault(); cut(sid); }
-      else if (e.key === 'v') { e.preventDefault(); paste(sid); }
+      e.preventDefault();
+      if (actionId === 'diagramCopy') copy(sid);
+      else if (actionId === 'diagramCut') cut(sid);
+      else if (actionId === 'diagramPaste') paste(sid);
+      else if (actionId === 'diagramDelete') del(sid);
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

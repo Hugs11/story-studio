@@ -7,6 +7,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useMediaMetadata, fmtSize, fmtHz } from '../../store/useMediaMetadata';
 import { Tooltip } from '../common/Tooltip';
 import { FilePlus, FolderPlus, Package, Play, SwatchBook, SlidersHorizontal, Copy, Scissors, FolderOpen, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
+import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { MediaPopover } from './MediaPopover';
@@ -869,7 +870,8 @@ export function MediaExplorer({
 
   useEffect(() => {
     function onKeyDown(e) {
-      if (!(e.ctrlKey && e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'F'))) return;
+      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'mediaPanel');
+      if (actionId !== 'mediaSearch') return;
       e.preventDefault();
       e.stopPropagation();
       const input = searchInputRef.current;
