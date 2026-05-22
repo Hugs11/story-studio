@@ -61,23 +61,23 @@ Studio keeps those pieces visible and editable in a single workspace.
 
 ## Screenshots
 
-![Story Studio editor](docs/assets/screenshots/editor-dark.png)
+![Story Studio editor](docs/assets/screenshots/editor-features-dark.png)
+
+| Home screen | Tree editor |
+|---|---|
+| ![Home screen](docs/assets/screenshots/home-dark.png) | ![Editor with story tree](docs/assets/screenshots/editor-dark.png) |
+
+| Story editor | Pack metadata |
+|---|---|
+| ![Story editor controls](docs/assets/screenshots/pack-metadata-dark.png) | ![Pack metadata modal](docs/assets/screenshots/story-editor-dark.png) |
 
 | Diagram and simulator | Media explorer |
 |---|---|
 | ![Diagram view with simulator](docs/assets/screenshots/diagram-simulator-dark.png) | ![Media explorer](docs/assets/screenshots/media-explorer-dark.png) |
 
-| Story editor | Pack metadata |
-|---|---|
-| ![Story editor controls](docs/assets/screenshots/story-editor-dark.png) | ![Pack metadata modal](docs/assets/screenshots/pack-metadata-dark.png) |
-
 | Audio editor | Settings |
 |---|---|
 | ![Audio editor](docs/assets/screenshots/audio-editor-dark.png) | ![Settings in light mode](docs/assets/screenshots/settings-light.png) |
-
-| Home screen |
-|---|
-| ![Home screen](docs/assets/screenshots/home-dark.png) |
 
 ## Features
 

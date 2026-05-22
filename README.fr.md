@@ -66,23 +66,23 @@ visibles et éditables dans un seul espace de travail.
 
 ## Captures d'écran
 
-![Éditeur Story Studio](docs/assets/screenshots/editor-dark.png)
+![Éditeur Story Studio](docs/assets/screenshots/editor-features-dark.png)
+
+| Écran d'accueil | Éditeur arborescent |
+|---|---|
+| ![Écran d'accueil](docs/assets/screenshots/home-dark.png) | ![Éditeur avec arbre de projet](docs/assets/screenshots/editor-dark.png) |
+
+| Éditeur d'histoire | Métadonnées du pack |
+|---|---|
+| ![Réglages d'une histoire](docs/assets/screenshots/pack-metadata-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/story-editor-dark.png) |
 
 | Diagramme et simulateur | Explorateur de médias |
 |---|---|
 | ![Vue diagramme avec simulateur](docs/assets/screenshots/diagram-simulator-dark.png) | ![Explorateur de médias](docs/assets/screenshots/media-explorer-dark.png) |
 
-| Éditeur d'histoire | Métadonnées du pack |
-|---|---|
-| ![Réglages d'une histoire](docs/assets/screenshots/story-editor-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/pack-metadata-dark.png) |
-
 | Éditeur audio | Préférences |
 |---|---|
 | ![Éditeur audio](docs/assets/screenshots/audio-editor-dark.png) | ![Préférences en mode clair](docs/assets/screenshots/settings-light.png) |
-
-| Écran d'accueil |
-|---|
-| ![Écran d'accueil](docs/assets/screenshots/home-dark.png) |
 
 ## Fonctionnalités
 
