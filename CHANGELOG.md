@@ -10,6 +10,12 @@ is the public record of the work completed before the first GitHub release.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+---
+
+## [0.9.0] - 2026-05-22
+
 ### Added
 
 - French README and French setup/release documentation for XTTS, ComfyUI and
@@ -76,6 +82,8 @@ is the public record of the work completed before the first GitHub release.
   playback are separated from end-of-story behavior, automatic end-node routing
   is shown as a generated-pack fact, and optional custom end messages stay in
   advanced settings by default.
+- Refreshed the README screenshots with the current pack workspace, story
+  editor and pack metadata flows.
 
 ### Fixed
 
@@ -98,6 +106,11 @@ is the public record of the work completed before the first GitHub release.
   generated behavior, including the `autoNext` next-story shortcut, contextual
   `next_story` resolution per source story, and the end-node fallback that
   inherits each story's own return target when no global destination is set.
+- Project tree badges now focus on direct navigation overrides and hide
+  advanced end-flow details such as end messages, end sequences and imported
+  end-node returns.
+- The story "Accueil" selector once again anchors its default destination with
+  an explicit `Réglage par défaut : ...` hint.
 - Validation issue selection now closes the toolbar dropdown immediately, and
   its keyboard handling no longer intercepts keys outside the validation menu.
 - Bottom-bar tab pills stay hidden while the side panel is open, avoiding
