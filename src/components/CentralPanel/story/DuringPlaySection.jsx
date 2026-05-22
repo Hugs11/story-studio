@@ -14,12 +14,11 @@ const TITLE_CONTROL_DEFAULTS = {
 
 const PLAY_CONTROLS = [
   { key: 'pause',    label: 'Pause',               tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
-  { key: 'autoplay', label: 'Lecture automatique',  tip: "À la fin de l'audio, l'histoire passe automatiquement à la suite. Désactive si tu veux que l'enfant appuie sur OK pour continuer.", def: false },
   { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pendant la lecture (par exemple pour changer d'histoire).", def: false },
 ];
 
 const TITLE_CONTROLS = [
-  { key: 'autoplay', label: 'Lecture automatique', tip: "L'histoire se lance toute seule à la fin de l'audio de sélection, sans attendre que l'enfant appuie sur OK.", def: false },
+  { key: 'autoplay', label: "Lancer l'histoire automatiquement", tip: "L'histoire se lance toute seule à la fin de l'audio de sélection, sans attendre que l'enfant appuie sur OK.", def: false },
   { key: 'ok',       label: 'Bouton OK',            tip: "L'enfant peut appuyer sur OK pour lancer l'histoire.",                   def: true },
   { key: 'home',     label: 'Bouton Accueil',        tip: "L'enfant peut revenir au menu parent en appuyant sur le bouton Accueil.", def: true },
   { key: 'pause',    label: 'Bouton pause',          tip: "L'enfant peut mettre en pause l'audio de sélection.",                    def: false },
