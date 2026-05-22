@@ -734,15 +734,7 @@
   min-height: 30px;
   padding: 5px 8px;
   gap: 7px;
-  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border-secondary));
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-background-secondary));
   font-size: 11.5px;
-}
-
-.during-play-home .navigation-listbox.is-compact .navigation-listbox-trigger:hover,
-.during-play-home .navigation-listbox.is-compact.is-open .navigation-listbox-trigger {
-  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border-secondary));
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-background-secondary));
 }
 
 .during-play-home .navigation-target-select > div + div {
