@@ -112,6 +112,7 @@ export function EditorTab({
             onDeleteMenu={onDeleteMenu}
             onDeleteItem={onDeleteItem}
             onBulkDeleteItems={onBulkDeleteItems}
+            onBulkUpdateItems={onBulkUpdateItems}
             onUnpackZip={onUnpackZip}
             onSimulateZip={onSimulateZip}
             onPasteEntries={onPasteEntries}
@@ -151,6 +152,7 @@ export function EditorTab({
           onDeleteItem={onDeleteItem}
           onBulkUpdateItems={onBulkUpdateItems}
           onBulkDeleteItems={onBulkDeleteItems}
+          onSetNodeColor={handleSetNodeColor}
           onImportStories={onAddStory}
           onUpdateNightModeAudio={onUpdateNightModeAudio}
           onUpdateNightMode={onUpdateNightMode}

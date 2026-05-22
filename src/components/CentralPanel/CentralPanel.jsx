@@ -34,6 +34,7 @@ export function CentralPanel({
   onDeleteItem,
   onBulkUpdateItems,
   onBulkDeleteItems,
+  onSetNodeColor,
   onImportStories,
   onUpdateNightModeAudio,
   onUpdateNightMode,
@@ -216,6 +217,8 @@ export function CentralPanel({
               onUpdateItem={onUpdateItem}
               onDeleteItem={onDeleteItem}
               onBulkDeleteItems={onBulkDeleteItems}
+              onBulkUpdateItems={onBulkUpdateItems}
+              onSetNodeColor={onSetNodeColor}
               onImportStories={onImportStories}
               onUpdateNightModeAudio={onUpdateNightModeAudio}
               onUpdateNightMode={onUpdateNightMode}
