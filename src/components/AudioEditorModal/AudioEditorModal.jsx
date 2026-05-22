@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
 import { useLocalFile } from '../../store/useLocalFile';
+import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -383,73 +384,73 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
         || target?.tagName === 'SELECT'
         || target?.isContentEditable
       ) return;
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
-        if (stagedEdit || previewPath) {
-          e.preventDefault();
-          undoStagedEdit();
-        }
-        return;
-      }
-      if (e.ctrlKey && !e.altKey && !e.metaKey && isKeyboardZoomKey(e)) {
-        e.preventDefault();
-        const direction = isKeyboardZoomOutKey(e) ? -1 : 1;
-        zoomAtCurrentCursor(direction * KEYBOARD_ZOOM_STEP);
-        return;
-      }
-      if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 'i' || e.key === 'I')) {
-        e.preventDefault();
-        clearStartPoint();
-        return;
-      }
-      if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 'o' || e.key === 'O')) {
-        e.preventDefault();
-        clearEndPoint();
-        return;
-      }
-      if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 'g' || e.key === 'G')) {
-        e.preventDefault();
-        if (canOperate) void handleStageAction('trim');
-        return;
-      }
-      if (e.ctrlKey && !e.altKey && !e.metaKey && (e.key === 'x' || e.key === 'X')) {
-        e.preventDefault();
-        if (canCut) void handleStageAction('cut');
-        return;
-      }
-      if (e.key === ' ') {
-        e.preventDefault();
-        handlePlayPause();
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        nudgeWithScrub(-NUDGE_STEP);
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        nudgeWithScrub(NUDGE_STEP);
-      } else if (e.key === 'Home') {
-        e.preventDefault();
-        stopShuttle();
-        setWaveTime(0);
-      } else if (e.key === 'End') {
-        e.preventDefault();
-        stopShuttle();
-        setWaveTime(durationRef.current);
-      } else if (e.key === 'j' || e.key === 'J') {
-        e.preventDefault();
-        bumpShuttle(-1);
-      } else if (e.key === 'k' || e.key === 'K') {
-        e.preventDefault();
-        stopShuttle();
-        wsRef.current?.pause();
-        setIsPlaying(false);
-      } else if (e.key === 'l' || e.key === 'L') {
-        e.preventDefault();
-        bumpShuttle(1);
-      } else if (e.key === 'i' || e.key === 'I') {
-        e.preventDefault();
-        if (e.shiftKey) { previewIn(); } else { markStartHere(); }
-      } else if (e.key === 'o' || e.key === 'O') {
-        e.preventDefault();
-        if (e.shiftKey) { previewOut(); } else { markEndHere(); }
+      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'audioEditor');
+      if (!actionId) return;
+      e.preventDefault();
+      switch (actionId) {
+        case 'audioUndo':
+          if (stagedEdit || previewPath) undoStagedEdit();
+          return;
+        case 'audioZoomIn':
+          zoomAtCurrentCursor(KEYBOARD_ZOOM_STEP);
+          return;
+        case 'audioZoomOut':
+          zoomAtCurrentCursor(-KEYBOARD_ZOOM_STEP);
+          return;
+        case 'audioClearIn':
+          clearStartPoint();
+          return;
+        case 'audioClearOut':
+          clearEndPoint();
+          return;
+        case 'audioKeepSelection':
+          if (canOperate) void handleStageAction('trim');
+          return;
+        case 'audioCutSelection':
+          if (canCut) void handleStageAction('cut');
+          return;
+        case 'audioPlayPause':
+          handlePlayPause();
+          return;
+        case 'audioNudgeBack':
+          nudgeWithScrub(-NUDGE_STEP);
+          return;
+        case 'audioNudgeFwd':
+          nudgeWithScrub(NUDGE_STEP);
+          return;
+        case 'audioGoStart':
+          stopShuttle();
+          setWaveTime(0);
+          return;
+        case 'audioGoEnd':
+          stopShuttle();
+          setWaveTime(durationRef.current);
+          return;
+        case 'audioShuttleBack':
+          bumpShuttle(-1);
+          return;
+        case 'audioShuttleStop':
+          stopShuttle();
+          wsRef.current?.pause();
+          setIsPlaying(false);
+          return;
+        case 'audioShuttleFwd':
+          bumpShuttle(1);
+          return;
+        case 'audioMarkIn':
+          markStartHere();
+          return;
+        case 'audioMarkOut':
+          markEndHere();
+          return;
+        case 'audioPreviewIn':
+          previewIn();
+          return;
+        case 'audioPreviewOut':
+          previewOut();
+          return;
+        default:
+          return;
       }
     }
     window.addEventListener('keydown', handleKey);
@@ -756,18 +757,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     const nextScroll = Math.max(0, pointer.time * nextZoom - pointer.x);
     ws.setScroll?.(nextScroll);
     if (pointer.scroller) pointer.scroller.scrollLeft = nextScroll;
-  }
-
-  function isKeyboardZoomOutKey(e) {
-    return e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract';
-  }
-
-  function isKeyboardZoomKey(e) {
-    return isKeyboardZoomOutKey(e)
-      || e.key === '+'
-      || e.key === '='
-      || e.code === 'Equal'
-      || e.code === 'NumpadAdd';
   }
 
   function getCursorZoomAnchor() {
