@@ -3,23 +3,31 @@ import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { useProjectContext } from '../../store/ProjectContext';
+import {
+  ENREGISTREMENTS,
+  FICHIERS_IMPORTES,
+  IMAGES_GENEREES,
+  VOIX_GENEREES,
+} from '../../store/workspaceDirs';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { TriangleAlert } from '../icons/LucideLocal';
 import './CentralPanel.css';
+
+const DELETABLE_WORKSPACE_DIRS = [FICHIERS_IMPORTES, ENREGISTREMENTS, VOIX_GENEREES, IMAGES_GENEREES];
 
 function canDeleteFromWorkspace(filePath, workspaceDir) {
   if (!filePath || !workspaceDir) return false;
   const normalize = (v) => String(v || '').replace(/\\/g, '/').replace(/\/+/g, '/').toLowerCase().trim();
   const file = normalize(filePath);
   const dir = normalize(workspaceDir).replace(/\/$/, '');
-  return ['fichiers-importes', 'enregistrements', 'voix-generees', 'images-generees']
-    .some((d) => file.startsWith(`${dir}/${d}/`));
+  return DELETABLE_WORKSPACE_DIRS.some((d) => file.startsWith(`${dir}/${d}/`));
 }
 
 const navigationSelectWrapStyle = { maxWidth: 280, width: '100%' };
 const fieldDescStyle = { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 };
 
 export function EndNodeEditor({
+  endNodeName = 'Message de fin',
   nightModeAudio,
   nightModeActive,
   nightModeReturn,
@@ -33,6 +41,7 @@ export function EndNodeEditor({
   onUpdateNightMode,
   onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
+  onUpdateEndNodeName,
   onRemove,
 }) {
   const { workspaceDir } = useProjectContext();
@@ -60,10 +69,20 @@ export function EndNodeEditor({
     <>
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Nœud de fin</div>
+          <div className="card-title">Message de fin</div>
           <div className="card-copy card-copy--inline">
             Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante (ex : « Tu veux encore écouter une histoire ? »). La lecture est toujours automatique.
           </div>
+        </div>
+
+        <div className="field-row">
+          <span className="field-label">Nom</span>
+          <input
+            className="field-input"
+            value={endNodeName}
+            onChange={(event) => onUpdateEndNodeName?.(event.target.value)}
+            placeholder="Message de fin"
+          />
         </div>
 
         <AudioField
@@ -84,12 +103,12 @@ export function EndNodeEditor({
       </div>
 
       <div className="card">
-        <div className="card-title">Pendant le nœud de fin</div>
+        <div className="card-title">Pendant le message de fin</div>
         <div className="field-row" style={{ marginBottom: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <span className="field-label">Accueil</span>
             <div style={fieldDescStyle}>
-              Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du nœud de fin.
+              Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du message de fin.
             </div>
           </div>
           <div style={navigationSelectWrapStyle}>
@@ -99,7 +118,7 @@ export function EndNodeEditor({
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={null}
-              emptyLabel="Réglage par défaut"
+              emptyLabel="Suit le retour de l'histoire"
               resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
             />
           </div>
@@ -107,10 +126,10 @@ export function EndNodeEditor({
       </div>
 
       <div className="card">
-        <div className="card-title">Après le nœud de fin</div>
+        <div className="card-title">Après le message de fin</div>
         <div className="field-row" style={{ marginBottom: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span className="field-label">À la fin du nœud de fin, retour vers</span>
+            <span className="field-label">À la fin du message de fin, retour vers</span>
             <div style={fieldDescStyle}>
               Où l'enfant est redirigé après la lecture du message de fin.
             </div>
@@ -122,7 +141,7 @@ export function EndNodeEditor({
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={null}
-              emptyLabel="Réglage par défaut"
+              emptyLabel="Suit la fin de l'histoire"
               resolvedDestinationLabel={nightModeReturnResolvedLabel}
             />
           </div>
@@ -150,9 +169,9 @@ export function EndNodeEditor({
         <div className="card-danger-divider" />
         <div className="card-danger-row">
           <div className="card-danger-text">
-            <div className="card-danger-title">Supprimer le nœud de fin</div>
+            <div className="card-danger-title">Supprimer le message de fin</div>
             <div className="card-danger-desc">
-              Retire le nœud de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
+              Retire le message de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
             </div>
           </div>
           <button className="btn btn-danger-outline" type="button" onClick={handleRemove}>

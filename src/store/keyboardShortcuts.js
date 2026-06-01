@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'storyStudioKeyboardShortcuts';
+import { KEYS, read, write, remove } from './persistentSettings';
 
 // Liste des scopes connus + libellés pour l'UI.
 // L'ordre détermine la priorité de dispatch et l'ordre d'affichage dans la modale.
@@ -41,7 +41,7 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'tabEmulator',      scope: 'general', label: 'Onglet émulateur',                   defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
   { id: 'tabDiagram',       scope: 'general', label: 'Onglet diagramme',                   defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
   { id: 'tabOptions',       scope: 'general', label: 'Onglet options',                     defaultShortcut: { ctrl: true, key: '4', code: 'Digit4' }, aliases: [{ ctrl: true, key: '4', code: 'Numpad4' }] },
-  { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, shift: true, key: 'enter', code: 'Enter' } },
+  { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
   { id: 'treeSearch',       scope: 'general', label: 'Rechercher dans la structure',        defaultShortcut: { ctrl: true, key: 'f', code: 'KeyF' } },
   { id: 'toggleValidation', scope: 'general', label: 'Ouvrir la validation',                defaultShortcut: { ctrl: true, shift: true, key: 'e', code: 'KeyE' } },
   { id: 'undo',             scope: 'general', label: 'Annuler',                             defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
@@ -75,9 +75,9 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'audioMarkOut',       scope: 'audioEditor', label: 'Marquer le point de sortie',      defaultShortcut: { key: 'o', code: 'KeyO' } },
   { id: 'audioClearIn',       scope: 'audioEditor', label: 'Effacer le point d\'entrée',      defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
   { id: 'audioClearOut',      scope: 'audioEditor', label: 'Effacer le point de sortie',      defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
-  { id: 'audioPreviewIn',     scope: 'audioEditor', label: 'Lire depuis le point d\'entrée',  defaultShortcut: { shift: true, key: 'i', code: 'KeyI' } },
-  { id: 'audioPreviewOut',    scope: 'audioEditor', label: 'Lire depuis le point de sortie',  defaultShortcut: { shift: true, key: 'o', code: 'KeyO' } },
-  { id: 'audioKeepSelection', scope: 'audioEditor', label: 'Garder la sélection',             defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
+  { id: 'audioPreviewIn',     scope: 'audioEditor', label: 'Aller au point d\'entrée',        defaultShortcut: { shift: true, key: 'i', code: 'KeyI' } },
+  { id: 'audioPreviewOut',    scope: 'audioEditor', label: 'Aller au point de sortie',        defaultShortcut: { shift: true, key: 'o', code: 'KeyO' } },
+  { id: 'audioKeepSelection', scope: 'audioEditor', label: 'Garder la sélection',             defaultShortcut: { ctrl: true, key: 'k', code: 'KeyK' } },
   { id: 'audioCutSelection',  scope: 'audioEditor', label: 'Supprimer la sélection',          defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
   { id: 'audioUndo',          scope: 'audioEditor', label: 'Annuler la modification',          defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
   { id: 'audioZoomIn',        scope: 'audioEditor', label: 'Zoomer autour du curseur',         defaultShortcut: { ctrl: true, key: '+', code: 'Equal' }, aliases: [{ ctrl: true, key: '=', code: 'Equal' }, { ctrl: true, key: '+', code: 'NumpadAdd' }] },
@@ -179,31 +179,22 @@ export function getShortcutLabelMap(shortcuts) {
 }
 
 export function loadKeyboardShortcuts() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SHORTCUTS;
-    const parsed = JSON.parse(raw);
-    return Object.fromEntries(
-      EDITABLE_DEFINITIONS.map((definition) => [
-        definition.id,
-        normalizeShortcut(parsed?.[definition.id] ?? definition.defaultShortcut),
-      ]),
-    );
-  } catch {
-    return DEFAULT_SHORTCUTS;
-  }
+  const parsed = read(KEYS.KEYBOARD_SHORTCUTS, { parse: JSON.parse });
+  if (!parsed) return DEFAULT_SHORTCUTS;
+  return Object.fromEntries(
+    EDITABLE_DEFINITIONS.map((definition) => [
+      definition.id,
+      normalizeShortcut(parsed?.[definition.id] ?? definition.defaultShortcut),
+    ]),
+  );
 }
 
 export function saveKeyboardShortcuts(shortcuts) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(shortcuts));
-  } catch {}
+  write(KEYS.KEYBOARD_SHORTCUTS, shortcuts, { serialize: JSON.stringify });
 }
 
 export function resetKeyboardShortcuts() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {}
+  remove(KEYS.KEYBOARD_SHORTCUTS);
   return DEFAULT_SHORTCUTS;
 }
 

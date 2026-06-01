@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   appendEntry,
   appendEntries,
@@ -26,16 +26,18 @@ import {
 } from './projectModel';
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
+import { basenameNoExt, pathKey } from '../utils/fileUtils';
+import { sanitizeImportedName } from './importedNames';
+
+export { sanitizeImportedName };
 
 export function isTextEditingTarget(target) {
   if (!(target instanceof Element)) return false;
   return !!target.closest('input, textarea, [contenteditable=""], [contenteditable="true"], [role="textbox"]');
 }
 
-const IMPORT_CONTROL_CHARS_REGEX = /[\u0000-\u001f\u007f]/g;
-const IMPORT_FILENAME_UNSAFE_REGEX = /[<>:"/\\|?*]/g;
-const IMPORT_EMOJI_REGEX = /[\p{Extended_Pictographic}\u200d\ufe0f]/gu;
-const IMPORT_TRAILING_PUNCTUATION_REGEX = /^[\s._-]+|[\s._-]+$/g;
+const MAX_HISTORY_SIZE = 50;
+
 const ROOT_AUDIO_FIELDS = new Set(['rootAudio', 'nightModeAudio']);
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
@@ -50,6 +52,7 @@ const DEFAULT_PROJECT = normalizeProjectData({
   projectName: '',
   packMetadata: DEFAULT_PACK_METADATA,
   rootName: 'Menu racine',
+  endNodeName: 'Message de fin',
   projectType: null, // null = non choisi, 'simple' | 'pack'
   rootAudio: null,
   rootImage: null,
@@ -60,7 +63,6 @@ const DEFAULT_PROJECT = normalizeProjectData({
   nightModeReturn: null,
   nightModeHomeReturn: null,
   nativeGraph: null,
-  rootItems: [],
   globalOptions: {
     convertFormat: true,
     addSilence: true,
@@ -69,32 +71,8 @@ const DEFAULT_PROJECT = normalizeProjectData({
     nightMode: false,
     aiImageGen: false,
   },
-  menus: [],
   rootEntries: [],
 });
-
-function basenameWithoutExtension(path) {
-  return String(path || '')
-    .split(/[\\/]/)
-    .pop()
-    .replace(/\.[^.]+$/, '');
-}
-
-export function sanitizeImportedName(value, fallback = '') {
-  const normalized = String(value || '')
-    .normalize('NFKC')
-    .replace(IMPORT_EMOJI_REGEX, ' ')
-    .replace(IMPORT_CONTROL_CHARS_REGEX, ' ')
-    .replace(IMPORT_FILENAME_UNSAFE_REGEX, ' ')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(IMPORT_TRAILING_PUNCTUATION_REGEX, '')
-    .trim()
-    .slice(0, 120)
-    .trim();
-
-  return normalized || fallback;
-}
 
 export function sanitizeImportedEntries(entries = []) {
   return (entries ?? []).map((entry) => {
@@ -117,11 +95,7 @@ export function sanitizeImportedEntries(entries = []) {
 
 function nameFromPath(path) {
   if (!path) return '';
-  return sanitizeImportedName(basenameWithoutExtension(path), '');
-}
-
-function mediaPathKey(path) {
-  return String(path || '').trim().replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase();
+  return sanitizeImportedName(basenameNoExt(path), '', { preserveHyphens: true });
 }
 
 function rewritePromotedRootTarget(target, promotedMenuId) {
@@ -166,8 +140,12 @@ export function useProjectStore() {
   const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
   const redoRef = useRef([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
+  // canUndo / canRedo sont des derives purs des refs : on les recalcule au
+  // render au lieu de les stocker en state. Toute mutation des refs est suivie
+  // d'un setProjectRaw qui declenche un re-render, donc les valeurs restent
+  // synchronisees sans setState-dans-setState (anti-pattern React).
+  const canUndo = historyRef.current.length > 0;
+  const canRedo = redoRef.current.length > 0;
 
   // Tags médias — state séparé (hors undo), persisté dans le .mbah
   const [mediaTags, setMediaTagsRaw] = useState({});
@@ -175,10 +153,8 @@ export function useProjectStore() {
   // Toute modification passe par ici pour alimenter l'historique
   const setProject = useCallback((updater) => {
     setProjectRaw(prev => {
-      historyRef.current = [...historyRef.current.slice(-49), prev];
+      historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY_SIZE - 1)), prev];
       redoRef.current = [];
-      setCanUndo(true);
-      setCanRedo(false);
       const next = typeof updater === 'function' ? updater(prev) : updater;
       return normalizeProjectData(next);
     });
@@ -190,8 +166,6 @@ export function useProjectStore() {
       const prev = historyRef.current[historyRef.current.length - 1];
       historyRef.current = historyRef.current.slice(0, -1);
       redoRef.current = [...redoRef.current, current];
-      setCanUndo(historyRef.current.length > 0);
-      setCanRedo(true);
       return prev;
     });
   }, []);
@@ -202,8 +176,6 @@ export function useProjectStore() {
       const next = redoRef.current[redoRef.current.length - 1];
       redoRef.current = redoRef.current.slice(0, -1);
       historyRef.current = [...historyRef.current, current];
-      setCanUndo(true);
-      setCanRedo(redoRef.current.length > 0);
       return next;
     });
   }, []);
@@ -213,8 +185,6 @@ export function useProjectStore() {
   const resetProject = useCallback(() => {
     historyRef.current = [];
     redoRef.current = [];
-    setCanUndo(false);
-    setCanRedo(false);
     setProjectRaw(DEFAULT_PROJECT);
     setSelectedId('root');
     setSavePath(null);
@@ -225,8 +195,6 @@ export function useProjectStore() {
   const loadProject = useCallback((data) => {
     historyRef.current = [];
     redoRef.current = [];
-    setCanUndo(false);
-    setCanRedo(false);
     setProjectRaw(normalizeProjectData(data));
     setSelectedId('root');
   }, []);
@@ -271,11 +239,11 @@ export function useProjectStore() {
   const deleteMediaTagsForPath = useCallback((path) => {
     if (!path) return;
     setMediaTagsRaw(prev => {
-      const key = mediaPathKey(path);
+      const key = pathKey(path);
       let changed = false;
       const next = {};
       for (const [tagPath, tags] of Object.entries(prev)) {
-        if (mediaPathKey(tagPath) === key) {
+        if (pathKey(tagPath) === key) {
           changed = true;
         } else {
           next[tagPath] = tags;
@@ -300,7 +268,7 @@ export function useProjectStore() {
       return updateProjectRootEntries({ ...p, projectType: type }, p.rootEntries ?? []);
     });
     setActiveTab('edit');
-    logger.info(`setProjectType: ${type}`);
+    logger.info(`project:set-type type=${type}`);
   }, [setProject]);
 
   const updateStoryAudio = useCallback((audio) => {
@@ -422,9 +390,22 @@ export function useProjectStore() {
 
   const addStory = useCallback((menuId, audioPath) => {
     const autoName = nameFromPath(audioPath);
+    const hasImportedAudio = !!audioPath;
     const newStory = createStoryEntry({
       name: autoName || 'Nouvelle histoire',
       audio: audioPath || null,
+      ...(hasImportedAudio
+        ? {
+            controlSettings: {
+              autoplay: true,
+              wheel: false,
+              pause: true,
+              ok: false,
+              home: true,
+            },
+            ...(menuId ? {} : { returnAfterPlay: 'root' }),
+          }
+        : {}),
     });
     setProject(p => appendEntry(p, menuId, newStory));
     setSelectedId(newStory.id);
@@ -432,7 +413,7 @@ export function useProjectStore() {
   }, [setProject]);
 
   const addZip = useCallback((menuId, zipPath, preferredName = null, coverImage = null, coverAudio = null) => {
-    const rawName = preferredName || basenameWithoutExtension(zipPath);
+    const rawName = preferredName || basenameNoExt(zipPath);
     const name = sanitizeImportedName(rawName, 'ZIP importe');
     const newZip = createZipEntry({ name, zipPath: zipPath || null, coverImage, coverAudio });
     setProject(p => appendEntry(p, menuId, newZip));

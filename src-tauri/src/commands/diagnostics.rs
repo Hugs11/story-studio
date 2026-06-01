@@ -24,11 +24,6 @@ pub fn set_log_level(level: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn get_log_level() -> String {
-    log::max_level().to_string()
-}
-
-#[tauri::command]
 pub fn get_current_log_file(app: tauri::AppHandle) -> Result<String, String> {
     let dir: PathBuf = app
         .path()
@@ -41,7 +36,9 @@ pub fn get_current_log_file(app: tauri::AppHandle) -> Result<String, String> {
 /// Garde au plus `keep` fichiers `.log` (le courant + rotations).
 /// Les plus anciens sont supprimés. Appelé une fois au boot.
 pub fn prune_old_log_files(dir: &std::path::Path, keep: usize) {
-    let Ok(entries) = fs::read_dir(dir) else { return };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
     let mut files: Vec<_> = entries
         .flatten()
         .filter(|entry| {

@@ -1,45 +1,45 @@
 import { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
-import { open as openDialog, ask } from '@tauri-apps/plugin-dialog';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { openPath } from '@tauri-apps/plugin-opener';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { isTextEditingTarget, sanitizeImportedEntries, sanitizeImportedName, useProjectStore } from './store/projectStore';
+import { sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
-  saveProject,
-  saveProjectAs,
-  loadProject,
-  loadProjectFromPath,
   getRecentProjects,
   rememberRecentProject,
-  forgetRecentProject,
-  getExtractedZipsDir,
   ensureExportsDir,
-  getWorkspaceDir,
   pickWorkspaceDir,
-  copyMediaToWorkspace,
-  isAlreadyManagedFile,
+  getWorkspaceDir,
   consolidateProject,
-  collectTransferableProjectFiles,
-  transferProjectFilesToProject,
-  autoSaveNewProject,
   projectToRustExport,
 } from './store/projectIO';
-import { getLastExportDir, saveLastExportDir, pickMultipleAudioOrZip, pickMultipleMediaFiles, pickFolder } from './store/useFileDialog';
+import { getLastExportDir, saveLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
+import { MediaTransferProvider } from './store/MediaTransferContext';
 import { getGenerateErrors } from './store/projectValidation';
 import { collectMediaLibrary } from './store/mediaLibrary';
-import { buildProjectIndex, collectProjectAudioPaths, replaceEntryWithEntries, visitProjectEntries } from './store/projectModel';
+import {
+  buildRelinkSignature,
+  collectMissingMedia,
+  relinkMediaLibraryPaths,
+  relinkMediaTags,
+  relinkProjectMedia,
+} from './store/missingMediaRelink';
+import { buildProjectIndex, collectProjectAudioPaths } from './store/projectModel';
+import {
+  hasExplicitExportPackName,
+  isProjectDirty,
+} from './store/projectHelpers';
+import { KEYS, read as readSetting } from './store/persistentSettings';
 import { loadXttsSettings, saveXttsSettings } from './store/xttsSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
-import { useRenderQueueExecutor } from './store/useRenderQueueExecutor';
-import { useProjectFileAudit } from './store/useProjectFileAudit';
-import { useProjectDerivedData } from './store/useProjectDerivedData';
+import { getImageJobTargetLabel } from './store/aiJobLabels';
+import { useRenderQueueExecutor } from './hooks/useRenderQueueExecutor';
+import { useProjectFileAudit } from './hooks/useProjectFileAudit';
+import { useProjectDerivedData } from './hooks/useProjectDerivedData';
 import {
-  findShortcutAction,
   getShortcutLabelMap,
   loadKeyboardShortcuts,
   saveKeyboardShortcuts,
@@ -47,19 +47,34 @@ import {
 } from './store/keyboardShortcuts';
 import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
 import { Loader2, TriangleAlert } from './components/icons/LucideLocal';
+import { AppModalPortal } from './components/common/AppModalPortal';
+import { SaveProgressModal } from './components/common/SaveProgressModal';
 import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
 import { PanelRail } from './components/layout/PanelRail';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
+import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { useEscapeKey } from './hooks/useEscapeKey';
+import { useAiJobUsage } from './hooks/useAiJobUsage';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
+import { useAutosave } from './hooks/useAutosave';
+import { useImportSession } from './hooks/useImportSession';
+import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
+import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
+import { useOsFileDrop } from './hooks/useOsFileDrop';
+import { usePersistentState } from './hooks/usePersistentState';
+import { useProjectLoading } from './hooks/useProjectLoading';
+import { useSaveProgress } from './hooks/useSaveProgress';
+import { useSyncedRef } from './hooks/useSyncedRef';
+import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
-import { isOriginalBackup } from './utils/mediaConventions';
-import { getExportPackName, parseConventionName } from './utils/packConvention';
+import { getExportPackName } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
+import { basename } from './utils/fileUtils';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
@@ -74,6 +89,8 @@ const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenera
 const StorySettingsModal = lazy(() => import('./components/StorySettingsModal/StorySettingsModal').then((module) => ({ default: module.StorySettingsModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
 const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
+const MissingMediaRelinkModal = lazy(() => import('./components/MissingMediaRelink/MissingMediaRelinkModal')
+  .then((module) => ({ default: module.MissingMediaRelinkModal })));
 
 function renderDeferred(children, fallback = null) {
   return (
@@ -83,113 +100,47 @@ function renderDeferred(children, fallback = null) {
   );
 }
 
-const APP_MODAL_OVERLAY_STYLE = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.55)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 10000,
-  backdropFilter: 'blur(2px)',
+// Codecs réutilisés par les `usePersistentState` ci-dessous.
+const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
+const INT_CODEC = {
+  decode: (raw) => {
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  },
+  encode: (value) => String(value),
 };
-
-function AppModalPortal({ className = 'modal-overlay', children }) {
-  return createPortal(
-    <div className={className} style={APP_MODAL_OVERLAY_STYLE}>
-      {children}
-    </div>,
-    document.body,
-  );
-}
 
 function isImportedPackPath(filePath) {
   return /\.(zip|7z)$/i.test(filePath || '');
 }
 
 function getImportDisplayName(filePath) {
-  const fileName = String(filePath || '').split(/[\\/]/).pop() || '';
+  const fileName = basename(filePath);
   return sanitizeImportedName(fileName, fileName || 'Import en cours');
-}
-
-function classifyOsDroppedFiles(paths) {
-  const ext = (p) => (String(p).split('.').pop() || '').toLowerCase();
-  const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm']);
-  const IMAGES = new Set(['png', 'jpg', 'jpeg', 'webp']);
-  const ARCHIVES = new Set(['zip', '7z']);
-  // Backups d'édition audio (`*.original.{ext}`) ignorés silencieusement.
-  const filtered = paths.filter((p) => !isOriginalBackup(p));
-  return {
-    audio: filtered.filter((p) => AUDIO.has(ext(p))),
-    images: filtered.filter((p) => IMAGES.has(ext(p))),
-    archives: filtered.filter((p) => ARCHIVES.has(ext(p))),
-  };
-}
-
-const AUDIO_ENTRY_FIELDS = ['audio', 'itemAudio', 'afterPlaybackPromptAudio'];
-function mediaPathKey(path) {
-  const value = String(path || '');
-  const normalized = value.startsWith('\\\\?\\UNC\\')
-    ? `\\\\${value.slice(8)}`
-    : value.replace(/^\\\\\?\\/, '');
-  return normalized.replace(/\\/g, '/').toLowerCase();
-}
-
-function markEntryAudioSkipSilence(entry) {
-  if (!entry || typeof entry !== 'object') return entry;
-  const audioProcessing = { ...(entry.audioProcessing ?? {}) };
-  for (const field of AUDIO_ENTRY_FIELDS) {
-    if (typeof entry[field] === 'string' && entry[field].trim()) {
-      audioProcessing[field] = { skipSilence: true };
-    }
-  }
-  const next = Object.keys(audioProcessing).length > 0
-    ? { ...entry, audioProcessing }
-    : { ...entry };
-  if (Array.isArray(next.children)) {
-    next.children = next.children.map(markEntryAudioSkipSilence);
-  }
-  return next;
-}
-
-function loadMediaLibraryPaths() {
-  return [];
-}
-
-// Retourne true si le projet a du contenu (= mérite d'être sauvegardé)
-function isProjectDirty(project) {
-  if (project.projectType !== null) return true;
-  let hasEntries = false;
-  visitProjectEntries(project, (entry) => {
-    if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'menu') hasEntries = true;
-  });
-  return !!project.projectName || !!project.rootAudio || !!project.rootImage || hasEntries;
-}
-
-function hasExplicitExportPackName(project) {
-  const metadata = project?.packMetadata ?? {};
-  if (metadata.namingMode === 'legacy') return !!String(metadata.legacyExportName || '').trim();
-  if (String(metadata.title || '').trim()) return true;
-  if (project?.projectType === 'simple') return !!String(project?.projectName || '').trim();
-  return false;
 }
 
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
 // false si l'utilisateur a annulé ou si la sauvegarde n'a pas abouti.
 // savedSnapshot : JSON.stringify du projet au moment du dernier save/load, ou null si projet vierge
-async function askSaveBeforeLeave(project, savedSnapshot, onSave) {
+async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog) {
   // Si on a un snapshot, comparer pour détecter les vraies modifications
   // Si pas de snapshot (projet vierge), vérifier si le projet a du contenu
   const unchanged = savedSnapshot === null
     ? !isProjectDirty(project)
     : JSON.stringify(project) === savedSnapshot;
   if (unchanged) return true;
-  // 1ère question : sauvegarder ?
-  const save = await ask(
-    'Voulez-vous sauvegarder le projet avant de continuer ?',
-    { title: 'Projet non sauvegardé', kind: 'warning', okLabel: 'Sauvegarder', cancelLabel: 'Ne pas sauvegarder' }
-  );
-  if (save) {
+  const choice = await showChoiceDialog({
+    title: 'Projet non sauvegardé',
+    message: 'Voulez-vous sauvegarder le projet avant de continuer ?',
+    variant: 'warning',
+    cancelValue: 'cancel',
+    actions: [
+      { value: 'cancel', label: 'Annuler', autoFocus: true },
+      { value: 'discard', label: 'Ne pas sauvegarder' },
+      { value: 'save', label: 'Sauvegarder', kind: 'primary' },
+    ],
+  });
+  if (choice === 'save') {
     try {
       const savedPath = await onSave?.();
       return !!savedPath;
@@ -197,58 +148,12 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave) {
       return false;
     }
   }
-  // 2ème question : vraiment continuer sans sauvegarder ?
-  const discard = await ask(
-    'Les modifications non sauvegardées seront perdues. Continuer quand même ?',
-    { title: 'Continuer sans sauvegarder ?', kind: 'warning', okLabel: 'Continuer', cancelLabel: 'Annuler' }
-  );
-  return discard;
+  return choice === 'discard';
 }
 
-function SaveProgressModal({ data, title, doneTitle }) {
-  return (
-    <AppModalPortal>
-      <div className="modal-box" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {data.complete
-              ? <>✓ {doneTitle}</>
-              : <><Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> {title}</>}
-          </span>
-        </div>
-        <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {data.lines.map((line, i) => {
-            const isLast = i === data.lines.length - 1;
-            const done = !isLast || data.complete;
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-                {done
-                  ? <span style={{ color: 'var(--color-accent)', width: 18, textAlign: 'center', flexShrink: 0, fontSize: 15 }}>✓</span>
-                  : <span style={{
-                      display: 'inline-block', width: 16, height: 16, flexShrink: 0,
-                      border: '2px solid var(--color-border-secondary)',
-                      borderTopColor: 'var(--color-accent)',
-                      borderRadius: '50%',
-                      animation: 'spin 0.7s linear infinite',
-                    }} />
-                }
-                <span style={{
-                  color: done ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
-                  fontWeight: done ? 400 : 600,
-                }}>
-                  {line}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </AppModalPortal>
-  );
-}
-
-export default function App() {
+function AppContent() {
   const store = useProjectStore();
+  const { showErrorDialog, showConfirmDialog, showChoiceDialog } = useErrorDialog();
   const renderQueue = useRenderQueueStore();
   const [saveToast, setSaveToast] = useState(null); // null | 'ok' | 'error'
   const [autoSavedPath, setAutoSavedPath] = useState(null); // path of last autosave (display only)
@@ -263,47 +168,40 @@ export default function App() {
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
   const [sdGenerateOpen, setSdGenerateOpen] = useState(false);
   const [sdGenerateContext, setSdGenerateContext] = useState(null);
-  const [bottomPanelOpen, setBottomPanelOpen] = useState(() => localStorage.getItem('bottomPanelOpen') === 'true');
-  const [bottomPanelTab, setBottomPanelTab] = useState(() => localStorage.getItem('bottomPanelTab') || 'media');
+  const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
+  const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [storySettingsOpen, setStorySettingsOpen] = useState(false);
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
-  const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = useState(() => localStorage.getItem('copyImportedFiles') === 'true');
-  const [workspaceDir, setWorkspaceDirState] = useState(() => localStorage.getItem('storyStudioWorkspaceDir') || '');
-  const [mediaLibraryPaths, setMediaLibraryPaths] = useState(() => loadMediaLibraryPaths());
-  const [showWebmWarning, setShowWebmWarning] = useState(false);
+  const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
+  const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [importNotice, setImportNotice] = useState(null); // string | null
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(() => localStorage.getItem('autoSaveEnabled') === 'true');
-  const [autoSaveBackupLimit, setAutoSaveBackupLimit] = useState(() => {
-    const raw = Number(localStorage.getItem('autoSaveBackupLimit'));
-    return Number.isFinite(raw) && raw >= 0 ? raw : 5;
-  });
-  const [showCentralDiagram, setShowCentralDiagram] = useState(() => localStorage.getItem('showCentralDiagram') === 'true');
+  const [activeDropZone, setActiveDropZone] = useState(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, false, BOOL_CODEC);
+  const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
+  const [showCentralDiagram, setShowCentralDiagram] = usePersistentState(KEYS.SHOW_CENTRAL_DIAGRAM, false, BOOL_CODEC);
   const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());
   const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
-  const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex);
-  const mediaLibraryCount = useMemo(
-    () => collectMediaLibrary({ project: store.project, statusByPath: pathAudit, sdJobs: sdStore.jobs, xttsJobs: xttsStore.jobs, extraPaths: mediaLibraryPaths }).length,
-    [store.project, pathAudit, sdStore.jobs, xttsStore.jobs, mediaLibraryPaths],
-  );
+  const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex, store.savePath);
   const aiQueueActiveCount = sdStore.pendingCount + xttsStore.pendingCount;
   const aiQueueHasResults = sdStore.hasResults || xttsStore.hasResults;
   const projectRef = useRef(store.project);
   const savePathRef = useRef(store.savePath);
-  const workspaceDirRef = useRef(localStorage.getItem('storyStudioWorkspaceDir') || '');
+  const workspaceDirRef = useRef(readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const mediaTagsRef = useRef(store.mediaTags);
-  const mediaLibraryPathsRef = useRef(mediaLibraryPaths);
   const mediaLibraryCountRef = useRef(0);
   const saveHandlerRef = useRef(null);
   const saveAsHandlerRef = useRef(null);
   const isSavingRef = useRef(false);
+  const persistProjectSnapshotRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
   const shortcutActionsRef = useRef({});
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
   const [validationOpen, setValidationOpen] = useState(false);
+  const [dismissedMissingMediaSignature, setDismissedMissingMediaSignature] = useState('');
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
@@ -318,7 +216,7 @@ export default function App() {
     if (isTauriRuntime()) {
       invoke('set_log_level', { level })
         .then(() => {
-          logger.info(`boot: verbose=${verbose} runtime=tauri ua=${navigator.userAgent.slice(0, 80)}`);
+          logger.info(`boot:verbose-enabled value=${verbose} runtime=tauri ua=${navigator.userAgent.slice(0, 80)}`);
         })
         .catch(() => {});
     }
@@ -335,8 +233,6 @@ export default function App() {
   projectRef.current = store.project;
   savePathRef.current = store.savePath;
   mediaTagsRef.current = store.mediaTags;
-  mediaLibraryPathsRef.current = mediaLibraryPaths;
-  mediaLibraryCountRef.current = mediaLibraryCount;
 
   useEffect(() => {
     workspaceDirRef.current = workspaceDir;
@@ -353,43 +249,24 @@ export default function App() {
     saveThemePreference(themePreference);
   }, [themePreference]);
 
-  // Interception fermeture fenêtre — enregistré une seule fois
-  useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-    const win = getCurrentWindow();
-    let unlisten;
-    win.onCloseRequested(async (e) => {
-      e.preventDefault();
-      const canClose = await askSaveBeforeLeave(projectRef.current, savedSnapshotRef.current, handleSaveProject);
-      if (canClose) await win.destroy();
-    }).then(fn => { unlisten = fn; });
-    return () => { unlisten?.(); };
-  }, []); // eslint-disable-line
+  const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
+    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog)
+  ), [showChoiceDialog]);
+
+  useWindowCloseGuard({
+    askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
+    projectRef,
+    savedSnapshotRef,
+    saveHandlerRef,
+  });
 
   useEffect(() => {
-    localStorage.setItem('copyImportedFiles', String(copyImportedFilesEnabled));
     if (!copyImportedFilesEnabled) dismissedTransferPromptRef.current = null;
   }, [copyImportedFilesEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('autoSaveEnabled', String(autoSaveEnabled));
-  }, [autoSaveEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem('autoSaveBackupLimit', String(autoSaveBackupLimit));
-  }, [autoSaveBackupLimit]);
-
-  useEffect(() => {
-    localStorage.setItem('showCentralDiagram', String(showCentralDiagram));
-  }, [showCentralDiagram]);
-
-  useEffect(() => {
-    localStorage.setItem('bottomPanelOpen', String(bottomPanelOpen));
-  }, [bottomPanelOpen]);
-
-  useEffect(() => {
-    localStorage.setItem('bottomPanelTab', bottomPanelTab);
-  }, [bottomPanelTab]);
+    setDismissedMissingMediaSignature('');
+  }, [store.savePath]);
 
   useEffect(() => {
     if (renderQueue.panelOpen) {
@@ -397,188 +274,39 @@ export default function App() {
       setBottomPanelTab('queue');
       renderQueue.setPanelOpen(false);
     }
-  }, [renderQueue.panelOpen]); // eslint-disable-line
+  }, [renderQueue.panelOpen, renderQueue.setPanelOpen]);
 
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.target?.closest?.('.keyboard-shortcuts-modal')) return;
-      if (document.querySelector('.audio-editor-modal')) return;
-      if (document.querySelector('.image-editor-box')) return;
+  useAppShortcuts({ actionsRef: shortcutActionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef });
 
-      const actions = shortcutActionsRef.current;
-      const actionId = findShortcutAction(e, keyboardShortcutsRef.current, 'general');
-      if (!actionId) return;
-      const stopShortcut = () => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation?.();
-      };
+  // mediaLibraryPathsRef est consomme par useAutosave juste apres ; sa declaration
+  // doit donc preceder. (Bug TDZ latent dans le code historique, declenche par
+  // certains modes de build/runtime.)
+  const {
+    mediaLibraryPaths,
+    mediaLibraryPathsRef,
+    setMediaLibraryPaths,
+    addPathsToMediaLibrary,
+    handleMediaCreated,
+    handleDeleteMedia,
+  } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
 
-      if (actionId === 'saveAs') {
-        stopShortcut();
-        saveAsHandlerRef.current?.();
-        return;
-      }
+  useAutosave({
+    enabled: autoSaveEnabled,
+    backupLimit: autoSaveBackupLimit,
+    projectRef,
+    savedSnapshotRef,
+    savePathRef,
+    workspaceDirRef,
+    autoSavePathRef,
+    isSavingRef,
+    mediaTagsRef,
+    mediaLibraryPathsRef,
+    mediaLibraryCountRef,
+    setAutoSavedPath,
+    setSaveToast,
+    saveHandlerRef,
+  });
 
-      if (actionId === 'saveProject') {
-        stopShortcut();
-        saveHandlerRef.current?.();
-        return;
-      }
-
-      if (actionId === 'addFolder') {
-        if (!actions.canAddFolder) return;
-        stopShortcut();
-        actions.addFolder?.();
-        return;
-      }
-
-      if (actionId === 'newProject') {
-        stopShortcut();
-        actions.newProject?.();
-        return;
-      }
-
-      if (actionId === 'openProject') {
-        stopShortcut();
-        actions.openProject?.();
-        return;
-      }
-
-      if (actionId === 'importStories') {
-        if (!actions.canImportStories) return;
-        stopShortcut();
-        actions.importStories?.();
-        return;
-      }
-
-      if (actionId === 'storySettings') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.openStorySettings?.();
-        return;
-      }
-
-      if (actionId === 'tabEdit') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.setActiveTab?.('edit');
-        return;
-      }
-
-      if (actionId === 'tabEmulator') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.setActiveTab?.('emu');
-        return;
-      }
-
-      if (actionId === 'tabDiagram') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.setActiveTab?.('diagram');
-        return;
-      }
-
-      if (actionId === 'tabOptions') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.setActiveTab?.('opts');
-        return;
-      }
-
-      if (actionId === 'generate') {
-        if (!actions.canGenerate) return;
-        stopShortcut();
-        actions.generate?.();
-        return;
-      }
-
-      if (actionId === 'treeSearch') {
-        stopShortcut();
-        if (!actions.projectActionsVisible || actions.activeTab !== 'edit') return;
-        actions.focusTreeSearch?.();
-        return;
-      }
-
-      if (actionId === 'toggleValidation') {
-        if (!actions.projectActionsVisible || !actions.hasValidationErrors) return;
-        stopShortcut();
-        actions.toggleValidation?.();
-        return;
-      }
-
-      if (actionId === 'undo') {
-        if (isTextEditingTarget(e.target)) return;
-        if (!actions.canUndo) return;
-        stopShortcut();
-        actions.undo?.();
-        return;
-      }
-
-      if (actionId === 'redo') {
-        if (isTextEditingTarget(e.target)) return;
-        if (!actions.canRedo) return;
-        stopShortcut();
-        actions.redo?.();
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, []); // eslint-disable-line
-
-  useEffect(() => {
-    if (!autoSaveEnabled) return;
-    const interval = setInterval(async () => {
-      if (isSavingRef.current) return;
-      const current = JSON.stringify(projectRef.current);
-      if (current === savedSnapshotRef.current) return;
-      if (!isProjectDirty(projectRef.current)) {
-        logger.warn('[autosave] projet vide détecté, sauvegarde automatique ignorée.');
-        return;
-      }
-      if (!savePathRef.current) {
-        // Project never manually saved — autosave to workspace/sauvegardes/ WITHOUT setting
-        // store.savePath, so that recording/generation paths are never derived from the autosave file.
-        const ws = workspaceDirRef.current || await getWorkspaceDir().catch(() => '');
-        if (!ws) return;
-        try {
-          const existing = autoSavePathRef.current;
-          if (existing) {
-            await saveProject(projectRef.current, existing, null, {
-              autosave: true,
-              backupLimit: autoSaveBackupLimit,
-              mediaTags: mediaTagsRef.current,
-              mediaLibraryPaths: mediaLibraryPathsRef.current,
-              totalMediaCount: mediaLibraryCountRef.current,
-            });
-            savedSnapshotRef.current = current;
-            setAutoSavedPath(existing);
-          } else {
-            const result = await autoSaveNewProject(projectRef.current, ws, {
-              backupLimit: autoSaveBackupLimit,
-              mediaTags: mediaTagsRef.current,
-              mediaLibraryPaths: mediaLibraryPathsRef.current,
-              totalMediaCount: mediaLibraryCountRef.current,
-            });
-            if (!result?.path) return;
-            autoSavePathRef.current = result.path;
-            savedSnapshotRef.current = JSON.stringify(result.project);
-            setAutoSavedPath(result.path);
-          }
-          setSaveToast('ok');
-          setTimeout(() => setSaveToast(null), 2000);
-        } catch (e) {
-          logger.error('[autosave] échec de la sauvegarde automatique:', e);
-        }
-        return;
-      }
-      saveHandlerRef.current?.({ silent: true });
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [autoSaveEnabled, autoSaveBackupLimit]); // eslint-disable-line
-
-  useEscapeKey(showWebmWarning, () => setShowWebmWarning(false));
   useEscapeKey(creditsOpen, () => setCreditsOpen(false));
 
   useSDJobs(sdStore, workspaceDir, handleMediaCreated);
@@ -604,6 +332,7 @@ export default function App() {
     sdStore.addJob(workflowId, workflowName, params, {
       projectName: getProjectFilePrefix(store.project, store.savePath),
       fieldId: sdGenerateContext?.fieldId || null,
+      targetLabel: getImageJobTargetLabel(sdGenerateContext, projectIndex),
     });
     handleOpenAiQueue();
   }
@@ -646,158 +375,7 @@ export default function App() {
     }
   }
 
-  const getAudioJobUsage = useCallback((job) => {
-    if (!job || job.kind !== 'audio' || job.status !== 'done' || !job.resultPath) return null;
-    const normalizePath = (value) => String(value || '')
-      .replace(/^\\\\\?\\/, '')
-      .replace(/[\\/]+/g, '/')
-      .trim()
-      .toLowerCase();
-    const audioFieldLabel = (field) => ({
-      rootAudio: 'audio d’accueil',
-      nightModeAudio: 'audio de fin',
-      itemAudio: 'audio de sélection',
-      audio: 'audio de lecture',
-      afterPlaybackPromptAudio: 'audio après lecture',
-      afterPlaybackSequence: 'audio de fin intermédiaire',
-      afterPlaybackHomeStep: 'audio Home pendant lecture',
-      coverAudio: 'audio de couverture',
-    }[field] || 'champ audio');
-    const resultPath = normalizePath(job.resultPath);
-    const usages = [];
-
-    function addUsage(path, nodeName, field) {
-      if (path && normalizePath(path) === resultPath) {
-        usages.push(`Nœud : ${nodeName} · Champ : ${audioFieldLabel(field)}`);
-      }
-    }
-
-    addUsage(store.project?.rootAudio, store.project?.name || 'Accueil', 'rootAudio');
-    addUsage(store.project?.nightModeAudio, 'Fin', 'nightModeAudio');
-
-    for (const flatEntry of projectIndex.flatEntries ?? []) {
-      const entry = flatEntry.entry ?? flatEntry;
-      const nodeName = entry.name || (entry.type === 'menu' ? 'Menu sans titre' : entry.type === 'zip' ? 'ZIP sans titre' : 'Histoire sans titre');
-      if (entry.type === 'menu') {
-        addUsage(entry.audio, nodeName, 'audio');
-      } else if (entry.type === 'story') {
-        addUsage(entry.itemAudio, nodeName, 'itemAudio');
-        addUsage(entry.audio, nodeName, 'audio');
-        addUsage(entry.afterPlaybackPromptAudio, nodeName, 'afterPlaybackPromptAudio');
-        for (const step of entry.afterPlaybackSequence ?? []) {
-          addUsage(step.audio, nodeName, 'afterPlaybackSequence');
-        }
-        addUsage(entry.afterPlaybackHomeStep?.audio, nodeName, 'afterPlaybackHomeStep');
-      } else if (entry.type === 'zip') {
-        addUsage(entry.coverAudio, nodeName, 'coverAudio');
-      }
-    }
-
-    if (usages.length > 0) {
-      return {
-        state: 'used',
-        label: usages.length === 1 ? 'Utilisé' : `Utilisé ×${usages.length}`,
-        detail: usages.join(' ; '),
-      };
-    }
-
-    const target = job.target;
-    let currentPath = null;
-    let targetExists = true;
-    let nodeName = null;
-    let fieldLabel = audioFieldLabel(target?.field);
-
-    switch (target?.kind) {
-      case 'root':
-        currentPath = store.project?.[target.field] ?? null;
-        nodeName = store.project?.name || 'Accueil';
-        break;
-      case 'rootStory':
-        currentPath = store.project?.rootEntries?.[0]?.[target.field] ?? null;
-        nodeName = store.project?.rootEntries?.[0]?.name || 'Histoire principale';
-        break;
-      case 'menu': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        targetExists = !!entry;
-        currentPath = entry?.[target.field] ?? null;
-        nodeName = entry?.name || 'Menu sans titre';
-        break;
-      }
-      case 'story': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        targetExists = !!entry;
-        currentPath = entry?.[target.field] ?? null;
-        nodeName = entry?.name || 'Histoire sans titre';
-        break;
-      }
-      case 'storySequence': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        const step = entry?.afterPlaybackSequence?.find((item) => item.id === target.stepId);
-        targetExists = !!entry && !!step;
-        currentPath = step?.[target.field] ?? null;
-        nodeName = `${entry?.name || 'Histoire sans titre'} · ${step?.name || 'Sequence de fin'}`;
-        fieldLabel = audioFieldLabel('afterPlaybackSequence');
-        break;
-      }
-      case 'storyHomeStep': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        targetExists = !!entry && !!entry.afterPlaybackHomeStep;
-        currentPath = entry?.afterPlaybackHomeStep?.[target.field] ?? null;
-        nodeName = `${entry?.name || 'Histoire sans titre'} · Home pendant lecture`;
-        fieldLabel = audioFieldLabel('afterPlaybackHomeStep');
-        break;
-      }
-      default:
-        targetExists = false;
-        break;
-    }
-
-    if (!targetExists) {
-      return { state: 'unused', label: 'Non utilisé', detail: `${fieldLabel} n’existe plus` };
-    }
-    if (normalizePath(currentPath) === resultPath) {
-      return { state: 'used', label: 'Utilisé', detail: `Nœud : ${nodeName} · Champ : ${fieldLabel}` };
-    }
-    return { state: 'unused', label: 'Non utilisé', detail: `Nœud : ${nodeName} · Champ modifié : ${fieldLabel}` };
-  }, [projectIndex, store.project]);
-
-  const getImageJobUsage = useCallback((job) => {
-    if (!job || job.kind === 'audio' || job.status !== 'done' || !job.resultPaths?.length) return null;
-    const normalizePath = (value) => String(value || '')
-      .replace(/^\\\\\?\\/, '')
-      .replace(/[\\/]+/g, '/')
-      .trim()
-      .toLowerCase();
-    const resultSet = new Set(job.resultPaths.map(normalizePath));
-    const usages = [];
-
-    function addUsage(path, nodeName, fieldLabel) {
-      if (path && resultSet.has(normalizePath(path))) {
-        usages.push(`${nodeName} · ${fieldLabel}`);
-      }
-    }
-
-    const rootLabel = store.project?.projectName || store.project?.packMetadata?.title || 'Accueil';
-    addUsage(store.project?.rootImage, rootLabel, 'image d’accueil');
-    addUsage(store.project?.thumbnailImage, rootLabel, 'vignette');
-
-    for (const flatEntry of projectIndex.flatEntries ?? []) {
-      const entry = flatEntry.entry ?? flatEntry;
-      const nodeName = entry.name || (entry.type === 'menu' ? 'Menu sans titre' : 'Histoire sans titre');
-      addUsage(entry.image, nodeName, entry.type === 'menu' ? 'image du menu' : 'image de l’histoire');
-      addUsage(entry.itemImage, nodeName, 'image de sélection');
-      addUsage(entry.coverImage, nodeName, 'couverture');
-    }
-
-    if (usages.length > 0) {
-      return {
-        state: 'used',
-        label: usages.length === 1 ? 'Utilisée' : `Utilisées ×${usages.length}`,
-        detail: usages.join(' ; '),
-      };
-    }
-    return { state: 'unused', label: 'Non utilisée', detail: 'Aucune image de cette génération n’est assignée au projet.' };
-  }, [projectIndex, store.project]);
+  const { getAudioJobUsage, getImageJobUsage } = useAiJobUsage({ project: store.project, projectIndex });
 
   async function handleQueueXttsGenerate(job) {
     xttsStore.addJob({
@@ -813,7 +391,7 @@ export default function App() {
   }
 
   async function handleNewProject() {
-    const canContinue = await askSaveBeforeLeave(store.project, savedSnapshotRef.current, handleSaveProject);
+    const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSaveProject);
     if (!canContinue) return;
     store.resetProject();
     setMediaLibraryPaths([]);
@@ -827,7 +405,7 @@ export default function App() {
   async function resolveDefaultExportDir() {
     let defaultPath = getLastExportDir();
     if (!defaultPath) {
-      const ws = workspaceDirRef.current || localStorage.getItem('storyStudioWorkspaceDir') || '';
+      const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
       if (ws) {
         const exportsDir = await ensureExportsDir(ws);
         if (exportsDir) defaultPath = exportsDir;
@@ -846,20 +424,27 @@ export default function App() {
       return;
     }
     if (pathAuditPending) {
-      alert('Vérification des fichiers du projet en cours. Attendez une seconde puis réessayez.');
+      showErrorDialog({
+        title: 'Vérification en cours',
+        message: 'Vérification des fichiers du projet en cours. Attendez une seconde puis réessayez.',
+        variant: 'warning',
+      });
       return;
     }
     const validationErrors = getGenerateErrors(projectForGeneration, pathAudit);
     if (validationErrors.length > 0) {
-      logger.warn(`generate: blocked by ${validationErrors.length} validation error(s)`);
-      alert(`Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`);
+      logger.warn(`generate:blocked count=${validationErrors.length}`);
+      showErrorDialog({
+        title: 'Impossible de générer',
+        message: `Impossible de générer le pack :\n\n• ${validationErrors.join('\n• ')}`,
+      });
       return;
     }
     const defaultPath = await resolveDefaultExportDir();
     const outputFolder = await openDialog({ directory: true, multiple: false, title: 'Dossier de sortie du pack', defaultPath });
     if (!outputFolder) return;
     saveLastExportDir(outputFolder);
-    logger.info(`generate: queued projectType=${projectForGeneration.projectType} name='${projectForGeneration.projectName}' outputFolder='${outputFolder}'`);
+    logger.info(`generate:queued projectType=${projectForGeneration.projectType} name='${projectForGeneration.projectName}' outputFolder='${outputFolder}'`);
     renderQueue.addJob({
       projectName: projectForGeneration.projectName || '(sans nom)',
       savePath: store.savePath ?? null,
@@ -871,13 +456,20 @@ export default function App() {
   async function handleOpenExportFolder() {
     const dir = getLastExportDir() || await resolveDefaultExportDir();
     if (!dir) {
-      alert("Aucun dossier d'export connu pour le moment.");
+      showErrorDialog({
+        title: 'Dossier d’export',
+        message: "Aucun dossier d'export connu pour le moment.",
+        variant: 'info',
+      });
       return;
     }
     try {
       await openPath(dir);
     } catch (error) {
-      alert(`Impossible d'ouvrir le dossier d'export : ${error}`);
+      showErrorDialog({
+        title: 'Dossier d’export',
+        message: `Impossible d'ouvrir le dossier d'export : ${error}`,
+      });
     }
   }
 
@@ -904,13 +496,14 @@ export default function App() {
     if (generate) await handleGenerate(result.project);
   }
 
-  const handleUpdateRoot = useCallback(({ projectName, name, rootName, packMetadata }) => {
+  const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
     const nextProjectName = projectName ?? name;
     if (nextProjectName !== undefined) store.updateProjectName(nextProjectName);
-    if (rootName !== undefined || packMetadata !== undefined) {
+    if (rootName !== undefined || endNodeName !== undefined || packMetadata !== undefined) {
       store.setProject(p => ({
         ...p,
         ...(rootName !== undefined ? { rootName } : {}),
+        ...(endNodeName !== undefined ? { endNodeName } : {}),
         ...(packMetadata !== undefined
           ? { packMetadata: { ...(p.packMetadata ?? {}), ...packMetadata } }
           : {}),
@@ -966,282 +559,39 @@ export default function App() {
     store.setActiveTab('emu');
   }
 
-  async function maybeCopyToProject(filePath) {
-    if (!copyImportedFilesEnabled) return filePath;
-    const ws = workspaceDirRef.current || localStorage.getItem('storyStudioWorkspaceDir') || '';
-    if (isAlreadyManagedFile(filePath, ws, savePathRef.current)) return filePath;
-    try {
-      const targetWorkspace = ws || await getWorkspaceDir();
-      if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-      return await copyMediaToWorkspace(filePath, targetWorkspace, 'fichiers-importes', getProjectFilePrefix(store.project, savePathRef.current));
-    } catch (e) {
-      logger.error('[maybeCopyToProject] échec copie:', e);
-      return filePath;
-    }
-  }
+  const {
+    maybeCopyToProject,
+    copyGeneratedMediaToProject,
+    dropOnNode,
+    notifyCutPaste,
+    extractAudioEmbeddedImage,
+    maybeOfferTransferIntoProject,
+    handleCopyImportedFilesChange,
+  } = useMediaTransferHandlers({
+    store,
+    copyImportedFilesEnabled,
+    setCopyImportedFilesEnabled,
+    workspaceDir,
+    setWorkspaceDirState,
+    workspaceDirRef,
+    savePathRef,
+    pathAudit,
+    dismissedTransferPromptRef,
+    setSaveToast,
+    persistProjectSnapshotRef,
+    showErrorDialog,
+  });
 
-  // Drop/paste audio from MediaExplorer onto a tree or diagram node.
-  const mediaDropNodeHandlerRef = useRef(null);
-  mediaDropNodeHandlerRef.current = async ({ nodeId, nodeType, path, paths, kind, clipboardMode }) => {
-    if (kind !== 'audio' && kind !== 'image') return;
-    const sourcePaths = (Array.isArray(paths) && paths.length > 0 ? paths : [path]).filter(Boolean);
-    if (sourcePaths.length === 0) return;
-    const finalPaths = [];
-    for (const sourcePath of sourcePaths) {
-      finalPaths.push(await maybeCopyToProject(sourcePath));
-    }
-    if (clipboardMode === 'cut') {
-      for (const sourcePath of sourcePaths) {
-        store.removeMediaReferences(sourcePath);
-      }
-    }
-    if (kind === 'image') {
-      const finalPath = finalPaths[0];
-      if (nodeType === 'root') {
-        store.updateRootMedia('rootImage', finalPath);
-      } else if (nodeType === 'menu') {
-        store.updateMenu(nodeId, { image: finalPath });
-      } else if (nodeType === 'story') {
-        store.updateItem(nodeId, { itemImage: finalPath });
-      }
-      return;
-    }
-    if (nodeType === 'root') {
-      for (const finalPath of finalPaths) {
-        store.addStory(null, finalPath);
-      }
-    } else if (nodeType === 'menu') {
-      for (const finalPath of finalPaths) {
-        store.addStory(nodeId, finalPath);
-      }
-    } else if (nodeType === 'story') {
-      store.updateItem(nodeId, { audio: finalPaths[0] });
-    }
-  };
-  useEffect(() => {
-    function onDrop(e) {
-      void mediaDropNodeHandlerRef.current(e.detail);
-    }
-    document.addEventListener('media-drop-node', onDrop);
-    return () => document.removeEventListener('media-drop-node', onDrop);
-  }, []);
-
-  const mediaCutPasteHandlerRef = useRef(null);
-  mediaCutPasteHandlerRef.current = ({ path }) => {
-    store.removeMediaReferences(path);
-  };
-  useEffect(() => {
-    function onCutPaste(e) {
-      mediaCutPasteHandlerRef.current(e.detail);
-    }
-    document.addEventListener('media-clipboard-cut-paste', onCutPaste);
-    return () => document.removeEventListener('media-clipboard-cut-paste', onCutPaste);
-  }, []);
-
-  const handleDeleteMedia = useCallback(async (item, { deleteFromDisk = false } = {}) => {
-    if (!item?.path) return { diskDeleted: false, diskError: null };
-    if (item.inProject) {
-      store.removeMediaReferences(item.path);
-    }
-
-    const key = mediaPathKey(item.path);
-    setMediaLibraryPaths((previous) => previous.filter((path) => mediaPathKey(path) !== key));
-    for (const job of xttsStore.jobs) {
-      if (mediaPathKey(job?.resultPath) === key) xttsStore.removeJob(job.id);
-    }
-    for (const job of sdStore.jobs) {
-      if (!(job?.resultPaths ?? []).some((path) => mediaPathKey(path) === key)) continue;
-      const nextPaths = job.resultPaths.filter((path) => mediaPathKey(path) !== key);
-      if (nextPaths.length === 0) sdStore.removeJob(job.id);
-      else sdStore.updateJob(job.id, { resultPaths: nextPaths });
-    }
-    store.deleteMediaTagsForPath(item.path);
-    if (!deleteFromDisk) {
-      return { diskDeleted: false, diskError: null };
-    }
-    const workspace = workspaceDirRef.current || '';
-    try {
-      await invoke('delete_workspace_media_file', { path: item.path, workspaceDir: workspace });
-      return { diskDeleted: true, diskError: null };
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      return { diskDeleted: false, diskError: message };
-    }
-  }, [sdStore, store, xttsStore]);
-
-  function addPathsToMediaLibrary(paths) {
-    setMediaLibraryPaths((previous) => {
-      const seen = new Set(previous.map((path) => path.replace(/\\/g, '/').toLowerCase()));
-      const merged = [...previous];
-      for (const path of paths) {
-        const key = path.replace(/\\/g, '/').toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          merged.push(path);
-        }
-      }
-      return merged;
-    });
-  }
-
-  async function handleImportMediaLibrary() {
-    const files = await pickMultipleMediaFiles();
-    if (files.length === 0) return;
-    const total = files.length;
-    setImporting({ name: files[0].split(/[\\/]/).pop() || files[0], index: 0, total, phase: "Préparation de l'import..." });
-    try {
-      const nextPaths = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setImporting({ name: file.split(/[\\/]/).pop() || file, index: i + 1, total, phase: 'Copie dans le projet...' });
-        nextPaths.push(await maybeCopyToProject(file));
-      }
-      addPathsToMediaLibrary(nextPaths);
-    } finally {
-      setImporting(null);
-    }
-  }
-
-  async function handleImportMediaLibraryFolder() {
-    const folderPath = await pickFolder();
-    if (!folderPath) return;
-    try {
-      const files = await invoke('list_folder_media_files', { folderPath });
-      if (!files.length) return;
-      const total = files.length;
-      const folderName = folderPath.split(/[\\/]/).pop() || folderPath;
-      setImporting({ name: folderName, index: 0, total, phase: 'Scan du dossier...' });
-      const nextPaths = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileName = file.split(/[\\/]/).pop() || file;
-        setImporting({ name: fileName, index: i + 1, total, phase: 'Copie dans le projet...' });
-        nextPaths.push(await maybeCopyToProject(file));
-      }
-      addPathsToMediaLibrary(nextPaths);
-    } catch (e) {
-      logger.error('[handleImportMediaLibraryFolder] erreur:', e);
-    } finally {
-      setImporting(null);
-    }
-  }
-
-  function handleMediaCreated(path) {
-    if (!path) return;
-    setMediaLibraryPaths((previous) => {
-      const key = mediaPathKey(path);
-      if (previous.some((existing) => mediaPathKey(existing) === key)) return previous;
-      return [...previous, path];
-    });
-  }
-
-  async function extractAudioEmbeddedImage(audioPath) {
-    if (!audioPath) return null;
-    try {
-      return await invoke('extract_audio_embedded_image', { audioPath });
-    } catch (e) {
-      logger.warn('[extractAudioEmbeddedImage] extraction impossible:', audioPath, e);
-      return null;
-    }
-  }
-
-  function buildTransferPromptSignature(savePath, candidates) {
-    return `${savePath}::${candidates.map((candidate) => candidate.path.toLowerCase()).sort().join('|')}`;
-  }
-
-  async function maybeOfferTransferIntoProject(project, savePath, options = {}) {
-    const { forcePrompt = false, copyEnabled = copyImportedFilesEnabled } = options;
-    if (!copyEnabled || !savePath) return { project, changed: false };
-
-    const candidates = collectTransferableProjectFiles(project, savePath, pathAudit);
-    if (candidates.length === 0) {
-      dismissedTransferPromptRef.current = null;
-      return { project, changed: false };
-    }
-
-    const signature = buildTransferPromptSignature(savePath, candidates);
-    if (!forcePrompt && dismissedTransferPromptRef.current === signature) {
-      return { project, changed: false };
-    }
-
-    const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
-    const suffix = candidates.length > 5 ? `\n• …et ${candidates.length - 5} autre(s)` : '';
-    const confirmed = await ask(
-      `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nVoulez-vous les copier dans fichiers-importes/ et mettre à jour le projet ?`,
-      {
-        title: 'Transférer les fichiers existants ?',
-        kind: 'warning',
-        okLabel: 'Transférer',
-        cancelLabel: 'Plus tard',
-      }
-    );
-
-    if (!confirmed) {
-      dismissedTransferPromptRef.current = signature;
-      return { project, changed: false };
-    }
-
-    const transferResult = await transferProjectFilesToProject(
-      project,
-      savePath,
-      async (sourcePath) => {
-        const targetWorkspace = workspaceDir || await getWorkspaceDir();
-        if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-        return copyMediaToWorkspace(sourcePath, targetWorkspace, 'fichiers-importes', getProjectFilePrefix(store.project, savePathRef.current));
-      },
-      pathAudit,
-    );
-
-    dismissedTransferPromptRef.current = null;
-
-    if (transferResult.errors.length > 0) {
-      const details = transferResult.errors
-        .slice(0, 5)
-        .map((error) => `• ${error.label}\n  ${error.error}`)
-        .join('\n');
-      alert(`Certains fichiers n'ont pas pu être transférés :\n\n${details}`);
-    }
-
-    return {
-      project: transferResult.project,
-      changed: transferResult.copiedCount > 0,
-    };
-  }
-
-  async function persistProjectSnapshot(project, savePath) {
-    const result = await saveProject(project, savePath);
-    if (!result?.path) return null;
-    store.syncProjectWithoutHistory(result.project);
-    store.setSavePath(result.path);
-    savedSnapshotRef.current = JSON.stringify(result.project);
-    setSaveToast('ok');
-    setTimeout(() => setSaveToast(null), 2000);
-    return result.path;
-  }
-
-  async function handleCopyImportedFilesChange(enabled) {
-    setCopyImportedFilesEnabled(enabled);
-    if (!enabled || !store.savePath) return;
-
-    try {
-      const transferResult = await maybeOfferTransferIntoProject(store.project, store.savePath, {
-        forcePrompt: true,
-        copyEnabled: enabled,
-      });
-      if (transferResult.changed) {
-        await persistProjectSnapshot(transferResult.project, store.savePath);
-      }
-    } catch (e) {
-      logger.error('[handleCopyImportedFilesChange] erreur:', e);
-      setSaveToast('error');
-      setTimeout(() => setSaveToast(null), 3000);
-    }
-  }
+  const mediaLibraryCount = useMemo(
+    () => collectMediaLibrary({ project: store.project, statusByPath: pathAudit, sdJobs: sdStore.jobs, xttsJobs: xttsStore.jobs, extraPaths: mediaLibraryPaths }).length,
+    [store.project, pathAudit, sdStore.jobs, xttsStore.jobs, mediaLibraryPaths],
+  );
+  mediaLibraryCountRef.current = mediaLibraryCount;
 
   async function handlePickWorkspaceDir() {
     const chosen = await pickWorkspaceDir();
     if (chosen) {
-      logger.info(`workspace: switched to '${chosen}'`);
+      logger.info(`workspace:switched path='${chosen}'`);
       setWorkspaceDirState(chosen);
     }
   }
@@ -1253,9 +603,9 @@ export default function App() {
     setLogLevel(level);
     if (isTauriRuntime()) {
       try { await invoke('set_log_level', { level }); }
-      catch (err) { logger.error('[verbose-logging] set_log_level failed:', err); }
+      catch (err) { logger.error('logging:set-level-error', err); }
     }
-    logger.warn(`logging verbosity changed to ${level}`);
+    logger.warn(`logging:level-changed level=${level}`);
   }
 
   function logDirOf(filePath) {
@@ -1269,7 +619,7 @@ export default function App() {
       const file = await invoke('get_current_log_file');
       return logDirOf(file);
     } catch (err) {
-      logger.error('[resolve-log-path] failed:', err);
+      logger.error('logging:resolve-path-error', err);
       return null;
     }
   }
@@ -1283,7 +633,7 @@ export default function App() {
       await navigator.clipboard.writeText(dir);
       return dir;
     } catch (err) {
-      logger.error('[copy-log-path] failed:', err);
+      logger.error('logging:copy-path-error', err);
       return null;
     }
   }
@@ -1308,550 +658,144 @@ export default function App() {
         setRecentProjects(rememberRecentProject(result.project, result.path));
       }
       if (result.errors.length > 0) {
-        alert(`Projet consolidé avec des fichiers manquants :\n\n${result.errors.slice(0, 5).map((error) => `• ${error.path}\n  ${error.error}`).join('\n')}`);
+        showErrorDialog({
+          title: 'Projet consolidé',
+          message: `Projet consolidé avec des fichiers manquants :\n\n${result.errors.slice(0, 5).map((error) => `• ${error.path}\n  ${error.error}`).join('\n')}`,
+          variant: 'warning',
+        });
       }
       return result;
     } catch (error) {
       setSaveProgress(null);
-      alert(`Consolidation impossible : ${error}`);
+      showErrorDialog({
+        title: 'Consolidation impossible',
+        message: `Consolidation impossible : ${error}`,
+      });
       return null;
     }
   }
 
   const [importing, setImporting] = useState(null);
   const [unpacking, setUnpacking] = useState(null);
-  const [saveAsProgress, setSaveAsProgress] = useState(null); // null | { lines: string[], complete: boolean }
-  const [saveProgress, setSaveProgress] = useState(null); // null | { lines: string[], complete: boolean }
-  const osDropScaleFactorRef = useRef(typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1);
 
-  async function dispatchFiles(menuId, files) {
-    for (let index = 0; index < files.length; index += 1) {
-      const f = files[index];
-      const displayName = getImportDisplayName(f);
-      setImporting({
-        name: displayName,
-        index: index + 1,
-        total: files.length,
-        phase: isImportedPackPath(f)
-          ? "Analyse du pack importé..."
-          : "Import de l'audio...",
+  const {
+    saveProgress,
+    saveAsProgress,
+    setSaveProgress,
+    handleSave,
+    handleSaveProject,
+    handleSaveProjectAs,
+    persistProjectSnapshot,
+  } = useSaveProgress({
+    store,
+    workspaceDirRef,
+    mediaLibraryPathsRef,
+    autoSaveEnabled,
+    autoSaveBackupLimit,
+    savedSnapshotRef,
+    isSavingRef,
+    setSaveToast,
+    setRecentProjects,
+    maybeOfferTransferIntoProject,
+  });
+  useSyncedRef(persistProjectSnapshotRef, persistProjectSnapshot);
+
+  const { handleLoad, handleLoadRecent } = useProjectLoading({
+    store,
+    sdStore,
+    xttsStore,
+    setMediaLibraryPaths,
+    setRecentProjects,
+    savedSnapshotRef,
+    autoSavePathRef,
+    setAutoSavedPath,
+    handleSaveProject,
+    showErrorDialog,
+    isProjectDirty,
+    showChoiceDialog,
+  });
+
+  const handleApplyMissingMediaRelinks = useCallback(async (replacements, { saveAfter = false } = {}) => {
+    const nextProject = relinkProjectMedia(store.project, replacements);
+    const nextMediaTags = relinkMediaTags(store.mediaTags, replacements);
+    const nextMediaLibraryPaths = relinkMediaLibraryPaths(mediaLibraryPathsRef.current, replacements);
+    store.setProject(nextProject);
+    store.setMediaTags(nextMediaTags);
+    setMediaLibraryPaths(nextMediaLibraryPaths);
+    mediaLibraryPathsRef.current = nextMediaLibraryPaths;
+    setDismissedMissingMediaSignature(buildRelinkSignature(collectMissingMedia(nextProject, pathAudit)));
+    if (saveAfter) {
+      await handleSaveProject({
+        projectOverride: nextProject,
+        mediaTagsOverride: nextMediaTags,
+        mediaLibraryPathsOverride: nextMediaLibraryPaths,
       });
-
-      const file = await maybeCopyToProject(f);
-      if (isImportedPackPath(file)) {
-        let zipTitle = null;
-        let zipCoverImage = null;
-        let zipCoverAudio = null;
-        try {
-          setImporting({
-            name: displayName,
-            index: index + 1,
-            total: files.length,
-            phase: 'Lecture des métadonnées du pack...',
-          });
-          const json = await invoke('load_pack_zip', { zipPath: file });
-          const data = JSON.parse(json);
-          zipTitle = sanitizeImportedName(data.title?.trim(), null);
-          const sq = (data.stageNodes || []).find(n => n.squareOne === true);
-          zipCoverImage = sq?.image || null;
-          zipCoverAudio = sq?.audio || null;
-        } catch (e) {
-          alert(`Archive importée invalide ou inaccessible : ${file}\n\n${e}`);
-          continue;
-        }
-        store.addZip(menuId, file, zipTitle, zipCoverImage, zipCoverAudio);
-      } else {
-        setImporting({
-          name: displayName,
-          index: index + 1,
-          total: files.length,
-          phase: "Analyse de l'audio importé...",
-        });
-        const embeddedImage = await extractAudioEmbeddedImage(file);
-        const storyId = store.addStory(menuId, file);
-        if (embeddedImage) store.updateItem(storyId, { itemImage: embeddedImage });
-      }
     }
-  }
+  }, [
+    handleSaveProject,
+    mediaLibraryPathsRef,
+    pathAudit,
+    setMediaLibraryPaths,
+    store,
+  ]);
 
-  const handleAddStory = useCallback(async () => {
-    const files = await pickMultipleAudioOrZip();
-    if (files.length === 0) return;
-    logger.info(`import: pick ${files.length} file(s) into root`);
-    setImporting({
-      name: getImportDisplayName(files[0]),
-      index: 0,
-      total: files.length,
-      phase: "Préparation de l'import...",
-    });
-    try {
-      await dispatchFiles(null, files);
-    } finally {
-      setImporting(null);
-    }
-  }, [dispatchFiles, setImporting]);
+  const {
+    dispatchFiles,
+    handleAddStory,
+    handleAddStoryToMenu,
+    handleImportFolder,
+    handleUnpackZip,
+    handleImportMediaLibrary,
+    handleImportMediaLibraryFolder,
+  } = useImportSession({
+    store,
+    projectIndex,
+    maybeCopyToProject,
+    copyGeneratedMediaToProject,
+    extractAudioEmbeddedImage,
+    setImporting,
+    setUnpacking,
+    setImportNotice,
+    addPathsToMediaLibrary,
+    persistProjectSnapshot,
+    workspaceDirRef,
+    handleSaveProject,
+    showErrorDialog,
+    getImportDisplayName,
+    isImportedPackPath,
+  });
 
-  const handleAddStoryToMenu = useCallback(async (menuId) => {
-    const files = await pickMultipleAudioOrZip();
-    if (files.length === 0) return;
-    setImporting({
-      name: getImportDisplayName(files[0]),
-      index: 0,
-      total: files.length,
-      phase: "Préparation de l'import...",
-    });
-    try {
-      await dispatchFiles(menuId ?? null, files);
-    } finally {
-      setImporting(null);
-    }
-  }, [dispatchFiles, setImporting]);
+  useOsFileDrop({
+    dispatchFiles,
+    maybeCopyToProject,
+    copyGeneratedMediaToProject,
+    extractAudioEmbeddedImage,
+    addPathsToMediaLibrary,
+    setImporting,
+    setActiveDropZone,
+    getImportDisplayName,
+  });
 
-  // OS file drop — fichiers glissés depuis l'explorateur Windows
-  const osFileDropHandlerRef = useRef(null);
-  osFileDropHandlerRef.current = async ({ type, paths, position }) => {
-    const cssPosition = position
-      ? {
-          x: position.x / (osDropScaleFactorRef.current || 1),
-          y: position.y / (osDropScaleFactorRef.current || 1),
-        }
-      : null;
-    if (type === 'over' && position) {
-      const el = document.elementFromPoint(cssPosition.x, cssPosition.y);
-      const zone = el?.closest('[data-os-drop-zone]')?.dataset?.osDropZone ?? null;
-      document.dispatchEvent(new CustomEvent('os-file-drag-zone', { detail: { zone } }));
-      return;
-    }
-    if (type === 'cancel' || type === 'leave') {
-      document.dispatchEvent(new CustomEvent('os-file-drag-zone', { detail: { zone: null } }));
-      return;
-    }
-    if (type === 'drop') {
-      document.dispatchEvent(new CustomEvent('os-file-drag-zone', { detail: { zone: null } }));
-      if (!paths?.length || !cssPosition) return;
-      const el = document.elementFromPoint(cssPosition.x, cssPosition.y);
-      const zone = el?.closest('[data-os-drop-zone]')?.dataset?.osDropZone ?? null;
-      if (!zone) return;
-      const { audio, images, archives } = classifyOsDroppedFiles(paths);
-      if (zone === 'treepanel') {
-        const relevant = [...audio, ...archives];
-        if (relevant.length === 0) return;
-        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total: relevant.length, phase: "Préparation de l'import..." });
-        try {
-          await dispatchFiles(null, relevant);
-        } finally {
-          setImporting(null);
-        }
-      } else if (zone === 'mediaexplorer') {
-        const relevant = [...audio, ...images, ...archives];
-        if (relevant.length === 0) return;
-        const total = relevant.length;
-        setImporting({ name: getImportDisplayName(relevant[0]), index: 0, total, phase: "Préparation de l'import..." });
-        try {
-          const nextPaths = [];
-          for (let i = 0; i < relevant.length; i++) {
-            const file = relevant[i];
-            setImporting({ name: getImportDisplayName(file), index: i + 1, total, phase: 'Copie dans le projet...' });
-            nextPaths.push(await maybeCopyToProject(file));
-          }
-          addPathsToMediaLibrary(nextPaths);
-        } finally {
-          setImporting(null);
-        }
-      }
-    }
-  };
-  useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-    let unlisten;
-    let cancelled = false;
-    const win = getCurrentWindow();
-    win.scaleFactor()
-      .then((factor) => {
-        if (!cancelled && Number.isFinite(factor) && factor > 0) {
-          osDropScaleFactorRef.current = factor;
-        }
-      })
-      .catch(() => {});
-    win.onDragDropEvent((event) => osFileDropHandlerRef.current(event.payload))
-      .then((fn) => {
-        if (cancelled) fn();
-        else unlisten = fn;
-      })
-      .catch((error) => logger.error('[os-file-drop] écoute impossible:', error));
-    return () => {
-      cancelled = true;
-      unlisten?.();
-      document.dispatchEvent(new CustomEvent('os-file-drag-zone', { detail: { zone: null } }));
-    };
-  }, []);
-
-  function countFolderFiles(node) {
-    if (node.type === 'folder') return (node.children ?? []).reduce((s, c) => s + countFolderFiles(c), 0);
-    return 1;
-  }
-
-  async function processFolderNode(node, parentMenuId, counter, total) {
-    if (node.type === 'folder') {
-      const menuId = store.addMenu(parentMenuId);
-      store.updateMenu(menuId, { name: node.name });
-      for (const child of (node.children ?? [])) {
-        await processFolderNode(child, menuId, counter, total);
-      }
-    } else if (node.type === 'audio') {
-      counter.value += 1;
-      setImporting({ name: node.name, index: counter.value, total, phase: "Import de l'audio..." });
-      const copiedPath = await maybeCopyToProject(node.path);
-      const embeddedImage = await extractAudioEmbeddedImage(copiedPath);
-      const storyId = store.addStory(parentMenuId, copiedPath);
-      if (embeddedImage) store.updateItem(storyId, { itemImage: embeddedImage });
-    } else if (node.type === 'zip') {
-      counter.value += 1;
-      setImporting({ name: node.name, index: counter.value, total, phase: "Import de l'archive..." });
-      const copiedPath = await maybeCopyToProject(node.path);
-      store.addZip(parentMenuId, copiedPath, null, null, null);
-    }
-  }
-
-  async function handleImportFolder(targetMenuId = null) {
-    const folderPath = await pickFolder();
-    if (!folderPath) return;
-    logger.info(`import-folder: '${folderPath}' targetMenuId=${targetMenuId ?? 'root'}`);
-    let tree;
-    try {
-      tree = await invoke('scan_import_folder', { folderPath });
-    } catch (e) {
-      logger.error(`import-folder: scan failed for '${folderPath}': ${e}`);
-      alert(`Impossible de lire le dossier : ${e}`);
-      return;
-    }
-    const total = countFolderFiles(tree);
-    if (total === 0) {
-      logger.warn(`import-folder: empty '${folderPath}'`);
-      alert('Aucun fichier audio ou archive trouvé dans ce dossier.');
-      return;
-    }
-    logger.info(`import-folder: ${total} file(s) found`);
-    setImporting({ name: tree.name, index: 0, total, phase: 'Analyse du dossier...' });
-    try {
-      await processFolderNode(tree, targetMenuId, { value: 0 }, total);
-    } finally {
-      setImporting(null);
-    }
-  }
-
-  async function handleUnpackZip(itemId) {
-    const zipItem = projectIndex.entryById.get(itemId) ?? null;
-    if (!zipItem?.zipPath) return;
-    const menuId = projectIndex.parentMenuById.get(itemId) ?? null;
-
-    let effectiveSavePath = store.savePath;
-    if (!effectiveSavePath) {
-      const path = await handleSaveProject();
-      if (!path) return;
-      effectiveSavePath = path;
-    }
-
-    const skipSilenceForExtractedAudio = await ask(
-      "Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout de silence global ?",
-      {
-        title: 'Extraction du pack',
-        kind: 'info',
-        okLabel: 'Exclure du silence',
-        cancelLabel: 'Garder le traitement global',
-      }
-    );
-
-    setUnpacking({ name: zipItem.name || 'ZIP en cours' });
-    try {
-      const extractedDirName = sanitizeImportedName(zipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
-      const wsDir = workspaceDirRef.current || localStorage.getItem('storyStudioWorkspaceDir') || effectiveSavePath.replace(/[\\/][^\\/]+$/, '');
-      const destDir = getExtractedZipsDir(wsDir) + '/' + extractedDirName;
-      const result = await invoke('unpack_zip_to_entries', {
-        zipPath: zipItem.zipPath,
-        destDir,
-        workspaceDir: wsDir,
-      });
-      const entries = sanitizeImportedEntries(result?.entries ?? []);
-      if (!entries.length) {
-        alert('Aucune entrée trouvée dans ce ZIP.');
-        return;
-      }
-
-      const processedEntries = (skipSilenceForExtractedAudio
-        ? entries.map(markEntryAudioSkipSilence)
-        : entries);
-      const zipFilename = (zipItem.zipPath || '').split(/[\\/]/).pop().replace(/\.(zip|7z)$/i, '');
-      const rawTitle = String(result?.title || '').trim();
-      const parsedZipFilename = parseConventionName(zipFilename);
-      const parsedPackName = parseConventionName(rawTitle) ?? parsedZipFilename;
-      const isZipConvention = /^\d+\+\]/.test(zipFilename);
-      const isTitleConvention = /^\d+\+\]/.test(rawTitle);
-      const packName = (rawTitle && (isTitleConvention || !isZipConvention))
-        ? sanitizeImportedName(rawTitle, zipItem.name || 'Pack importé')
-        : sanitizeImportedName(zipFilename || zipItem.name, 'Pack importé');
-      const packMetadata = parsedPackName
-        ? {
-            ...parsedPackName,
-            version: result?.packVersion ?? parsedPackName.version,
-            description: result?.packDescription ?? '',
-            namingMode: 'convention',
-          }
-        : {
-            title: packName,
-            author: '',
-            version: result?.packVersion ?? 1,
-            minAge: ((zipFilename || zipItem.name || '').match(/^(\d+)\+\]/)?.[1]) || '3',
-            producer: '',
-            bonus: '',
-            description: result?.packDescription ?? '',
-            namingMode: 'convention',
-            legacyExportName: '',
-            legacyName: '',
-          };
-      const isBlankProject = menuId == null
-        && (store.project.rootEntries ?? []).length <= 1
-        && !store.project.projectName?.trim()
-        && !store.project.packMetadata?.title
-        && !store.project.rootAudio
-        && !store.project.rootImage;
-      let nextProject = isBlankProject
-        ? {
-            ...store.project,
-            projectType: 'pack',
-            projectName: parsedZipFilename ? '' : sanitizeImportedName(zipFilename || packName, 'Pack importe'),
-            packMetadata,
-            rootAudio: result?.rootAudio ?? null,
-            rootImage: result?.rootImage ?? null,
-            thumbnailImage: result?.thumbnailImage ?? result?.rootImage ?? null,
-            sameImage: !!(result?.rootImage) && !result?.thumbnailImage,
-            nativeGraph: result?.nativeGraph ?? null,
-            rootEntries: processedEntries,
-          }
-        : replaceEntryWithEntries(store.project, menuId, itemId, processedEntries);
-      const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
-        ? result.unresolvedTransitions.map((warning) => ({
-            ...warning,
-            sourceRootId: result?.rootId ?? null,
-            sourceName: packName,
-          }))
-        : [];
-      nextProject = {
-        ...nextProject,
-        importWarnings: [
-          ...(nextProject.importWarnings ?? []).filter((warning) => warning?.sourceRootId !== result?.rootId),
-          ...unresolvedTransitions,
-        ],
-      };
-      if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode) {
-        nextProject = {
-          ...nextProject,
-          nightModeAudio: result.nightModeAudio,
-          nightModeReturn: result.nightModeReturn ?? null,
-          nightModeHomeReturn: result.nightModeHomeReturn ?? null,
-          audioProcessing: skipSilenceForExtractedAudio
-            ? {
-                ...(nextProject.audioProcessing ?? {}),
-                nightModeAudio: { skipSilence: true },
-              }
-            : nextProject.audioProcessing,
-          globalOptions: {
-            ...nextProject.globalOptions,
-            nightMode: true,
-          },
-        };
-      }
-      store.setProject(nextProject);
-      store.setSelectedId('root');
-      await persistProjectSnapshot(nextProject, effectiveSavePath);
-      if (result?.advancedTransitionsDetected) {
-        const firstWarning = unresolvedTransitions[0]?.message;
-        setImportNotice(
-          "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
-          + "Story Studio a conservé la structure reconnue, mais vérifiez les retours concernés avant export."
-          + (firstWarning ? ` Exemple : ${firstWarning}` : '')
-        );
-      }
-    } catch (e) {
-      alert(`Erreur lors de l'extraction : ${e}`);
-    } finally {
-      setUnpacking(null);
-    }
-  }
-
-  async function handleSave() {
-    return handleSaveProject();
-  }
-
-  async function handleSaveProject({ silent = false, projectOverride = null, returnResult = false } = {}) {
-    if (isSavingRef.current) return null;
-    isSavingRef.current = true;
-    let progressStarted = false;
-    function onProgress(step) {
-      if (silent) return;
-      if (!progressStarted) {
-        progressStarted = true;
-        setSaveProgress({ lines: [step], complete: false });
-      } else {
-        setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
-      }
-    }
-    const projectToSave = projectOverride ?? store.project;
-    logger.info(`save: kind=${silent ? 'auto' : 'manual'} hasPath=${!!store.savePath} projectType=${projectToSave?.projectType || 'none'} entries=${projectToSave?.rootEntries?.length ?? 0}`);
-    try {
-      let result = await saveProject(projectToSave, store.savePath, onProgress, {
-        autosave: silent,
-        backupLimit: autoSaveEnabled ? autoSaveBackupLimit : 0,
-        mediaTags: store.mediaTags,
-        mediaLibraryPaths: mediaLibraryPathsRef.current,
-        workspaceDir: workspaceDirRef.current,
-      });
-      if (!result) {
-        setSaveProgress(null);
-        return null;
-      }
-      if (result?.path) {
-        const transferResult = silent
-          ? { project: result.project, changed: false }
-          : await maybeOfferTransferIntoProject(result.project, result.path);
-        if (transferResult.changed) {
-          result = await saveProject(transferResult.project, result.path, onProgress, { mediaTags: store.mediaTags });
-        }
-        store.syncProjectWithoutHistory(result.project);
-        store.setSavePath(result.path);
-        setRecentProjects(rememberRecentProject(result.project, result.path));
-        savedSnapshotRef.current = JSON.stringify(result.project);
-        if (!silent) {
-          setSaveProgress(prev => prev ? { ...prev, complete: true } : null);
-          setTimeout(() => setSaveProgress(null), 1500);
-        }
-        setSaveToast('ok');
-        setTimeout(() => setSaveToast(null), 2000);
-        logger.info(`save: done path='${result.path}' kind=${silent ? 'auto' : 'manual'}`);
-        return returnResult ? result : result.path;
-      }
-      setSaveProgress(null);
-      return null;
-    } catch (e) {
-      logger.error('[handleSave] erreur:', e);
-      setSaveProgress(null);
-      setSaveToast('error');
-      setTimeout(() => setSaveToast(null), 3000);
-      return null;
-    } finally {
-      isSavingRef.current = false;
-    }
-  }
-
-  async function handleSaveProjectAs() {
-    let progressStarted = false;
-    function onProgress(step) {
-      if (!progressStarted) {
-        progressStarted = true;
-        setSaveAsProgress({ lines: [step], complete: false });
-      } else {
-        setSaveAsProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
-      }
-    }
-    try {
-      const result = await saveProjectAs(store.project, store.savePath, onProgress, store.mediaTags, { workspaceDir: workspaceDirRef.current }, mediaLibraryPathsRef.current);
-      if (!result) {
-        setSaveAsProgress(null);
-        return null;
-      }
-      if (result?.path) {
-        store.syncProjectWithoutHistory(result.project);
-        store.setSavePath(result.path);
-        setRecentProjects(rememberRecentProject(result.project, result.path));
-        savedSnapshotRef.current = JSON.stringify(result.project);
-        setSaveToast('ok');
-        setTimeout(() => setSaveToast(null), 2000);
-        setSaveAsProgress(prev => prev ? { ...prev, complete: true } : null);
-        setTimeout(() => setSaveAsProgress(null), 1800);
-        return result.path;
-      }
-      setSaveAsProgress(null);
-      return null;
-    } catch (e) {
-      logger.error('[handleSaveAs] erreur:', e);
-      setSaveAsProgress(null);
-      setSaveToast('error');
-      setTimeout(() => setSaveToast(null), 3000);
-      return null;
-    }
-  }
-
-  saveHandlerRef.current = handleSaveProject;
-  saveAsHandlerRef.current = handleSaveProjectAs;
-
-  async function applyLoadedProject(result) {
-    const entries = result?.data?.rootEntries?.length ?? 0;
-    logger.info(`load: path='${result.path}' projectType=${result.data?.projectType || 'none'} schemaVersion=${result.data?.schemaVersion ?? '?'} entries=${entries}`);
-    store.loadProject(result.data);
-    store.setMediaTags(result.mediaTags ?? {});
-    store.setSavePath(result.path);
-    setMediaLibraryPaths(result.mediaLibraryPaths ?? []);
-    setRecentProjects(rememberRecentProject(result.data, result.path));
-    savedSnapshotRef.current = JSON.stringify(result.data);
-    autoSavePathRef.current = null;
-    setAutoSavedPath(null);
-    sdStore.clearDone();
-    xttsStore.clearDone();
-    // Recalculer les métadonnées ZIP manquantes pour les projets anciens
-    const zipEntries = [];
-    visitProjectEntries(result.data, (entry, ancestors) => {
-      if (entry.type === 'zip' && entry.zipPath && (!entry.coverImage || !entry.coverAudio)) {
-        zipEntries.push({ entry, ancestors });
-      }
-    });
-    for (const { entry, ancestors } of zipEntries) {
-      try {
-        const nextFields = {};
-        const json = await invoke('load_pack_zip', { zipPath: entry.zipPath });
-        const data = JSON.parse(json);
-        const squareOne = (data.stageNodes || []).find((node) => node.squareOne === true);
-        if (!entry.coverImage && squareOne?.image) nextFields.coverImage = squareOne.image;
-        if (!entry.coverAudio && squareOne?.audio) nextFields.coverAudio = squareOne.audio;
-        if (!entry.name?.trim() && data.title?.trim()) nextFields.name = sanitizeImportedName(data.title.trim(), 'ZIP importe');
-        if (Object.keys(nextFields).length > 0) store.updateItem(entry.id, nextFields);
-      } catch (e) {
-        const scope = ancestors.map((parent) => parent.name).join(' / ') || 'racine';
-        logger.warn(`[handleLoad] ZIP métadonnées indisponibles (${scope}):`, entry.zipPath, e);
-      }
-    }
-  }
-
-  async function handleLoad() {
-    const canContinue = await askSaveBeforeLeave(store.project, savedSnapshotRef.current, handleSaveProject);
-    if (!canContinue) return;
-    const result = await loadProject();
-    if (result) {
-      await applyLoadedProject(result);
-    }
-  }
-
-  async function handleLoadRecent(path) {
-    const canContinue = await askSaveBeforeLeave(store.project, savedSnapshotRef.current, handleSaveProject);
-    if (!canContinue) return;
-    try {
-      const result = await loadProjectFromPath(path);
-      await applyLoadedProject(result);
-    } catch (e) {
-      logger.error(`load-recent: failed for '${path}': ${e}`);
-      setRecentProjects(forgetRecentProject(path));
-      alert(`Impossible d'ouvrir ce projet récent :\n${e}`);
-    }
-  }
+  useSyncedRef(saveHandlerRef, handleSaveProject);
+  useSyncedRef(saveAsHandlerRef, handleSaveProjectAs);
 
   function hasWebmFiles(project) {
     const allAudio = collectProjectAudioPaths(project);
     return allAudio.some(f => f && f.toLowerCase().endsWith('.webm'));
   }
 
-  function handleUpdateGlobalOption(key, value) {
+  async function handleUpdateGlobalOption(key, value) {
     if (key === 'convertFormat' && !value && hasWebmFiles(store.project)) {
-      setShowWebmWarning(true);
-      return;
+      const confirmed = await showConfirmDialog({
+        title: 'Fichiers .webm détectés',
+        message:
+          "Un ou plusieurs fichiers audio sont au format .webm, qui n'est pas compatible avec la Boîte à Histoires.\n\n"
+          + "Désactiver « Convertir au bon format » risque de produire un pack non fonctionnel.",
+        variant: 'warning',
+        okLabel: 'Désactiver quand même',
+        cancelLabel: 'Garder activé',
+      });
+      if (!confirmed) return;
     }
     store.updateGlobalOption(key, value);
   }
@@ -1897,6 +841,19 @@ export default function App() {
   );
 
   const { projectType } = store.project;
+  const missingMedia = useMemo(
+    () => collectMissingMedia(store.project, pathAudit),
+    [store.project, pathAudit],
+  );
+  const missingMediaSignature = useMemo(
+    () => buildRelinkSignature(missingMedia),
+    [missingMedia],
+  );
+  const showMissingMediaRelink = projectType !== null
+    && !!store.savePath
+    && !pathAuditPending
+    && missingMedia.length > 0
+    && missingMediaSignature !== dismissedMissingMediaSignature;
   const errors = validationIssues.filter((issue) => issue.status === 'error').length;
   const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
   const totalIssues = errors + warnings;
@@ -1917,7 +874,7 @@ export default function App() {
   const lastExportDir = getLastExportDir();
   const modalExportFolder = (() => {
     if (lastExportDir) return lastExportDir;
-    const ws = workspaceDirRef.current || (typeof window !== 'undefined' ? localStorage.getItem('storyStudioWorkspaceDir') : '') || '';
+    const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
     if (!ws) return null;
     const trimmed = ws.replace(/[\\/]+$/, '');
     const sep = ws.includes('\\') ? '\\' : '/';
@@ -1939,7 +896,7 @@ export default function App() {
   }
   const canGenerate = projectType !== null && !pathAuditPending && totalIssues === 0;
 
-  shortcutActionsRef.current = {
+  useSyncedRef(shortcutActionsRef, {
     newProject: handleNewProject,
     openProject: handleLoad,
     importStories: handleAddStory,
@@ -1959,9 +916,43 @@ export default function App() {
     canUndo: store.canUndo,
     canRedo: store.canRedo,
     hasValidationErrors: errors > 0,
+  });
+
+  const optionsTabProps = {
+    copyFilesEnabled: copyImportedFilesEnabled,
+    onCopyFilesChange: handleCopyImportedFilesChange,
+    workspaceDir,
+    onPickWorkspaceDir: handlePickWorkspaceDir,
+    onConsolidateProject: handleConsolidateProject,
+    autoSaveEnabled,
+    onAutoSaveChange: setAutoSaveEnabled,
+    autoSaveBackupLimit,
+    onAutoSaveBackupLimitChange: setAutoSaveBackupLimit,
+    themePreference,
+    onThemePreferenceChange: setThemePreference,
+    keyboardShortcuts,
+    onUpdateKeyboardShortcuts: setKeyboardShortcuts,
+    xttsSettings,
+    onUpdateXttsSettings: handleUpdateXttsSettings,
+    sdSettings: sdStore.sdSettings,
+    onUpdateSdSettings: sdStore.updateSdSettings,
+    showCentralDiagram,
+    onShowCentralDiagramChange: setShowCentralDiagram,
+    verboseLogging,
+    onVerboseLoggingChange: handleVerboseLoggingChange,
+    onCopyLogPath: handleCopyLogPath,
+    onResolveLogPath: handleResolveLogPath,
+    project: store.project,
+    savePath: store.savePath,
   };
 
   return (
+    <MediaTransferProvider
+      dropOnNode={dropOnNode}
+      notifyCutPaste={notifyCutPaste}
+      activeDropZone={activeDropZone}
+      setActiveDropZone={setActiveDropZone}
+    >
     <ProjectContext.Provider value={{
       savePath: store.savePath,
       projectName: effectiveProjectFilePrefix,
@@ -2006,6 +997,7 @@ export default function App() {
           showProjectActions={projectType !== null}
           shortcutLabels={shortcutLabels}
           canImportStories={canImportStories}
+          canImportFolder={canImportStories}
           canAddFolder={canAddFolder}
           saveState={saveToast}
           generateDisabled={!canGenerate}
@@ -2013,6 +1005,7 @@ export default function App() {
           onOpenProject={handleLoad}
           onSaveProject={handleSave}
           onImportStories={() => handleAddStory()}
+          onImportFolder={() => handleImportFolder()}
           onAddFolder={() => store.addMenu()}
           onRecord={handleToolbarRecord}
           canRecord={canRecord}
@@ -2130,32 +1123,8 @@ export default function App() {
           )}
           {store.activeTab === 'opts' && renderDeferred(
             <OptionsTab
-              copyFilesEnabled={copyImportedFilesEnabled}
-              onCopyFilesChange={handleCopyImportedFilesChange}
-              workspaceDir={workspaceDir}
-              onPickWorkspaceDir={handlePickWorkspaceDir}
-              onConsolidateProject={handleConsolidateProject}
-              autoSaveEnabled={autoSaveEnabled}
-              onAutoSaveChange={setAutoSaveEnabled}
-              autoSaveBackupLimit={autoSaveBackupLimit}
-              onAutoSaveBackupLimitChange={setAutoSaveBackupLimit}
-              themePreference={themePreference}
-              onThemePreferenceChange={setThemePreference}
-              keyboardShortcuts={keyboardShortcuts}
-              onUpdateKeyboardShortcuts={setKeyboardShortcuts}
-              xttsSettings={xttsSettings}
-              onUpdateXttsSettings={handleUpdateXttsSettings}
-              sdSettings={sdStore.sdSettings}
-              onUpdateSdSettings={sdStore.updateSdSettings}
+              {...optionsTabProps}
               onBackToHome={projectType === null ? () => store.setActiveTab('edit') : null}
-              showCentralDiagram={showCentralDiagram}
-              onShowCentralDiagramChange={setShowCentralDiagram}
-              verboseLogging={verboseLogging}
-              onVerboseLoggingChange={handleVerboseLoggingChange}
-              onCopyLogPath={handleCopyLogPath}
-              onResolveLogPath={handleResolveLogPath}
-              project={store.project}
-              savePath={store.savePath}
             />,
           )}
 
@@ -2198,31 +1167,7 @@ export default function App() {
 
       {prefsModalOpen && renderDeferred(
         <OptionsTab
-          copyFilesEnabled={copyImportedFilesEnabled}
-          onCopyFilesChange={handleCopyImportedFilesChange}
-          workspaceDir={workspaceDir}
-          onPickWorkspaceDir={handlePickWorkspaceDir}
-          onConsolidateProject={handleConsolidateProject}
-          autoSaveEnabled={autoSaveEnabled}
-          onAutoSaveChange={setAutoSaveEnabled}
-          autoSaveBackupLimit={autoSaveBackupLimit}
-          onAutoSaveBackupLimitChange={setAutoSaveBackupLimit}
-          themePreference={themePreference}
-          onThemePreferenceChange={setThemePreference}
-          keyboardShortcuts={keyboardShortcuts}
-          onUpdateKeyboardShortcuts={setKeyboardShortcuts}
-          xttsSettings={xttsSettings}
-          onUpdateXttsSettings={handleUpdateXttsSettings}
-          sdSettings={sdStore.sdSettings}
-          onUpdateSdSettings={sdStore.updateSdSettings}
-          showCentralDiagram={showCentralDiagram}
-          onShowCentralDiagramChange={setShowCentralDiagram}
-          verboseLogging={verboseLogging}
-          onVerboseLoggingChange={handleVerboseLoggingChange}
-          onCopyLogPath={handleCopyLogPath}
-          onResolveLogPath={handleResolveLogPath}
-          project={store.project}
-          savePath={store.savePath}
+          {...optionsTabProps}
           asModal
           onClose={() => setPrefsModalOpen(false)}
         />,
@@ -2267,28 +1212,6 @@ export default function App() {
         />,
       )}
 
-      {/* Warning désactivation conversion avec fichiers webm */}
-      {showWebmWarning && (
-        <AppModalPortal>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 360 }}>
-            <div className="modal-header">
-              <span>Fichiers .webm détectés</span>
-              <button className="modal-close" onClick={() => setShowWebmWarning(false)}>×</button>
-            </div>
-            <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-              Un ou plusieurs fichiers audio sont au format <strong>.webm</strong>, qui n'est pas compatible avec la Boîte à Histoires.<br /><br />
-              Désactiver <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> risque de produire un pack non fonctionnel.
-            </div>
-            <div style={{ padding: '0 20px 16px', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn" onClick={() => { store.updateGlobalOption('convertFormat', false); setShowWebmWarning(false); }}>
-                Désactiver quand même
-              </button>
-              <button className="btn btn-primary" onClick={() => setShowWebmWarning(false)}>Garder activé</button>
-            </div>
-          </div>
-        </AppModalPortal>
-      )}
-
       {/* SD — modale de génération */}
       {sdGenerateOpen && renderDeferred(
         <SDGenerateModal
@@ -2307,6 +1230,13 @@ export default function App() {
 
       {saveAsProgress && <SaveProgressModal data={saveAsProgress} title="Enregistrement sous..." doneTitle="Copie terminée" />}
       {saveProgress && <SaveProgressModal data={saveProgress} title="Enregistrement..." doneTitle="Projet enregistré" />}
+      {showMissingMediaRelink && renderDeferred(
+        <MissingMediaRelinkModal
+          missingMedia={missingMedia}
+          onApply={handleApplyMissingMediaRelinks}
+          onClose={() => setDismissedMissingMediaSignature(missingMediaSignature)}
+        />,
+      )}
 
       {unpacking && (
         <AppModalPortal className="gen-overlay">
@@ -2490,5 +1420,14 @@ export default function App() {
       )}
     </div>
     </ProjectContext.Provider>
+    </MediaTransferProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorDialogProvider>
+      <AppContent />
+    </ErrorDialogProvider>
   );
 }

@@ -10,6 +10,7 @@ import {
   isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from './navigationTargets.js';
+import { pathKey } from '../utils/fileUtils.js';
 
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
 
@@ -146,8 +147,8 @@ export function isCombinedNightStoryBypass(entry, project) {
 export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
   if (!project?.nightModeAudio || !project?.nightModeReturn || entry?.type !== 'story') return false;
   if (!entry?.afterPlaybackPromptAudio || (entry?.afterPlaybackSequence?.length ?? 0) > 0) return false;
-  const promptAudio = String(entry.afterPlaybackPromptAudio).trim().replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase();
-  const nightAudio = String(project.nightModeAudio).trim().replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase();
+  const promptAudio = pathKey(entry.afterPlaybackPromptAudio);
+  const nightAudio = pathKey(project.nightModeAudio);
   if (!promptAudio || promptAudio !== nightAudio) return false;
   const autoNextFallback = getAutoNextFallbackTarget(entry, parentMenu, project);
   const fallbackTarget = autoNextFallback ?? getStoryFallbackReturnTarget(entry, parentMenu, rootEntries);

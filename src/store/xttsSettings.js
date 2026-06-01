@@ -1,4 +1,4 @@
-const XTTS_SETTINGS_KEY = 'xttsSettings';
+import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 
 const DEFAULT_XTTS_SETTINGS = {
   enabled: false,
@@ -12,7 +12,7 @@ const DEFAULT_XTTS_SETTINGS = {
 
 export function loadXttsSettings() {
   try {
-    const raw = localStorage.getItem(XTTS_SETTINGS_KEY);
+    const raw = readSetting(KEYS.XTTS_SETTINGS);
     if (!raw) return { ...DEFAULT_XTTS_SETTINGS };
     const parsed = { ...DEFAULT_XTTS_SETTINGS, ...JSON.parse(raw) };
     return {
@@ -25,5 +25,5 @@ export function loadXttsSettings() {
 }
 
 export function saveXttsSettings(settings) {
-  localStorage.setItem(XTTS_SETTINGS_KEY, JSON.stringify(settings));
+  writeSetting(KEYS.XTTS_SETTINGS, JSON.stringify(settings));
 }

@@ -1,0 +1,58 @@
+.save-progress-box {
+  width: 360px;
+}
+
+.save-progress-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.save-progress-spinner {
+  width: 14px;
+  height: 14px;
+  animation: spin 1s linear infinite;
+}
+
+.save-progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.save-progress-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.save-progress-check {
+  color: var(--color-accent);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.save-progress-bullet {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--color-border-secondary);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.save-progress-text {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.save-progress-line.is-done .save-progress-text {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}

@@ -31,7 +31,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
   const titleControls = node.titleControlSettings ?? {};
   const homeDefaultTargetName = parentMenu?.name || "le menu d'accueil du pack";
   const endNodeBypassNote = hasVisibleEndNode(project)
-    ? ' (sans passer par le nœud de fin)'
+    ? ' (sans passer par le message de fin)'
     : '';
   const homeResolvedHint = `Retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}`;
   const homeResolvedDestinationLabel = getNavigationSelectHint({
@@ -43,9 +43,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
     allMenus,
     allStories,
   });
-  const homeDestinationHintLabel = node.returnOnHome
-    ? homeResolvedDestinationLabel
-    : `Réglage par défaut : ${homeResolvedDestinationLabel}`;
+  const homeDestinationHintLabel = homeResolvedDestinationLabel;
 
   return (
     <div className="card during-play-card">
@@ -75,7 +73,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
             <Tooltip
               text={node.returnOnHomeNone
                 ? "Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire."
-                : `Destination quand l'enfant appuie sur Accueil pendant la lecture. Par défaut : retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}.`}
+                : `Destination quand l'enfant appuie sur Accueil pendant la lecture : retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}.`}
               placement="above"
               style={{ flex: 1 }}
             >
@@ -94,7 +92,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={node.id}
-              emptyLabel="Comportement par défaut"
+              emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
               includeRoot={false}
               includeStoryPlay={false}
               size="compact"

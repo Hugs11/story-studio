@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'storyStudioThemePreference';
+import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 
 export const THEME_OPTIONS = [
   { value: 'system', label: 'Système' },
@@ -8,7 +8,7 @@ export const THEME_OPTIONS = [
 
 export function loadThemePreference() {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
+    const value = readSetting(KEYS.THEME);
     return THEME_OPTIONS.some((option) => option.value === value) ? value : 'system';
   } catch {
     return 'system';
@@ -17,7 +17,7 @@ export function loadThemePreference() {
 
 export function saveThemePreference(value) {
   try {
-    localStorage.setItem(STORAGE_KEY, value);
+    writeSetting(KEYS.THEME, value);
   } catch {}
 }
 

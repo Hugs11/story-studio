@@ -1,4 +1,4 @@
-const SD_SETTINGS_KEY = 'sdSettings';
+import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 
 const DEFAULT_SD_SETTINGS = {
   serverUrl: 'http://127.0.0.1:8188',
@@ -9,7 +9,7 @@ const DEFAULT_SD_SETTINGS = {
 
 export function loadSdSettings() {
   try {
-    const raw = localStorage.getItem(SD_SETTINGS_KEY);
+    const raw = readSetting(KEYS.SD_SETTINGS);
     if (!raw) return { ...DEFAULT_SD_SETTINGS };
     return { ...DEFAULT_SD_SETTINGS, ...JSON.parse(raw) };
   } catch {
@@ -18,5 +18,5 @@ export function loadSdSettings() {
 }
 
 export function saveSdSettings(settings) {
-  localStorage.setItem(SD_SETTINGS_KEY, JSON.stringify(settings));
+  writeSetting(KEYS.SD_SETTINGS, JSON.stringify(settings));
 }

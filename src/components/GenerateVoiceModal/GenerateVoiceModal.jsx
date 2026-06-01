@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { KEYS, read, write } from '../../store/persistentSettings';
 import './GenerateVoiceModal.css';
 
 const LANGUAGE_OPTIONS = [
@@ -26,7 +27,7 @@ export function GenerateVoiceModal({
   const [language, setLanguage] = useState(xttsSettings.language || 'fr');
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(() => (
-    localStorage.getItem('xtts_last_voice') || localStorage.getItem('xtts_last_speaker') || ''
+    read(KEYS.XTTS_LAST_VOICE) || read(KEYS.XTTS_LAST_SPEAKER) || ''
   ));
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -57,7 +58,7 @@ export function GenerateVoiceModal({
         ? favoriteVoices.filter((voice) => voices.includes(voice))
         : voices;
       const fallbackVoices = nextVisibleVoices.length > 0 ? nextVisibleVoices : voices;
-      const lastVoice = localStorage.getItem('xtts_last_voice') || localStorage.getItem('xtts_last_speaker') || '';
+      const lastVoice = read(KEYS.XTTS_LAST_VOICE) || read(KEYS.XTTS_LAST_SPEAKER) || '';
       setDevice(status.device || null);
       setAvailableVoices(voices);
       setSelectedVoice((current) => {
@@ -74,9 +75,11 @@ export function GenerateVoiceModal({
     }
   }
 
+  // reason: chargement one-shot du statut XTTS au montage de la modale.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadStatus();
-  }, []); // eslint-disable-line
+  }, []);
 
   useEscapeKey(true, () => {
     if (!submitting) onClose?.();
@@ -108,8 +111,8 @@ export function GenerateVoiceModal({
           filenameHint,
         },
       });
-      localStorage.setItem('xtts_last_voice', selectedVoice);
-      localStorage.setItem('xtts_last_speaker', selectedVoice);
+      write(KEYS.XTTS_LAST_VOICE, selectedVoice);
+      write(KEYS.XTTS_LAST_SPEAKER, selectedVoice);
       onClose();
     } catch (e) {
       setError(String(e));
@@ -187,8 +190,8 @@ export function GenerateVoiceModal({
               value={selectedVoice}
               onChange={(e) => {
                 setSelectedVoice(e.target.value);
-                localStorage.setItem('xtts_last_voice', e.target.value);
-                localStorage.setItem('xtts_last_speaker', e.target.value);
+                write(KEYS.XTTS_LAST_VOICE, e.target.value);
+                write(KEYS.XTTS_LAST_SPEAKER, e.target.value);
               }}
               disabled={submitting || visibleVoices.length === 0}
             >

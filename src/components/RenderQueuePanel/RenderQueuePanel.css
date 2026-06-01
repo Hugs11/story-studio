@@ -218,6 +218,12 @@
   border: 1px solid rgba(229, 115, 115, 0.25);
 }
 
+.rq-badge-canceled {
+  color: var(--color-text-tertiary);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
 /* ── Spinner ───────────────────────────────────────────────────────────────── */
 
 .rq-spinner {
@@ -292,6 +298,15 @@
 
 .rq-remove-btn:hover {
   opacity: 1;
+}
+
+.rq-cancel-btn {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 42%, transparent);
+  color: color-mix(in srgb, var(--danger-text, #fca5a5) 86%, var(--color-text-primary));
+}
+
+.rq-cancel-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger, #ef4444) 16%, transparent);
 }
 
 /* ── Bouton bottombar ──────────────────────────────────────────────────────── */

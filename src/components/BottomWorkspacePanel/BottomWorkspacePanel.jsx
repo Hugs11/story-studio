@@ -3,15 +3,15 @@ import { MediaExplorer } from '../MediaExplorer/MediaExplorer';
 import { RenderQueuePanel } from '../RenderQueuePanel/RenderQueuePanel';
 import { SDQueuePanel } from '../SDQueuePanel/SDQueuePanel';
 import { collectMediaLibrary } from '../../store/mediaLibrary';
+import { KEYS, read, write } from '../../store/persistentSettings';
 import './BottomWorkspacePanel.css';
 
-const HEIGHT_KEY = 'bottomPanelHeight';
 const DEFAULT_HEIGHT = 270;
 const MIN_HEIGHT = 180;
 const MAX_HEIGHT = 600;
 
 function loadHeight() {
-  const raw = Number(localStorage.getItem(HEIGHT_KEY));
+  const raw = Number(read(KEYS.BOTTOM_PANEL_HEIGHT));
   return Number.isFinite(raw) && raw >= MIN_HEIGHT && raw <= MAX_HEIGHT ? raw : DEFAULT_HEIGHT;
 }
 
@@ -74,7 +74,7 @@ export function BottomWorkspacePanel({
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       if (dragRef.current != null) {
-        localStorage.setItem(HEIGHT_KEY, String(dragRef.current));
+        write(KEYS.BOTTOM_PANEL_HEIGHT, String(dragRef.current));
         dragRef.current = null;
       }
     }
@@ -140,6 +140,7 @@ export function BottomWorkspacePanel({
             embedded
             jobs={renderQueue.jobs}
             onRemove={renderQueue.removeJob}
+            onCancel={renderQueue.cancelJob}
             onClearDone={renderQueue.clearDone}
             onClose={onClose}
           />

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 import { Image as ImageIcon } from '../icons/LucideLocal';
-import { useLocalFile } from '../../store/useLocalFile';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { Tooltip } from '../common/Tooltip';
 
 function AppMark() {
@@ -16,7 +16,7 @@ function AppMark() {
 function MinimizeIcon() {
   return (
     <svg viewBox="0 0 16 16" className="chrome-icon" aria-hidden="true">
-      <path d="M3 8.75h10v1.5H3z" />
+      <path d="M3 8.75h10v1.5H3z" fill="currentColor" />
     </svg>
   );
 }

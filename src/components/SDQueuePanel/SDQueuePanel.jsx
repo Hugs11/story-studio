@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocalFile } from '../../store/useLocalFile';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Tooltip } from '../common/Tooltip';
+import { basename } from '../../utils/fileUtils';
+import { mediaDrag } from '../../store/dragState';
 import './SDQueuePanel.css';
 
 function formatTime(secs) {
@@ -81,11 +83,91 @@ function CompactAudioPlayer({ url }) {
   );
 }
 
+function startQueueMediaDrag(event, { kind, path, label, onDragStart = null }) {
+  if (!path || (kind !== 'audio' && kind !== 'image') || event.button !== 0) return;
+  if (event.target?.closest?.('input, textarea, [role="slider"], .sd-audio-mini')) return;
+
+  const startX = event.clientX;
+  const startY = event.clientY;
+  let dragging = false;
+  let ghost = null;
+  let currentTarget = null;
+
+  function findTarget(x, y) {
+    return document.elementsFromPoint(x, y).find((el) => el.dataset.dropKind === kind) ?? null;
+  }
+
+  function onMove(ev) {
+    if (!dragging) {
+      if (Math.abs(ev.clientX - startX) < 6 && Math.abs(ev.clientY - startY) < 6) return;
+      dragging = true;
+      onDragStart?.();
+      mediaDrag.start(kind, path);
+      ghost = document.createElement('div');
+      ghost.className = 'sd-queue-drag-ghost';
+      ghost.textContent = label || basename(path);
+      document.body.appendChild(ghost);
+    }
+
+    ghost.style.left = `${ev.clientX + 14}px`;
+    ghost.style.top = `${ev.clientY - 14}px`;
+
+    const nextTarget = findTarget(ev.clientX, ev.clientY);
+    if (nextTarget !== currentTarget) {
+      currentTarget?.classList.remove('is-drop-over');
+      nextTarget?.classList.add('is-drop-over');
+      currentTarget = nextTarget;
+      ghost.classList.toggle('is-over-target', !!nextTarget);
+    }
+  }
+
+  function onUp() {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    if (ghost) {
+      document.body.removeChild(ghost);
+      ghost = null;
+    }
+    currentTarget?.classList.remove('is-drop-over');
+
+    if (dragging && currentTarget) {
+      currentTarget.dispatchEvent(new CustomEvent('media-drop', {
+        bubbles: false,
+        detail: { path, kind },
+      }));
+    }
+    mediaDrag.end();
+  }
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+
 function JobResultThumb({ path, onPreview }) {
   const url = useLocalFile(path);
+  const draggedRef = useRef(false);
+
+  function handleClick(event) {
+    if (draggedRef.current) {
+      event.preventDefault();
+      draggedRef.current = false;
+      return;
+    }
+    onPreview(path);
+  }
+
   return (
-    <Tooltip text="Voir l’image en grand">
-      <button className="sd-result-thumb" onClick={() => onPreview(path)}>
+    <Tooltip text="Glisser vers un placeholder image, cliquer pour prévisualiser">
+      <button
+        className="sd-result-thumb"
+        onPointerDown={(event) => startQueueMediaDrag(event, {
+          kind: 'image',
+          path,
+          label: basename(path),
+          onDragStart: () => { draggedRef.current = true; },
+        })}
+        onClick={handleClick}
+      >
         {url ? (
           <img src={url} alt="" className="sd-result-img" />
         ) : (
@@ -98,7 +180,7 @@ function JobResultThumb({ path, onPreview }) {
 
 function ImagePreviewModal({ path, onClose }) {
   const url = useLocalFile(path);
-  const filename = path ? path.split(/[\\/]/).pop() : '';
+  const filename = basename(path);
   useEscapeKey(true, () => onClose?.());
   return (
     <div className="modal-overlay sd-preview-overlay" onMouseDown={onClose}>
@@ -117,11 +199,18 @@ function ImagePreviewModal({ path, onClose }) {
 
 function AudioResult({ path }) {
   const url = useLocalFile(path);
-  const filename = path ? path.split(/[\\/]/).pop() : '';
+  const filename = basename(path);
   return (
-    <div className="sd-audio-result">
+    <div
+      className="sd-audio-result"
+      onPointerDown={(event) => startQueueMediaDrag(event, {
+        kind: 'audio',
+        path,
+        label: filename,
+      })}
+    >
       <Tooltip text={path} wrap className="sd-audio-file-tooltip">
-        <div className="sd-audio-file">{filename}</div>
+        <div className="sd-audio-file" title="Glisser vers un placeholder audio">{filename}</div>
       </Tooltip>
       {url && <CompactAudioPlayer url={url} />}
     </div>
@@ -204,6 +293,9 @@ function JobCard({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUsa
         <div className="sd-job-error">{job.errorMessage}</div>
       )}
       {job.kind === 'audio' && !audioUsage && job.targetLabel && (
+        <div className="sd-job-meta">Destination: {job.targetLabel}</div>
+      )}
+      {isImageJob && job.targetLabel && (
         <div className="sd-job-meta">Destination: {job.targetLabel}</div>
       )}
       {job.status === 'done' && isImageJob && job.resultPaths.length > 0 && (

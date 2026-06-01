@@ -1,0 +1,179 @@
+{
+  "description": "Fixtures partagees JS<->Rust pour ancrer le contrat de validation. Chaque cas decrit un projet et le verdict attendu (les deux moteurs doivent l'accepter ou le refuser).",
+  "consumedBy": [
+    "scripts/validationParity.test.mjs",
+    "src-tauri/src/domain/tests/parity.rs"
+  ],
+  "cases": [
+    {
+      "name": "pack_valid_minimal",
+      "comment": "Pack avec une histoire complete. Doit passer JS (0 erreur) ET Rust (Ok).",
+      "expect": "ok",
+      "project": {
+        "projectName": "Pack OK",
+        "packMetadata": { "title": "Pack OK", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png"
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png"
+      ]
+    },
+    {
+      "name": "pack_missing_story_audio",
+      "comment": "Story sans audio doit bloquer JS et Rust (libelles differents : JS dit 'histoire manquante', Rust dit 'audio manquant').",
+      "expect": "fail",
+      "jsKeywords": ["histoire", "manquant"],
+      "rustKeywords": ["audio"],
+      "project": {
+        "projectName": "Pack OK",
+        "packMetadata": { "title": "Pack OK", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png"
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png"
+      ]
+    },
+    {
+      "name": "pack_empty_pack",
+      "comment": "Pack sans aucune histoire doit bloquer JS et Rust (Rust valide rootAudio mais aucun root entry exploitable).",
+      "expect": "fail",
+      "jsKeywords": ["histoire"],
+      "rustKeywords": ["aucune histoire"],
+      "project": {
+        "projectName": "Pack vide",
+        "packMetadata": { "title": "Pack vide", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": []
+      },
+      "fileAuditTrue": ["valid/root.mp3", "valid/root.png", "valid/thumb.png"]
+    },
+    {
+      "name": "pack_autoplay_story_missing_image",
+      "comment": "Story autoplay sans image de selection doit bloquer : elle apparait quand meme dans le menu du pack.",
+      "expect": "fail",
+      "jsKeywords": ["image"],
+      "rustKeywords": ["image"],
+      "project": {
+        "projectName": "Pack autoplay no image",
+        "packMetadata": { "title": "Pack autoplay no image", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-autoplay",
+            "type": "story",
+            "name": "Autoplay",
+            "audio": "valid/story.mp3",
+            "itemAudio": "valid/story-title.mp3",
+            "controlSettings": { "autoplay": true }
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story.mp3",
+        "valid/story-title.mp3"
+      ]
+    },
+    {
+      "name": "pack_autoplay_story_missing_selection_audio",
+      "comment": "Story autoplay avec image mais sans audio de selection doit bloquer : l'audio de selection est requis dans l'UI.",
+      "expect": "fail",
+      "jsKeywords": ["audio titre"],
+      "rustKeywords": ["audio titre"],
+      "project": {
+        "projectName": "Pack autoplay no title audio",
+        "packMetadata": { "title": "Pack autoplay no title audio", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-autoplay-audio",
+            "type": "story",
+            "name": "Autoplay audio",
+            "audio": "valid/story.mp3",
+            "itemImage": "valid/story-image.png",
+            "controlSettings": { "autoplay": true }
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story.mp3",
+        "valid/story-image.png"
+      ]
+    },
+    {
+      "name": "simple_missing_root_audio",
+      "comment": "Projet simple sans audio racine doit bloquer JS et Rust.",
+      "expect": "fail",
+      "jsKeywords": ["audio intro"],
+      "rustKeywords": ["Audio racine"],
+      "project": {
+        "projectName": "Simple no audio",
+        "packMetadata": {},
+        "projectType": "simple",
+        "globalOptions": {},
+        "rootEntries": [
+          {
+            "id": "story-main",
+            "type": "story",
+            "name": "Histoire principale",
+            "audio": "valid/main.mp3"
+          }
+        ]
+      },
+      "fileAuditTrue": ["valid/main.mp3"]
+    }
+  ]
+}

@@ -2,9 +2,15 @@ import { memo, useMemo, useState } from 'react';
 import { Toggle } from '../common/Toggle';
 import { findEntryById } from '../../store/projectModel';
 import { useProjectContext } from '../../store/ProjectContext';
+import { KEYS, read } from '../../store/persistentSettings';
+import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { Moon } from '../icons/LucideLocal';
 import { NavigationTargetSelect } from './story/storyUtils';
+import {
+  canShowTextImageBatchAction,
+  getTextImageBatchTargets,
+} from './multiEditorBatchTargets';
 
 const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
@@ -43,20 +49,47 @@ export const MultiEditor = memo(function MultiEditor({
   const ids = useMemo(() => [...selectedIds], [selectedIds]);
 
   const nodes = useMemo(
-    () => ids.map((id) => findEntryById(project, id, projectIndex)).filter(Boolean),
+    () => ids.map((id) => {
+      if (id === 'root') {
+        return {
+          id: 'root',
+          type: 'root',
+          name: project?.rootName || project?.packMetadata?.title || project?.projectName || 'Menu racine',
+        };
+      }
+      if (id === 'end-node') {
+        return {
+          id: 'end-node',
+          type: 'end-node',
+          name: project?.endNodeName || 'Message de fin',
+        };
+      }
+      return findEntryById(project, id, projectIndex);
+    }).filter(Boolean),
     [ids, project, projectIndex],
   );
 
   const { xttsSettings, onQueueXttsGenerate, onMediaCreated, savePath } = useProjectContext();
+  const { showErrorDialog } = useErrorDialog();
   const [batchImageGenerating, setBatchImageGenerating] = useState(false);
   const [batchAudioGenerating, setBatchAudioGenerating] = useState(false);
   const [batchError, setBatchError] = useState('');
 
   const editableNodes = nodes.filter((n) => n.type === 'story' || n.type === 'menu');
+  const textImageNodes = getTextImageBatchTargets(nodes);
+  const canGenerateTextImages = canShowTextImageBatchAction(nodes);
+  const titleAudioNodes = nodes.filter((n) => (
+    n.type === 'story'
+    || n.type === 'menu'
+    || n.type === 'root'
+    || n.type === 'end-node'
+  ));
   const editableIds = editableNodes.map((n) => n.id);
   const storyCount = nodes.filter((n) => n.type === 'story').length;
   const zipCount = nodes.filter((n) => n.type === 'zip').length;
   const menuCount = nodes.filter((n) => n.type === 'menu').length;
+  const rootCount = nodes.filter((n) => n.type === 'root').length;
+  const endNodeCount = nodes.filter((n) => n.type === 'end-node').length;
   const onlyStories = storyCount === nodes.length && storyCount > 0;
   const onlyMenus = menuCount === nodes.length && menuCount > 0;
   const allSameType = onlyStories || onlyMenus;
@@ -66,6 +99,8 @@ export const MultiEditor = memo(function MultiEditor({
   if (storyCount > 0) bannerParts.push(`${storyCount} histoire${storyCount > 1 ? 's' : ''}`);
   if (zipCount > 0) bannerParts.push(`${zipCount} ZIP`);
   if (menuCount > 0) bannerParts.push(`${menuCount} dossier${menuCount > 1 ? 's' : ''}`);
+  if (rootCount > 0) bannerParts.push('menu racine');
+  if (endNodeCount > 0) bannerParts.push(project?.endNodeName || 'message de fin');
 
   function handleControlChange(key, value) {
     onBulkUpdateItems(editableIds, (entry) => ({
@@ -119,12 +154,15 @@ export const MultiEditor = memo(function MultiEditor({
   const batchBusy = batchImageGenerating || batchAudioGenerating;
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
   const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : 'Pendant la lecture';
+  const batchGenerationDescription = canGenerateTextImages
+    ? "Crée d'un coup une image texte pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
+    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
 
   function getSelectedVoice() {
     const favoriteVoices = Array.isArray(xttsSettings?.favoriteVoices) ? xttsSettings.favoriteVoices : [];
     return (
-      localStorage.getItem('xtts_last_voice') ||
-      localStorage.getItem('xtts_last_speaker') ||
+      read(KEYS.XTTS_LAST_VOICE) ||
+      read(KEYS.XTTS_LAST_SPEAKER) ||
       favoriteVoices[0] ||
       ''
     );
@@ -142,7 +180,7 @@ export const MultiEditor = memo(function MultiEditor({
     const errors = [];
 
     try {
-      for (const node of editableNodes) {
+      for (const node of textImageNodes) {
         const text = getNodeTitle(node);
         const isMenu = node.type === 'menu';
 
@@ -185,7 +223,11 @@ export const MultiEditor = memo(function MultiEditor({
     if (!voice) {
       const msg = 'Choisis une voix XTTS une première fois (depuis le bouton TTS d’un audio) avant de lancer la génération groupée.';
       setBatchError(msg);
-      window.alert(msg);
+      showErrorDialog({
+        title: 'Génération audio',
+        message: msg,
+        variant: 'warning',
+      });
       return;
     }
 
@@ -193,14 +235,18 @@ export const MultiEditor = memo(function MultiEditor({
     const errors = [];
 
     try {
-      for (const node of editableNodes) {
+      for (const node of titleAudioNodes) {
         const text = getNodeTitle(node);
         const isMenu = node.type === 'menu';
+        const target = (() => {
+          if (node.type === 'root') return { kind: 'root', field: 'rootAudio' };
+          if (node.type === 'end-node') return { kind: 'root', field: 'nightModeAudio' };
+          if (isMenu) return { kind: 'menu', entryId: node.id, field: 'audio' };
+          return { kind: 'story', entryId: node.id, field: 'itemAudio' };
+        })();
         try {
           await onQueueXttsGenerate?.({
-            target: isMenu
-              ? { kind: 'menu', entryId: node.id, field: 'audio' }
-              : { kind: 'story', entryId: node.id, field: 'itemAudio' },
+            target,
             targetLabel: `${text} — titre`,
             voiceLabel: voice,
             request: {
@@ -254,26 +300,28 @@ export const MultiEditor = memo(function MultiEditor({
         </button>
       </div>
 
-      {editableNodes.length > 0 && (
+      {(canGenerateTextImages || titleAudioNodes.length > 0) && (
         <div className="card">
           <div className="card-title">Génération groupée</div>
           <div className="field-row">
             <div style={{ flex: 1 }}>
               <span className="field-label">Générer à partir des noms</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                Crée d'un coup une image texte (le nom écrit en gros) ou un audio (le nom prononcé) pour chaque élément sélectionné. Les packs ZIP importés sont ignorés.
+                {batchGenerationDescription}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleGenerateTextImagesFromNames}
-                disabled={batchBusy}
-              >
-                {batchImageGenerating ? 'Images…' : 'Images texte'}
-              </button>
-              {xttsSettings?.enabled && (
+              {canGenerateTextImages ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleGenerateTextImagesFromNames}
+                  disabled={batchBusy}
+                >
+                  {batchImageGenerating ? 'Images…' : 'Images texte'}
+                </button>
+              ) : null}
+              {xttsSettings?.enabled && titleAudioNodes.length > 0 && (
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -343,7 +391,7 @@ export const MultiEditor = memo(function MultiEditor({
               <span className="field-label">Accueil</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                 Destination quand l'enfant appuie sur Accueil pendant la lecture.
-                Par défaut : retour direct au menu parent{hasEndNode ? ' (sans passer par le nœud de fin)' : ''}.
+                Sans réglage spécifique : retour direct au menu parent{hasEndNode ? ' (sans passer par le message de fin)' : ''}.
               </div>
             </div>
             <div style={{ maxWidth: 220, width: '100%' }}>
@@ -356,7 +404,7 @@ export const MultiEditor = memo(function MultiEditor({
               allMenus={allMenus}
               allStories={allStories.filter((s) => !ids.includes(s.id))}
               currentStoryId={null}
-              emptyLabel="Comportement par défaut"
+              emptyLabel="Retour direct au menu parent"
               includeRoot={false}
               includeStoryPlay={false}
             />
@@ -374,10 +422,10 @@ export const MultiEditor = memo(function MultiEditor({
               <div style={{ flex: 1 }}>
                 <span className="field-label">Fin de l'histoire</span>
                 <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                  Passage automatique par le nœud de fin du pack
+                  Passage automatique par le message de fin du pack
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                  La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce nœud de fin.
+                  La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce message de fin.
                 </div>
               </div>
             </div>
@@ -393,10 +441,10 @@ export const MultiEditor = memo(function MultiEditor({
             <Moon style={{ width: 18, height: 18, flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
               {onlyMenus
-                ? 'La destination après chaque histoire est gérée par le nœud de fin du pack.'
-                : 'La destination après lecture est gérée par le nœud de fin du pack.'}
+                ? 'La destination après chaque histoire est gérée par le message de fin du pack.'
+                : 'La destination après lecture est gérée par le message de fin du pack.'}
               <br />
-              Pour la modifier, sélectionne le nœud de fin dans l'arbre à gauche.
+              Pour la modifier, sélectionne le message de fin dans l'arbre à gauche.
             </div>
           </div>
         </div>
@@ -466,7 +514,7 @@ export const MultiEditor = memo(function MultiEditor({
                 <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                   {onlyStories
                     ? 'Où l’enfant atterrit après la sortie automatique.'
-                    : 'Destination après la lecture — peut hériter du réglage du dossier parent.'}
+                    : 'Destination après la lecture — suit le dossier parent si rien n’est choisi ici.'}
                 </div>
               </div>
               <div style={{ maxWidth: 220, width: '100%' }}>
@@ -479,7 +527,7 @@ export const MultiEditor = memo(function MultiEditor({
                 allMenus={allMenus}
                 allStories={onlyStories ? allStories.filter((s) => !ids.includes(s.id)) : []}
                 currentStoryId={null}
-                emptyLabel="Réglage par défaut (hérité)"
+                emptyLabel="Suit la destination du dossier parent"
                 includeRoot={false}
                 includeStoryPlay={false}
               />

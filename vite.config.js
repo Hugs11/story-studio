@@ -1,11 +1,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
 
 const host = "127.0.0.1";
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Genere dist/bundle-stats.html en mode `npm run build:stats`.
+    process.env.BUNDLE_STATS && visualizer({
+      filename: "dist/bundle-stats.html",
+      template: "treemap",
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ].filter(Boolean),
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

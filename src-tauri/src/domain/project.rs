@@ -15,30 +15,6 @@ pub(crate) struct GlobalOptions {
     pub(crate) night_mode: bool,
 }
 
-#[derive(Deserialize, Clone)]
-pub(crate) struct StoryItem {
-    #[serde(rename = "type")]
-    pub(crate) item_type: String,
-    pub(crate) name: String,
-    pub(crate) audio: Option<String>,
-    #[serde(rename = "itemAudio")]
-    pub(crate) item_audio: Option<String>,
-    #[serde(rename = "itemImage")]
-    pub(crate) item_image: Option<String>,
-    #[serde(rename = "zipPath")]
-    pub(crate) zip_path: Option<String>,
-}
-
-#[derive(Deserialize, Clone)]
-pub(crate) struct Menu {
-    pub(crate) name: String,
-    pub(crate) audio: Option<String>,
-    pub(crate) image: Option<String>,
-    #[serde(rename = "autoBlackImage", default)]
-    pub(crate) auto_black_image: bool,
-    pub(crate) items: Vec<StoryItem>,
-}
-
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub(crate) struct EntryControlSettings {
     pub(crate) autoplay: Option<bool>,
@@ -156,11 +132,10 @@ pub(crate) struct Project {
     pub(crate) pack_description: String,
     #[serde(rename = "rootEntries", default)]
     pub(crate) root_entries: Vec<ProjectEntry>,
-    #[serde(rename = "rootItems", default)]
-    pub(crate) root_items: Vec<StoryItem>,
     #[serde(rename = "globalOptions")]
     pub(crate) global_options: GlobalOptions,
-    pub(crate) menus: Vec<Menu>,
 }
 
-fn default_pack_version() -> i32 { 1 }
+fn default_pack_version() -> i32 {
+    1
+}

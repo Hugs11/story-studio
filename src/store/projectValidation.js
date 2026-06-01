@@ -1,5 +1,33 @@
-import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel';
-import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets';
+// Validation projet cote frontend.
+//
+// Contrat partage avec Rust : src-tauri/src/domain/validation.rs#validate_project_for_generation.
+// Les regles "structurelles" doivent rester miroirs ; le test de parite
+// scripts/validationParity.test.mjs + le module #[cfg(test)] de validation.rs ancrent
+// 4 cas canoniques (pack valide, story sans audio, pack vide, simple sans audio racine).
+//
+// Regles partagees JS <-> Rust (toute divergence est un bug a corriger):
+//   - Audio racine obligatoire (rootAudio).
+//   - Image racine / vignette obligatoires sur pack.
+//   - Story : audio obligatoire, accessibilite disque verifiee.
+//   - Story : itemImage + itemAudio obligatoires.
+//   - Zip : zipPath obligatoire et fichier accessible.
+//   - Pack non-vide : au moins une histoire jouable.
+//
+// Regles UX uniquement (cote JS, signalees a l'utilisateur en temps reel) :
+//   - "duplicateId" : doublons d'ID dans rootEntries. Rust ne controle pas
+//     (la generation cree des ids assainis distincts).
+//   - "rootReservedId" : ID 'root' reserve. Rust applique implicitement.
+//   - Cibles de navigation cassees (returnAfterPlay, etc.) : warning JS,
+//     Rust accepte mais l'execution peut etre incoherente (cas couvert par
+//     le test round-trip native_pack/tests/roundtrip.rs).
+//   - emptyMenu / emptyPack : warnings JS, Rust refuse via "aucune histoire".
+//
+// Si une regle est ajoutee : l'implementer des deux cotes, etendre
+// validation-projects.json + le module tests::parity_* de Rust.
+
+import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel.js';
+import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
+import { VALIDATION_MESSAGES, brokenField, emptyTarget, missingField, missingTarget } from './validationMessages.js';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -55,47 +83,45 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
     const storyId = decodeNavigationStoryId(normalized);
     const entry = storyId ? projectIndex.entryById.get(storyId) : null;
     if (!entry || entry.type !== 'story') {
-      pushError(issues, id, `${label} — destination histoire introuvable`);
+      pushError(issues, id, missingTarget(label, 'histoire'));
     } else if (isStoryHomeStepNavigationTarget(normalized) && !entry.afterPlaybackHomeStep) {
-      pushError(issues, id, `${label} - retour de fin introuvable pour cette histoire`);
+      pushError(issues, id, VALIDATION_MESSAGES.storyReturnLost(label));
     }
     return;
   }
   const menuId = decodeNavigationMenuId(normalized);
   if (!menuId || !menuIds.has(menuId)) {
-    pushError(issues, id, `${label} — destination dossier introuvable`);
+    pushError(issues, id, missingTarget(label, 'dossier'));
   } else if (getPlayableDescendantCount(projectIndex, menuId) === 0) {
-    pushError(issues, id, `${label} — destination dossier vide ou non jouable`);
+    pushError(issues, id, emptyTarget(label, 'dossier'));
   }
 }
 
 function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
-  const isAutoplay = !!item?.controlSettings?.autoplay;
-  if (!hasPath(item?.audio)) pushWarning(issues, item?.id ?? null, `${name} — histoire manquante`);
-  else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — histoire introuvable ou inaccessible`);
-  if (!isAutoplay) {
-    if (!hasPath(item?.itemImage)) pushWarning(issues, item?.id ?? null, `${name} — image manquante`);
-    else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — image introuvable ou inaccessible`);
-    if (!hasPath(item?.itemAudio)) pushWarning(issues, item?.id ?? null, `${name} — audio titre manquant`);
-    else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — audio titre introuvable ou inaccessible`);
-  }
+  const itemId = item?.id ?? null;
+  if (!hasPath(item?.audio)) pushWarning(issues, itemId, missingField(name, 'histoire', { feminine: true }));
+  else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'histoire'));
+  if (!hasPath(item?.itemImage)) pushWarning(issues, itemId, missingField(name, 'image', { feminine: true }));
+  else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image'));
+  if (!hasPath(item?.itemAudio)) pushWarning(issues, itemId, missingField(name, 'audio titre'));
+  else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio titre'));
   if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
-    pushWarning(issues, item?.id ?? null, `${name} — audio de fin d'histoire introuvable ou inaccessible`);
+    pushWarning(issues, itemId, brokenField(name, "audio de fin d'histoire"));
   }
   for (const [index, step] of (item?.afterPlaybackSequence ?? []).entries()) {
     if (!hasPath(step?.audio)) {
-      pushWarning(issues, item?.id ?? null, `${name} — audio de fin ${index + 1} manquant`);
+      pushWarning(issues, itemId, missingField(name, `audio de fin ${index + 1}`));
     } else if (isBrokenPath(step.audio, fileAudit)) {
-      pushWarning(issues, item?.id ?? null, `${name} — audio de fin ${index + 1} introuvable ou inaccessible`);
+      pushWarning(issues, itemId, brokenField(name, `audio de fin ${index + 1}`));
     }
   }
 }
 
 function validateZipItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
-  if (!hasPath(item?.zipPath)) pushWarning(issues, item?.id ?? null, `${name} — zip manquant`);
-  else if (isBrokenPath(item?.zipPath, fileAudit)) pushWarning(issues, item?.id ?? null, `${name} — zip introuvable ou inaccessible`);
+  if (!hasPath(item?.zipPath)) pushWarning(issues, item?.id ?? null, missingField(name, 'zip'));
+  else if (isBrokenPath(item?.zipPath, fileAudit)) pushWarning(issues, item?.id ?? null, brokenField(name, 'zip'));
 }
 
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
@@ -109,7 +135,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   const menuIds = new Set(menuMap.keys());
 
   if (!projectType) {
-    pushWarning(issues, 'root', 'Aucun type de projet selectionne.');
+    pushWarning(issues, 'root', VALIDATION_MESSAGES.noProjectType);
     return issues;
   }
 
@@ -117,40 +143,47 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     pushWarning(
       issues,
       warning?.entryId ?? 'root',
-      warning?.message || 'Transition importee non modelisee.',
+      warning?.message || VALIDATION_MESSAGES.importedTransitionUnmodeled,
     );
   }
 
   for (const [entryId, count] of entryIdCounts.entries()) {
     if (count > 1) {
-      pushError(issues, entryId, `Identifiant duplique — ${count} elements partagent l'id ${entryId}`);
+      pushError(issues, entryId, VALIDATION_MESSAGES.duplicateId(count, entryId));
     }
   }
   if (entryIdCounts.has('root')) {
-    pushError(issues, 'root', "Identifiant reserve utilise — aucun element ne doit porter l'id root");
+    pushError(issues, 'root', VALIDATION_MESSAGES.rootReservedId);
   }
 
-  if (!hasPath(project?.rootAudio)) pushWarning(issues, 'root', `Menu racine — audio intro manquant`);
-  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', `Menu racine — audio intro introuvable ou inaccessible`);
-  if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', `Menu racine — image de couverture manquante`);
-  else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', `Menu racine — image de couverture introuvable ou inaccessible`);
+  if (!hasPath(project?.rootAudio)) pushWarning(issues, 'root', missingField('Menu racine', 'audio intro'));
+  else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'audio intro'));
+  if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField('Menu racine', 'image de couverture', { feminine: true }));
+  else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'image de couverture'));
   if (projectType === 'pack') {
-    if (!hasPath(project?.thumbnailImage)) pushWarning(issues, 'root', `Menu racine — image bibliothèque manquante (cocher « même image » ou en choisir une)`);
-    else if (isBrokenPath(project?.thumbnailImage, fileAudit)) pushWarning(issues, 'root', `Menu racine — image bibliothèque introuvable ou inaccessible`);
+    if (!hasPath(project?.thumbnailImage)) {
+      pushWarning(
+        issues,
+        'root',
+        `${missingField('Menu racine', 'image bibliothèque', { feminine: true })} (cocher « même image » ou en choisir une)`,
+      );
+    } else if (isBrokenPath(project?.thumbnailImage, fileAudit)) {
+      pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
+    }
   } else if (hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
-    pushWarning(issues, 'root', `Menu racine — image bibliothèque introuvable ou inaccessible`);
+    pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
-    pushWarning(issues, 'end-node', `Nœud de fin — audio manquant`);
+    pushWarning(issues, 'end-node', missingField('Message de fin', 'audio'));
   } else if (hasEndNode && isBrokenPath(project?.nightModeAudio, fileAudit)) {
-    pushWarning(issues, 'end-node', `Nœud de fin — audio introuvable ou inaccessible`);
+    pushWarning(issues, 'end-node', brokenField('Message de fin', 'audio'));
   }
 
   if (projectType === 'simple') {
     if (!hasPath(firstSimpleStory?.audio)) {
-      pushWarning(issues, 'root', `${rootName} — histoire manquante`);
+      pushWarning(issues, 'root', missingField(rootName, 'histoire', { feminine: true }));
     } else if (isBrokenPath(firstSimpleStory?.audio, fileAudit)) {
-      pushWarning(issues, 'root', `${rootName} — histoire introuvable ou inaccessible`);
+      pushWarning(issues, 'root', brokenField(rootName, 'histoire'));
     }
     return issues;
   }
@@ -162,36 +195,37 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     const parentMenu = ancestors.length > 0 ? ancestors[ancestors.length - 1] : null;
     const entryId = typeof entry?.id === 'string' ? entry.id.trim() : '';
     if (!entryId) {
-      pushError(issues, null, `${pathLabel} — identifiant interne manquant`);
+      pushError(issues, null, VALIDATION_MESSAGES.missingInternalId(pathLabel));
     } else if (entryId === 'root') {
-      pushError(issues, entryId, `${pathLabel} — identifiant reserve invalide`);
+      pushError(issues, entryId, VALIDATION_MESSAGES.reservedIdInvalid(pathLabel));
     }
     if (entry?.type !== 'menu' && entry?.type !== 'story' && entry?.type !== 'zip') {
-      pushError(issues, entry?.id ?? null, `${pathLabel} — type d'element non pris en charge`);
+      pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.unsupportedEntryType(pathLabel));
       return;
     }
 
     if (entry?.type === 'menu') {
+      const menuId = entry?.id ?? null;
       const isSilentImportedContinuation = !!entry?.importedContinuation;
-      if (!hasPath(entry?.audio) && !isSilentImportedContinuation) pushWarning(issues, entry?.id ?? null, `${pathLabel} — audio manquant`);
-      else if (isBrokenPath(entry?.audio, fileAudit)) pushWarning(issues, entry?.id ?? null, `${pathLabel} — audio introuvable ou inaccessible`);
+      if (!hasPath(entry?.audio) && !isSilentImportedContinuation) pushWarning(issues, menuId, missingField(pathLabel, 'audio'));
+      else if (isBrokenPath(entry?.audio, fileAudit)) pushWarning(issues, menuId, brokenField(pathLabel, 'audio'));
       if (!hasPath(entry?.image) && !entry?.autoBlackImage) {
-        pushWarning(issues, entry?.id ?? null, `${pathLabel} — image manquante`);
+        pushWarning(issues, menuId, missingField(pathLabel, 'image', { feminine: true }));
       } else if (isBrokenPath(entry?.image, fileAudit)) {
-        pushWarning(issues, entry?.id ?? null, `${pathLabel} — image introuvable ou inaccessible`);
+        pushWarning(issues, menuId, brokenField(pathLabel, 'image'));
       }
       if (getPlayableDescendantCount(projectIndex, entry.id) === 0) {
-        pushWarning(issues, entry?.id ?? null, `${pathLabel} — collection vide`);
+        pushWarning(issues, menuId, VALIDATION_MESSAGES.emptyMenu(pathLabel));
       }
-      const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, entry?.id ?? null);
+      const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, menuId);
       if (hasPath(entry?.returnAfterPlay) && menuReturnTarget !== 'root' && menuReturnTarget && !menuIds.has(menuReturnTarget)) {
-        pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour introuvable`);
+        pushError(issues, menuId, missingTarget(entryLabel, 'de retour'));
       } else if (hasPath(entry?.returnAfterPlay) && menuReturnTarget && menuReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, menuReturnTarget) === 0) {
-        pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour vide ou non jouable`);
+        pushError(issues, menuId, emptyTarget(entryLabel, 'de retour'));
       }
       validateNavigationTarget(
         issues,
-        entry?.id ?? null,
+        menuId,
         `${entryLabel} — Accueil du dossier`,
         entry?.returnOnHome,
         projectIndex,
@@ -202,16 +236,16 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
 
     const storyReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, parentMenu?.id ?? null);
     if (hasPath(entry?.returnAfterPlay) && storyReturnTarget !== 'root' && storyReturnTarget && !menuIds.has(storyReturnTarget)) {
-      pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour introuvable`);
+      pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'de retour'));
     } else if (hasPath(entry?.returnAfterPlay) && storyReturnTarget && storyReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, storyReturnTarget) === 0) {
-      pushError(issues, entry?.id ?? null, `${entryLabel} — destination de retour vide ou non jouable`);
+      pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'de retour'));
     }
 
     const homeReturnTarget = resolveNavigationMenuTarget(entry?.returnOnHome, storyReturnTarget);
     if (hasPath(entry?.returnOnHome) && homeReturnTarget !== 'root' && homeReturnTarget && !menuIds.has(homeReturnTarget)) {
-      pushError(issues, entry?.id ?? null, `${entryLabel} — destination bouton Accueil introuvable`);
+      pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'bouton Accueil'));
     } else if (hasPath(entry?.returnOnHome) && homeReturnTarget && homeReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, homeReturnTarget) === 0) {
-      pushError(issues, entry?.id ?? null, `${entryLabel} — destination bouton Accueil vide ou non jouable`);
+      pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'bouton Accueil'));
     }
 
     if (!entry?.titleReturnOnHomeNone) {
@@ -274,7 +308,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   }, projectIndex);
 
   if (rootPlayableCount === 0) {
-    pushWarning(issues, 'root', 'Le pack ne contient aucune histoire.');
+    pushWarning(issues, 'root', VALIDATION_MESSAGES.emptyPack);
   }
   return issues;
 }
@@ -288,10 +322,8 @@ export function getGenerateErrors(project, fileAudit = {}) {
 export function getItemValidationStatus(item, fileAudit = {}) {
   if (item.type === 'zip') return isAccessiblePath(item.zipPath, fileAudit) ? 'ok' : 'error';
   if (!isAccessiblePath(item.audio, fileAudit)) return 'error';
-  if (!item.controlSettings?.autoplay) {
-    if (!isAccessiblePath(item.itemImage, fileAudit)) return 'error';
-    if (!isAccessiblePath(item.itemAudio, fileAudit)) return 'error';
-  }
+  if (!isAccessiblePath(item.itemImage, fileAudit)) return 'error';
+  if (!isAccessiblePath(item.itemAudio, fileAudit)) return 'error';
   if (hasPath(item.afterPlaybackPromptAudio) && !isAccessiblePath(item.afterPlaybackPromptAudio, fileAudit)) return 'error';
   for (const step of item.afterPlaybackSequence ?? []) {
     if (!isAccessiblePath(step?.audio, fileAudit)) return 'error';

@@ -1,7 +1,7 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Windows desktop editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
@@ -23,7 +23,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:stats": "cross-env BUNDLE_STATS=1 vite build",
     "preview": "vite preview",
+    "convert:legacy-project": "node scripts/convert-legacy-project.mjs",
+    "check:blank-lines": "node scripts/check-blank-lines.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -44,6 +47,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-react": "^6.0.1",
+    "rollup-plugin-visualizer": "^7.0.1",
     "vite": "^8.0.10"
   },
   "engines": {

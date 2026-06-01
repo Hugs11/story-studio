@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TreePanel } from '../components/TreePanel/TreePanel';
+import { TreeReturnsToggle } from '../components/TreePanel/TreeReturnsToggle';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
+import { KEYS, read, write } from '../store/persistentSettings';
 
 function startResize(e, panelClass, cssVar, direction) {
   e.preventDefault();
@@ -40,6 +42,9 @@ export function EditorTab({
   const { projectType } = project;
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
+  const [showNavigationBadges, setShowNavigationBadges] = useState(
+    () => read(KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES) !== 'false',
+  );
   const skipIdSyncRef = useRef(false);
 
   const handleSimulateNode = useCallback((nodeId) => {
@@ -65,6 +70,11 @@ export function EditorTab({
       onUpdateItem(fields, nodeId);
     }
   }, [onUpdateMedia, onUpdateMenu, onUpdateItem]);
+
+  const handleShowNavigationBadgesChange = useCallback((next) => {
+    setShowNavigationBadges(next);
+    write(KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES, next ? 'true' : 'false');
+  }, []);
 
   useEffect(() => {
     if (skipIdSyncRef.current) {
@@ -97,10 +107,17 @@ export function EditorTab({
         <div className="panel-left">
           <div className="panel-left-header">
             <span>Structure</span>
+            {projectType === 'pack' ? (
+              <TreeReturnsToggle
+                enabled={showNavigationBadges}
+                onChange={handleShowNavigationBadgesChange}
+              />
+            ) : null}
           </div>
           <TreePanel
             project={project}
             projectType={projectType}
+            showNavigationBadges={showNavigationBadges}
             selectedId={selectedId}
             onSelect={onSelect}
             onSelectionChange={handleSelectionChange}

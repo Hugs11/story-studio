@@ -110,7 +110,7 @@ export function generateConventionName(metadata = {}) {
   const version = toIntVersion(metadata.version);
   const bonusPart = bonus ? `_(${bonus})` : '';
   const prefix = `${minAge}+]`;
-  const titlePart = producer && author && rawProducer !== rawAuthor
+  const titlePart = producer && (!author || rawProducer !== rawAuthor)
     ? `${producer}-${title}${bonusPart}`
     : `${title}${bonusPart}`;
   const versionSuffix = version > 1 ? `_V${version}` : '';

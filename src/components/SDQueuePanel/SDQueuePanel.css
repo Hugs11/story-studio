@@ -287,6 +287,11 @@
   border-color: var(--color-accent);
 }
 
+.sd-result-thumb,
+.sd-audio-file {
+  touch-action: none;
+}
+
 .sd-result-thumb:hover .sd-result-use { opacity: 1; }
 
 .sd-result-img {
@@ -359,4 +364,28 @@
   border-top-color: transparent;
   background: none;
   animation: sd-spin 0.7s linear infinite;
+}
+
+.sd-queue-drag-ghost {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(18, 18, 24, 0.95);
+  border: 1px solid var(--color-border-secondary);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  color: var(--color-text-primary);
+  font-size: 11px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.sd-queue-drag-ghost.is-over-target {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
 }

@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -97,8 +97,7 @@ own licenses — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 ## Installation
 
 Download the Windows installer from the
-[GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest)
-once the first public release is published.
+[GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest).
 
 To build from source or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

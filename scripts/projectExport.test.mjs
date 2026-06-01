@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { normalizeProjectData, projectToRustExport, projectToSerializable } from '../src/store/projectModel.js';
 
-test('projectToRustExport injects Rust compatibility fields', () => {
+test('projectToRustExport injects pack export metadata', () => {
   const project = normalizeProjectData({
     projectName: 'Mini-loup',
     packMetadata: {
@@ -23,9 +23,11 @@ test('projectToRustExport injects Rust compatibility fields', () => {
   assert.equal(rustExport.name, '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2');
   assert.equal(rustExport.packVersion, 2);
   assert.equal(rustExport.packDescription, 'Changelog');
+  assert.equal(Object.hasOwn(rustExport, 'rootItems'), false);
+  assert.equal(Object.hasOwn(rustExport, 'menus'), false);
 });
 
-test('projectToSerializable keeps legacy Rust fields out of the mbah model', () => {
+test('projectToSerializable keeps Rust-only and legacy model fields out of the mbah model', () => {
   const serializable = projectToSerializable({
     projectName: 'Mini-loup',
     packMetadata: { title: 'Mini-loup', version: 1, minAge: '3' },
@@ -37,6 +39,8 @@ test('projectToSerializable keeps legacy Rust fields out of the mbah model', () 
   assert.equal(Object.hasOwn(serializable, 'name'), false);
   assert.equal(Object.hasOwn(serializable, 'packVersion'), false);
   assert.equal(Object.hasOwn(serializable, 'packDescription'), false);
+  assert.equal(Object.hasOwn(serializable, 'rootItems'), false);
+  assert.equal(Object.hasOwn(serializable, 'menus'), false);
 });
 
 test('projectToRustExport preserves a legacy raw export name', () => {

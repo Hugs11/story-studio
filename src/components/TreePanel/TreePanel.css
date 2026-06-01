@@ -67,6 +67,39 @@
   color: var(--color-text-primary);
 }
 
+.tree-returns-toggle {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 78%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-background-secondary) 74%, transparent);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.tree-returns-toggle:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
+  background: color-mix(in srgb, var(--color-accent-light) 62%, var(--color-background-secondary));
+}
+
+.tree-returns-toggle.is-active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent-light) 74%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.tree-returns-toggle-icon {
+  width: 16px;
+  height: 16px;
+}
+
 /* ── End-node separator ─────────────────────────────────────────────────── */
 .tree-end-node-sep {
   flex-shrink: 0;
@@ -293,18 +326,19 @@
 
 .ti-badges {
   flex-shrink: 0;
-  width: 52px;
+  width: auto;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.ti-badges.is-compact {
+.ti-badges.is-empty {
+  width: 0;
   gap: 0;
 }
 
-.ti-badges.is-compact .tooltip-wrap:not(:first-child) {
-  margin-left: -8px;
+.ti-badges.is-compact {
+  gap: 4px;
 }
 
 .ti-badges.is-compact .tooltip-wrap {
@@ -319,10 +353,6 @@
   z-index: 2;
 }
 
-.ti-badges.is-compact .tooltip-wrap:nth-child(3) {
-  z-index: 1;
-}
-
 .badge-nav {
   flex-shrink: 0;
   width: 24px;
@@ -335,8 +365,8 @@
 }
 
 .badge-nav--more {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   font-size: 9px;
   font-weight: 700;
   color: var(--muted);
@@ -370,20 +400,10 @@
   background: color-mix(in oklch, oklch(0.74 0.16 35) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.74 0.16 35) 35%, transparent);
 }
-.badge-nav--prompt-home {
-  color: oklch(0.74 0.13 190);
-  background: color-mix(in oklch, oklch(0.74 0.13 190) 22%, transparent);
-  border-color: color-mix(in oklch, oklch(0.74 0.13 190) 35%, transparent);
-}
-.badge-nav--prompt-home-none {
-  color: oklch(0.72 0.15 25);
-  background: color-mix(in oklch, oklch(0.72 0.15 25) 22%, transparent);
-  border-color: color-mix(in oklch, oklch(0.72 0.15 25) 35%, transparent);
-}
 .badge-nav--end-node {
-  color: oklch(0.83 0.14 75);
-  background: color-mix(in oklch, oklch(0.83 0.14 75) 22%, transparent);
-  border-color: color-mix(in oklch, oklch(0.83 0.14 75) 35%, transparent);
+  color: oklch(0.74 0.11 95);
+  background: color-mix(in oklch, oklch(0.74 0.11 95) 18%, transparent);
+  border-color: color-mix(in oklch, oklch(0.74 0.11 95) 34%, transparent);
 }
 .badge-nav--end-node-home {
   color: oklch(0.74 0.16 35);

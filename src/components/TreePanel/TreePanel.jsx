@@ -1,16 +1,15 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import {
-  DndContext, closestCenter, PointerSensor, pointerWithin, useDroppable, useSensor, useSensors,
-  DragOverlay,
-} from '@dnd-kit/core';
-import {
-  SortableContext, verticalListSortingStrategy, arrayMove,
-} from '@dnd-kit/sortable';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Fragment, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { TreeNode } from './TreeNode';
+import { TreeSearchBar } from './TreeSearchBar';
+import { TreeDragOverlay } from './TreeDragOverlay';
 import { ContextMenu } from './ContextMenu';
+import { useTreeDnd } from './useTreeDnd';
+import { useTreeSelection } from './useTreeSelection';
+import { END_NODE_ID, EMPTY_BADGES } from './treePanelConstants';
 import {
-  IconArchive,
   IconArrowUpLeft,
   IconClipboardPaste,
   IconCopy,
@@ -27,134 +26,26 @@ import {
 } from './TreeIcons';
 import { deepCloneEntry } from '../../store/projectModel';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
-import { useSharedClipboard } from '../../store/useSharedClipboard';
+import { useSharedClipboard } from '../../hooks/useSharedClipboard';
+import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { getItemValidationStatus, getMenuValidationStatus, getRootValidationStatus, getEndNodeValidationStatus } from '../../store/projectValidation';
 import {
+  TREE_COLOR_PALETTE,
+  countDescendants,
+  hasSelectedAncestor,
+  resolveDropTargetForNode,
+} from '../tree/treeOperations';
+import { computeBadgesData, formatBadgeTitle, getStrongestStatus } from '../tree/treeNavigationBadges';
+import {
   getGeneratedEndNodeHomeNavigation,
+  getGeneratedEndNodeReturnNavigation,
   getGeneratedNavigationTargetName,
-  getGeneratedStoryNavigation,
   hasVisibleEndNode,
 } from '../../store/generatedNavigation';
 import './TreePanel.css';
 
-const EMPTY_BADGES = [];
-const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
-
-function containsMenu(entry, targetMenuId) {
-  if (!entry || entry.type !== 'menu') return false;
-  if (entry.id === targetMenuId) return true;
-  return (entry.children ?? []).some((child) => containsMenu(child, targetMenuId));
-}
-
-function wouldCreateMenuCycle(entry, targetContainerId, projectIndex = null) {
-  if (targetContainerId == null || entry?.type !== 'menu') return false;
-  const targetPath = projectIndex?.pathById.get(targetContainerId) ?? null;
-  if (targetPath) {
-    return targetPath.some((ancestor) => ancestor.id === entry.id);
-  }
-  return containsMenu(entry, targetContainerId);
-}
-
-function hasSelectedAncestor(entryId, candidateIds, getParentId) {
-  let parentId = getParentId(entryId);
-  while (parentId != null) {
-    if (candidateIds.has(parentId)) return true;
-    parentId = getParentId(parentId);
-  }
-  return false;
-}
-
-function getStrongestStatus(issues = []) {
-  if (issues.some((issue) => issue.status === 'error')) return 'error';
-  if (issues.some((issue) => issue.status === 'warn' || issue.status === 'warning')) return 'warn';
-  return null;
-}
-
-function getNavigationBadges(entry, parentMenu, issuesById, projectIndex, project, rootEntries) {
-  if (entry?.type === 'menu' && entry.nativeGraph?.preserveForRoundTrip === true) {
-    return [{
-      key: 'native-graph',
-      kind: 'graph',
-      label: '◇',
-      title: 'Graphe interactif natif préservé pour le round-trip.',
-    }];
-  }
-  if (entry?.type === 'menu' && entry.importedContinuation) {
-    return [{
-      key: 'continuation',
-      kind: 'continuation',
-      label: '⇒',
-      title: `Continuation native importée depuis ${entry.importedContinuation.sourceStoryName || 'une histoire'}.`,
-    }];
-  }
-  if (entry?.type !== 'story') return [];
-
-  const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
-  const badges = [];
-
-  const entryIssues = issuesById.get(entry.id) ?? [];
-  const homeStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination bouton Accueil') || issue.text.includes('destination Home spécifique inutile')));
-
-  const hasAdvancedEndFlow = navigation.hasPrompt || navigation.hasSequence || navigation.usesEndNode;
-  if (!hasAdvancedEndFlow) {
-    const returnStatus = getStrongestStatus(entryIssues.filter((issue) => issue.text.includes('destination de retour')));
-    if (navigation.directReturn.isModified) {
-      const returnName = getGeneratedNavigationTargetName(navigation.directReturn.targetId, projectIndex);
-      badges.push({
-        key: `return:${navigation.directReturn.targetId}:${returnName}`,
-        kind: 'return',
-        status: returnStatus,
-        label: '↩',
-        title: `Retour modifié : après lecture → « ${returnName} »`,
-      });
-    }
-  }
-
-  if (navigation.storyHome.isNone) {
-    badges.push({
-      key: 'home:none',
-      kind: 'home-none',
-      status: homeStatus,
-      label: '⌂',
-      title: 'Retour modifié : bouton Home pendant la lecture → aucune transition',
-    });
-  } else if (navigation.storyHome.isConfigured) {
-    const homeName = getGeneratedNavigationTargetName(navigation.storyHome.targetId, projectIndex);
-    badges.push({
-      key: `home:${navigation.storyHome.targetId}:${homeName}`,
-      kind: 'home',
-      status: navigation.storyHome.isInactive ? 'warn' : homeStatus,
-      label: '⌂',
-      title: navigation.storyHome.isInactive
-        ? `Retour modifié : bouton Home configuré vers « ${homeName} », mais le bouton Accueil est désactivé pendant la lecture`
-        : `Retour modifié : bouton Home → « ${homeName} »`,
-    });
-  }
-
-  return badges;
-}
-
-function resolveDropContainerId(over, overData, overEntry, isContainerDrop, getParentId) {
-  if (isContainerDrop) {
-    if (overData && Object.prototype.hasOwnProperty.call(overData, 'containerId')) {
-      return overData.containerId;
-    }
-    return over.id === 'container:root' ? null : String(over.id).replace(/^container:/, '');
-  }
-  if (over.id === 'root') return null;
-  return overEntry?.type === 'menu' ? overEntry.id : getParentId(over.id);
-}
-
-
-export const END_NODE_ID = 'end-node';
-
-const EMPTY_DROP_INFO = { targetId: null, position: 'inside', isContainer: false };
-
-function countDescendants(entry) {
-  if (!entry.children?.length) return 0;
-  return entry.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
-}
+export { END_NODE_ID };
 
 export function TreePanel({
   project, projectType, selectedId, onSelect, onReorder, onMoveToMenu,
@@ -164,13 +55,12 @@ export function TreePanel({
   onAddEndNode, onRemoveEndNode, onSimulateNode,
   pathAudit, validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
+  showNavigationBadges = true,
 }) {
-  const [activeId, setActiveId] = useState(null);
-  const [dropInfo, setDropInfo] = useState(EMPTY_DROP_INFO);
-  const dropInfoRef = useRef(EMPTY_DROP_INFO);
+  const { activeDropZone, dropOnNode } = useMediaTransfer();
   const [ctxMenu, setCtxMenu] = useState(null);
   const [collapsedIds, setCollapsedIds] = useState(new Set());
-  const [osDropHover, setOsDropHover] = useState(false);
+  const osDropHover = activeDropZone === 'treepanel';
 
   const isExpanded = useCallback((id) => !collapsedIds.has(id), [collapsedIds]);
 
@@ -187,35 +77,9 @@ export function TreePanel({
   const [searchTerm, setSearchTerm] = useState('');
   const searchInputRef = useRef(null);
   const pendingFocusRef = useRef(false);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const collisionDetection = useCallback((args) => {
-    const pointerHits = pointerWithin(args);
-    return pointerHits.length > 0 ? pointerHits : closestCenter(args);
-  }, []);
 
-  const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
-  const anchorIdRef = useRef(selectedId);
   const clipboardRef = useSharedClipboard(); // { entries, isCut, sourceIds } — partagé avec le diagramme
   const [cutIds, setCutIds] = useState(new Set());
-  const skipSyncRef = useRef(false);
-
-  const callOnSelect = useCallback((id) => {
-    skipSyncRef.current = true;
-    onSelect(id);
-  }, [onSelect]);
-
-  const prevSelectedIdRef = useRef(selectedId);
-  useEffect(() => {
-    if (selectedId !== prevSelectedIdRef.current) {
-      prevSelectedIdRef.current = selectedId;
-      if (skipSyncRef.current) {
-        skipSyncRef.current = false;
-      } else {
-        setSelectedIds(new Set([selectedId]));
-        anchorIdRef.current = selectedId;
-      }
-    }
-  }, [selectedId]);
 
   const rootEntries = project.rootEntries ?? [];
   const validationIssues = validationIssuesProp ?? [];
@@ -243,15 +107,32 @@ export function TreePanel({
         type: entry.type,
         level: entry.level,
       })));
+      if (hasVisibleEndNode(project)) {
+        nodes.push({ id: END_NODE_ID, type: END_NODE_ID, level: 0 });
+      }
     }
     return nodes;
-  }, [projectIndex, projectType]);
+  }, [project, projectIndex, projectType]);
   const flatNodeIndexById = useMemo(
     () => new Map(flatNodes.map((node, index) => [node.id, index])),
     [flatNodes],
   );
   const getEntry = useCallback((entryId) => projectIndex.entryById.get(entryId) ?? null, [projectIndex]);
   const getParentId = useCallback((entryId) => projectIndex.parentMenuById.get(entryId) ?? null, [projectIndex]);
+
+  const {
+    selectedIds,
+    setSelectedIds,
+    anchorIdRef,
+    callOnSelect,
+    handleNodeSelect,
+  } = useTreeSelection({
+    selectedId,
+    onSelect,
+    onSelectionChange,
+    flatNodes,
+    flatNodeIndexById,
+  });
 
   const ancestorIds = useMemo(() => {
     const ancestors = new Set();
@@ -263,82 +144,91 @@ export function TreePanel({
     return ancestors;
   }, [selectedIds, getParentId]);
 
-  // Compute drop position (before / after / inside) from the active element's rect vs the hovered element.
-  // For menus: top 30% → before, middle 40% → inside, bottom 30% → after.
-  // For stories/zip: top half → before, bottom half → after.
-  const computeDropInfo = useCallback((over, activeRect) => {
-    if (!over) return EMPTY_DROP_INFO;
-
-    const overData = over.data.current;
-    if (overData?.kind === 'container') {
-      return { targetId: overData.containerId, position: 'inside', isContainer: true };
-    }
-
-    const targetId = String(over.id);
-    if (targetId === 'root') {
-      return { targetId: null, position: 'inside', isContainer: true };
-    }
-
-    const entry = getEntry(targetId);
-    const overRect = over.rect;
-    if (!overRect || !activeRect) {
-      return { targetId, position: 'inside', isContainer: false };
-    }
-
-    const activeMidY = activeRect.top + activeRect.height / 2;
-
-    if (entry?.type === 'menu') {
-      const zone = Math.min(overRect.height * 0.18, 6);
-      const relativeY = activeMidY - overRect.top;
-      if (relativeY < zone) return { targetId, position: 'before', isContainer: false };
-      if (relativeY > overRect.height - zone) return { targetId, position: 'after', isContainer: false };
-      return { targetId, position: 'inside', isContainer: false };
-    }
-
-    const overMidY = overRect.top + overRect.height / 2;
-    return { targetId, position: activeMidY < overMidY ? 'before' : 'after', isContainer: false };
-  }, [getEntry]);
-
-  const handleDragMove = useCallback((event) => {
-    const { active, over } = event;
-    const newInfo = over
-      ? computeDropInfo(over, active.rect.current?.translated ?? null)
-      : EMPTY_DROP_INFO;
-    const prev = dropInfoRef.current;
-    if (prev.targetId !== newInfo.targetId || prev.position !== newInfo.position || prev.isContainer !== newInfo.isContainer) {
-      dropInfoRef.current = newInfo;
-      setDropInfo(newInfo);
-    }
-  }, [computeDropInfo]);
-  const entryNameSignature = projectIndex.flatEntries
-    .map(({ id, entry }) => `${id}:${entry.name ?? ''}`)
-    .join('\n');
+  // Cache navigation badges DATA (struct sans noms resolus). Survit aux
+  // renders via useRef. Invalidation **par-entry-reference** : on ne re-calcule
+  // les badges DATA que pour les entries dont la reference Zustand a change
+  // (= elles ont ete mutees). Les autres reutilisent le cache.
+  //
+  // Trade-off assume :
+  //   - Cas frequent (rename d'une story X, edit de ses media) : seule X est
+  //     invalidee, les N-1 autres restent cached. **Gain principal.**
+  //   - Cas marginal : si on ajoute une story juste apres Y et que Y retourne
+  //     vers "next-story", le badge de Y pourrait theoriquement etre stale
+  //     jusqu'a ce que Y soit re-touchee. En pratique, getGeneratedStoryNavigation
+  //     n'utilise `rootEntries` que pour resoudre la cible `next-story` au
+  //     niveau d'un menu, et cela n'apparait que dans le `targetId` resolu --
+  //     dont la traduction en NOM se fait via formatBadgeTitle a chaque render
+  //     (qui voit le projectIndex courant). Donc en pratique : ok.
+  //
+  // Les titres textuels sont reformates a chaque render via formatBadgeTitle,
+  // donc tout rename de cible apparait immediatement dans l'UI meme si la DATA
+  // n'est pas recalculee.
+  const badgesDataCacheRef = useRef(new Map());
+  const navigationBadgeProjectKey = [
+    project?.nightModeAudio || '',
+    project?.nightModeReturn || '',
+    project?.globalOptions?.nightMode ? 'night' : '',
+    project?.globalOptions?.endNode ? 'end' : '',
+    project?.globalOptions?.autoNext ? 'auto' : '',
+  ].join('|');
 
   const navigationBadgesById = useMemo(() => {
     const badgesById = new Map();
-    if (projectType !== 'pack') return badgesById;
+    if (projectType !== 'pack' || !showNavigationBadges) return badgesById;
+    const cache = badgesDataCacheRef.current;
+    const seenIds = new Set();
+
     for (const flatEntry of projectIndex.flatEntries) {
       const entry = flatEntry.entry;
-      if (entry.type !== 'story') continue;
+      seenIds.add(entry.id);
       const parentMenuId = projectIndex.parentMenuById.get(entry.id);
       const parentMenu = parentMenuId ? (projectIndex.entryById.get(parentMenuId) ?? null) : null;
-      badgesById.set(entry.id, getNavigationBadges(
-        entry,
-        parentMenu,
-        issuesById,
-        projectIndex,
-        project,
-        rootEntries,
-      ));
+      const entryIssues = issuesById.get(entry.id);
+
+      const cached = cache.get(entry.id);
+      let data;
+      if (cached
+        && cached.entry === entry
+        && cached.parentMenu === parentMenu
+        && cached.issues === entryIssues
+        && cached.rootEntries === rootEntries
+        && cached.projectKey === navigationBadgeProjectKey
+        && cached.showDefaultReturns === true) {
+        data = cached.data;
+      } else {
+        data = computeBadgesData(entry, parentMenu, issuesById, project, rootEntries, {
+          showDefaultReturns: true,
+        });
+        cache.set(entry.id, {
+          entry,
+          parentMenu,
+          issues: entryIssues,
+          rootEntries,
+          projectKey: navigationBadgeProjectKey,
+          showDefaultReturns: true,
+          data,
+        });
+      }
+
+      if (data.length > 0) {
+        badgesById.set(entry.id, data.map((d) => formatBadgeTitle(d, projectIndex)).filter(Boolean));
+      }
     }
+
+    // Nettoyage des entries disparues du projet
+    for (const id of cache.keys()) {
+      if (!seenIds.has(id)) cache.delete(id);
+    }
+
     return badgesById;
   }, [
     issuesById,
     project,
-    entryNameSignature,
     projectIndex,
     projectType,
+    navigationBadgeProjectKey,
     rootEntries,
+    showNavigationBadges,
   ]);
 
   const visibleIds = useMemo(() => {
@@ -367,71 +257,25 @@ export function TreePanel({
     return container?.type === 'menu' ? (container.children ?? []) : [];
   }, [getEntry, rootEntries]);
 
-  function handleNodeSelect(id, e) {
-    const isCtrl = e?.ctrlKey || e?.metaKey;
-    const isShift = e?.shiftKey;
-
-    if (id === END_NODE_ID) {
-      const single = new Set([END_NODE_ID]);
-      setSelectedIds(single);
-      onSelectionChange?.(single);
-      anchorIdRef.current = END_NODE_ID;
-      callOnSelect(END_NODE_ID);
-      return;
-    }
-
-    if (isCtrl && !isShift) {
-      if (id === 'root') {
-        setSelectedIds(new Set(['root']));
-        anchorIdRef.current = 'root';
-        callOnSelect('root');
-        return;
-      }
-      const next = new Set([...selectedIds].filter((currentId) => currentId !== END_NODE_ID));
-      if (next.has(id)) {
-        next.delete(id);
-        if (next.size === 0) next.add(id);
-        if (id === selectedId) {
-          const fallback = [...next].find((currentId) => currentId !== id) ?? 'root';
-          callOnSelect(fallback);
-        }
-      } else {
-        next.add(id);
-        anchorIdRef.current = id;
-        callOnSelect(id);
-      }
-      setSelectedIds(next);
-      onSelectionChange?.(next);
-    } else if (isShift && anchorIdRef.current) {
-      const anchorIdx = flatNodeIndexById.get(anchorIdRef.current) ?? -1;
-      const currentIdx = flatNodeIndexById.get(id) ?? -1;
-      if (anchorIdx === -1 || currentIdx === -1) {
-        callOnSelect(id);
-        const single = new Set([id]);
-        setSelectedIds(single);
-        onSelectionChange?.(single);
-        return;
-      }
-      const [start, end] = anchorIdx <= currentIdx ? [anchorIdx, currentIdx] : [currentIdx, anchorIdx];
-      const next = isCtrl
-        ? new Set([...selectedIds].filter((currentId) => currentId !== END_NODE_ID))
-        : new Set();
-      for (let i = start; i <= end; i += 1) {
-        if (flatNodes[i].id !== 'root') next.add(flatNodes[i].id);
-      }
-      next.add(anchorIdRef.current);
-      if (next.size === 0) next.add(id);
-      setSelectedIds(next);
-      onSelectionChange?.(next);
-      callOnSelect(id);
-    } else {
-      const single = new Set([id]);
-      setSelectedIds(single);
-      onSelectionChange?.(single);
-      anchorIdRef.current = id;
-      callOnSelect(id);
-    }
-  }
+  const {
+    activeId,
+    dropInfo,
+    sensors,
+    collisionDetection,
+    handleDragStart,
+    handleDragMove,
+    handleDragEnd,
+    handleDragCancel,
+  } = useTreeDnd({
+    projectIndex,
+    selectedIds,
+    flatNodes,
+    getEntry,
+    getParentId,
+    getContainerEntries,
+    onReorder,
+    onMoveToMenu,
+  });
 
   function deleteSelectedNodes() {
     const toDelete = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
@@ -495,16 +339,14 @@ export function TreePanel({
     const clipboard = kind === 'image' ? imageClipboard : audioClipboard;
     const clip = clipboard.getEntry();
     if (!clip?.path) return;
-    document.dispatchEvent(new CustomEvent('media-drop-node', {
-      detail: {
-        nodeId,
-        nodeType,
-        path: clip.path,
-        paths: clip.paths,
-        kind,
-        clipboardMode: clip.mode,
-      },
-    }));
+    void dropOnNode({
+      nodeId,
+      nodeType,
+      path: clip.path,
+      paths: clip.paths,
+      kind,
+      clipboardMode: clip.mode,
+    });
     if (clip.mode === 'cut') clipboard.clear();
   }
 
@@ -535,102 +377,6 @@ export function TreePanel({
     else if (actionId === 'treeDelete') deleteSelectedNodes();
   }
 
-  function handleDragEnd(event) {
-    const { active, over } = event;
-    // Snapshot the final drop position before clearing state
-    const finalDropInfo = over
-      ? computeDropInfo(over, active.rect.current?.translated ?? null)
-      : null;
-
-    setActiveId(null);
-    dropInfoRef.current = EMPTY_DROP_INFO;
-    setDropInfo(EMPTY_DROP_INFO);
-
-    if (!over || active.id === over.id) return;
-    const activeEntry = getEntry(active.id);
-    if (!activeEntry) return;
-    const fromContainerId = getParentId(active.id);
-
-    // Resolve the target container, optional anchor, and insert position from drop info
-    let targetContainerId, anchorId, insertPosition;
-
-    if (!finalDropInfo || finalDropInfo.isContainer) {
-      // Dropped on an explicit container droppable (root zone, root-exit, container:xxx)
-      targetContainerId = finalDropInfo?.targetId ?? null;
-      anchorId = null;
-      insertPosition = 'inside';
-    } else if (finalDropInfo.position === 'inside') {
-      // Dropped on the middle zone of a menu → drop inside that menu
-      const targetEntry = finalDropInfo.targetId ? getEntry(finalDropInfo.targetId) : null;
-      targetContainerId = targetEntry?.type === 'menu'
-        ? targetEntry.id
-        : getParentId(finalDropInfo.targetId);
-      anchorId = null;
-      insertPosition = 'inside';
-    } else {
-      // Dropped before/after a specific item → insert next to it
-      anchorId = finalDropInfo.targetId;
-      if (anchorId === active.id) return; // Guard: hovering own element
-      targetContainerId = getParentId(anchorId) ?? null;
-      insertPosition = finalDropInfo.position; // 'before' | 'after'
-    }
-
-    if (wouldCreateMenuCycle(activeEntry, targetContainerId, projectIndex)) return;
-
-    // Same-container reorder (before/after a sibling)
-    if (fromContainerId === targetContainerId) {
-      if (!anchorId) return; // Dropped on own container without specific anchor → no-op
-      const items = getContainerEntries(fromContainerId);
-      const isMulti = selectedIds.size > 1 && selectedIds.has(active.id) && !selectedIds.has(anchorId);
-      if (isMulti) {
-        // Move all selected siblings to the anchor position, preserving their relative order.
-        const selectedInOrder = items.filter((item) => selectedIds.has(item.id));
-        const rest = items.filter((item) => !selectedIds.has(item.id));
-        const anchorIdx = rest.findIndex((item) => item.id === anchorId);
-        if (anchorIdx === -1) return;
-        const insertIdx = insertPosition === 'after' ? anchorIdx + 1 : anchorIdx;
-        onReorder(fromContainerId, [
-          ...rest.slice(0, insertIdx),
-          ...selectedInOrder,
-          ...rest.slice(insertIdx),
-        ]);
-      } else {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const anchorIndex = items.findIndex((item) => item.id === anchorId);
-        if (oldIndex === -1 || anchorIndex === -1 || oldIndex === anchorIndex) return;
-        onReorder(fromContainerId, arrayMove(items, oldIndex, anchorIndex));
-      }
-      return;
-    }
-
-    // Cross-container move
-    const candidateIds = selectedIds.size > 1 && selectedIds.has(active.id)
-      ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
-      : [active.id];
-    const candidateSet = new Set(candidateIds);
-    const idsToMove = candidateIds.filter((id) => {
-      if (id === 'root') return false;
-      const entry = getEntry(id);
-      if (!entry) return false;
-      if (wouldCreateMenuCycle(entry, targetContainerId, projectIndex)) return false;
-      if (hasSelectedAncestor(id, candidateSet, getParentId)) return false;
-      return true;
-    });
-
-    for (const id of idsToMove) {
-      // For single-item drags with a precise anchor, use insert position.
-      // For multi-select, fall back to append (anchor would shift after first insert).
-      const useAnchor = idsToMove.length === 1 && anchorId && insertPosition !== 'inside';
-      onMoveToMenu(
-        id,
-        getParentId(id),
-        targetContainerId,
-        useAnchor ? anchorId : null,
-        useAnchor ? insertPosition : 'inside',
-      );
-    }
-  }
-
   const handleContextMenu = useCallback((e, nodeId, nodeType) => {
     e.preventDefault();
     e.stopPropagation();
@@ -650,7 +396,7 @@ export function TreePanel({
     const actions = [];
 
     if (nodeType === END_NODE_ID) {
-      actions.push({ icon: <IconTrash />, label: 'Supprimer le nœud de fin', fn: () => onRemoveEndNode?.(), danger: true });
+      actions.push({ icon: <IconTrash />, label: 'Supprimer le message de fin', fn: () => onRemoveEndNode?.(), danger: true });
       return actions;
     }
 
@@ -664,7 +410,7 @@ export function TreePanel({
       const hasEndNode = hasVisibleEndNode(project);
       if (isRootCtx && !hasEndNode) {
         actions.push('sep');
-        actions.push({ icon: <IconMoon />, label: 'Ajouter un nœud de fin', fn: () => onAddEndNode?.() });
+        actions.push({ icon: <IconMoon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
       }
 
       if (nodeType === 'root' && onDemoteRootToMenu && (project.rootEntries ?? []).length > 0) {
@@ -868,11 +614,12 @@ export function TreePanel({
               dragging={!!activeId}
               containerDroppableId={entry.type === 'menu' ? `container:${entry.id}` : null}
               navigationBadges={navigationBadgesById.get(entry.id) ?? EMPTY_BADGES}
+              showNavigationBadgeColumn={showNavigationBadgeColumn}
               expanded={isExpanded(entry.id)}
               onToggleExpand={handleToggleExpand}
               childCount={countDescendants(entry)}
               sortable
-              dropInfo={dropInfo}
+              dropTarget={resolveDropTargetForNode(entry.id, entry.type, dropInfo)}
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
@@ -888,18 +635,38 @@ export function TreePanel({
 
   const hasEndNode = projectType === 'pack' && hasVisibleEndNode(project);
   const nightModeActive = !!project.globalOptions?.nightMode;
+  const showNavigationBadgeColumn = projectType === 'pack' && showNavigationBadges;
 
-  const endNodeHomeBadges = (() => {
+  const endNodeNavigationBadges = (() => {
+    const badges = [];
+    const returnNavigation = getGeneratedEndNodeReturnNavigation(project);
+    if (hasEndNode && returnNavigation) {
+      const nightSuffix = project.globalOptions?.nightMode ? ' (mode nuit)' : '';
+      const isNightMode = !!project.globalOptions?.nightMode;
+      const returnName = returnNavigation.targetId
+        ? getGeneratedNavigationTargetName(returnNavigation.targetId, projectIndex)
+        : "destination de fin de l'histoire source";
+      badges.push({
+        key: `end-node-return:${returnNavigation.targetId || 'contextual'}:${returnName}`,
+        kind: isNightMode ? 'end-night' : 'end-node',
+        label: isNightMode ? '☾' : '■',
+        title: `À la fin du message de fin${nightSuffix} → « ${returnName} »`,
+      });
+    }
+
     const homeNavigation = getGeneratedEndNodeHomeNavigation(project);
-    if (!hasEndNode || !homeNavigation?.targetId) return EMPTY_BADGES;
-    const homeName = getGeneratedNavigationTargetName(homeNavigation.targetId, projectIndex);
-    const nightSuffix = homeNavigation.isNightMode ? ' (mode nuit)' : '';
-    return [{
-      key: `end-node-home:${homeNavigation.targetId}:${homeName}`,
-      kind: homeNavigation.isNightMode ? 'end-night-home' : 'end-node-home',
-      label: '⌂',
-      title: `Retour modifié : bouton Home du nœud de fin${nightSuffix} → « ${homeName} »`,
-    }];
+    if (hasEndNode && homeNavigation?.targetId) {
+      const homeName = getGeneratedNavigationTargetName(homeNavigation.targetId, projectIndex);
+      const nightSuffix = homeNavigation.isNightMode ? ' (mode nuit)' : '';
+      badges.push({
+        key: `end-node-home:${homeNavigation.targetId}:${homeName}`,
+        kind: homeNavigation.isNightMode ? 'end-night-home' : 'end-node-home',
+        label: '⌂',
+        title: `Appuie sur le bouton Accueil du message de fin${nightSuffix} → « ${homeName} »`,
+      });
+    }
+
+    return badges.length ? badges : EMPTY_BADGES;
   })();
 
   const prevHasEndNodeRef = useRef(hasEndNode);
@@ -925,12 +692,6 @@ export function TreePanel({
     }
   }, [searchActive]);
 
-  useEffect(() => {
-    function onZone(e) { setOsDropHover(e.detail.zone === 'treepanel'); }
-    document.addEventListener('os-file-drag-zone', onZone);
-    return () => document.removeEventListener('os-file-drag-zone', onZone);
-  }, []);
-
   const activeEntry = activeId ? getEntry(activeId) : null;
   // Suppress dnd-kit's sort animation when the intent is "drop inside" a folder,
   // so the hovered folder doesn't slide away from its position.
@@ -941,44 +702,20 @@ export function TreePanel({
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
-        onDragStart={(e) => { setActiveId(e.active.id); }}
+        onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => { setActiveId(null); dropInfoRef.current = EMPTY_DROP_INFO; setDropInfo(EMPTY_DROP_INFO); }}
+        onDragCancel={handleDragCancel}
       >
         <div className="tree-shell" data-os-drop-zone="treepanel">
           {projectType === 'pack' && searchActive ? (
-            <div className="tree-search-bar">
-              <span className="tree-search-icon">⌕</span>
-              <input
-                ref={searchInputRef}
-                className="tree-search-input"
-                type="text"
-                placeholder="Rechercher…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onBlur={() => { if (!searchTerm) setSearchActive(false); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    setSearchTerm('');
-                    setSearchActive(false);
-                    searchInputRef.current?.blur();
-                  }
-                  e.stopPropagation();
-                }}
-              />
-              {searchTerm ? (
-                <button
-                  type="button"
-                  className="tree-search-clear"
-                  onClick={() => { setSearchTerm(''); searchInputRef.current?.focus(); }}
-                >
-                  ×
-                </button>
-              ) : null}
-            </div>
+            <TreeSearchBar
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              setSearchActive={setSearchActive}
+              inputRef={searchInputRef}
+            />
           ) : null}
-
           <div
             ref={treeScrollRef}
             className="tree"
@@ -993,7 +730,7 @@ export function TreePanel({
               id="root"
               type="root"
               label={projectType === 'pack'
-                ? (project.packMetadata?.title || project.projectName || 'Menu racine')
+                ? (project.rootName || 'Menu racine')
                 : (project.projectName || 'Mon histoire')}
               level={0}
               selected={selectedIds.has('root')}
@@ -1001,13 +738,14 @@ export function TreePanel({
               status={getNodeStatus({ id: 'root' }, () => getRootValidationStatus(project, pathAudit))}
               dragging={!!activeId}
               containerDroppableId="container:root"
-              navigationBadges={project?.nativeGraph?.preserveForRoundTrip === true ? [{
+              navigationBadges={showNavigationBadgeColumn && project?.nativeGraph?.preserveForRoundTrip === true ? [{
                 key: 'native-graph-root',
                 kind: 'graph',
                 label: 'Graphe',
                 title: 'Graphe interactif natif actif pour le round-trip.',
               }] : EMPTY_BADGES}
-              dropInfo={dropInfo}
+              showNavigationBadgeColumn={showNavigationBadgeColumn}
+              dropTarget={resolveDropTargetForNode('root', 'root', dropInfo)}
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
@@ -1025,12 +763,13 @@ export function TreePanel({
                   id={END_NODE_ID}
                   type="end-node"
                   icon={nightModeActive ? 'moon' : 'stop'}
-                  label={nightModeActive ? 'Nœud de fin (mode nuit)' : 'Nœud de fin'}
+                  label={`${project.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`}
                   level={0}
                   selected={selectedIds.has(END_NODE_ID)}
                   status={getNodeStatus({ id: END_NODE_ID }, () => getEndNodeValidationStatus(project, pathAudit))}
                   dragging={false}
-                  navigationBadges={endNodeHomeBadges}
+                  navigationBadges={showNavigationBadgeColumn ? endNodeNavigationBadges : EMPTY_BADGES}
+                  showNavigationBadgeColumn={showNavigationBadgeColumn}
                   onSelect={handleNodeSelect}
                   onContextMenu={handleContextMenu}
                 />
@@ -1046,17 +785,7 @@ export function TreePanel({
         </div>
 
         <DragOverlay>
-          {activeEntry && (
-            <div className="tree-item active" style={{ opacity: 0.85, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', paddingLeft: '6px' }}>
-              <span className="tree-chevron-spacer" />
-              <div className="tree-item-body">
-                <span className="ti-icon">
-                  {activeEntry.type === 'menu' ? <IconFolderOpen /> : activeEntry.type === 'zip' ? <IconArchive /> : <IconStory />}
-                </span>
-                <span className="ti-label">{activeEntry.name}</span>
-              </div>
-            </div>
-          )}
+          <TreeDragOverlay entry={activeEntry} />
         </DragOverlay>
       </DndContext>
 

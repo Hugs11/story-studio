@@ -44,7 +44,7 @@ export function containFit(img) {
  * hue                 : degrés [0,360]
  * sepia               : % [0,100]
  */
-export function buildFilter({ brightness, contrast, saturation, grayscale, hue, sepia, blur, invert, thickness }) {
+export function buildFilter({ brightness = 0, contrast = 0, saturation = 0, grayscale = false, hue = 0, sepia = 0, blur = 0, invert = false, thickness = 0 }) {
   const parts = [];
   // Trick morphologique : blur étale les bords, contrast re-binarise → traits plus épais
   if (thickness > 0) {
@@ -62,6 +62,30 @@ export function buildFilter({ brightness, contrast, saturation, grayscale, hue, 
   return parts.length ? parts.join(' ') : 'none';
 }
 
+function applyVignette(ctx, filters = {}) {
+  const strength = Math.max(0, Math.min(100, Number(filters.vignette) || 0)) / 100;
+  if (strength <= 0) return;
+
+  const minDim = Math.min(CANVAS_W, CANVAS_H);
+  const centerX = CANVAS_W / 2;
+  const centerY = CANVAS_H / 2;
+  const size = Math.max(30, Math.min(100, Number(filters.vignetteSize) || 70)) / 100;
+  const feather = Math.max(5, Math.min(80, Number(filters.vignetteFeather) || 35)) / 100;
+  const innerRadius = (minDim / 2) * size;
+  const outerRadius = Math.min(
+    Math.hypot(CANVAS_W / 2, CANVAS_H / 2),
+    innerRadius + (minDim / 2) * feather,
+  );
+
+  const gradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, `rgba(0,0,0,${strength.toFixed(3)})`);
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.restore();
+}
+
 /**
  * Rend l'image sur le canvas avec la transform et les filtres donnés
  */
@@ -69,14 +93,14 @@ export function renderFrame(canvas, img, transform, filters) {
   if (!canvas || !img) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    logger.error('[ImageEditorModal] 2d context unavailable');
+    logger.error('image-editor:context-unavailable');
     return;
   }
   const scale = Number.isFinite(transform?.scale) ? transform.scale : 1;
   const offsetX = Number.isFinite(transform?.offsetX) ? transform.offsetX : 0;
   const offsetY = Number.isFinite(transform?.offsetY) ? transform.offsetY : 0;
   if (!Number.isFinite(scale) || scale <= 0) {
-    logger.error('[ImageEditorModal] invalid scale for render', transform);
+    logger.error('image-editor:invalid-scale', transform);
     return;
   }
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
@@ -90,7 +114,7 @@ export function renderFrame(canvas, img, transform, filters) {
       img.naturalHeight * scale,
     );
   } catch (error) {
-    logger.error('[ImageEditorModal] renderFrame failed', {
+    logger.error('image-editor:render-frame-error', {
       error,
       naturalWidth: img.naturalWidth,
       naturalHeight: img.naturalHeight,
@@ -100,4 +124,5 @@ export function renderFrame(canvas, img, transform, filters) {
     throw error;
   }
   ctx.filter = 'none';
+  applyVignette(ctx, filters);
 }

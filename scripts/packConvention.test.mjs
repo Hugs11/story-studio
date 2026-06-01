@@ -21,6 +21,15 @@ test('generates a minimal convention name', () => {
   assert.equal(generateConventionName({ title: 'Mon pack' }), '3+]Mon_pack');
 });
 
+test('generates a producer prefix even without author', () => {
+  assert.equal(generateConventionName({
+    title: 'Les histoires de Mini-loup',
+    producer: 'Philippe Matter',
+    version: 3,
+    minAge: '3',
+  }), '3+]Philippe_Matter-Les_histoires_de_Mini-loup_V3');
+});
+
 test('roundtrips a convention name through parse and generate', () => {
   const raw = '3+]Les_histoires_de_Mini-loup_(8_chapitres)[by_funkyfoenky_V2';
   assert.equal(generateConventionName(parseConventionName(raw)), raw);

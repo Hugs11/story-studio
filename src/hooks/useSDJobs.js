@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { addProjectPrefix } from '../utils/fileUtils';
+import { logger } from '../utils/logger';
 
 const MAX_CONCURRENT_SD_JOBS = 1;
 
@@ -14,7 +15,7 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
       const payload = event.payload || {};
       if (!payload.jobId) return;
       if (payload.error) {
-        console.debug('[ComfyUI progress]', payload.error);
+        logger.warn('comfyui:progress-error', payload.error);
         return;
       }
       if (typeof payload.progress === 'number') {
@@ -26,7 +27,7 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
     }).then((fn) => {
       if (cancelled) fn();
       else unlisten = fn;
-    }).catch(() => {});
+    }).catch((error) => logger.error('comfyui:listen-error', error));
 
     return () => {
       cancelled = true;
@@ -44,7 +45,7 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
       settings: sdStore.sdSettings,
       clientId: next.clientId,
       jobId: next.id,
-    }).catch(e => console.debug('[ComfyUI progress]', String(e)));
+    }).catch(e => logger.warn('comfyui:watch-progress-error', String(e)));
     invoke('comfyui_submit_job', {
       settings: sdStore.sdSettings,
       request: {

@@ -1,0 +1,102 @@
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.dialog-panel {
+  width: min(480px, 100%);
+  max-height: min(80vh, 680px);
+  overflow: auto;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-lg);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.dialog-icon {
+  display: inline-flex;
+  color: var(--danger);
+}
+
+.dialog-panel--warning .dialog-icon {
+  color: var(--warning);
+}
+
+.dialog-panel--info .dialog-icon {
+  color: var(--accent);
+}
+
+.dialog-message {
+  padding: 16px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.dialog-actions .primary-btn,
+.dialog-actions .secondary-btn {
+  min-width: 88px;
+  min-height: 32px;
+  padding: 7px 12px;
+  border-radius: var(--border-radius-md);
+  font: inherit;
+  font-size: 12px;
+  border: 0.5px solid var(--control-border);
+  cursor: pointer;
+}
+
+.dialog-actions .primary-btn {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.dialog-actions .secondary-btn {
+  background: var(--control-bg);
+  color: var(--color-text-primary);
+}
+
+.dialog-actions .primary-btn:hover,
+.dialog-actions .secondary-btn:hover {
+  border-color: var(--control-border-hover);
+}
+
+@media (max-width: 520px) {
+  .dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

@@ -153,11 +153,17 @@
 /* ── Trim stats ───────────────────────────────────────────────── */
 
 .audio-editor-trim-stat {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   color: var(--color-text-tertiary, #6b7280);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.audio-editor-modal .tooltip-wrap > button:disabled {
+  pointer-events: none;
 }
 
 /* ── Transport toolbar ────────────────────────────────────────── */

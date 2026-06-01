@@ -16,7 +16,7 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
   const destinationHelp = node.returnAfterPlay
     ? "Toutes les histoires de ce dossier qui n'ont pas leur propre destination configurée reviendront vers le dossier choisi ci-dessous."
-    : "Par défaut, à la fin de chaque histoire l'enfant revient sur ce dossier. Choisis un autre dossier seulement si tu veux le rediriger ailleurs.";
+    : "À la fin de chaque histoire, l'enfant revient sur ce dossier. Choisis un autre dossier seulement si tu veux le rediriger ailleurs.";
 
   const [textImgModal, setTextImgModal] = useState(null);
 
@@ -179,7 +179,7 @@ export const MenuEditor = memo(function MenuEditor({ node, allMenus = [], onUpda
           <div className="card-title">Après chaque histoire de ce dossier</div>
           <div className="field-row">
             <div style={{ flex: 1 }}>
-              <span className="field-label">Destination par défaut</span>
+              <span className="field-label">Destination des histoires</span>
               <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                 Où l'enfant retourne quand une histoire de ce dossier se termine, si l'histoire n'a pas sa propre destination configurée.
               </div>

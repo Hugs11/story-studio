@@ -1,12 +1,9 @@
 import { visitProjectEntries } from './projectModel';
 import { isOriginalBackup } from '../utils/mediaConventions';
+import { basename, stripWindowsLongPathPrefix } from '../utils/fileUtils';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-function basename(path) {
-  return String(path || '').replace(/\\/g, '/').replace(/.*\//, '');
 }
 
 function extname(path) {
@@ -21,12 +18,6 @@ function mediaKind(path) {
   if (['mp3', 'ogg', 'wav', 'm4a', 'webm', 'flac'].includes(ext)) return 'audio';
   if (['zip', '7z'].includes(ext)) return 'archive';
   return 'other';
-}
-
-function auditPath(path) {
-  const value = String(path || '');
-  if (value.startsWith('\\\\?\\UNC\\')) return `\\\\${value.slice(8)}`;
-  return value.replace(/^\\\\\?\\/, '');
 }
 
 // 'ai' = ComfyUI/XTTS result · 'recorded' = enregistrements/ · 'imported' = fichiers-importes/ · 'project' = referenced in project node · 'library' = extra standalone path
@@ -44,7 +35,7 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
   // Backups d'édition audio (`*.original.{ext}`) : masqués sauf s'ils sont explicitement
   // référencés par une entrée projet (pour ne jamais rendre invisible une référence existante).
   if (!isProjectRef && isOriginalBackup(path)) return;
-  const checkedPath = auditPath(path);
+  const checkedPath = stripWindowsLongPathPrefix(path);
   const key = checkedPath.replace(/\\/g, '/').toLowerCase();
   const existing = map.get(key);
   const usage = { label, source, field, ...(entryId ? { entryId } : {}) };

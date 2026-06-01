@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useErrorDialog } from '../common/Dialog';
+import {
+  ENREGISTREMENTS,
+  FICHIERS_IMPORTES,
+  IMAGES_GENEREES,
+  VOIX_GENEREES,
+} from '../../store/workspaceDirs';
 import './DeleteAudioDialog.css';
 
-const PREF_KEY = 'delete_audio_pref'; // 'app_only' | 'app_and_disk'
-const DELETABLE_WORKSPACE_DIRS = ['fichiers-importes', 'enregistrements', 'voix-generees', 'images-generees'];
+const DELETABLE_WORKSPACE_DIRS = [FICHIERS_IMPORTES, ENREGISTREMENTS, VOIX_GENEREES, IMAGES_GENEREES];
 
 function isLikelyWorkspaceMediaFile(file, workspaceDir) {
   if (!file || !workspaceDir?.trim()) return false;
@@ -14,68 +20,31 @@ function isLikelyWorkspaceMediaFile(file, workspaceDir) {
 }
 
 export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose, allowDiskDelete = true, diskDeleteHelp = null }) {
+  const { showErrorDialog } = useErrorDialog();
   const effectiveAllowDiskDelete = allowDiskDelete && isLikelyWorkspaceMediaFile(file, workspaceDir);
-  const savedPref = localStorage.getItem(PREF_KEY);
-  const effectiveSavedPref = effectiveAllowDiskDelete ? savedPref : (savedPref === 'app_only' ? savedPref : null);
-  const [deleteFromDisk, setDeleteFromDisk] = useState(effectiveAllowDiskDelete && savedPref === 'app_and_disk');
-  const [remember, setRemember] = useState(!!savedPref);
+  const [deleteFromDisk, setDeleteFromDisk] = useState(false);
   const [error, setError] = useState('');
-  const autoAppliedRef = useRef(false);
 
-  useEffect(() => {
-    if (!effectiveSavedPref || autoAppliedRef.current) return;
-    autoAppliedRef.current = true;
-
-    let cancelled = false;
-
-    async function applySavedPreference() {
-      if (effectiveSavedPref === 'app_and_disk' && file) {
-        try {
-          await invoke('delete_workspace_media_file', { path: file, workspaceDir });
-        } catch (e) {
-          if (!cancelled) {
-            alert(`Suppression disque refusée : ${e}`);
-            onDeleted();
-          }
-          return;
-        }
-      }
-      if (!cancelled) onDeleted();
-    }
-
-    applySavedPreference();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [effectiveSavedPref, file, onDeleted, workspaceDir]);
-
-  useEscapeKey(!effectiveSavedPref, () => onClose?.());
+  useEscapeKey(true, () => onClose?.());
 
   async function handleConfirm() {
     setError('');
-    if (remember) {
-      localStorage.setItem(PREF_KEY, deleteFromDisk ? 'app_and_disk' : 'app_only');
-    } else {
-      localStorage.removeItem(PREF_KEY);
-    }
     if (deleteFromDisk && file) {
       try {
         await invoke('delete_workspace_media_file', { path: file, workspaceDir });
       } catch (e) {
         const message = `Suppression disque refusée : ${e}`;
         setError(message);
-        alert(`${message}\n\nLa référence projet va être retirée, mais le fichier reste sur le disque.`);
+        showErrorDialog({
+          title: 'Suppression disque refusée',
+          message: `${message}\n\nLa référence projet va être retirée, mais le fichier reste sur le disque.`,
+          variant: 'warning',
+        });
         onDeleted();
         return;
       }
     }
     onDeleted();
-  }
-
-  // Si une préférence est mémorisée, on applique directement après montage.
-  if (effectiveSavedPref) {
-    return null;
   }
 
   return (
@@ -107,11 +76,6 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
               {diskDeleteHelp || "Ce fichier n'est pas dans l'emplacement de travail Story Studio. Il sera seulement retiré de Story Studio."}
             </div>
           )}
-
-          <label className="delete-remember">
-            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
-            Se souvenir de ce choix
-          </label>
 
           {error && (
             <div className="info-box warn" style={{ marginTop: 12 }}>

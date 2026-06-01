@@ -2,22 +2,42 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, copyFile, mkdir, rename, remove, exists, readDir } from '@tauri-apps/plugin-fs';
 import { getProjectFilePrefix, sanitizeProjectPrefix } from '../utils/projectPrefix';
+import { basename, basenameNoExt, dirname, joinPath, pathKey } from '../utils/fileUtils';
 import { TEMP_IMAGES_DIR, LEGACY_TEMP_IMAGES_DIR } from '../utils/tempDirs';
-import { migrateProjectData, normalizeProjectData, projectToRustExport, projectToSerializable, visitProjectEntries } from './projectModel';
+import {
+  migrateProjectData,
+  normalizeProjectData,
+  projectToRustExport,
+  projectToSerializable,
+  visitProjectEntries,
+  walkProjectMediaReferences,
+} from './projectModel';
+import { selectStaleAutosaveBackups } from './autosaveDecision';
+import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
+import {
+  EXPORTS,
+  FICHIERS_IMPORTES,
+  IMAGES_GENEREES,
+  MANAGED_PROJECT_DIRS,
+  SAUVEGARDES,
+  VERSIONS_SECURITE,
+  ZIPS_EXTRAITS,
+} from './workspaceDirs';
 
-const PROJECT_OPEN_KEYS = ['lastOpenProjectDir', 'lastProjectDir'];
-const PROJECT_SAVE_KEYS = ['lastSaveProjectDir', 'lastProjectDir'];
-const RECENT_PROJECTS_KEY = 'recentProjects';
-const WORKSPACE_DIR_KEY = 'storyStudioWorkspaceDir';
-const MANAGED_PROJECT_DIRS = ['fichiers-importes', 'enregistrements', 'voix-generees', 'images-generees', 'zips-extraits', 'exports'];
+const PROJECT_OPEN_KEYS = [KEYS.LAST_OPEN_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
+const PROJECT_SAVE_KEYS = [KEYS.LAST_SAVE_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const RECENT_PROJECT_LIMIT = 8;
 const BACKUP_DIR_NAME = '.story-studio-backups';
-const AUTOSAVE_DIR_NAME = 'sauvegardes';
-const AUTOSAVE_BACKUP_DIR_NAME = 'versions-securite';
+// Caracteres interdits dans un nom de fichier `.mbah` propose a l'utilisateur.
+const FILENAME_FORBIDDEN_CHARS = /[<>:"/\\|?*\[\]+]/g;
+
+function sanitizeProjectFilename(name, fallback = 'mon-projet') {
+  return String(name || fallback).trim().replace(FILENAME_FORBIDDEN_CHARS, '_');
+}
 
 function getStoredDir(keys) {
   for (const key of keys) {
-    const value = localStorage.getItem(key);
+    const value = readSetting(key);
     if (value) return value;
   }
   return undefined;
@@ -26,7 +46,7 @@ function getStoredDir(keys) {
 function saveProjectDir(key, filePath) {
   if (!filePath) return;
   const dir = filePath.replace(/[\\/][^\\/]+$/, '');
-  if (dir) localStorage.setItem(key, dir);
+  if (dir) writeSetting(key, dir);
 }
 
 async function getDefaultWorkspaceDir() {
@@ -35,15 +55,15 @@ async function getDefaultWorkspaceDir() {
 }
 
 export async function getWorkspaceDir() {
-  const saved = localStorage.getItem(WORKSPACE_DIR_KEY);
+  const saved = readSetting(KEYS.WORKSPACE_DIR);
   if (saved?.trim()) return saved;
   const fallback = await getDefaultWorkspaceDir();
-  localStorage.setItem(WORKSPACE_DIR_KEY, fallback);
+  writeSetting(KEYS.WORKSPACE_DIR, fallback);
   return fallback;
 }
 
 function setWorkspaceDir(path) {
-  if (path?.trim()) localStorage.setItem(WORKSPACE_DIR_KEY, path);
+  if (path?.trim()) writeSetting(KEYS.WORKSPACE_DIR, path);
 }
 
 export async function pickWorkspaceDir() {
@@ -60,15 +80,8 @@ export async function pickWorkspaceDir() {
   return chosen;
 }
 
-function basenameWithoutExtension(path) {
-  return String(path || '')
-    .replace(/\\/g, '/')
-    .replace(/.*\//, '')
-    .replace(/\.[^/.]+$/, '');
-}
-
 function projectNameFromPath(path) {
-  return basenameWithoutExtension(path).trim();
+  return basenameNoExt(path).trim();
 }
 
 function isFallbackProjectName(value) {
@@ -88,7 +101,7 @@ function withLocalProjectNameForPath(project, path, { force = false } = {}) {
 
 export function getRecentProjects() {
   try {
-    const raw = localStorage.getItem(RECENT_PROJECTS_KEY);
+    const raw = readSetting(KEYS.RECENT_PROJECTS);
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((entry) => entry && typeof entry.path === 'string' && entry.path.trim());
@@ -103,16 +116,17 @@ export function rememberRecentProject(project, path) {
   const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
   const nextEntry = {
     path,
-    projectName: project?.projectName?.trim() || basenameWithoutExtension(path) || 'Projet sans nom',
-    name: project?.projectName?.trim() || basenameWithoutExtension(path) || 'Projet sans nom',
+    projectName: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
+    name: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
     projectType: project?.projectType || 'pack',
+    thumbnailImage: project?.thumbnailImage || project?.rootImage || null,
     updatedAt: Date.now(),
   };
   const next = [
     nextEntry,
     ...existing.filter((entry) => entry.path.replace(/\\/g, '/').toLowerCase() !== normalizedPath),
   ].slice(0, RECENT_PROJECT_LIMIT);
-  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(next));
+  writeSetting(KEYS.RECENT_PROJECTS, JSON.stringify(next));
   return next;
 }
 
@@ -121,7 +135,7 @@ export function forgetRecentProject(path) {
   const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
   const next = getRecentProjects()
     .filter((entry) => entry.path.replace(/\\/g, '/').toLowerCase() !== normalizedPath);
-  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(next));
+  writeSetting(KEYS.RECENT_PROJECTS, JSON.stringify(next));
   return next;
 }
 
@@ -138,20 +152,17 @@ function hasPath(path) {
 }
 
 function normalizePath(path) {
-  return String(path || '')
-    .replace(/^\\\\\?\\/, '')
-    .replace(/\\/g, '/')
+  return pathKey(path)
     .replace(/\/+/g, '/')
-    .replace(/\/$/, '')
-    .toLowerCase();
+    .replace(/\/$/, '');
 }
 
 function getProjectDir(savePath) {
-  return savePath.replace(/[\\/][^\\/]+$/, '');
+  return dirname(savePath);
 }
 
 function getFileName(path) {
-  return String(path || '').replace(/\\/g, '/').replace(/.*\//, '');
+  return basename(path);
 }
 
 function splitFileName(fileName) {
@@ -164,8 +175,8 @@ function splitFileName(fileName) {
 
 function getProjectAssetsDir(savePath) {
   const projectDir = getProjectDir(savePath);
-  const projectBaseName = savePath.replace(/.*[\\/]/, '').replace(/\.mbah$/i, '');
-  return `${projectDir}/${projectBaseName}_assets`;
+  const projectBaseName = basenameNoExt(savePath);
+  return joinPath(projectDir, `${projectBaseName}_assets`);
 }
 
 function isPathInsideDir(path, dir) {
@@ -214,60 +225,28 @@ function fromProjectRelative(maybRelativePath, mbahDir) {
   return fwdDir + '/' + maybRelativePath.replace(/^\.\//, '');
 }
 
-// Walks all path fields in a project and applies transformFn to each non-empty path.
+// Applique transformFn a chaque path media du projet, retourne un clone modifie.
 function mapProjectPaths(project, transformFn) {
-  const cloned = JSON.parse(JSON.stringify(project));
-  const t = (p) => (hasPath(p) ? transformFn(p) : p);
-  cloned.rootAudio = t(cloned.rootAudio);
-  cloned.rootImage = t(cloned.rootImage);
-  cloned.thumbnailImage = t(cloned.thumbnailImage);
-  cloned.nightModeAudio = t(cloned.nightModeAudio);
-  const mapNativeGraph = (graph) => {
-    for (const stage of graph?.document?.stageNodes ?? []) {
-      stage.audio = t(stage.audio);
-      stage.image = t(stage.image);
-    }
-  };
-  mapNativeGraph(cloned.nativeGraph);
-  visitProjectEntries(cloned, (entry) => {
-    if (entry.type === 'menu') {
-      entry.audio = t(entry.audio);
-      entry.image = t(entry.image);
-      mapNativeGraph(entry.nativeGraph);
-    } else if (entry.type === 'zip') {
-      entry.zipPath = t(entry.zipPath);
-    } else {
-      entry.audio = t(entry.audio);
-      entry.image = t(entry.image);
-      entry.itemAudio = t(entry.itemAudio);
-      entry.itemImage = t(entry.itemImage);
-      entry.afterPlaybackPromptAudio = t(entry.afterPlaybackPromptAudio);
-      for (const step of entry.afterPlaybackSequence ?? []) {
-        step.audio = t(step.audio);
-        step.image = t(step.image);
-      }
-      if (entry.afterPlaybackHomeStep) {
-        entry.afterPlaybackHomeStep.audio = t(entry.afterPlaybackHomeStep.audio);
-        entry.afterPlaybackHomeStep.image = t(entry.afterPlaybackHomeStep.image);
-      }
-    }
-  });
+  const cloned = structuredClone(project);
+  for (const ref of walkProjectMediaReferences(cloned)) {
+    ref.obj[ref.key] = transformFn(ref.path);
+  }
   return cloned;
 }
 
 function isManagedProjectPath(path, savePath) {
   if (!hasPath(path) || !hasPath(savePath)) return false;
-  const workspaceDir = localStorage.getItem(WORKSPACE_DIR_KEY);
+  const workspaceDir = readSetting(KEYS.WORKSPACE_DIR);
   if (isManagedWorkspacePath(path, workspaceDir)) return true;
   const projectDir = getProjectDir(savePath);
   if (isPathInsideDir(path, projectDir)) return true;
   if (isPathInsideDir(path, getProjectAssetsDir(savePath))) return true;
-  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, `${projectDir}/${dirName}`));
+  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, joinPath(projectDir, dirName)));
 }
 
 function isManagedWorkspacePath(path, workspaceDir) {
   if (!hasPath(path) || !hasPath(workspaceDir)) return false;
-  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, `${workspaceDir}/${dirName}`));
+  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, joinPath(workspaceDir, dirName)));
 }
 
 function shouldTransferProjectPath(path, savePath, statusByPath = null) {
@@ -277,107 +256,36 @@ function shouldTransferProjectPath(path, savePath, statusByPath = null) {
   return !isManagedProjectPath(path, savePath);
 }
 
-function pushTransferCandidate(candidates, seen, path, label, savePath, statusByPath) {
-  if (!shouldTransferProjectPath(path, savePath, statusByPath)) return;
-  const key = normalizePath(path);
-  if (seen.has(key)) return;
-  seen.add(key);
-  candidates.push({
-    path,
-    label,
-    filename: path.split(/[\\/]/).pop() || path,
-  });
-}
-
+// Construit la liste mutable des references a transferer, sur un clone du projet.
+// Le caller peut muter `ref.obj[ref.key]` pour rediriger les chemins.
 function collectTransferTargets(project, savePath, statusByPath = null) {
-  const updated = JSON.parse(JSON.stringify(projectToSerializable(normalizeProjectData(project))));
+  const updated = structuredClone(projectToSerializable(normalizeProjectData(project)));
   const refs = [];
-
-  const addRef = (obj, key, label) => {
-    const path = obj?.[key];
-    if (!shouldTransferProjectPath(path, savePath, statusByPath)) return;
-    refs.push({ obj, key, path, label });
-  };
-
-  addRef(updated, 'rootAudio', 'Audio de couverture');
-  addRef(updated, 'rootImage', 'Image de couverture');
-  addRef(updated, 'thumbnailImage', 'Image bibliothèque');
-  addRef(updated, 'nightModeAudio', 'Audio mode nuit');
-  for (const stage of updated.nativeGraph?.document?.stageNodes ?? []) {
-    addRef(stage, 'audio', `Audio graphe natif: ${stage.name || stage.uuid || 'stage'}`);
-    addRef(stage, 'image', `Image graphe natif: ${stage.name || stage.uuid || 'stage'}`);
+  for (const ref of walkProjectMediaReferences(updated)) {
+    if (!shouldTransferProjectPath(ref.path, savePath, statusByPath)) continue;
+    refs.push(ref);
   }
-
-  visitProjectEntries(updated, (entry) => {
-    if (entry?.type === 'menu') {
-      addRef(entry, 'audio', `Audio menu: ${entry.name || 'sans nom'}`);
-      addRef(entry, 'image', `Image menu: ${entry.name || 'sans nom'}`);
-      for (const stage of entry.nativeGraph?.document?.stageNodes ?? []) {
-        addRef(stage, 'audio', `Audio graphe natif: ${stage.name || stage.uuid || 'stage'}`);
-        addRef(stage, 'image', `Image graphe natif: ${stage.name || stage.uuid || 'stage'}`);
-      }
-      return;
-    }
-    if (entry?.type === 'zip') {
-      addRef(entry, 'zipPath', `ZIP: ${entry.name || 'sans nom'}`);
-      return;
-    }
-    addRef(entry, 'audio', `Audio histoire: ${entry.name || 'sans nom'}`);
-    addRef(entry, 'itemAudio', `Titre audio: ${entry.name || 'sans nom'}`);
-    addRef(entry, 'afterPlaybackPromptAudio', `Audio fin histoire: ${entry.name || 'sans nom'}`);
-    for (const [index, step] of (entry.afterPlaybackSequence ?? []).entries()) {
-      addRef(step, 'audio', `Audio fin histoire ${index + 1}: ${entry.name || 'sans nom'}`);
-      addRef(step, 'image', `Image fin histoire ${index + 1}: ${entry.name || 'sans nom'}`);
-    }
-    addRef(entry.afterPlaybackHomeStep, 'audio', `Audio fin histoire home: ${entry.name || 'sans nom'}`);
-    addRef(entry.afterPlaybackHomeStep, 'image', `Image fin histoire home: ${entry.name || 'sans nom'}`);
-    addRef(entry, 'itemImage', `Image histoire: ${entry.name || 'sans nom'}`);
-  });
-
   return { updated, refs };
 }
 
+// Vue lecture-seule pour l'UI : candidates uniques (path/label/filename)
+// que l'utilisateur peut accepter ou refuser de copier dans le projet.
 export function collectTransferableProjectFiles(project, savePath, statusByPath = null) {
   if (!hasPath(savePath)) return [];
   const normalized = normalizeProjectData(project);
-  const candidates = [];
   const seen = new Set();
-
-  pushTransferCandidate(candidates, seen, normalized.rootAudio, 'Audio de couverture', savePath, statusByPath);
-  pushTransferCandidate(candidates, seen, normalized.rootImage, 'Image de couverture', savePath, statusByPath);
-  pushTransferCandidate(candidates, seen, normalized.thumbnailImage, 'Image bibliothèque', savePath, statusByPath);
-  pushTransferCandidate(candidates, seen, normalized.nightModeAudio, 'Audio mode nuit', savePath, statusByPath);
-  const pushNativeGraphCandidates = (graph) => {
-    for (const stage of graph?.document?.stageNodes ?? []) {
-      pushTransferCandidate(candidates, seen, stage.audio, `Audio graphe natif: ${stage.name || stage.uuid || 'stage'}`, savePath, statusByPath);
-      pushTransferCandidate(candidates, seen, stage.image, `Image graphe natif: ${stage.name || stage.uuid || 'stage'}`, savePath, statusByPath);
-    }
-  };
-  pushNativeGraphCandidates(normalized.nativeGraph);
-
-  visitProjectEntries(normalized, (entry) => {
-    if (entry?.type === 'menu') {
-      pushTransferCandidate(candidates, seen, entry.audio, `Audio menu: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-      pushTransferCandidate(candidates, seen, entry.image, `Image menu: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-      pushNativeGraphCandidates(entry.nativeGraph);
-      return;
-    }
-    if (entry?.type === 'zip') {
-      pushTransferCandidate(candidates, seen, entry.zipPath, `ZIP: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-      return;
-    }
-    pushTransferCandidate(candidates, seen, entry.audio, `Audio histoire: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    pushTransferCandidate(candidates, seen, entry.itemAudio, `Titre audio: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    pushTransferCandidate(candidates, seen, entry.afterPlaybackPromptAudio, `Audio fin histoire: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    for (const [index, step] of (entry.afterPlaybackSequence ?? []).entries()) {
-      pushTransferCandidate(candidates, seen, step.audio, `Audio fin histoire ${index + 1}: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-      pushTransferCandidate(candidates, seen, step.image, `Image fin histoire ${index + 1}: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    }
-    pushTransferCandidate(candidates, seen, entry.afterPlaybackHomeStep?.audio, `Audio fin histoire home: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    pushTransferCandidate(candidates, seen, entry.afterPlaybackHomeStep?.image, `Image fin histoire home: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-    pushTransferCandidate(candidates, seen, entry.itemImage, `Image histoire: ${entry.name || 'sans nom'}`, savePath, statusByPath);
-  });
-
+  const candidates = [];
+  for (const ref of walkProjectMediaReferences(normalized)) {
+    if (!shouldTransferProjectPath(ref.path, savePath, statusByPath)) continue;
+    const key = normalizePath(ref.path);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push({
+      path: ref.path,
+      label: ref.label,
+      filename: basename(ref.path) || ref.path,
+    });
+  }
   return candidates;
 }
 
@@ -421,11 +329,11 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
 export { projectToRustExport };
 
 async function uniquePathInDir(dir, fileName) {
-  let candidate = `${dir}/${fileName}`;
+  let candidate = joinPath(dir, fileName);
   if (!(await exists(candidate))) return candidate;
   const { stem, ext } = splitFileName(fileName);
   for (let index = 1; index < 1000; index += 1) {
-    candidate = `${dir}/${stem}--${Date.now()}-${index}${ext}`;
+    candidate = joinPath(dir, `${stem}--${Date.now()}-${index}${ext}`);
     if (!(await exists(candidate))) return candidate;
   }
   throw new Error(`Impossible de créer un nom unique pour ${fileName}`);
@@ -435,20 +343,15 @@ async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
   const keep = Number(limit) || 0;
   if (keep <= 0 || !path || !(await exists(path))) return;
   const projectDir = getProjectDir(path);
-  const baseName = getFileName(path).replace(/\.mbah$/i, '');
-  const backupDir = backupDirOverride ?? `${projectDir}/${BACKUP_DIR_NAME}`;
+  const baseName = basenameNoExt(path);
+  const backupDir = backupDirOverride ?? joinPath(projectDir, BACKUP_DIR_NAME);
   await mkdir(backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await copyFile(path, `${backupDir}/${baseName}.${stamp}.mbah`);
+  await copyFile(path, joinPath(backupDir, `${baseName}.${stamp}.mbah`));
 
   const entries = await readDir(backupDir).catch(() => []);
-  const backups = entries
-    .filter((entry) => entry.isFile && entry.name?.startsWith(`${baseName}.`) && entry.name.endsWith('.mbah'))
-    .map((entry) => entry.name)
-    .sort()
-    .reverse();
-  for (const stale of backups.slice(keep)) {
-    await remove(`${backupDir}/${stale}`).catch(() => {});
+  for (const stale of selectStaleAutosaveBackups(entries, baseName, keep)) {
+    await remove(joinPath(backupDir, stale)).catch(() => {});
   }
 }
 
@@ -467,65 +370,54 @@ async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupD
 /**
  * Copie les images temporaires vers {workspaceDir}/images-generees/.
  * Fallback : images-generees/ à côté du .mbah si workspace non défini.
- * Retourne un projet avec les chemins mis à jour.
+ * Retourne un projet serialisable avec les chemins mis à jour.
  */
 async function persistTempImages(project, projectPath, workspaceDir = null) {
-  const normalized = normalizeProjectData(project);
-  const projectBaseName = projectPath.replace(/.*[\\/]/, '').replace(/\.mbah$/, '');
+  const updated = structuredClone(projectToSerializable(normalizeProjectData(project)));
 
-  // Collecte des images temporaires
-  const collect = [];
-  if (isTempImage(normalized.rootImage)) collect.push({ obj: normalized, key: 'rootImage' });
-  if (isTempImage(normalized.thumbnailImage)) collect.push({ obj: normalized, key: 'thumbnailImage' });
-  visitProjectEntries(normalized, (entry) => {
-    if (entry?.type === 'menu' && isTempImage(entry.image)) collect.push({ obj: entry, key: 'image' });
-    if (entry?.type === 'story' && isTempImage(entry.itemImage)) collect.push({ obj: entry, key: 'itemImage' });
-  });
+  // Une seule traversee : on collecte uniquement les images temporaires editables.
+  // `walkProjectMediaReferences` couvre rootImage/thumbnailImage + menu.image + story.itemImage,
+  // mais on filtre `scope: 'native-graph'` pour ne pas toucher aux assets graphe natif preserves.
+  const tempRefs = [];
+  for (const ref of walkProjectMediaReferences(updated)) {
+    if (ref.scope === 'native-graph') continue;
+    if (ref.key !== 'rootImage' && ref.key !== 'thumbnailImage' && ref.key !== 'image' && ref.key !== 'itemImage') continue;
+    if (!isTempImage(ref.path)) continue;
+    tempRefs.push(ref);
+  }
 
-  if (collect.length === 0) return projectToSerializable(normalized);
+  if (tempRefs.length === 0) return updated;
 
-  const resolvedWs = workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
-  const baseDir = resolvedWs || projectPath.replace(/[\\/][^\\/]+$/, '');
-  const targetDir = `${baseDir}/images-generees`;
-
+  const resolvedWs = workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
+  const baseDir = resolvedWs || getProjectDir(projectPath);
+  const targetDir = joinPath(baseDir, IMAGES_GENEREES);
   await mkdir(targetDir, { recursive: true });
 
-  // Clone profond pour ne pas muter le store
-  const updated = JSON.parse(JSON.stringify(projectToSerializable(normalized)));
-
-  const cloneCollect = [];
-  if (isTempImage(updated.rootImage))      cloneCollect.push({ obj: updated, key: 'rootImage' });
-  if (isTempImage(updated.thumbnailImage)) cloneCollect.push({ obj: updated, key: 'thumbnailImage' });
-  visitProjectEntries(updated, (entry) => {
-    if (entry?.type === 'menu' && isTempImage(entry.image)) cloneCollect.push({ obj: entry, key: 'image' });
-    if (entry?.type === 'story' && isTempImage(entry.itemImage)) cloneCollect.push({ obj: entry, key: 'itemImage' });
-  });
-
-  const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(projectBaseName);
-  for (const { obj, key } of cloneCollect) {
-    const src = obj[key];
-    const filename = src.replace(/.*[\\/]/, '');
+  const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(basenameNoExt(projectPath));
+  for (const ref of tempRefs) {
+    const src = ref.path;
+    const filename = basename(src);
     const prefixedName = prefix ? `${prefix}__${filename}` : filename;
     const dst = await uniquePathInDir(targetDir, prefixedName);
     await copyFile(src, dst);
-    obj[key] = dst;
+    ref.obj[ref.key] = dst;
   }
 
-  return projectToSerializable(updated);
+  return updated;
 }
 
 export async function saveProject(project, existingPath = null, onProgress = null, options = {}) {
   let path = existingPath;
 
   if (!path) {
-    const ws = options.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
+    const ws = options.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
     const lastDir = getStoredDir(PROJECT_SAVE_KEYS) ?? getStoredDir(PROJECT_OPEN_KEYS);
-    const workspaceAutosaveDir = ws ? `${ws}/${AUTOSAVE_DIR_NAME}` : null;
+    const workspaceAutosaveDir = ws ? joinPath(ws, SAUVEGARDES) : null;
     const defaultDir = workspaceAutosaveDir ?? lastDir;
-    const suggestedName = (project.projectName || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
+    const suggestedName = sanitizeProjectFilename(project.projectName);
     const chosenPath = await save({
       filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
-      defaultPath: defaultDir ? `${defaultDir}/${suggestedName}.mbah` : `${suggestedName}.mbah`,
+      defaultPath: defaultDir ? joinPath(defaultDir, `${suggestedName}.mbah`) : `${suggestedName}.mbah`,
       title: 'Enregistrer le projet...',
     });
     if (!chosenPath) return null;
@@ -538,7 +430,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
 
   onProgress?.('Enregistrement du projet...');
   const mbahDir = getProjectDir(path);
-  const resolvedWs = options.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
+  const resolvedWs = options.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   const projectForPath = options.autosave
     ? project
     : withLocalProjectNameForPath(project, path);
@@ -549,11 +441,14 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     : await persistTempImages(projectForPath, path, resolvedWs);
   const projectToSave = {
     ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, mbahDir)),
+    // Tags are still keyed by media path. Keys are relativized in .mbah files
+    // to survive project-folder moves; content-hash tags would be a future
+    // migration if we need to track renamed files inside the workspace.
     mediaTags: relativizeTagKeys(options.mediaTags ?? {}, mbahDir),
     mediaLibraryPaths: (options.mediaLibraryPaths ?? []).map((p) => toProjectRelative(p, mbahDir)),
   };
   const workspaceBackupDir = resolvedWs
-    ? `${resolvedWs}/${AUTOSAVE_DIR_NAME}/${AUTOSAVE_BACKUP_DIR_NAME}`
+    ? joinPath(resolvedWs, SAUVEGARDES, VERSIONS_SECURITE)
     : null;
   await writeProjectFileAtomic(path, JSON.stringify(projectToSave, null, 2), {
     backupLimit: options.backupLimit ?? 0,
@@ -566,15 +461,15 @@ export async function saveProject(project, existingPath = null, onProgress = nul
 }
 
 export async function saveProjectAs(project, currentSavePath, onProgress = null, mediaTags = {}, options = {}, mediaLibraryPaths = []) {
-  const safeCurrentName = (project.projectName || 'mon-projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_');
-  const ws = options.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
-  const workspaceAutosaveDir = ws ? `${ws}/${AUTOSAVE_DIR_NAME}` : null;
+  const safeCurrentName = sanitizeProjectFilename(project.projectName);
+  const ws = options.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
+  const workspaceAutosaveDir = ws ? joinPath(ws, SAUVEGARDES) : null;
   const defaultDir = currentSavePath
     ? getProjectDir(currentSavePath)
     : (workspaceAutosaveDir ?? getStoredDir(PROJECT_SAVE_KEYS) ?? getStoredDir(PROJECT_OPEN_KEYS));
   const chosenPath = await save({
     filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
-    defaultPath: defaultDir ? `${defaultDir}/${safeCurrentName}.mbah` : `${safeCurrentName}.mbah`,
+    defaultPath: defaultDir ? joinPath(defaultDir, `${safeCurrentName}.mbah`) : `${safeCurrentName}.mbah`,
     title: 'Enregistrer une copie sous...',
   });
   if (!chosenPath) return null;
@@ -584,7 +479,7 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 
   onProgress?.('Enregistrement du projet...');
 
-  const resolvedWs = options?.workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || null;
+  const resolvedWs = options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   onProgress?.('Décollage vers la lune...');
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
   const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
@@ -638,13 +533,13 @@ export async function loadProjectFromPath(path) {
 
 export function getExtractedZipsDir(workspaceDir) {
   if (!workspaceDir) return null;
-  return workspaceDir.replace(/[\\/]+$/, '') + '/zips-extraits';
+  return joinPath(workspaceDir, ZIPS_EXTRAITS);
 }
 
 export async function ensureExportsDir(workspaceDir) {
   const baseDir = workspaceDir?.trim();
   if (!baseDir) return null;
-  const path = baseDir.replace(/[\\/]+$/, '') + '/exports';
+  const path = joinPath(baseDir, EXPORTS);
   try {
     await mkdir(path, { recursive: true });
     return path;
@@ -664,42 +559,11 @@ function mediaKindForPath(path) {
 export async function consolidateProject(project, savePath, destinationDir, onProgress = null) {
   if (!destinationDir) return null;
   const normalized = normalizeProjectData(project);
-  const serializable = JSON.parse(JSON.stringify(projectToSerializable(normalized)));
-  const refs = [];
-  const addRef = (obj, key) => {
-    const value = obj?.[key];
-    if (hasPath(value)) refs.push({ obj, key, path: value });
-  };
-  const addGraphRefs = (graph) => {
-    for (const stage of graph?.document?.stageNodes ?? []) {
-      addRef(stage, 'audio');
-      addRef(stage, 'image');
-    }
-  };
-
-  addRef(serializable, 'rootAudio');
-  addRef(serializable, 'rootImage');
-  addRef(serializable, 'thumbnailImage');
-  addRef(serializable, 'nightModeAudio');
-  addGraphRefs(serializable.nativeGraph);
-  visitProjectEntries(serializable, (entry) => {
-    addRef(entry, 'audio');
-    addRef(entry, 'image');
-    addRef(entry, 'itemAudio');
-    addRef(entry, 'itemImage');
-    addRef(entry, 'zipPath');
-    addRef(entry, 'afterPlaybackPromptAudio');
-    addGraphRefs(entry.nativeGraph);
-    for (const step of entry.afterPlaybackSequence ?? []) {
-      addRef(step, 'audio');
-      addRef(step, 'image');
-    }
-    addRef(entry.afterPlaybackHomeStep, 'audio');
-    addRef(entry.afterPlaybackHomeStep, 'image');
-  });
+  const serializable = structuredClone(projectToSerializable(normalized));
+  const refs = [...walkProjectMediaReferences(serializable)];
 
   await mkdir(destinationDir, { recursive: true });
-  const assetsRoot = `${destinationDir}/assets`;
+  const assetsRoot = joinPath(destinationDir, 'assets');
   await mkdir(assetsRoot, { recursive: true });
   const copied = new Map();
   let copiedCount = 0;
@@ -711,9 +575,9 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
     if (!nextPath) {
       try {
         const kind = mediaKindForPath(ref.path);
-        const targetDir = `${assetsRoot}/${kind}`;
+        const targetDir = joinPath(assetsRoot, kind);
         await mkdir(targetDir, { recursive: true });
-        nextPath = await uniquePathInDir(targetDir, getFileName(ref.path));
+        nextPath = await uniquePathInDir(targetDir, basename(ref.path));
         await copyFile(ref.path, nextPath);
         copied.set(key, nextPath);
         copiedCount += 1;
@@ -726,9 +590,9 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
     ref.obj[ref.key] = nextPath;
   }
 
-  const fallbackName = savePath ? getFileName(savePath).replace(/\.mbah$/i, '') : 'projet';
-  const projectName = (serializable.projectName || fallbackName || 'projet').trim().replace(/[<>:"/\\|?*\[\]+]/g, '_') || 'projet';
-  const projectPath = `${destinationDir}/${projectName.replace(/\.mbah$/i, '')}-consolidee.mbah`;
+  const fallbackName = savePath ? basenameNoExt(savePath) : 'projet';
+  const projectName = sanitizeProjectFilename(serializable.projectName || fallbackName, 'projet') || 'projet';
+  const projectPath = joinPath(destinationDir, `${projectName.replace(/\.mbah$/i, '')}-consolidee.mbah`);
   const projectToSave = mapProjectPaths(serializable, (p) => toProjectRelative(p, destinationDir));
   await writeProjectFileAtomic(projectPath, JSON.stringify(projectToSave, null, 2));
   return { path: projectPath, project: serializable, copiedCount, errors };
@@ -736,7 +600,7 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
 
 export function isAlreadyManagedFile(path, workspaceDir, savePath) {
   if (!hasPath(path)) return false;
-  const ws = workspaceDir || localStorage.getItem(WORKSPACE_DIR_KEY) || '';
+  const ws = workspaceDir || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
   if (ws && isManagedWorkspacePath(path, ws)) return true;
   if (hasPath(savePath)) return isManagedProjectPath(path, savePath);
   return false;
@@ -744,17 +608,16 @@ export function isAlreadyManagedFile(path, workspaceDir, savePath) {
 
 export async function autoSaveNewProject(project, workspaceDir, options = {}) {
   if (!workspaceDir) return null;
-  const autosaveDir = `${workspaceDir}/${AUTOSAVE_DIR_NAME}`;
+  const autosaveDir = joinPath(workspaceDir, SAUVEGARDES);
   await mkdir(autosaveDir, { recursive: true });
 
-  const safeName = (project.projectName || 'nouveau-projet').trim()
-    .replace(/[<>:"/\\|?*\[\]+]/g, '_')
+  const safeName = sanitizeProjectFilename(project.projectName, 'nouveau-projet')
     .replace(/\s+/g, '-')
     .toLowerCase() || 'nouveau-projet';
   const stamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, 'h').replace(/-(\d{2})$/, 'm$1');
   const filename = `${safeName}_${stamp}.mbah`;
-  const path = `${autosaveDir}/${filename}`;
-  const backupDirOverride = `${autosaveDir}/${AUTOSAVE_BACKUP_DIR_NAME}`;
+  const path = joinPath(autosaveDir, filename);
+  const backupDirOverride = joinPath(autosaveDir, VERSIONS_SECURITE);
 
   return saveProject(project, path, null, {
     autosave: true,
@@ -766,15 +629,15 @@ export async function autoSaveNewProject(project, workspaceDir, options = {}) {
   });
 }
 
-export async function copyMediaToWorkspace(sourcePath, workspaceDir, category = 'fichiers-importes', projectName = '') {
+export async function copyMediaToWorkspace(sourcePath, workspaceDir, category = FICHIERS_IMPORTES, projectName = '') {
   if (!hasPath(sourcePath)) return sourcePath;
   const baseDir = workspaceDir || await getWorkspaceDir();
-  const safeCategory = MANAGED_PROJECT_DIRS.includes(category) ? category : 'fichiers-importes';
-  const targetDir = `${baseDir}/${safeCategory}`;
+  const safeCategory = MANAGED_PROJECT_DIRS.includes(category) ? category : FICHIERS_IMPORTES;
+  const targetDir = joinPath(baseDir, safeCategory);
   await mkdir(targetDir, { recursive: true });
   if (isManagedWorkspacePath(sourcePath, baseDir)) return sourcePath;
   const prefix = sanitizeProjectPrefix(projectName);
-  const originalName = getFileName(sourcePath);
+  const originalName = basename(sourcePath);
   const targetName = prefix ? `${prefix}__${originalName}` : originalName;
   const dest = await uniquePathInDir(targetDir, targetName);
   await copyFile(sourcePath, dest);

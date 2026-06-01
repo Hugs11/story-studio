@@ -175,7 +175,7 @@
   width: 48px;
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1133,6 +1133,7 @@
 
 @media (max-width: 1140px) {
   .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='import-folder'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='settings'] .chrome-toolbar-btn-label {
@@ -1140,6 +1141,7 @@
   }
 
   .chrome-toolbar-btn[data-toolbar-id='import'],
+  .chrome-toolbar-btn[data-toolbar-id='import-folder'],
   .chrome-toolbar-btn[data-toolbar-id='folder'],
   .chrome-toolbar-btn[data-toolbar-id='record'],
   .chrome-toolbar-btn[data-toolbar-id='settings'] {

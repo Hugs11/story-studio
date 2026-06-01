@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
 import { FilePen, FolderOpen, ListTodo, SlidersHorizontal, SwatchBook } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
+import { useLocalFile } from '../../hooks/useLocalFile';
+import { loadProjectFromPath } from '../../store/projectIO';
 
 function formatRecentDate(updatedAt) {
   if (!updatedAt) return '';
@@ -23,6 +25,21 @@ function ActionIcon({ Icon }) {
   return <Icon className="mode-action-icon-svg" strokeWidth={1.9} />;
 }
 
+function RecentProjectThumb({ project, index, loadedThumbnail = null }) {
+  const thumbnailPath = project.thumbnailImage || loadedThumbnail || null;
+  const thumbnailUrl = useLocalFile(thumbnailPath);
+
+  if (thumbnailUrl) {
+    return (
+      <span className="mode-recent-thumb">
+        <img src={thumbnailUrl} alt="" />
+      </span>
+    );
+  }
+
+  return <span className={`mode-recent-dot tone-${index % 5}`} />;
+}
+
 export function ModeSelector({
   onSelect,
   onOpen,
@@ -31,7 +48,35 @@ export function ModeSelector({
   onOpenRecent,
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
-  const visibleRecentProjects = recentProjects.slice(0, 5);
+  const [loadedThumbnails, setLoadedThumbnails] = useState({});
+  const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const projectsToLoad = visibleRecentProjects.filter((project) => (
+      project?.path
+      && !project.thumbnailImage
+    ));
+    if (!projectsToLoad.length) return undefined;
+
+    Promise.all(projectsToLoad.map((project) => (
+      loadProjectFromPath(project.path)
+        .then((result) => [project.path, result?.data?.thumbnailImage || result?.data?.rootImage || null])
+        .catch(() => [project.path, null])
+    ))).then((entries) => {
+      if (cancelled) return;
+      setLoadedThumbnails((prev) => {
+        const next = { ...prev };
+        for (const [path, thumbnail] of entries) {
+          if (next[path] === undefined) next[path] = thumbnail;
+        }
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [visibleRecentProjects]);
+
   return (
     <div className="mode-selector">
       <section className="mode-home-panel mode-home-left">
@@ -87,7 +132,11 @@ export function ModeSelector({
                 className="mode-recent-item"
                 onClick={() => onOpenRecent?.(project.path)}
               >
-                <span className={`mode-recent-dot tone-${index % 5}`} />
+                <RecentProjectThumb
+                  project={project}
+                  index={index}
+                  loadedThumbnail={loadedThumbnails[project.path] ?? null}
+                />
                 <span className="mode-recent-copy">
                   <span className="mode-recent-name">{project.projectName || project.name}</span>
                   <span className="mode-recent-type">{projectTypeLabel(project.projectType)}</span>

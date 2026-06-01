@@ -53,6 +53,23 @@ test('story Home remains visible even when it matches the end target', () => {
   assert.equal(nav.directReturn.targetId, 'root');
 });
 
+test('end node does not hide a story returnOnHome override', () => {
+  const a = story('a', { returnOnHome: 'root' });
+  const p = project([a], {
+    nightModeAudio: 'night.mp3',
+    nightModeReturn: 'root',
+    globalOptions: { nightMode: true, endNode: true },
+  });
+
+  const nav = getGeneratedStoryNavigation(a, null, p, p.rootEntries);
+
+  assert.equal(nav.usesEndNode, true);
+  assert.equal(nav.directReturn.isBypassedByEndNode, true);
+  assert.equal(nav.endNodeReturn.targetId, 'root');
+  assert.equal(nav.storyHome.isConfigured, true);
+  assert.equal(nav.storyHome.targetId, 'root');
+});
+
 test('returnOnHomeNone is a visible modified behavior', () => {
   const a = story('a', { returnOnHomeNone: true });
   const nav = getGeneratedStoryNavigation(a, null, project([a]), [a]);
@@ -243,6 +260,25 @@ test('autoNext combined with end-node uses next sibling as effective fallback', 
   assert.equal(nav.endNodeReturn.isActive, true);
   assert.equal(nav.endNodeReturn.isConfigured, false);
   assert.equal(nav.endNodeReturn.effectiveTargetId, 'story_play:b');
+});
+
+test('nativeGraph preserve does not mask autoNext preview behavior', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { nativeStageId: 'stage-a' });
+  const b = story('b', { nativeStageId: 'stage-b' });
+  menu.children = [a, b];
+  const p = project([menu], {
+    nativeGraph: {
+      preserveForRoundTrip: true,
+      document: { stageNodes: [], actionNodes: [] },
+    },
+    globalOptions: { autoNext: true },
+  });
+
+  const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
+
+  assert.equal(nav.directReturn.targetId, 'story_play:b');
+  assert.equal(nav.usesEndNode, false);
 });
 
 test('autoNext: last story of a menu falls back to menu parent', () => {

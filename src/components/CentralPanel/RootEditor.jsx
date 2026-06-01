@@ -4,10 +4,10 @@ import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { Image as ImageIcon, Info } from '../icons/LucideLocal';
+import { KEYS, read, write } from '../../store/persistentSettings';
+import { basename } from '../../utils/fileUtils';
 import './CentralPanel.css';
 import './RootEditor.css';
-
-const SIMPLE_MODE_INFO_DISMISS_KEY = 'storyStudio.simpleModeInfoDismissed';
 
 export const RootEditor = memo(function RootEditor({ node, projectType, onUpdateRoot, onUpdateMedia, onUpdateStoryAudio }) {
   const sameImage = !!node.sameImage;
@@ -18,24 +18,18 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
   const simpleStoryName = node.packMetadata?.title || node.projectName || '';
   const rootTitle = isSimple ? simpleStoryName : (node.packMetadata?.title || node.projectName || '');
 
-  const [simpleInfoDismissed, setSimpleInfoDismissed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try { return window.localStorage.getItem(SIMPLE_MODE_INFO_DISMISS_KEY) === '1'; }
-    catch { return false; }
-  });
+  const [simpleInfoDismissed, setSimpleInfoDismissed] = useState(
+    () => read(KEYS.SIMPLE_MODE_INFO_DISMISS) === '1',
+  );
 
   useEffect(() => {
     if (!isSimple) return;
-    if (typeof window === 'undefined') return;
-    try {
-      setSimpleInfoDismissed(window.localStorage.getItem(SIMPLE_MODE_INFO_DISMISS_KEY) === '1');
-    } catch { /* ignore */ }
+    setSimpleInfoDismissed(read(KEYS.SIMPLE_MODE_INFO_DISMISS) === '1');
   }, [isSimple]);
 
   function dismissSimpleInfo() {
     setSimpleInfoDismissed(true);
-    try { window.localStorage.setItem(SIMPLE_MODE_INFO_DISMISS_KEY, '1'); }
-    catch { /* ignore */ }
+    write(KEYS.SIMPLE_MODE_INFO_DISMISS, '1');
   }
 
   function handleSimpleNameChange(nextValue) {
@@ -310,7 +304,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             ttsFilenameHint={`histoire-complete-${simpleStoryName || 'histoire'}`}
             xttsTarget={{ kind: 'rootStory', field: 'audio' }}
             onPick={(f) => {
-              const autoName = f.split(/[\\/]/).pop()
+              const autoName = basename(f)
                 .replace(/\.(mp3|ogg|wav|m4a)$/i, '')
                 .replace(/[-_]/g, ' ').trim();
               onUpdateStoryAudio(f);

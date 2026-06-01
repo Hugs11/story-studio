@@ -84,10 +84,10 @@ export function CentralPanel({
   const defaultPackEntryLabel = defaultPackEntry
     ? `${defaultPackEntry.name} (premier élément du pack)`
     : NAV_ROOT_LABEL;
-  // Étiquette pour le défaut GLOBAL du nœud de fin : la destination effective
+  // Étiquette pour le défaut GLOBAL du message de fin : la destination effective
   // est contextuelle (chaque story retombe sur sa propre destination de fin).
   // On ne peut donc pas afficher une cible unique sans mentir.
-  const endNodeContextualDefaultLabel = 'Suit la destination de fin de chaque histoire';
+  const endNodeContextualDefaultLabel = 'Suit la destination de fin de l’histoire source';
 
   const resolveExplicitTargetLabel = (normalized) => {
     if (isNextStoryNavigationTarget(normalized)) {
@@ -97,6 +97,8 @@ export function CentralPanel({
     return null;
   };
 
+  // resolveExplicitTargetLabel capture defaultPackEntryLabel + projectIndex (deja listes),
+  // endNodeContextualDefaultLabel est une string litterale stable.
   const endNodeReturnResolvedLabel = useMemo(() => {
     const normalized = normalizeNavigationTarget(project.nightModeReturn);
     if (!normalized) return endNodeContextualDefaultLabel;
@@ -111,7 +113,7 @@ export function CentralPanel({
       if (!fallback) return endNodeContextualDefaultLabel;
       const fallbackLabel = resolveExplicitTargetLabel(fallback)
         ?? getGeneratedNavigationTargetName(resolveNavigationTargetId(fallback, null), projectIndex);
-      return `${fallbackLabel} (suit le réglage de fin)`;
+      return `${fallbackLabel} (même destination que la fin du message)`;
     }
     return resolveExplicitTargetLabel(normalized);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +125,7 @@ export function CentralPanel({
 
         <div className="center-body">
           <EndNodeEditor
+            endNodeName={project.endNodeName || 'Message de fin'}
             nightModeAudio={project.nightModeAudio}
             nightModeActive={!!project.globalOptions?.nightMode}
             nightModeReturn={project.nightModeReturn ?? null}
@@ -136,6 +139,7 @@ export function CentralPanel({
             onUpdateNightMode={onUpdateNightMode}
             onUpdateNightModeReturn={onUpdateNightModeReturn}
             onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
+            onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
             onRemove={onRemoveEndNode}
           />
         </div>

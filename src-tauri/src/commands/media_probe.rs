@@ -54,8 +54,14 @@ fn probe_one(path: &str) -> MediaMeta {
         .unwrap_or("")
         .to_lowercase();
 
-    let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp" | "bmp" | "gif");
-    let is_audio = matches!(ext.as_str(), "mp3" | "ogg" | "wav" | "m4a" | "webm" | "flac");
+    let is_image = matches!(
+        ext.as_str(),
+        "png" | "jpg" | "jpeg" | "webp" | "bmp" | "gif"
+    );
+    let is_audio = matches!(
+        ext.as_str(),
+        "mp3" | "ogg" | "wav" | "m4a" | "webm" | "flac"
+    );
 
     let mut width = None;
     let mut height = None;

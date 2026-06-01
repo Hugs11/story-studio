@@ -1,8 +1,9 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { useProjectContext } from '../../store/ProjectContext';
+import { basename } from '../../utils/fileUtils';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
@@ -77,15 +78,15 @@ function resolvePromptHomeTarget(node, parentMenu) {
 }
 
 function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEffective) {
-  if (!parentMenu) return 'Comportement courant (défaut)';
-  if (autoNextEffective) return 'Réglage par défaut (Histoire suivante)';
+  if (!parentMenu) return 'Destination actuelle de l’histoire';
+  if (autoNextEffective) return 'Lecture de l’histoire suivante';
   const inheritedTargetId = parentMenu.returnAfterPlay ?? null;
   if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) {
-    return `Réglage par défaut (${parentMenu.name || 'ce dossier'})`;
+    return `Retour vers ${parentMenu.name || 'ce dossier'}`;
   }
-  if (isRootNavigationTarget(inheritedTargetId)) return `Réglage par défaut (${NAV_ROOT_LABEL})`;
+  if (isRootNavigationTarget(inheritedTargetId)) return `Retour vers ${NAV_ROOT_LABEL}`;
   const name = targetNameById(allMenus, allStories, resolveNavigationTargetId(inheritedTargetId, parentMenu.id));
-  return `Réglage par défaut (${name})`;
+  return `Retour vers ${name}`;
 }
 
 function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffective, isLastInMenu) {
@@ -170,7 +171,7 @@ function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, a
     lines.push(`Fin d'histoire : message audio, puis OK vers ${promptOkTargetName || returnTargetName || 'la destination configurée'}`);
     lines.push(`Accueil sur le message audio : ${node?.afterPlaybackPromptHomeNone ? 'aucune transition' : `Accueil vers ${promptHomeTargetName || promptOkTargetName || 'la destination configurée'}`}`);
   } else if (hasEndNode) {
-    lines.push("Fin d'histoire : passage par le nœud de fin du pack");
+    lines.push("Fin d'histoire : passage par le message de fin du pack");
   } else if (autoNextEffective && !isLastInMenu) {
     lines.push("Fin d'histoire : enchaînement automatique sur l'histoire suivante");
   } else {
@@ -218,7 +219,7 @@ export const StoryEditor = memo(function StoryEditor({
   }
 
   async function handleStoryAudioPick(path) {
-    const autoName = path.split(/[\\/]/).pop()
+    const autoName = basename(path)
       .replace(/\.(mp3|ogg|wav|m4a|webm)$/i, '')
       .replace(/[-_]/g, ' ')
       .trim();

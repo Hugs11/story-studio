@@ -5,8 +5,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { StatusDot } from '../common/Badge';
 import { Tooltip } from '../common/Tooltip';
 import {
-  IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon, IconStop,
-  IconReturn, IconSquareFilled, IconDiamond, IconArrowRight,
+  IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon,
+  IconReturn, IconStop, IconDiamond, IconArrowRight,
   ICON_BY_KEY,
 } from './TreeIcons';
 import './TreePanel.css';
@@ -16,17 +16,15 @@ const BADGE_ICON_BY_KIND = {
   'prompt-return': <IconReturn />,
   home: <IconHouse />,
   'home-none': <IconHouse />,
-  'end-node': <IconSquareFilled />,
+  'end-node': <IconStop />,
   'end-night': <IconMoon />,
   'end-node-home': <IconHouse />,
   'end-night-home': <IconHouse />,
-  'prompt-home': <IconHouse />,
-  'prompt-home-none': <IconHouse />,
   graph: <IconDiamond />,
   continuation: <IconArrowRight />,
 };
 
-const MAX_VISIBLE_NAVIGATION_BADGES = 2;
+const MAX_NAVIGATION_BADGE_SLOTS = 2;
 
 function getTreeIndent(level) {
   const safeLevel = Math.max(level, 0);
@@ -47,13 +45,14 @@ function TreeNodeInner({
   dragging,
   containerDroppableId,
   navigationBadges = [],
+  showNavigationBadgeColumn = false,
   expanded,
   onToggleExpand,
   childCount,
   color,
   onSelect,
   onContextMenu,
-  dropInfo,
+  dropTarget,
   suppressSortAnimation,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -80,20 +79,17 @@ function TreeNodeInner({
   };
 
   const isDragActive = dragging && !isDragging;
-  const isMyTarget = isDragActive && (
-    dropInfo?.targetId === id ||
-    (type === 'root' && dropInfo?.targetId === null && dropInfo?.isContainer)
-  );
-
-  const showInsertBefore = !!(isMyTarget && !dropInfo.isContainer && dropInfo.position === 'before');
-  const showInsertAfter = !!(isMyTarget && !dropInfo.isContainer && dropInfo.position === 'after');
-  const showDropInside = !!(isMyTarget && dropInfo.position === 'inside' &&
-    (dropInfo.isContainer || type === 'menu' || type === 'root'));
+  const showInsertBefore = isDragActive && dropTarget === 'before';
+  const showInsertAfter = isDragActive && dropTarget === 'after';
+  const showDropInside = isDragActive && dropTarget === 'inside';
 
   const insertClass = showInsertBefore ? 'insert-before' : showInsertAfter ? 'insert-after' : '';
   const hasToggle = type === 'menu';
-  const visibleNavigationBadges = navigationBadges.slice(0, MAX_VISIBLE_NAVIGATION_BADGES);
-  const hiddenNavigationBadges = navigationBadges.slice(MAX_VISIBLE_NAVIGATION_BADGES);
+  const visibleBadgeCount = navigationBadges.length > MAX_NAVIGATION_BADGE_SLOTS
+    ? MAX_NAVIGATION_BADGE_SLOTS - 1
+    : MAX_NAVIGATION_BADGE_SLOTS;
+  const visibleNavigationBadges = navigationBadges.slice(0, visibleBadgeCount);
+  const hiddenNavigationBadges = navigationBadges.slice(visibleBadgeCount);
   const hasHiddenNavigationBadges = hiddenNavigationBadges.length > 0;
   const hiddenNavigationBadgeTitle = hasHiddenNavigationBadges
     ? hiddenNavigationBadges.map((badge) => badge.title).join(' · ')
@@ -148,10 +144,7 @@ function TreeNodeInner({
         <span className="tree-chevron-spacer" />
       )}
       <div className="tree-item-body">
-        <div
-          className={`ti-badges${hasHiddenNavigationBadges ? ' is-compact' : ''}`}
-          style={navigationBadges.length === 0 && type !== 'story' && type !== 'end-node' ? { width: 0 } : undefined}
-        >
+        <div className={`ti-badges${showNavigationBadgeColumn ? ' has-column' : ''}${navigationBadges.length === 0 ? ' is-empty' : ''}${hasHiddenNavigationBadges ? ' is-compact' : ''}`}>
           {visibleNavigationBadges.map((badge) => (
             <Tooltip key={badge.key} text={badge.title}>
               <span
@@ -197,6 +190,7 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.status === next.status
   && prev.dragging === next.dragging
   && prev.containerDroppableId === next.containerDroppableId
+  && prev.showNavigationBadgeColumn === next.showNavigationBadgeColumn
   && prev.navigationBadges === next.navigationBadges
   && prev.expanded === next.expanded
   && prev.onToggleExpand === next.onToggleExpand
@@ -204,6 +198,6 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.color === next.color
   && prev.onSelect === next.onSelect
   && prev.onContextMenu === next.onContextMenu
-  && prev.dropInfo === next.dropInfo
+  && prev.dropTarget === next.dropTarget
   && prev.suppressSortAnimation === next.suppressSortAnimation
 ));

@@ -1,16 +1,16 @@
-const STORAGE_KEY = 'storyStudio.verboseLogging';
+import { KEYS, read as readSetting, write as writeSetting, remove as removeSetting } from './persistentSettings';
 
 export function loadVerboseLoggingPref() {
   if (typeof window === 'undefined') return false;
-  try { return window.localStorage.getItem(STORAGE_KEY) === '1'; }
+  try { return readSetting(KEYS.VERBOSE_LOGGING) === '1'; }
   catch { return false; }
 }
 
 export function saveVerboseLoggingPref(enabled) {
   if (typeof window === 'undefined') return;
   try {
-    if (enabled) window.localStorage.setItem(STORAGE_KEY, '1');
-    else window.localStorage.removeItem(STORAGE_KEY);
+    if (enabled) writeSetting(KEYS.VERBOSE_LOGGING, '1');
+    else removeSetting(KEYS.VERBOSE_LOGGING);
   } catch { /* ignore */ }
 }
 

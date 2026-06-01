@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
+import { basename } from '../../utils/fileUtils';
 import { useProjectContext } from '../../store/ProjectContext';
+import { KEYS, read, write } from '../../store/persistentSettings';
+import { useErrorDialog } from '../common/Dialog';
 import './AudioAssemblyModal.css';
-
-function basename(path) {
-  return String(path || '').replace(/\\/g, '/').replace(/.*\//, '');
-}
 
 function fileStem(name) {
   const dot = name.lastIndexOf('.');
@@ -43,6 +42,7 @@ export function AudioAssemblyModal({
   onDeleteMedia,
 }) {
   const { workspaceDir } = useProjectContext();
+  const { showErrorDialog } = useErrorDialog();
   const initialItems = useMemo(
     () => items.map((item) => ({
       id: item.id || item.path,
@@ -53,19 +53,18 @@ export function AudioAssemblyModal({
     [items],
   );
   const [orderedItems, setOrderedItems] = useState(initialItems);
-  const savedOpts = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('audio-assembly-opts') ?? 'null') ?? {}; } catch { return {}; }
-  }, []);
+  const savedOpts = useMemo(
+    () => read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {},
+    [],
+  );
   const [addSilence, setAddSilence] = useState(() => savedOpts.addSilence ?? false);
   const [silenceSec, setSilenceSec] = useState(() => savedOpts.silenceSec ?? '0.5');
   const [deleteOriginals, setDeleteOriginals] = useState(() => savedOpts.deleteOriginals ?? false);
-  const [deleteDisk, setDeleteDisk] = useState(() => savedOpts.deleteDisk ?? false);
+  const [deleteDisk, setDeleteDisk] = useState(() => !!savedOpts.deleteOriginals && !!savedOpts.deleteDisk);
 
   function saveOpts(patch) {
-    try {
-      const current = JSON.parse(localStorage.getItem('audio-assembly-opts') ?? '{}');
-      localStorage.setItem('audio-assembly-opts', JSON.stringify({ ...current, ...patch }));
-    } catch {}
+    const current = read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {};
+    write(KEYS.AUDIO_ASSEMBLY_OPTIONS, { ...current, ...patch }, { serialize: JSON.stringify });
   }
   const [outputFileName, setOutputFileName] = useState(() => {
     const base = defaultOutputName(initialItems);
@@ -204,7 +203,11 @@ export function AudioAssemblyModal({
         const header = diskErrors.length === 1
           ? "Le fichier assemblé a été créé, mais la suppression disque a été refusée pour :"
           : `Le fichier assemblé a été créé, mais la suppression disque a été refusée pour ${diskErrors.length} fichiers :`;
-        window.alert(`${header}\n\n${diskErrors.join('\n\n')}\n\nLes références projet ont été retirées, mais les fichiers d'origine restent sur le disque (hors workspace géré par Story Studio).`);
+        showErrorDialog({
+          title: 'Suppression disque refusée',
+          message: `${header}\n\n${diskErrors.join('\n\n')}\n\nLes références projet ont été retirées, mais les fichiers d'origine restent sur le disque (hors workspace géré par Story Studio).`,
+          variant: 'warning',
+        });
       }
     } catch (e) {
       setError(readableError(e));
@@ -287,7 +290,12 @@ export function AudioAssemblyModal({
               <input
                 type="checkbox"
                 checked={deleteOriginals}
-                onChange={(e) => { setDeleteOriginals(e.target.checked); saveOpts({ deleteOriginals: e.target.checked }); if (!e.target.checked) { setDeleteDisk(false); saveOpts({ deleteDisk: false }); } }}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setDeleteOriginals(checked);
+                  if (!checked) setDeleteDisk(false);
+                  saveOpts({ deleteOriginals: checked, ...(checked ? {} : { deleteDisk: false }) });
+                }}
                 disabled={submitting}
               />
               <span>Supprimer les fichiers originaux du projet</span>
@@ -296,7 +304,10 @@ export function AudioAssemblyModal({
               <input
                 type="checkbox"
                 checked={deleteDisk}
-                onChange={(e) => { setDeleteDisk(e.target.checked); saveOpts({ deleteDisk: e.target.checked }); }}
+                onChange={(e) => {
+                  setDeleteDisk(e.target.checked);
+                  saveOpts({ deleteDisk: e.target.checked });
+                }}
                 disabled={submitting || !deleteOriginals}
               />
               <span>Supprimer aussi du disque dur</span>
