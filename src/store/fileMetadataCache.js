@@ -1,6 +1,8 @@
 import { exists, stat } from '@tauri-apps/plugin-fs';
+import { stripWindowsLongPathPrefix } from '../utils/fileUtils';
 
 export const FILE_REFRESH_THROTTLE_MS = 1500;
+const PATH_QUERY_TIMEOUT_MS = 4000;
 
 const pathSnapshotCache = new Map();
 const inflightPathSnapshots = new Map();
@@ -8,9 +10,7 @@ let statPermissionAvailable = true;
 
 function normalizePath(path) {
   if (typeof path !== 'string') return '';
-  const trimmed = path.trim();
-  if (trimmed.startsWith('\\\\?\\UNC\\')) return `\\\\${trimmed.slice(8)}`;
-  return trimmed.startsWith('\\\\?\\') ? trimmed.slice(4) : trimmed;
+  return stripWindowsLongPathPrefix(path.trim());
 }
 
 function normalizeTimeMs(value) {
@@ -38,7 +38,15 @@ function isFresh(snapshot, maxAgeMs) {
 
 async function queryPathSnapshot(path) {
   try {
-    const pathExists = await exists(path);
+    let existsTimeoutId = null;
+    const pathExists = await Promise.race([
+      exists(path),
+      new Promise((_, reject) => {
+        existsTimeoutId = setTimeout(() => reject(new Error('fs.exists timeout')), PATH_QUERY_TIMEOUT_MS);
+      }),
+    ]).finally(() => {
+      if (existsTimeoutId) clearTimeout(existsTimeoutId);
+    });
     if (!pathExists) {
       return buildSnapshot(path, null, false);
     }
@@ -46,7 +54,15 @@ async function queryPathSnapshot(path) {
       return buildSnapshot(path, null, true);
     }
     try {
-      const info = await stat(path);
+      let statTimeoutId = null;
+      const info = await Promise.race([
+        stat(path),
+        new Promise((_, reject) => {
+          statTimeoutId = setTimeout(() => reject(new Error('fs.stat timeout')), PATH_QUERY_TIMEOUT_MS);
+        }),
+      ]).finally(() => {
+        if (statTimeoutId) clearTimeout(statTimeoutId);
+      });
       return buildSnapshot(path, info, true);
     } catch (error) {
       if (String(error).includes('fs.stat not allowed')) {

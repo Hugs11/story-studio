@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { openPath } from '@tauri-apps/plugin-opener';
+import { logger } from '../../utils/logger';
+import { basename } from '../../utils/fileUtils';
 import './RenderQueuePanel.css';
 
 const STATUS_LABEL = {
@@ -7,6 +9,7 @@ const STATUS_LABEL = {
   running: 'Génération…',
   done: 'Terminé',
   error: 'Erreur',
+  canceled: 'Annulé',
 };
 const PANEL_DEFAULT_HEIGHT = 340;
 const PANEL_MIN_HEIGHT = 120;
@@ -25,7 +28,7 @@ function formatTime(ts) {
   return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function JobCard({ job, expanded, onToggle, onRemove }) {
+function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
   const logsEndRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState('idle');
   const [openFolderError, setOpenFolderError] = useState(false);
@@ -41,7 +44,7 @@ function JobCard({ job, expanded, onToggle, onRemove }) {
     if (openFolderResetRef.current) clearTimeout(openFolderResetRef.current);
   }, []);
 
-  const folderName = job.outputFolder?.split(/[\\/]/).pop() ?? job.outputFolder;
+  const folderName = basename(job.outputFolder);
   const allText = [...job.logs, ...(job.errorMessage ? [job.errorMessage] : [])].join('\n');
 
   async function handleCopyLogs() {
@@ -65,7 +68,7 @@ function JobCard({ job, expanded, onToggle, onRemove }) {
       setOpenFolderError(true);
       if (openFolderResetRef.current) clearTimeout(openFolderResetRef.current);
       openFolderResetRef.current = setTimeout(() => setOpenFolderError(false), 2000);
-      console.warn("Impossible d'ouvrir le dossier de rendu", error);
+      logger.warn('render-queue:open-folder-error', error);
     }
   }
 
@@ -80,9 +83,17 @@ function JobCard({ job, expanded, onToggle, onRemove }) {
         <div className="rq-job-right">
           <span className={`rq-badge rq-badge-${job.status}`}>
             {job.status === 'running' && <span className="rq-spinner" />}
-            {STATUS_LABEL[job.status]}
+            {job.cancelRequested ? 'Annulation…' : STATUS_LABEL[job.status]}
           </span>
-          {(job.status === 'done' || job.status === 'error') && (
+          {(job.status === 'pending' || job.status === 'running') && (
+            <button
+              className="btn-xs rq-cancel-btn"
+              title={job.status === 'pending' ? 'Annuler ce rendu' : 'Annuler la génération en cours'}
+              disabled={job.cancelRequested}
+              onClick={(e) => { e.stopPropagation(); onCancel?.(job.id); }}
+            >Annuler</button>
+          )}
+          {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
             <button
               className="btn-xs rq-remove-btn"
               title="Retirer"
@@ -113,14 +124,14 @@ function JobCard({ job, expanded, onToggle, onRemove }) {
                 {copyStatus === 'copied' ? 'Copié ✓' : copyStatus === 'error' ? 'Erreur' : 'Copier logs'}
               </button>
             )}
-            {(job.status === 'done' || job.status === 'error') && (
+            {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
               <button className="btn-xs" onClick={handleOpenFolder}>
                 {openFolderError ? 'Erreur' : 'Ouvrir dossier'}
               </button>
             )}
             {job.status === 'done' && job.resultPath && (
               <span className="rq-result-path" title={job.resultPath}>
-                → {job.resultPath.split(/[\\/]/).pop()}
+                → {basename(job.resultPath)}
               </span>
             )}
           </div>
@@ -130,7 +141,7 @@ function JobCard({ job, expanded, onToggle, onRemove }) {
   );
 }
 
-export function RenderQueuePanel({ jobs, onRemove, onClearDone, onClose, embedded = false }) {
+export function RenderQueuePanel({ jobs, onRemove, onCancel, onClearDone, onClose, embedded = false }) {
   const [expandedId, setExpandedId] = useState(null);
   const [panelHeight, setPanelHeight] = useState(PANEL_DEFAULT_HEIGHT);
   const resizingRef = useRef(false);
@@ -182,7 +193,7 @@ export function RenderQueuePanel({ jobs, onRemove, onClearDone, onClose, embedde
   }
 
   const activeCount = jobs.filter(j => j.status === 'pending' || j.status === 'running').length;
-  const doneCount = jobs.filter(j => j.status === 'done' || j.status === 'error').length;
+  const doneCount = jobs.filter(j => j.status === 'done' || j.status === 'error' || j.status === 'canceled').length;
 
   return (
     <div className={`rq-panel${embedded ? ' is-embedded' : ''}`} style={{ '--rq-panel-height': `${panelHeight}px` }}>
@@ -220,6 +231,7 @@ export function RenderQueuePanel({ jobs, onRemove, onClearDone, onClose, embedde
               expanded={expandedId === job.id}
               onToggle={() => setExpandedId(id => id === job.id ? null : job.id)}
               onRemove={onRemove}
+              onCancel={onCancel}
             />
           ))
         )}

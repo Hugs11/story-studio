@@ -528,3 +528,106 @@ fn convert_fs_pack_directory_to_zip(
 ) -> Result<(), String> {
     crate::support::fs_pack_reader::read_fs_pack_to_studio_zip(pack_dir, output_zip, fallback_title)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_import_dir(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "story_studio_imported_pack_test_{}_{}_{}",
+            name,
+            std::process::id(),
+            now_millis()
+        ))
+    }
+
+    fn write_zip(path: &Path, entries: &[(&str, &[u8])]) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("create zip parent");
+        }
+        let file = fs::File::create(path).expect("create zip");
+        let mut writer = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        for (name, bytes) in entries {
+            writer.start_file(*name, options).expect("start zip file");
+            writer.write_all(bytes).expect("write zip file");
+        }
+        writer.finish().expect("finish zip");
+    }
+
+    #[test]
+    fn ensure_studio_pack_zip_returns_valid_studio_zip_source() {
+        let dir = temp_import_dir("studio_zip");
+        let zip_path = dir.join("pack.zip");
+        write_zip(
+            &zip_path,
+            &[
+                ("story.json", br#"{"title":"Pack test","stageNodes":[]}"#),
+                ("assets/image.png", b"png"),
+            ],
+        );
+
+        let resolved =
+            ensure_studio_pack_zip(zip_path.to_str().expect("zip path utf8")).expect("valid zip");
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&zip_path).expect("canonical zip")
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn ensure_studio_pack_zip_rejects_non_archive_file() {
+        let dir = temp_import_dir("non_archive");
+        fs::create_dir_all(&dir).expect("create temp dir");
+        let path = dir.join("pack.txt");
+        fs::write(&path, b"not an archive").expect("write file");
+
+        let err =
+            ensure_studio_pack_zip(path.to_str().expect("path utf8")).expect_err("reject txt");
+        assert!(err.contains("ni un ZIP ni un 7z"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn validate_existing_pack_path_accepts_7z_extension_before_conversion() {
+        let dir = temp_import_dir("seven_zip_extension");
+        fs::create_dir_all(&dir).expect("create temp dir");
+        let path = dir.join("pack.7z");
+        fs::write(&path, b"not a real 7z").expect("write fake 7z");
+
+        let resolved = validate_existing_pack_path(path.to_str().expect("path utf8"))
+            .expect("7z extension accepted before conversion");
+        assert_eq!(resolved, fs::canonicalize(&path).expect("canonical 7z"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn ensure_studio_pack_zip_rejects_zip_without_pack_shape() {
+        let dir = temp_import_dir("zip_without_story");
+        let zip_path = dir.join("pack.zip");
+        write_zip(&zip_path, &[("readme.txt", b"not a story pack")]);
+
+        let err = ensure_studio_pack_zip(zip_path.to_str().expect("zip path utf8"))
+            .expect_err("reject unrecognized zip");
+        assert!(err.contains("non reconnue") || err.contains("Aucun pack Lunii reconnu"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn archive_limits_report_explicit_errors() {
+        let err = ensure_archive_entry_count(ARCHIVE_MAX_ENTRIES + 1, Path::new("large.zip"))
+            .unwrap_err();
+        assert!(err.contains("Archive trop volumineuse"));
+
+        let err = ensure_extracted_entry_size("assets/audio.mp3", ARCHIVE_MAX_FILE_BYTES + 1)
+            .unwrap_err();
+        assert!(err.contains("Fichier trop volumineux"));
+    }
+}

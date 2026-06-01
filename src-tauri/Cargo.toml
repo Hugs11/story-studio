@@ -1,6 +1,6 @@
 [package]
 name = "story-studio"
-version = "0.9.0"
+version = "0.9.1"
 description = "Desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
@@ -32,3 +32,4 @@ sha1 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }
 uuid = { version = "1", features = ["v4"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif", "webp"] }
+rayon = "1"

@@ -2,6 +2,7 @@ import { isTauriRuntime } from './tauriRuntime';
 
 const isDev = import.meta.env.DEV;
 
+// Frontend log event names should use the `module:action` convention.
 const LEVEL_RANK = { off: 0, error: 1, warn: 2, info: 3, debug: 4, trace: 5 };
 let currentLevel = LEVEL_RANK.warn;
 
@@ -19,8 +20,10 @@ async function getPluginLog() {
   if (!isTauriRuntime()) return null;
   if (!pluginLogPromise) {
     pluginLogPromise = import('@tauri-apps/plugin-log').catch((err) => {
+      // reason: fallback console quand le plugin Tauri est absent (mode web / dev hors Tauri) ;
+      // c'est notre seul recours puisque logger lui-meme ne peut pas se reappeler ici.
       // eslint-disable-next-line no-console
-      console.warn('[logger] tauri-plugin-log indisponible', err);
+      console.warn('logger:plugin-unavailable', err);
       return null;
     });
   }
@@ -60,13 +63,13 @@ export function installGlobalErrorHandlers() {
   if (typeof window === 'undefined') return () => {};
   function onError(event) {
     const location = `${event.filename || 'unknown'}:${event.lineno || 0}:${event.colno || 0}`;
-    if (event.error?.stack) logger.error(`Uncaught error at ${location}: ${event.error.stack}`);
-    else logger.error(`Uncaught error at ${location}: ${event.message}`);
+    if (event.error?.stack) logger.error(`runtime:uncaught-error location=${location} stack=${event.error.stack}`);
+    else logger.error(`runtime:uncaught-error location=${location} message=${event.message}`);
   }
   function onRejection(event) {
     const reason = event.reason;
-    if (reason?.stack) logger.error(`Unhandled rejection: ${reason.stack}`);
-    else logger.error(`Unhandled rejection: ${stringify([reason])}`);
+    if (reason?.stack) logger.error(`runtime:unhandled-rejection stack=${reason.stack}`);
+    else logger.error(`runtime:unhandled-rejection reason=${stringify([reason])}`);
   }
   window.addEventListener('error', onError);
   window.addEventListener('unhandledrejection', onRejection);

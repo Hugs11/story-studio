@@ -22,8 +22,9 @@ pub fn save_recording(
 #[tauri::command]
 pub fn delete_file(path: String, save_path: Option<String>) -> Result<(), String> {
     log::info!(target: "files", "delete_file: '{}'", path);
-    project_files::delete_file(&path, save_path.as_deref())
-        .inspect_err(|err| log::error!(target: "files", "delete_file failed for '{}': {}", path, err))
+    project_files::delete_file(&path, save_path.as_deref()).inspect_err(
+        |err| log::error!(target: "files", "delete_file failed for '{}': {}", path, err),
+    )
 }
 
 #[tauri::command]
@@ -70,16 +71,18 @@ pub fn scan_unused_project_files(
 ) -> Result<project_files::CleanupScanResult, String> {
     log::info!(target: "files",
         "scan_unused_project_files: savePath='{}' usedCount={}", save_path, used_paths.len());
-    project_files::scan_unused_files(&save_path, &used_paths)
-        .inspect_err(|err| log::error!(target: "files", "scan_unused_project_files failed: {}", err))
+    project_files::scan_unused_files(&save_path, &used_paths).inspect_err(
+        |err| log::error!(target: "files", "scan_unused_project_files failed: {}", err),
+    )
 }
 
 #[tauri::command]
 pub fn delete_unused_project_files(paths: Vec<String>, save_path: String) -> Result<usize, String> {
     log::info!(target: "files",
         "delete_unused_project_files: {} file(s) under '{}'", paths.len(), save_path);
-    project_files::delete_unused_files(&paths, &save_path)
-        .inspect_err(|err| log::error!(target: "files", "delete_unused_project_files failed: {}", err))
+    project_files::delete_unused_files(&paths, &save_path).inspect_err(
+        |err| log::error!(target: "files", "delete_unused_project_files failed: {}", err),
+    )
 }
 
 #[tauri::command]
@@ -93,8 +96,16 @@ pub async fn trim_audio(
     log::info!(target: "files",
         "trim_audio: input='{}' start={}s end={}s", input_path, start_sec, end_sec);
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::trim_audio(&input_path, start_sec, end_sec, save_path.as_deref(), workspace_dir.as_deref())
-            .inspect_err(|err| log::error!(target: "files", "trim_audio failed for '{}': {}", input_path, err))
+        project_files::trim_audio(
+            &input_path,
+            start_sec,
+            end_sec,
+            save_path.as_deref(),
+            workspace_dir.as_deref(),
+        )
+        .inspect_err(
+            |err| log::error!(target: "files", "trim_audio failed for '{}': {}", input_path, err),
+        )
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -111,8 +122,16 @@ pub async fn cut_audio(
     log::info!(target: "files",
         "cut_audio: input='{}' cut={}..{}s", input_path, cut_start, cut_end);
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::cut_audio(&input_path, cut_start, cut_end, save_path.as_deref(), workspace_dir.as_deref())
-            .inspect_err(|err| log::error!(target: "files", "cut_audio failed for '{}': {}", input_path, err))
+        project_files::cut_audio(
+            &input_path,
+            cut_start,
+            cut_end,
+            save_path.as_deref(),
+            workspace_dir.as_deref(),
+        )
+        .inspect_err(
+            |err| log::error!(target: "files", "cut_audio failed for '{}': {}", input_path, err),
+        )
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -153,19 +172,23 @@ pub async fn preview_audio_edit(
     let input_for_log = input_path.clone();
     let mode_for_log = mode.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::preview_audio_edit(
-            &input_path,
-            &mode,
-            start_sec,
-            end_sec,
-            save_path.as_deref(),
-            workspace_dir.as_deref(),
-            fade_in_sec,
-            fade_out_sec,
-            cut_fade_sec,
-        )
-        .inspect_err(|err| log::error!(target: "files",
-            "preview_audio_edit failed (mode={}) for '{}': {}", mode_for_log, input_for_log, err))
+        project_files::preview_audio_edit(project_files::AudioEditRequest {
+            input_path: &input_path,
+            save_path: save_path.as_deref(),
+            workspace_dir: workspace_dir.as_deref(),
+            params: project_files::AudioEditParams {
+                mode: &mode,
+                start_sec,
+                end_sec,
+                fade_in_sec,
+                fade_out_sec,
+                cut_fade_sec,
+            },
+        })
+        .inspect_err(|err| {
+            log::error!(target: "files",
+            "preview_audio_edit failed (mode={}) for '{}': {}", mode_for_log, input_for_log, err)
+        })
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -190,19 +213,23 @@ pub async fn apply_audio_edit(
     let input_for_log = input_path.clone();
     let mode_for_log = mode.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::apply_audio_edit(
-            &input_path,
-            &mode,
-            start_sec,
-            end_sec,
-            save_path.as_deref(),
-            workspace_dir.as_deref(),
-            fade_in_sec,
-            fade_out_sec,
-            cut_fade_sec,
-        )
-        .inspect_err(|err| log::error!(target: "files",
-            "apply_audio_edit failed (mode={}) for '{}': {}", mode_for_log, input_for_log, err))
+        project_files::apply_audio_edit(project_files::AudioEditRequest {
+            input_path: &input_path,
+            save_path: save_path.as_deref(),
+            workspace_dir: workspace_dir.as_deref(),
+            params: project_files::AudioEditParams {
+                mode: &mode,
+                start_sec,
+                end_sec,
+                fade_in_sec,
+                fade_out_sec,
+                cut_fade_sec,
+            },
+        })
+        .inspect_err(|err| {
+            log::error!(target: "files",
+            "apply_audio_edit failed (mode={}) for '{}': {}", mode_for_log, input_for_log, err)
+        })
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -219,9 +246,16 @@ pub async fn commit_audio_preview(
         "commit_audio_preview: input='{}' preview='{}'", input_path, preview_path);
     let input_for_log = input_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::commit_audio_preview(&input_path, &preview_path, save_path.as_deref(), workspace_dir.as_deref())
-            .inspect_err(|err| log::error!(target: "files",
-                "commit_audio_preview failed for '{}': {}", input_for_log, err))
+        project_files::commit_audio_preview(
+            &input_path,
+            &preview_path,
+            save_path.as_deref(),
+            workspace_dir.as_deref(),
+        )
+        .inspect_err(|err| {
+            log::error!(target: "files",
+                "commit_audio_preview failed for '{}': {}", input_for_log, err)
+        })
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?
@@ -332,17 +366,22 @@ pub fn scan_import_folder(folder_path: String) -> Result<ScanEntry, String> {
 }
 
 fn collect_media_files_recursive(dir: &std::path::Path, out: &mut Vec<String>) {
-    let Ok(read_dir) = std::fs::read_dir(dir) else { return };
-    let mut entries: Vec<std::path::PathBuf> = read_dir
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .collect();
+    let Ok(read_dir) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut entries: Vec<std::path::PathBuf> =
+        read_dir.filter_map(|e| e.ok()).map(|e| e.path()).collect();
     entries.sort_by(|a, b| {
         a.file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_lowercase()
-            .cmp(&b.file_name().unwrap_or_default().to_string_lossy().to_lowercase())
+            .cmp(
+                &b.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase(),
+            )
     });
     for path in entries {
         if path.is_dir() {

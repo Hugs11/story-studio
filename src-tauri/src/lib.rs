@@ -65,6 +65,9 @@ pub fn run() {
     log::set_max_level(log::LevelFilter::Warn);
 
     tauri::Builder::default()
+        .manage(std::sync::Arc::new(
+            commands::generation::GenerationCancelState::default(),
+        ))
         .plugin(build_log_plugin())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -83,8 +86,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::generation::generate_pack,
-            commands::generation::generate_pack_native_dry_run,
-            commands::generation::generate_pack_native_v1,
+            commands::generation::cancel_generate_pack,
             commands::files::save_recording,
             commands::files::delete_file,
             commands::files::delete_workspace_media_file,
@@ -117,7 +119,6 @@ pub fn run() {
             commands::comfyui::comfyui_download_output,
             commands::media_probe::probe_media_files,
             commands::diagnostics::set_log_level,
-            commands::diagnostics::get_log_level,
             commands::diagnostics::get_current_log_file
         ])
         .run(tauri::generate_context!())

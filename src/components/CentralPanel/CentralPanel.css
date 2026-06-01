@@ -758,6 +758,102 @@
   max-width: 100%;
 }
 
+.after-play-main-row,
+.after-play-destination-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.after-play-intro,
+.after-play-destination-copy {
+  min-width: 0;
+}
+
+.after-play-question {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.after-play-answer,
+.after-play-muted {
+  margin-top: 3px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.after-play-destination-row {
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border-secondary) 55%, transparent);
+}
+
+.after-play-destination-select {
+  width: min(260px, 100%);
+  flex-shrink: 0;
+}
+
+.after-play-route {
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.after-play-route-title {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.after-play-route-list {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.after-play-route-chip {
+  min-width: 0;
+  max-width: min(360px, 100%);
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 88%, transparent);
+  background: color-mix(in srgb, var(--color-background-secondary) 82%, transparent);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.after-play-route-chip > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.after-play-route-icon,
+.after-play-route-icon svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.after-play-route-arrow {
+  color: var(--color-text-tertiary);
+  font-size: 17px;
+  line-height: 1;
+}
+
 .story-end-mode-btn {
   min-height: 28px;
   padding: 0 10px;
@@ -808,6 +904,15 @@
   }
 
   .story-end-mode {
+    width: 100%;
+  }
+
+  .after-play-main-row,
+  .after-play-destination-row {
+    flex-direction: column;
+  }
+
+  .after-play-destination-select {
     width: 100%;
   }
 }

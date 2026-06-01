@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
-import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../store/useFileDialog';
+import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
 import { THEME_OPTIONS } from '../store/themePreference';
 import './OptionsTab.css';
 

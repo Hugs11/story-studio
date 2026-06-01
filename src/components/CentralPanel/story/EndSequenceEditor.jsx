@@ -1,5 +1,6 @@
 import { AudioField } from '../AudioField';
 import { ImageField } from '../ImageField';
+import { useErrorDialog } from '../../common/Dialog';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import {
@@ -19,6 +20,8 @@ export function EndSequenceEditor({
   allStories,
   onUpdate,
 }) {
+  const { showConfirmDialog } = useErrorDialog();
+
   function updateSequence(nextSteps) {
     onUpdate({ afterPlaybackSequence: nextSteps.map((s, i) => normalizeSequenceStep(s, i)) });
   }
@@ -44,10 +47,15 @@ export function EndSequenceEditor({
     updateSequence(next);
   }
 
-  function deleteStep(index) {
+  async function deleteStep(index) {
     const step = steps[index];
     if (!step) return;
-    if (!window.confirm(`Supprimer l'étape "${step.name || `Étape ${index + 1}`}" ?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Confirmer la suppression',
+      message: `Supprimer l'étape "${step.name || `Étape ${index + 1}`}" ?`,
+      okLabel: 'Supprimer',
+    });
+    if (!confirmed) return;
     updateSequence(steps.filter((_, i) => i !== index));
   }
 
@@ -193,7 +201,7 @@ export function EndSequenceEditor({
                 <div className="field-row" style={{ marginBottom: 0 }}>
                   <div style={{ flex: 1 }}>
                     <span className="field-label">Bouton Accueil</span>
-                    <div className="sequence-help">Par défaut, suit la destination de fin d'histoire.</div>
+                    <div className="sequence-help">Suit la destination de fin d'histoire si rien n'est choisi ici.</div>
                   </div>
                   <NavigationTargetSelect
                     value={homeSelectValue}

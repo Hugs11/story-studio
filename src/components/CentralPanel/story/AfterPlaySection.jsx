@@ -4,6 +4,8 @@ import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import {
   decodeNavigationStoryId,
+  isNextStoryNavigationTarget,
+  isRootNavigationTarget,
   isStoryHomeStepNavigationTarget,
   isStoryNavigationTarget,
   isStoryPlayNavigationTarget,
@@ -11,6 +13,7 @@ import {
 import {
   getDefaultPackEntryDestination,
   getGeneratedStoryNavigation,
+  resolveGeneratedTargetForStory,
 } from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
@@ -22,18 +25,68 @@ import {
   normalizeSequenceStep,
 } from './storyUtils';
 import { EndSequenceEditor } from './EndSequenceEditor';
-import { FolderOpen, Moon, Music } from '../../icons/LucideLocal';
+import { CircleStop, Pause } from '../../icons/LucideLocal';
+import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
+import { useErrorDialog } from '../../common/Dialog';
+import { pathKey } from '../../../utils/fileUtils';
 
-function mediaPathKey(value) {
-  return typeof value === 'string'
-    ? value.trim().replace(/^\\\\\?\\/, '').replace(/\\/g, '/').toLowerCase()
-    : '';
+function destinationHintLabel(label) {
+  if (!label) return null;
+  return String(label)
+    .replace(/^Retour vers /, '')
+    .replace(/^Lecture de /, '')
+    .trim();
 }
 
-function defaultDestinationHintLabel(label) {
-  if (!label) return null;
-  const match = String(label).match(/^Réglage par défaut \((.*)\)$/);
-  return match?.[1] || label;
+function RouteChip({ icon = null, children }) {
+  return (
+    <span className="after-play-route-chip">
+      {icon ? <span className="after-play-route-icon">{icon}</span> : null}
+      <span>{children}</span>
+    </span>
+  );
+}
+
+function RouteArrow() {
+  return <span className="after-play-route-arrow" aria-hidden="true">→</span>;
+}
+
+function RouteTargetIcon({ type, nightMode = false }) {
+  if (type === 'story') return <IconStory />;
+  if (type === 'zip') return <IconArchive />;
+  if (type === 'root') return <IconHouse />;
+  if (type === 'end-node') return nightMode ? <IconMoon /> : <IconStop />;
+  return <IconFolderOpen />;
+}
+
+function routeTypeFromTarget(target, project) {
+  if (!target) return 'menu';
+  if (isStoryNavigationTarget(target) || isNextStoryNavigationTarget(target)) return 'story';
+  if (isRootNavigationTarget(target)) {
+    return getDefaultPackEntryDestination(project)?.type || 'root';
+  }
+  return 'menu';
+}
+
+function routeDestinationFromTarget(targetId, project, allMenus, allStories) {
+  if (!targetId) return null;
+  if (targetId === 'root') {
+    const defaultDest = getDefaultPackEntryDestination(project);
+    if (!defaultDest) return { name: NAV_ROOT_LABEL, type: 'menu' };
+    return { name: defaultDest.name, type: defaultDest.type };
+  }
+  if (isStoryNavigationTarget(targetId)) {
+    const storyId = decodeNavigationStoryId(targetId);
+    const story = allStories.find((s) => s.id === storyId);
+    const prefix = isStoryPlayNavigationTarget(targetId)
+      ? 'Lecture directe - '
+      : isStoryHomeStepNavigationTarget(targetId)
+        ? 'Retour de fin - '
+        : '';
+    return { name: `${prefix}${story?.name ?? 'Histoire'}`, type: 'story' };
+  }
+  const menu = allMenus.find((m) => m.id === targetId);
+  return menu ? { name: menu.name, type: 'menu' } : null;
 }
 
 export function AfterPlaySection({
@@ -45,49 +98,25 @@ export function AfterPlaySection({
   inheritedReturnLabel,
   onUpdate,
 }) {
+  const { showConfirmDialog } = useErrorDialog();
   const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode);
   const hasPrompt = !!node?.afterPlaybackPromptAudio;
   const usesGlobalEndNodeAudio = !!(
     hasEndNode
     && hasPrompt
-    && mediaPathKey(node.afterPlaybackPromptAudio)
-    && mediaPathKey(node.afterPlaybackPromptAudio) === mediaPathKey(project?.nightModeAudio)
+    && pathKey(node.afterPlaybackPromptAudio)
+    && pathKey(node.afterPlaybackPromptAudio) === pathKey(project?.nightModeAudio)
   );
   const afterPlaybackSequence = (node.afterPlaybackSequence ?? []).map(normalizeSequenceStep);
   const afterPlaybackHomeStep = node.afterPlaybackHomeStep
     ? normalizeSequenceStep(node.afterPlaybackHomeStep, 0)
     : null;
 
-  // Quand l'histoire passe par le nœud de fin, on calcule sa destination finale
-  // réellement générée pour cette histoire précise. On utilise `effectiveTargetId`
-  // qui reflète le fallback Rust `compute_night_bridge_targets` quand
-  // `nightModeReturn` est vide (retombée sur le retour propre de l'histoire).
-  const endNodeFinalDestination = (() => {
-    if (!hasEndNode || node?.type !== 'story') return null;
-    const navigation = getGeneratedStoryNavigation(node, parentMenu, project, project?.rootEntries ?? []);
-    if (!navigation.endNodeReturn.isActive) return null;
-    const targetId = navigation.endNodeReturn.effectiveTargetId;
-    if (!targetId) return null;
-    if (targetId === 'root') {
-      const defaultDest = getDefaultPackEntryDestination(project);
-      if (!defaultDest) return { name: NAV_ROOT_LABEL, type: 'menu' };
-      return { name: defaultDest.name, type: defaultDest.type };
-    }
-    if (isStoryNavigationTarget(targetId)) {
-      const storyId = decodeNavigationStoryId(targetId);
-      const story = allStories.find((s) => s.id === storyId);
-      const prefix = isStoryPlayNavigationTarget(targetId)
-        ? 'Lecture directe - '
-        : isStoryHomeStepNavigationTarget(targetId)
-          ? 'Retour de fin - '
-          : '';
-      return { name: `${prefix}${story?.name ?? 'Histoire'}`, type: 'story' };
-    }
-    const menu = allMenus.find((m) => m.id === targetId);
-    return menu ? { name: menu.name, type: 'menu' } : null;
-  })();
   const hasSequence = afterPlaybackSequence.length > 0;
   const hasAdvancedContent = hasPrompt || hasSequence;
+  const storyNavigation = node?.type === 'story'
+    ? getGeneratedStoryNavigation(node, parentMenu, project, project?.rootEntries ?? [])
+    : null;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSequenceEditor, setShowSequenceEditor] = useState(false);
@@ -110,26 +139,26 @@ export function AfterPlaySection({
     ? '__none__'
     : (node.afterPlaybackPromptHomeTarget ?? '');
   const promptAudioLabel = usesGlobalEndNodeAudio
-    ? 'Audio du nœud de fin'
+    ? 'Audio du message de fin'
     : hasEndNode
       ? 'Audio de remplacement'
       : 'Audio de fin';
   const promptAudioDescription = usesGlobalEndNodeAudio
-    ? "Cette histoire utilise l'audio commun défini dans le Nœud de fin du pack."
+    ? "Cette histoire utilise l'audio commun défini dans le message de fin du pack."
     : hasEndNode
-      ? "Joué à la place du nœud de fin pour cette histoire"
+      ? "Joué à la place du message de fin pour cette histoire"
       : "Joué à la fin de l'histoire";
   const addPromptTooltip = hasEndNode
-    ? "Pour cette histoire uniquement : un seul audio joué à la fin, à la place du nœud de fin du pack."
+    ? "Pour cette histoire uniquement : un seul audio joué à la fin, à la place du message de fin du pack."
     : "Un seul audio joué à la fin (ex : « Bravo, l'histoire est finie ! »)";
   const addSequenceTooltip = hasEndNode
-    ? "Pour cette histoire uniquement : plusieurs étapes audio enchaînées à la place du nœud de fin du pack."
+    ? "Pour cette histoire uniquement : plusieurs étapes audio enchaînées à la place du message de fin du pack."
     : 'Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)';
   const advancedTitle = hasEndNode
-    ? 'Personnaliser pour cette histoire'
+    ? 'Remplacer le message de fin pour cette histoire'
     : 'Réglages avancés';
   const advancedDescription = hasEndNode
-    ? "Remplacer le nœud de fin du pack par un audio spécifique pour cette histoire seulement. La plupart des packs n'en ont pas besoin."
+    ? "Par défaut, le message de fin est utilisé. Vous pouvez en mettre un spécifique à cette histoire uniquement."
     : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
   const advancedCollapsedLabel = hasEndNode ? 'Réglages avancés' : 'Configurer';
 
@@ -139,9 +168,14 @@ export function AfterPlaySection({
     setShowAdvanced(false);
   }, [node?.id]);
 
-  function clearEndAfterPlayback() {
+  async function clearEndAfterPlayback() {
     if (hasPrompt || hasSequence) {
-      if (!window.confirm('Supprimer le message de fin de cette histoire ?')) return;
+      const confirmed = await showConfirmDialog({
+        title: 'Confirmer la suppression',
+        message: 'Supprimer le message de fin de cette histoire ?',
+        okLabel: 'Supprimer',
+      });
+      if (!confirmed) return;
     }
     onUpdate({
       afterPlaybackPromptAudio: null,
@@ -179,6 +213,38 @@ export function AfterPlaySection({
   }
 
   const playbackEndMode = autoContinuationEnabled ? 'auto' : 'stay';
+  const returnDestinationLabel = destinationHintLabel(returnDestinationHint) || inheritedReturnLabel || 'la destination choisie';
+  const returnDestinationType = routeTypeFromTarget(node.returnAfterPlay, project);
+  const nightModeActive = !!project?.globalOptions?.nightMode;
+  const routeUsesEndStep = hasEndNode || hasPrompt || hasSequence;
+  const routeFinalTargetId = (() => {
+    if (!storyNavigation) return null;
+    if (hasEndNode && storyNavigation.endNodeReturn.isActive) {
+      return storyNavigation.endNodeReturn.effectiveTargetId;
+    }
+    if (hasSequence) {
+      const lastStep = afterPlaybackSequence[afterPlaybackSequence.length - 1];
+      return resolveGeneratedTargetForStory(
+        lastStep?.okTarget,
+        node,
+        parentMenu,
+        project?.rootEntries ?? [],
+        storyNavigation.directReturn.targetId,
+      );
+    }
+    if (hasPrompt) {
+      return storyNavigation.promptReturn.targetId ?? storyNavigation.directReturn.targetId;
+    }
+    return null;
+  })();
+  const routeFinalDestination = routeDestinationFromTarget(routeFinalTargetId, project, allMenus, allStories);
+  const routeFinalLabel = routeFinalDestination?.name || returnDestinationLabel;
+  const routeFinalType = routeFinalDestination?.type || returnDestinationType;
+  const routeEndStepLabel = hasSequence
+    ? 'Scénario de fin'
+    : hasPrompt && !usesGlobalEndNodeAudio
+      ? 'Message de fin personnalisé'
+      : `${project?.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`;
 
   // ─── Contenu "Message de fin" ────────────────────────────────────────────────
 
@@ -227,7 +293,7 @@ export function AfterPlaySection({
       <>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <span className="field-label">
-            {usesGlobalEndNodeAudio ? 'Message du nœud de fin importé' : 'Message audio de fin'}
+            {usesGlobalEndNodeAudio ? 'Message de fin importé' : 'Message audio de fin'}
           </span>
           <button
             type="button"
@@ -240,7 +306,7 @@ export function AfterPlaySection({
         </div>
         {hasEndNode && !usesGlobalEndNodeAudio && (
           <div className="sequence-note" style={{ marginBottom: 10 }}>
-            Cette histoire jouera ce message <strong>à la place</strong> du nœud de fin du pack.
+            Cette histoire jouera ce message <strong>à la place</strong> du message de fin du pack.
           </div>
         )}
         <AudioField
@@ -263,7 +329,7 @@ export function AfterPlaySection({
           <div className="end-simple-settings">
             {usesGlobalEndNodeAudio && (
               <div className="sequence-note" style={{ marginBottom: 10 }}>
-                Ce message vient du nœud de fin importé. Remplacer l'audio ici personnalisera uniquement cette histoire.
+                Ce message vient du message de fin importé. Remplacer l'audio ici personnalisera uniquement cette histoire.
               </div>
             )}
             <div className="sequence-controls">
@@ -297,7 +363,7 @@ export function AfterPlaySection({
                   allMenus={allMenus}
                   allStories={allStories}
                   currentStoryId={node.id}
-                  emptyLabel="Comportement par défaut"
+                  emptyLabel="Même destination que la fin d'histoire"
                 />
               </div>
               <div className="field-row" style={{ marginBottom: 0 }}>
@@ -353,33 +419,19 @@ export function AfterPlaySection({
     <div className="card">
       <div className="card-title">Après la lecture</div>
 
-      {hasEndNode && (
-        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <span className="field-label">Fin de l'histoire</span>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              Passage automatique par le nœud de fin du pack
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              La Lunii continue automatiquement après l'audio de l'histoire pour jouer ce nœud de fin.
-            </div>
+      <div className="after-play-main-row">
+        <div className="after-play-intro">
+          <div className="after-play-question">Que se passe-t-il à la fin de l'histoire ?</div>
+          <div className="after-play-answer">
+            {hasEndNode
+              ? 'Un message de fin est joué automatiquement avant de passer à la destination suivante.'
+              : autoContinuationEnabled
+                ? "La Lunii peut s'arrêter et attendre, ou enchaîner automatiquement vers la destination choisie."
+                : "La Lunii s'arrête et reste sur l'écran de l'histoire. L'enfant doit appuyer sur un bouton pour continuer."}
           </div>
         </div>
-      )}
 
-      {!hasEndNode && (
-        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <span className="field-label">Fin de l'histoire</span>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              {autoContinuationEnabled ? 'La Lunii enchaîne vers la destination' : "La Lunii reste sur l'écran de lecture"}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              {autoContinuationEnabled
-                ? "À la fin de l'histoire, la Lunii passe à la destination ci-dessous sans attendre."
-                : "Aucune destination de fin n'est lancée automatiquement. Le bouton Accueil, s'il est actif, reste le chemin de sortie."}
-            </div>
-          </div>
+        {!hasEndNode && (
           <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
             <button
               type="button"
@@ -398,91 +450,57 @@ export function AfterPlaySection({
               Enchaîner
             </button>
           </div>
-        </div>
-      )}
-
-      {hasEndNode && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', flexWrap: 'wrap' }}>
-          <span className="field-label">Puis destination</span>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              padding: '4px 10px',
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <Moon style={{ width: 14, height: 14 }} /> Passe par le nœud de fin du pack
-          </span>
-          {endNodeFinalDestination && (
-            <>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>→</span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 12,
-                  padding: '4px 10px',
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                {endNodeFinalDestination.type === 'story'
-                  ? <Music style={{ width: 14, height: 14 }} />
-                  : <FolderOpen style={{ width: 14, height: 14 }} />}
-                {endNodeFinalDestination.name}
-              </span>
-            </>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {allMenus.length > 0 && !hasEndNode && autoContinuationEnabled && (
-        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <span className="field-label">Puis destination</span>
-            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              Où l'enfant atterrit après la sortie automatique. Par défaut, suit le réglage du dossier parent.
+        <div className="after-play-destination-row">
+          <div className="after-play-destination-copy">
+            <span className="field-label">Destination après l'histoire</span>
+            <div className="after-play-muted">
+              L'écran ou le menu affiché à la sortie automatique.
             </div>
           </div>
-          <div style={{ maxWidth: 220, width: '100%' }}>
-          <NavigationTargetSelect
-            value={node.returnAfterPlay ?? ''}
-            onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
-            allMenus={allMenus}
-            allStories={allStories}
-            currentStoryId={node.id}
-            emptyLabel={inheritedReturnLabel}
-            includeRoot={false}
-            includeStoryPlay={false}
-          />
-          <NavigationHint
-            label={hasExplicitReturnTarget
-              ? returnDestinationHint
-              : `Réglage par défaut : ${defaultDestinationHintLabel(returnDestinationHint)}`}
-          />
+          <div className="after-play-destination-select">
+            <NavigationTargetSelect
+              value={node.returnAfterPlay ?? ''}
+              onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={node.id}
+              emptyLabel={inheritedReturnLabel}
+              includeRoot={false}
+              includeStoryPlay={false}
+            />
+            <NavigationHint label={returnDestinationHint} />
           </div>
         </div>
       )}
 
-      {allMenus.length > 0 && !hasEndNode && !autoContinuationEnabled && (
-        <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <span className="field-label">Destination</span>
-            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              Non utilisée avec ce mode. Réglage par défaut si enchaînement : {defaultDestinationHintLabel(returnDestinationHint)}.
-            </div>
-          </div>
+      <div className="after-play-route">
+        <div className="after-play-route-title">Résumé du parcours</div>
+        <div className="after-play-route-list">
+          <RouteChip icon={<CircleStop />}>Fin de l'histoire</RouteChip>
+          <RouteArrow />
+          {routeUsesEndStep ? (
+            <>
+              <RouteChip icon={<RouteTargetIcon type="end-node" nightMode={nightModeActive} />}>
+                {routeEndStepLabel}
+              </RouteChip>
+              {routeFinalLabel ? (
+                <>
+                  <RouteArrow />
+                  <RouteChip icon={<RouteTargetIcon type={routeFinalType} />}>{routeFinalLabel}</RouteChip>
+                </>
+              ) : null}
+            </>
+          ) : autoContinuationEnabled ? (
+            <RouteChip icon={<RouteTargetIcon type={returnDestinationType} />}>{returnDestinationLabel}</RouteChip>
+          ) : (
+            <RouteChip icon={<Pause />}>Attente sur l'écran</RouteChip>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Options avancées : message de fin + bouton Accueil */}
       <div className="advanced-toggle-row">

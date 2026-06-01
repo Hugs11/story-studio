@@ -288,6 +288,24 @@
   line-height: 1;
 }
 
+.image-gen-btn.is-generating {
+  color: var(--color-accent);
+}
+
+.image-gen-spinner {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-top-color: var(--color-accent);
+  animation: image-gen-spin 0.7s linear infinite;
+}
+
+@keyframes image-gen-spin {
+  to { transform: rotate(360deg); }
+}
+
 .image-sd-results {
   display: flex;
   flex-wrap: wrap;

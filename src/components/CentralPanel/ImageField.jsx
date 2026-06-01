@@ -1,10 +1,16 @@
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { imageClipboard } from '../../store/fieldClipboard';
-import { pickImage } from '../../store/useFileDialog';
-import { useLocalFile } from '../../store/useLocalFile';
+import { useMediaTransfer } from '../../store/MediaTransferContext';
+import { pickImage } from '../../hooks/useFileDialog';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { useProjectContext } from '../../store/ProjectContext';
-import { ImageEditorModal } from '../ImageEditorModal/ImageEditorModal';
+import { basename, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
+import { readImageEditMetadata, writeImageEditMetadata } from '../ImageEditorModal/imageEditMetadata';
+// reason: lazy() pour sortir ImageEditorModal (~3 KB gz) + canvas/PNG export
+// du chunk partage. Charge uniquement quand l'utilisateur edite une image.
+const ImageEditorModal = lazy(() => import('../ImageEditorModal/ImageEditorModal')
+  .then((m) => ({ default: m.ImageEditorModal })));
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { Copy, Scissors, FolderOpen, ClipboardPaste, Sparkles, Image as ImageIcon } from '../icons/LucideLocal';
@@ -41,16 +47,27 @@ export function ImageField({
   formatHint = 'Format recommandé : 320 × 240 px',
   badge = null,
 }) {
+  const { notifyCutPaste } = useMediaTransfer();
   const { pathAudit, sdSettings, sdJobs, onOpenSDGenerate, onRemoveSdResult, onImportFile } = useProjectContext();
   const aiEnabled = sdSettings?.aiImageGen && !!onOpenSDGenerate;
   const previewUrl = useLocalFile(file);
-  const filename = file ? file.split(/[\\/]/).pop() : null;
-  const displayPath = file ? file.replace(/^\\\\\?\\/, '') : null;
+  const filename = file ? basename(file) : null;
+  const displayPath = file ? stripWindowsLongPathPrefix(file) : null;
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorSource, setEditorSource] = useState(null);
+  const [editorInitialTransform, setEditorInitialTransform] = useState(null);
+  const [editorInitialFilters, setEditorInitialFilters] = useState(null);
   const [ctxMenu, setCtxMenu] = useState(null);
+  const autoAppliedSdResultsRef = useRef(new Set());
   const fileAvailable = !!file && pathAudit[file] !== false;
   const showFilledState = !!file && fileAvailable;
+  const isGeneratingForField = useMemo(
+    () => !!fieldId && (sdJobs ?? []).some(j => (
+      j.fieldId === fieldId
+      && (j.status === 'pending' || j.status === 'submitting' || j.status === 'running')
+    )),
+    [sdJobs, fieldId],
+  );
 
   const sdResults = useMemo(
     () => (sdJobs ?? [])
@@ -59,33 +76,55 @@ export function ImageField({
     [sdJobs, fieldId],
   );
 
+  useEffect(() => {
+    if (file || !onPick || sdResults.length === 0) return;
+    const next = sdResults.find(({ path }) => !autoAppliedSdResultsRef.current.has(path));
+    if (!next?.path) return;
+    autoAppliedSdResultsRef.current.add(next.path);
+    onPick(next.path);
+  }, [file, onPick, sdResults]);
+
   async function handlePick() {
     const picked = await pickImage();
     if (!picked) return;
     setEditorSource(picked);
+    setEditorInitialTransform(null);
+    setEditorInitialFilters(null);
+    setEditorOpen(true);
+  }
+
+  async function openEditor(path) {
+    const metadata = await readImageEditMetadata(path);
+    setEditorSource(metadata?.sourcePath || path);
+    setEditorInitialTransform(metadata?.transform ?? null);
+    setEditorInitialFilters(metadata?.filters ?? null);
     setEditorOpen(true);
   }
 
   function handleEdit(e) {
     e.stopPropagation();
     if (!fileAvailable) return;
-    setEditorSource(file);
-    // Re-editer une image deja exportee doit repartir de son raster courant.
-    // Rejouer un ancien crop/filtre sur une image deja aplatie provoque des incoherences.
-    setEditorOpen(true);
+    openEditor(file);
   }
 
-  async function handleEditorConfirm(editedPath) {
+  async function handleEditorConfirm(editedPath, editMetadata = null) {
     setEditorOpen(false);
     setEditorSource(null);
+    setEditorInitialTransform(null);
+    setEditorInitialFilters(null);
     if (!onPick) return;
     const finalPath = await onImportFile?.(editedPath) ?? editedPath;
+    if (editMetadata?.sourcePath) {
+      await writeImageEditMetadata(finalPath, editMetadata);
+    }
     onPick(finalPath);
   }
 
   function handleEditorCancel() {
     setEditorOpen(false);
     setEditorSource(null);
+    setEditorInitialTransform(null);
+    setEditorInitialFilters(null);
   }
 
   function handleContextMenu(e) {
@@ -99,9 +138,7 @@ export function ImageField({
     const clip = imageClipboard.getEntry();
     if (!clip?.path || !onPick) return;
     if (clip.mode === 'cut') {
-      document.dispatchEvent(new CustomEvent('media-clipboard-cut-paste', {
-        detail: { path: clip.path, kind: 'image' },
-      }));
+      notifyCutPaste({ path: clip.path, kind: 'image' });
     }
     onPick(clip.path);
     if (clip.mode === 'cut') imageClipboard.clear();
@@ -109,7 +146,7 @@ export function ImageField({
 
   const dropRef = useRef(null);
   const openEditorRef = useRef(null);
-  openEditorRef.current = (path) => { setEditorSource(path); setEditorOpen(true); };
+  openEditorRef.current = openEditor;
 
   useEffect(() => {
     const el = dropRef.current;
@@ -172,15 +209,18 @@ export function ImageField({
         <div className="image-action-row">
           {aiEnabled && (
             <button
-              className="image-gen-btn image-gen-btn--accent"
+              className={`image-gen-btn image-gen-btn--accent${isGeneratingForField ? ' is-generating' : ''}`}
               onClick={() => onOpenSDGenerate({
                 currentImagePath: fileAvailable ? file : null,
                 currentImageLabel: label || 'image actuelle',
                 fieldId,
               })}
+              disabled={isGeneratingForField}
             >
-              <span className="image-gen-btn-icon" aria-hidden="true"><Sparkles style={{ width: 12, height: 12 }} /></span>
-              <span>Générer IA</span>
+              <span className="image-gen-btn-icon" aria-hidden="true">
+                {isGeneratingForField ? <span className="image-gen-spinner" /> : <Sparkles style={{ width: 12, height: 12 }} />}
+              </span>
+              <span>{isGeneratingForField ? 'Génération…' : 'Générer IA'}</span>
             </button>
           )}
           {extraActions.map((action) => (
@@ -209,11 +249,15 @@ export function ImageField({
         </div>
       )}
       {editorOpen && editorSource && (
-        <ImageEditorModal
-          sourcePath={editorSource}
-          onConfirm={handleEditorConfirm}
-          onCancel={handleEditorCancel}
-        />
+        <Suspense fallback={null}>
+          <ImageEditorModal
+            sourcePath={editorSource}
+            initialTransform={editorInitialTransform}
+            initialFilters={editorInitialFilters}
+            onConfirm={handleEditorConfirm}
+            onCancel={handleEditorCancel}
+          />
+        </Suspense>
       )}
       {ctxMenu && (
         <ContextMenu

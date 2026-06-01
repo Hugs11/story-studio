@@ -7,9 +7,26 @@ import { MultiEditor } from './MultiEditor';
 import { FloatingSimulator } from '../FloatingSimulator/FloatingSimulator';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { KEYS, read, write } from '../../store/persistentSettings';
 import { Download } from '../icons/LucideLocal';
-import { END_NODE_ID, ICONS, TYPE_LABELS, describeContainer, countStories } from './flowDiagramLayout';
+import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStory } from '../TreePanel/TreeIcons';
+import { END_NODE_ID, TYPE_LABELS, describeContainer, countStories } from './flowDiagramLayout';
 import './FlowDiagram.css';
+
+const INSPECTOR_WIDTH_DEFAULT = 680;
+const INSPECTOR_WIDTH_MIN = 420;
+const INSPECTOR_WIDTH_MAX = 980;
+
+function getInspectorMaxWidth() {
+  if (typeof window === 'undefined') return INSPECTOR_WIDTH_MAX;
+  return Math.max(INSPECTOR_WIDTH_MIN, Math.min(INSPECTOR_WIDTH_MAX, window.innerWidth - 96));
+}
+
+function clampInspectorWidth(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return INSPECTOR_WIDTH_DEFAULT;
+  return Math.max(INSPECTOR_WIDTH_MIN, Math.min(getInspectorMaxWidth(), Math.round(numeric)));
+}
 
 function EmptyDiagramState({ onImportStories = null }) {
   return (
@@ -25,6 +42,25 @@ function EmptyDiagramState({ onImportStories = null }) {
   );
 }
 
+function inspectorTitle(node) {
+  if (!node) return 'Réglages';
+  if (node.id === END_NODE_ID) return node.name || 'Message de fin';
+  if (node.type === 'root') return 'Pack';
+  if (node.type === 'menu') return 'Dossier';
+  if (node.type === 'story') return "Histoire";
+  if (node.type === 'zip') return 'Archive ZIP';
+  return TYPE_LABELS[node.type] || 'Réglages';
+}
+
+function DiagramNodeIcon({ type }) {
+  if (type === 'root') return <IconHouse />;
+  if (type === 'menu') return <IconFolderOpen />;
+  if (type === 'story') return <IconStory />;
+  if (type === 'zip') return <IconArchive />;
+  if (type === 'end-node') return <IconMoon />;
+  return null;
+}
+
 function NodeCard({ type, name, selected, detail, badge, onClick }) {
   return (
     <button
@@ -33,7 +69,7 @@ function NodeCard({ type, name, selected, detail, badge, onClick }) {
       onClick={onClick}
       title={name || '(sans nom)'}
     >
-      <div className="fd-node-icon">{ICONS[type]}</div>
+      <div className="fd-node-icon"><DiagramNodeIcon type={type} /></div>
       <div className="fd-node-copy">
         <div className="fd-node-top">
           <div className="fd-node-name">{name || '(sans nom)'}</div>
@@ -64,7 +100,7 @@ function StoryCluster({ containerKey, stories, expanded, onToggle, selectedId, o
               onClick={() => onSelect?.(story.id)}
               title={story.name || '(sans nom)'}
             >
-              <span className="fd-story-chip-icon">{ICONS.story}</span>
+              <span className="fd-story-chip-icon"><DiagramNodeIcon type="story" /></span>
               <span className="fd-story-chip-label">{story.name || '(sans nom)'}</span>
               {(story.afterPlaybackSequence?.length ?? 0) > 0 ? (
                 <span className="fd-story-chip-badge">Fin x{story.afterPlaybackSequence.length}</span>
@@ -223,13 +259,66 @@ export function FlowDiagram({
   const [inspectorNodeId, setInspectorNodeId] = useState(null);
   const [multiPanelOpen, setMultiPanelOpen] = useState(false);
   const [autoOpenSettings, setAutoOpenSettings] = useState(
-    () => localStorage.getItem('fd_auto_open_settings') !== 'false',
+    () => read(KEYS.FLOW_DIAGRAM_AUTO_OPEN_SETTINGS) !== 'false',
+  );
+  const [inspectorPanelWidth, setInspectorPanelWidth] = useState(
+    () => clampInspectorWidth(read(KEYS.FLOW_DIAGRAM_INSPECTOR_WIDTH, { defaultValue: INSPECTOR_WIDTH_DEFAULT })),
   );
 
   function handleAutoOpenChange(e) {
     const v = e.target.checked;
     setAutoOpenSettings(v);
-    localStorage.setItem('fd_auto_open_settings', v ? 'true' : 'false');
+    write(KEYS.FLOW_DIAGRAM_AUTO_OPEN_SETTINGS, v ? 'true' : 'false');
+  }
+
+  function persistInspectorWidth(width) {
+    write(KEYS.FLOW_DIAGRAM_INSPECTOR_WIDTH, String(clampInspectorWidth(width)));
+  }
+
+  function updateInspectorWidth(width) {
+    const nextWidth = clampInspectorWidth(width);
+    setInspectorPanelWidth(nextWidth);
+    return nextWidth;
+  }
+
+  function handleInspectorResizePointerDown(event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startWidth = inspectorPanelWidth;
+    let nextWidth = startWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    function handlePointerMove(moveEvent) {
+      nextWidth = updateInspectorWidth(startWidth + startX - moveEvent.clientX);
+    }
+
+    function stopResize() {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResize);
+      window.removeEventListener('pointercancel', stopResize);
+      persistInspectorWidth(nextWidth);
+    }
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResize);
+    window.addEventListener('pointercancel', stopResize);
+  }
+
+  function handleInspectorResizeKeyDown(event) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home') return;
+    event.preventDefault();
+    const nextWidth = event.key === 'Home'
+      ? INSPECTOR_WIDTH_DEFAULT
+      : inspectorPanelWidth + (event.key === 'ArrowLeft' ? 32 : -32);
+    persistInspectorWidth(updateInspectorWidth(nextWidth));
   }
 
   const selectedPath = useMemo(() => (
@@ -294,7 +383,7 @@ export function FlowDiagram({
         return {
           id: END_NODE_ID,
           type: 'end-node',
-          name: 'Nœud de fin',
+          name: 'Message de fin',
         };
       }
       return buildSelectedNode(project, inspectorNodeId, projectIndex);
@@ -382,10 +471,23 @@ export function FlowDiagram({
       )}
 
       {inspectorNode && (
-        <div className="fd-floating-panel fd-floating-panel--editor" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="fd-floating-panel fd-floating-panel--editor"
+          style={{ width: inspectorPanelWidth }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div
+            className="fd-floating-panel-resize-handle"
+            role="separator"
+            aria-label="Redimensionner le panneau de réglages"
+            aria-orientation="vertical"
+            tabIndex={0}
+            onPointerDown={handleInspectorResizePointerDown}
+            onKeyDown={handleInspectorResizeKeyDown}
+          />
           <div className="fd-floating-panel-head">
             <div>
-              <div className="fd-floating-panel-title">Réglages du nœud</div>
+              <div className="fd-floating-panel-title">{inspectorTitle(inspectorNode)}</div>
               <div className="fd-floating-panel-sub">{inspectorNode.name || TYPE_LABELS[inspectorNode.type]}</div>
             </div>
             <button type="button" className="modal-close" onClick={() => setInspectorNodeId(null)}>✕</button>
@@ -393,6 +495,7 @@ export function FlowDiagram({
           <div className="fd-floating-panel-body">
             {inspectorNode.id === END_NODE_ID ? (
               <EndNodeEditor
+                endNodeName={project.endNodeName || 'Message de fin'}
                 nightModeAudio={project.nightModeAudio}
                 nightModeActive={!!project.globalOptions?.nightMode}
                 nightModeReturn={project.nightModeReturn ?? null}
@@ -405,6 +508,7 @@ export function FlowDiagram({
                 onUpdateNightMode={onUpdateNightMode}
                 onUpdateNightModeReturn={onUpdateNightModeReturn}
                 onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
+                onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
                 onRemove={() => {
                   onRemoveEndNode?.();
                   setInspectorNodeId(null);

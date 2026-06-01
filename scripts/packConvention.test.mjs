@@ -21,6 +21,15 @@ test('generates a minimal convention name', () => {
   assert.equal(generateConventionName({ title: 'Mon pack' }), '3+]Mon_pack');
 });
 
+test('generates a producer prefix even without author', () => {
+  assert.equal(generateConventionName({
+    title: 'Example stories',
+    producer: 'Example Producer',
+    version: 3,
+    minAge: '3',
+  }), '3+]Example_Producer-Example_stories_V3');
+});
+
 test('roundtrips a convention name through parse and generate', () => {
   const raw = '3+]Example_stories_(8_chapitres)[by_example_author_V2';
   assert.equal(generateConventionName(parseConventionName(raw)), raw);

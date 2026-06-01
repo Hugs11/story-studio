@@ -2,13 +2,10 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { Toggle } from '../common/Toggle';
+import { basename } from '../../utils/fileUtils';
 
 function cloneGraph(graph) {
-  return JSON.parse(JSON.stringify(graph));
-}
-
-function basename(path) {
-  return typeof path === 'string' ? path.split(/[\\/]/).pop() : '';
+  return structuredClone(graph);
 }
 
 function stageId(stage) {

@@ -11,7 +11,8 @@ function genId() {
 //   savePath: string | null,
 //   projectJson: string,
 //   outputFolder: string,
-//   status: 'pending' | 'running' | 'done' | 'error',
+//   status: 'pending' | 'running' | 'done' | 'error' | 'canceled',
+//   cancelRequested: boolean,
 //   logs: string[],
 //   resultPath: string | null,
 //   errorMessage: string | null,
@@ -30,6 +31,7 @@ export function useRenderQueueStore() {
       projectJson,
       outputFolder,
       status: 'pending',
+      cancelRequested: false,
       logs: [],
       resultPath: null,
       errorMessage: null,
@@ -52,8 +54,29 @@ export function useRenderQueueStore() {
     setJobs(prev => prev.filter(j => j.id !== id));
   }, []);
 
+  const cancelJob = useCallback((id) => {
+    setJobs(prev => prev.map(j => {
+      if (j.id !== id) return j;
+      if (j.status === 'pending') {
+        return {
+          ...j,
+          status: 'canceled',
+          cancelRequested: false,
+          errorMessage: null,
+        };
+      }
+      if (j.status === 'running') {
+        return {
+          ...j,
+          cancelRequested: true,
+        };
+      }
+      return j;
+    }));
+  }, []);
+
   const clearDone = useCallback(() => {
-    setJobs(prev => prev.filter(j => j.status !== 'done' && j.status !== 'error'));
+    setJobs(prev => prev.filter(j => j.status !== 'done' && j.status !== 'error' && j.status !== 'canceled'));
   }, []);
 
   const activeCount = jobs.filter(j => j.status === 'pending' || j.status === 'running').length;
@@ -66,6 +89,7 @@ export function useRenderQueueStore() {
     updateJob,
     appendLog,
     removeJob,
+    cancelJob,
     clearDone,
     activeCount,
     hasResults,

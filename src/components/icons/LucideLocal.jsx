@@ -153,6 +153,11 @@ const pauseNode = [
   ['rect', { x: '6', y: '4', width: '4', height: '16', rx: '1' }],
 ];
 
+const circleStopNode = [
+  ['circle', { cx: '12', cy: '12', r: '10' }],
+  ['rect', { x: '9', y: '9', width: '6', height: '6', rx: '1' }],
+];
+
 const squareNode = [
   ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }],
 ];
@@ -183,6 +188,11 @@ const cropNode = [
 const rotateCcwNode = [
   ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }],
   ['path', { d: 'M3 3v5h5' }],
+];
+
+const undo2Node = [
+  ['path', { d: 'M9 14 4 9l5-5' }],
+  ['path', { d: 'M4 9h10.5a5.5 5.5 0 1 1 0 11H11' }],
 ];
 
 const copyNode = [
@@ -320,12 +330,14 @@ export const ListTodo = createLocalLucideIcon(listTodoNode);
 export const SwatchBook = createLocalLucideIcon(swatchBookNode);
 export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
+export const CircleStop = createLocalLucideIcon(circleStopNode);
 export const Square = createLocalLucideIcon(squareNode);
 export const SkipBack = createLocalLucideIcon(skipBackNode);
 export const SkipForward = createLocalLucideIcon(skipForwardNode);
 export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
+export const Undo2 = createLocalLucideIcon(undo2Node);
 export const Copy = createLocalLucideIcon(copyNode);
 export const ClipboardPaste = createLocalLucideIcon(clipboardPasteNode);
 export const Trash2 = createLocalLucideIcon(trash2Node);

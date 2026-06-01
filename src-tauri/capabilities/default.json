@@ -15,6 +15,17 @@
     "core:window:allow-is-maximized",
     "core:window:allow-start-dragging",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }],
+      "deny": [
+        { "path": "C:\\Windows\\**" },
+        { "path": "C:\\Windows\\System32\\**" },
+        { "path": "C:\\Program Files\\**" },
+        { "path": "C:\\Program Files (x86)\\**" },
+        { "path": "C:\\ProgramData\\**" }
+      ]
+    },
     "dialog:default",
     "log:default",
     "fs:default",

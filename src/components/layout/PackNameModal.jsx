@@ -3,7 +3,7 @@ import { exists } from '@tauri-apps/plugin-fs';
 import { CircleCheck, Image, Package, TriangleAlert } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useLocalFile } from '../../store/useLocalFile';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { generateConventionName, getExportPackName } from '../../utils/packConvention';
 
 const AGE_CHIPS = ['2', '3', '6', '9', '12'];

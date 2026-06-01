@@ -120,6 +120,36 @@
   justify-content: space-between;
 }
 
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 2px 0;
+  padding: 10px 9px;
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 72%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-background-secondary) 35%, transparent);
+}
+
+.filter-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.filter-group-help {
+  margin-top: -5px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--color-text-tertiary);
+}
+
+.filter-group .filter-label {
+  min-width: 61px;
+}
+
 .filter-advanced-toggle {
   background: none;
   border: none;

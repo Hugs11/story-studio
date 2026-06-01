@@ -5,11 +5,11 @@ import {
   getGeneratedStoryNavigation,
   resolveGeneratedTargetForStory,
 } from '../../store/generatedNavigation';
-import { findEntryById, findEntryPath, findParentMenuId } from '../../store/projectModel';
+import { canMoveEntryToContainer } from '../tree/treeOperations';
 
-export const ICONS = { root: '📦', menu: '📂', story: '🎵', zip: '🗜', 'end-node': '🌙' };
-export const TYPE_LABELS = { root: 'Racine', menu: 'Collection', story: 'Histoire', zip: 'ZIP', 'end-node': 'Nœud de fin' };
-export const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', bmp: 'image/bmp', webp: 'image/webp' };
+export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', 'end-node': 'Message de fin' };
+// Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
+export { MIME } from '../../utils/mimeTypes';
 export const ZOOM_MIN = 0.08;
 export const ZOOM_MAX = 1.9;
 export const BUTTON_ZOOM_FACTOR = 1.12;
@@ -261,7 +261,8 @@ export function getCompleteLayout(project, compactMode, options = {}) {
       entry: {
         id: END_NODE_ID,
         type: 'end-node',
-        name: 'Nœud de fin',
+        name: project.endNodeName || 'Message de fin',
+        icon: project.globalOptions?.nightMode ? 'moon' : 'stop',
       },
       x: endNodeX,
       y: endNodeY,
@@ -383,7 +384,13 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         }
       } else if (hasEndNode) {
         effectiveReturnTarget = END_NODE_ID;
-        transitions.push({ from: entry.id, to: effectiveReturnTarget, kind: 'return', source: 'configured' });
+        transitions.push({
+          from: entry.id,
+          to: effectiveReturnTarget,
+          kind: 'return',
+          source: 'configured',
+          endNodeTargetId: diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId),
+        });
       } else {
         if (explicitReturnTarget) {
           effectiveReturnTarget = explicitReturnTarget;
@@ -519,15 +526,4 @@ export function getCompleteNavigationEdges(project, layout) {
   return regularEdges;
 }
 
-export function canMoveEntryToContainer(project, projectIndex, entryId, targetContainerId) {
-  if (!entryId || entryId === 'root') return false;
-  const entry = findEntryById(project, entryId, projectIndex);
-  if (!entry) return false;
-  const sourceContainerId = findParentMenuId(project, entryId, projectIndex);
-  if (sourceContainerId === targetContainerId) return false;
-  if (targetContainerId != null && entry.type === 'menu') {
-    const targetPath = findEntryPath(project, targetContainerId, projectIndex) ?? [];
-    if (targetPath.some((ancestor) => ancestor.id === entry.id)) return false;
-  }
-  return targetContainerId == null || !!findEntryById(project, targetContainerId, projectIndex);
-}
+export { canMoveEntryToContainer };

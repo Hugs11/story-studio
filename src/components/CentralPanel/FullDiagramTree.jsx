@@ -1,18 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { invoke } from '@tauri-apps/api/core';
-import { useLocalFile } from '../../store/useLocalFile';
-import { findParentMenuId, findEntryById, findEntryPath, deepCloneEntry } from '../../store/projectModel';
+import { findParentMenuId, findEntryById, deepCloneEntry } from '../../store/projectModel';
+import { KEYS, read, write } from '../../store/persistentSettings';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
-import { useSharedClipboard } from '../../store/useSharedClipboard';
+import { useSharedClipboard } from '../../hooks/useSharedClipboard';
+import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { ContextMenu } from '../TreePanel/ContextMenu';
-import { Tooltip } from '../common/Tooltip';
-import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Eye, Settings, Play } from '../icons/LucideLocal';
+import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../icons/LucideLocal';
 import {
-  ICONS,
-  TYPE_LABELS,
-  MIME,
   BUTTON_ZOOM_FACTOR,
   WHEEL_ZOOM_SENSITIVITY,
   DRAG_START_DISTANCE,
@@ -21,413 +17,17 @@ import {
   getCompleteNavigationEdges,
   canMoveEntryToContainer,
   END_NODE_ID,
+  TYPE_LABELS,
 } from './flowDiagramLayout';
-
-const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
-
-function useZipCover(zipPath, coverImage) {
-  const [url, setUrl] = useState(null);
-
-  useEffect(() => {
-    if (!zipPath || !coverImage) {
-      setUrl(null);
-      return undefined;
-    }
-
-    let cancelled = false;
-    let objectUrl = null;
-    const assetName = `assets/${coverImage}`;
-
-    invoke('get_pack_asset', { zipPath, assetName })
-      .then((bytes) => {
-        if (cancelled) return;
-        const ext = coverImage.split('.').pop().toLowerCase();
-        objectUrl = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'image/png' }));
-        setUrl(objectUrl);
-      })
-      .catch(() => {
-        if (!cancelled) setUrl(null);
-      });
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [zipPath, coverImage]);
-
-  return url;
-}
-
-function FullDiagramNode({
-  entry,
-  compactMode = 'full',
-  selectedId,
-  selectedIds,
-  cutIds,
-  draggingId = null,
-  dragOverContainerId = undefined,
-  onSelect,
-  onSelectionChange,
-  onContextMenu,
-  onPreview,
-  onInspect,
-  onDragPointerDown,
-  onToggleCollapse,
-  isRoot = false,
-  rootImage,
-  isCollapsed = false,
-  childSummary = null,
-}) {
-  const imagePath = isRoot
-    ? (rootImage ?? null)
-    : entry.type === 'menu'
-      ? entry.image ?? null
-      : entry.type === 'story'
-        ? entry.itemImage ?? null
-        : null;
-  const zipCoverImage = entry.type === 'zip' ? entry.coverImage ?? null : null;
-  const zipPath = entry.type === 'zip' ? entry.zipPath ?? null : null;
-  const localUrl = useLocalFile(imagePath);
-  const zipUrl = useZipCover(zipPath, zipCoverImage);
-  const compact = compactMode !== 'full';
-  const showThumbnail = !compact || entry.type === 'story';
-  const url = showThumbnail ? (entry.type === 'zip' ? zipUrl : localUrl) : null;
-  const sequenceCount = entry.type === 'story' ? (entry.afterPlaybackSequence?.length ?? 0) : 0;
-  const containerId = isRoot ? null : entry.type === 'menu' ? entry.id : undefined;
-  const isDropTarget = containerId === dragOverContainerId && draggingId !== null;
-  const isDragging = draggingId === entry.id;
-  const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
-  const isCut = cutIds?.has(entry.id);
-  const canCollapse = entry.type === 'menu' && childSummary?.total > 0;
-  const dropLabel = isDropTarget
-    ? (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
-    : null;
-
-  function handleClick(e) {
-    if (entry.id === END_NODE_ID) {
-      onSelectionChange?.(new Set([END_NODE_ID]));
-      onSelect?.(END_NODE_ID);
-      return;
-    }
-
-    if (e.ctrlKey || e.metaKey || e.shiftKey) { // Shift = Ctrl dans le diagramme (pas de liste plate pour le range)
-      const next = new Set([...(selectedIds ?? [selectedId])].filter((id) => id !== END_NODE_ID));
-      if (next.has(entry.id)) {
-        next.delete(entry.id);
-        if (next.size === 0) next.add(entry.id);
-      } else {
-        next.add(entry.id);
-      }
-      onSelectionChange?.(next);
-      onSelect?.(entry.id);
-    } else {
-      onSelectionChange?.(new Set([entry.id]));
-      onSelect?.(entry.id);
-    }
-  }
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''}`}
-      style={isCut ? { opacity: 0.4 } : undefined}
-      data-fd-drop-container={containerId === undefined ? undefined : (containerId === null ? 'root' : containerId)}
-      {...((entry.type === 'story' || entry.type === 'menu' || entry.type === 'root') ? { 'data-media-node-id': entry.id, 'data-media-node-type': entry.type } : {})}
-      onPointerDown={(!isRoot && entry.type !== 'end-node') ? (event) => onDragPointerDown?.(event, entry.id) : undefined}
-      onClick={handleClick}
-      onContextMenu={(e) => onContextMenu?.(e, entry.id, entry.type)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect?.(entry.id);
-        }
-      }}
-      title={entry.name || '(sans nom)'}
-    >
-      <div className="fd-complete-node-actions">
-        {canCollapse ? (
-          <Tooltip text={isCollapsed ? 'Deplier ce dossier' : 'Replier ce dossier'}>
-            <button
-              type="button"
-              className="fd-complete-node-action fd-complete-node-action--collapse"
-              aria-label={isCollapsed ? 'Deplier ce dossier' : 'Replier ce dossier'}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleCollapse?.(entry.id);
-              }}
-            >
-              {isCollapsed ? '+' : '−'}
-            </button>
-          </Tooltip>
-        ) : null}
-        <Tooltip text="Simuler depuis ce point">
-          <button
-            type="button"
-            className="fd-complete-node-action fd-complete-node-action--preview"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect?.(entry.id);
-              onPreview?.(entry.id);
-            }}
-          >
-            <Eye style={{ width: 16, height: 16 }} />
-          </button>
-        </Tooltip>
-        <Tooltip text="Ouvrir les réglages de ce nœud">
-          <button
-            type="button"
-            className="fd-complete-node-action fd-complete-node-action--inspect"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelectionChange?.(new Set([entry.id]));
-              onSelect?.(entry.id);
-              onInspect?.(entry.id);
-            }}
-          >
-            <Settings style={{ width: 16, height: 16 }} />
-          </button>
-        </Tooltip>
-      </div>
-      <div className="fd-complete-node-thumb">
-        {url
-          ? <img src={url} alt="" />
-          : <span className="fd-complete-node-placeholder">{ICONS[entry.type]}</span>}
-        {sequenceCount > 0 ? <span className="fd-complete-end-badge">Fin x{sequenceCount}</span> : null}
-        {dropLabel ? <div className="fd-complete-drop-indicator">{dropLabel}</div> : null}
-      </div>
-      <div className="fd-complete-node-label">
-        <span className="fd-complete-node-icon">{ICONS[entry.type]}</span>
-        <div className="fd-complete-node-texts">
-          <span className="fd-complete-node-name">{entry.name || '(sans nom)'}</span>
-          {!compact ? (
-            <span className="fd-complete-node-kind">
-              {isCollapsed && childSummary
-                ? `${TYPE_LABELS[entry.type]} · ${childSummary.descendants} element${childSummary.descendants > 1 ? 's' : ''} masques`
-                : TYPE_LABELS[entry.type]}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FullChildrenRow({
-  entries,
-  compactMode,
-  selectedId,
-  selectedIds,
-  cutIds,
-  draggingId,
-  dragOverContainerId,
-  onSelect,
-  onSelectionChange,
-  onContextMenu,
-  onPreview,
-  onInspect,
-  onDragPointerDown,
-}) {
-  if (!entries.length) return null;
-
-  return (
-    <div className="fd-complete-children-group">
-      <div className="fd-complete-children-row">
-        {entries.map((child) => (
-          <div key={child.id} className="fd-complete-row-item">
-            {child.type === 'story' ? (
-              <FullDiagramNode
-                entry={child}
-                compactMode={compactMode}
-                selectedId={selectedId}
-                selectedIds={selectedIds}
-                cutIds={cutIds}
-                draggingId={draggingId}
-                dragOverContainerId={dragOverContainerId}
-                onSelect={onSelect}
-                onSelectionChange={onSelectionChange}
-                onContextMenu={onContextMenu}
-                onPreview={onPreview}
-                onInspect={onInspect}
-                onDragPointerDown={onDragPointerDown}
-              />
-            ) : (
-              <FullEntryBranch
-                entry={child}
-                compactMode={compactMode}
-                selectedId={selectedId}
-                selectedIds={selectedIds}
-                cutIds={cutIds}
-                draggingId={draggingId}
-                dragOverContainerId={dragOverContainerId}
-                onSelect={onSelect}
-                onSelectionChange={onSelectionChange}
-                onContextMenu={onContextMenu}
-                onPreview={onPreview}
-                onInspect={onInspect}
-                onDragPointerDown={onDragPointerDown}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FullEntryBranch({
-  entry,
-  compactMode,
-  selectedId,
-  selectedIds,
-  cutIds,
-  draggingId,
-  dragOverContainerId,
-  onSelect,
-  onSelectionChange,
-  onContextMenu,
-  onPreview,
-  onInspect,
-  onDragPointerDown,
-  rootImage,
-}) {
-  const structuralChildren = entry.type === 'menu'
-    ? (entry.children ?? []).filter((child) => child.type === 'menu' || child.type === 'zip')
-    : [];
-  const storyChildren = entry.type === 'menu'
-    ? (entry.children ?? []).filter((child) => child.type === 'story')
-    : [];
-  const hasChildren = structuralChildren.length > 0 || storyChildren.length > 0;
-
-  return (
-    <div className={`fd-complete-branch fd-complete-branch--${entry.type}`}>
-      <div className="fd-complete-branch-node">
-        <FullDiagramNode
-          entry={entry}
-          compactMode={compactMode}
-          selectedId={selectedId}
-          selectedIds={selectedIds}
-          cutIds={cutIds}
-          draggingId={draggingId}
-          dragOverContainerId={dragOverContainerId}
-          onSelect={onSelect}
-          onSelectionChange={onSelectionChange}
-          onContextMenu={onContextMenu}
-          onPreview={onPreview}
-          onInspect={onInspect}
-          onDragPointerDown={onDragPointerDown}
-          rootImage={rootImage}
-        />
-      </div>
-
-      {hasChildren ? (
-        <div className="fd-complete-branch-children">
-          <FullChildrenRow
-            entries={structuralChildren}
-            compactMode={compactMode}
-            selectedId={selectedId}
-            selectedIds={selectedIds}
-            cutIds={cutIds}
-            draggingId={draggingId}
-            dragOverContainerId={dragOverContainerId}
-            onSelect={onSelect}
-            onSelectionChange={onSelectionChange}
-            onContextMenu={onContextMenu}
-            onPreview={onPreview}
-            onInspect={onInspect}
-            onDragPointerDown={onDragPointerDown}
-          />
-          <FullChildrenRow
-            entries={storyChildren}
-            compactMode={compactMode}
-            selectedId={selectedId}
-            selectedIds={selectedIds}
-            cutIds={cutIds}
-            draggingId={draggingId}
-            dragOverContainerId={dragOverContainerId}
-            onSelect={onSelect}
-            onSelectionChange={onSelectionChange}
-            onContextMenu={onContextMenu}
-            onPreview={onPreview}
-            onInspect={onInspect}
-            onDragPointerDown={onDragPointerDown}
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function hasSelectedAncestor(entryId, candidateIds, getParentId) {
-  let parentId = getParentId(entryId);
-  while (parentId != null) {
-    if (candidateIds.has(parentId)) return true;
-    parentId = getParentId(parentId);
-  }
-  return false;
-}
-
-function countDescendants(entry) {
-  if (entry?.type !== 'menu') return 0;
-  return (entry.children ?? []).reduce((count, child) => (
-    count + 1 + countDescendants(child)
-  ), 0);
-}
-
-function summarizeEntryList(children) {
-  return {
-    total: children.length,
-    stories: children.filter((child) => child.type === 'story').length,
-    containers: children.filter((child) => child.type === 'menu' || child.type === 'zip').length,
-    descendants: children.reduce((count, child) => count + 1 + countDescendants(child), 0),
-  };
-}
-
-function summarizeChildren(entry) {
-  const children = entry?.type === 'menu' ? (entry.children ?? []) : [];
-  return summarizeEntryList(children);
-}
-
-function buildChildSummaryMap(entries, map = new Map(), includeRoot = true) {
-  if (includeRoot) map.set('root', summarizeEntryList(entries ?? []));
-  for (const entry of entries ?? []) {
-    if (entry.type === 'menu') {
-      map.set(entry.id, summarizeChildren(entry));
-      buildChildSummaryMap(entry.children ?? [], map, false);
-    }
-  }
-  return map;
-}
-
-function cloneFocusedPath(path, index = 0) {
-  const entry = path[index];
-  if (!entry) return null;
-  if (index >= path.length - 1) {
-    return entry.type === 'menu'
-      ? { ...entry, children: entry.children ?? [] }
-      : { ...entry };
-  }
-  const focusedChild = cloneFocusedPath(path, index + 1);
-  return {
-    ...entry,
-    children: focusedChild ? [focusedChild] : [],
-  };
-}
-
-function buildFocusProject(project, selectedId, projectIndex) {
-  if (!selectedId || selectedId === 'root' || selectedId === END_NODE_ID) return project;
-  const path = findEntryPath(project, selectedId, projectIndex) ?? [];
-  if (!path.length) return project;
-  const focusedEntry = cloneFocusedPath(path);
-  if (!focusedEntry) return project;
-  return {
-    ...project,
-    rootEntries: [focusedEntry],
-  };
-}
+import {
+  TREE_COLOR_PALETTE,
+  hasSelectedAncestor,
+} from '../tree/treeOperations.js';
+import {
+  buildChildSummaryMap,
+  buildFocusProject,
+} from './fullDiagramFocus.js';
+import { FullDiagramNode } from './FullDiagramNode.jsx';
 
 export function CompleteDiagramTree({
   project,
@@ -457,6 +57,7 @@ export function CompleteDiagramTree({
   onRemoveEndNode,
   allMenus,
 }) {
+  const { dropOnNode } = useMediaTransfer();
   const containerRef = useRef(null);
   const panStateRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0, cameraX: 0, cameraY: 0 });
   const didInitialCenterRef = useRef(false);
@@ -475,7 +76,10 @@ export function CompleteDiagramTree({
   const dragStartRef = useRef({ pointerId: null, entryId: null, startX: 0, startY: 0 });
   const dragPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const [dragPointer, setDragPointer] = useState(null);
-  const [showReturns, setShowReturns] = useState(false);
+  const [showReturns, setShowReturns] = useState(() => read(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, { defaultValue: 'true' }) !== 'false');
+  const [hoveredNavigationEdgeId, setHoveredNavigationEdgeId] = useState(null);
+  const [pinnedNavigationEdgeId, setPinnedNavigationEdgeId] = useState(null);
+  const [navigationTooltip, setNavigationTooltip] = useState(null);
   const [focusMode, setFocusMode] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const projectRef = useRef(project);
@@ -484,6 +88,7 @@ export function CompleteDiagramTree({
   const onSelectRef = useRef(onSelect);
   const selectedIdsRef = useRef(selectedIds);
   const onSelectionChangeRef = useRef(onSelectionChange);
+  const activeNavigationEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
 
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, nodeId, nodeType }
@@ -499,6 +104,11 @@ export function CompleteDiagramTree({
     });
   }, []);
 
+  const handleShowReturnsChange = useCallback((checked) => {
+    setShowReturns(checked);
+    write(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, checked ? 'true' : 'false');
+  }, []);
+
   projectRef.current = project;
   projectIndexRef.current = projectIndex;
   onMoveToMenuRef.current = onMoveToMenu;
@@ -511,6 +121,14 @@ export function CompleteDiagramTree({
     function onKeyDown(e) {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+      if (e.key === 'Escape' && activeNavigationEdgeIdRef.current) {
+        setHoveredNavigationEdgeId(null);
+        setPinnedNavigationEdgeId(null);
+        setNavigationTooltip(null);
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       const actionId = findShortcutAction(e, getCurrentShortcuts(), 'diagram');
       if (!actionId) return;
       const { handleCopy: copy, handleCut: cut, handlePaste: paste, handleDeleteSelection: del, selectedId: sid } = kbHandlersRef.current;
@@ -582,7 +200,7 @@ export function CompleteDiagramTree({
     return 'full';
   }, [containerWidth]);
   const visibleProject = useMemo(
-    () => (focusMode ? buildFocusProject(project, selectedId, projectIndex) : project),
+    () => (focusMode ? buildFocusProject(project, selectedId, END_NODE_ID, projectIndex) : project),
     [focusMode, project, projectIndex, selectedId],
   );
   const childSummaryById = useMemo(
@@ -606,9 +224,119 @@ export function CompleteDiagramTree({
   const returnEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'return'), [navigationEdges]);
   const homeEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'home'), [navigationEdges]);
   const sequenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'sequence'), [navigationEdges]);
+  const nodeLabelById = useMemo(() => new Map(layout.nodes.map((node) => [
+    node.entry.id,
+    node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
+  ])), [layout.nodes]);
+  const nodeById = useMemo(() => new Map(layout.nodes.map((node) => [node.entry.id, node])), [layout.nodes]);
+  const edgeKey = useCallback((edge) => [
+    edge.kind,
+    edge.source || 'configured',
+    edge.from,
+    edge.to,
+    edge.label || '',
+    Math.round(edge.x1),
+    Math.round(edge.y1),
+  ].join(':'), []);
+  const activeNavigationEdgeId = hoveredNavigationEdgeId ?? pinnedNavigationEdgeId;
+  const activeNavigationEdge = useMemo(
+    () => navigationEdges.find((edge) => edgeKey(edge) === activeNavigationEdgeId) ?? null,
+    [activeNavigationEdgeId, edgeKey, navigationEdges],
+  );
+  const activeNavigationEdgeIds = useMemo(() => {
+    if (!activeNavigationEdge) return new Set();
+    const ids = new Set([edgeKey(activeNavigationEdge)]);
+    if (activeNavigationEdge.to === END_NODE_ID) {
+      for (const edge of navigationEdges) {
+        if (edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId) ids.add(edgeKey(edge));
+      }
+    }
+    return ids;
+  }, [activeNavigationEdge, edgeKey, navigationEdges]);
+  const activeNavigationNodeIds = useMemo(() => {
+    if (!activeNavigationEdge) return new Set();
+    const ids = new Set([activeNavigationEdge.from, activeNavigationEdge.to]);
+    if (activeNavigationEdge.to === END_NODE_ID && activeNavigationEdge.endNodeTargetId) {
+      for (const edge of navigationEdges) {
+        if (edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId) {
+          ids.add(edge.from);
+          ids.add(edge.to);
+        }
+      }
+      ids.add(activeNavigationEdge.endNodeTargetId);
+    }
+    return ids;
+  }, [activeNavigationEdge, navigationEdges]);
+  const hasActiveNavigationEdge = !!activeNavigationEdge;
+  const activeEndNodeContinuationEdge = useMemo(() => {
+    if (!activeNavigationEdge || activeNavigationEdge.to !== END_NODE_ID || !activeNavigationEdge.endNodeTargetId) return null;
+    if (navigationEdges.some((edge) => edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId)) return null;
+    const from = nodeById.get(END_NODE_ID);
+    const to = nodeById.get(activeNavigationEdge.endNodeTargetId);
+    if (!from || !to) return null;
+    const x1 = from.x + (from.width / 2);
+    const y1 = from.y;
+    const x2 = to.x + (to.width / 2);
+    const y2 = to.y + to.height;
+    const verticalDirection = y2 >= y1 ? 1 : -1;
+    const controlOffset = Math.max(80, Math.abs(x2 - x1) * 0.2, Math.abs(y2 - y1) * 0.34);
+    return {
+      x1,
+      y1,
+      x2,
+      y2,
+      c1y: y1 + (controlOffset * verticalDirection),
+      c2y: y2 - (controlOffset * verticalDirection),
+    };
+  }, [activeNavigationEdge, navigationEdges, nodeById]);
+  function describeNavigationEdge(edge) {
+    const from = nodeLabelById.get(edge.from) ?? edge.from;
+    const to = nodeLabelById.get(edge.to) ?? edge.to;
+    if (edge.to === END_NODE_ID) {
+      const finalTarget = edge.endNodeTargetId ? (nodeLabelById.get(edge.endNodeTargetId) ?? edge.endNodeTargetId) : null;
+      return finalTarget
+        ? `À la fin de « ${from} » → message de fin → « ${finalTarget} »`
+        : `À la fin de « ${from} » → message de fin`;
+    }
+    const kindLabel = edge.kind === 'home'
+      ? 'Retour Home'
+      : edge.kind === 'sequence'
+        ? 'Séquence de fin'
+        : 'Retour';
+    if (edge.kind === 'home') return `Bouton Home pendant « ${from} » → « ${to} »`;
+    if (edge.kind === 'sequence') return `Séquence de fin de « ${from} » → « ${to} »`;
+    return edge.label ? `${edge.label} : ${from} → ${to}` : `${kindLabel} : « ${from} » → « ${to} »`;
+  }
+  function updateNavigationTooltip(event, edge) {
+    const node = containerRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    setNavigationTooltip({
+      text: `${describeNavigationEdge(edge)}. Clique pour ${pinnedNavigationEdgeId === edgeKey(edge) ? 'désépingler' : 'épingler'} ce trajet.`,
+      left: event.clientX - rect.left + 12,
+      top: event.clientY - rect.top + 12,
+    });
+  }
   useEffect(() => {
     didInitialCenterRef.current = false;
   }, [project, focusMode, collapsedIds]);
+
+  useEffect(() => {
+    if (!showReturns) {
+      setHoveredNavigationEdgeId(null);
+      setPinnedNavigationEdgeId(null);
+      setNavigationTooltip(null);
+    }
+  }, [showReturns]);
+
+  useEffect(() => {
+    if (pinnedNavigationEdgeId && !navigationEdges.some((edge) => edgeKey(edge) === pinnedNavigationEdgeId)) {
+      setPinnedNavigationEdgeId(null);
+    }
+    if (hoveredNavigationEdgeId && !navigationEdges.some((edge) => edgeKey(edge) === hoveredNavigationEdgeId)) {
+      setHoveredNavigationEdgeId(null);
+    }
+  }, [edgeKey, hoveredNavigationEdgeId, navigationEdges, pinnedNavigationEdgeId]);
 
   useEffect(() => {
     zoomRef.current = zoom;
@@ -621,6 +349,10 @@ export function CompleteDiagramTree({
   useEffect(() => {
     draggingIdRef.current = draggingId;
   }, [draggingId]);
+
+  useEffect(() => {
+    activeNavigationEdgeIdRef.current = activeNavigationEdgeId;
+  }, [activeNavigationEdgeId]);
 
   useEffect(() => {
     dragOverContainerIdRef.current = dragOverContainerId;
@@ -740,6 +472,9 @@ export function CompleteDiagramTree({
   function handlePointerDown(event) {
     if (event.button !== 0) return;
     if (event.target.closest('.fd-complete-node, .fd-complete-zoom, .fd-complete-viewbar')) return;
+    setHoveredNavigationEdgeId(null);
+    setPinnedNavigationEdgeId(null);
+    setNavigationTooltip(null);
     const node = containerRef.current;
     if (!node) return;
     panStateRef.current = {
@@ -855,16 +590,14 @@ export function CompleteDiagramTree({
     const clipboard = kind === 'image' ? imageClipboard : audioClipboard;
     const clip = clipboard.getEntry();
     if (!clip?.path) return;
-    document.dispatchEvent(new CustomEvent('media-drop-node', {
-      detail: {
-        nodeId,
-        nodeType,
-        path: clip.path,
-        paths: clip.paths,
-        kind,
-        clipboardMode: clip.mode,
-      },
-    }));
+    void dropOnNode({
+      nodeId,
+      nodeType,
+      path: clip.path,
+      paths: clip.paths,
+      kind,
+      clipboardMode: clip.mode,
+    });
     if (clip.mode === 'cut') clipboard.clear();
   }
 
@@ -878,7 +611,7 @@ export function CompleteDiagramTree({
 
   function buildActions(nodeId, nodeType) {
     if (nodeId === END_NODE_ID) {
-      return [{ icon: <Trash2 />, label: 'Supprimer le nœud de fin', fn: () => onRemoveEndNode?.(), danger: true }];
+      return [{ icon: <Trash2 />, label: 'Supprimer le message de fin', fn: () => onRemoveEndNode?.(), danger: true }];
     }
 
     const entry = findEntryById(project, nodeId, projectIndex);
@@ -893,7 +626,7 @@ export function CompleteDiagramTree({
     const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
     if (nodeType === 'root' && !hasEndNode) {
       actions.push('sep');
-      actions.push({ icon: <Moon />, label: 'Ajouter un nœud de fin', fn: () => onAddEndNode?.() });
+      actions.push({ icon: <Moon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
     }
 
     if (nodeType === 'menu' && onSetMenuAsRoot && project.rootEntries?.[0]?.id === nodeId) {
@@ -1054,7 +787,7 @@ export function CompleteDiagramTree({
             <input
               type="checkbox"
               checked={showReturns}
-              onChange={(event) => setShowReturns(event.target.checked)}
+              onChange={(event) => handleShowReturnsChange(event.target.checked)}
             />
             <span>Afficher les retours</span>
           </label>
@@ -1111,17 +844,51 @@ export function CompleteDiagramTree({
                   d={`M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.midY} L ${edge.x2} ${edge.midY} L ${edge.x2} ${edge.y2}`}
                 />
               ))}
-              {navigationEdges.map((edge) => (
+              {navigationEdges.map((edge) => {
+                const id = edgeKey(edge);
+                const isActive = activeNavigationEdgeIds.has(id);
+                const isDimmed = hasActiveNavigationEdge && !isActive;
+                const d = `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
+                return (
+                  <g
+                    key={id}
+                    className={`fd-complete-navigation-edge ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
+                    onPointerEnter={(event) => {
+                      setHoveredNavigationEdgeId(id);
+                      updateNavigationTooltip(event, edge);
+                    }}
+                    onPointerMove={(event) => updateNavigationTooltip(event, edge)}
+                    onPointerLeave={() => {
+                      setHoveredNavigationEdgeId(null);
+                      setNavigationTooltip(null);
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPinnedNavigationEdgeId((current) => (current === id ? null : id));
+                    }}
+                  >
+                    <path
+                      className="fd-complete-line-hitbox"
+                      d={d}
+                    />
+                    <path
+                      className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
+                      d={d}
+                    />
+                  </g>
+                );
+              })}
+              {activeEndNodeContinuationEdge ? (
                 <path
-                  key={`${edge.kind}-${edge.source || 'configured'}-${edge.from}-${edge.to}`}
-                  className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
-                  d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`}
+                  className="fd-complete-line fd-complete-line--return fd-complete-line--end-continuation"
+                  d={`M ${activeEndNodeContinuationEdge.x1} ${activeEndNodeContinuationEdge.y1} C ${activeEndNodeContinuationEdge.x1} ${activeEndNodeContinuationEdge.c1y} ${activeEndNodeContinuationEdge.x2} ${activeEndNodeContinuationEdge.c2y} ${activeEndNodeContinuationEdge.x2} ${activeEndNodeContinuationEdge.y2}`}
                 />
-              ))}
+              ) : null}
               {navigationEdges.filter((edge) => edge.label).map((edge) => (
                 <text
-                  key={`label-${edge.kind}-${edge.source || 'configured'}-${edge.from}-${edge.to}`}
-                  className={`fd-complete-edge-label fd-complete-edge-label--${edge.kind}`}
+                  key={`label-${edgeKey(edge)}`}
+                  className={`fd-complete-edge-label fd-complete-edge-label--${edge.kind} ${activeNavigationEdgeIds.has(edgeKey(edge)) ? 'is-active' : hasActiveNavigationEdge ? 'is-dimmed' : ''}`}
                   x={edge.labelX}
                   y={edge.labelY}
                   textAnchor="middle"
@@ -1134,7 +901,7 @@ export function CompleteDiagramTree({
             {layout.nodes.map((node) => (
               <div
                 key={node.entry.id}
-                className="fd-complete-placed-node"
+                className={`fd-complete-placed-node ${activeNavigationNodeIds.has(node.entry.id) ? 'is-navigation-active' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''}`}
                 style={{ left: node.x, top: node.y, width: node.width }}
               >
                 <FullDiagramNode
@@ -1191,6 +958,14 @@ export function CompleteDiagramTree({
             style={{ left: dragPointer.x + 14, top: dragPointer.y + 14 }}
           >
             Deplacer
+          </div>
+        ) : null}
+        {navigationTooltip ? (
+          <div
+            className="fd-navigation-tooltip"
+            style={{ left: navigationTooltip.left, top: navigationTooltip.top }}
+          >
+            {navigationTooltip.text}
           </div>
         ) : null}
       </div>

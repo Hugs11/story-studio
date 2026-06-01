@@ -179,9 +179,9 @@
 
 .mode-recent-item {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   min-height: 72px;
   padding: 0 18px;
   border: 0;
@@ -203,6 +203,7 @@
   height: 12px;
   border-radius: 4px;
   background: var(--color-accent);
+  justify-self: center;
 }
 
 .mode-recent-dot.tone-0 { background: #2FA05C; }
@@ -210,6 +211,26 @@
 .mode-recent-dot.tone-2 { background: #A35AB5; }
 .mode-recent-dot.tone-3 { background: #D1761B; }
 .mode-recent-dot.tone-4 { background: #18A5A1; }
+
+.mode-recent-thumb {
+  width: 42px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 82%, transparent);
+  border-radius: 7px;
+  background: var(--color-background-secondary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #000 20%, transparent);
+}
+
+.mode-recent-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 .mode-recent-copy {
   min-width: 0;
@@ -364,7 +385,7 @@
   }
 
   .mode-recent-item {
-    grid-template-columns: 12px minmax(0, 1fr);
+    grid-template-columns: 42px minmax(0, 1fr);
     gap: 12px;
   }
 

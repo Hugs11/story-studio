@@ -6,12 +6,9 @@
 // (médiathèque, scans d'import, drop OS, nettoyage projet), sauf s'ils sont explicitement
 // référencés par une entrée projet.
 
-const ORIGINAL_BACKUP_RE = /\.original(?:-\d+)?\.[^.]+$/i;
+import { basename } from './fileUtils';
 
-/** Retire les séparateurs et préfixes UNC pour ne garder que le nom de fichier. */
-function basename(path) {
-  return String(path || '').replace(/\\/g, '/').replace(/.*\//, '');
-}
+const ORIGINAL_BACKUP_RE = /\.original(?:-\d+)?\.[^.]+$/i;
 
 /**
  * Renvoie `true` si le chemin/nom correspond à la convention de backup

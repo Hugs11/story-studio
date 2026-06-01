@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { pickSdReferenceImage } from '../../store/useFileDialog';
+import { pickSdReferenceImage } from '../../hooks/useFileDialog';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Tooltip } from '../common/Tooltip';
 import { Dices } from '../icons/LucideLocal';
+import { basename } from '../../utils/fileUtils';
 import './SDGenerateModal.css';
 
 function randomSeed() {
@@ -68,7 +69,9 @@ export function SDGenerateModal({
       })
       .catch(e => setError(String(e)))
       .finally(() => setLoadingWorkflows(false));
-  }, []); // eslint-disable-line
+  // reason: chargement one-shot des workflows ComfyUI au montage.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setUseCurrentImageAsReference(false);
@@ -149,7 +152,7 @@ export function SDGenerateModal({
   }
 
   const refName = effectiveReferenceImagePath
-    ? effectiveReferenceImagePath.split(/[\\/]/).pop()
+    ? basename(effectiveReferenceImagePath)
     : null;
 
   return (

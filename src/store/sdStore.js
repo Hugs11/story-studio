@@ -1,24 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { loadSdSettings, saveSdSettings } from './sdSettings';
-
-const RESULTS_STORAGE_KEY = 'sdJobResults';
+import { KEYS, read, write } from './persistentSettings';
 
 function loadPersistedJobs() {
-  try {
-    const raw = localStorage.getItem(RESULTS_STORAGE_KEY);
-    if (!raw) return [];
-    const jobs = JSON.parse(raw);
-    return Array.isArray(jobs) ? jobs : [];
-  } catch {
-    return [];
-  }
+  const jobs = read(KEYS.SD_RESULTS, { parse: JSON.parse, defaultValue: [] });
+  return Array.isArray(jobs) ? jobs : [];
 }
 
 function persistDoneJobs(jobs) {
-  try {
-    const toSave = jobs.filter(j => j.status === 'done' && j.resultPaths.length > 0);
-    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(toSave));
-  } catch {}
+  const toSave = jobs.filter(j => j.status === 'done' && j.resultPaths.length > 0);
+  write(KEYS.SD_RESULTS, toSave, { serialize: JSON.stringify });
 }
 
 function genId() {
@@ -38,6 +29,7 @@ function genId() {
 //   errorMessage: string | null,
 //   progress: number | null,
 //   progressLabel: string | null,
+//   targetLabel: string,
 //   createdAt: number,
 // }
 
@@ -70,6 +62,7 @@ export function useSdStore() {
       createdAt: Date.now(),
       projectName: options.projectName || '',
       fieldId: options.fieldId || null,
+      targetLabel: options.targetLabel || '',
     };
     setJobs(prev => [...prev, job]);
     return job.id;

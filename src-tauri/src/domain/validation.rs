@@ -1,4 +1,4 @@
-use crate::domain::project::{Menu, Project, ProjectEntry, StoryItem};
+use crate::domain::project::{Project, ProjectEntry};
 use crate::services::project_files::{validate_existing_file_path, validate_existing_pack_path};
 use std::collections::{HashMap, HashSet};
 
@@ -25,16 +25,16 @@ fn display_label(value: &str, fallback: &str) -> String {
     }
 }
 
-fn validate_story_item_for_generation(
-    item: &StoryItem,
+fn validate_story_entry_for_generation(
+    entry: &ProjectEntry,
     context: &str,
-    require_selection_media: bool,
     errors: &mut Vec<String>,
 ) {
-    match item.item_type.as_str() {
+    match entry.entry_type.as_str() {
         "zip" => {
             let zip_label = format!("{} : ZIP", context);
-            if let Some(zip_path) = required_file_path(item.zip_path.as_deref(), &zip_label, errors)
+            if let Some(zip_path) =
+                required_file_path(entry.zip_path.as_deref(), &zip_label, errors)
             {
                 if let Err(err) = validate_existing_pack_path(zip_path) {
                     errors.push(err);
@@ -44,91 +44,30 @@ fn validate_story_item_for_generation(
         _ => {
             let story_audio_label = format!("{} : audio", context);
             if let Some(audio_path) =
-                required_file_path(item.audio.as_deref(), &story_audio_label, errors)
+                required_file_path(entry.audio.as_deref(), &story_audio_label, errors)
             {
                 if let Err(err) = validate_existing_file_path(audio_path, &story_audio_label) {
                     errors.push(err);
                 }
             }
-            if require_selection_media {
-                let item_audio_label = format!("{} : audio titre", context);
-                if let Some(item_audio) =
-                    required_file_path(item.item_audio.as_deref(), &item_audio_label, errors)
-                {
-                    if let Err(err) = validate_existing_file_path(item_audio, &item_audio_label) {
-                        errors.push(err);
-                    }
+            let item_audio_label = format!("{} : audio titre", context);
+            if let Some(item_audio) =
+                required_file_path(entry.item_audio.as_deref(), &item_audio_label, errors)
+            {
+                if let Err(err) = validate_existing_file_path(item_audio, &item_audio_label) {
+                    errors.push(err);
                 }
-                let item_image_label = format!("{} : image", context);
-                if let Some(item_image) =
-                    required_file_path(item.item_image.as_deref(), &item_image_label, errors)
-                {
-                    if let Err(err) = validate_existing_file_path(item_image, &item_image_label) {
-                        errors.push(err);
-                    }
+            }
+
+            let item_image_label = format!("{} : image", context);
+            if let Some(item_image) =
+                required_file_path(entry.item_image.as_deref(), &item_image_label, errors)
+            {
+                if let Err(err) = validate_existing_file_path(item_image, &item_image_label) {
+                    errors.push(err);
                 }
             }
         }
-    }
-}
-
-pub(crate) fn menu_to_project_entry(menu: &Menu) -> ProjectEntry {
-    ProjectEntry {
-        id: String::new(),
-        entry_type: "menu".to_string(),
-        name: menu.name.clone(),
-        audio: menu.audio.clone(),
-        image: menu.image.clone(),
-        item_audio: None,
-        item_image: None,
-        zip_path: None,
-        auto_black_image: menu.auto_black_image,
-        control_settings: None,
-        return_after_play: None,
-        return_on_home: None,
-        return_on_home_none: false,
-        title_return_on_home: None,
-        title_return_on_home_none: false,
-        title_control_settings: None,
-        after_playback_prompt_audio: None,
-        after_playback_prompt_control_settings: None,
-        after_playback_prompt_ok_target: None,
-        after_playback_prompt_home_target: None,
-        after_playback_prompt_home_none: false,
-        after_playback_sequence: Vec::new(),
-        after_playback_home_step: None,
-        audio_processing: HashMap::new(),
-        children: menu.items.iter().map(story_item_to_project_entry).collect(),
-    }
-}
-
-pub(crate) fn story_item_to_project_entry(item: &StoryItem) -> ProjectEntry {
-    ProjectEntry {
-        id: String::new(),
-        entry_type: item.item_type.clone(),
-        name: item.name.clone(),
-        audio: item.audio.clone(),
-        image: None,
-        item_audio: item.item_audio.clone(),
-        item_image: item.item_image.clone(),
-        zip_path: item.zip_path.clone(),
-        auto_black_image: false,
-        control_settings: None,
-        return_after_play: None,
-        return_on_home: None,
-        return_on_home_none: false,
-        title_return_on_home: None,
-        title_return_on_home_none: false,
-        title_control_settings: None,
-        after_playback_prompt_audio: None,
-        after_playback_prompt_control_settings: None,
-        after_playback_prompt_ok_target: None,
-        after_playback_prompt_home_target: None,
-        after_playback_prompt_home_none: false,
-        after_playback_sequence: Vec::new(),
-        after_playback_home_step: None,
-        audio_processing: HashMap::new(),
-        children: Vec::new(),
     }
 }
 
@@ -148,25 +87,7 @@ fn decode_navigation_menu_target(target: &str) -> Option<&str> {
 }
 
 pub(crate) fn project_root_entries(project: &Project) -> Vec<ProjectEntry> {
-    let mut entries = if !project.root_entries.is_empty() {
-        project.root_entries.clone()
-    } else if project.project_type.as_deref() == Some("simple") {
-        project
-            .menus
-            .first()
-            .and_then(|menu| menu.items.first())
-            .map(story_item_to_project_entry)
-            .into_iter()
-            .collect()
-    } else {
-        let mut entries: Vec<ProjectEntry> = project
-            .root_items
-            .iter()
-            .map(story_item_to_project_entry)
-            .collect();
-        entries.extend(project.menus.iter().map(menu_to_project_entry));
-        entries
-    };
+    let mut entries = project.root_entries.clone();
     normalize_imported_continuation_clones(&mut entries);
     entries
 }
@@ -474,20 +395,7 @@ fn validate_project_entry_for_generation(
                     context, entry.entry_type
                 ));
             } else {
-                let is_autoplay = entry
-                    .control_settings
-                    .as_ref()
-                    .and_then(|cs| cs.autoplay)
-                    .unwrap_or(false);
-                let item = StoryItem {
-                    item_type: "story".to_string(),
-                    name: entry.name.clone(),
-                    audio: entry.audio.clone(),
-                    item_audio: entry.item_audio.clone(),
-                    item_image: entry.item_image.clone(),
-                    zip_path: None,
-                };
-                validate_story_item_for_generation(&item, context, !is_autoplay, errors);
+                validate_story_entry_for_generation(entry, context, errors);
                 if let Some(prompt_audio) = entry
                     .after_playback_prompt_audio
                     .as_deref()
@@ -570,20 +478,7 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             .find(|entry| entry.entry_type != "menu" && entry.entry_type != "zip")
         {
             Some(story) => {
-                let item = StoryItem {
-                    item_type: "story".to_string(),
-                    name: story.name.clone(),
-                    audio: story.audio.clone(),
-                    item_audio: story.item_audio.clone(),
-                    item_image: story.item_image.clone(),
-                    zip_path: None,
-                };
-                validate_story_item_for_generation(
-                    &item,
-                    "Histoire principale",
-                    false,
-                    &mut errors,
-                );
+                validate_story_entry_for_generation(story, "Histoire principale", &mut errors);
             }
             None => errors.push("Histoire principale manquante.".to_string()),
         }
@@ -633,5 +528,202 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
         Ok(())
     } else {
         Err(errors.join("\n"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::project::GlobalOptions;
+
+    fn options() -> GlobalOptions {
+        GlobalOptions {
+            convert_format: true,
+            add_silence: false,
+            auto_next: false,
+            select_next: false,
+            night_mode: false,
+        }
+    }
+
+    fn base_project(project_type: &str) -> Project {
+        Project {
+            name: "Validation test".to_string(),
+            project_type: Some(project_type.to_string()),
+            root_audio: None,
+            root_image: None,
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            audio_processing: HashMap::new(),
+            native_graph: None,
+            pack_version: 1,
+            pack_description: String::new(),
+            root_entries: Vec::new(),
+            global_options: options(),
+        }
+    }
+
+    fn root_entry_story(name: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: name.to_ascii_lowercase(),
+            entry_type: "story".to_string(),
+            name: name.to_string(),
+            audio: Some("missing-story.mp3".to_string()),
+            item_audio: Some("missing-title.mp3".to_string()),
+            item_image: Some("missing-title.png".to_string()),
+            ..ProjectEntry::default()
+        }
+    }
+
+    #[test]
+    fn validation_reports_simple_story_errors_from_root_entries() {
+        let mut root_entries_project = base_project("simple");
+        root_entries_project.root_entries = vec![root_entry_story("Simple")];
+
+        let root_entries_errors = validate_project_for_generation(&root_entries_project)
+            .expect_err("rootEntries simple should report missing files");
+
+        assert!(root_entries_errors.contains("Audio racine manquant."));
+        assert!(root_entries_errors.contains("Histoire principale : audio"));
+    }
+
+    // ---- Parite avec le test JS scripts/validationParity.test.mjs ----
+    // Les cas ci-dessous miroitent les fixtures de scripts/fixtures/validation-projects.json.
+    // Si on ajoute une regle de validation : ajouter un cas ici ET dans le JSON, et
+    // valider que les deux moteurs produisent le meme verdict (Ok / Err).
+
+    fn story_entry_with_paths(id: &str, name: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: "story".to_string(),
+            name: name.to_string(),
+            audio: Some("valid/story1.mp3".to_string()),
+            item_audio: Some("valid/story1-title.mp3".to_string()),
+            item_image: Some("valid/story1-title.png".to_string()),
+            ..ProjectEntry::default()
+        }
+    }
+
+    #[test]
+    fn parity_pack_valid_minimal_passes_validation() {
+        // Equivalent JSON : pack_valid_minimal. JS = ok, Rust = Ok.
+        // Note : les paths n'existent pas sur disque, donc validate_existing_file_path va echouer.
+        // Cote JS, fileAudit force ces paths a true ; cote Rust, on ne peut pas mocker le FS sans
+        // toucher au code de prod. On verifie donc que les erreurs Rust portent UNIQUEMENT sur
+        // l'inaccessibilite disque, jamais sur la structure du projet.
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = vec![story_entry_with_paths("story-1", "Histoire 1")];
+
+        let result = validate_project_for_generation(&project);
+        match result {
+            Ok(()) => {}
+            Err(errors) => {
+                assert!(
+                    !errors.contains("manquant"),
+                    "structure invalide alors qu'elle devrait passer : {}",
+                    errors,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn parity_pack_missing_story_audio_fails() {
+        // Equivalent JSON : pack_missing_story_audio. JS = fail, Rust = Err contenant "audio".
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = vec![ProjectEntry {
+            id: "story-1".to_string(),
+            entry_type: "story".to_string(),
+            name: "Histoire 1".to_string(),
+            audio: None,
+            item_audio: Some("valid/story1-title.mp3".to_string()),
+            item_image: Some("valid/story1-title.png".to_string()),
+            ..ProjectEntry::default()
+        }];
+
+        let errors = validate_project_for_generation(&project)
+            .expect_err("projet sans audio histoire doit bloquer");
+        assert!(
+            errors.contains("audio"),
+            "Rust doit signaler l'audio manquant ; recu : {}",
+            errors,
+        );
+    }
+
+    #[test]
+    fn parity_pack_empty_pack_fails() {
+        // Equivalent JSON : pack_empty_pack. JS = fail (warning "emptyPack"),
+        // Rust = Err contenant "aucune histoire" (cf. validate_pack_root).
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = Vec::new();
+
+        let errors = validate_project_for_generation(&project).expect_err("pack vide doit bloquer");
+        assert!(
+            errors.to_lowercase().contains("aucune histoire")
+                || errors.to_lowercase().contains("aucun")
+                || errors.to_lowercase().contains("vide"),
+            "Rust doit signaler le pack vide ; recu : {}",
+            errors,
+        );
+    }
+
+    #[test]
+    fn parity_simple_missing_root_audio_fails() {
+        // Equivalent JSON : simple_missing_root_audio. JS = fail (warning audio intro),
+        // Rust = Err contenant "Audio racine".
+        let mut project = base_project("simple");
+        project.root_audio = None;
+        project.root_entries = vec![ProjectEntry {
+            id: "story-main".to_string(),
+            entry_type: "story".to_string(),
+            name: "Histoire principale".to_string(),
+            audio: Some("valid/main.mp3".to_string()),
+            ..ProjectEntry::default()
+        }];
+
+        let errors = validate_project_for_generation(&project)
+            .expect_err("simple sans audio racine doit bloquer");
+        assert!(
+            errors.contains("Audio racine") || errors.contains("audio"),
+            "Rust doit signaler l'audio racine manquant ; recu : {}",
+            errors,
+        );
+    }
+
+    #[test]
+    fn project_root_entries_normalizes_imported_continuation_children() {
+        let mut project = base_project("pack");
+        project.root_entries = vec![ProjectEntry {
+            id: "import-sequence-choice-1".to_string(),
+            entry_type: "menu".to_string(),
+            name: "Suite apres histoire".to_string(),
+            children: vec![ProjectEntry {
+                id: "child".to_string(),
+                entry_type: "story".to_string(),
+                name: "Child".to_string(),
+                return_after_play: Some("story:child".to_string()),
+                ..ProjectEntry::default()
+            }],
+            ..ProjectEntry::default()
+        }];
+
+        let entries = project_root_entries(&project);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].children[0].id, "import-sequence-choice-1-child");
+        assert_eq!(
+            entries[0].children[0].return_after_play.as_deref(),
+            Some("story:import-sequence-choice-1-child")
+        );
     }
 }

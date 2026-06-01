@@ -2,8 +2,7 @@ import { writeFile, mkdir, copyFile, BaseDirectory } from '@tauri-apps/plugin-fs
 import { join, tempDir } from '@tauri-apps/api/path';
 import { TEXT_IMG_W, TEXT_IMG_H, drawTextImage } from './drawTextImage';
 import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
-
-const WORKSPACE_DIR_KEY = 'storyStudioWorkspaceDir';
+import { KEYS, read } from '../../store/persistentSettings';
 
 export async function generateTextImage(text) {
   const canvas = document.createElement('canvas');
@@ -21,7 +20,7 @@ export async function generateTextImage(text) {
   const tmp = await tempDir();
   const tempAbsPath = await join(tmp, tempRelPath);
 
-  const workspaceDir = localStorage.getItem(WORKSPACE_DIR_KEY);
+  const workspaceDir = read(KEYS.WORKSPACE_DIR);
   if (workspaceDir) {
     try {
       const destDir = `${workspaceDir}/images-generees`;

@@ -2,32 +2,32 @@ import { useRef, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
-import { useLocalFile } from '../../store/useLocalFile';
-import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
+import { basename } from '../../utils/fileUtils';
+import {
+  NUDGE_STEP,
+  SKIP_STEP,
+  ZOOM_MIN,
+  ZOOM_MAX,
+  WHEEL_ZOOM_SENSITIVITY,
+  KEYBOARD_ZOOM_STEP,
+  formatTime,
+} from './audioEditorConstants';
+import { markersAfterAction } from './audioEditorMarkers';
+import { createAudioEditorWaveformOptions, styleRegionHandles } from './audioEditorWaveform';
+import {
+  currentFadeValue as currentFadeValuePure,
+  fadeConfig as fadeConfigPure,
+  fadeLimit as fadeLimitPure,
+  fadeTargetFromPointer as fadeTargetFromPointerPure,
+  isFadeHandleClick,
+} from './fadeUtils';
+import { useAudioEditorShortcuts } from './useAudioEditorShortcuts';
+import { useShuttlePlayback } from './useShuttlePlayback';
 import './AudioEditorModal.css';
-
-const NUDGE_STEP = 0.05;
-const SKIP_STEP = 5;
-const ZOOM_MIN = 1;
-const ZOOM_MAX = 600;
-const WHEEL_ZOOM_SENSITIVITY = 0.04;
-const KEYBOARD_ZOOM_STEP = 12;
-const SCRUB_DURATION = 0.06;
-const SHUTTLE_RATES = [1, 2, 4, 8];
-
-function formatTime(sec) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  const cs = Math.floor((sec % 1) * 100);
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  const cc = String(cs).padStart(2, '0');
-  return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}.${cc}` : `${mm}:${ss}.${cc}`;
-}
 
 export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, onCancel }) {
   const [sourcePath, setSourcePath] = useState(filePath);
@@ -48,9 +48,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const skipNextZoomEffectRef = useRef(false);
   const actionBasePathRef = useRef(filePath);
   const pendingViewportRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const shuttleRef = useRef(null);
-  const reverseBufferRef = useRef(null);
 
   const [editInfo, setEditInfo] = useState(null);
   const [stagedEdit, setStagedEdit] = useState(null);
@@ -63,16 +60,29 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const [fadeOutSec, setFadeOutSec] = useState(0);
   const [cutFadeSec, setCutFadeSec] = useState(0);
   const [zoom, setZoom] = useState(80);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [applyMode, setApplyMode] = useState(null); // 'trim' | 'cut' | 'preview' | 'restore' | null
-  const [currentTime, setCurrentTime] = useState(0);
-  const [shuttleStatus, setShuttleStatus] = useState(null);
   const [error, setError] = useState(null);
+
+  const {
+    shuttleRef,
+    currentTime,
+    setCurrentTime,
+    isPlaying,
+    setIsPlaying,
+    shuttleStatus,
+    clampAudioTime,
+    setWaveTime,
+    getCurrentAudioTime,
+    stopShuttle,
+    nudgeWithScrub,
+    bumpShuttle,
+    resetReverseBuffer,
+  } = useShuttlePlayback({ wsRef, durationRef });
 
   const isApplying = applyMode !== null;
   const isPreviewingEdit = !!previewPath;
-  const filename = filePath?.split(/[\\/]/).pop() ?? '';
+  const filename = basename(filePath);
   const trimDuration = Math.max(0, trimEnd - trimStart);
   const canOperate = !isLoading && !isApplying && trimEnd > trimStart + 0.01;
   const canCut = canOperate && trimDuration < duration - 0.01;
@@ -147,6 +157,17 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     return () => window.removeEventListener('pointerdown', handlePointerDown);
   }, [fadePopover, fadeContextMenu]);
 
+  // reason: ces 5 deps changent en pratique TOUJOURS EN GROUPE -- chaque
+  // mutation de stagedEdit / cutMarkers / previewPath passe par
+  // regenerateFadePreview ou handleStageAction qui appelle
+  // invoke('preview_audio_edit', ...) -> setPreviewPath(newPath) -> audioUrl
+  // change. Le re-decode audio est donc inherent au workflow (le user
+  // bouge un fade -> ffmpeg regenere un preview -> waveform recharge).
+  // Lot 11 P3 : analyse approfondie a montre que separer en 2 useEffects
+  // coordonnes via wsReady ne procurerait aucun gain pratique. On garde
+  // le pattern actuel ; la presence des 5 deps est une securite pour
+  // les cas hypothetiques ou stagedEdit/cutMarkers changerait sans
+  // changement audio.
   useEffect(() => {
     if (!audioUrl || !containerRef.current) return;
 
@@ -155,20 +176,13 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setIsLoading(true);
     setError(null);
     wsRef.current = null;
-    reverseBufferRef.current = null;
+    resetReverseBuffer();
 
-    const ws = WaveSurfer.create({
+    const ws = WaveSurfer.create(createAudioEditorWaveformOptions({
       container: containerRef.current,
       url: audioUrl,
-      waveColor: '#64748B',
-      progressColor: '#94A3B8',
-      cursorColor: '#F59E0B',
-      height: 96,
       plugins: [wsRegions],
-      interact: true,
-      dragToSeek: true,
-      hideScrollbar: false,
-    });
+    }));
 
     ws.on('ready', (dur) => {
       if (!mounted) return;
@@ -374,88 +388,34 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     if (!isLoading) applyWaveZoom(zoom);
   }, [zoom, isLoading]);
 
-  useEffect(() => {
-    if (isLoading) return;
-    function handleKey(e) {
-      const target = e.target;
-      if (
-        target?.tagName === 'TEXTAREA'
-        || target?.tagName === 'INPUT'
-        || target?.tagName === 'SELECT'
-        || target?.isContentEditable
-      ) return;
-      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'audioEditor');
-      if (!actionId) return;
-      e.preventDefault();
-      switch (actionId) {
-        case 'audioUndo':
-          if (stagedEdit || previewPath) undoStagedEdit();
-          return;
-        case 'audioZoomIn':
-          zoomAtCurrentCursor(KEYBOARD_ZOOM_STEP);
-          return;
-        case 'audioZoomOut':
-          zoomAtCurrentCursor(-KEYBOARD_ZOOM_STEP);
-          return;
-        case 'audioClearIn':
-          clearStartPoint();
-          return;
-        case 'audioClearOut':
-          clearEndPoint();
-          return;
-        case 'audioKeepSelection':
-          if (canOperate) void handleStageAction('trim');
-          return;
-        case 'audioCutSelection':
-          if (canCut) void handleStageAction('cut');
-          return;
-        case 'audioPlayPause':
-          handlePlayPause();
-          return;
-        case 'audioNudgeBack':
-          nudgeWithScrub(-NUDGE_STEP);
-          return;
-        case 'audioNudgeFwd':
-          nudgeWithScrub(NUDGE_STEP);
-          return;
-        case 'audioGoStart':
-          stopShuttle();
-          setWaveTime(0);
-          return;
-        case 'audioGoEnd':
-          stopShuttle();
-          setWaveTime(durationRef.current);
-          return;
-        case 'audioShuttleBack':
-          bumpShuttle(-1);
-          return;
-        case 'audioShuttleStop':
-          stopShuttle();
-          wsRef.current?.pause();
-          setIsPlaying(false);
-          return;
-        case 'audioShuttleFwd':
-          bumpShuttle(1);
-          return;
-        case 'audioMarkIn':
-          markStartHere();
-          return;
-        case 'audioMarkOut':
-          markEndHere();
-          return;
-        case 'audioPreviewIn':
-          previewIn();
-          return;
-        case 'audioPreviewOut':
-          previewOut();
-          return;
-        default:
-          return;
-      }
-    }
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isLoading, stagedEdit, previewPath, canOperate, canCut]); // eslint-disable-line react-hooks/exhaustive-deps
+  useAudioEditorShortcuts({
+    isLoading,
+    canOperate,
+    canCut,
+    stagedEdit,
+    previewPath,
+    actions: {
+      undo: undoStagedEdit,
+      zoomIn: () => zoomAtCurrentCursor(KEYBOARD_ZOOM_STEP),
+      zoomOut: () => zoomAtCurrentCursor(-KEYBOARD_ZOOM_STEP),
+      clearStart: clearStartPoint,
+      clearEnd: clearEndPoint,
+      trimSelection: () => { void handleStageAction('trim'); },
+      cutSelection: () => { void handleStageAction('cut'); },
+      playPause: handlePlayPause,
+      nudgeBack: () => nudgeWithScrub(-NUDGE_STEP),
+      nudgeForward: () => nudgeWithScrub(NUDGE_STEP),
+      goToStart: () => { stopShuttle(); setWaveTime(0); },
+      goToEnd: () => { stopShuttle(); setWaveTime(durationRef.current); },
+      shuttleBack: () => bumpShuttle(-1),
+      shuttleStop: () => { stopShuttle(); wsRef.current?.pause(); setIsPlaying(false); },
+      shuttleForward: () => bumpShuttle(1),
+      markStart: markStartHere,
+      markEnd: markEndHere,
+      previewIn: goToTrimStart,
+      previewOut: goToTrimEnd,
+    },
+  });
 
   function handlePlayPause() {
     if (shuttleRef.current) {
@@ -508,201 +468,14 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setTrimEnd(end);
   }
 
-  function previewIn() {
+  function goToTrimStart() {
     stopShuttle();
-    wsRef.current?.play(trimStartRef.current);
+    setWaveTime(trimStartRef.current);
   }
 
-  function previewOut() {
+  function goToTrimEnd() {
     stopShuttle();
-    wsRef.current?.play(trimEndRef.current);
-  }
-
-  function styleRegionHandles(region, color) {
-    window.setTimeout(() => {
-      const left = region?.element?.querySelector?.('[part*="region-handle-left"]');
-      const right = region?.element?.querySelector?.('[part*="region-handle-right"]');
-      if (left) {
-        left.style.borderLeftColor = color;
-        left.dataset.audioEditorRegionId = region.id ?? '';
-        left.dataset.audioEditorHandle = 'left';
-      }
-      if (right) {
-        right.style.borderRightColor = color;
-        right.dataset.audioEditorRegionId = region.id ?? '';
-        right.dataset.audioEditorHandle = 'right';
-      }
-    }, 0);
-  }
-
-  function clampAudioTime(value) {
-    const dur = durationRef.current || 0;
-    return Math.max(0, Math.min(Number(value) || 0, dur));
-  }
-
-  function setWaveTime(time) {
-    const next = clampAudioTime(time);
-    wsRef.current?.setTime(next);
-    setCurrentTime(next);
-    return next;
-  }
-
-  function getCurrentAudioTime() {
-    if (shuttleRef.current) return currentShuttleTime();
-    return clampAudioTime(wsRef.current?.getCurrentTime?.() ?? currentTime);
-  }
-
-  function getAudioContext() {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return null;
-    if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
-    if (audioCtxRef.current.state === 'suspended') {
-      void audioCtxRef.current.resume();
-    }
-    return audioCtxRef.current;
-  }
-
-  function createReverseBuffer(buffer) {
-    const ctx = getAudioContext();
-    if (!ctx || !buffer) return null;
-    const reversed = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-      const input = buffer.getChannelData(channel);
-      const output = reversed.getChannelData(channel);
-      for (let i = 0, j = input.length - 1; i < input.length; i += 1, j -= 1) {
-        output[i] = input[j];
-      }
-    }
-    return reversed;
-  }
-
-  function getPlaybackBuffer(direction) {
-    const buffer = wsRef.current?.getDecodedData?.();
-    if (!buffer) return null;
-    if (direction >= 0) return buffer;
-    if (!reverseBufferRef.current || reverseBufferRef.current.length !== buffer.length) {
-      reverseBufferRef.current = createReverseBuffer(buffer);
-    }
-    return reverseBufferRef.current;
-  }
-
-  function currentShuttleTime() {
-    const active = shuttleRef.current;
-    const ctx = audioCtxRef.current;
-    if (!active) return clampAudioTime(wsRef.current?.getCurrentTime?.() ?? currentTime);
-    if (!ctx) return active.startTime;
-    const elapsed = Math.max(0, ctx.currentTime - active.startedAt) * active.rate;
-    return clampAudioTime(active.startTime + active.direction * elapsed);
-  }
-
-  function stopShuttle({ sync = true } = {}) {
-    const active = shuttleRef.current;
-    if (!active) {
-      setShuttleStatus(null);
-      return;
-    }
-    const nextTime = sync ? currentShuttleTime() : active.startTime;
-    shuttleRef.current = null;
-    if (active.rafId) cancelAnimationFrame(active.rafId);
-    try {
-      active.source.onended = null;
-      active.source.stop();
-    } catch (_) {
-      // Source may already be stopped by the Web Audio clock.
-    }
-    try {
-      active.source.disconnect();
-    } catch (_) {
-      // Already disconnected.
-    }
-    setWaveTime(nextTime);
-    setIsPlaying(false);
-    setShuttleStatus(null);
-  }
-
-  function startBufferPlayback({ direction, rate, startTime, duration: playDuration = null, status = null }) {
-    const ctx = getAudioContext();
-    const buffer = getPlaybackBuffer(direction);
-    if (!ctx || !buffer) {
-      setWaveTime(startTime);
-      return false;
-    }
-
-    stopShuttle({ sync: true });
-    wsRef.current?.pause();
-
-    const dur = durationRef.current || buffer.duration;
-    const clampedStart = clampAudioTime(startTime);
-    const offset = direction >= 0 ? clampedStart : Math.max(0, dur - clampedStart);
-    const maxDuration = direction >= 0 ? dur - clampedStart : clampedStart;
-    if (maxDuration <= 0.005) {
-      setWaveTime(clampedStart);
-      return false;
-    }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.playbackRate.setValueAtTime(Math.max(0.25, rate), ctx.currentTime);
-    source.connect(ctx.destination);
-
-    const active = {
-      source,
-      direction,
-      rate,
-      startTime: clampedStart,
-      startedAt: ctx.currentTime,
-      rafId: null,
-      scrub: playDuration !== null,
-    };
-    shuttleRef.current = active;
-    setIsPlaying(true);
-    setShuttleStatus(status);
-
-    const syncCursor = () => {
-      if (shuttleRef.current !== active) return;
-      const next = currentShuttleTime();
-      setWaveTime(next);
-      const atEnd = direction >= 0 ? next >= dur - 0.001 : next <= 0.001;
-      if (atEnd) {
-        stopShuttle({ sync: true });
-        return;
-      }
-      active.rafId = requestAnimationFrame(syncCursor);
-    };
-    if (!active.scrub) {
-      active.rafId = requestAnimationFrame(syncCursor);
-    }
-    source.onended = () => {
-      if (shuttleRef.current === active) stopShuttle({ sync: !active.scrub });
-    };
-    source.start(0, Math.max(0, Math.min(offset, buffer.duration)), Math.max(0.01, Math.min(playDuration ?? maxDuration, maxDuration)));
-    return true;
-  }
-
-  function nudgeWithScrub(delta) {
-    stopShuttle({ sync: !shuttleRef.current?.scrub });
-    const next = setWaveTime(getCurrentAudioTime() + delta);
-    startBufferPlayback({
-      direction: 1,
-      rate: 1,
-      startTime: next,
-      duration: Math.min(SCRUB_DURATION, Math.max(0.01, (durationRef.current || 0) - next)),
-      status: null,
-    });
-  }
-
-  function bumpShuttle(direction) {
-    const active = shuttleRef.current;
-    const sameDirection = active && !active.scrub && active.direction === direction;
-    const currentRate = sameDirection ? active.rate : 0;
-    const currentIndex = SHUTTLE_RATES.findIndex((rate) => rate === currentRate);
-    const nextRate = SHUTTLE_RATES[Math.min(SHUTTLE_RATES.length - 1, currentIndex + 1)] ?? SHUTTLE_RATES[0];
-    const startTime = active ? currentShuttleTime() : getCurrentAudioTime();
-    startBufferPlayback({
-      direction,
-      rate: nextRate,
-      startTime,
-      status: `${direction > 0 ? 'L' : 'J'} ×${nextRate}`,
-    });
+    setWaveTime(trimEndRef.current);
   }
 
   function getWavePointer(e) {
@@ -900,66 +673,21 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     openFadePopover(target, e);
   }
 
-  function isFadeHandleClick(e) {
-    const path = e.nativeEvent?.composedPath?.() ?? [];
-    return path.some((node) => {
-      const regionId = node?.dataset?.audioEditorRegionId ?? '';
-      return regionId === 'audio-fade-in-region'
-        || regionId === 'audio-fade-out-region'
-        || regionId === 'audio-cut-region';
-    });
-  }
+  const currentFadeValue = (target) => currentFadeValuePure(target, { fadeInSec, fadeOutSec, cutFadeSec });
+  const fadeLimit = (target) => fadeLimitPure(target, { outputFadeMax, cutFadeMax });
+  const fadeConfig = (target) => fadeConfigPure(target, { fadeInSec, fadeOutSec, cutFadeSec, outputFadeMax, cutFadeMax });
 
-  function currentFadeValue(target) {
-    if (target === 'in') return fadeInSec;
-    if (target === 'out') return fadeOutSec;
-    return cutFadeSec;
-  }
-
-  function fadeLimit(target) {
-    if (target === 'cut') return cutFadeMax;
-    return outputFadeMax;
-  }
-
-  function fadeTargetFromPointer(e, { existingOnly = false } = {}) {
-    const pointer = getWavePointer(e);
-    if (!pointer) return null;
-    const dur = durationRef.current || 0;
-    const tolerance = Math.max(0.15, 16 / pointer.pxPerSec);
-    const candidates = [];
-    const addCandidate = (target, point, rangeStart = point, rangeEnd = point, value = 0) => {
-      if (existingOnly && value <= 0) return;
-      const start = Math.min(rangeStart, rangeEnd) - tolerance;
-      const end = Math.max(rangeStart, rangeEnd) + tolerance;
-      if (pointer.time < start || pointer.time > end) return;
-      const distance = pointer.time >= Math.min(rangeStart, rangeEnd) && pointer.time <= Math.max(rangeStart, rangeEnd)
-        ? 0
-        : Math.abs(pointer.time - point);
-      candidates.push({ target, distance });
-    };
-
-    if (previewPath && stagedEdit) {
-      const fadeIn = Math.min(fadeInSec, outputFadeMax);
-      const fadeOut = Math.min(fadeOutSec, outputFadeMax);
-      addCandidate('in', 0, 0, fadeIn > 0 ? fadeIn : 0, fadeIn);
-      addCandidate('out', dur, fadeOut > 0 ? Math.max(0, dur - fadeOut) : dur, dur, fadeOut);
-      if (stagedEdit.mode === 'cut') {
-        const join = Math.max(0, Math.min(Number(stagedEdit.startSec ?? 0), dur));
-        const cutFade = Math.min(cutFadeSec, cutFadeMax);
-        addCandidate('cut', join, cutFade > 0 ? Math.max(0, join - cutFade) : join, join, cutFade);
-      }
-    } else if (regionRef.current) {
-      const start = trimStartRef.current;
-      const end = trimEndRef.current;
-      const fadeIn = Math.min(fadeInSec, fadeMax);
-      const fadeOut = Math.min(fadeOutSec, fadeMax);
-      addCandidate('in', start, start, fadeIn > 0 ? Math.min(end, start + fadeIn) : start, fadeIn);
-      addCandidate('out', end, fadeOut > 0 ? Math.max(start, end - fadeOut) : end, end, fadeOut);
-    }
-
-    if (candidates.length === 0) return null;
-    candidates.sort((a, b) => a.distance - b.distance);
-    return candidates[0].target;
+  function fadeTargetFromPointer(e, options = {}) {
+    return fadeTargetFromPointerPure(
+      getWavePointer(e),
+      {
+        durationRef, regionRef, previewPath, stagedEdit,
+        fadeInSec, fadeOutSec, cutFadeSec,
+        outputFadeMax, cutFadeMax, fadeMax,
+        trimStartRef, trimEndRef,
+      },
+      options,
+    );
   }
 
   function setFadeValue(target, value) {
@@ -972,16 +700,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     if (!stagedEdit) {
       setPreviewPath(null);
     }
-  }
-
-  function fadeConfig(target) {
-    if (target === 'in') {
-      return { label: 'Fondu entrée', value: Math.min(fadeInSec, outputFadeMax), max: outputFadeMax };
-    }
-    if (target === 'out') {
-      return { label: 'Fondu sortie', value: Math.min(fadeOutSec, outputFadeMax), max: outputFadeMax };
-    }
-    return { label: 'Fondu de coupe', value: Math.min(cutFadeSec, cutFadeMax), max: cutFadeMax };
   }
 
   async function handleFadePopoverOk() {
@@ -1027,6 +745,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           edit.mode,
           edit.startSec,
           edit.endSec,
+          durationRef.current,
           edit.cutFadeSec,
         ));
       } else if (!stagedEdit) {
@@ -1047,48 +766,32 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setApplyMode('restore');
     setError(null);
     try {
-      const result = await invoke('restore_audio_original', {
+      await invoke('restore_audio_original', {
         inputPath: filePath,
         savePath: savePath ?? null,
         workspaceDir: workspaceDir ?? null,
       });
-      onConfirm(result.output_path);
+      // Le chemin ne change pas (le fichier est ecrase par la copie de
+      // l'original) -- on reset l'etat d'edition et on force useLocalFile a
+      // relire (le mtime a change).
+      setPreviewPath(null);
+      setStagedEdit(null);
+      setEditInfo(null);
+      setHasChainedPreview(false);
+      setCutMarkers([]);
+      setFadeInSec(0);
+      setFadeOutSec(0);
+      setCutFadeSec(0);
+      actionBasePathRef.current = filePath;
+      preStagedSelectionRef.current = null;
+      preStagedCutMarkersRef.current = [];
+      initialEditRef.current = null;
+      window.dispatchEvent(new Event('focus'));
+      setApplyMode(null);
     } catch (err) {
       setError(String(err));
       setApplyMode(null);
     }
-  }
-
-  function markersAfterAction(markers, mode, start, end, newCutFadeSec = 0) {
-    const selectionStart = Number(start);
-    const selectionEnd = Number(end);
-    if (!Number.isFinite(selectionStart) || !Number.isFinite(selectionEnd) || selectionEnd <= selectionStart) {
-      return markers;
-    }
-    if (mode === 'trim') {
-      return markers
-        .filter((marker) => marker.time >= selectionStart && marker.time <= selectionEnd)
-        .map((marker) => ({
-          ...marker,
-          time: Math.max(0, marker.time - selectionStart),
-        }));
-    }
-
-    if (mode === 'cut') {
-      const removedDuration = selectionEnd - selectionStart + Math.max(0, Number(newCutFadeSec) || 0);
-      const shifted = markers
-        .filter((marker) => marker.time < selectionStart || marker.time > selectionEnd)
-        .map((marker) => ({
-          ...marker,
-          time: marker.time > selectionEnd ? Math.max(0, marker.time - removedDuration) : marker.time,
-        }));
-      if (selectionStart > 0.01 && selectionEnd < durationRef.current - 0.01) {
-        shifted.push({ time: selectionStart, fadeSec: Math.max(0, Number(newCutFadeSec) || 0) });
-      }
-      return shifted.sort((a, b) => a.time - b.time);
-    }
-
-    return markers;
   }
 
   async function handleStageAction(mode) {
@@ -1097,7 +800,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setError(null);
     const sourcePathForPreview = previewPath || filePath;
     const willChainPreview = !!previewPath || hasChainedPreview;
-    const nextCutMarkers = markersAfterAction(cutMarkers, mode, trimStart, trimEnd, 0);
+    const nextCutMarkers = markersAfterAction(cutMarkers, mode, trimStart, trimEnd, durationRef.current, 0);
     preStagedCutMarkersRef.current = cutMarkers;
     preStagedSelectionRef.current = {
       start: trimStart,
@@ -1195,17 +898,19 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
 
           {/* Barre d'outils transport */}
           <div className="audio-tb-row">
-            <span className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('in', e)}>
+            <div className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('in', e)}>
               Entrée&nbsp;{formatTime(trimStart)}
-              <button
-                className={`audio-editor-fade-chip${fadeInSec > 0 ? ' is-active' : ''}`}
-                onClick={(e) => openFadePopover('in', e)}
-                onContextMenu={(e) => openFadePopover('in', e)}
-                disabled={isApplying}
-              >
-                ↗{fadeInSec > 0 ? ` ${formatTime(Math.min(fadeInSec, fadeMax))}` : ''}
-              </button>
-            </span>
+              <Tooltip text="Ajouter ou modifier le fondu en entrée">
+                <button
+                  className={`audio-editor-fade-chip${fadeInSec > 0 ? ' is-active' : ''}`}
+                  onClick={(e) => openFadePopover('in', e)}
+                  onContextMenu={(e) => openFadePopover('in', e)}
+                  disabled={isApplying}
+                >
+                  ↗{fadeInSec > 0 ? ` ${formatTime(Math.min(fadeInSec, fadeMax))}` : ''}
+                </button>
+              </Tooltip>
+            </div>
           <div className="audio-tb">
             <Tooltip text="Marquer le point d'entrée à la position du curseur (i)">
               <button className="audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</button>
@@ -1233,16 +938,16 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
 
             <div className="audio-tb-sep" />
 
-            <Tooltip text="Lire depuis le point d'entrée (Shift+I)">
-              <button className="audio-tb-btn audio-tb-btn-text" onClick={previewIn} disabled={isLoading}>|▶</button>
+            <Tooltip text="Aller au point d'entrée (Shift+I)">
+              <button className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</button>
             </Tooltip>
-            <Tooltip text="Lire depuis le point de sortie (Shift+O)">
-              <button className="audio-tb-btn audio-tb-btn-text" onClick={previewOut} disabled={isLoading}>▶|</button>
+            <Tooltip text="Aller au point de sortie (Shift+O)">
+              <button className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</button>
             </Tooltip>
 
             <div className="audio-tb-sep" />
 
-            <Tooltip text="Garder la sélection (Ctrl+G)">
+            <Tooltip text="Garder la sélection (Ctrl+K)">
               <button
                 className="audio-tb-btn"
                 onClick={() => handleStageAction('trim')}
@@ -1261,17 +966,19 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
               </button>
             </Tooltip>
           </div>
-            <span className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('out', e)}>
+            <div className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('out', e)}>
               Sortie&nbsp;{formatTime(trimEnd)}
-              <button
-                className={`audio-editor-fade-chip${fadeOutSec > 0 ? ' is-active' : ''}`}
-                onClick={(e) => openFadePopover('out', e)}
-                onContextMenu={(e) => openFadePopover('out', e)}
-                disabled={isApplying}
-              >
-                ↘{fadeOutSec > 0 ? ` ${formatTime(Math.min(fadeOutSec, fadeMax))}` : ''}
-              </button>
-            </span>
+              <Tooltip text="Ajouter ou modifier le fondu en sortie">
+                <button
+                  className={`audio-editor-fade-chip${fadeOutSec > 0 ? ' is-active' : ''}`}
+                  onClick={(e) => openFadePopover('out', e)}
+                  onContextMenu={(e) => openFadePopover('out', e)}
+                  disabled={isApplying}
+                >
+                  ↘{fadeOutSec > 0 ? ` ${formatTime(Math.min(fadeOutSec, fadeMax))}` : ''}
+                </button>
+              </Tooltip>
+            </div>
           </div>
 
           {/* Zoom */}
@@ -1307,9 +1014,15 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
 
         <div className="audio-editor-footer">
           <button className="btn" onClick={onCancel} disabled={isApplying}>Annuler</button>
-          <button className="btn btn-primary" onClick={handleApply} disabled={!canValidate}>
-            {applyMode === 'trim' || applyMode === 'cut' ? 'Application…' : 'Valider les modifications'}
-          </button>
+          <Tooltip text={canValidate ? 'Valider les modifications' : 'Aucune modification à valider'} placement="above">
+            <button className="btn btn-primary" onClick={handleApply} disabled={!canValidate}>
+              {applyMode === 'trim' || applyMode === 'cut'
+                ? 'Application…'
+                : canValidate
+                  ? 'Valider les modifications'
+                  : 'Aucune modification'}
+            </button>
+          </Tooltip>
         </div>
 
         {fadeContextMenu && (

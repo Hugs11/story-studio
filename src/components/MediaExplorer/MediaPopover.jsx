@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useLocalFile } from '../../store/useLocalFile';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import './MediaPopover.css';
 
 function fmt(secs) {
@@ -27,7 +27,7 @@ function tagStyle(name) {
   return { background: `hsl(${Math.round(tagHue(name))},55%,45%)`, color: '#fff' };
 }
 
-function PopoverAudioPlayer({ path, name }) {
+export function PopoverAudioPlayer({ path, name }) {
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(null);

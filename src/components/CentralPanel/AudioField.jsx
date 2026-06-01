@@ -1,17 +1,22 @@
-import { useRef, useState, useEffect } from 'react';
+import { lazy, Suspense, useRef, useState, useEffect } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard } from '../../store/fieldClipboard';
-import { useLocalFile } from '../../store/useLocalFile';
-import { pickAudio } from '../../store/useFileDialog';
+import { useMediaTransfer } from '../../store/MediaTransferContext';
+import { pickAudio } from '../../hooks/useFileDialog';
 import { useProjectContext } from '../../store/ProjectContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { basename, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 import { RecordModal } from '../RecordModal/RecordModal';
-import { AudioEditorModal } from '../AudioEditorModal/AudioEditorModal';
+// reason: lazy() pour sortir wavesurfer.js (~18 KB gz) + AudioEditorModal du
+// chunk partage. Charge uniquement quand l'utilisateur ouvre l'editeur audio.
+const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal')
+  .then((m) => ({ default: m.AudioEditorModal })));
 import { GenerateVoiceModal } from '../GenerateVoiceModal/GenerateVoiceModal';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
+import { MediaPopover } from '../MediaExplorer/MediaPopover';
 
 const WAVE_HEIGHTS = [6, 10, 14, 10, 16, 12, 8, 14, 10, 6, 12, 8, 14, 10, 16, 8, 12, 6, 10, 14];
 const FILLED_WAVE_HEIGHTS = Array.from({ length: 96 }, (_, index) => WAVE_HEIGHTS[index % WAVE_HEIGHTS.length]);
@@ -28,6 +33,7 @@ export function AudioField({
   xttsTarget = null,
   accentLabel = false,
 }) {
+  const { notifyCutPaste } = useMediaTransfer();
   const {
     savePath,
     workspaceDir,
@@ -41,11 +47,6 @@ export function AudioField({
     onQueueXttsGenerate,
     onMediaCreated,
   } = useProjectContext();
-  const [shouldLoadAudio, setShouldLoadAudio] = useState(false);
-  const [pendingPlay, setPendingPlay] = useState(false);
-  const audioUrl = useLocalFile(shouldLoadAudio ? file : null);
-  const audioRef = useRef(null);
-  const [playing, setPlaying] = useState(false);
   const [showRecord, setShowRecord] = useState(false);
   const [showTts, setShowTts] = useState(false);
   const [showNoSaveWarning, setShowNoSaveWarning] = useState(false);
@@ -56,8 +57,9 @@ export function AudioField({
   const [showAudioEditor, setShowAudioEditor] = useState(false);
   const [showConvertNotice, setShowConvertNotice] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
-  const filename = file ? file.split(/[\\/]/).pop() : null;
-  const displayPath = file ? file.replace(/^\\\\\?\\/, '') : null;
+  const [playerAnchorRect, setPlayerAnchorRect] = useState(null);
+  const filename = file ? basename(file) : null;
+  const displayPath = file ? stripWindowsLongPathPrefix(file) : null;
   const fileAvailable = !!file && pathAudit[file] !== false;
   const showFilledState = !!file && fileAvailable;
   const tooltipText = description || displayPath || '';
@@ -68,32 +70,10 @@ export function AudioField({
     setPendingGeneratedSource(null);
   });
 
-  // Stoppe l'audio au démontage (ex : changement d'onglet)
+  // Ferme le player quand le fichier change (navigation entre stories sans remount).
   useEffect(() => {
-    return () => {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    };
-  }, []);
-
-  // Réinitialise tout quand le fichier change (navigation entre stories sans remount)
-  useEffect(() => {
-    setShouldLoadAudio(false);
-    setPendingPlay(false);
-    setPlaying(false);
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setPlayerAnchorRect(null);
   }, [file]);
-
-  // Lance la lecture dès que l'URL est disponible après un clic play
-  useEffect(() => {
-    if (!pendingPlay || !audioUrl) return;
-    setPendingPlay(false);
-    if (!audioRef.current) {
-      audioRef.current = new Audio(audioUrl);
-      audioRef.current.onended = () => setPlaying(false);
-      audioRef.current.onerror = () => setPlaying(false);
-    }
-    audioRef.current.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [pendingPlay, audioUrl]);
 
   async function handleReplace() {
     const picked = await pickAudio();
@@ -151,22 +131,11 @@ export function AudioField({
 
   function handlePlay(e) {
     e.stopPropagation();
-    if (playing) {
-      audioRef.current?.pause();
-      setPlaying(false);
+    if (playerAnchorRect) {
+      setPlayerAnchorRect(null);
       return;
     }
-    if (audioUrl) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(audioUrl);
-        audioRef.current.onended = () => setPlaying(false);
-        audioRef.current.onerror = () => setPlaying(false);
-      }
-      audioRef.current.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    } else {
-      setShouldLoadAudio(true);
-      setPendingPlay(true);
-    }
+    setPlayerAnchorRect(e.currentTarget.getBoundingClientRect());
   }
 
   const dropWrapRef = useRef(null);
@@ -194,9 +163,7 @@ export function AudioField({
     const clip = audioClipboard.getEntry();
     if (!clip?.path) return;
     if (clip.mode === 'cut') {
-      document.dispatchEvent(new CustomEvent('media-clipboard-cut-paste', {
-        detail: { path: clip.path, kind: 'audio' },
-      }));
+      notifyCutPaste({ path: clip.path, kind: 'audio' });
     }
     void handlePicked(clip.path);
     if (clip.mode === 'cut') audioClipboard.clear();
@@ -251,14 +218,13 @@ export function AudioField({
           </div>
         ) : (
           <div className="audio-empty-row">
-          <div className={`audio-bar ${playing ? 'is-playing' : ''}`}>
-            <Tooltip text={playing ? 'Pause' : 'Écouter'}>
+          <div className={`audio-bar ${playerAnchorRect ? 'is-playing' : ''}`}>
+            <Tooltip text={playerAnchorRect ? 'Fermer le lecteur' : 'Écouter'}>
               <button
                 className="play-btn"
                 onClick={handlePlay}
-                disabled={pendingPlay && !audioUrl}
               >
-                {playing
+                {playerAnchorRect
                   ? <div style={{ width: 8, height: 10, display: 'flex', gap: 2 }}>
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
@@ -286,8 +252,7 @@ export function AudioField({
                   className="audio-clear-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    audioRef.current?.pause();
-                    setPlaying(false);
+                    setPlayerAnchorRect(null);
                     setShowDeleteDialog(true);
                   }}
                 >×</button>
@@ -378,21 +343,20 @@ export function AudioField({
 
       {/* Modal d'édition audio */}
       {showAudioEditor && (
-        <AudioEditorModal
-          filePath={file}
-          savePath={savePath}
-          workspaceDir={workspaceDir}
-          onConfirm={(outputPath) => {
-            audioRef.current?.pause();
-            audioRef.current = null;
-            setPlaying(false);
-            setShouldLoadAudio(false);
-            setShowAudioEditor(false);
-            if (outputPath !== file && onPick) void onPick(outputPath);
-            if (outputPath && outputPath !== file) onMediaCreated?.(outputPath);
-          }}
-          onCancel={() => setShowAudioEditor(false)}
-        />
+        <Suspense fallback={null}>
+          <AudioEditorModal
+            filePath={file}
+            savePath={savePath}
+            workspaceDir={workspaceDir}
+            onConfirm={(outputPath) => {
+              setPlayerAnchorRect(null);
+              setShowAudioEditor(false);
+              if (outputPath !== file && onPick) void onPick(outputPath);
+              if (outputPath && outputPath !== file) onMediaCreated?.(outputPath);
+            }}
+            onCancel={() => setShowAudioEditor(false)}
+          />
+        </Suspense>
       )}
 
       {/* Modal d'enregistrement */}
@@ -448,6 +412,19 @@ export function AudioField({
               },
             ] : []),
           ]}
+        />
+      )}
+
+      {playerAnchorRect && showFilledState && (
+        <MediaPopover
+          item={{
+            kind: 'audio',
+            path: file,
+            name: filename || label || 'Audio',
+            usages: [],
+          }}
+          anchorRect={playerAnchorRect}
+          onClose={() => setPlayerAnchorRect(null)}
         />
       )}
     </>

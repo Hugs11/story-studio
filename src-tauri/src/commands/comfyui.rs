@@ -12,8 +12,8 @@ pub async fn comfyui_check(settings: ComfyUiSettings) -> Result<bool, String> {
             .map(|_| true)
             .inspect_err(|err| log::warn!(target: "comfyui", "comfyui_check failed: {}", err))
     })
-        .await
-        .map_err(|e| e.to_string())?
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

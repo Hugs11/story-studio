@@ -1,15 +1,46 @@
 import { useState, useRef, useEffect } from 'react';
 import { logger } from '../../utils/logger';
-import { readFile, writeFile, mkdir, copyFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { join, tempDir } from '@tauri-apps/api/path';
-import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
-
-const WORKSPACE_DIR_KEY = 'storyStudioWorkspaceDir';
-import { coverFit, containFit, renderFrame, buildFilter, CANVAS_W, CANVAS_H } from './useImageEditor';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { coverFit, containFit, renderFrame, CANVAS_W, CANVAS_H } from './useImageEditor';
 import { Tooltip } from '../common/Tooltip';
+import { FilterSlider } from './FilterSlider';
+import { exportEditedImage } from './imageEditorExport';
+import { useImageCanvasInteractions } from './useImageCanvasInteractions';
 import './ImageEditorModal.css';
 
-const DEFAULT_FILTERS = { brightness: 0, contrast: 0, saturation: 0, grayscale: false, hue: 0, sepia: 0, blur: 0, invert: false, thickness: 0 };
+const DEFAULT_FILTERS = {
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  grayscale: false,
+  hue: 0,
+  sepia: 0,
+  blur: 0,
+  invert: false,
+  thickness: 0,
+  vignette: 0,
+  vignetteSize: 70,
+  vignetteFeather: 35,
+};
+
+function createDefaultFilters() {
+  return { ...DEFAULT_FILTERS };
+}
+
+function normalizeFilters(filters = {}) {
+  return { ...DEFAULT_FILTERS, ...filters };
+}
+
+function serializeError(error) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+  return String(error);
+}
 
 export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTransform, initialFilters }) {
   const canvasRef = useRef(null);
@@ -17,13 +48,12 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
   const objectUrlRef = useRef(null);
 
   const [transform, setTransform] = useState({ offsetX: 0, offsetY: 0, scale: 1 });
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState(() => createDefaultFilters());
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const dragRef = useRef(null);
   const isDirtyRef = useRef(false);
 
   // Chargement de l'image source depuis le disque via Tauri
@@ -58,16 +88,18 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
           imgRef.current = img;
           try {
             isDirtyRef.current = false;
-            setTransform(initialTransform ?? coverFit(img));
-            setFilters(initialFilters ?? DEFAULT_FILTERS);
+            // Sans metadata d'edition, on preserve l'image entiere pour qu'un
+            // simple changement de filtre ne modifie pas aussi le cadrage.
+            setTransform(initialTransform ?? containFit(img));
+            setFilters(normalizeFilters(initialFilters));
             setImgLoaded(true);
-            logger.info('[ImageEditorModal] image loaded', {
+            logger.info('image-editor:image-loaded', {
               sourcePath,
               naturalWidth: img.naturalWidth,
               naturalHeight: img.naturalHeight,
             });
           } catch (error) {
-            logger.error('[ImageEditorModal] init failed', error);
+            logger.error('image-editor:init-error', error);
             setLoadError("Impossible d'initialiser l'image.");
           }
         };
@@ -81,7 +113,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
         img.src = url;
       })
       .catch((error) => {
-        logger.error('[ImageEditorModal] readFile failed', sourcePath, error);
+        logger.error('image-editor:read-file-error', sourcePath, error);
         setLoadError('Impossible de lire le fichier.');
       });
 
@@ -99,11 +131,11 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
     try {
       renderFrame(canvasRef.current, imgRef.current, transform, filters);
     } catch (error) {
-      logger.error('[ImageEditorModal] render effect failed', {
+      logger.error('image-editor:render-effect-error', {
         sourcePath,
         transform,
         filters,
-        error,
+        error: serializeError(error),
       });
       setLoadError("Le rendu de l'image a echoue.");
     }
@@ -128,53 +160,12 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
-  // Pan — mousedown
-  function handleMouseDown(e) {
-    e.preventDefault();
-    dragRef.current = { startX: e.clientX - transform.offsetX, startY: e.clientY - transform.offsetY };
-  }
-
-  // Pan — mousemove
-  function handleMouseMove(e) {
-    const dragState = dragRef.current;
-    if (!dragState) return;
-    const nextOffsetX = e.clientX - dragState.startX;
-    const nextOffsetY = e.clientY - dragState.startY;
-    isDirtyRef.current = true;
-    setTransform(t => ({
-      ...t,
-      offsetX: nextOffsetX,
-      offsetY: nextOffsetY,
-    }));
-  }
-
-  function handleMouseUp() { dragRef.current = null; }
-
-  // Zoom vers curseur — wheel
-  function handleWheel(e) {
-    e.preventDefault();
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    if (!rect.width || !Number.isFinite(rect.width)) return;
-    const cssScale = rect.width / CANVAS_W; // CSS scaling factor (640/320 = 2)
-    if (!Number.isFinite(cssScale) || cssScale <= 0) return;
-    const cursorX = (e.clientX - rect.left) / cssScale;
-    const cursorY = (e.clientY - rect.top) / cssScale;
-    if (!Number.isFinite(cursorX) || !Number.isFinite(cursorY)) return;
-    const factor = e.deltaY < 0 ? 1.08 : 0.92;
-    isDirtyRef.current = true;
-    setTransform(t => {
-      const currentScale = Number.isFinite(t.scale) && t.scale > 0 ? t.scale : 1;
-      const newScale = Math.max(0.05, Math.min(20, currentScale * factor));
-      const ratio = newScale / currentScale;
-      if (!Number.isFinite(ratio)) return t;
-      return {
-        scale: newScale,
-        offsetX: cursorX - (cursorX - t.offsetX) * ratio,
-        offsetY: cursorY - (cursorY - t.offsetY) * ratio,
-      };
-    });
-  }
+  const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel } = useImageCanvasInteractions({
+    transform,
+    setTransform,
+    canvasRef,
+    onDirty: () => { isDirtyRef.current = true; },
+  });
 
   function handleCoverFit() {
     if (imgRef.current) { isDirtyRef.current = true; setTransform(coverFit(imgRef.current)); }
@@ -190,10 +181,14 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
   }
 
   function resetFilters() {
-    setFilters(DEFAULT_FILTERS);
+    const nextFilters = createDefaultFilters();
+    isDirtyRef.current = true;
+    setFilters(nextFilters);
+    if (imgLoaded && canvasRef.current && imgRef.current) {
+      renderFrame(canvasRef.current, imgRef.current, transform, nextFilters);
+    }
   }
 
-  // Export PNG 320×240 et sauvegarde dans %TEMP%/story_studio_images/
   async function handleConfirm() {
     if (!isDirtyRef.current) {
       onConfirm(sourcePath, { transform, filters });
@@ -201,41 +196,11 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
     }
     setSaving(true);
     try {
-      const offscreen = document.createElement('canvas');
-      offscreen.width = CANVAS_W;
-      offscreen.height = CANVAS_H;
-      renderFrame(offscreen, imgRef.current, transform, filters);
-
-      const blob = await new Promise(resolve => offscreen.toBlob(resolve, 'image/png'));
-      if (!blob) throw new Error('Canvas export returned null blob');
-      const buffer = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-
-      const basename = `edited_${Date.now()}.png`;
-      await mkdir(TEMP_IMAGES_DIR, { baseDir: BaseDirectory.Temp, recursive: true });
-      const tempRelPath = `${TEMP_IMAGES_DIR}/${basename}`;
-      await writeFile(tempRelPath, bytes, { baseDir: BaseDirectory.Temp });
-      const tmp = await tempDir();
-      const tempAbsPath = await join(tmp, tempRelPath);
-
-      let finalPath = tempAbsPath;
-      const workspaceDir = localStorage.getItem(WORKSPACE_DIR_KEY);
-      if (workspaceDir) {
-        try {
-          const destDir = `${workspaceDir}/images-generees`;
-          await mkdir(destDir, { recursive: true });
-          const destPath = `${destDir}/${basename}`;
-          await copyFile(tempAbsPath, destPath);
-          finalPath = destPath;
-        } catch {
-          // fallback to temp path
-        }
-      }
-
-      logger.info('[ImageEditorModal] image saved', { sourcePath, finalPath });
-      onConfirm(finalPath, { transform, filters });
+      const finalPath = await exportEditedImage({ image: imgRef.current, transform, filters, sourcePath });
+      logger.info('image-editor:image-saved', { sourcePath, finalPath });
+      onConfirm(finalPath, { sourcePath, transform, filters });
     } catch (err) {
-      logger.error('[ImageEditorModal] save failed:', err);
+      logger.error('image-editor:save-error', err);
       setLoadError("L'export de l'image a echoue.");
       setSaving(false);
     }
@@ -290,6 +255,17 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
             <FilterSlider label="Épaisseur" value={filters.thickness} min={0} max={5}
               onChange={v => setFilter('thickness', v)} />
 
+            <div className="filter-group">
+              <div className="filter-group-title">Vignettage</div>
+              <div className="filter-group-help">Assombrit les bords de l’image.</div>
+              <FilterSlider label="Intensité" value={filters.vignette} min={0} max={100} unit="%" signed={false}
+                onChange={v => setFilter('vignette', v)} />
+              <FilterSlider label="Taille" value={filters.vignetteSize} min={30} max={100} unit="%" signed={false}
+                onChange={v => setFilter('vignetteSize', v)} />
+              <FilterSlider label="Diffusion" value={filters.vignetteFeather} min={5} max={80} unit="%" signed={false}
+                onChange={v => setFilter('vignetteFeather', v)} />
+            </div>
+
             <div className="filter-row filter-toggle">
               <span className="filter-label">Niveaux de gris</span>
               <input type="checkbox" checked={filters.grayscale}
@@ -325,23 +301,6 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function FilterSlider({ label, value, min, max, unit = '', onChange }) {
-  return (
-    <div className="filter-row">
-      <span className="filter-label">{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="filter-slider"
-      />
-      <span className="filter-value">{value > 0 ? `+${value}` : value}{unit}</span>
     </div>
   );
 }

@@ -3,14 +3,70 @@
 This changelog is intentionally concise. It summarizes the main public features
 added to Story Studio over time, without mirroring every internal commit.
 
-The project will be published on GitHub with a clean public history; this file
-is the public record of the work completed before the first GitHub release.
+GitHub Releases carry the detailed notes and downloadable installers for each
+public version; this file stays as the concise project history.
 
 ---
 
 ## [Unreleased]
 
-No unreleased changes yet.
+---
+
+## [0.9.1] - 2026-06-01
+
+Story Studio v0.9.1 is a maintenance and architecture release focused on
+making the project easier to understand, test and extend after the first public
+beta releases.
+
+### Changed
+
+- Reorganized the native Rust pack generation engine into smaller, focused
+  modules for assets, document building, stage writing, returns, night mode and
+  imported ZIP handling.
+- Split pack import, project file operations, ComfyUI services and audio edit
+  workflows into clearer service boundaries.
+- Simplified the project model around `rootEntries`: legacy `rootItems` and
+  `menus` are migrated on load but are no longer saved or sent to Rust.
+- Replaced native frontend error/confirmation dialogs with the shared Story
+  Studio dialog and aligned frontend log event names on `module:action`.
+- Shared frontend tree operations between the tree panel and diagram views, and
+  extracted several large UI/audio/image editor areas into smaller helpers and
+  hooks.
+- Improved diagram navigation readability with highlighted return paths, clearer
+  route labels/icons and a resizable settings panel.
+- Improved tree return badges with clearer default/override states, better
+  spacing, route arrows and dedicated visibility controls.
+- Improved tree badge, simulator, image editor, media explorer and audio editor
+  behavior discovered during the architecture cleanup.
+
+### Added
+
+- Added `npm run convert:legacy-project` to convert older `.mbah` files to the
+  current rootEntries-only project shape, with overwrite protection by default.
+- Added synthetic Rust round-trip coverage for generated packs, night-mode packs
+  and imported native graphs.
+- Added local audit scripts for dead code and import cleanup.
+- Added recent-project thumbnails on the home screen.
+- Added streamed generation logs and cancel support for the render queue.
+
+### Fixed
+
+- Prevented `scoped_label_id` collisions for entries sharing the same first
+  eight ID characters.
+- Hardened XTTS output filenames and recording names against path-like or
+  overly long values.
+- Fixed missing-media relinking, imported audio cover extraction, generated
+  media drops, image edit metadata, image filter framing and audio waveform sync.
+- Fixed several navigation, end-node, import, generated-media, waveform and
+  compact-layout edge cases found while validating the reorganized code.
+
+### Performance
+
+- Parallelized native pack asset preprocessing with Rayon so audio conversion
+  through FFmpeg, image resizing and imported ZIP preparation can run across
+  multiple CPU cores before the final deterministic staging step.
+- Lazy-loaded heavy audio and image editor modals, reduced tree drag/drop churn
+  and cached tree badge data for smoother large-project editing.
 
 ---
 

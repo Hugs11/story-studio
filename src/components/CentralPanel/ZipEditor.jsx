@@ -1,28 +1,13 @@
-import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { pickZip } from '../../store/useFileDialog';
+import { pickZip } from '../../hooks/useFileDialog';
+import { basename } from '../../utils/fileUtils';
+import { useZipCover } from './useZipCover.js';
 import './CentralPanel.css';
 import './ImageField.css';
 
-const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', bmp: 'image/bmp', webp: 'image/webp' };
-
 function ZipCover({ zipPath, coverImage }) {
-  const [url, setUrl] = useState(null);
-
-  useEffect(() => {
-    if (!zipPath || !coverImage) { setUrl(null); return; }
-    let cancelled = false;
-    const assetName = `assets/${coverImage}`;
-    invoke('get_pack_asset', { zipPath, assetName })
-      .then(bytes => {
-        if (cancelled) return;
-        const ext = coverImage.split('.').pop().toLowerCase();
-        const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'image/png' });
-        setUrl(URL.createObjectURL(blob));
-      })
-      .catch(() => { if (!cancelled) setUrl(null); });
-    return () => { cancelled = true; };
-  }, [zipPath, coverImage]);
+  // useZipCover gere le chargement de l'asset + la revocation de l'object URL
+  // (l'ancienne implementation locale ne revoquait jamais -> fuite memoire).
+  const url = useZipCover(zipPath, coverImage);
 
   if (!url) return null;
   return (
@@ -39,12 +24,12 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
   async function handlePick() {
     const picked = await pickZip();
     if (picked) {
-      const name = picked.split(/[\\/]/).pop().replace(/\.(zip|7z)$/i, '');
+      const name = basename(picked).replace(/\.(zip|7z)$/i, '');
       onUpdate({ zipPath: picked, name });
     }
   }
 
-  const filename = node.zipPath ? node.zipPath.split(/[\\/]/).pop() : null;
+  const filename = node.zipPath ? basename(node.zipPath) : null;
 
   return (
     <>
