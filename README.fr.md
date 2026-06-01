@@ -18,22 +18,13 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-Je cherchais un outil simple pour créer des histoires audio pour mon enfant.
-En tant qu'ancien monteur vidéo, je ne retrouvais pas dans les outils
-existants ce qui me semblait essentiel : une interface visuelle, directe et
-fluide, permettant de construire une narration sans friction, sans avoir à
-passer par des outils en ligne de commande ni manipuler des structures de
-dossiers complexes et peu lisibles. Story Studio est né de ce besoin.
+Story Studio permet de créer, importer, organiser, tester et exporter des
+packs d'histoires compatibles Lunii dans un espace de travail Windows visuel.
+Tout reste local : images, audio, navigation, simulation et export ZIP.
 
-Logiciel open source de création, il permet d'imaginer, organiser et exporter
-des histoires audio interactives compatibles avec votre Lunii — dans un
-espace clair et compréhensible où chaque élément trouve naturellement sa
-place. Toutes vos créations restent stockées localement sur votre ordinateur.
-
-Créez des histoires pour votre boîte à histoires sans jongler entre plusieurs
-logiciels : importez, éditez et recadrez vos images, assemblez et découpez
-vos fichiers audio, organisez vos menus et vos récits, puis exportez au
-format compatible Lunii.
+Importez vos médias, assemblez et découpez l'audio, recadrez les images,
+organisez vos menus et vos récits, puis exportez un ZIP compatible Lunii sans
+jongler entre plusieurs outils.
 
 > Story Studio est un outil communautaire. Il n'est pas affilié à Lunii, ni
 > soutenu ou sponsorisé par Lunii.
@@ -45,6 +36,17 @@ encore contenir des bugs, des cas limites et des problèmes de compatibilité
 avec certains packs communautaires. Garde des copies de sauvegarde de tes
 projets importants et signale les problèmes reproductibles via les GitHub
 issues.
+
+## Dernière version
+
+Story Studio 0.9.1 se concentre sur la grande réorganisation de l'architecture,
+le prétraitement plus rapide des médias, des diagrammes de navigation plus
+lisibles, les vignettes des projets récents et des corrections autour des
+médias, de l'audio et de l'éditeur image.
+
+- [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
+- [Lire les notes de version 0.9.1](https://github.com/Hugs11/story-studio/releases/tag/v0.9.1)
+- [Voir le changelog complet](CHANGELOG.md)
 
 ## En un coup d'œil
 
@@ -89,6 +91,18 @@ issues.
 - **Validation et file de rendu** : vérifications de compatibilité et génération en série avec suivi des logs.
 - **Intégrations locales optionnelles** XTTS (voix) et ComfyUI (images).
 - **Confort projet** : autosave, versions de sécurité, raccourcis configurables, thèmes clair/sombre, vue diagramme.
+
+## Pourquoi Story Studio ?
+
+Je cherchais un outil simple pour créer des histoires audio pour mon enfant. En
+tant qu'ancien monteur vidéo, je ne retrouvais pas dans les outils existants ce
+qui me semblait essentiel : une interface visuelle, directe et fluide,
+permettant de construire une narration sans friction, sans ligne de commande ni
+structures de dossiers complexes.
+
+Story Studio est né de ce besoin : rassembler l'import, les images, l'audio, la
+navigation, la simulation et l'export dans un même espace clair, local et
+compréhensible.
 
 ## Configuration requise
 

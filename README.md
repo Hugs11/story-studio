@@ -18,22 +18,13 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-I was looking for a simple tool to create audio stories for my child. As a
-former video editor, I could never find in existing tools what felt essential
-to me: a visual and straightforward interface that makes building a
-narrative fluid and frictionless, without relying on command-line tools or
-dealing with complex and hard-to-read folder structures. Story Studio was
-born from that need.
+Story Studio lets you create, import, organize, test and export
+Lunii-compatible story packs in a visual Windows desktop workspace. Everything
+stays local: images, audio, navigation, simulation and ZIP export.
 
-An open-source creation tool, it lets you imagine, organize, and export
-interactive audio stories compatible with Lunii devices — in a clear and
-intuitive workspace where every element naturally finds its place. Everything
-stays stored locally on your computer.
-
-Create stories for your story box without juggling between multiple
-applications: import, edit, and crop your images, assemble and trim your
-audio files, organize menus and story navigation, then easily export to a
-Lunii-compatible format.
+Import your media, assemble and trim audio, crop images, organize menus and
+story paths, then export a Lunii-compatible ZIP without juggling between
+several tools.
 
 > Story Studio is a community tool. It is not affiliated with, endorsed by, or
 > sponsored by Lunii.
@@ -44,6 +35,16 @@ Story Studio is currently in beta. The app is usable, but it may still contain
 bugs, edge cases and compatibility issues with some community packs. Please keep
 backup copies of important projects and report reproducible problems through
 GitHub issues.
+
+## Latest Release
+
+Story Studio 0.9.1 focuses on the large architecture cleanup, faster native
+asset preprocessing, clearer navigation diagrams, recent-project thumbnails and
+media, audio and image-editor fixes.
+
+- [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
+- [Read the v0.9.1 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.1)
+- [See the full changelog](CHANGELOG.md)
 
 ## At a Glance
 
@@ -88,6 +89,17 @@ GitHub issues.
 - **Validation and render queue**: compatibility checks and serial generation with log tracking.
 - **Optional local integrations** XTTS (voice) and ComfyUI (images).
 - **Project comfort**: autosave, safety versions, configurable shortcuts, light/dark themes, full diagram view.
+
+## Why Story Studio?
+
+I was looking for a simple tool to create audio stories for my child. As a
+former video editor, I could never find in existing tools what felt essential
+to me: a visual and straightforward interface that makes building a narrative
+fluid and frictionless, without relying on command-line tools or dealing with
+complex folder structures.
+
+Story Studio was born from that need: bringing import, images, audio,
+navigation, simulation and export into one clear local workspace.
 
 ## Requirements
 
