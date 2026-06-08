@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { isTauriRuntime } from '../utils/tauriRuntime';
 
 function playNotification(type) {
   try {
@@ -39,6 +40,8 @@ export function useRenderQueueExecutor({ jobs, updateJob, appendLog }) {
   }, [jobs]);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+
     let cancelled = false;
     let unlisten = null;
     listen('generate-log', (event) => {
@@ -57,6 +60,8 @@ export function useRenderQueueExecutor({ jobs, updateJob, appendLog }) {
   }, [appendLog]);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+
     const runningCancelJob = jobs.find(j => j.status === 'running' && j.cancelRequested);
     if (!runningCancelJob || cancelSentForRef.current === runningCancelJob.id) return;
     cancelSentForRef.current = runningCancelJob.id;
@@ -68,6 +73,8 @@ export function useRenderQueueExecutor({ jobs, updateJob, appendLog }) {
   }, [jobs, appendLog]);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+
     // Un job est déjà en cours d'exécution dans cette instance
     if (executingRef.current) return;
 

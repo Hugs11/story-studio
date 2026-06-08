@@ -5,6 +5,7 @@ import { Toggle } from '../components/common/Toggle';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
 import { THEME_OPTIONS } from '../store/themePreference';
+import { isTauriRuntime } from '../utils/tauriRuntime';
 import './OptionsTab.css';
 
 function formatSize(bytes) {
@@ -87,12 +88,16 @@ export function OptionsTab({
   }
 
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+
     invoke('comfyui_list_workflows')
       .then(setSdWorkflows)
       .catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+
     let cancelled = false;
     let unlisten = null;
     listen('xtts-log', (event) => {
@@ -356,7 +361,7 @@ export function OptionsTab({
                     className="xtts-input"
                     value={xttsSettings.xttsDir}
                     onChange={(e) => onUpdateXttsSettings({ xttsDir: e.target.value })}
-                    placeholder="D:\\XTTS"
+                    placeholder="C:\\chemin\\vers\\XTTS"
                   />
                 </label>
 
