@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 
 const html = fs.readFileSync('dist/bundle-stats.html', 'utf8');
+const cwdPrefix = process.cwd().replace(/\\/g, '/').replace(/\/$/, '');
 const marker = 'const data = ';
 const idx = html.indexOf(marker);
 if (idx < 0) {
@@ -54,15 +55,24 @@ const sortedChunks = [...byChunk.entries()]
   .map(([name, mods]) => ({ name, mods, total: mods.reduce((s, m) => s + m.gz, 0) }))
   .sort((a, b) => b.total - a.total);
 
+function displayModuleId(id) {
+  const normalized = id.replace(/\\/g, '/');
+  const lower = normalized.toLowerCase();
+  const cwdLower = cwdPrefix.toLowerCase();
+  const withoutCwd = lower.startsWith(`${cwdLower}/`)
+    ? normalized.slice(cwdPrefix.length + 1)
+    : normalized;
+
+  return withoutCwd.replace(/^.*node_modules\//, 'NM/');
+}
+
 for (const chunk of sortedChunks) {
   if (chunk.total < 3000) continue;
   console.log('---');
   console.log(`CHUNK ${chunk.name} | total gz ${chunk.total}`);
   chunk.mods.sort((a, b) => b.gz - a.gz);
   for (const m of chunk.mods.slice(0, 20)) {
-    const id = m.id
-      .replace(/^[A-Za-z]:[\\/]story-studio[\\/]/, '')
-      .replace(/^.*node_modules[\\/]/, 'NM/');
+    const id = displayModuleId(m.id);
     console.log(`  ${String(m.gz).padStart(7)} gz | ${String(m.raw).padStart(8)} raw | ${id}`);
   }
 }

@@ -3,11 +3,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { addProjectPrefix } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
+import { isTauriRuntime } from '../utils/tauriRuntime';
 
 const MAX_CONCURRENT_SD_JOBS = 1;
 
 export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
   useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+
     let cancelled = false;
     let unlisten = null;
     listen('comfyui-progress', (event) => {
@@ -36,6 +39,8 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
   }, []);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return;
+
     const active = sdStore.jobs.filter(j => j.status === 'submitting' || j.status === 'running');
     if (active.length >= MAX_CONCURRENT_SD_JOBS) return;
     const next = sdStore.jobs.find(j => j.status === 'pending');
@@ -65,6 +70,8 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
   }, [sdStore.jobs]);
 
   useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+
     const running = sdStore.jobs.filter(j => j.status === 'running' && j.promptId);
     if (running.length === 0) return;
     const interval = setInterval(async () => {
