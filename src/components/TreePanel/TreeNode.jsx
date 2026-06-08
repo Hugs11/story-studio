@@ -9,7 +9,9 @@ import {
   IconReturn, IconStop, IconDiamond, IconArrowRight,
   ICON_BY_KEY,
 } from './TreeIcons';
+import { getTreeGuideStyleVars, getTreeIndent, resolveHoverGuide } from './treeGuides';
 import './TreePanel.css';
+import './TreeGuides.css';
 
 const BADGE_ICON_BY_KIND = {
   return: <IconReturn />,
@@ -26,11 +28,6 @@ const BADGE_ICON_BY_KIND = {
 
 const MAX_NAVIGATION_BADGE_SLOTS = 2;
 
-function getTreeIndent(level) {
-  const safeLevel = Math.max(level, 0);
-  return 6 + Math.min(safeLevel, 6) * 12;
-}
-
 function TreeNodeInner({
   id,
   type,
@@ -40,6 +37,8 @@ function TreeNodeInner({
   selected,
   cut,
   isAncestor,
+  isActiveScope,
+  isHoverScope,
   status,
   sortable,
   dragging,
@@ -52,6 +51,11 @@ function TreeNodeInner({
   color,
   onSelect,
   onContextMenu,
+  hoverGuideScopeIds,
+  hoverGuideLevel,
+  hoverScopeEnabled,
+  onHoverScope,
+  isHoverGuide,
   dropTarget,
   suppressSortAnimation,
 }) {
@@ -75,6 +79,7 @@ function TreeNodeInner({
         }
       : { opacity: cut ? 0.4 : 1 }),
     paddingLeft: `${getTreeIndent(level)}px`,
+    ...getTreeGuideStyleVars({ level, hoverGuideLevel }),
     ...(color ? { '--tree-node-color': color } : {}),
   };
 
@@ -111,6 +116,19 @@ function TreeNodeInner({
     resolvedIcon = <IconMoon />;
   }
 
+  const handlePointerHover = onHoverScope && !dragging
+    ? (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const guide = resolveHoverGuide({
+          clientX: e.clientX,
+          itemLeft: rect.left,
+          level,
+          guideScopeIds: hoverGuideScopeIds,
+        });
+        onHoverScope(guide.scopeId, guide.level, hoverScopeEnabled);
+      }
+    : undefined;
+
   return (
     <div
       ref={(node) => {
@@ -124,6 +142,9 @@ function TreeNodeInner({
         selected ? 'active' : '',
         color ? 'is-colored' : '',
         isAncestor && !selected ? 'ancestor-sel' : '',
+        isActiveScope && !selected ? 'active-scope' : '',
+        isHoverScope && !selected ? 'hover-scope' : '',
+        isHoverGuide ? 'hover-guide' : '',
         insertClass,
         showDropInside ? 'drop-target' : '',
       ].filter(Boolean).join(' ')}
@@ -132,7 +153,12 @@ function TreeNodeInner({
         : {})}
       onClick={(e) => onSelect(id, e)}
       onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, id, type); } : undefined}
+      onPointerEnter={handlePointerHover}
+      onPointerMove={handlePointerHover}
     >
+      <span className="tree-depth-guides" aria-hidden="true" />
+      <span className="tree-active-branch-guide" aria-hidden="true" />
+      <span className="tree-hover-branch-guide" aria-hidden="true" />
       {hasToggle ? (
         <button
           className={`tree-chevron${expanded ? ' tree-chevron--expanded' : ''}`}
@@ -187,6 +213,9 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.selected === next.selected
   && prev.cut === next.cut
   && prev.isAncestor === next.isAncestor
+  && prev.isActiveScope === next.isActiveScope
+  && prev.isHoverScope === next.isHoverScope
+  && prev.isHoverGuide === next.isHoverGuide
   && prev.status === next.status
   && prev.dragging === next.dragging
   && prev.containerDroppableId === next.containerDroppableId
@@ -198,6 +227,10 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.color === next.color
   && prev.onSelect === next.onSelect
   && prev.onContextMenu === next.onContextMenu
+  && prev.hoverGuideScopeIds === next.hoverGuideScopeIds
+  && prev.hoverGuideLevel === next.hoverGuideLevel
+  && prev.hoverScopeEnabled === next.hoverScopeEnabled
+  && prev.onHoverScope === next.onHoverScope
   && prev.dropTarget === next.dropTarget
   && prev.suppressSortAnimation === next.suppressSortAnimation
 ));

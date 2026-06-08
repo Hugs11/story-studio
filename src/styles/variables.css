@@ -32,6 +32,10 @@
   --color-scrollbar-track: #11151a;
   --color-scrollbar-thumb: #2b3138;
   --color-scrollbar-thumb-hover: #3a434d;
+  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
   --border-radius-sm: 4px;
   --border-radius-md: 6px;
   --border-radius-lg: 10px;
@@ -93,6 +97,10 @@
     --color-scrollbar-track: var(--bg0);
     --color-scrollbar-thumb: var(--bg3);
     --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+    --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
+    --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
+    --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
+    --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
 
     /* Tokens d'interaction — boutons et controles (theme sombre auto) */
     --control-bg: var(--bg2);
@@ -162,6 +170,10 @@
   --color-scrollbar-track: #F0F2F5;
   --color-scrollbar-thumb: #C4CBD5;
   --color-scrollbar-thumb-hover: #AEB7C4;
+  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -193,6 +205,10 @@
     --color-scrollbar-track: var(--bg0);
     --color-scrollbar-thumb: var(--bg3);
     --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+    --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
+    --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
+    --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
+    --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
   }
 }
 
@@ -224,6 +240,10 @@
   --color-scrollbar-track: var(--bg0);
   --color-scrollbar-thumb: var(--bg3);
   --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+  --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
 
   /* Tokens d'interaction — boutons et controles (theme sombre force) */
   --control-bg: var(--bg2);
@@ -291,6 +311,10 @@
   --color-scrollbar-track: #F0F2F5;
   --color-scrollbar-thumb: #C4CBD5;
   --color-scrollbar-thumb-hover: #AEB7C4;
+  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
 
   /* Tokens d'interaction — boutons et controles (theme clair force) */
   --control-bg: #FFFFFF;

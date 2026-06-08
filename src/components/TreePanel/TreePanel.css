@@ -216,11 +216,6 @@
   color: var(--color-accent);
 }
 
-/* ── Ancestor highlight (parent of a selected node) ─────────────────────── */
-.tree-item.ancestor-sel {
-  background: color-mix(in srgb, var(--color-accent-light) 50%, transparent);
-}
-
 /* ── Icon and label ─────────────────────────────────────────────────────── */
 .ti-icon {
   flex-shrink: 0;
