@@ -1,0 +1,99 @@
+/* ── Depth guides and active branch context ─────────────────────────────── */
+.tree-depth-guides {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 13px;
+  width: calc(var(--tree-depth-level, 0) * 12px);
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--tree-depth-guide) 0 1px,
+    transparent 1px 12px
+  );
+  opacity: 0.42;
+}
+
+.tree-active-branch-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--tree-branch-guide-left, 13px);
+  width: var(--tree-branch-guide-width, 2px);
+  border-radius: 2px;
+  background: var(--tree-path-guide);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tree-hover-branch-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--tree-hover-guide-left, 13px);
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-accent) 42%, var(--tree-path-guide));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tree-item:hover .tree-depth-guides {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--tree-depth-guide) 0 1px,
+    transparent 1px 12px
+  );
+  opacity: 0.62;
+}
+
+.tree-item.active-scope:not(.active):not(.ancestor-sel) {
+  background: var(--tree-scope-bg);
+}
+
+.tree-item.active-scope:not(.active):not(.ancestor-sel):hover {
+  background: color-mix(in srgb, var(--tree-scope-bg) 76%, var(--color-accent-light));
+}
+
+.tree-item.hover-scope:not(.active) {
+  background: var(--tree-scope-hover-bg);
+}
+
+.tree-item.hover-scope:not(.active) .tree-depth-guides {
+  opacity: 0.68;
+}
+
+.tree-item.hover-scope:not(.active) .ti-icon,
+.tree-item.hover-scope:not(.active) .tree-chevron {
+  color: color-mix(in srgb, var(--color-accent) 72%, var(--muted));
+}
+
+.tree-item.hover-guide .tree-hover-branch-guide {
+  opacity: 0.9;
+}
+
+.tree-item.active .tree-depth-guides {
+  opacity: 0.5;
+}
+
+.tree-item.active .tree-active-branch-guide,
+.tree-item.ancestor-sel .tree-active-branch-guide {
+  opacity: 0.82;
+}
+
+.tree-item.ancestor-sel {
+  background: transparent;
+}
+
+.tree-item.ancestor-sel:hover {
+  background: color-mix(in srgb, var(--color-accent-light) 32%, transparent);
+}
+
+.tree-item.ancestor-sel .ti-icon,
+.tree-item.ancestor-sel .tree-chevron {
+  color: color-mix(in srgb, var(--color-text-secondary) 78%, var(--muted));
+}
+
+.tree-item.is-colored.hover-scope:not(.active) {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--tree-node-color));
+}

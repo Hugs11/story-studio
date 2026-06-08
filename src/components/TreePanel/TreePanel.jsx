@@ -8,6 +8,12 @@ import { TreeDragOverlay } from './TreeDragOverlay';
 import { ContextMenu } from './ContextMenu';
 import { useTreeDnd } from './useTreeDnd';
 import { useTreeSelection } from './useTreeSelection';
+import {
+  buildGuideScopeIdsById,
+  getNextHoverGuide,
+  isEntryInHoverGuide,
+  sameHoverGuide,
+} from './treeGuides';
 import { END_NODE_ID, EMPTY_BADGES } from './treePanelConstants';
 import {
   IconArrowUpLeft,
@@ -60,6 +66,8 @@ export function TreePanel({
   const { activeDropZone, dropOnNode } = useMediaTransfer();
   const [ctxMenu, setCtxMenu] = useState(null);
   const [collapsedIds, setCollapsedIds] = useState(new Set());
+  const [hoverScopeParentId, setHoverScopeParentId] = useState(null);
+  const [hoverGuide, setHoverGuide] = useState(null);
   const osDropHover = activeDropZone === 'treepanel';
 
   const isExpanded = useCallback((id) => !collapsedIds.has(id), [collapsedIds]);
@@ -138,11 +146,40 @@ export function TreePanel({
     const ancestors = new Set();
     for (const id of selectedIds) {
       if (id === 'root' || id === END_NODE_ID) continue;
-      const parentId = getParentId(id);
-      if (parentId != null) ancestors.add(parentId);
+      let parentId = getParentId(id);
+      while (parentId != null) {
+        ancestors.add(parentId);
+        parentId = getParentId(parentId);
+      }
     }
     return ancestors;
   }, [selectedIds, getParentId]);
+
+  const activeScopeParentId = useMemo(() => {
+    if (!selectedId || selectedId === 'root' || selectedId === END_NODE_ID) return null;
+    return getParentId(selectedId) ?? 'root';
+  }, [selectedId, getParentId]);
+
+  const guideScopeIdsById = useMemo(
+    () => buildGuideScopeIdsById(projectIndex),
+    [projectIndex],
+  );
+
+  const clearHoverScope = useCallback(() => {
+    setHoverScopeParentId(null);
+    setHoverGuide(null);
+  }, []);
+
+  const handleHoverScope = useCallback((parentScopeId, level, enableScope) => {
+    const nextGuide = getNextHoverGuide(parentScopeId, level);
+    setHoverGuide((prev) => (
+      sameHoverGuide(prev, nextGuide)
+        ? prev
+        : nextGuide
+    ));
+    const nextScopeParentId = enableScope ? (parentScopeId ?? null) : null;
+    setHoverScopeParentId((prev) => (prev === nextScopeParentId ? prev : nextScopeParentId));
+  }, []);
 
   // Cache navigation badges DATA (struct sans noms resolus). Survit aux
   // renders via useRef. Invalidation **par-entry-reference** : on ne re-calcule
@@ -276,6 +313,13 @@ export function TreePanel({
     onReorder,
     onMoveToMenu,
   });
+
+  useEffect(() => {
+    if (activeId) {
+      setHoverScopeParentId(null);
+      setHoverGuide(null);
+    }
+  }, [activeId]);
 
   function deleteSelectedNodes() {
     const toDelete = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
@@ -595,6 +639,7 @@ export function TreePanel({
   function renderEntries(entries, level, parentMenu = null) {
     const filtered = visibleIds ? entries.filter((e) => visibleIds.has(e.id)) : entries;
     if (!filtered?.length) return null;
+    const parentScopeId = parentMenu?.id ?? 'root';
     return (
       <SortableContext items={filtered.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
         {filtered.map((entry) => (
@@ -608,6 +653,14 @@ export function TreePanel({
               cut={cutIds.has(entry.id)}
               color={entry.treeColor}
               isAncestor={ancestorIds.has(entry.id)}
+              isActiveScope={activeScopeParentId === parentScopeId}
+              isHoverScope={hoverScopeParentId === parentScopeId}
+              isHoverGuide={isEntryInHoverGuide({
+                entryId: entry.id,
+                level,
+                hoverGuide,
+                guideScopeIdsById,
+              })}
               status={getNodeStatus(entry, () => entry.type === 'menu'
                 ? getMenuValidationStatus(entry, pathAudit)
                 : getItemValidationStatus(entry, pathAudit))}
@@ -623,6 +676,10 @@ export function TreePanel({
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
+              hoverGuideScopeIds={guideScopeIdsById.get(entry.id)}
+              hoverGuideLevel={hoverGuide?.level ?? null}
+              hoverScopeEnabled={entry.type === 'menu'}
+              onHoverScope={handleHoverScope}
             />
             {entry.type === 'menu' && isExpanded(entry.id)
               ? renderEntries(entry.children ?? [], level + 1, entry)
@@ -722,6 +779,7 @@ export function TreePanel({
             tabIndex={0}
             onKeyDown={handleKeyDown}
             onContextMenu={(e) => handleContextMenu(e, 'root', 'root-bg')}
+            onPointerLeave={clearHoverScope}
             style={{ outline: 'none' }}
             data-media-node-id="root"
             data-media-node-type="root"
