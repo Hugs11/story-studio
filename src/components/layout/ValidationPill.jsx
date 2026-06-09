@@ -9,12 +9,6 @@ const ChevronDown = ({ size = 10 }) => (
   </svg>
 );
 
-const XIcon = ({ size = 12 }) => (
-  <svg width={size} height={size} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-    <path d="M3 3l6 6M9 3l-6 6" />
-  </svg>
-);
-
 const ArrowRight = ({ size = 11 }) => (
   <svg width={size} height={size} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M2 6h7M6 3l3 3-3 3" />
@@ -100,7 +94,12 @@ export function ValidationPill({
 
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
+  const closeTimerRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) setActiveIndex(0);
@@ -125,12 +124,12 @@ export function ValidationPill({
       if (!wrapRef.current?.contains(e.target)) onOpenChange?.(false);
     }
     function onKeyDown(e) {
-      if (!wrapRef.current?.contains(e.target)) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onOpenChange?.(false);
         return;
       }
+      if (!wrapRef.current?.contains(e.target)) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActiveIndex((idx) => (flat.length === 0 ? 0 : (idx + 1) % flat.length));
@@ -187,12 +186,41 @@ export function ValidationPill({
     onOpenChange?.(!open);
   }
 
+  function openPopover() {
+    if (state !== 'errors' && state !== 'warnings') return;
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    onOpenChange?.(true);
+  }
+
+  function scheduleClose() {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => onOpenChange?.(false), 140);
+  }
+
   function handleItemClick(item) {
     selectIssue(item.issue.id);
   }
 
+  const popoverSubtitle = (() => {
+    if (errorCount > 0 && warningCount > 0) {
+      return `${errorCount} erreur${errorCount > 1 ? 's' : ''} et ${warningCount} élément${warningCount > 1 ? 's' : ''} à compléter avant de générer le pack.`;
+    }
+    if (errorCount > 0) {
+      return `${errorCount} erreur${errorCount > 1 ? 's' : ''} à corriger avant de générer le pack.`;
+    }
+    return `${warningCount} élément${warningCount > 1 ? 's' : ''} à compléter avant de générer le pack.`;
+  })();
+
   return (
-    <div className={`validation-pill-wrap ${isOpen ? 'is-open' : ''}`} ref={wrapRef}>
+    <div
+      className={`validation-pill-wrap ${isOpen ? 'is-open' : ''}`}
+      ref={wrapRef}
+      onPointerEnter={openPopover}
+      onPointerLeave={scheduleClose}
+      onMouseEnter={openPopover}
+      onMouseLeave={scheduleClose}
+      onFocus={openPopover}
+    >
       <Tooltip text={tooltipText}>
         <button
           type="button"
@@ -224,72 +252,50 @@ export function ValidationPill({
       </Tooltip>
 
       {isOpen ? (
-        <div
-          className={`validation-pill-dd is-${state}`}
-          ref={dropdownRef}
-          role="listbox"
-          aria-label="Liste des éléments de validation"
-        >
-          <div className="validation-pill-dd-head">
-            <span className="validation-pill-dd-icon"><TriangleAlert width={13} height={13} /></span>
-            <span className="validation-pill-dd-title">
-              VALIDATION
-              <em>
-                {errorCount > 0 && warningCount > 0
-                  ? `· ${errorCount} erreur${errorCount > 1 ? 's' : ''} + ${warningCount} à compléter`
-                  : errorCount > 0
-                    ? `· ${errorCount} erreur${errorCount > 1 ? 's' : ''} à corriger`
-                    : `· ${warningCount} élément${warningCount > 1 ? 's' : ''} à compléter`}
-              </em>
-            </span>
-            <button
-              type="button"
-              className="validation-pill-dd-close"
-              onClick={() => onOpenChange?.(false)}
-              aria-label="Fermer"
-            >
-              <XIcon size={12} />
-            </button>
-          </div>
-          <div className="validation-pill-dd-body">
-            {groups.map((group, groupIdx) => {
-              const prevSeverity = groupIdx > 0 ? groups[groupIdx - 1].severity : null;
-              const isFirstOfSeverity = prevSeverity !== group.severity;
-              return (
+        <>
+          <div className="validation-pill-hover-bridge" aria-hidden="true" />
+          <div
+            className={`validation-pill-dd is-${state}`}
+            ref={dropdownRef}
+            role="listbox"
+            aria-label="Liste des éléments de validation"
+          >
+            <div className="validation-pill-dd-head">
+              <span className="validation-pill-dd-title">Validation</span>
+              <span className="validation-pill-dd-subtitle">{popoverSubtitle}</span>
+            </div>
+            <div className="validation-pill-dd-body">
+              <div className="validation-pill-section-title">À compléter</div>
+              {groups.map((group) => (
                 <div key={group.key} className={`validation-pill-group is-${group.severity}`}>
-                  {isFirstOfSeverity ? (
-                    <div className="validation-pill-severity-head">
-                      {group.severity === 'error' ? 'Erreurs' : 'À compléter'}
-                    </div>
-                  ) : null}
                   <div className="validation-pill-group-head">
                     <span className="validation-pill-group-label">{group.label}</span>
                     <span className="validation-pill-group-count">· {group.items.length}</span>
                   </div>
                   {group.items.map((item) => {
-                    const isActive = item.flatIndex === activeIndex;
-                    return (
-                      <button
-                        type="button"
-                        key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
-                        data-flat-idx={item.flatIndex}
-                        className={`validation-pill-item is-${item.severity} ${isActive ? 'is-active' : ''}`}
-                        onClick={() => handleItemClick(item)}
-                        onMouseEnter={() => setActiveIndex(item.flatIndex)}
-                        role="option"
-                        aria-selected={isActive}
-                      >
-                        <span className="validation-pill-item-dot" aria-hidden="true" />
-                        <span className="validation-pill-item-label">{item.label}</span>
-                        <span className="validation-pill-item-go" aria-hidden="true"><ArrowRight size={11} /></span>
-                      </button>
-                    );
-                  })}
+                      const isActive = item.flatIndex === activeIndex;
+                      return (
+                        <button
+                          type="button"
+                          key={`${item.issue.id ?? 'noid'}:${item.flatIndex}`}
+                          data-flat-idx={item.flatIndex}
+                          className={`validation-pill-item is-${item.severity} ${isActive ? 'is-active' : ''}`}
+                          onClick={() => handleItemClick(item)}
+                          onMouseEnter={() => setActiveIndex(item.flatIndex)}
+                          role="option"
+                          aria-selected={isActive}
+                        >
+                          <span className="validation-pill-item-dot" aria-hidden="true" />
+                          <span className="validation-pill-item-label">{item.label}</span>
+                          <span className="validation-pill-item-go" aria-hidden="true"><ArrowRight size={11} /></span>
+                        </button>
+                      );
+                    })}
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );
