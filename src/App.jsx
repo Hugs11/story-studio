@@ -86,7 +86,6 @@ const DiagramTab = lazy(() => import('./tabs/DiagramTab').then((module) => ({ de
 const OptionsTab = lazy(() => import('./tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
 const EmulatorTab = lazy(() => import('./tabs/EmulatorTab').then((module) => ({ default: module.EmulatorTab })));
 const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
-const StorySettingsModal = lazy(() => import('./components/StorySettingsModal/StorySettingsModal').then((module) => ({ default: module.StorySettingsModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
 const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
 const MissingMediaRelinkModal = lazy(() => import('./components/MissingMediaRelink/MissingMediaRelinkModal')
@@ -171,7 +170,7 @@ function AppContent() {
   const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
   const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
   const [creditsOpen, setCreditsOpen] = useState(false);
-  const [storySettingsOpen, setStorySettingsOpen] = useState(false);
+  const [packOptionsOpen, setPackOptionsOpen] = useState(false);
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
@@ -901,7 +900,7 @@ function AppContent() {
     openProject: handleLoad,
     importStories: handleAddStory,
     addFolder: () => store.addMenu(),
-    openStorySettings: () => setStorySettingsOpen(true),
+    openPackOptions: () => setPackOptionsOpen(true),
     setActiveTab: store.setActiveTab,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
@@ -1009,7 +1008,11 @@ function AppContent() {
           onAddFolder={() => store.addMenu()}
           onRecord={handleToolbarRecord}
           canRecord={canRecord}
-          onOpenStorySettings={() => setStorySettingsOpen(true)}
+          packOptionsOpen={packOptionsOpen}
+          onPackOptionsOpenChange={setPackOptionsOpen}
+          projectType={store.project.projectType}
+          globalOptions={store.project.globalOptions}
+          onUpdateGlobalOption={handleUpdateGlobalOption}
           onGenerate={handleGenerate}
           onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
           onOpenExportFolder={handleOpenExportFolder}
@@ -1181,16 +1184,6 @@ function AppContent() {
           onSaved={handleToolbarRecordSaved}
           onClose={() => setToolbarRecordOpen(false)}
         />
-      )}
-
-      {storySettingsOpen && renderDeferred(
-        <StorySettingsModal
-          open={storySettingsOpen}
-          projectType={store.project.projectType}
-          globalOptions={store.project.globalOptions}
-          onClose={() => setStorySettingsOpen(false)}
-          onUpdateOption={handleUpdateGlobalOption}
-        />,
       )}
 
       {packMetadataOpen && renderDeferred(

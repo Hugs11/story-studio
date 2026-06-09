@@ -108,7 +108,7 @@ export function KeyboardShortcutsModal({
         </div>
 
         <div className="keyboard-shortcuts-body">
-          <div className="story-settings-lead">
+          <div className="keyboard-shortcuts-lead">
             Clique sur un raccourci puis presse la nouvelle combinaison. Échap annule la capture.
           </div>
 

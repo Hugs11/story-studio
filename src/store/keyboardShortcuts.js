@@ -29,7 +29,7 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'importStories',    scope: 'general', label: 'Importer des histoires',              defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
   { id: 'addFolder',        scope: 'general', label: 'Ajouter un dossier',                  defaultShortcut: { ctrl: true, shift: true, key: 'n', code: 'KeyN' } },
   {
-    id: 'storySettings', scope: 'general', label: 'Réglages de l\'histoire',
+    id: 'storySettings', scope: 'general', label: 'Options du pack',
     defaultShortcut: { ctrl: true, key: ',', code: 'Comma' },
     aliases: [
       { ctrl: true, key: 'm', code: 'KeyM' },
