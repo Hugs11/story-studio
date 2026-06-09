@@ -296,6 +296,46 @@
   margin-left: 2px;
 }
 
+.chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #6548d8;
+  color: color-mix(in srgb, var(--pack-options-accent) 82%, var(--control-text));
+  border-color: color-mix(in srgb, var(--pack-options-accent) 34%, var(--control-border));
+  background: color-mix(in srgb, var(--control-bg) 94%, var(--pack-options-accent) 6%);
+  font-weight: 600;
+  padding-left: 9px;
+  padding-right: 8px;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="light"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #6548d8;
+}
+
+:root[data-theme="dark"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #9a8cff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+    --pack-options-accent: #9a8cff;
+  }
+}
+
+.chrome-toolbar-btn[data-toolbar-id='pack-options']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='pack-options'].is-active {
+  color: color-mix(in srgb, var(--pack-options-accent) 74%, var(--control-text));
+  border-color: color-mix(in srgb, var(--pack-options-accent) 46%, var(--control-border));
+  background: color-mix(in srgb, var(--control-bg-hover) 88%, var(--pack-options-accent) 12%);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
+}
+
+.chrome-pack-options-caret {
+  font-size: 11px;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.9;
+}
+
 .chrome-toolbar-cta {
   height: 30px;
   padding: 0 12px;
@@ -1135,16 +1175,14 @@
   .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='import-folder'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,
-  .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label,
-  .chrome-toolbar-btn[data-toolbar-id='settings'] .chrome-toolbar-btn-label {
+  .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label {
     display: none;
   }
 
   .chrome-toolbar-btn[data-toolbar-id='import'],
   .chrome-toolbar-btn[data-toolbar-id='import-folder'],
   .chrome-toolbar-btn[data-toolbar-id='folder'],
-  .chrome-toolbar-btn[data-toolbar-id='record'],
-  .chrome-toolbar-btn[data-toolbar-id='settings'] {
+  .chrome-toolbar-btn[data-toolbar-id='record'] {
     width: 30px;
     min-width: 30px;
     padding-left: 0;

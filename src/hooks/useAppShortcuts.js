@@ -66,7 +66,7 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
       if (actionId === 'storySettings') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
-        actions.openStorySettings?.();
+        actions.openPackOptions?.();
         return;
       }
 

@@ -15,6 +15,7 @@ import {
 import { Tooltip } from '../common/Tooltip';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { ValidationPill } from './ValidationPill';
+import { PackOptionsPopover } from './PackOptionsPopover';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
@@ -81,7 +82,11 @@ export function Toolbar({
   onAddFolder,
   onRecord,
   canRecord,
-  onOpenStorySettings,
+  packOptionsOpen = false,
+  onPackOptionsOpenChange,
+  projectType,
+  globalOptions,
+  onUpdateGlobalOption,
   onGenerate,
   onOpenPackMetadata,
   onOpenExportFolder,
@@ -203,19 +208,6 @@ export function Toolbar({
             {item.icon}
           </ToolbarButton>
         ))}
-        {showProjectActions ? (
-          <>
-            <span className="chrome-toolbar-sep" />
-            <ToolbarButton
-              id="settings"
-              title={withShortcut("Réglages de l'histoire", shortcutLabels.storySettings)}
-              label="Réglages"
-              onClick={onOpenStorySettings}
-            >
-              <ToolbarIcon Icon={SlidersHorizontal} />
-            </ToolbarButton>
-          </>
-        ) : null}
       </div>
 
       <div className="chrome-toolbar-right">
@@ -230,6 +222,26 @@ export function Toolbar({
               onSelectIssue={onSelectIssue}
               onCountZeroTransition={handleCountZeroTransition}
               shortcutLabel={shortcutLabels.toggleValidation}
+            />
+            <span className="chrome-toolbar-sep" />
+            <PackOptionsPopover
+              open={packOptionsOpen}
+              projectType={projectType}
+              globalOptions={globalOptions}
+              onOpenChange={onPackOptionsOpenChange}
+              onUpdateOption={onUpdateGlobalOption}
+              trigger={(
+                <ToolbarButton
+                  id="pack-options"
+                  title={withShortcut('Options du pack', shortcutLabels.storySettings)}
+                  label="Options du pack"
+                  onClick={() => onPackOptionsOpenChange?.(true)}
+                  active={packOptionsOpen}
+                  trailing={<span className="chrome-pack-options-caret" aria-hidden="true">▾</span>}
+                >
+                  <ToolbarIcon Icon={SlidersHorizontal} />
+                </ToolbarButton>
+              )}
             />
             <span className="chrome-toolbar-sep" />
             <div className="chrome-generate-split" ref={generateMenuRef}>
