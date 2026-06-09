@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CircleCheck,
   Download,
-  FilePen,
   FilePlus,
   FolderInput,
   FolderOpen,
@@ -16,6 +15,7 @@ import { Tooltip } from '../common/Tooltip';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { ValidationPill } from './ValidationPill';
 import { PackOptionsPopover } from './PackOptionsPopover';
+import { GenerateMenuPopover } from './GenerateMenuPopover';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
@@ -53,19 +53,6 @@ function ToolbarButton({
   );
 }
 
-function MenuItem({ disabled = false, onClick, children }) {
-  return (
-    <button
-      className="chrome-generate-menu-item"
-      role="menuitem"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function Toolbar({
   showProjectActions,
   shortcutLabels = DEFAULT_SHORTCUT_LABELS,
@@ -100,7 +87,6 @@ export function Toolbar({
 }) {
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
-  const generateMenuRef = useRef(null);
   const successToastTimerRef = useRef(null);
 
   useEffect(() => () => {
@@ -111,27 +97,6 @@ export function Toolbar({
     setSuccessToast(true);
     if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
     successToastTimerRef.current = setTimeout(() => setSuccessToast(false), 2200);
-  }
-
-  useEffect(() => {
-    if (!generateMenuOpen) return undefined;
-    function onPointerDown(event) {
-      if (!generateMenuRef.current?.contains(event.target)) setGenerateMenuOpen(false);
-    }
-    function onKeyDown(event) {
-      if (event.key === 'Escape') setGenerateMenuOpen(false);
-    }
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [generateMenuOpen]);
-
-  function handleGenerateAction(action) {
-    setGenerateMenuOpen(false);
-    action?.();
   }
 
   const primaryGroup = [
@@ -244,7 +209,7 @@ export function Toolbar({
               )}
             />
             <span className="chrome-toolbar-sep" />
-            <div className="chrome-generate-split" ref={generateMenuRef}>
+            <div className="chrome-generate-split">
               {successToast ? (
                 <div className="validation-success-toast" role="status" aria-live="polite">
                   <CircleCheck width={13} height={13} aria-hidden="true" />
@@ -262,43 +227,27 @@ export function Toolbar({
                   <span className="chrome-generate-main-label">Générer le pack</span>
                 </button>
               </Tooltip>
-              <button
-                className="chrome-toolbar-cta chrome-generate-caret"
-                onClick={() => setGenerateMenuOpen((open) => !open)}
-                aria-label="Options de génération"
-                aria-haspopup="menu"
-                aria-expanded={generateMenuOpen}
-              >
-                <span className="chrome-generate-caret-glyph" aria-hidden="true">▾</span>
-              </button>
-              {generateMenuOpen ? (
-                <div className="chrome-generate-menu" role="menu">
-                  <MenuItem disabled={generateDisabled} onClick={() => handleGenerateAction(onGenerate)}>
-                    <ToolbarIcon Icon={Package} />
-                    <span>
-                      <strong>Générer maintenant</strong>
-                      <small>{exportPackName ? `${exportPackName}.zip` : 'Export ZIP'}{generateShortcut ? ` · ${generateShortcut}` : ''}</small>
-                    </span>
-                  </MenuItem>
-                  <span className="chrome-generate-menu-sep" />
-                  {onOpenPackMetadata ? (
-                    <MenuItem onClick={() => handleGenerateAction(onOpenPackMetadata)}>
-                      <ToolbarIcon Icon={FilePen} />
-                      <span>
-                        <strong>Modifier les métadonnées...</strong>
-                        <small>Titre, âge, auteur, version</small>
-                      </span>
-                    </MenuItem>
-                  ) : null}
-                  <MenuItem onClick={() => handleGenerateAction(onOpenExportFolder)}>
-                    <ToolbarIcon Icon={FolderOpen} />
-                    <span>
-                      <strong>Ouvrir le dossier d'export</strong>
-                      <small>Dernier emplacement utilisé</small>
-                    </span>
-                  </MenuItem>
-                </div>
-              ) : null}
+              <GenerateMenuPopover
+                open={generateMenuOpen}
+                onOpenChange={setGenerateMenuOpen}
+                generateDisabled={generateDisabled}
+                onGenerate={onGenerate}
+                onOpenPackMetadata={onOpenPackMetadata}
+                onOpenExportFolder={onOpenExportFolder}
+                exportPackName={exportPackName}
+                generateShortcut={generateShortcut}
+                trigger={({ openPopover }) => (
+                  <button
+                    className="chrome-toolbar-cta chrome-generate-caret"
+                    onClick={openPopover}
+                    aria-label="Options de génération"
+                    aria-haspopup="menu"
+                    aria-expanded={generateMenuOpen}
+                  >
+                    <span className="chrome-generate-caret-glyph" aria-hidden="true">▾</span>
+                  </button>
+                )}
+              />
             </div>
           </>
         ) : null}
