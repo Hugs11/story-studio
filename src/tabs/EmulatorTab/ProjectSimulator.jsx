@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { decodeNavigationStoryId, isStoryNavigationTarget, isStoryPlayNavigationTarget } from '../../store/navigationTargets';
-import { getGeneratedStoryNavigation } from '../../store/generatedNavigation';
+import { getEffectiveEndBehavior, getGeneratedStoryNavigation } from '../../store/generatedNavigation';
+import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { getExportPackName } from '../../utils/packConvention';
 import { LocalImage } from './LocalImage';
 import { ZipImage } from './ZipImage';
@@ -322,7 +323,10 @@ export function ProjectSimulator({
   }, [activeStory, currentEntry, isSimple, onActiveNodeChange, simpleStory, state]);
 
   useEffect(() => {
-    if (isSimple || state !== 'browse' || currentEntry?.type !== 'menu' || !currentEntry?.autoBlackImage || !autoPlaybackEnabled) return undefined;
+    const menuControls = currentEntry?.type === 'menu'
+      ? getGeneratedMenuControls(currentEntry, currentMenu, project)
+      : null;
+    if (isSimple || state !== 'browse' || currentEntry?.type !== 'menu' || !menuControls?.autoplay || !autoPlaybackEnabled) return undefined;
 
     function advance() {
       if (!mountedRef.current) return;
@@ -365,16 +369,16 @@ export function ProjectSimulator({
       clearTimeout(pollTimer);
       if (audioRef.current) audioRef.current.removeEventListener('ended', advance);
     };
-  }, [currentEntry, isSimple, state, autoPlaybackEnabled]);
+  }, [currentEntry, currentMenu, isSimple, project, state, autoPlaybackEnabled]);
 
   // Transition de fin de lecture : prompt intermediaire puis retour, ou retour direct.
   useEffect(() => {
     if (state !== 'playing' || !autoPlaybackEnabled) return undefined;
     const story = isSimple ? simpleStory : currentEntry;
-    const navigation = story?.type === 'story'
-      ? getGeneratedStoryNavigation(story, currentMenu, project, rootEntries)
+    const behavior = story?.type === 'story'
+      ? getEffectiveEndBehavior(story, currentMenu, project, rootEntries)
       : null;
-    const shouldAutoFinish = !!story?.controlSettings?.autoplay || !!navigation?.usesEndNode;
+    const shouldAutoFinish = !!behavior?.autoContinuation;
     if (!shouldAutoFinish) return undefined;
 
     let pollTimer;

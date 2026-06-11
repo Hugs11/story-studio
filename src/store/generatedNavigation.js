@@ -10,6 +10,7 @@ import {
   isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from './navigationTargets.js';
+import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
 import { pathKey } from '../utils/fileUtils.js';
 
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
@@ -319,18 +320,19 @@ export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries 
     finalTargetId = navigation.promptReturn.targetId ?? navigation.directReturn.targetId;
   }
 
-  const storyControls = entry?.controlSettings ?? {};
+  const generatedPlayControls = getGeneratedStoryPlayControls(entry, parentMenu, project);
   const autoContinuation = !!(
     autoNext.applies
     ||
     endStepKind
     || entry?.returnAfterPlay
-    || storyControls.autoplay
+    || generatedPlayControls.autoplay
   );
 
   return {
     navigation,
     autoNext,
+    generatedPlayControls,
     endStepKind,
     usesEndStep: !!endStepKind,
     directTargetId: navigation.directReturn.targetId,

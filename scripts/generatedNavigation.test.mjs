@@ -12,6 +12,10 @@ import {
   hasVisibleEndNode,
   isCombinedNightStoryBypass,
 } from '../src/store/generatedNavigation.js';
+import {
+  getGeneratedMenuControls,
+  getGeneratedStoryPlayControls,
+} from '../src/store/generatedPlayback.js';
 
 function story(id, fields = {}) {
   return {
@@ -244,6 +248,44 @@ test('autoNext: story without override returns to next sibling (mirrors Rust aut
   assert.equal(nav.directReturn.targetId, 'story_play:b');
   // Pas marqué comme modifié : l'utilisateur n'a pas configuré returnAfterPlay
   assert.equal(nav.directReturn.isModified, false);
+});
+
+test('menu autoplay disabled is preserved when the menu is a real root choice', () => {
+  const first = { id: 'menu-1', type: 'menu', name: 'Menu 1', controlSettings: { autoplay: false }, children: [story('a')] };
+  const second = { id: 'menu-2', type: 'menu', name: 'Menu 2', controlSettings: { autoplay: false }, children: [story('b')] };
+  const p = project([first, second]);
+
+  const controls = getGeneratedMenuControls(first, null, p);
+
+  assert.equal(controls.isChoiceNode, true);
+  assert.equal(controls.autoplay, false);
+  assert.equal(controls.forceAutoplay, false);
+});
+
+test('single root menu is forced to autoplay even when its local autoplay is disabled', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', controlSettings: { autoplay: false }, children: [story('a')] };
+  const p = project([menu]);
+
+  const controls = getGeneratedMenuControls(menu, null, p);
+
+  assert.equal(controls.isChoiceNode, false);
+  assert.equal(controls.autoplay, true);
+  assert.equal(controls.forceAutoplay, true);
+});
+
+test('default story inside a menu auto-continues when Rust forces playback autoplay', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { controlSettings: { ok: false, autoplay: false } });
+  menu.children = [a];
+  const p = project([menu]);
+
+  const controls = getGeneratedStoryPlayControls(a, menu, p);
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(controls.forceAutoplay, true);
+  assert.equal(controls.autoplay, true);
+  assert.equal(behavior.autoContinuation, true);
+  assert.equal(behavior.finalTargetId, 'menu-1');
 });
 
 test('effective end behavior: autoNext without end step goes directly to next story playback', () => {
