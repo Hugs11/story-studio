@@ -688,42 +688,41 @@
   container-type: inline-size;
 }
 
-.during-play-split {
+.during-play-stack {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1px minmax(220px, min(34%, 340px));
-  gap: 18px;
-  align-items: stretch;
-  min-width: 0;
-}
-
-.during-play-left,
-.during-play-home {
+  gap: 10px;
   min-width: 0;
 }
 
 .during-play-toggles {
-  grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
-  gap: 8px;
+  grid-template-columns: 1fr;
 }
 
-.during-play-divider {
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--color-border-secondary) 62%, transparent) 14%,
-    color-mix(in srgb, var(--color-border-secondary) 62%, transparent) 86%,
-    transparent
-  );
+.during-play-toggles .sequence-control,
+.during-play-home-head {
+  justify-content: flex-start;
+}
+
+.during-play-home-head > span {
+  flex: 0 0 auto !important;
 }
 
 .during-play-home {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border-secondary) 46%, transparent);
 }
 
 .during-play-home-head {
   margin-bottom: 8px;
+  flex-wrap: nowrap;
+}
+
+.during-play-home-select {
+  flex: 1 1 260px;
+  min-width: 180px;
 }
 
 .during-play-home .navigation-target-select {
@@ -899,19 +898,13 @@
 }
 
 @container (max-width: 700px) {
-  .during-play-split {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .during-play-home-head {
+    flex-wrap: wrap;
   }
 
-  .during-play-divider {
-    height: 1px;
-    width: 100%;
-    background: color-mix(in srgb, var(--color-border-secondary) 55%, transparent);
-  }
-
-  .during-play-toggles {
-    grid-template-columns: 1fr;
+  .during-play-home-select {
+    flex-basis: 100%;
+    order: 3;
   }
 
   .story-end-mode {
@@ -1390,21 +1383,6 @@
 
   .advanced-toggle-row {
     align-items: flex-start;
-  }
-
-  .during-play-split {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .during-play-divider {
-    height: 1px;
-    width: 100%;
-    background: color-mix(in srgb, var(--color-border-secondary) 55%, transparent);
-  }
-
-  .during-play-toggles {
-    grid-template-columns: 1fr;
   }
 }
 
