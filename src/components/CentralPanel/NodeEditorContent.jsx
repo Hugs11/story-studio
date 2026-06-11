@@ -24,7 +24,7 @@ export const NodeEditorContent = memo(function NodeEditorContent({
   onBulkDeleteItems,
 }) {
   const isMultiSelect = selectedIds && selectedIds.size > 1;
-  const parentMenuId = !isMultiSelect && node?.type === 'story' ? findParentMenuId(project, node.id, projectIndex) : null;
+  const parentMenuId = !isMultiSelect && (node?.type === 'story' || node?.type === 'menu') ? findParentMenuId(project, node.id, projectIndex) : null;
   const parentMenu = useMemo(
     () => (parentMenuId ? findEntryById(project, parentMenuId, projectIndex) : null),
     [parentMenuId, project, projectIndex],
@@ -63,6 +63,8 @@ export const NodeEditorContent = memo(function NodeEditorContent({
     return (
       <MenuEditor
         node={node}
+        project={project}
+        parentMenu={parentMenu}
         allMenus={allMenus}
         onUpdate={onUpdateMenu}
         onDelete={onDeleteMenu}
