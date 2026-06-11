@@ -52,19 +52,17 @@ impl<'a> StoryBuilder<'a> {
                         menu_return.as_deref(),
                         menu_replay_transition.clone(),
                     );
-                    // auto_next: when globally active and no explicit per-story/per-menu override,
-                    // the story goes directly to the next sibling's play stage instead of the menu.
-                    let auto_next_active = self.report.project.options.auto_next
-                        && story.return_after_play.is_none()
-                        && menu.return_after_play.is_none();
+                    // auto_next is global: it bypasses local/menu returnAfterPlay and
+                    // sends playback directly to the next sibling story.
+                    let auto_next_active = self.report.project.options.auto_next;
                     let play_return_transition = if auto_next_active {
                         match find_next_story_id(&menu.children, child_index) {
                             Some(next_id) => self
                                 .story_prealloc
                                 .get(next_id)
                                 .map(|p| transition(&p.play_action_id, 0))
-                                .unwrap_or(fallback_transition),
-                            None => fallback_transition,
+                                .unwrap_or_else(|| menu_replay_transition.clone()),
+                            None => menu_replay_transition.clone(),
                         }
                     } else {
                         let story_return = resolve_next_story_target(
@@ -82,10 +80,9 @@ impl<'a> StoryBuilder<'a> {
                         &menu.children,
                         child_index,
                     );
-                    // When returnOnHome is not set but returnAfterPlay IS set,
-                    // home goes to the parent menu so it differs from ok (which advances to next story).
-                    // When auto_next is active and play_return_transition points to the next story,
-                    // home must also stay on the menu — not inherit the next-story target.
+                    // When returnOnHome is not set but returnAfterPlay IS set, home
+                    // stays on the parent menu so it differs from the generated OK path.
+                    // Under auto_next, Home also stays on the menu by default.
                     let play_home_transition = if story.return_on_home_none {
                         None
                     } else {
@@ -107,8 +104,8 @@ impl<'a> StoryBuilder<'a> {
                     };
                     // Force autoplay for stories with no explicit controls in any menu context
                     // (not just nested menus) so they never hang after playback.
-                    let effective_simple_leaf =
-                        menu.return_after_play.is_none() && story.return_after_play.is_none();
+                    let effective_simple_leaf = auto_next_active
+                        || (menu.return_after_play.is_none() && story.return_after_play.is_none());
                     let (night_bridge_return, night_bridge_home) = self
                         .compute_night_bridge_targets(
                             &menu.children,

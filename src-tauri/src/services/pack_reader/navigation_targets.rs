@@ -24,6 +24,171 @@ pub(super) fn assign_return_targets(
     unresolved_transitions
 }
 
+#[derive(Default)]
+struct AutoNextImportDetection {
+    has_chain: bool,
+    has_conflict: bool,
+}
+
+pub(super) fn extract_auto_next_return_overrides(entries: &mut [serde_json::Value]) -> bool {
+    let mut detection = AutoNextImportDetection::default();
+    inspect_auto_next_entries(entries, None, &mut detection);
+    let auto_next_detected = detection.has_chain && !detection.has_conflict;
+    if auto_next_detected {
+        strip_auto_next_return_overrides(entries, None);
+    }
+    auto_next_detected
+}
+
+fn inspect_auto_next_entries(
+    entries: &[serde_json::Value],
+    parent_menu_id: Option<&str>,
+    detection: &mut AutoNextImportDetection,
+) {
+    inspect_auto_next_level(entries, parent_menu_id, detection);
+    for entry in entries {
+        if entry.get("type").and_then(|value| value.as_str()) != Some("menu") {
+            continue;
+        }
+        let menu_id = entry.get("id").and_then(|value| value.as_str());
+        if let Some(children) = entry.get("children").and_then(|value| value.as_array()) {
+            inspect_auto_next_entries(children, menu_id, detection);
+        }
+    }
+}
+
+fn inspect_auto_next_level(
+    entries: &[serde_json::Value],
+    parent_menu_id: Option<&str>,
+    detection: &mut AutoNextImportDetection,
+) {
+    let story_indices: Vec<usize> = entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.get("type").and_then(|value| value.as_str()) == Some("story"))
+        .map(|(index, _)| index)
+        .collect();
+    if story_indices.is_empty() {
+        return;
+    }
+
+    for (position, story_index) in story_indices.iter().enumerate() {
+        let story = &entries[*story_index];
+        if has_after_playback_end_step(story) {
+            detection.has_conflict = true;
+            return;
+        }
+
+        let return_target = story
+            .get("returnAfterPlay")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        let is_last_story = position + 1 == story_indices.len();
+        if is_last_story {
+            if !target_matches_parent(return_target, parent_menu_id) {
+                detection.has_conflict = true;
+                return;
+            }
+            continue;
+        }
+
+        let next_story = &entries[story_indices[position + 1]];
+        let Some(next_story_id) = next_story.get("id").and_then(|value| value.as_str()) else {
+            detection.has_conflict = true;
+            return;
+        };
+        if !target_matches_story(return_target, next_story_id) {
+            detection.has_conflict = true;
+            return;
+        }
+        detection.has_chain = true;
+    }
+}
+
+fn strip_auto_next_return_overrides(
+    entries: &mut [serde_json::Value],
+    parent_menu_id: Option<&str>,
+) {
+    let story_indices: Vec<usize> = entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.get("type").and_then(|value| value.as_str()) == Some("story"))
+        .map(|(index, _)| index)
+        .collect();
+
+    for (position, story_index) in story_indices.iter().enumerate() {
+        let return_target = entries[*story_index]
+            .get("returnAfterPlay")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        let is_last_story = position + 1 == story_indices.len();
+        let should_strip = if is_last_story {
+            target_matches_parent(return_target, parent_menu_id)
+        } else {
+            entries[story_indices[position + 1]]
+                .get("id")
+                .and_then(|value| value.as_str())
+                .map(|next_story_id| target_matches_story(return_target, next_story_id))
+                .unwrap_or(false)
+        };
+        if should_strip {
+            if let Some(obj) = entries[*story_index].as_object_mut() {
+                obj.remove("returnAfterPlay");
+            }
+        }
+    }
+
+    for entry in entries.iter_mut() {
+        if entry.get("type").and_then(|value| value.as_str()) != Some("menu") {
+            continue;
+        }
+        let menu_id = entry
+            .get("id")
+            .and_then(|value| value.as_str())
+            .map(str::to_string);
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(|value| value.as_array_mut())
+        {
+            strip_auto_next_return_overrides(children, menu_id.as_deref());
+        }
+    }
+}
+
+fn has_after_playback_end_step(entry: &serde_json::Value) -> bool {
+    entry
+        .get("afterPlaybackPromptAudio")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+        .is_some()
+        || entry
+            .get("afterPlaybackSequence")
+            .and_then(|value| value.as_array())
+            .map(|steps| !steps.is_empty())
+            .unwrap_or(false)
+}
+
+fn target_matches_story(target: Option<&str>, story_id: &str) -> bool {
+    let Some(target) = target else {
+        return false;
+    };
+    target == format!("story:{story_id}") || target == format!("story_play:{story_id}")
+}
+
+fn target_matches_parent(target: Option<&str>, parent_menu_id: Option<&str>) -> bool {
+    match parent_menu_id {
+        Some(menu_id) => {
+            target.is_none()
+                || target == Some("current_menu")
+                || target == Some(menu_id)
+                || target == Some(format!("menu:{menu_id}").as_str())
+        }
+        None => target.is_none() || target == Some("root"),
+    }
+}
+
 /// Construit une table { stage_uuid → story_item_uuid } couvrant :
 /// - l'UUID du titre (= item id)
 /// - l'UUID du play stage (champ temporaire _playStageId)

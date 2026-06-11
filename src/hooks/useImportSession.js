@@ -288,7 +288,17 @@ export function useImportSession({
           ...unresolvedTransitions,
         ],
       };
-      if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode) {
+      if (result?.autoNext) {
+        nextProject = {
+          ...nextProject,
+          globalOptions: {
+            ...nextProject.globalOptions,
+            autoNext: true,
+            nightMode: false,
+          },
+        };
+      }
+      if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
         nextProject = {
           ...nextProject,
           nightModeAudio: result.nightModeAudio,

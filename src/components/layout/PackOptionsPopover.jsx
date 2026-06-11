@@ -104,14 +104,18 @@ export function PackOptionsPopover({
 
             <div className="pack-options-section">
               <div className="pack-options-section-title">Comportement de lecture global</div>
-              <Tooltip text="Enchaîne automatiquement les histoires." wrap className="pack-options-row-tip">
+              <Tooltip
+                text="Enchaîne automatiquement les histoires et ignore les messages, scénarios et retours de fin tant que l'option est active."
+                wrap
+                className="pack-options-row-tip"
+              >
                 <div className={`pack-options-row ${isSimpleProject ? 'is-disabled' : ''}`}>
                   <span className="pack-options-label">Auto-next</span>
                   <Toggle
                     on={!!globalOptions.autoNext}
                     onChange={(value) => updateOption('autoNext', value)}
                     disabled={isSimpleProject}
-                    ariaLabel="Auto-next. Enchaîne automatiquement les histoires."
+                    ariaLabel="Auto-next. Enchaîne automatiquement les histoires et ignore les fins configurées."
                   />
                 </div>
               </Tooltip>

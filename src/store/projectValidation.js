@@ -128,8 +128,9 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   const issues = [];
   const projectType = project?.projectType;
   const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Nom de mon histoire');
+  const autoNext = !!project?.globalOptions?.autoNext;
   const nightMode = !!project?.globalOptions?.nightMode;
-  const hasEndNode = nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode;
+  const hasEndNode = !autoNext && (nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode);
   const projectIndex = providedProjectIndex ?? buildProjectIndex(project);
   const { entryIdCounts, menuMap, firstSimpleStory, rootPlayableCount } = collectProjectGraphStats(projectIndex);
   const menuIds = new Set(menuMap.keys());
@@ -217,11 +218,13 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       if (getPlayableDescendantCount(projectIndex, entry.id) === 0) {
         pushWarning(issues, menuId, VALIDATION_MESSAGES.emptyMenu(pathLabel));
       }
-      const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, menuId);
-      if (hasPath(entry?.returnAfterPlay) && menuReturnTarget !== 'root' && menuReturnTarget && !menuIds.has(menuReturnTarget)) {
-        pushError(issues, menuId, missingTarget(entryLabel, 'de retour'));
-      } else if (hasPath(entry?.returnAfterPlay) && menuReturnTarget && menuReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, menuReturnTarget) === 0) {
-        pushError(issues, menuId, emptyTarget(entryLabel, 'de retour'));
+      if (!autoNext) {
+        const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, menuId);
+        if (hasPath(entry?.returnAfterPlay) && menuReturnTarget !== 'root' && menuReturnTarget && !menuIds.has(menuReturnTarget)) {
+          pushError(issues, menuId, missingTarget(entryLabel, 'de retour'));
+        } else if (hasPath(entry?.returnAfterPlay) && menuReturnTarget && menuReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, menuReturnTarget) === 0) {
+          pushError(issues, menuId, emptyTarget(entryLabel, 'de retour'));
+        }
       }
       validateNavigationTarget(
         issues,
@@ -234,11 +237,15 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       return;
     }
 
-    const storyReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, parentMenu?.id ?? null);
-    if (hasPath(entry?.returnAfterPlay) && storyReturnTarget !== 'root' && storyReturnTarget && !menuIds.has(storyReturnTarget)) {
-      pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'de retour'));
-    } else if (hasPath(entry?.returnAfterPlay) && storyReturnTarget && storyReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, storyReturnTarget) === 0) {
-      pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'de retour'));
+    const storyReturnTarget = autoNext
+      ? (parentMenu?.id ?? null)
+      : resolveNavigationMenuTarget(entry?.returnAfterPlay, parentMenu?.id ?? null);
+    if (!autoNext) {
+      if (hasPath(entry?.returnAfterPlay) && storyReturnTarget !== 'root' && storyReturnTarget && !menuIds.has(storyReturnTarget)) {
+        pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'de retour'));
+      } else if (hasPath(entry?.returnAfterPlay) && storyReturnTarget && storyReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, storyReturnTarget) === 0) {
+        pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'de retour'));
+      }
     }
 
     const homeReturnTarget = resolveNavigationMenuTarget(entry?.returnOnHome, storyReturnTarget);
@@ -262,7 +269,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     if (entry?.type === 'zip') validateZipItem(issues, entry, pathLabel, fileAudit);
     else {
       validateStorySelectionItem(issues, entry, pathLabel, fileAudit);
-      if (hasPath(entry?.afterPlaybackPromptAudio)) {
+      if (!autoNext && hasPath(entry?.afterPlaybackPromptAudio)) {
         validateNavigationTarget(
           issues,
           entry?.id ?? null,
@@ -282,7 +289,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           );
         }
       }
-      if ((entry?.afterPlaybackSequence ?? []).length > 0) {
+      if (!autoNext && (entry?.afterPlaybackSequence ?? []).length > 0) {
         for (const [index, step] of entry.afterPlaybackSequence.entries()) {
           validateNavigationTarget(
             issues,
@@ -319,11 +326,13 @@ export function getGenerateErrors(project, fileAudit = {}) {
     .map((issue) => issue.text);
 }
 
-export function getItemValidationStatus(item, fileAudit = {}) {
+export function getItemValidationStatus(item, fileAudit = {}, project = null) {
+  const autoNext = !!project?.globalOptions?.autoNext;
   if (item.type === 'zip') return isAccessiblePath(item.zipPath, fileAudit) ? 'ok' : 'error';
   if (!isAccessiblePath(item.audio, fileAudit)) return 'error';
   if (!isAccessiblePath(item.itemImage, fileAudit)) return 'error';
   if (!isAccessiblePath(item.itemAudio, fileAudit)) return 'error';
+  if (autoNext) return 'ok';
   if (hasPath(item.afterPlaybackPromptAudio) && !isAccessiblePath(item.afterPlaybackPromptAudio, fileAudit)) return 'error';
   for (const step of item.afterPlaybackSequence ?? []) {
     if (!isAccessiblePath(step?.audio, fileAudit)) return 'error';
@@ -335,6 +344,7 @@ export function getItemValidationStatus(item, fileAudit = {}) {
 }
 
 export function getEndNodeValidationStatus(project, fileAudit = {}) {
+  if (project?.globalOptions?.autoNext) return 'ok';
   if (!isAccessiblePath(project?.nightModeAudio, fileAudit)) return 'error';
   return 'ok';
 }

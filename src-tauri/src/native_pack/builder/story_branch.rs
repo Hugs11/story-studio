@@ -26,15 +26,19 @@ impl<'a> StoryBuilder<'a> {
             .map(|p| p.play_action_id.clone())
             .unwrap_or_else(|| self.next_id());
         let base_story_name = display_label(&story.name, "Story");
+        let auto_next_active = self.report.project.options.auto_next;
+        let has_effective_night_mode =
+            self.report.project.night_mode_audio.is_some() && !auto_next_active;
         // force_autoplay ensures the firmware fires okTransition automatically.
         // Required when returnAfterPlay is set, and also when the story is inside a
         // nested menu with no explicit navigation controls — otherwise the audio loops.
-        let force_autoplay = story
-            .return_after_play
-            .as_deref()
-            .map(|r| !r.trim().is_empty())
-            .unwrap_or(false)
-            || self.report.project.night_mode_audio.is_some()
+        let force_autoplay = auto_next_active
+            || story
+                .return_after_play
+                .as_deref()
+                .map(|r| !r.trim().is_empty())
+                .unwrap_or(false)
+            || has_effective_night_mode
             || (simple_leaf_playback && !story.ok && !story.autoplay);
         let play_controls = ControlSettings {
             wheel: story.wheel,
@@ -43,7 +47,9 @@ impl<'a> StoryBuilder<'a> {
             pause: story.pause,
             autoplay: force_autoplay || story.autoplay,
         };
-        let play_ok_transition = if !story.after_playback_sequence.is_empty() {
+        let play_ok_transition = if auto_next_active {
+            Some(play_return_transition.clone())
+        } else if !story.after_playback_sequence.is_empty() {
             let sequence_transitions = self.build_after_playback_sequence(
                 story,
                 role_prefix,
@@ -95,7 +101,7 @@ impl<'a> StoryBuilder<'a> {
             });
 
             Some(transition(&prompt_action_id, 0))
-        } else if self.report.project.night_mode_audio.is_some()
+        } else if has_effective_night_mode
             && (!should_emit_combined_story_stage(story, true) || story.return_after_play.is_none())
         {
             Some(
@@ -107,7 +113,7 @@ impl<'a> StoryBuilder<'a> {
             None
         };
 
-        if should_emit_combined_story_stage(story, self.report.project.night_mode_audio.is_some()) {
+        if should_emit_combined_story_stage(story, has_effective_night_mode) {
             self.action_nodes.push(ActionNode {
                 id: play_action_id,
                 name: action_node_name(),

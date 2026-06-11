@@ -663,7 +663,7 @@ export function TreePanel({
               })}
               status={getNodeStatus(entry, () => entry.type === 'menu'
                 ? getMenuValidationStatus(entry, pathAudit)
-                : getItemValidationStatus(entry, pathAudit))}
+                : getItemValidationStatus(entry, pathAudit, project))}
               dragging={!!activeId}
               containerDroppableId={entry.type === 'menu' ? `container:${entry.id}` : null}
               navigationBadges={navigationBadgesById.get(entry.id) ?? EMPTY_BADGES}

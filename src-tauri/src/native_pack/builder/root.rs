@@ -19,7 +19,9 @@ impl<'a> StoryBuilder<'a> {
 
         let role_prefix = scoped_label_id("root", &story.id, &story.name);
         let stage_id = self.next_id();
-        let story_controls = if project.options.night_mode {
+        let auto_next_active = project.options.auto_next;
+        let night_mode_active = project.options.night_mode && !auto_next_active;
+        let story_controls = if night_mode_active {
             playback_controls()
         } else {
             ControlSettings {
@@ -30,7 +32,7 @@ impl<'a> StoryBuilder<'a> {
                 autoplay: story.autoplay,
             }
         };
-        let story_ok_transition = if project.night_mode_audio.is_some() {
+        let story_ok_transition = if project.night_mode_audio.is_some() && !auto_next_active {
             Some(self.build_night_bridge()?)
         } else {
             None
@@ -80,15 +82,26 @@ impl<'a> StoryBuilder<'a> {
         match entry {
             CanonicalEntry::Story(story) => {
                 let root_transition = transition(root_action_id, root_index as i32);
-                let story_return = resolve_next_story_target(
-                    story.return_after_play.as_deref(),
-                    siblings,
-                    root_index,
-                );
-                let play_return_transition = self.resolve_story_return_transition(
-                    story_return.as_deref(),
-                    root_transition.clone(),
-                );
+                let auto_next_active = self.report.project.options.auto_next;
+                let play_return_transition = if auto_next_active {
+                    find_next_story_id(siblings, root_index)
+                        .and_then(|next_id| {
+                            self.story_prealloc
+                                .get(next_id)
+                                .map(|prealloc| transition(&prealloc.play_action_id, 0))
+                        })
+                        .unwrap_or_else(|| transition(root_action_id, 0))
+                } else {
+                    let story_return = resolve_next_story_target(
+                        story.return_after_play.as_deref(),
+                        siblings,
+                        root_index,
+                    );
+                    self.resolve_story_return_transition(
+                        story_return.as_deref(),
+                        root_transition.clone(),
+                    )
+                };
                 let story_home = resolve_next_story_target(
                     story.return_on_home.as_deref(),
                     siblings,
@@ -97,10 +110,14 @@ impl<'a> StoryBuilder<'a> {
                 let play_home_transition = if story.return_on_home_none {
                     None
                 } else {
-                    Some(self.resolve_story_home_transition(
-                        story_home.as_deref(),
-                        play_return_transition.clone(),
-                    ))
+                    Some(if auto_next_active && story.return_on_home.is_none() {
+                        root_transition.clone()
+                    } else {
+                        self.resolve_story_home_transition(
+                            story_home.as_deref(),
+                            play_return_transition.clone(),
+                        )
+                    })
                 };
                 let (night_bridge_return, night_bridge_home) = self.compute_night_bridge_targets(
                     siblings,
@@ -115,7 +132,7 @@ impl<'a> StoryBuilder<'a> {
                     play_return_transition,
                     night_bridge_return,
                     night_bridge_home,
-                    false,
+                    auto_next_active,
                 )
             }
             CanonicalEntry::Menu(menu) => self.build_menu_branch(

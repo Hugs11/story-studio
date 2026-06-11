@@ -99,7 +99,7 @@ impl<'a> StoryBuilder<'a> {
             version: project.pack_version,
             description: project.pack_description.clone(),
             format: "v1".to_string(),
-            night_mode_available: project.options.night_mode,
+            night_mode_available: project.options.night_mode && !project.options.auto_next,
             action_nodes: std::mem::take(&mut self.action_nodes),
             stage_nodes: std::mem::take(&mut self.stage_nodes),
         };

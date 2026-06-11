@@ -75,6 +75,111 @@ fn assigns_imported_title_home_targets() {
 }
 
 #[test]
+fn linear_story_play_returns_are_imported_as_auto_next() {
+    let doc = serde_json::json!({
+        "title": "Auto next import",
+        "nightModeAvailable": false,
+        "actionNodes": [
+            { "id": "root-action", "options": ["menu"] },
+            { "id": "menu-action", "options": ["a-title", "b-title"] },
+            { "id": "a-title-action", "options": ["a-play"] },
+            { "id": "b-title-action", "options": ["b-play"] },
+            { "id": "a-return-action", "options": ["b-play"] },
+            { "id": "b-return-action", "options": ["menu"] }
+        ],
+        "stageNodes": [
+            {
+                "uuid": "square",
+                "squareOne": true,
+                "audio": "root.mp3",
+                "image": "root.png",
+                "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": false }
+            },
+            {
+                "uuid": "menu",
+                "name": "Menu",
+                "audio": "menu.mp3",
+                "image": "menu.png",
+                "okTransition": { "actionNode": "menu-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+            },
+            {
+                "uuid": "a-title",
+                "name": "A",
+                "audio": "a-title.mp3",
+                "image": "a.png",
+                "okTransition": { "actionNode": "a-title-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+            },
+            {
+                "uuid": "a-play",
+                "name": "Histoire - A",
+                "audio": "a.mp3",
+                "homeTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                "okTransition": { "actionNode": "a-return-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": true, "wheel": false, "ok": false, "home": true }
+            },
+            {
+                "uuid": "b-title",
+                "name": "B",
+                "audio": "b-title.mp3",
+                "image": "b.png",
+                "okTransition": { "actionNode": "b-title-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+            },
+            {
+                "uuid": "b-play",
+                "name": "Histoire - B",
+                "audio": "b.mp3",
+                "homeTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                "okTransition": { "actionNode": "b-return-action", "optionIndex": 0 },
+                "controlSettings": { "autoplay": true, "wheel": false, "ok": false, "home": true }
+            }
+        ]
+    });
+    let assets = HashMap::from([
+        ("root.mp3".to_string(), PathBuf::from("root.mp3")),
+        ("root.png".to_string(), PathBuf::from("root.png")),
+        ("menu.mp3".to_string(), PathBuf::from("menu.mp3")),
+        ("menu.png".to_string(), PathBuf::from("menu.png")),
+        ("a-title.mp3".to_string(), PathBuf::from("a-title.mp3")),
+        ("a.png".to_string(), PathBuf::from("a.png")),
+        ("a.mp3".to_string(), PathBuf::from("a.mp3")),
+        ("b-title.mp3".to_string(), PathBuf::from("b-title.mp3")),
+        ("b.png".to_string(), PathBuf::from("b.png")),
+        ("b.mp3".to_string(), PathBuf::from("b.mp3")),
+    ]);
+
+    let result = walk_story_doc_to_entries(&doc, &assets).expect("imported entries");
+    assert_eq!(
+        result.get("autoNext").and_then(|value| value.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        result.get("nightMode").and_then(|value| value.as_bool()),
+        Some(false)
+    );
+    let entries = result
+        .get("entries")
+        .and_then(|value| value.as_array())
+        .expect("entries");
+    let menu = entries
+        .iter()
+        .find(|entry| entry.get("id").and_then(|value| value.as_str()) == Some("menu"))
+        .expect("menu");
+    let children = menu
+        .get("children")
+        .and_then(|value| value.as_array())
+        .expect("children");
+
+    assert_eq!(children.len(), 2);
+    assert!(children
+        .iter()
+        .all(|child| child.get("returnAfterPlay").is_none()));
+}
+
+#[test]
 fn autoplay_choice_options_are_imported_as_story_leaves() {
     let doc = serde_json::json!({
         "title": "Autoplay choices",

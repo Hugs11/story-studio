@@ -12,8 +12,7 @@ import {
 } from '../../../store/navigationTargets';
 import {
   getDefaultPackEntryDestination,
-  getGeneratedStoryNavigation,
-  resolveGeneratedTargetForStory,
+  getEffectiveEndBehavior,
 } from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
@@ -89,6 +88,16 @@ function routeDestinationFromTarget(targetId, project, allMenus, allStories) {
   return menu ? { name: menu.name, type: 'menu' } : null;
 }
 
+function getAutoNextContextText(autoNextResolution) {
+  if (!autoNextResolution?.enabled) return null;
+  if (autoNextResolution.applies) {
+    return autoNextResolution.hasNextStory
+      ? "Auto-next est activé dans les options du pack : la destination par défaut est la lecture directe de l'histoire suivante."
+      : "Auto-next est activé dans les options du pack : aucune histoire suivante, la destination par défaut revient au dossier.";
+  }
+  return null;
+}
+
 export function AfterPlaySection({
   node,
   parentMenu,
@@ -99,8 +108,10 @@ export function AfterPlaySection({
   onUpdate,
 }) {
   const { showConfirmDialog } = useErrorDialog();
-  const hasEndNode = !!(project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode);
-  const hasPrompt = !!node?.afterPlaybackPromptAudio;
+  const autoNextEnabled = !!project?.globalOptions?.autoNext;
+  const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
+  const rawHasPrompt = !!node?.afterPlaybackPromptAudio;
+  const hasPrompt = rawHasPrompt && !autoNextEnabled;
   const usesGlobalEndNodeAudio = !!(
     hasEndNode
     && hasPrompt
@@ -112,11 +123,15 @@ export function AfterPlaySection({
     ? normalizeSequenceStep(node.afterPlaybackHomeStep, 0)
     : null;
 
-  const hasSequence = afterPlaybackSequence.length > 0;
-  const hasAdvancedContent = hasPrompt || hasSequence;
-  const storyNavigation = node?.type === 'story'
-    ? getGeneratedStoryNavigation(node, parentMenu, project, project?.rootEntries ?? [])
+  const rawHasSequence = afterPlaybackSequence.length > 0;
+  const hasSequence = rawHasSequence && !autoNextEnabled;
+  const effectiveEndBehavior = node?.type === 'story'
+    ? getEffectiveEndBehavior(node, parentMenu, project, project?.rootEntries ?? [])
     : null;
+  const storyNavigation = effectiveEndBehavior?.navigation ?? null;
+  const hasGeneratedEndNode = !!storyNavigation?.endNodeReturn?.isActive;
+  const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
+  const autoNextApplies = !!autoNextResolution?.applies;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSequenceEditor, setShowSequenceEditor] = useState(false);
@@ -125,10 +140,19 @@ export function AfterPlaySection({
   const promptControls = node.afterPlaybackPromptControlSettings ?? {};
   const storyControls = node.controlSettings ?? {};
   const hasExplicitReturnTarget = !!node.returnAfterPlay;
-  const autoContinuationEnabled = !!(storyControls.autoplay || hasExplicitReturnTarget);
+  const localAutoContinuationEnabled = !!(storyControls.autoplay || hasExplicitReturnTarget);
+  const autoContinuationEnabled = !!effectiveEndBehavior?.autoContinuation;
+  const routeFinalTargetId = effectiveEndBehavior?.finalTargetId ?? null;
+  const routeFinalDestination = routeDestinationFromTarget(routeFinalTargetId, project, allMenus, allStories);
+  const autoNextDestinationLabel = autoNextApplies
+    ? (routeFinalDestination?.name || (autoNextResolution?.isLastStory ? (parentMenu?.name || 'ce dossier') : "l'histoire suivante"))
+    : null;
+  const returnEmptyResolvedLabel = autoNextApplies
+    ? `Auto-next : ${autoNextDestinationLabel}`
+    : inheritedReturnLabel;
   const returnDestinationHint = getNavigationSelectHint({
     value: node.returnAfterPlay,
-    emptyResolvedLabel: inheritedReturnLabel,
+    emptyResolvedLabel: returnEmptyResolvedLabel,
     entry: node,
     parentMenu,
     project,
@@ -147,7 +171,9 @@ export function AfterPlaySection({
     ? "Cette histoire utilise l'audio commun défini dans le message de fin du pack."
     : hasEndNode
       ? "Joué à la place du message de fin pour cette histoire"
-      : "Joué à la fin de l'histoire";
+      : autoNextApplies
+        ? "Joué à la fin de l'histoire, avant la destination auto-next"
+        : "Joué à la fin de l'histoire";
   const addPromptTooltip = hasEndNode
     ? "Pour cette histoire uniquement : un seul audio joué à la fin, à la place du message de fin du pack."
     : "Un seul audio joué à la fin (ex : « Bravo, l'histoire est finie ! »)";
@@ -158,8 +184,8 @@ export function AfterPlaySection({
     ? 'Remplacer le message de fin pour cette histoire'
     : 'Réglages avancés';
   const advancedDescription = hasEndNode
-    ? "Par défaut, le message de fin est utilisé. Vous pouvez en mettre un spécifique à cette histoire uniquement."
-    : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
+      ? "Par défaut, le message de fin est utilisé. Vous pouvez en mettre un spécifique à cette histoire uniquement."
+      : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
   const advancedCollapsedLabel = hasEndNode ? 'Réglages avancés' : 'Configurer';
 
   useEffect(() => {
@@ -169,7 +195,7 @@ export function AfterPlaySection({
   }, [node?.id]);
 
   async function clearEndAfterPlayback() {
-    if (hasPrompt || hasSequence) {
+    if (rawHasPrompt || rawHasSequence) {
       const confirmed = await showConfirmDialog({
         title: 'Confirmer la suppression',
         message: 'Supprimer le message de fin de cette histoire ?',
@@ -213,31 +239,13 @@ export function AfterPlaySection({
   }
 
   const playbackEndMode = autoContinuationEnabled ? 'auto' : 'stay';
-  const returnDestinationLabel = destinationHintLabel(returnDestinationHint) || inheritedReturnLabel || 'la destination choisie';
-  const returnDestinationType = routeTypeFromTarget(node.returnAfterPlay, project);
+  const returnDestinationLabel = routeFinalDestination?.name
+    || destinationHintLabel(returnDestinationHint)
+    || inheritedReturnLabel
+    || 'la destination choisie';
+  const returnDestinationType = routeFinalDestination?.type || routeTypeFromTarget(node.returnAfterPlay, project);
   const nightModeActive = !!project?.globalOptions?.nightMode;
-  const routeUsesEndStep = hasEndNode || hasPrompt || hasSequence;
-  const routeFinalTargetId = (() => {
-    if (!storyNavigation) return null;
-    if (hasEndNode && storyNavigation.endNodeReturn.isActive) {
-      return storyNavigation.endNodeReturn.effectiveTargetId;
-    }
-    if (hasSequence) {
-      const lastStep = afterPlaybackSequence[afterPlaybackSequence.length - 1];
-      return resolveGeneratedTargetForStory(
-        lastStep?.okTarget,
-        node,
-        parentMenu,
-        project?.rootEntries ?? [],
-        storyNavigation.directReturn.targetId,
-      );
-    }
-    if (hasPrompt) {
-      return storyNavigation.promptReturn.targetId ?? storyNavigation.directReturn.targetId;
-    }
-    return null;
-  })();
-  const routeFinalDestination = routeDestinationFromTarget(routeFinalTargetId, project, allMenus, allStories);
+  const routeUsesEndStep = !!effectiveEndBehavior?.usesEndStep;
   const routeFinalLabel = routeFinalDestination?.name || returnDestinationLabel;
   const routeFinalType = routeFinalDestination?.type || returnDestinationType;
   const routeEndStepLabel = hasSequence
@@ -245,6 +253,13 @@ export function AfterPlaySection({
     : hasPrompt && !usesGlobalEndNodeAudio
       ? 'Message de fin personnalisé'
       : `${project?.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`;
+  const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
+  const showReturnDestinationRow = allMenus.length > 0
+    && !hasGeneratedEndNode
+    && !autoNextApplies
+    && (localAutoContinuationEnabled || autoNextApplies);
+  const autoNextContextText = getAutoNextContextText(autoNextResolution);
+  const showAdvancedControls = !autoNextApplies;
 
   // ─── Contenu "Message de fin" ────────────────────────────────────────────────
 
@@ -258,7 +273,7 @@ export function AfterPlaySection({
               Scénario de fin — {afterPlaybackSequence.length} étape{afterPlaybackSequence.length > 1 ? 's' : ''}
             </div>
             <div className="end-summary-copy">
-              Séquence jouée après la fin de l'histoire, avant le retour au menu.
+              Séquence jouée après la fin de l'histoire, avant la destination suivante.
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -423,15 +438,29 @@ export function AfterPlaySection({
         <div className="after-play-intro">
           <div className="after-play-question">Que se passe-t-il à la fin de l'histoire ?</div>
           <div className="after-play-answer">
-            {hasEndNode
-              ? 'Un message de fin est joué automatiquement avant de passer à la destination suivante.'
+            {hasGeneratedEndNode
+              ? 'Un message de fin est joué automatiquement avant de passer à la destination effective.'
+              : hasSequence
+                ? 'Le scénario de fin est joué automatiquement avant de passer à la destination effective.'
+                : hasPrompt
+                  ? 'Le message de fin personnalisé est joué automatiquement avant de passer à la destination effective.'
+                  : autoNextApplies
+                    ? 'Auto-next applique une destination automatique définie par la position de cette histoire dans le dossier.'
               : autoContinuationEnabled
                 ? "La Lunii peut s'arrêter et attendre, ou enchaîner automatiquement vers la destination choisie."
                 : "La Lunii s'arrête et reste sur l'écran de l'histoire. L'enfant doit appuyer sur un bouton pour continuer."}
           </div>
+          {autoNextContextText ? (
+            <div className="after-play-context-note">{autoNextContextText}</div>
+          ) : null}
+          {autoNextApplies ? (
+            <div className="after-play-context-note">
+              Les retours personnalisés, le message de fin et les scénarios de fin sont conservés dans le projet, mais ignorés tant qu'auto-next est actif.
+            </div>
+          ) : null}
         </div>
 
-        {!hasEndNode && (
+        {showEndModeControls && (
           <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
             <button
               type="button"
@@ -453,12 +482,16 @@ export function AfterPlaySection({
         )}
       </div>
 
-      {allMenus.length > 0 && !hasEndNode && autoContinuationEnabled && (
+      {showReturnDestinationRow && (
         <div className="after-play-destination-row">
           <div className="after-play-destination-copy">
-            <span className="field-label">Destination après l'histoire</span>
+            <span className="field-label">
+              {autoNextApplies ? 'Exception à auto-next' : "Destination après l'histoire"}
+            </span>
             <div className="after-play-muted">
-              L'écran ou le menu affiché à la sortie automatique.
+              {autoNextApplies
+                ? 'Laisser vide pour suivre le comportement auto-next global.'
+                : "L'écran ou le menu affiché à la sortie automatique."}
             </div>
           </div>
           <div className="after-play-destination-select">
@@ -468,7 +501,7 @@ export function AfterPlaySection({
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={node.id}
-              emptyLabel={inheritedReturnLabel}
+              emptyLabel={returnEmptyResolvedLabel}
               includeRoot={false}
               includeStoryPlay={false}
             />
@@ -502,41 +535,45 @@ export function AfterPlaySection({
         </div>
       </div>
 
-      {/* Options avancées : message de fin + bouton Accueil */}
-      <div className="advanced-toggle-row">
-        <div className="advanced-toggle-copy">
-          <div className="field-label">{advancedTitle}</div>
-          <div className="advanced-toggle-desc">
-            {advancedDescription}
+      {showAdvancedControls ? (
+        <>
+          {/* Options avancées : message de fin + bouton Accueil */}
+          <div className="advanced-toggle-row">
+            <div className="advanced-toggle-copy">
+              <div className="field-label">{advancedTitle}</div>
+              <div className="advanced-toggle-desc">
+                {advancedDescription}
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`btn advanced-toggle-btn ${showAdvanced ? 'is-active' : ''}`}
+              aria-expanded={showAdvanced}
+              onClick={() => setShowAdvanced((v) => !v)}
+            >
+              {showAdvanced ? 'Masquer' : advancedCollapsedLabel}
+            </button>
           </div>
-        </div>
-        <button
-          type="button"
-          className={`btn advanced-toggle-btn ${showAdvanced ? 'is-active' : ''}`}
-          aria-expanded={showAdvanced}
-          onClick={() => setShowAdvanced((v) => !v)}
-        >
-          {showAdvanced ? 'Masquer' : advancedCollapsedLabel}
-        </button>
-      </div>
 
-      {showAdvanced && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: '10px 12px',
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            display: 'grid',
-            gap: 12,
-          }}
-        >
-          <div>
-            {endContent}
-          </div>
-        </div>
-      )}
+          {showAdvanced && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '10px 12px',
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'grid',
+                gap: 12,
+              }}
+            >
+              <div>
+                {endContent}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

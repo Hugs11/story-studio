@@ -16,14 +16,17 @@ export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
 
 export function hasVisibleEndNode(project) {
   return !!(
-    project?.nightModeAudio
-    || project?.globalOptions?.nightMode
-    || project?.globalOptions?.endNode
+    !project?.globalOptions?.autoNext
+    && (
+      project?.nightModeAudio
+      || project?.globalOptions?.nightMode
+      || project?.globalOptions?.endNode
+    )
   );
 }
 
 export function hasGeneratedEndNode(project) {
-  return !!project?.nightModeAudio;
+  return !!(!project?.globalOptions?.autoNext && project?.nightModeAudio);
 }
 
 export function getDefaultPackEntryDestination(project) {
@@ -96,19 +99,28 @@ function getStoryFallbackReturnTarget(entry, parentMenu, rootEntries) {
     : getRootEntryFallbackTarget(entry, rootEntries);
 }
 
-// Mirrors `native_pack.rs:2092-2105` : quand `globalOptions.autoNext` est actif
-// ET ni la story ni le menu n'ont d'override `returnAfterPlay`, la story revient
-// directement sur la story sœur suivante (pas sur le menu).
 function getAutoNextFallbackTarget(entry, parentMenu, project) {
   if (!project?.globalOptions?.autoNext) return null;
-  if (!parentMenu) return null;
-  if (entry?.returnAfterPlay) return null;
-  if (parentMenu.returnAfterPlay) return null;
-  const siblings = parentMenu.children ?? [];
-  const idx = siblings.findIndex((s) => s.id === entry?.id);
-  if (idx < 0) return null;
-  const next = siblings.slice(idx + 1).find((s) => s.type === 'story');
-  return next ? `story_play:${next.id}` : null;
+  if (entry?.type !== 'story') return null;
+  const next = findNextStorySibling(entry, parentMenu, project?.rootEntries ?? []);
+  if (next) return `story_play:${next.id}`;
+  return parentMenu?.id ?? 'root';
+}
+
+export function getAutoNextResolution(entry, parentMenu, project, rootEntries = []) {
+  const enabled = !!project?.globalOptions?.autoNext;
+  const applies = !!(enabled && entry?.type === 'story');
+  const nextStory = applies ? findNextStorySibling(entry, parentMenu, rootEntries) : null;
+  return {
+    enabled,
+    applies,
+    targetId: applies
+      ? (nextStory ? `story_play:${nextStory.id}` : (parentMenu?.id ?? 'root'))
+      : null,
+    hasNextStory: !!nextStory,
+    isLastStory: applies && !nextStory,
+    parentTargetId: parentMenu?.id ?? 'root',
+  };
 }
 
 export function resolveGeneratedTargetForStory(target, entry, parentMenu, rootEntries, fallbackTarget = null) {
@@ -145,6 +157,7 @@ export function isCombinedNightStoryBypass(entry, project) {
 }
 
 export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
+  if (project?.globalOptions?.autoNext) return false;
   if (!project?.nightModeAudio || !project?.nightModeReturn || entry?.type !== 'story') return false;
   if (!entry?.afterPlaybackPromptAudio || (entry?.afterPlaybackSequence?.length ?? 0) > 0) return false;
   const promptAudio = pathKey(entry.afterPlaybackPromptAudio);
@@ -177,13 +190,13 @@ export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
 }
 
 export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries) {
-  const hasPrompt = !!entry?.afterPlaybackPromptAudio;
-  const hasSequence = (entry?.afterPlaybackSequence?.length ?? 0) > 0;
-  // Le fallback story doit refléter `auto_next` Rust avant tout autre calcul.
+  const autoNextEnabled = !!project?.globalOptions?.autoNext;
+  const hasPrompt = !!entry?.afterPlaybackPromptAudio && !autoNextEnabled;
+  const hasSequence = (entry?.afterPlaybackSequence?.length ?? 0) > 0 && !autoNextEnabled;
   const autoNextFallback = getAutoNextFallbackTarget(entry, parentMenu, project);
   const fallbackReturnTarget = autoNextFallback ?? getStoryFallbackReturnTarget(entry, parentMenu, rootEntries);
   const directReturnTarget = resolveGeneratedTargetForStory(
-    entry?.returnAfterPlay,
+    autoNextFallback ? null : entry?.returnAfterPlay,
     entry,
     parentMenu,
     rootEntries,
@@ -192,6 +205,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   const inheritedReturnTarget = getInheritedReturnTarget(entry, parentMenu, rootEntries);
   const usesEndNode = !!(
     project?.nightModeAudio
+    && !autoNextEnabled
     && entry?.type === 'story'
     && !hasPrompt
     && !hasSequence
@@ -235,7 +249,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   return {
     directReturn: {
       targetId: directReturnTarget,
-      isModified: !!entry?.returnAfterPlay && directReturnTarget !== inheritedReturnTarget,
+      isModified: !autoNextFallback && !!entry?.returnAfterPlay && directReturnTarget !== inheritedReturnTarget,
       isBypassedByEndNode: usesEndNode,
     },
     storyHome: {
@@ -273,6 +287,55 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     hasPrompt,
     hasSequence,
     isCombinedNightStoryBypass: isCombinedNightStoryBypass(entry, project),
+  };
+}
+
+export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries = []) {
+  const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
+  const autoNext = getAutoNextResolution(entry, parentMenu, project, rootEntries);
+  const sequence = entry?.afterPlaybackSequence ?? [];
+  let endStepKind = null;
+  let finalTargetId = navigation.directReturn.targetId;
+
+  if (autoNext.applies) {
+    finalTargetId = autoNext.targetId;
+  } else if (navigation.endNodeReturn.isActive) {
+    endStepKind = navigation.endNodeReturn.isNightMode ? 'night-end-node' : 'end-node';
+    finalTargetId = navigation.endNodeReturn.effectiveTargetId ?? navigation.directReturn.targetId;
+  } else if (navigation.hasSequence) {
+    const lastStep = sequence[sequence.length - 1];
+    endStepKind = 'sequence';
+    finalTargetId = resolveGeneratedTargetForStory(
+      lastStep?.okTarget,
+      entry,
+      parentMenu,
+      rootEntries,
+      navigation.directReturn.targetId,
+    );
+  } else if (navigation.hasPrompt) {
+    endStepKind = navigation.promptReturn.isImportedNightPrompt
+      ? 'imported-night-prompt'
+      : 'prompt';
+    finalTargetId = navigation.promptReturn.targetId ?? navigation.directReturn.targetId;
+  }
+
+  const storyControls = entry?.controlSettings ?? {};
+  const autoContinuation = !!(
+    autoNext.applies
+    ||
+    endStepKind
+    || entry?.returnAfterPlay
+    || storyControls.autoplay
+  );
+
+  return {
+    navigation,
+    autoNext,
+    endStepKind,
+    usesEndStep: !!endStepKind,
+    directTargetId: navigation.directReturn.targetId,
+    finalTargetId: autoContinuation ? finalTargetId : null,
+    autoContinuation,
   };
 }
 

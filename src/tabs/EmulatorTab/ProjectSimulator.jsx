@@ -205,6 +205,7 @@ export function ProjectSimulator({
   }, [activeSequence.length, navigateSequenceOk, sequenceIndex]);
 
   const startAfterPlaybackSequence = useCallback(() => {
+    if (project?.globalOptions?.autoNext) return false;
     const sequence = isSimple
       ? (simpleStory?.afterPlaybackSequence ?? [])
       : (currentEntry?.afterPlaybackSequence ?? []);
@@ -214,9 +215,10 @@ export function ProjectSimulator({
       return true;
     }
     return false;
-  }, [currentEntry, isSimple, simpleStory]);
+  }, [currentEntry, isSimple, project?.globalOptions?.autoNext, simpleStory]);
 
   const startAfterPlaybackPrompt = useCallback(() => {
+    if (project?.globalOptions?.autoNext) return false;
     const sequence = isSimple
       ? (simpleStory?.afterPlaybackSequence ?? [])
       : (currentEntry?.afterPlaybackSequence ?? []);
@@ -229,9 +231,10 @@ export function ProjectSimulator({
       return true;
     }
     return false;
-  }, [currentEntry, isSimple, simpleStory]);
+  }, [currentEntry, isSimple, project?.globalOptions?.autoNext, simpleStory]);
 
   const startEndNode = useCallback(() => {
+    if (project?.globalOptions?.autoNext) return false;
     if (!project.nightModeAudio) return false;
     const story = isSimple ? simpleStory : currentEntry;
     const navigation = story?.type === 'story'
