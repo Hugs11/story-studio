@@ -1,34 +1,32 @@
 .tog {
   appearance: none;
   -webkit-appearance: none;
-  width: 28px;
-  height: 16px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--control-border) 72%, transparent);
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
   padding: 0;
   margin: 0;
-  background: var(--control-border);
+  background: color-mix(in srgb, var(--control-border) 78%, var(--control-bg-subtle));
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.2s, border-color 0.12s, box-shadow 0.12s;
-  display: inline-block;
+  transition: background 0.16s, box-shadow 0.12s, opacity 0.12s;
+  display: inline-flex;
+  align-items: center;
   vertical-align: middle;
 }
 
 .tog:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-border-secondary) 70%, var(--color-accent));
-  border-color: var(--control-border-hover);
+  background: color-mix(in srgb, var(--control-border) 70%, var(--control-bg-hover));
 }
 
 .tog.on {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent-light) 88%, var(--color-background-primary));
 }
 
 .tog.on:hover:not(:disabled) {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
+  background: color-mix(in srgb, var(--color-accent-light) 94%, var(--color-background-primary));
 }
 
 .tog:focus-visible {
@@ -40,31 +38,73 @@
 .tog:disabled {
   cursor: not-allowed;
   background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
+  opacity: 0.72;
 }
 
 .tog-thumb {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: white;
+  background: color-mix(in srgb, var(--control-bg-subtle) 42%, var(--color-background-tertiary));
+  color: color-mix(in srgb, var(--control-text) 82%, var(--color-background-primary));
   top: 50%;
-  left: 2px;
+  left: 3px;
   transform: translateY(-50%);
-  transition: left 0.2s;
-  display: block;
+  transition: left 0.16s, background 0.16s, color 0.16s, box-shadow 0.16s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--control-text-muted) 20%, transparent),
+    0 1px 1px color-mix(in srgb, black 10%, transparent);
 }
 
-.tog.on .tog-thumb { left: 14px; }
+.tog-thumb-icon {
+  width: 12px;
+  height: 12px;
+}
 
-.tog:disabled .tog-thumb {
-  background: var(--control-disabled-text);
+.tog-thumb-mixed {
+  width: 9px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.tog.on .tog-thumb {
+  left: 23px;
+  background: color-mix(in srgb, var(--color-accent-hover) 92%, var(--color-background-tertiary));
+  color: var(--color-accent-contrast);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent-contrast) 16%, transparent),
+    0 1px 1px color-mix(in srgb, black 14%, transparent);
 }
 
 .tog.mixed {
-  background: color-mix(in srgb, var(--color-border-secondary) 60%, var(--color-accent) 40%);
-  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--control-border));
+  background: color-mix(in srgb, var(--control-bg-active) 42%, var(--color-accent-light));
 }
-.tog.mixed .tog-thumb { left: 8px; }
+
+.tog.mixed .tog-thumb {
+  left: 13px;
+  color: var(--color-accent-contrast);
+  background: color-mix(in srgb, var(--color-accent-hover) 78%, var(--color-background-tertiary));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent-contrast) 14%, transparent),
+    0 1px 1px color-mix(in srgb, black 12%, transparent);
+}
+
+.tog:disabled .tog-thumb {
+  background: var(--control-disabled-border);
+  color: var(--control-disabled-text);
+  box-shadow: none;
+}
+
+.tog:disabled.on {
+  background: color-mix(in srgb, var(--primary-disabled-bg) 76%, var(--control-disabled-bg));
+}
+
+.tog:disabled.mixed {
+  background: color-mix(in srgb, var(--control-disabled-bg) 80%, var(--primary-disabled-bg));
+}
