@@ -1,3 +1,7 @@
+.delete-audio-overlay {
+  padding: 24px;
+}
+
 .delete-dialog-body {
   padding: 14px 20px;
   display: flex;

@@ -53,8 +53,7 @@ export function EndNodeEditor({
     if (hasAudio) {
       setShowDeleteDialog(true);
     } else {
-      onUpdateNightMode(false);
-      onRemove();
+      onRemove?.();
     }
   }
 
@@ -62,7 +61,7 @@ export function EndNodeEditor({
     setShowDeleteDialog(false);
     onUpdateNightModeAudio(null);
     onUpdateNightMode(false);
-    onRemove();
+    onRemove?.({ skipConfirm: true });
   }
 
   return (

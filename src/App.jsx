@@ -804,13 +804,27 @@ function AppContent() {
     store.setSelectedId('end-node');
   }
 
-  function handleRemoveEndNode() {
+  async function handleRemoveEndNode(options = {}) {
+    if (!options?.skipConfirm) {
+      const confirmed = await showConfirmDialog({
+        title: 'Supprimer le message de fin',
+        message:
+          "Supprimer le message de fin du pack ?\n\n"
+          + "Les histoires ne joueront plus de message commun à leur conclusion. Le mode nuit sera aussi désactivé.",
+        variant: 'warning',
+        okLabel: 'Supprimer',
+        cancelLabel: 'Annuler',
+      });
+      if (!confirmed) return false;
+    }
+
     store.updateRootMedia('nightModeAudio', null);
     store.updateRootMedia('nightModeReturn', null);
     store.updateRootMedia('nightModeHomeReturn', null);
     store.updateGlobalOption('nightMode', false);
     store.updateGlobalOption('endNode', false);
     store.setSelectedId('root');
+    return true;
   }
 
   function handleUpdateXttsSettings(fields) {
