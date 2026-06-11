@@ -18,7 +18,6 @@ const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9
 
 const SHARED_DURING_CONTROL_KEYS = [
   { key: 'pause',    label: 'Bouton pause',         desc: 'Autorise la pause pendant la lecture' },
-  { key: 'wheel',    label: 'Molette de sélection', desc: 'Autorise la molette pendant la lecture' },
 ];
 
 const MENU_CONTROL_KEYS = [

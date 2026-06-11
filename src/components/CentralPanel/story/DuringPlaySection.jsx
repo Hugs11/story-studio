@@ -14,7 +14,6 @@ const TITLE_CONTROL_DEFAULTS = {
 
 const PLAY_CONTROLS = [
   { key: 'pause',    label: 'Pause',               tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
-  { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pendant la lecture (par exemple pour changer d'histoire).", def: false },
 ];
 
 const TITLE_CONTROLS = [
