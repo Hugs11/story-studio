@@ -286,6 +286,15 @@ const circleXNode = [
   ['path', { d: 'm9 9 6 6' }],
 ];
 
+const checkNode = [
+  ['path', { d: 'M20 6 9 17l-5-5' }],
+];
+
+const xNode = [
+  ['path', { d: 'M18 6 6 18' }],
+  ['path', { d: 'm6 6 12 12' }],
+];
+
 const triangleAlertNode = [
   ['path', { d: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3' }],
   ['path', { d: 'M12 9v4' }],
@@ -353,6 +362,8 @@ export const Link2 = createLocalLucideIcon(link2Node);
 export const Loader2 = createLocalLucideIcon(loader2Node);
 export const CircleCheck = createLocalLucideIcon(circleCheckNode);
 export const CircleX = createLocalLucideIcon(circleXNode);
+export const Check = createLocalLucideIcon(checkNode);
+export const X = createLocalLucideIcon(xNode);
 export const TriangleAlert = createLocalLucideIcon(triangleAlertNode);
 export const Settings = createLocalLucideIcon(settingsNode);
 export const Speech = createLocalLucideIcon(speechNode);
