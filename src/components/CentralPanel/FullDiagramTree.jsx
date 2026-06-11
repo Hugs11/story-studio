@@ -602,6 +602,14 @@ export function CompleteDiagramTree({
   }
 
   function handleDeleteSelection(nodeId) {
+    const onlyEndNodeSelected = selectedIds?.size === 1 && selectedIds?.has(END_NODE_ID);
+    if (nodeId === END_NODE_ID && onlyEndNodeSelected) {
+      onRemoveEndNode?.();
+      onSelectionChange?.(new Set(['root']));
+      onSelect?.('root');
+      return;
+    }
+
     const topLevel = getTopLevelSelected(nodeId);
     if (!topLevel.length) return;
     onBulkDeleteItems?.(topLevel);

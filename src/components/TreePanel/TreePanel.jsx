@@ -322,6 +322,16 @@ export function TreePanel({
   }, [activeId]);
 
   function deleteSelectedNodes() {
+    const onlyEndNodeSelected = selectedIds.size === 1 && selectedIds.has(END_NODE_ID);
+    if (onlyEndNodeSelected) {
+      onRemoveEndNode?.();
+      const rootSet = new Set(['root']);
+      setSelectedIds(rootSet);
+      onSelectionChange?.(rootSet);
+      callOnSelect('root');
+      return;
+    }
+
     const toDelete = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
     if (toDelete.length === 0) return;
     onBulkDeleteItems?.(toDelete);
