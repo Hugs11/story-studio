@@ -13,7 +13,7 @@ const TITLE_CONTROL_DEFAULTS = {
 };
 
 const PLAY_CONTROLS = [
-  { key: 'pause',    label: 'Pause',               tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
+  { key: 'pause',    label: 'Bouton Pause',        tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
 ];
 
 const TITLE_CONTROLS = [
@@ -42,62 +42,57 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
     allMenus,
     allStories,
   });
-  const homeDestinationHintLabel = homeResolvedDestinationLabel;
 
   return (
     <div className="card during-play-card">
       <div className="card-title">Pendant la lecture</div>
 
-      <div className="during-play-split">
-        <div className="during-play-left">
-          <div className="sequence-controls during-play-toggles">
-            {PLAY_CONTROLS.map(({ key, label, tip, def }) => (
-              <label key={key} className="sequence-control">
-                <Tooltip text={tip} placement="above" style={{ flex: 1 }}>
-                  <span>{label}</span>
-                </Tooltip>
-                <Toggle
-                  on={controls[key] ?? def}
-                  onChange={(v) => onUpdate({ controlSettings: { ...controls, [key]: v } })}
-                />
-              </label>
-            ))}
-          </div>
+      <div className="during-play-stack">
+        <div className="sequence-controls during-play-toggles">
+          {PLAY_CONTROLS.map(({ key, label, tip, def }) => (
+            <label key={key} className="sequence-control">
+              <Toggle
+                on={controls[key] ?? def}
+                onChange={(v) => onUpdate({ controlSettings: { ...controls, [key]: v } })}
+              />
+              <Tooltip text={tip} placement="above" style={{ flex: 1 }}>
+                <span>{label}</span>
+              </Tooltip>
+            </label>
+          ))}
         </div>
-
-        <div className="during-play-divider" aria-hidden="true" />
 
         <div className="during-play-home">
           <div className="sequence-control during-play-home-head">
+            <Toggle
+              on={!node.returnOnHomeNone}
+              onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
+            />
             <Tooltip
               text={node.returnOnHomeNone
                 ? "Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire."
                 : `Destination quand l'enfant appuie sur Accueil pendant la lecture : retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}.`}
               placement="above"
-              style={{ flex: 1 }}
             >
-              <span>Accueil</span>
+              <span>Bouton Accueil</span>
             </Tooltip>
-            <Toggle
-              on={!node.returnOnHomeNone}
-              onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
-            />
+            {!node.returnOnHomeNone ? (
+              <div className="during-play-home-select">
+                <NavigationTargetSelect
+                  value={node.returnOnHome ?? ''}
+                  onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
+                  allMenus={allMenus}
+                  allStories={allStories}
+                  currentStoryId={node.id}
+                  emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
+                  includeRoot={false}
+                  includeStoryPlay={false}
+                  size="compact"
+                  resolvedDestinationLabel={null}
+                />
+              </div>
+            ) : null}
           </div>
-
-          {!node.returnOnHomeNone ? (
-            <NavigationTargetSelect
-              value={node.returnOnHome ?? ''}
-              onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
-              allMenus={allMenus}
-              allStories={allStories}
-              currentStoryId={node.id}
-              emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
-              includeRoot={false}
-              includeStoryPlay={false}
-              size="compact"
-              resolvedDestinationLabel={homeDestinationHintLabel}
-            />
-          ) : null}
         </div>
       </div>
 
