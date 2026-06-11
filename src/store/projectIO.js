@@ -23,6 +23,7 @@ import {
   VERSIONS_SECURITE,
   ZIPS_EXTRAITS,
 } from './workspaceDirs';
+import { chooseCompatibleProjectPath, workspaceFallbackForProjectRelativePath } from './projectPathCompatibility';
 
 const PROJECT_OPEN_KEYS = [KEYS.LAST_OPEN_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const PROJECT_SAVE_KEYS = [KEYS.LAST_SAVE_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
@@ -223,6 +224,51 @@ function fromProjectRelative(maybRelativePath, mbahDir) {
   if (!maybRelativePath.startsWith('./') && !maybRelativePath.startsWith('../')) return maybRelativePath;
   const fwdDir = mbahDir.replace(/\\/g, '/').replace(/\/$/, '');
   return fwdDir + '/' + maybRelativePath.replace(/^\.\//, '');
+}
+
+async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir, cache) {
+  if (!hasPath(maybeRelativePath)) return maybeRelativePath;
+  if (!maybeRelativePath.startsWith('./') && !maybeRelativePath.startsWith('../')) return maybeRelativePath;
+
+  const cacheKey = `${mbahDir}\n${workspaceDir}\n${maybeRelativePath}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+  const projectPath = fromProjectRelative(maybeRelativePath, mbahDir);
+  const workspacePath = workspaceFallbackForProjectRelativePath(maybeRelativePath, workspaceDir);
+  if (!workspacePath || normalizePath(projectPath) === normalizePath(workspacePath)) {
+    cache.set(cacheKey, projectPath);
+    return projectPath;
+  }
+
+  const [projectExists, workspaceExists] = await Promise.all([
+    exists(projectPath).catch(() => false),
+    exists(workspacePath).catch(() => false),
+  ]);
+  const resolvedPath = chooseCompatibleProjectPath(maybeRelativePath, projectPath, workspaceDir, {
+    projectExists,
+    workspaceExists,
+  });
+  cache.set(cacheKey, resolvedPath);
+  return resolvedPath;
+}
+
+async function resolveLoadedProjectPaths(project, mbahDir, workspaceDir, cache) {
+  const cloned = structuredClone(project);
+  for (const ref of walkProjectMediaReferences(cloned)) {
+    ref.obj[ref.key] = await resolveLoadedProjectPath(ref.path, mbahDir, workspaceDir, cache);
+  }
+  return cloned;
+}
+
+async function absolutizeTagKeysWithCompatibility(tags, mbahDir, workspaceDir, cache) {
+  if (!tags || typeof tags !== 'object') return {};
+  const result = {};
+  for (const [path, tagList] of Object.entries(tags)) {
+    if (!Array.isArray(tagList) || tagList.length === 0) continue;
+    const resolvedPath = await resolveLoadedProjectPath(path, mbahDir, workspaceDir, cache);
+    result[resolvedPath] = tagList;
+  }
+  return result;
 }
 
 // Applique transformFn a chaque path media du projet, retourne un clone modifie.
@@ -522,11 +568,13 @@ export async function loadProjectFromPath(path) {
   const text = await readTextFile(path);
   const mbahDir = getProjectDir(path);
   const rawData = JSON.parse(text);
-  const mediaTags = absolutizeTagKeys(rawData.mediaTags, mbahDir);
+  const workspaceDir = await getWorkspaceDir();
+  const compatibilityCache = new Map();
+  const mediaTags = await absolutizeTagKeysWithCompatibility(rawData.mediaTags, mbahDir, workspaceDir, compatibilityCache);
   const mediaLibraryPaths = Array.isArray(rawData.mediaLibraryPaths)
-    ? rawData.mediaLibraryPaths.map((p) => fromProjectRelative(p, mbahDir))
+    ? await Promise.all(rawData.mediaLibraryPaths.map((p) => resolveLoadedProjectPath(p, mbahDir, workspaceDir, compatibilityCache)))
     : [];
-  const withAbsolutePaths = mapProjectPaths(rawData, (p) => fromProjectRelative(p, mbahDir));
+  const withAbsolutePaths = await resolveLoadedProjectPaths(rawData, mbahDir, workspaceDir, compatibilityCache);
   const migrated = migrateProjectData(withAbsolutePaths, { savePath: path });
   return { data: normalizeProjectData(migrated), path, mediaTags, mediaLibraryPaths };
 }
