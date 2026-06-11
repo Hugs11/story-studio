@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useErrorDialog } from '../common/Dialog';
+import { AppModalPortal } from '../common/AppModalPortal';
 import {
   ENREGISTREMENTS,
   FICHIERS_IMPORTES,
@@ -48,7 +49,7 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
   }
 
   return (
-    <div className="modal-overlay">
+    <AppModalPortal className="delete-audio-overlay">
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
         <div className="modal-header">
           <span>Supprimer l'audio</span>
@@ -89,6 +90,6 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
           <button className="btn btn-danger" onClick={handleConfirm}>Supprimer</button>
         </div>
       </div>
-    </div>
+    </AppModalPortal>
   );
 }

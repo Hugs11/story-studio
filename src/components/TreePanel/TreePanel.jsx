@@ -321,10 +321,11 @@ export function TreePanel({
     }
   }, [activeId]);
 
-  function deleteSelectedNodes() {
+  async function deleteSelectedNodes() {
     const onlyEndNodeSelected = selectedIds.size === 1 && selectedIds.has(END_NODE_ID);
     if (onlyEndNodeSelected) {
-      onRemoveEndNode?.();
+      const removed = await onRemoveEndNode?.();
+      if (removed === false) return;
       const rootSet = new Set(['root']);
       setSelectedIds(rootSet);
       onSelectionChange?.(rootSet);
@@ -428,7 +429,7 @@ export function TreePanel({
     if (actionId === 'treeCopy') handleCopy();
     else if (actionId === 'treeCut') handleCut();
     else if (actionId === 'treePaste') handlePaste();
-    else if (actionId === 'treeDelete') deleteSelectedNodes();
+    else if (actionId === 'treeDelete') void deleteSelectedNodes();
   }
 
   const handleContextMenu = useCallback((e, nodeId, nodeType) => {

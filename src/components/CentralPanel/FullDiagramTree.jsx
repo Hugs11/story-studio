@@ -136,7 +136,7 @@ export function CompleteDiagramTree({
       if (actionId === 'diagramCopy') copy(sid);
       else if (actionId === 'diagramCut') cut(sid);
       else if (actionId === 'diagramPaste') paste(sid);
-      else if (actionId === 'diagramDelete') del(sid);
+      else if (actionId === 'diagramDelete') void del(sid);
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -601,10 +601,11 @@ export function CompleteDiagramTree({
     if (clip.mode === 'cut') clipboard.clear();
   }
 
-  function handleDeleteSelection(nodeId) {
+  async function handleDeleteSelection(nodeId) {
     const onlyEndNodeSelected = selectedIds?.size === 1 && selectedIds?.has(END_NODE_ID);
     if (nodeId === END_NODE_ID && onlyEndNodeSelected) {
-      onRemoveEndNode?.();
+      const removed = await onRemoveEndNode?.();
+      if (removed === false) return;
       onSelectionChange?.(new Set(['root']));
       onSelect?.('root');
       return;
