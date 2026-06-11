@@ -1240,6 +1240,7 @@ function AppContent() {
       {showMissingMediaRelink && renderDeferred(
         <MissingMediaRelinkModal
           missingMedia={missingMedia}
+          workspaceDir={workspaceDir}
           onApply={handleApplyMissingMediaRelinks}
           onClose={() => setDismissedMissingMediaSignature(missingMediaSignature)}
         />,

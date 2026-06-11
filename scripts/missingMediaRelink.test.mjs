@@ -7,6 +7,10 @@ import {
   relinkMediaTags,
   relinkProjectMedia,
 } from '../src/store/missingMediaRelink.js';
+import {
+  chooseCompatibleProjectPath,
+  workspaceFallbackForProjectRelativePath,
+} from '../src/store/projectPathCompatibility.js';
 
 test('collectMissingMedia groups repeated missing media references', () => {
   const project = {
@@ -92,5 +96,42 @@ test('candidatePathsForRelinkRoot tries managed folder suffix then basename', ()
       'C:/project/fichiers-importes/story.mp3',
       'C:/project/story.mp3',
     ],
+  );
+});
+
+test('workspaceFallbackForProjectRelativePath maps managed relative paths to workspace root', () => {
+  assert.equal(
+    workspaceFallbackForProjectRelativePath('./fichiers-importes/story.mp3', 'C:/workspace'),
+    'C:/workspace/fichiers-importes/story.mp3',
+  );
+  assert.equal(
+    workspaceFallbackForProjectRelativePath('../voix-generees/voice.wav', 'C:/workspace'),
+    'C:/workspace/voix-generees/voice.wav',
+  );
+  assert.equal(
+    workspaceFallbackForProjectRelativePath('./custom-assets/story.mp3', 'C:/workspace'),
+    null,
+  );
+});
+
+test('chooseCompatibleProjectPath prefers workspace media when the project-relative target is missing', () => {
+  assert.equal(
+    chooseCompatibleProjectPath(
+      './fichiers-importes/story.mp3',
+      'C:/workspace/sauvegardes/fichiers-importes/story.mp3',
+      'C:/workspace',
+      { projectExists: false, workspaceExists: true },
+    ),
+    'C:/workspace/fichiers-importes/story.mp3',
+  );
+
+  assert.equal(
+    chooseCompatibleProjectPath(
+      './fichiers-importes/story.mp3',
+      'C:/workspace/sauvegardes/fichiers-importes/story.mp3',
+      'C:/workspace',
+      { projectExists: true, workspaceExists: true },
+    ),
+    'C:/workspace/sauvegardes/fichiers-importes/story.mp3',
   );
 });

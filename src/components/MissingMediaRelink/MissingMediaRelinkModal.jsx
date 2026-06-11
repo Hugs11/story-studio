@@ -77,7 +77,7 @@ function mergeResolvedRows(rows, resolvedByPath) {
   });
 }
 
-export function MissingMediaRelinkModal({ missingMedia, onApply, onClose }) {
+export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApply, onClose }) {
   const [rows, setRows] = useState(() => buildInitialRows(missingMedia));
   const [selectedRoot, setSelectedRoot] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -96,14 +96,7 @@ export function MissingMediaRelinkModal({ missingMedia, onApply, onClose }) {
     resolvedRows.map((row) => [row.path, row.replacementPath]),
   ), [resolvedRows]);
 
-  async function handleChooseFolder() {
-    const folder = await openDialog({
-      directory: true,
-      multiple: false,
-      title: 'Choisir le dossier où chercher les médias manquants',
-      defaultPath: selectedRoot || dirname(rows[0]?.path),
-    });
-    if (!folder) return;
+  async function runFolderScan(folder) {
     setSelectedRoot(folder);
     setScanning(true);
     setScanMessage('Recherche des médias...');
@@ -161,6 +154,22 @@ export function MissingMediaRelinkModal({ missingMedia, onApply, onClose }) {
     }
   }
 
+  async function handleChooseFolder() {
+    const folder = await openDialog({
+      directory: true,
+      multiple: false,
+      title: 'Choisir le dossier où chercher les médias manquants',
+      defaultPath: selectedRoot || workspaceDir || dirname(rows[0]?.path),
+    });
+    if (!folder) return;
+    await runFolderScan(folder);
+  }
+
+  async function handleUseWorkspace() {
+    if (!workspaceDir) return;
+    await runFolderScan(workspaceDir);
+  }
+
   async function handleChooseFile(row) {
     const file = await openDialog({
       multiple: false,
@@ -214,6 +223,16 @@ export function MissingMediaRelinkModal({ missingMedia, onApply, onClose }) {
             <button className="btn btn-primary" type="button" onClick={handleChooseFolder} disabled={scanning || applying}>
               {scanning ? <Loader2 className="missing-media-spin" /> : <FolderOpen />}
               Retrouver un dossier
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={handleUseWorkspace}
+              disabled={!workspaceDir || scanning || applying}
+              title={workspaceDir || 'Workspace non configuré'}
+            >
+              <Link2 />
+              Utiliser le workspace
             </button>
             {selectedRoot && <span className="missing-media-root" title={selectedRoot}>{selectedRoot}</span>}
           </div>
