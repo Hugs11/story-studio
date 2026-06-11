@@ -16,7 +16,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
   const isSimple = projectType === 'simple';
   const simpleStoryName = node.packMetadata?.title || node.projectName || '';
-  const rootTitle = isSimple ? simpleStoryName : (node.packMetadata?.title || node.projectName || '');
+  const rootTitle = isSimple ? simpleStoryName : (node.rootName || node.packMetadata?.title || node.projectName || '');
 
   const [simpleInfoDismissed, setSimpleInfoDismissed] = useState(
     () => read(KEYS.SIMPLE_MODE_INFO_DISMISS) === '1',
