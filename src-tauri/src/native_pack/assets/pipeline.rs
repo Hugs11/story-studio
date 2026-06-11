@@ -204,7 +204,10 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 
     emit("🧪 Preparation assets moteur natif");
     emit(&format!("  Stage dir : {}", stage_dir.to_string_lossy()));
-    emit(&format!("  Prétraitement assets : {} élément(s)", requests.len()));
+    emit(&format!(
+        "  Prétraitement assets : {} élément(s)",
+        requests.len()
+    ));
 
     let canonical_options = &canonical.options;
     let ffmpeg_ref = ffmpeg.as_ref();
@@ -409,18 +412,22 @@ pub(crate) fn collect_asset_requests(
     if let Some(path) = project.thumbnail_image.as_ref() {
         requests.push(image_request("thumbnailImage", path));
     }
-    if let Some(path) = project.night_mode_audio.as_ref() {
-        requests.push(audio_request_with_processing(
-            "nightModeAudio",
-            path,
-            skip_silence_for(root_audio_processing, "nightModeAudio"),
-        ));
+    if !project.options.auto_next {
+        if let Some(path) = project.night_mode_audio.as_ref() {
+            requests.push(audio_request_with_processing(
+                "nightModeAudio",
+                path,
+                skip_silence_for(root_audio_processing, "nightModeAudio"),
+            ));
+        }
     }
 
     for entry in &project.entries {
-        collect_entry_requests(entry, "root", &mut requests);
+        collect_entry_requests(entry, "root", &mut requests, project.options.auto_next);
     }
-    collect_native_graph_requests(project.native_graph.as_ref(), &mut requests);
+    if !project.options.auto_next {
+        collect_native_graph_requests(project.native_graph.as_ref(), &mut requests);
+    }
 
     requests
 }
@@ -485,7 +492,12 @@ fn collect_native_graph_requests(
     }
 }
 
-fn collect_entry_requests(entry: &CanonicalEntry, prefix: &str, requests: &mut Vec<AssetRequest>) {
+fn collect_entry_requests(
+    entry: &CanonicalEntry,
+    prefix: &str,
+    requests: &mut Vec<AssetRequest>,
+    auto_next: bool,
+) {
     match entry {
         CanonicalEntry::Menu(menu) => {
             let label = scoped_label_id(prefix, &menu.id, &menu.name);
@@ -500,7 +512,7 @@ fn collect_entry_requests(entry: &CanonicalEntry, prefix: &str, requests: &mut V
                 requests.push(image_request(&format!("{}/menuImage", label), path));
             }
             for child in &menu.children {
-                collect_entry_requests(child, &label, requests);
+                collect_entry_requests(child, &label, requests, auto_next);
             }
         }
         CanonicalEntry::Story(story) => {
@@ -519,41 +531,43 @@ fn collect_entry_requests(entry: &CanonicalEntry, prefix: &str, requests: &mut V
                     skip_silence_for(&story.audio_processing, "itemAudio"),
                 ));
             }
-            if let Some(path) = story.after_playback_prompt_audio.as_ref() {
-                requests.push(audio_request_with_processing(
-                    &format!("{}/afterPlaybackPromptAudio", label),
-                    path,
-                    skip_silence_for(&story.audio_processing, "afterPlaybackPromptAudio"),
-                ));
-            }
-            for (index, step) in story.after_playback_sequence.iter().enumerate() {
-                if let Some(path) = step.audio.as_ref() {
+            if !auto_next {
+                if let Some(path) = story.after_playback_prompt_audio.as_ref() {
                     requests.push(audio_request_with_processing(
-                        &format!("{}/afterPlaybackSequence/{}/audio", label, index),
+                        &format!("{}/afterPlaybackPromptAudio", label),
                         path,
-                        false,
+                        skip_silence_for(&story.audio_processing, "afterPlaybackPromptAudio"),
                     ));
                 }
-                if let Some(path) = step.image.as_ref() {
-                    requests.push(image_request(
-                        &format!("{}/afterPlaybackSequence/{}/image", label, index),
-                        path,
-                    ));
+                for (index, step) in story.after_playback_sequence.iter().enumerate() {
+                    if let Some(path) = step.audio.as_ref() {
+                        requests.push(audio_request_with_processing(
+                            &format!("{}/afterPlaybackSequence/{}/audio", label, index),
+                            path,
+                            false,
+                        ));
+                    }
+                    if let Some(path) = step.image.as_ref() {
+                        requests.push(image_request(
+                            &format!("{}/afterPlaybackSequence/{}/image", label, index),
+                            path,
+                        ));
+                    }
                 }
-            }
-            if let Some(step) = story.after_playback_home_step.as_ref() {
-                if let Some(path) = step.audio.as_ref() {
-                    requests.push(audio_request_with_processing(
-                        &format!("{}/afterPlaybackHomeStep/audio", label),
-                        path,
-                        false,
-                    ));
-                }
-                if let Some(path) = step.image.as_ref() {
-                    requests.push(image_request(
-                        &format!("{}/afterPlaybackHomeStep/image", label),
-                        path,
-                    ));
+                if let Some(step) = story.after_playback_home_step.as_ref() {
+                    if let Some(path) = step.audio.as_ref() {
+                        requests.push(audio_request_with_processing(
+                            &format!("{}/afterPlaybackHomeStep/audio", label),
+                            path,
+                            false,
+                        ));
+                    }
+                    if let Some(path) = step.image.as_ref() {
+                        requests.push(image_request(
+                            &format!("{}/afterPlaybackHomeStep/image", label),
+                            path,
+                        ));
+                    }
                 }
             }
             if let Some(path) = story.item_image.as_ref() {

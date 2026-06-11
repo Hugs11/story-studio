@@ -787,6 +787,17 @@
   line-height: 1.45;
 }
 
+.after-play-context-note {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border-secondary));
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-background-secondary));
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .after-play-destination-row {
   padding-top: 14px;
   border-top: 1px solid color-mix(in srgb, var(--color-border-secondary) 55%, transparent);

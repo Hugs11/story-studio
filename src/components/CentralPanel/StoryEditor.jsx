@@ -103,6 +103,11 @@ function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffe
   const hasLocalReturnOverride = !!node?.returnAfterPlay;
   const hasLocalHomeOverride = !!node?.returnOnHome || !!node?.returnOnHomeNone;
 
+  if (autoNextEffective) {
+    return isLastInMenu
+      ? { tone: 'muted', text: `Auto-next actif — dernière histoire, retour vers ${inheritedTargetName}.` }
+      : { tone: 'accent', text: "Auto-next actif — cette histoire enchaîne automatiquement sur l'histoire suivante." };
+  }
   if (hasLocalReturnOverride) {
     return {
       tone: 'accent',
@@ -116,11 +121,6 @@ function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffe
         ? `Fin d'histoire vers ${inheritedTargetName} — bouton Accueil sans transition.`
         : `Fin d'histoire vers ${inheritedTargetName} — bouton Accueil vers ${targetNameById(allMenus, allStories, effectiveHomeTargetId, 'une destination introuvable')}.`,
     };
-  }
-  if (autoNextEffective) {
-    return isLastInMenu
-      ? { tone: 'muted', text: `Auto-next actif — dernière histoire, retour vers ${inheritedTargetName}.` }
-      : { tone: 'accent', text: "Auto-next actif — cette histoire enchaîne automatiquement sur l'histoire suivante." };
   }
   if (parentMenu) {
     return {
@@ -142,10 +142,10 @@ function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, a
   const homeTargetName = homeTargetId
     ? targetNameById(allMenus, allStories, homeTargetId, parentMenu?.name || 'ce dossier')
     : null;
-  const hasPrompt = !!node?.afterPlaybackPromptAudio;
+  const hasPrompt = !!node?.afterPlaybackPromptAudio && !autoNextEffective;
   const sequence = node?.afterPlaybackSequence ?? [];
-  const hasSequence = sequence.length > 0;
-  const hasEndNode = !hasPrompt && !hasSequence && !!project?.nightModeAudio;
+  const hasSequence = sequence.length > 0 && !autoNextEffective;
+  const hasEndNode = !autoNextEffective && !hasPrompt && !hasSequence && !!project?.nightModeAudio;
   const promptOkTargetId = resolvePromptOkTarget(node, parentMenu);
   const promptHomeTargetId = resolvePromptHomeTarget(node, parentMenu);
   const promptOkTargetName = promptOkTargetId
@@ -160,7 +160,11 @@ function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, a
     `Bouton Accueil : ${homeEnabled ? (homeTargetName ? `retour vers ${homeTargetName}` : 'retour selon le contexte courant') : 'désactivé'}`,
   ];
 
-  if (hasSequence) {
+  if (autoNextEffective && !isLastInMenu) {
+    lines.push("Fin d'histoire : enchaînement automatique sur l'histoire suivante");
+  } else if (autoNextEffective) {
+    lines.push(`Fin d'histoire : retour direct vers ${parentMenu?.name || NAV_ROOT_LABEL}`);
+  } else if (hasSequence) {
     const lastStep = sequence[sequence.length - 1] ?? null;
     const sequenceOkTargetId = resolveNavigationTargetId(lastStep?.okTarget, parentMenu?.id ?? null) ?? returnTargetId;
     const sequenceOkTargetName = sequenceOkTargetId
@@ -172,8 +176,6 @@ function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, a
     lines.push(`Accueil sur le message audio : ${node?.afterPlaybackPromptHomeNone ? 'aucune transition' : `Accueil vers ${promptHomeTargetName || promptOkTargetName || 'la destination configurée'}`}`);
   } else if (hasEndNode) {
     lines.push("Fin d'histoire : passage par le message de fin du pack");
-  } else if (autoNextEffective && !isLastInMenu) {
-    lines.push("Fin d'histoire : enchaînement automatique sur l'histoire suivante");
   } else {
     lines.push(`Fin d'histoire : retour direct vers ${returnTargetName || 'la destination configurée'}`);
   }
@@ -195,7 +197,7 @@ export const StoryEditor = memo(function StoryEditor({
   const { onExtractAudioEmbeddedImage } = useProjectContext();
 
   const autoNext = project?.globalOptions?.autoNext ?? false;
-  const autoNextEffective = autoNext && !node?.returnAfterPlay && !(parentMenu?.returnAfterPlay);
+  const autoNextEffective = autoNext && node?.type === 'story';
   const parentChildren = parentMenu?.children ?? [];
   const nodeIndexInParent = parentChildren.findIndex((c) => c.id === node?.id);
   const isLastInMenu = autoNextEffective && (

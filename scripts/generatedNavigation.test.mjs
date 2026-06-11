@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
   getDefaultPackEntryDestination,
+  getEffectiveEndBehavior,
   getGeneratedEndNodeHomeNavigation,
   getGeneratedEndNodeReturnNavigation,
   getGeneratedStoryNavigation,
@@ -245,7 +246,87 @@ test('autoNext: story without override returns to next sibling (mirrors Rust aut
   assert.equal(nav.directReturn.isModified, false);
 });
 
-test('autoNext combined with end-node uses next sibling as effective fallback', () => {
+test('effective end behavior: autoNext without end step goes directly to next story playback', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a');
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu], { globalOptions: { autoNext: true } });
+
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(behavior.autoNext.applies, true);
+  assert.equal(behavior.autoNext.hasNextStory, true);
+  assert.equal(behavior.usesEndStep, false);
+  assert.equal(behavior.finalTargetId, 'story_play:b');
+  assert.equal(behavior.autoContinuation, true);
+});
+
+test('effective end behavior: autoNext suppresses the global end node', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a');
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu], {
+    nightModeAudio: 'night.mp3',
+    globalOptions: { autoNext: true, nightMode: true },
+  });
+
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(behavior.autoNext.applies, true);
+  assert.equal(behavior.usesEndStep, false);
+  assert.equal(behavior.endStepKind, null);
+  assert.equal(behavior.finalTargetId, 'story_play:b');
+});
+
+test('effective end behavior: autoNext suppresses a local prompt', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { afterPlaybackPromptAudio: 'end-a.mp3' });
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu], { globalOptions: { autoNext: true } });
+
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(behavior.autoNext.applies, true);
+  assert.equal(behavior.usesEndStep, false);
+  assert.equal(behavior.endStepKind, null);
+  assert.equal(behavior.navigation.hasPrompt, false);
+  assert.equal(behavior.finalTargetId, 'story_play:b');
+});
+
+test('effective end behavior: autoNext overrides explicit story return', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { returnAfterPlay: 'root' });
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu], { globalOptions: { autoNext: true } });
+
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(behavior.autoNext.applies, true);
+  assert.equal(behavior.navigation.directReturn.targetId, 'story_play:b');
+  assert.equal(behavior.navigation.directReturn.isModified, false);
+  assert.equal(behavior.finalTargetId, 'story_play:b');
+});
+
+test('effective end behavior: autoNext last story falls back to parent menu', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a');
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu], { globalOptions: { autoNext: true } });
+
+  const behavior = getEffectiveEndBehavior(b, menu, p, p.rootEntries);
+
+  assert.equal(behavior.autoNext.applies, true);
+  assert.equal(behavior.autoNext.hasNextStory, false);
+  assert.equal(behavior.autoNext.isLastStory, true);
+  assert.equal(behavior.finalTargetId, 'menu-1');
+});
+
+test('autoNext combined with end-node suppresses the end node', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a');
   const b = story('b');
@@ -257,9 +338,11 @@ test('autoNext combined with end-node uses next sibling as effective fallback', 
 
   const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
 
-  assert.equal(nav.endNodeReturn.isActive, true);
+  assert.equal(nav.endNodeReturn.isActive, false);
   assert.equal(nav.endNodeReturn.isConfigured, false);
-  assert.equal(nav.endNodeReturn.effectiveTargetId, 'story_play:b');
+  assert.equal(nav.endNodeReturn.effectiveTargetId, null);
+  assert.equal(nav.usesEndNode, false);
+  assert.equal(nav.directReturn.targetId, 'story_play:b');
 });
 
 test('nativeGraph preserve does not mask autoNext preview behavior', () => {
@@ -293,7 +376,7 @@ test('autoNext: last story of a menu falls back to menu parent', () => {
   assert.equal(nav.directReturn.targetId, 'menu-1');
 });
 
-test('autoNext: explicit returnAfterPlay wins over auto_next', () => {
+test('autoNext: explicit returnAfterPlay is ignored by auto_next', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a', { returnAfterPlay: 'root' });
   const b = story('b');
@@ -302,7 +385,8 @@ test('autoNext: explicit returnAfterPlay wins over auto_next', () => {
 
   const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
 
-  assert.equal(nav.directReturn.targetId, 'root');
+  assert.equal(nav.directReturn.targetId, 'story_play:b');
+  assert.equal(nav.directReturn.isModified, false);
 });
 
 test('end node fallback for a root story keeps its root index target', () => {
@@ -372,6 +456,17 @@ test('endNode without audio is visible-only and not generated', () => {
   assert.equal(hasVisibleEndNode(p), true);
   assert.equal(hasGeneratedEndNode(p), false);
   assert.equal(getGeneratedEndNodeHomeNavigation({ ...p, nightModeHomeReturn: 'root' }), null);
+});
+
+test('autoNext hides visible/generated end node controls', () => {
+  const p = project([], {
+    nightModeAudio: 'night.mp3',
+    globalOptions: { autoNext: true, nightMode: true, endNode: true },
+  });
+
+  assert.equal(hasVisibleEndNode(p), false);
+  assert.equal(hasGeneratedEndNode(p), false);
+  assert.equal(getGeneratedEndNodeReturnNavigation(p), null);
 });
 
 test('end node global return without setting is marked contextual, not root', () => {

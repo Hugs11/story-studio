@@ -8,7 +8,8 @@ use super::native_graph::{
     has_interactive_branching_graph, native_graph_with_resolved_assets,
 };
 use super::navigation_targets::{
-    assign_return_targets, build_story_stage_map, remove_night_mode_return_overrides,
+    assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
+    remove_night_mode_return_overrides,
 };
 use super::night_mode::detect_imported_night_mode;
 use super::sequence_menus::expand_sequence_choice_menus;
@@ -406,6 +407,8 @@ pub(super) fn walk_story_doc_to_entries(
             entries = projected_entries;
         }
     }
+    let auto_next_detected =
+        !needs_native_graph_projection && extract_auto_next_return_overrides(&mut entries);
     let reported_unresolved_transitions = if needs_native_graph_projection {
         Vec::new()
     } else {
@@ -420,6 +423,7 @@ pub(super) fn walk_story_doc_to_entries(
         .unwrap_or("")
         .to_string();
     let night_mode_detected = night_mode_audio.is_some();
+    let effective_night_mode_detected = night_mode_detected && !auto_next_detected;
 
     Ok(serde_json::json!({
         "rootId": format!("import-root:{}", sq_id),
@@ -428,10 +432,11 @@ pub(super) fn walk_story_doc_to_entries(
         "packDescription": pack_description,
         "rootAudio": effective_root_audio,
         "rootImage": effective_root_image,
-        "nightMode": night_mode_detected,
-        "nightModeAudio": night_mode_audio,
-        "nightModeReturn": night_mode_return,
-        "nightModeHomeReturn": night_mode_home_return,
+        "autoNext": auto_next_detected,
+        "nightMode": effective_night_mode_detected,
+        "nightModeAudio": if auto_next_detected { None } else { night_mode_audio },
+        "nightModeReturn": if auto_next_detected { None } else { night_mode_return },
+        "nightModeHomeReturn": if auto_next_detected { None } else { night_mode_home_return },
         "nativeGraph": native_graph,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
@@ -572,6 +577,9 @@ pub(super) fn walk_entry(
                     // Créer un menu au lieu d'une histoire pour conserver la structure complète.
                     if is_stage_autoplay(terminal) {
                         let single_next_id = term_opts[0];
+                        let terminal_is_story_play_stage = stage_uuid(terminal)
+                            .map(|id| story_play_stage_ids.contains(id))
+                            .unwrap_or(false);
                         let single_next_is_wheel_nav =
                             stages.get(single_next_id).is_some_and(|s| {
                                 s.get("controlSettings")
@@ -584,7 +592,8 @@ pub(super) fn walk_entry(
                                         .and_then(|a| a.as_bool())
                                         .unwrap_or(false)
                             });
-                        if !story_play_stage_ids.contains(single_next_id)
+                        if !terminal_is_story_play_stage
+                            && !story_play_stage_ids.contains(single_next_id)
                             && single_next_is_wheel_nav
                         {
                             if let Some(single_next_stage) = stages.get(single_next_id) {

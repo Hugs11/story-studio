@@ -323,14 +323,15 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
     if (entry.type === 'story') {
       const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries);
       const sequence = entry.afterPlaybackSequence ?? [];
-      const hasSequence = sequence.length > 0;
-      const hasPrompt = !!entry.afterPlaybackPromptAudio;
+      const autoNextActive = !!project?.globalOptions?.autoNext;
+      const hasSequence = sequence.length > 0 && !autoNextActive;
+      const hasPrompt = !!entry.afterPlaybackPromptAudio && !autoNextActive;
       let effectiveReturnTarget = null;
       const inheritedTarget = parentMenu?.returnAfterPlay
         ? resolveStoryDiagramTarget(parentMenu.returnAfterPlay, entry, parentMenu, rootEntries, parentMenu.id)
         : null;
       const generatedReturnTarget = diagramNodeIdFromGeneratedTarget(navigation.directReturn.targetId);
-      const explicitReturnTarget = entry.returnAfterPlay && generatedReturnTarget
+      const explicitReturnTarget = !autoNextActive && entry.returnAfterPlay && generatedReturnTarget
         ? generatedReturnTarget
         : null;
       const fallbackReturnTarget = explicitReturnTarget

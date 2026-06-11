@@ -60,8 +60,6 @@ function hasAutoNextMenuReturn(entry, parentMenu, project) {
   return !!(
     project?.globalOptions?.autoNext
     && parentMenu
-    && !entry?.returnAfterPlay
-    && !parentMenu.returnAfterPlay
   );
 }
 

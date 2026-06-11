@@ -382,6 +382,152 @@ fn exports_after_playback_sequence_before_story_return() {
 }
 
 #[test]
+fn auto_next_overrides_end_steps_and_story_returns() {
+    let project = CanonicalProject {
+        name: "Auto-next pack".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: Some("night.mp3".to_string()),
+        night_mode_return: Some("root".to_string()),
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            convert_format: true,
+            add_silence: false,
+            auto_next: true,
+            select_next: false,
+            night_mode: true,
+        },
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "menu".to_string(),
+            name: "Menu".to_string(),
+            audio: Some("menu.mp3".to_string()),
+            image: Some("menu.png".to_string()),
+            auto_black_image: false,
+            children: vec![
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "first".to_string(),
+                    name: "Premier".to_string(),
+                    audio: Some("first-story.mp3".to_string()),
+                    item_audio: Some("first-item.mp3".to_string()),
+                    item_image: Some("first.png".to_string()),
+                    return_after_play: Some("root".to_string()),
+                    after_playback_prompt_audio: Some("prompt.mp3".to_string()),
+                    after_playback_sequence: vec![CanonicalAfterPlaybackStep {
+                        id: "bell".to_string(),
+                        name: "Cloche".to_string(),
+                        audio: Some("bell.mp3".to_string()),
+                        image: None,
+                        control_settings: None,
+                        ok_target: Some("root".to_string()),
+                        ok_choice_targets: Vec::new(),
+                        home_target: None,
+                        home_follows_ok: false,
+                        home_none: true,
+                    }],
+                    ..Default::default()
+                }),
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "second".to_string(),
+                    name: "Second".to_string(),
+                    audio: Some("second-story.mp3".to_string()),
+                    item_audio: Some("second-item.mp3".to_string()),
+                    item_image: Some("second.png".to_string()),
+                    ..Default::default()
+                }),
+            ],
+            ..Default::default()
+        })],
+    };
+    let report = report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Menu#menu/menuAudio", "menu.mp3"),
+            prepared_asset("root/Menu#menu/menuImage", "menu.png"),
+            prepared_asset("root/Menu#menu/Premier#first/itemAudio", "first-item.mp3"),
+            prepared_asset("root/Menu#menu/Premier#first/itemImage", "first.png"),
+            prepared_asset("root/Menu#menu/Premier#first/storyAudio", "first-story.mp3"),
+            prepared_asset("root/Menu#menu/Second#second/itemAudio", "second-item.mp3"),
+            prepared_asset("root/Menu#menu/Second#second/itemImage", "second.png"),
+            prepared_asset(
+                "root/Menu#menu/Second#second/storyAudio",
+                "second-story.mp3",
+            ),
+        ],
+        Vec::new(),
+    );
+
+    let document = build_story_document(&report).expect("auto-next story document");
+    let action_by_id: HashMap<&str, &ActionNode> = document
+        .action_nodes
+        .iter()
+        .map(|action| (action.id.as_str(), action))
+        .collect();
+    let target_stage_name = |transition: &Transition| -> &str {
+        let action = action_by_id
+            .get(transition.action_node.as_str())
+            .expect("action");
+        let stage_id = action.options[transition.option_index as usize].as_str();
+        document
+            .stage_nodes
+            .iter()
+            .find(|stage| stage.uuid == stage_id)
+            .map(|stage| stage.name.as_str())
+            .expect("stage")
+    };
+
+    let first_play_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Premier")
+        .expect("first play stage");
+    let second_play_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Second")
+        .expect("second play stage");
+
+    assert!(!document.night_mode_available);
+    assert!(first_play_stage.control_settings.autoplay);
+    assert!(second_play_stage.control_settings.autoplay);
+    assert!(document
+        .stage_nodes
+        .iter()
+        .all(|stage| stage.name != "nightStage"));
+    assert!(document
+        .stage_nodes
+        .iter()
+        .all(|stage| stage.name != "Cloche"));
+    assert!(document
+        .stage_nodes
+        .iter()
+        .all(|stage| !stage.name.starts_with("Fin -")));
+    assert_eq!(
+        target_stage_name(first_play_stage.ok_transition.as_ref().expect("first ok")),
+        "Histoire - Second"
+    );
+    assert_eq!(
+        target_stage_name(
+            first_play_stage
+                .home_transition
+                .as_ref()
+                .expect("first home")
+        ),
+        "Menu"
+    );
+    assert_eq!(
+        target_stage_name(second_play_stage.ok_transition.as_ref().expect("second ok")),
+        "Menu"
+    );
+}
+
+#[test]
 fn canonicalizes_pack_structure() {
     let project = Project {
         name: "Pack".to_string(),

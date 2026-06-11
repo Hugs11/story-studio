@@ -55,7 +55,9 @@ pub(crate) struct ImportedZipBundle {
 }
 
 fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDocument, String> {
-    if active_native_graph(report.project.native_graph.as_ref()).is_some() {
+    if !report.project.options.auto_next
+        && active_native_graph(report.project.native_graph.as_ref()).is_some()
+    {
         return build_native_graph_story_document(report);
     }
     let mut builder = StoryBuilder::new(report);
@@ -93,7 +95,8 @@ fn build_native_graph_story_document(
     if !report.project.name.trim().is_empty() {
         document.title = report.project.name.clone();
     }
-    document.night_mode_available = report.project.options.night_mode;
+    document.night_mode_available =
+        report.project.options.night_mode && !report.project.options.auto_next;
 
     for stage in &mut document.stage_nodes {
         if stage.audio.is_some() {
