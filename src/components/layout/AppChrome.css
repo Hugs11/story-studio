@@ -699,7 +699,7 @@
   width: min(780px, calc(100vw - 32px));
   border-radius: 12px;
   border-color: var(--borderLt);
-  font-family: var(--font-sans, 'Space Grotesk', -apple-system, 'Segoe UI', system-ui, sans-serif);
+  font-family: var(--font-sans);
 }
 
 .pack-meta-header {
@@ -942,7 +942,7 @@
 
 .pack-meta-token.is-empty {
   color: var(--muted);
-  font-family: var(--font-sans, 'Space Grotesk', -apple-system, 'Segoe UI', system-ui, sans-serif);
+  font-family: var(--font-sans);
   font-size: 12px;
 }
 

@@ -21,6 +21,20 @@ instead of depending on `lucide-react`. Those copied icon definitions remain
 licensed by Lucide under the ISC License and are not covered by Story Studio's
 MIT license.
 
+## Space Grotesk
+
+- **Bundled file:** `public/fonts/SpaceGrotesk-Variable.woff2`
+- **Upstream project:** <https://github.com/floriankarsten/space-grotesk>
+- **License:** SIL Open Font License, Version 1.1
+- **License text:** <https://github.com/floriankarsten/space-grotesk/blob/master/OFL.txt>
+- **Copyright notice:** Copyright 2020 The Space Grotesk Project Authors.
+- **SHA-256:** `8E085AA438094F11487A836652EDD5C054FA6A96F63FC7C282105EE3A4B08C07`
+
+Story Studio bundles the variable WOFF2 font file locally so the desktop app
+can render its UI consistently without loading fonts from the network. The font
+software remains licensed under the SIL Open Font License and is not covered by
+Story Studio's MIT license.
+
 ## FFmpeg
 
 - **Bundled file:** `src-tauri/tools/ffmpeg.exe`
