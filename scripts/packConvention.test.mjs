@@ -35,6 +35,14 @@ test('roundtrips a convention name through parse and generate', () => {
   assert.equal(generateConventionName(parseConventionName(raw)), raw);
 });
 
+test('roundtrips a custom minimum age', () => {
+  const raw = '5+]Les_histoires_de_Mini-loup_V2';
+  const parsed = parseConventionName(raw);
+
+  assert.equal(parsed.minAge, '5');
+  assert.equal(generateConventionName(parsed), raw);
+});
+
 test('roundtrips a producer with spaces and a bonus', () => {
   const raw = '3+]France_Inter-Les_histoires_(8_chapitres)[by_Moi_V2';
   const parsed = parseConventionName(raw);
