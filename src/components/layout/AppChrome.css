@@ -564,6 +564,7 @@
   font-weight: 650;
 }
 
+.pack-meta-age-control,
 .pack-meta-age-chips {
   display: flex;
   align-items: center;
@@ -590,12 +591,37 @@
   background: var(--accentDim);
 }
 
+.pack-meta-age-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 8px;
+  border-left: 1px solid var(--borderLt);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.pack-meta-age-custom-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--control-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pack-meta-age-custom.is-active .pack-meta-age-custom-value {
+  color: var(--accent);
+}
+
 .pack-meta-age-other {
-  flex: 0 0 54px !important;
-  width: 54px;
-  max-width: 54px;
+  flex: 0 0 44px !important;
+  width: 44px;
+  max-width: 44px;
   height: 28px;
   text-align: center;
+  padding: 0 8px;
 }
 
 .pack-meta-textarea {
@@ -847,7 +873,18 @@
   font-size: 11px;
 }
 
+.pack-meta-age-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .pack-meta-age-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-wrap: nowrap;
 }
 
@@ -863,11 +900,37 @@
   color: var(--accent);
 }
 
+.pack-meta-age-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 9px;
+  border-left: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pack-meta-age-custom-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pack-meta-age-custom.is-active .pack-meta-age-custom-value {
+  color: var(--accent);
+}
+
 .pack-meta-age-other {
-  flex: 0 0 78px !important;
-  width: 78px;
-  max-width: 78px;
+  flex: 0 0 44px !important;
+  width: 44px;
+  max-width: 44px;
   height: 32px;
+  padding: 0 8px;
 }
 
 .pack-meta-textarea {
@@ -1194,6 +1257,16 @@
   .pack-meta-cover-panel {
     grid-template-columns: 96px minmax(0, 1fr);
     align-items: center;
+  }
+
+  .pack-meta-age-control {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .pack-meta-age-custom {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .pack-meta-footer {

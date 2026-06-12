@@ -129,6 +129,8 @@ export function PackNameModal({
   const hasExportName = normalizedDraft.namingMode === 'legacy'
     ? !!normalizedDraft.legacyExportName
     : !!normalizedDraft.title;
+  const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
+  const customAgeValue = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
 
   useEffect(() => {
     if (!open || !exportFolder || !exportName) {
@@ -157,6 +159,10 @@ export function PackNameModal({
       [field]: field === 'version' ? normalizeVersion(value) : value,
       namingMode: 'convention',
     }));
+  }
+
+  function updateAge(value) {
+    updateField('minAge', String(value || '').replace(/\D/g, ''));
   }
 
   async function submit(kind) {
@@ -219,24 +225,34 @@ export function PackNameModal({
 
             <div className="pack-meta-field-row">
               <label>Âge minimum</label>
-              <div className="pack-meta-age-chips">
-                {AGE_CHIPS.map((age) => (
-                  <button
-                    key={age}
-                    type="button"
-                    className={`pack-meta-age-chip ${String(draft.minAge) === age ? 'is-active' : ''}`}
-                    onClick={() => updateField('minAge', age)}
-                  >
-                    {age}+
-                  </button>
-                ))}
-                <input
-                  className="pack-meta-input pack-meta-age-other"
-                  value={draft.minAge || ''}
-                  onChange={(event) => updateField('minAge', event.target.value)}
-                  aria-label="Âge minimum personnalisé"
-                  placeholder="autre..."
-                />
+              <div className="pack-meta-age-control">
+                <div className="pack-meta-age-chips" role="group" aria-label="Âges minimum prédéfinis">
+                  {AGE_CHIPS.map((age) => (
+                    <button
+                      key={age}
+                      type="button"
+                      className={`pack-meta-age-chip ${currentAge === age ? 'is-active' : ''}`}
+                      onClick={() => updateAge(age)}
+                    >
+                      {age}+
+                    </button>
+                  ))}
+                </div>
+                <div className={`pack-meta-age-custom ${customAgeValue ? 'is-active' : ''}`}>
+                  <span>Autre :</span>
+                  <div className="pack-meta-age-custom-value">
+                    <input
+                      className="pack-meta-input pack-meta-age-other"
+                      value={customAgeValue}
+                      onChange={(event) => updateAge(event.target.value)}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      aria-label="Âge minimum personnalisé"
+                      placeholder="5"
+                    />
+                    <span aria-hidden="true">+</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -290,7 +306,7 @@ export function PackNameModal({
           </div>
           <div className="pack-meta-actions">
             <button className="btn" onClick={onClose} disabled={saving}>Annuler</button>
-            <button className="btn" onClick={() => submit('save')} disabled={saving}>{saving === 'save' ? 'Application...' : 'Appliquer les métadonnées'}</button>
+            <button className="btn" onClick={() => submit('save')} disabled={saving}>{saving === 'save' ? 'Application...' : 'Appliquer'}</button>
             <Tooltip text={generateButtonTooltip} wrap>
               <button
                 className="btn btn-primary"
