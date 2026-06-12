@@ -307,6 +307,19 @@
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06);
 }
 
+.chrome-toolbar-btn[data-toolbar-id='project-menu'] {
+  color: var(--control-text);
+  font-weight: 600;
+  padding-left: 9px;
+  padding-right: 8px;
+}
+
+.chrome-toolbar-btn[data-toolbar-id='project-menu']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='project-menu'].is-active {
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
+}
+
 :root[data-theme="light"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
   --pack-options-accent: #6548d8;
 }
@@ -330,6 +343,13 @@
 }
 
 .chrome-pack-options-caret {
+  font-size: 11px;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.chrome-project-caret {
   font-size: 11px;
   line-height: 1;
   color: currentColor;
@@ -1152,6 +1172,10 @@
 
   .chrome-toolbar-btn-label,
   .chrome-generate-main-label {
+    display: none;
+  }
+
+  .chrome-toolbar-btn-trailing {
     display: none;
   }
 

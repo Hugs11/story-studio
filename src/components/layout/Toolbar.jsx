@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CircleCheck,
-  Download,
+  FilePen,
   FilePlus,
   FolderInput,
-  FolderOpen,
   FolderPlus,
   Mic,
   Package,
-  Save,
   SlidersHorizontal,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -16,6 +14,7 @@ import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { ValidationPill } from './ValidationPill';
 import { PackOptionsPopover } from './PackOptionsPopover';
 import { GenerateMenuPopover } from './GenerateMenuPopover';
+import { ProjectMenuPopover } from './ProjectMenuPopover';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
@@ -64,6 +63,7 @@ export function Toolbar({
   onNewProject,
   onOpenProject,
   onSaveProject,
+  onSaveProjectAs,
   onImportStories,
   onImportFolder,
   onAddFolder,
@@ -85,6 +85,7 @@ export function Toolbar({
   onValidationOpenChange,
   onSelectIssue,
 }) {
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
   const successToastTimerRef = useRef(null);
@@ -99,60 +100,38 @@ export function Toolbar({
     successToastTimerRef.current = setTimeout(() => setSuccessToast(false), 2200);
   }
 
-  const primaryGroup = [
+  const addGroup = [
     {
-      id: 'new',
-      title: withShortcut('Nouveau projet', shortcutLabels.newProject),
-      label: 'Nouveau',
-      onClick: onNewProject,
+      id: 'import',
+      title: withShortcut('Ajouter des fichiers audio / ZIP / 7z', shortcutLabels.importStories),
+      label: 'Ajouter une histoire',
+      onClick: onImportStories,
+      disabled: !canImportStories,
       icon: <ToolbarIcon Icon={FilePlus} />,
     },
     {
-      id: 'open',
-      title: withShortcut('Ouvrir un projet', shortcutLabels.openProject),
-      label: 'Ouvrir',
-      onClick: onOpenProject,
-      icon: <ToolbarIcon Icon={FolderOpen} />,
-    },
-    {
-      id: 'save',
-      title: withShortcut('Sauvegarder le projet', shortcutLabels.saveProject),
-      label: 'Sauvegarder',
-      onClick: onSaveProject,
-      active: saveState === 'ok',
-      icon: <ToolbarIcon Icon={Save} />,
-    },
-  ];
-
-  const projectGroup = [
-    {
-      id: 'import',
-      title: withShortcut('Importer des histoires audio / zip / 7z', shortcutLabels.importStories),
-      label: 'Importer',
-      onClick: onImportStories,
-      disabled: !canImportStories,
-      icon: <ToolbarIcon Icon={Download} />,
-    },
-    {
-      id: 'import-folder',
-      title: 'Importer un dossier et son contenu',
-      label: 'Importer dossier',
-      onClick: onImportFolder,
-      disabled: !canImportFolder,
-      icon: <ToolbarIcon Icon={FolderInput} />,
-    },
-    {
       id: 'folder',
-      title: withShortcut('Créer un dossier', shortcutLabels.addFolder),
-      label: 'Dossier',
+      title: withShortcut('Ajouter un dossier dans le pack', shortcutLabels.addFolder),
+      label: 'Ajouter un dossier',
       onClick: onAddFolder,
       disabled: !canAddFolder,
       icon: <ToolbarIcon Icon={FolderPlus} />,
     },
     {
+      id: 'import-folder',
+      title: 'Importer un dossier audio et son contenu',
+      label: 'Importer un dossier',
+      onClick: onImportFolder,
+      disabled: !canImportFolder,
+      icon: <ToolbarIcon Icon={FolderInput} />,
+    },
+  ];
+
+  const captureGroup = [
+    {
       id: 'record',
-      title: 'Enregistrer une histoire',
-      label: 'Enregistrer',
+      title: 'Enregistrer une histoire au micro',
+      label: 'Micro',
       onClick: onRecord,
       disabled: !canRecord,
       icon: <ToolbarIcon Icon={Mic} />,
@@ -162,13 +141,36 @@ export function Toolbar({
   return (
     <div className="chrome-toolbar">
       <div className="chrome-toolbar-left">
-        {primaryGroup.map((item) => (
-          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} active={item.active}>
+        <ProjectMenuPopover
+          open={projectMenuOpen}
+          onOpenChange={setProjectMenuOpen}
+          shortcutLabels={shortcutLabels}
+          onNewProject={onNewProject}
+          onOpenProject={onOpenProject}
+          onSaveProject={onSaveProject}
+          onSaveProjectAs={onSaveProjectAs}
+          saveState={saveState}
+          trigger={({ openPopover }) => (
+            <ToolbarButton
+              id="project-menu"
+              title="Actions du projet"
+              label="Projet"
+              onClick={openPopover}
+              active={projectMenuOpen}
+              trailing={<span className="chrome-project-caret" aria-hidden="true">▾</span>}
+            >
+              <ToolbarIcon Icon={FilePen} />
+            </ToolbarButton>
+          )}
+        />
+        <span className="chrome-toolbar-sep" />
+        {addGroup.map((item) => (
+          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
             {item.icon}
           </ToolbarButton>
         ))}
         <span className="chrome-toolbar-sep" />
-        {projectGroup.map((item) => (
+        {captureGroup.map((item) => (
           <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
             {item.icon}
           </ToolbarButton>
