@@ -1,0 +1,128 @@
+.project-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.project-menu-wrap.is-open .chrome-project-caret {
+  transform: rotate(180deg);
+}
+
+.project-menu-bridge {
+  position: absolute;
+  z-index: 255;
+  top: 100%;
+  left: 0;
+  width: max(100%, 260px);
+  height: 14px;
+}
+
+.project-menu {
+  position: absolute;
+  z-index: 260;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 260px;
+  padding: 10px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38);
+  animation: project-menu-in 0.12s ease-out;
+}
+
+.project-menu::before {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: -7px;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-border-secondary);
+  border-right: 0;
+  border-bottom: 0;
+  background: var(--color-background-primary);
+  transform: rotate(45deg);
+}
+
+@keyframes project-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.project-menu-head {
+  display: grid;
+  gap: 2px;
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--color-border-tertiary);
+  margin-bottom: 8px;
+}
+
+.project-menu-head strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.project-menu-head span {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.project-menu-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 7px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-menu-item:hover {
+  background: var(--control-bg-hover);
+}
+
+.project-menu-item:disabled {
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+}
+
+.project-menu-item:disabled:hover {
+  background: transparent;
+}
+
+.project-menu-item span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.project-menu-item strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.project-menu-item small {
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-menu-sep {
+  display: block;
+  height: 1px;
+  background: var(--color-border-tertiary);
+  margin: 8px 2px;
+}

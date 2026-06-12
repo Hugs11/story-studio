@@ -1017,6 +1017,7 @@ function AppContent() {
           onNewProject={handleNewProject}
           onOpenProject={handleLoad}
           onSaveProject={handleSave}
+          onSaveProjectAs={handleSaveProjectAs}
           onImportStories={() => handleAddStory()}
           onImportFolder={() => handleImportFolder()}
           onAddFolder={() => store.addMenu()}
