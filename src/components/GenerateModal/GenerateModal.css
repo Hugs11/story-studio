@@ -38,7 +38,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 10px 14px;
-  font-family: var(--font-mono, 'Consolas', monospace);
+  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.6;
   background: var(--color-background-tertiary);

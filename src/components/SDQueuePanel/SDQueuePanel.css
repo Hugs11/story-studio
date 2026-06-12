@@ -124,9 +124,9 @@
 }
 
 .sd-usage-used {
-  background: color-mix(in srgb, #4caf50 15%, transparent);
-  color: #4caf50;
-  border-color: color-mix(in srgb, #4caf50 55%, transparent);
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
 }
 
 .sd-usage-unused {
@@ -146,8 +146,8 @@
 }
 
 .sd-badge-done {
-  background: color-mix(in srgb, #4caf50 15%, transparent);
-  color: #4caf50;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
 }
 
 .sd-badge-error {

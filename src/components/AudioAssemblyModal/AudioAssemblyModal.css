@@ -108,7 +108,7 @@
 
 .audio-assembly-duration {
   color: var(--color-text-tertiary);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   text-align: right;
 }

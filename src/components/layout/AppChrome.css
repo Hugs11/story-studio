@@ -601,7 +601,7 @@
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg0);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
@@ -811,7 +811,7 @@
 .pack-meta-version-input,
 .pack-meta-age-other {
   text-align: center;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .pack-meta-inline-field {
@@ -883,7 +883,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.5;
   white-space: normal;

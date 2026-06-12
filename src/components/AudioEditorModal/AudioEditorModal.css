@@ -136,7 +136,7 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-tertiary, #6b7280);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .audio-editor-shuttle-status {

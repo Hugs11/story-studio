@@ -13,6 +13,7 @@
   --accent: oklch(0.72 0.15 50);
   --accentDim: oklch(0.72 0.15 50 / 0.12);
   --accentBorder: oklch(0.72 0.15 50 / 0.35);
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 
 /* Thème clair — suit les préférences système Windows */
@@ -77,6 +78,22 @@
   --warning-bg-hover: #FCE7BD;
   --warning-border: #ECB570;
   --warning-border-hover: color-mix(in srgb, var(--warning) 82%, #C8D0DA);
+
+  --success: #4CAF50;
+  --color-success: var(--success);
+  --success-text: #2F7D32;
+  --success-bg: #EDF7ED;
+  --success-bg-hover: #DFF0E0;
+  --success-border: #77C77A;
+  --success-border-hover: color-mix(in srgb, var(--success) 82%, #C8D0DA);
+
+  --info: #3D9BE9;
+  --color-info: var(--info);
+  --info-text: #185FA5;
+  --info-bg: #EAF4FE;
+  --info-bg-hover: #D9ECFD;
+  --info-border: #7DBBF0;
+  --info-border-hover: color-mix(in srgb, var(--info) 82%, #C8D0DA);
 }
 
 /* Thème sombre automatique */
@@ -138,6 +155,22 @@
     --warning-bg-hover: color-mix(in srgb, #E59A3A 24%, var(--bg2));
     --warning-border: color-mix(in srgb, #E59A3A 60%, var(--borderLt));
     --warning-border-hover: color-mix(in srgb, #E59A3A 82%, var(--borderLt));
+
+    --success: #5FBF6B;
+    --color-success: var(--success);
+    --success-text: #7DDC9B;
+    --success-bg: color-mix(in srgb, var(--success) 14%, var(--bg2));
+    --success-bg-hover: color-mix(in srgb, var(--success) 24%, var(--bg2));
+    --success-border: color-mix(in srgb, var(--success) 60%, var(--borderLt));
+    --success-border-hover: color-mix(in srgb, var(--success) 82%, var(--borderLt));
+
+    --info: #79B8FF;
+    --color-info: var(--info);
+    --info-text: #A8D0FF;
+    --info-bg: color-mix(in srgb, var(--info) 14%, var(--bg2));
+    --info-bg-hover: color-mix(in srgb, var(--info) 24%, var(--bg2));
+    --info-border: color-mix(in srgb, var(--info) 60%, var(--borderLt));
+    --info-border-hover: color-mix(in srgb, var(--info) 82%, var(--borderLt));
   }
 }
 
@@ -281,6 +314,22 @@
   --warning-bg-hover: color-mix(in srgb, #E59A3A 24%, var(--bg2));
   --warning-border: color-mix(in srgb, #E59A3A 60%, var(--borderLt));
   --warning-border-hover: color-mix(in srgb, #E59A3A 82%, var(--borderLt));
+
+  --success: #5FBF6B;
+  --color-success: var(--success);
+  --success-text: #7DDC9B;
+  --success-bg: color-mix(in srgb, var(--success) 14%, var(--bg2));
+  --success-bg-hover: color-mix(in srgb, var(--success) 24%, var(--bg2));
+  --success-border: color-mix(in srgb, var(--success) 60%, var(--borderLt));
+  --success-border-hover: color-mix(in srgb, var(--success) 82%, var(--borderLt));
+
+  --info: #79B8FF;
+  --color-info: var(--info);
+  --info-text: #A8D0FF;
+  --info-bg: color-mix(in srgb, var(--info) 14%, var(--bg2));
+  --info-bg-hover: color-mix(in srgb, var(--info) 24%, var(--bg2));
+  --info-border: color-mix(in srgb, var(--info) 60%, var(--borderLt));
+  --info-border-hover: color-mix(in srgb, var(--info) 82%, var(--borderLt));
 }
 
 :root[data-theme="light"] {
@@ -352,4 +401,20 @@
   --warning-bg-hover: #FCE7BD;
   --warning-border: #ECB570;
   --warning-border-hover: color-mix(in srgb, var(--warning) 82%, #C8D0DA);
+
+  --success: #4CAF50;
+  --color-success: var(--success);
+  --success-text: #2F7D32;
+  --success-bg: #EDF7ED;
+  --success-bg-hover: #DFF0E0;
+  --success-border: #77C77A;
+  --success-border-hover: color-mix(in srgb, var(--success) 82%, #C8D0DA);
+
+  --info: #3D9BE9;
+  --color-info: var(--info);
+  --info-text: #185FA5;
+  --info-bg: #EAF4FE;
+  --info-bg-hover: #D9ECFD;
+  --info-border: #7DBBF0;
+  --info-border-hover: color-mix(in srgb, var(--info) 82%, #C8D0DA);
 }

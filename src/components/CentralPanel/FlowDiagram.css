@@ -399,7 +399,7 @@
 
 .fd-complete-legend-line--return {
   border-top-style: dashed;
-  border-top-color: color-mix(in srgb, #79b8ff 68%, white 14%);
+  border-top-color: color-mix(in srgb, var(--info) 68%, white 14%);
 }
 
 .fd-complete-legend-line--home {
@@ -675,13 +675,13 @@
 }
 
 .fd-complete-sibling-group--stories {
-  fill: color-mix(in srgb, var(--fd-sibling-tone, #79b8ff) 5%, transparent);
-  stroke: color-mix(in srgb, var(--fd-sibling-tone, #79b8ff) 22%, var(--color-border-secondary));
+  fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 5%, transparent);
+  stroke: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 22%, var(--color-border-secondary));
   stroke-dasharray: 5 5;
 }
 
 .fd-complete-sibling-group--tone-0 {
-  --fd-sibling-tone: #79b8ff;
+  --fd-sibling-tone: var(--info);
 }
 
 .fd-complete-sibling-group--tone-1 {
@@ -711,14 +711,14 @@
 }
 
 .fd-complete-line--return {
-  stroke: color-mix(in srgb, #79b8ff 58%, var(--color-text-tertiary) 42%);
+  stroke: color-mix(in srgb, var(--info) 58%, var(--color-text-tertiary) 42%);
   stroke-width: 1;
   stroke-dasharray: 4 4;
   opacity: 0.5;
 }
 
 .fd-complete-line--return.fd-complete-line--configured {
-  stroke: color-mix(in srgb, #79b8ff 62%, var(--color-text-tertiary) 38%);
+  stroke: color-mix(in srgb, var(--info) 62%, var(--color-text-tertiary) 38%);
 }
 
 .fd-complete-line--return.fd-complete-line--inherited {
@@ -746,7 +746,7 @@
   stroke-width: 2.6;
   stroke-dasharray: 10 7;
   opacity: 1;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, #79b8ff 60%, transparent));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--info) 60%, transparent));
   animation: fd-active-flow 0.8s linear infinite;
 }
 
@@ -755,7 +755,7 @@
   stroke-width: 2.6;
   stroke-dasharray: 10 7;
   opacity: 1;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, #79b8ff 60%, transparent));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--info) 60%, transparent));
   animation: fd-active-flow 0.8s linear infinite;
 }
 
@@ -846,9 +846,9 @@
 }
 
 .fd-complete-placed-node.is-navigation-active .fd-complete-node {
-  border-color: color-mix(in srgb, #79b8ff 74%, var(--color-accent) 26%);
+  border-color: color-mix(in srgb, var(--info) 74%, var(--color-accent) 26%);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, #79b8ff 35%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--info) 35%, transparent),
     0 10px 24px rgba(0, 0, 0, 0.24);
 }
 

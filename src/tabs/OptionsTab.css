@@ -82,7 +82,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-text-tertiary);
 }
@@ -207,7 +207,7 @@
   border: 0.5px solid var(--color-border-tertiary);
   background: var(--color-background-primary);
   color: var(--color-text-secondary);
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace);
+  font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1.45;
 }
