@@ -175,7 +175,7 @@ body {
 }
 
 .bottom-validation-dot.is-ok {
-  background: #5fbf6b;
+  background: var(--success);
 }
 
 .bottom-validation-dot.is-error {
@@ -209,13 +209,13 @@ body {
   background: color-mix(in srgb, var(--color-accent) 18%, transparent);
   color: var(--color-accent);
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   line-height: 1;
 }
 
 .bottom-status-pill.is-done {
-  background: color-mix(in srgb, #4caf50 16%, transparent);
-  color: #4caf50;
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  color: var(--success);
 }
 
 .status-text {

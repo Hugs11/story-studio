@@ -78,7 +78,7 @@
   color: var(--color-text-primary);
   font-size: 12px;
   padding: 5px 8px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .record-name-input:focus {

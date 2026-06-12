@@ -1,6 +1,6 @@
 import { findEntryById, findParentMenuId } from '../../store/projectModel/index.js';
 
-// Palette de couleurs assignees aux racines (utilisee par TreePanel et FullDiagramTree).
+// Palette decorative assignee aux racines (utilisee par TreePanel, MultiEditor et FullDiagramTree).
 export const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
 
 // Vrai si entryId a un ancetre dans le set candidateIds (selection multiple).

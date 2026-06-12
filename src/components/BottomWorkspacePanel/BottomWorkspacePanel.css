@@ -82,7 +82,7 @@
   background: var(--color-background-secondary);
   color: var(--color-text-tertiary);
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .bottom-workspace-spacer {
