@@ -54,6 +54,12 @@ const filePenNode = [
   ['path', { d: 'M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z' }],
 ];
 
+const kanbanNode = [
+  ['path', { d: 'M5 3v14' }],
+  ['path', { d: 'M12 3v8' }],
+  ['path', { d: 'M19 3v18' }],
+];
+
 const monitorPlayNode = [
   ['path', { d: 'M15.033 9.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56V7.648a.645.645 0 0 1 .967-.56z' }],
   ['path', { d: 'M12 17v4' }],
@@ -324,6 +330,7 @@ const searchNode = [
 ];
 
 export const FilePen = createLocalLucideIcon(filePenNode);
+export const Kanban = createLocalLucideIcon(kanbanNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const MonitorPlay = createLocalLucideIcon(monitorPlayNode);
 export const Network = createLocalLucideIcon(networkNode);

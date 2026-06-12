@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CircleCheck,
-  FilePen,
   FilePlus,
   FolderInput,
   FolderPlus,
+  Kanban,
   Mic,
   Package,
   SlidersHorizontal,
@@ -159,7 +159,7 @@ export function Toolbar({
               active={projectMenuOpen}
               trailing={<span className="chrome-project-caret" aria-hidden="true">▾</span>}
             >
-              <ToolbarIcon Icon={FilePen} />
+              <ToolbarIcon Icon={Kanban} />
             </ToolbarButton>
           )}
         />
