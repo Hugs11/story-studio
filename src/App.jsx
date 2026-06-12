@@ -871,9 +871,7 @@ function AppContent() {
   const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
   const totalIssues = errors + warnings;
 
-  const statusText = projectType === null ? 'Choisissez un type de projet'
-    : pathAuditPending ? 'Vérification des fichiers...'
-    : '';
+  const statusText = projectType === null ? 'Choisissez un type de projet' : '';
   const projectDirty = savedSnapshotRef.current === null
     ? isProjectDirty(store.project)
     : JSON.stringify(store.project) !== savedSnapshotRef.current;
@@ -1320,39 +1318,6 @@ function AppContent() {
 
       {/* Bottom bar */}
       <div className="bottombar">
-        <div className="bottom-validation-summary">
-          {projectType !== null && !pathAuditPending ? (
-            totalIssues === 0 ? (
-              <span className="bottom-validation-item">
-                <span className="bottom-validation-dot is-ok" />
-                <span>Prêt à générer</span>
-              </span>
-            ) : errors === 0 ? (
-              <span className="bottom-validation-item">
-                <span className="bottom-validation-dot is-warning" />
-                <span>
-                  Il reste {warnings} élément{warnings > 1 ? 's' : ''} à compléter pour pouvoir générer le pack
-                </span>
-              </span>
-            ) : (
-              <span className="bottom-validation-item">
-                <span className="bottom-validation-segment">
-                  <span className="bottom-validation-dot is-error" />
-                  <span>{errors} erreur{errors > 1 ? 's' : ''}</span>
-                </span>
-                {warnings > 0 ? (
-                  <>
-                    <span className="bottom-validation-sep" aria-hidden="true">·</span>
-                    <span className="bottom-validation-segment">
-                      <span className="bottom-validation-dot is-warning" />
-                      <span>{warnings} à compléter</span>
-                    </span>
-                  </>
-                ) : null}
-              </span>
-            )
-          ) : null}
-        </div>
         <span className="status-text">{statusText}</span>
         {projectType !== null && !bottomPanelOpen && (
           <button

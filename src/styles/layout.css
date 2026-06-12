@@ -151,53 +151,6 @@ body {
   min-width: 0;
 }
 
-.bottom-validation-summary {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.bottom-validation-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--color-text-secondary);
-}
-
-.bottom-validation-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.bottom-validation-dot.is-ok {
-  background: var(--success);
-}
-
-.bottom-validation-dot.is-error {
-  background: var(--danger);
-}
-
-.bottom-validation-dot.is-warning {
-  background: var(--warning);
-}
-
-.bottom-validation-segment {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.bottom-validation-sep {
-  color: var(--color-text-tertiary);
-  font-weight: 400;
-  margin: 0 2px;
-}
-
 .bottom-status-pill {
   min-width: 16px;
   height: 16px;
