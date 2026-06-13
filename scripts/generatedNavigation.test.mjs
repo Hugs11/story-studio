@@ -288,6 +288,21 @@ test('default story inside a menu auto-continues when Rust forces playback autop
   assert.equal(behavior.finalTargetId, 'menu-1');
 });
 
+test('story inside a menu can stay on screen when OK is enabled', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { controlSettings: { ok: true, autoplay: false } });
+  menu.children = [a];
+  const p = project([menu]);
+
+  const controls = getGeneratedStoryPlayControls(a, menu, p);
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(controls.forceAutoplay, false);
+  assert.equal(controls.autoplay, false);
+  assert.equal(behavior.autoContinuation, false);
+  assert.equal(behavior.finalTargetId, null);
+});
+
 test('effective end behavior: autoNext without end step goes directly to next story playback', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a');

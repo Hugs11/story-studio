@@ -18,7 +18,7 @@
 }
 
 .chrome-toolbar-left {
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 
 .chrome-toolbar-right {
@@ -238,7 +238,7 @@
   }
 }
 
-@media (max-width: 1140px) {
+@media (max-width: 1360px) {
   .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='import-folder'] .chrome-toolbar-btn-label,
   .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,

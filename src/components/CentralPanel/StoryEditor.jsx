@@ -293,7 +293,6 @@ export const StoryEditor = memo(function StoryEditor({
               onPick={(f) => onUpdate({ itemAudio: f })}
               onClear={() => onUpdate({ itemAudio: null })}
             />
-            <div className="sep" />
             <AudioField
               accentLabel
               label="Histoire complète"
@@ -330,23 +329,21 @@ export const StoryEditor = memo(function StoryEditor({
         onUpdate={onUpdate}
       />
 
-      <div className="card card--danger">
-        <div className="card-danger-header">
-          <span className="card-danger-icon-box">
-            <Trash2 className="card-danger-icon" />
-          </span>
-          <span>Supprimer cette histoire</span>
-        </div>
-        <div className="card-danger-divider" />
+      <div className="card card--danger card--danger-compact">
         <div className="card-danger-row">
-          <div className="card-danger-text">
-            <div className="card-danger-desc">
-              L'histoire est retirée du pack avec son audio, son image et ses transitions. Les fichiers audio et image restent disponibles dans la médiathèque pour être réutilisés.
-            </div>
-          </div>
-          <button className="btn btn-danger-outline" onClick={onDelete}>
-            Supprimer
+          <button
+            className="card-danger-trash"
+            type="button"
+            onClick={onDelete}
+            aria-label="Supprimer cette histoire"
+            title="Supprimer cette histoire"
+          >
+            <Trash2 className="card-danger-icon" />
           </button>
+          <span className="card-danger-title">Supprimer cette histoire</span>
+          <p className="card-danger-desc">
+            L'histoire est retirée du pack avec son audio, son image et ses transitions. Les fichiers audio et image restent disponibles dans la médiathèque pour être réutilisés.
+          </p>
         </div>
       </div>
 

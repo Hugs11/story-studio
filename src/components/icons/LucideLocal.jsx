@@ -201,6 +201,10 @@ const rotateCcwNode = [
   ['path', { d: 'M3 3v5h5' }],
 ];
 
+const chevronRightNode = [
+  ['path', { d: 'm9 18 6-6-6-6' }],
+];
+
 const undo2Node = [
   ['path', { d: 'M9 14 4 9l5-5' }],
   ['path', { d: 'M4 9h10.5a5.5 5.5 0 1 1 0 11H11' }],
@@ -359,6 +363,7 @@ export const SkipForward = createLocalLucideIcon(skipForwardNode);
 export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
+export const ChevronRight = createLocalLucideIcon(chevronRightNode);
 export const Undo2 = createLocalLucideIcon(undo2Node);
 export const Copy = createLocalLucideIcon(copyNode);
 export const ClipboardPaste = createLocalLucideIcon(clipboardPasteNode);

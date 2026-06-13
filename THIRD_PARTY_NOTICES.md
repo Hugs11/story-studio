@@ -35,6 +35,24 @@ can render its UI consistently without loading fonts from the network. The font
 software remains licensed under the SIL Open Font License and is not covered by
 Story Studio's MIT license.
 
+## JetBrains Mono
+
+- **Bundled files:**
+  - `public/fonts/JetBrainsMono-Regular.ttf`
+  - `public/fonts/JetBrainsMono-Medium.ttf`
+- **Upstream project:** <https://www.jetbrains.com/lp/mono/>
+- **Source repository:** <https://github.com/JetBrains/JetBrainsMono>
+- **License:** SIL Open Font License, Version 1.1
+- **License text:** `public/fonts/OFL-JetBrainsMono.txt`
+- **Copyright notice:** Copyright 2020 The JetBrains Mono Project Authors.
+- **SHA-256:**
+  - `JetBrainsMono-Regular.ttf`: `44CE4A84F20D60F24539BD0CEF11F79C29E38609E0F8ADF18551C9794A5D9DC3`
+  - `JetBrainsMono-Medium.ttf`: `3386A05F6ECE969E4537DE6BE894170D20558E82F7D56C8C5D332972EF172160`
+
+Story Studio bundles JetBrains Mono locally for compact technical labels and
+numeric UI text. The font software remains licensed under the SIL Open Font
+License and is not covered by Story Studio's MIT license.
+
 ## FFmpeg
 
 - **Bundled file:** `src-tauri/tools/ffmpeg.exe`

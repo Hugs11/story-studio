@@ -24,6 +24,7 @@ import {
   normalizeSequenceStep,
 } from './storyUtils';
 import { EndSequenceEditor } from './EndSequenceEditor';
+import { StoryDisclosure } from './StoryDisclosure';
 import { CircleStop, Pause } from '../../icons/LucideLocal';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
 import { useErrorDialog } from '../../common/Dialog';
@@ -186,7 +187,6 @@ export function AfterPlaySection({
   const advancedDescription = hasEndNode
       ? 'Par défaut, cette histoire utilise le message de fin du pack.'
       : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
-  const advancedCollapsedLabel = 'Configurer';
 
   useEffect(() => {
     setShowSequenceEditor(false);
@@ -233,7 +233,11 @@ export function AfterPlaySection({
 
   function updateAutoContinuation(enabled) {
     onUpdate({
-      controlSettings: { ...storyControls, autoplay: enabled },
+      controlSettings: {
+        ...storyControls,
+        autoplay: enabled,
+        ok: !enabled,
+      },
       ...(enabled ? {} : { returnAfterPlay: null }),
     });
   }
@@ -440,7 +444,12 @@ export function AfterPlaySection({
 
   return (
     <div className="card">
-      <div className="card-title">Après la lecture</div>
+      <div className="card-title-row">
+        <div className="card-title">Après la lecture</div>
+        <div className="card-copy card-copy--inline">
+          Que se passe-t-il quand cette histoire se termine.
+        </div>
+      </div>
 
       {(showAfterPlayIntro || showEndModeControls) ? (
         <div className="after-play-main-row">
@@ -453,23 +462,26 @@ export function AfterPlaySection({
           ) : null}
 
           {showEndModeControls && (
-            <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
-              <button
-                type="button"
-                className={`story-end-mode-btn ${playbackEndMode === 'stay' ? 'is-active' : ''}`}
-                aria-pressed={playbackEndMode === 'stay'}
-                onClick={() => updateAutoContinuation(false)}
-              >
-                Rester sur l'écran
-              </button>
-              <button
-                type="button"
-                className={`story-end-mode-btn ${playbackEndMode === 'auto' ? 'is-active' : ''}`}
-                aria-pressed={playbackEndMode === 'auto'}
-                onClick={() => updateAutoContinuation(true)}
-              >
-                Enchaîner
-              </button>
+            <div className="after-play-end-row">
+              <span className="after-play-end-label">À la fin</span>
+              <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
+                <button
+                  type="button"
+                  className={`story-end-mode-btn ${playbackEndMode === 'stay' ? 'is-active' : ''}`}
+                  aria-pressed={playbackEndMode === 'stay'}
+                  onClick={() => updateAutoContinuation(false)}
+                >
+                  Rester sur l'écran
+                </button>
+                <button
+                  type="button"
+                  className={`story-end-mode-btn ${playbackEndMode === 'auto' ? 'is-active' : ''}`}
+                  aria-pressed={playbackEndMode === 'auto'}
+                  onClick={() => updateAutoContinuation(true)}
+                >
+                  Enchaîner
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -477,7 +489,7 @@ export function AfterPlaySection({
 
       <div className="after-play-route">
         <div className="after-play-route-head">
-          <div className="after-play-route-title">Chemin de lecture</div>
+          <div className="after-play-route-title">Résumé du parcours</div>
           {routeContextText ? (
             <div className="after-play-route-context">{routeContextText}</div>
           ) : null}
@@ -534,43 +546,25 @@ export function AfterPlaySection({
       )}
 
       {showAdvancedControls ? (
-        <>
-          {/* Options avancées : message de fin + bouton Accueil */}
-          <div className="advanced-toggle-row">
-            <div className="advanced-toggle-copy">
-              <div className="field-label">{advancedTitle}</div>
-              <div className="advanced-toggle-desc">
-                {advancedDescription}
-              </div>
+        <StoryDisclosure
+          open={showAdvanced}
+          onToggle={() => setShowAdvanced((v) => !v)}
+        >
+          <div className="story-advanced-row">
+            <div className="story-advanced-copy">
+              <div className="story-advanced-title">{advancedTitle}</div>
+              <div className="story-advanced-desc">{advancedDescription}</div>
             </div>
-            <button
-              type="button"
-              className={`btn advanced-toggle-btn ${showAdvanced ? 'is-active' : ''}`}
-              aria-expanded={showAdvanced}
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {showAdvanced ? 'Masquer' : advancedCollapsedLabel}
-            </button>
           </div>
 
           {showAdvanced && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                display: 'grid',
-                gap: 12,
-              }}
-            >
+            <div className="story-advanced-controls">
               <div>
                 {endContent}
               </div>
             </div>
           )}
-        </>
+        </StoryDisclosure>
       ) : null}
     </div>
   );

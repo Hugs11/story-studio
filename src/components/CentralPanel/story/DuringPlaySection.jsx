@@ -3,6 +3,7 @@ import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import { hasVisibleEndNode } from '../../../store/generatedNavigation';
 import { getNavigationSelectHint, NavigationTargetSelect } from './storyUtils';
+import { StoryDisclosure } from './StoryDisclosure';
 
 const TITLE_CONTROL_DEFAULTS = {
   autoplay: false,
@@ -55,9 +56,11 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
 
   return (
     <div className="card during-play-card">
-      <div className="card-title">Pendant l'histoire</div>
-      <div className="during-play-help">
-        Choisis les boutons utilisables pendant la lecture de l'histoire.
+      <div className="card-title-row">
+        <div className="card-title">Pendant l'histoire</div>
+        <div className="card-copy card-copy--inline">
+          Choisis les boutons utilisables pendant la lecture de l'histoire.
+        </div>
       </div>
 
       <div className="during-play-stack">
@@ -94,7 +97,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
             </Tooltip>
             {homeEnabled ? (
               <>
-                <span className="during-play-destination-label">Au retour</span>
+                <span className="during-play-destination-label">Destination</span>
                 <div className="during-play-home-select">
                   <NavigationTargetSelect
                     value={node.returnOnHome ?? ''}
@@ -115,26 +118,23 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
         </div>
       </div>
 
-      <button
-        type="button"
-        className={`during-play-advanced-disclosure ${showAdvanced ? 'is-open' : ''}`}
-        aria-expanded={showAdvanced}
-        onClick={() => setShowAdvanced((v) => {
+      <StoryDisclosure
+        open={showAdvanced}
+        onToggle={() => setShowAdvanced((v) => {
           const next = !v;
           duringPlaySelectionAdvancedOpen = next;
           return next;
         })}
       >
-        <span className="during-play-advanced-chevron" aria-hidden="true">{showAdvanced ? '▾' : '▸'}</span>
-        <span>Réglages avancés</span>
-      </button>
-
-      {showAdvanced && (
-        <div className="during-play-advanced-panel">
-          <div className="during-play-advanced-title">Écran de sélection</div>
-          <div className="during-play-advanced-desc">
-            Boutons actifs pendant l'audio de sélection, avant que l'histoire ne commence.
+        <div className="story-advanced-row">
+          <div className="story-advanced-copy">
+            <div className="story-advanced-title">Écran de sélection</div>
+            <div className="story-advanced-desc">
+              Boutons actifs pendant l'audio de sélection, avant que l'histoire ne commence.
+            </div>
           </div>
+        </div>
+        <div className="story-advanced-controls">
           <div className="sequence-controls">
             {TITLE_CONTROLS.map(({ key, label, tip, def }) => (
               <label key={key} className="sequence-control">
@@ -151,7 +151,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
             ))}
           </div>
         </div>
-      )}
+      </StoryDisclosure>
     </div>
   );
 }
