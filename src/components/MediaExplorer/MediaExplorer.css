@@ -343,16 +343,16 @@
   padding: 1px 5px;
   border-radius: 3px;
   line-height: 14px;
-  background: oklch(0.70 0.13 148 / 0.18);
-  color: oklch(0.70 0.13 148);
-  border: 0.5px solid oklch(0.70 0.13 148 / 0.4);
+  background: color-mix(in srgb, var(--bg0) 72%, transparent);
+  color: var(--text);
+  border: 0.5px solid var(--borderLt);
   pointer-events: none;
 }
 
 .media-usage-badge.is-zero {
-  background: rgba(0, 0, 0, 0.22);
-  color: rgba(255, 255, 255, 0.30);
-  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--bg0) 58%, transparent);
+  color: var(--muted);
+  border: 0.5px solid var(--border);
 }
 
 /* List row & header share the same 9-column template — widths driven by --me-grid */
@@ -619,7 +619,6 @@
   aspect-ratio: auto;
 }
 
-.me-list-row .media-origin-badge,
 .me-list-row .media-usage-badge {
   top: 50%;
   transform: translateY(-50%);
@@ -627,15 +626,15 @@
   font-size: 10px;
   line-height: 14px;
   padding: 1px 5px;
-  background: oklch(0.70 0.13 148 / 0.92);
-  color: #fff;
-  border: none;
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  color: var(--text);
+  border: 0.5px solid var(--borderLt);
 }
 
 .me-list-row .media-usage-badge.is-zero {
-  background: rgba(30, 30, 30, 0.80);
-  color: rgba(255, 255, 255, 0.45);
-  border: none;
+  background: color-mix(in srgb, var(--bg0) 62%, transparent);
+  color: var(--muted);
+  border: 0.5px solid var(--border);
 }
 
 .me-list-row .media-audio-wave {
@@ -651,7 +650,7 @@
 }
 
 .media-thumb-fallback.is-audio {
-  color: var(--success);
+  color: var(--muted);
 }
 
 .media-thumb-fallback.is-archive {

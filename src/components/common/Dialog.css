@@ -14,11 +14,11 @@
   width: min(480px, 100%);
   max-height: min(80vh, 680px);
   overflow: auto;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-lg);
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
+  background: var(--bg1);
+  color: var(--text);
+  box-shadow: var(--shadow-overlay);
 }
 
 .dialog-header {
@@ -26,15 +26,16 @@
   align-items: center;
   gap: 10px;
   padding: 11px 16px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-bottom: 1px solid var(--border);
 }
 
 .dialog-header h2 {
   margin: 0;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
   line-height: 1.25;
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
 }
 
 .dialog-icon {
@@ -63,25 +64,26 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 10px 16px 14px;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 1px solid var(--border);
 }
 
 .dialog-actions .primary-btn,
 .dialog-actions .secondary-btn {
   min-width: 88px;
   min-height: 32px;
-  padding: 7px 12px;
-  border-radius: var(--border-radius-md);
-  font: inherit;
-  font-size: 12px;
-  border: 0.5px solid var(--control-border);
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+  border: 1px solid var(--control-border);
   cursor: pointer;
 }
 
 .dialog-actions .primary-btn {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
+  border-color: color-mix(in srgb, var(--accent) 82%, black);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .dialog-actions .secondary-btn {

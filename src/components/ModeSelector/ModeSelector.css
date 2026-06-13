@@ -72,11 +72,11 @@
 }
 
 .mode-section-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   color: var(--color-text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--tracking-eyebrow);
 }
 
 .mode-action-list {

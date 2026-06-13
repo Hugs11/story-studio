@@ -3,6 +3,7 @@ import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { pickAudio } from '../../hooks/useFileDialog';
+import { useLocalFile } from '../../hooks/useLocalFile';
 import { useProjectContext } from '../../store/ProjectContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
@@ -16,10 +17,17 @@ import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
-import { MediaPopover } from '../MediaExplorer/MediaPopover';
 
 const WAVE_HEIGHTS = [6, 10, 14, 10, 16, 12, 8, 14, 10, 6, 12, 8, 14, 10, 16, 8, 12, 6, 10, 14];
 const FILLED_WAVE_HEIGHTS = Array.from({ length: 96 }, (_, index) => WAVE_HEIGHTS[index % WAVE_HEIGHTS.length]);
+let activeAudioFieldStop = null;
+
+function formatAudioTime(value) {
+  if (!Number.isFinite(value) || value <= 0) return '0:00';
+  const seconds = Math.floor(value);
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+}
 
 export function AudioField({
   label,
@@ -57,12 +65,18 @@ export function AudioField({
   const [showAudioEditor, setShowAudioEditor] = useState(false);
   const [showConvertNotice, setShowConvertNotice] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
-  const [playerAnchorRect, setPlayerAnchorRect] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef(null);
   const filename = file ? basename(file) : null;
   const displayPath = file ? stripWindowsLongPathPrefix(file) : null;
   const fileAvailable = !!file && pathAudit[file] !== false;
   const showFilledState = !!file && fileAvailable;
+  const audioUrl = useLocalFile(showFilledState ? file : null);
   const tooltipText = description || displayPath || '';
+  const progressRatio = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
+  const playedBars = Math.round(progressRatio * FILLED_WAVE_HEIGHTS.length);
 
   useEscapeKey(showConvertNotice, () => setShowConvertNotice(false));
   useEscapeKey(showNoSaveWarning && !savingGeneratedAudio, () => {
@@ -70,10 +84,13 @@ export function AudioField({
     setPendingGeneratedSource(null);
   });
 
-  // Ferme le player quand le fichier change (navigation entre stories sans remount).
   useEffect(() => {
-    setPlayerAnchorRect(null);
+    stopPlayback();
+    setCurrentTime(0);
+    setDuration(0);
   }, [file]);
+
+  useEffect(() => () => stopPlayback(), []);
 
   async function handleReplace() {
     const picked = await pickAudio();
@@ -129,13 +146,75 @@ export function AudioField({
     if (onPick) void onPick(path);
   }
 
-  function handlePlay(e) {
+  function stopPlayback(reset = false) {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      if (reset) audio.currentTime = 0;
+    }
+    setIsPlaying(false);
+    if (reset) setCurrentTime(0);
+    if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
+  }
+
+  function ensureAudioElement() {
+    if (!audioUrl) return null;
+    const audio = audioRef.current;
+    if (audio && audio.src === audioUrl) return audio;
+
+    if (audio) audio.pause();
+    const nextAudio = new Audio(audioUrl);
+    nextAudio.preload = 'metadata';
+    nextAudio.addEventListener('loadedmetadata', () => {
+      setDuration(Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0);
+    });
+    nextAudio.addEventListener('timeupdate', () => {
+      setCurrentTime(nextAudio.currentTime || 0);
+    });
+    nextAudio.addEventListener('ended', () => {
+      nextAudio.currentTime = 0;
+      setCurrentTime(Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0);
+      setIsPlaying(false);
+      if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
+      window.setTimeout(() => {
+        if (audioRef.current === nextAudio && !nextAudio.paused) return;
+        if (audioRef.current === nextAudio) setCurrentTime(0);
+      }, 350);
+    });
+    nextAudio.addEventListener('pause', () => setIsPlaying(false));
+    nextAudio.addEventListener('play', () => setIsPlaying(true));
+    audioRef.current = nextAudio;
+    return nextAudio;
+  }
+
+  async function handlePlay(e) {
     e.stopPropagation();
-    if (playerAnchorRect) {
-      setPlayerAnchorRect(null);
+    const audio = ensureAudioElement();
+    if (!audio) return;
+    if (isPlaying) {
+      stopPlayback();
       return;
     }
-    setPlayerAnchorRect(e.currentTarget.getBoundingClientRect());
+    if (activeAudioFieldStop && activeAudioFieldStop !== stopPlayback) activeAudioFieldStop();
+    activeAudioFieldStop = stopPlayback;
+    try {
+      await audio.play();
+    } catch {
+      setIsPlaying(false);
+    }
+  }
+
+  function handleWaveScrub(e) {
+    e.stopPropagation();
+    const audio = ensureAudioElement();
+    if (!audio) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+    const knownDuration = Number.isFinite(audio.duration) ? audio.duration : duration;
+    if (!knownDuration) return;
+    const nextTime = ratio * knownDuration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
   }
 
   const dropWrapRef = useRef(null);
@@ -169,6 +248,10 @@ export function AudioField({
     if (clip.mode === 'cut') audioClipboard.clear();
   }
 
+  function stopButtonEvent(e) {
+    e.stopPropagation();
+  }
+
   return (
     <>
       <div
@@ -191,40 +274,46 @@ export function AudioField({
               </span>
               {!file && required ? <span className="audio-required-badge">Requis</span> : null}
               <span className="audio-empty-plus">+</span>
+              <div className="audio-bar-actions" aria-label="Actions audio">
+                <Tooltip text="Enregistrer l'audio">
+                  <button className="mic-btn" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
+                    <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
+                  </button>
+                </Tooltip>
+                {xttsSettings?.enabled && (
+                  <Tooltip text="Générer une voix depuis un texte">
+                    <button className="tts-btn" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
+                      <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
             </div>
-            <Tooltip text="Enregistrer l'audio">
-              <button className="mic-btn" onClick={handleMic}>
-                <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-              </button>
-            </Tooltip>
-            {xttsSettings?.enabled && (
-              <Tooltip text="Générer une voix depuis un texte">
-                <button className="tts-btn" onClick={handleTts}>
-                  <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                </button>
-              </Tooltip>
-            )}
             {file && !fileAvailable && onClear && (
               <Tooltip text="Retirer le lien cassé">
                 <button
+                  className="audio-clear-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     onClear();
                   }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', fontSize: 14, padding: '0 2px' }}
+                  aria-label="Retirer le lien cassé"
+                  title="Retirer le lien cassé"
                 >×</button>
               </Tooltip>
             )}
           </div>
         ) : (
           <div className="audio-empty-row">
-          <div className={`audio-bar ${playerAnchorRect ? 'is-playing' : ''}`}>
-            <Tooltip text={playerAnchorRect ? 'Fermer le lecteur' : 'Écouter'}>
+          <div className={`audio-bar ${isPlaying ? 'is-playing' : ''}`}>
+            <Tooltip text={isPlaying ? 'Pause' : 'Écouter'}>
               <button
                 className="play-btn"
                 onClick={handlePlay}
+                aria-label={isPlaying ? 'Mettre en pause' : 'Lire'}
+                title={isPlaying ? 'Pause' : 'Lire'}
               >
-                {playerAnchorRect
+                {isPlaying
                   ? <div style={{ width: 8, height: 10, display: 'flex', gap: 2 }}>
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
@@ -240,11 +329,23 @@ export function AudioField({
               </Tooltip>
             </div>
 
-            <div className="wave" aria-hidden="true">
+            <button
+              type="button"
+              className="wave"
+              onPointerDown={handleWaveScrub}
+              aria-label="Se déplacer dans l'audio"
+              title="Se déplacer dans l'audio"
+              style={{ '--audio-progress': `${progressRatio * 100}%` }}
+            >
               {FILLED_WAVE_HEIGHTS.map((h, i) => (
-                <div key={i} className="wbar" style={{ height: h }} />
+                <span key={i} className={`wbar${i < playedBars ? ' is-played' : ''}`} style={{ height: h }} />
               ))}
-            </div>
+              <span className="wave-playhead" aria-hidden="true" />
+            </button>
+
+            <span className="audio-duration" aria-label="Temps de lecture">
+              {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+            </span>
 
             {onClear && (
               <Tooltip text="Supprimer">
@@ -252,30 +353,34 @@ export function AudioField({
                   className="audio-clear-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPlayerAnchorRect(null);
+                    stopPlayback(true);
                     setShowDeleteDialog(true);
                   }}
+                  aria-label="Retirer l'audio"
+                  title="Retirer l'audio"
                 >×</button>
               </Tooltip>
             )}
+            <div className="audio-bar-actions" aria-label="Actions audio">
+              <Tooltip text="Remplacer par un enregistrement">
+                <button className="mic-btn" type="button" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
+                  <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
+                </button>
+              </Tooltip>
+              {xttsSettings?.enabled && (
+                <Tooltip text="Générer une nouvelle voix depuis un texte">
+                  <button className="tts-btn" type="button" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
+                    <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
+                  </button>
+                </Tooltip>
+              )}
+              <Tooltip text="Éditer l'audio">
+                <button className="tts-btn" type="button" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
+                  <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
+                </button>
+              </Tooltip>
+            </div>
           </div>
-          <Tooltip text="Remplacer par un enregistrement">
-            <button className="mic-btn" onClick={handleMic}>
-              <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-            </button>
-          </Tooltip>
-          {xttsSettings?.enabled && (
-            <Tooltip text="Générer une nouvelle voix depuis un texte">
-              <button className="tts-btn" onClick={handleTts}>
-                <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-              </button>
-            </Tooltip>
-          )}
-          <Tooltip text="Éditer l'audio">
-            <button className="tts-btn" onClick={() => setShowAudioEditor(true)}>
-              <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-            </button>
-          </Tooltip>
           </div>
         )}
       </div>
@@ -349,7 +454,7 @@ export function AudioField({
             savePath={savePath}
             workspaceDir={workspaceDir}
             onConfirm={(outputPath) => {
-              setPlayerAnchorRect(null);
+              stopPlayback(true);
               setShowAudioEditor(false);
               if (outputPath !== file && onPick) void onPick(outputPath);
               if (outputPath && outputPath !== file) onMediaCreated?.(outputPath);
@@ -415,18 +520,6 @@ export function AudioField({
         />
       )}
 
-      {playerAnchorRect && showFilledState && (
-        <MediaPopover
-          item={{
-            kind: 'audio',
-            path: file,
-            name: filename || label || 'Audio',
-            usages: [],
-          }}
-          anchorRect={playerAnchorRect}
-          onClose={() => setPlayerAnchorRect(null)}
-        />
-      )}
     </>
   );
 }

@@ -1,20 +1,18 @@
 import './Badge.css';
 
-const BADGE_STYLES = {
-  root: { bg: '#EEEDFE', color: '#3C3489', label: 'Racine' },
-  menu: { bg: '#E1F5EE', color: '#085041', label: 'Menu' },
-  story: { bg: '#E6F1FB', color: '#0C447C', label: 'Histoire' },
-  zip: { bg: '#FAEEDA', color: '#633806', label: 'ZIP' },
+const BADGE_LABELS = {
+  root: 'Racine',
+  menu: 'Menu',
+  story: 'Histoire',
+  zip: 'ZIP',
 };
 
 export function Badge({ type }) {
-  const style = BADGE_STYLES[type] || BADGE_STYLES.root;
+  const normalizedType = BADGE_LABELS[type] ? type : 'root';
+
   return (
-    <span
-      className="badge"
-      style={{ background: style.bg, color: style.color }}
-    >
-      {style.label}
+    <span className={`badge badge--${normalizedType}`}>
+      {BADGE_LABELS[normalizedType]}
     </span>
   );
 }

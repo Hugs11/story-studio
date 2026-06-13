@@ -37,9 +37,9 @@ function destinationHintLabel(label) {
     .trim();
 }
 
-function RouteChip({ icon = null, children }) {
+function RouteChip({ icon = null, children, destination = false }) {
   return (
-    <span className="after-play-route-chip">
+    <span className={`after-play-route-chip${destination ? ' is-destination' : ''}`}>
       {icon ? <span className="after-play-route-icon">{icon}</span> : null}
       <span>{children}</span>
     </span>
@@ -181,12 +181,12 @@ export function AfterPlaySection({
     ? "Pour cette histoire uniquement : plusieurs étapes audio enchaînées à la place du message de fin du pack."
     : 'Plusieurs étapes audio enchaînées (ex : question → réponse → conclusion)';
   const advancedTitle = hasEndNode
-    ? 'Remplacer le message de fin pour cette histoire'
+    ? 'Message de fin personnalisé'
     : 'Réglages avancés';
   const advancedDescription = hasEndNode
-      ? "Par défaut, le message de fin est utilisé. Vous pouvez en mettre un spécifique à cette histoire uniquement."
+      ? 'Par défaut, cette histoire utilise le message de fin du pack.'
       : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
-  const advancedCollapsedLabel = hasEndNode ? 'Réglages avancés' : 'Configurer';
+  const advancedCollapsedLabel = 'Configurer';
 
   useEffect(() => {
     setShowSequenceEditor(false);
@@ -262,6 +262,13 @@ export function AfterPlaySection({
     && !autoNextApplies
     && (localAutoContinuationEnabled || autoNextApplies);
   const autoNextContextText = getAutoNextContextText(autoNextResolution);
+  const afterPlayNotes = [
+    autoNextContextText,
+    autoNextApplies
+      ? 'Les retours personnalisés, le message de fin et les scénarios de fin restent dans le projet, mais auto-next prend la main.'
+      : null,
+  ].filter(Boolean);
+  const showAfterPlayIntro = afterPlayNotes.length > 0;
   const showAdvancedControls = !autoNextApplies;
 
   // ─── Contenu "Message de fin" ────────────────────────────────────────────────
@@ -285,8 +292,7 @@ export function AfterPlaySection({
             </button>
             <button
               type="button"
-              className="btn-xs"
-              style={{ color: '#E24B4A', borderColor: '#E24B4A' }}
+              className="btn-xs btn-danger-outline"
               onClick={clearEndAfterPlayback}
             >
               Retirer
@@ -315,8 +321,7 @@ export function AfterPlaySection({
           </span>
           <button
             type="button"
-            className="btn-xs"
-            style={{ color: '#E24B4A', borderColor: '#E24B4A' }}
+            className="btn-xs btn-danger-outline"
             onClick={clearEndAfterPlayback}
           >
             Retirer
@@ -435,65 +440,50 @@ export function AfterPlaySection({
 
   return (
     <div className="card">
-      <div className="card-title">À la fin de l'histoire</div>
+      <div className="card-title">Après la lecture</div>
 
-      <div className="after-play-main-row">
-        <div className="after-play-intro">
-          <div className="after-play-question">Que se passe-t-il à la fin de l'histoire ?</div>
-          <div className="after-play-answer">
-            {hasGeneratedEndNode
-              ? 'Un message de fin est joué automatiquement avant de passer à la destination effective.'
-              : hasSequence
-                ? 'Le scénario de fin est joué automatiquement avant de passer à la destination effective.'
-                : hasPrompt
-                  ? 'Le message de fin personnalisé est joué automatiquement avant de passer à la destination effective.'
-                  : autoNextApplies
-                    ? 'Auto-next applique une destination automatique définie par la position de cette histoire dans le dossier.'
-              : autoContinuationEnabled
-                ? "La Lunii peut s'arrêter et attendre, ou enchaîner automatiquement vers la destination choisie."
-                : "La Lunii s'arrête et reste sur l'écran de l'histoire. L'enfant doit appuyer sur un bouton pour continuer."}
-          </div>
-          {autoNextContextText ? (
-            <div className="after-play-context-note">{autoNextContextText}</div>
-          ) : null}
-          {autoNextApplies ? (
-            <div className="after-play-context-note">
-              Les retours personnalisés, le message de fin et les scénarios de fin sont conservés dans le projet, mais ignorés tant qu'auto-next est actif.
+      {(showAfterPlayIntro || showEndModeControls) ? (
+        <div className="after-play-main-row">
+          {showAfterPlayIntro ? (
+            <div className="after-play-intro">
+              {afterPlayNotes.map((note) => (
+                <div key={note} className="after-play-context-note">{note}</div>
+              ))}
             </div>
           ) : null}
-        </div>
 
-        {showEndModeControls && (
-          <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
-            <button
-              type="button"
-              className={`story-end-mode-btn ${playbackEndMode === 'stay' ? 'is-active' : ''}`}
-              aria-pressed={playbackEndMode === 'stay'}
-              onClick={() => updateAutoContinuation(false)}
-            >
-              Rester sur l'écran
-            </button>
-            <button
-              type="button"
-              className={`story-end-mode-btn ${playbackEndMode === 'auto' ? 'is-active' : ''}`}
-              aria-pressed={playbackEndMode === 'auto'}
-              onClick={() => updateAutoContinuation(true)}
-            >
-              Enchaîner
-            </button>
-          </div>
-        )}
-      </div>
+          {showEndModeControls && (
+            <div className="story-end-mode" role="group" aria-label="Comportement à la fin de l'histoire">
+              <button
+                type="button"
+                className={`story-end-mode-btn ${playbackEndMode === 'stay' ? 'is-active' : ''}`}
+                aria-pressed={playbackEndMode === 'stay'}
+                onClick={() => updateAutoContinuation(false)}
+              >
+                Rester sur l'écran
+              </button>
+              <button
+                type="button"
+                className={`story-end-mode-btn ${playbackEndMode === 'auto' ? 'is-active' : ''}`}
+                aria-pressed={playbackEndMode === 'auto'}
+                onClick={() => updateAutoContinuation(true)}
+              >
+                Enchaîner
+              </button>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="after-play-route">
         <div className="after-play-route-head">
-          <div className="after-play-route-title">Parcours réel sur la Lunii</div>
+          <div className="after-play-route-title">Chemin de lecture</div>
           {routeContextText ? (
             <div className="after-play-route-context">{routeContextText}</div>
           ) : null}
         </div>
         <div className="after-play-route-list">
-          <RouteChip icon={<CircleStop />}>Fin de l'histoire</RouteChip>
+          <RouteChip icon={<CircleStop />}>Histoire terminée</RouteChip>
           <RouteArrow />
           {routeUsesEndStep ? (
             <>
@@ -503,12 +493,12 @@ export function AfterPlaySection({
               {routeFinalLabel ? (
                 <>
                   <RouteArrow />
-                  <RouteChip icon={<RouteTargetIcon type={routeFinalType} />}>{routeFinalLabel}</RouteChip>
+                  <RouteChip icon={<RouteTargetIcon type={routeFinalType} />} destination>{routeFinalLabel}</RouteChip>
                 </>
               ) : null}
             </>
           ) : autoContinuationEnabled ? (
-            <RouteChip icon={<RouteTargetIcon type={returnDestinationType} />}>{returnDestinationLabel}</RouteChip>
+            <RouteChip icon={<RouteTargetIcon type={returnDestinationType} />} destination>{returnDestinationLabel}</RouteChip>
           ) : (
             <RouteChip icon={<Pause />}>Attente sur l'écran</RouteChip>
           )}

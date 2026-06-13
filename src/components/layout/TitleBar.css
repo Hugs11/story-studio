@@ -1,7 +1,7 @@
 .chrome-titlebar {
   display: flex;
   align-items: stretch;
-  min-height: 38px;
+  min-height: var(--titlebar-height);
   background: var(--bg0);
   border-bottom: 1px solid var(--border);
 }
@@ -40,10 +40,11 @@
 }
 
 .chrome-titlebar-brand {
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
   color: var(--text);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .chrome-titlebar-chevron {
@@ -81,7 +82,7 @@
   border: 1px solid var(--borderLt);
   background: color-mix(in srgb, var(--bg2) 72%, transparent);
   color: var(--text);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   padding: 3px 9px 3px 6px;
   cursor: pointer;
   min-width: 0;
@@ -131,7 +132,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
 }
 
 .chrome-titlebar-pack-meta {
@@ -152,8 +154,8 @@
 }
 
 .chrome-titlebar-status.is-saved {
-  background: #4FD17B;
-  box-shadow: 0 0 0 3px rgba(79, 209, 123, 0.18);
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
 }
 
 .chrome-titlebar-spacer {
