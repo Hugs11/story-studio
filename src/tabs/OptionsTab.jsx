@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
@@ -22,6 +22,32 @@ const LANGUAGE_OPTIONS = [
   { value: 'it', label: 'Italiano' },
   { value: 'pt', label: 'Portugues' },
 ];
+
+const OPTION_GROUPS = [
+  {
+    label: 'Général',
+    items: [
+      { id: 'save', label: 'Sauvegarde' },
+      { id: 'interface', label: 'Interface' },
+      { id: 'projects-media', label: 'Projets et médias' },
+    ],
+  },
+  {
+    label: 'Intelligence artificielle',
+    items: [
+      { id: 'xtts', label: 'Voix locale' },
+      { id: 'comfyui', label: 'Images IA' },
+    ],
+  },
+  {
+    label: 'Avancé',
+    items: [
+      { id: 'diagnostic', label: 'Diagnostic' },
+    ],
+  },
+];
+
+const OPTION_SECTION_IDS = OPTION_GROUPS.flatMap((group) => group.items.map((item) => item.id));
 
 export function OptionsTab({
   copyFilesEnabled,
@@ -67,6 +93,9 @@ export function OptionsTab({
   const [xttsLogs, setXttsLogs] = useState([]);
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
+  const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
+  const screenRef = useRef(null);
+  const sectionRefs = useRef({});
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
 
   useEffect(() => {
@@ -212,8 +241,60 @@ export function OptionsTab({
     onUpdateXttsSettings({ favoriteVoices: [] });
   }
 
+  useEffect(() => {
+    const root = screenRef.current;
+    const sections = OPTION_SECTION_IDS
+      .map((id) => sectionRefs.current[id])
+      .filter(Boolean);
+    if (!root || sections.length === 0 || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      const visibleEntries = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+      const nextId = visibleEntries[0]?.target?.id;
+      if (nextId) setActiveSectionId(nextId);
+    }, {
+      root,
+      rootMargin: '-12% 0px -70% 0px',
+      threshold: [0, 0.1, 0.35, 0.6],
+    });
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [asModal]);
+
+  function scrollToSection(sectionId) {
+    sectionRefs.current[sectionId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSectionId(sectionId);
+  }
+
+  function renderSectionNav() {
+    return (
+      <nav className="opts-nav" aria-label="Sections des préférences">
+        {OPTION_GROUPS.map((group) => (
+          <div className="opts-nav-group" key={group.label}>
+            <div className="opts-nav-group-title">{group.label}</div>
+            <div className="opts-nav-items">
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`opts-nav-item${activeSectionId === item.id ? ' is-active' : ''}`}
+                  onClick={() => scrollToSection(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+    );
+  }
+
   const content = (
-    <div className="opts-screen">
+    <div className={`opts-screen${asModal ? ' is-modal' : ''}`} ref={screenRef}>
         {onBackToHome && (
           <div className="opts-back-row">
             <button className="btn" onClick={onBackToHome}>
@@ -221,7 +302,14 @@ export function OptionsTab({
             </button>
           </div>
         )}
-        <div className="opts-card">
+        <div className="opts-layout">
+          {renderSectionNav()}
+          <div className="opts-content">
+        <section
+          id="save"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current.save = node; }}
+        >
           <div className="opts-card-title">Sauvegarde</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -249,9 +337,13 @@ export function OptionsTab({
           <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
             Raccourcis : <strong>Ctrl+S</strong> pour sauvegarder, <strong>Ctrl+Maj+S</strong> pour sauvegarder sous
           </div>
-        </div>
+        </section>
 
-        <div className="opts-card">
+        <section
+          id="interface"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current.interface = node; }}
+        >
           <div className="opts-card-title">Interface</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -284,9 +376,13 @@ export function OptionsTab({
             </div>
             <Toggle on={!!showCentralDiagram} onChange={onShowCentralDiagramChange} />
           </div>
-        </div>
+        </section>
 
-        <div className="opts-card">
+        <section
+          id="projects-media"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current['projects-media'] = node; }}
+        >
           <div className="opts-card-title">Gestion des projets et médias</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -328,9 +424,13 @@ export function OptionsTab({
               {consolidationResult.errors?.length ? `, ${consolidationResult.errors.length} fichier(s) manquant(s).` : '.'}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="opts-card">
+        <section
+          id="xtts"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current.xtts = node; }}
+        >
           <div className="opts-card-title">Generation de voix locale — XTTS</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -462,9 +562,13 @@ export function OptionsTab({
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="opts-card">
+        <section
+          id="comfyui"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current.comfyui = node; }}
+        >
           <div className="opts-card-title">Génération d'images IA — ComfyUI</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -570,9 +674,13 @@ export function OptionsTab({
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="opts-card">
+        <section
+          id="diagnostic"
+          className="opts-card"
+          ref={(node) => { sectionRefs.current.diagnostic = node; }}
+        >
           <div className="opts-card-title">Diagnostic</div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -606,8 +714,10 @@ export function OptionsTab({
           <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
             Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement.
           </div>
-        </div>
+        </section>
 
+          </div>
+        </div>
       </div>
   );
 
