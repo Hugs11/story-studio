@@ -15,6 +15,7 @@ import { ValidationPill } from './ValidationPill';
 import { PackOptionsPopover } from './PackOptionsPopover';
 import { GenerateMenuPopover } from './GenerateMenuPopover';
 import { ProjectMenuPopover } from './ProjectMenuPopover';
+import './Toolbar.css';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;

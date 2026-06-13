@@ -1,0 +1,114 @@
+.chrome-rail {
+  width: var(--chrome-rail-width);
+  flex-shrink: 0;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px;
+  overflow: visible;
+  position: relative;
+  z-index: 5;
+}
+
+.chrome-rail-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  overflow: visible;
+}
+
+.chrome-rail-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--control-text-muted);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chrome-rail-btn:hover {
+  background: var(--bg2);
+  color: var(--text);
+}
+
+.chrome-rail-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.chrome-rail-btn.is-active {
+  color: var(--accent);
+  background: var(--accentDim);
+  border-color: var(--accentBorder);
+}
+
+.chrome-rail-btn.is-active::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  right: -7px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.chrome-rail-icon {
+  width: 20px;
+  height: 20px;
+  transform-origin: center;
+  transform: scale(1.26);
+}
+
+.chrome-rail-flyout {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg2);
+  border: 1px solid var(--borderLt);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  animation: chrome-rail-flyout-in 0.12s ease;
+}
+
+.chrome-rail-flyout-arrow {
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--borderLt);
+  border-right: none;
+  border-top: none;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+@keyframes chrome-rail-flyout-in {
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}

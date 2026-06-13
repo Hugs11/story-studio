@@ -1,0 +1,208 @@
+.chrome-titlebar {
+  display: flex;
+  align-items: stretch;
+  min-height: 38px;
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border);
+}
+
+.chrome-titlebar-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 10px;
+  gap: 10px;
+}
+
+.chrome-titlebar-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.chrome-app-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.chrome-app-mark-img {
+  width: 16px;
+  height: 16px;
+  object-fit: cover;
+  display: block;
+}
+
+.chrome-titlebar-brand {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.chrome-titlebar-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  width: 10px;
+  height: 10px;
+}
+
+.chrome-titlebar-chevron-icon {
+  width: 10px;
+  height: 10px;
+  color: currentColor;
+  flex-shrink: 0;
+}
+
+.chrome-titlebar-project {
+  color: var(--text);
+  opacity: 0.85;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: min(44vw, 520px);
+}
+
+.chrome-titlebar-pack-recap {
+  height: 28px;
+  max-width: min(36vw, 360px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--borderLt);
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 3px 9px 3px 6px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.chrome-titlebar-pack-recap:hover:not(:disabled) {
+  background: var(--bg2);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--borderLt));
+}
+
+.chrome-titlebar-pack-recap:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.chrome-titlebar-pack-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chrome-titlebar-pack-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.chrome-titlebar-pack-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.chrome-titlebar-pack-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.chrome-titlebar-pack-meta {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.chrome-titlebar-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.chrome-titlebar-status.is-dirty {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.chrome-titlebar-status.is-saved {
+  background: #4FD17B;
+  box-shadow: 0 0 0 3px rgba(79, 209, 123, 0.18);
+}
+
+.chrome-titlebar-spacer {
+  flex: 1;
+  min-width: 20px;
+}
+
+.chrome-window-controls {
+  display: flex;
+  align-items: stretch;
+  margin-left: auto;
+}
+
+.chrome-window-btn {
+  width: 48px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chrome-window-btn:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.chrome-window-btn:hover {
+  background: var(--bg2);
+  color: var(--text);
+}
+
+.chrome-window-btn-close:hover {
+  background: #C23A36;
+  color: #fff3f3;
+}
+
+@media (max-width: 900px)  {
+  .chrome-titlebar-project {
+    max-width: 28vw;
+  }
+
+  .chrome-titlebar-pack-recap {
+    max-width: 30vw;
+  }
+
+  .chrome-titlebar-pack-meta {
+    display: none;
+  }
+}

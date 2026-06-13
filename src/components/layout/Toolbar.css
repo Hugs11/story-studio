@@ -1,0 +1,298 @@
+.chrome-toolbar {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 0 calc(var(--chrome-rail-width) + 12px);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+}
+
+.chrome-toolbar-left,
+.chrome-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chrome-toolbar-left {
+  flex: 1 1 auto;
+}
+
+.chrome-toolbar-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.chrome-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--borderLt);
+  margin: 0 4px;
+}
+
+.chrome-toolbar-btn {
+  height: 30px;
+  padding: 0 10px;
+  gap: 6px;
+  border-radius: 5px;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--control-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.chrome-toolbar-btn:hover:not(:disabled),
+.chrome-toolbar-btn.is-active {
+  color: var(--control-text);
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
+}
+
+.chrome-toolbar-btn.is-active {
+  background: var(--control-bg-active);
+}
+
+.chrome-toolbar-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.chrome-toolbar-btn:disabled {
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+}
+
+.chrome-toolbar-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chrome-toolbar-btn-label {
+  white-space: nowrap;
+}
+
+.chrome-toolbar-btn.is-icon-only {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+}
+
+.chrome-toolbar-btn-trailing {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
+.chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #6548d8;
+  color: color-mix(in srgb, var(--pack-options-accent) 82%, var(--control-text));
+  border-color: color-mix(in srgb, var(--pack-options-accent) 34%, var(--control-border));
+  background: color-mix(in srgb, var(--control-bg) 94%, var(--pack-options-accent) 6%);
+  font-weight: 600;
+  padding-left: 9px;
+  padding-right: 8px;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06);
+}
+
+.chrome-toolbar-btn[data-toolbar-id='project-menu'] {
+  color: var(--control-text);
+  font-weight: 600;
+  padding-left: 9px;
+  padding-right: 8px;
+}
+
+.chrome-toolbar-btn[data-toolbar-id='project-menu']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='project-menu'].is-active {
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
+}
+
+:root[data-theme="light"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #6548d8;
+}
+
+:root[data-theme="dark"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+  --pack-options-accent: #9a8cff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
+    --pack-options-accent: #9a8cff;
+  }
+}
+
+.chrome-toolbar-btn[data-toolbar-id='pack-options']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='pack-options'].is-active {
+  color: color-mix(in srgb, var(--pack-options-accent) 74%, var(--control-text));
+  border-color: color-mix(in srgb, var(--pack-options-accent) 46%, var(--control-border));
+  background: color-mix(in srgb, var(--control-bg-hover) 88%, var(--pack-options-accent) 12%);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
+}
+
+.chrome-pack-options-caret {
+  font-size: 11px;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.chrome-project-caret {
+  font-size: 11px;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.chrome-toolbar-cta {
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in oklch, oklch(0.74 0.115 50) 75%, #000 25%);
+  background: oklch(0.74 0.115 50);
+  color: #23160a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, filter 0.12s;
+}
+
+.chrome-toolbar-cta:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.chrome-toolbar-cta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+.chrome-toolbar-cta:disabled {
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
+
+.chrome-generate-split {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chrome-generate-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.chrome-generate-caret {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  border-left-color: color-mix(in srgb, #23160a 26%, transparent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  justify-content: center;
+}
+
+.chrome-generate-caret-glyph {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.chrome-generate-main-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .chrome-toolbar {
+    gap: 8px;
+    padding-left: calc(var(--chrome-rail-width) + 10px);
+    padding-right: 10px;
+  }
+
+  .chrome-toolbar-left,
+  .chrome-toolbar-right {
+    gap: 5px;
+  }
+
+  .chrome-toolbar-btn,
+  .chrome-toolbar-cta {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .chrome-toolbar-sep {
+    margin-left: 2px;
+    margin-right: 2px;
+  }
+}
+
+@media (max-width: 1140px) {
+  .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='import-folder'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,
+  .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label {
+    display: none;
+  }
+
+  .chrome-toolbar-btn[data-toolbar-id='import'],
+  .chrome-toolbar-btn[data-toolbar-id='import-folder'],
+  .chrome-toolbar-btn[data-toolbar-id='folder'],
+  .chrome-toolbar-btn[data-toolbar-id='record'] {
+    width: 30px;
+    min-width: 30px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 900px)  {
+  .chrome-toolbar {
+    padding: 0 10px;
+  }
+
+  .chrome-toolbar-right {
+    gap: 4px;
+  }
+
+  .chrome-toolbar-cta {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .chrome-toolbar-btn-label,
+  .chrome-generate-main-label {
+    display: none;
+  }
+
+  .chrome-toolbar-btn-trailing {
+    display: none;
+  }
+
+  .chrome-toolbar-btn,
+  .chrome-generate-main {
+    width: 30px;
+    min-width: 30px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

@@ -4,6 +4,7 @@ import { isTauriRuntime } from '../../utils/tauriRuntime';
 import { Image as ImageIcon } from '../icons/LucideLocal';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Tooltip } from '../common/Tooltip';
+import './TitleBar.css';
 
 function AppMark() {
   return (
