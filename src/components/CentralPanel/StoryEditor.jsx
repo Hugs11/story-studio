@@ -125,7 +125,7 @@ function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffe
   if (parentMenu) {
     return {
       tone: 'muted',
-      text: `Après la lecture, retour vers ${inheritedTargetName}.`,
+      text: `À la fin de l'histoire, retour vers ${inheritedTargetName}.`,
     };
   }
   return { tone: 'muted', text: 'Cette histoire utilise le comportement courant du pack.' };
@@ -309,7 +309,7 @@ export const StoryEditor = memo(function StoryEditor({
 
       </div>
 
-      {/* Card : Pendant la lecture */}
+      {/* Card : Pendant l'histoire */}
       <DuringPlaySection
         node={node}
         project={project}
@@ -319,7 +319,7 @@ export const StoryEditor = memo(function StoryEditor({
         onUpdate={onUpdate}
       />
 
-      {/* Card : Après la lecture */}
+      {/* Card : A la fin de l'histoire */}
       <AfterPlaySection
         node={node}
         parentMenu={parentMenu}

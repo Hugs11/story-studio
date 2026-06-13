@@ -253,6 +253,17 @@ export function AfterPlaySection({
     : hasPrompt && !usesGlobalEndNodeAudio
       ? 'Message de fin personnalisé'
       : `${project?.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`;
+  const routeContextText = autoNextApplies
+    ? 'Auto-next activé'
+    : routeUsesEndStep
+      ? hasSequence
+        ? 'via scénario de fin'
+        : hasPrompt && !usesGlobalEndNodeAudio
+          ? 'via message personnalisé'
+          : 'via message de fin du pack'
+      : autoContinuationEnabled
+        ? 'enchaînement automatique'
+        : "attente sur l'écran";
   const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
   const showReturnDestinationRow = allMenus.length > 0
     && !hasGeneratedEndNode
@@ -432,7 +443,7 @@ export function AfterPlaySection({
 
   return (
     <div className="card">
-      <div className="card-title">Après la lecture</div>
+      <div className="card-title">À la fin de l'histoire</div>
 
       <div className="after-play-main-row">
         <div className="after-play-intro">
@@ -482,6 +493,36 @@ export function AfterPlaySection({
         )}
       </div>
 
+      <div className="after-play-route">
+        <div className="after-play-route-head">
+          <div className="after-play-route-title">Parcours réel sur la Lunii</div>
+          {routeContextText ? (
+            <div className="after-play-route-context">{routeContextText}</div>
+          ) : null}
+        </div>
+        <div className="after-play-route-list">
+          <RouteChip icon={<CircleStop />}>Fin de l'histoire</RouteChip>
+          <RouteArrow />
+          {routeUsesEndStep ? (
+            <>
+              <RouteChip icon={<RouteTargetIcon type="end-node" nightMode={nightModeActive} />}>
+                {routeEndStepLabel}
+              </RouteChip>
+              {routeFinalLabel ? (
+                <>
+                  <RouteArrow />
+                  <RouteChip icon={<RouteTargetIcon type={routeFinalType} />}>{routeFinalLabel}</RouteChip>
+                </>
+              ) : null}
+            </>
+          ) : autoContinuationEnabled ? (
+            <RouteChip icon={<RouteTargetIcon type={returnDestinationType} />}>{returnDestinationLabel}</RouteChip>
+          ) : (
+            <RouteChip icon={<Pause />}>Attente sur l'écran</RouteChip>
+          )}
+        </div>
+      </div>
+
       {showReturnDestinationRow && (
         <div className="after-play-destination-row">
           <div className="after-play-destination-copy">
@@ -509,31 +550,6 @@ export function AfterPlaySection({
           </div>
         </div>
       )}
-
-      <div className="after-play-route">
-        <div className="after-play-route-title">Résumé du parcours</div>
-        <div className="after-play-route-list">
-          <RouteChip icon={<CircleStop />}>Fin de l'histoire</RouteChip>
-          <RouteArrow />
-          {routeUsesEndStep ? (
-            <>
-              <RouteChip icon={<RouteTargetIcon type="end-node" nightMode={nightModeActive} />}>
-                {routeEndStepLabel}
-              </RouteChip>
-              {routeFinalLabel ? (
-                <>
-                  <RouteArrow />
-                  <RouteChip icon={<RouteTargetIcon type={routeFinalType} />}>{routeFinalLabel}</RouteChip>
-                </>
-              ) : null}
-            </>
-          ) : autoContinuationEnabled ? (
-            <RouteChip icon={<RouteTargetIcon type={returnDestinationType} />}>{returnDestinationLabel}</RouteChip>
-          ) : (
-            <RouteChip icon={<Pause />}>Attente sur l'écran</RouteChip>
-          )}
-        </div>
-      </div>
 
       {showAdvancedControls ? (
         <>
