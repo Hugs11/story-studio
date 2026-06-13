@@ -152,7 +152,7 @@ export const MultiEditor = memo(function MultiEditor({
 
   const batchBusy = batchImageGenerating || batchAudioGenerating;
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
-  const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : 'Pendant la lecture';
+  const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : "Pendant l'histoire";
   const batchGenerationDescription = canGenerateTextImages
     ? "Crée d'un coup une image texte pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
     : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
@@ -415,7 +415,7 @@ export const MultiEditor = memo(function MultiEditor({
 
       {allSameType && hasEndNode && (onlyStories || onlyMenus) && (
         <div className="card">
-          <div className="card-title">Après la lecture</div>
+          <div className="card-title">À la fin de l'histoire</div>
           {onlyStories && (
             <div className="field-row" style={{ marginBottom: 10, alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
@@ -441,7 +441,7 @@ export const MultiEditor = memo(function MultiEditor({
             <div style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
               {onlyMenus
                 ? 'La destination après chaque histoire est gérée par le message de fin du pack.'
-                : 'La destination après lecture est gérée par le message de fin du pack.'}
+                : "La destination à la fin de l'histoire est gérée par le message de fin du pack."}
               <br />
               Pour la modifier, sélectionne le message de fin dans l'arbre à gauche.
             </div>
@@ -452,7 +452,7 @@ export const MultiEditor = memo(function MultiEditor({
       {allSameType && !hasEndNode && (allMenus.length > 0 || onlyStories) && (
         <div className="card">
           <div className="card-title">
-            {onlyMenus ? 'Après la lecture (défaut enfants)' : 'Après la lecture'}
+            {onlyMenus ? "À la fin de l'histoire (défaut enfants)" : "À la fin de l'histoire"}
           </div>
 
           {onlyStories && (() => {
@@ -513,7 +513,7 @@ export const MultiEditor = memo(function MultiEditor({
                 <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                   {onlyStories
                     ? 'Où l’enfant atterrit après la sortie automatique.'
-                    : 'Destination après la lecture — suit le dossier parent si rien n’est choisi ici.'}
+                    : "Destination à la fin de l'histoire — suit le dossier parent si rien n’est choisi ici."}
                 </div>
               </div>
               <div style={{ maxWidth: 220, width: '100%' }}>

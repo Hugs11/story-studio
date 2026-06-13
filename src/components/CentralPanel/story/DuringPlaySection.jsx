@@ -45,7 +45,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
 
   return (
     <div className="card during-play-card">
-      <div className="card-title">Pendant la lecture</div>
+      <div className="card-title">Pendant l'histoire</div>
 
       <div className="during-play-stack">
         <div className="sequence-controls during-play-toggles">
@@ -100,7 +100,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
         <div className="advanced-toggle-copy">
           <div className="field-label">Écran de sélection</div>
           <div className="advanced-toggle-desc">
-            Boutons actifs pendant l'audio de sélection (avant que l'histoire ne se lance)
+            Boutons actifs pendant l'audio de sélection, avant que l'histoire ne commence.
           </div>
         </div>
         <button
