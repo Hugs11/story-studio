@@ -4,10 +4,31 @@ import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
 import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
-import { TriangleAlert } from '../icons/LucideLocal';
+import { Trash2 } from '../icons/LucideLocal';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import './CentralPanel.css';
+
+const MENU_BEHAVIOR_CONTROLS = [
+  {
+    key: 'wheel',
+    label: 'Molette de sélection',
+    desc: "L'enfant peut parcourir les histoires de ce dossier avec la molette.",
+    def: true,
+  },
+  {
+    key: 'autoplay',
+    label: 'Lancer la première histoire automatiquement',
+    desc: "Après l'audio de sélection, la première histoire démarre sans appui sur OK.",
+    def: false,
+  },
+  {
+    key: 'pause',
+    label: 'Bouton Pause',
+    desc: "L'enfant peut mettre en pause l'audio de sélection du dossier.",
+    def: false,
+  },
+];
 
 export const MenuEditor = memo(function MenuEditor({ node, project = null, parentMenu = null, allMenus = [], onUpdate, onDelete }) {
   const isImportedContinuation = !!node.importedContinuation;
@@ -150,36 +171,42 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
         </div>
       ) : null}
 
-      <div className="card">
-        <div className="card-title">Comportement</div>
-        <div className="field-row" style={{ marginBottom: 4 }}>
-          <div style={{ flex: 1 }}>
-            <span className="field-label">Pas d'image</span>
-            <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              Ce dossier n'envoie aucune image à la Lunii — l'écran conserve l'affichage précédent pendant la sélection.
-            </div>
+      <div className="card menu-behavior-card">
+        <div className="card-title-row">
+          <div className="card-title">Réglages du dossier</div>
+          <div className="card-copy card-copy--inline">
+            Règle ce que l'enfant peut faire sur cet écran de choix.
           </div>
+        </div>
+
+        <div className="menu-behavior-stack">
+          <label className="sequence-control menu-behavior-control">
           <Toggle
             on={node.autoBlackImage || false}
             onChange={(v) => onUpdate({ autoBlackImage: v })}
+            ariaLabel="Écran sans image"
           />
-        </div>
-        {[
-          { key: 'wheel',    label: 'Molette de sélection', desc: 'L\'enfant peut tourner la molette pour choisir une histoire', def: true },
-          { key: 'autoplay', label: 'Lecture automatique',  desc: "L'audio de présentation enchaîne directement sur la première histoire, sans attendre que l'enfant appuie sur OK", def: false },
-          { key: 'pause',    label: 'Bouton pause',         desc: 'L\'enfant peut mettre en pause l\'audio de présentation', def: false },
-        ].map(({ key, label, desc, def }) => (
-          <div key={key} className="field-row" style={{ marginBottom: 4 }}>
-            <div style={{ flex: 1 }}>
-              <span className="field-label">{label}</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{desc}</div>
+            <div className="menu-behavior-copy">
+              <span className="during-play-control-title">Écran transparent</span>
+              <span className="menu-behavior-desc">
+                Aucune image n'est affichée, l'écran reste vide.
+              </span>
             </div>
-            <Toggle
-              on={node.controlSettings?.[key] ?? def}
-              onChange={(v) => onUpdate({ controlSettings: { ...node.controlSettings, [key]: v } })}
-            />
-          </div>
-        ))}
+          </label>
+          {MENU_BEHAVIOR_CONTROLS.map(({ key, label, desc, def }) => (
+            <label key={key} className="sequence-control menu-behavior-control">
+              <Toggle
+                on={node.controlSettings?.[key] ?? def}
+                onChange={(v) => onUpdate({ controlSettings: { ...node.controlSettings, [key]: v } })}
+                ariaLabel={label}
+              />
+              <div className="menu-behavior-copy">
+                <span className="during-play-control-title">{label}</span>
+                <span className="menu-behavior-desc">{desc}</span>
+              </div>
+            </label>
+          ))}
+        </div>
       </div>
 
       {allMenus.length > 1 && node.children?.some(c => c.type !== 'menu') && (
@@ -199,7 +226,6 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
               allStories={[]}
               currentStoryId={null}
               emptyLabel="Reste dans ce dossier"
-              includeRoot={false}
               includeNextStory={false}
               includeStoryPlay={false}
               style={{ maxWidth: 180 }}
@@ -221,27 +247,26 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
         </div>
       )}
 
-      <div className="card card--danger">
-        <div className="card-danger-header">
-          <TriangleAlert className="card-danger-icon" />
-          <span>Zone sensible</span>
-        </div>
-        <div className="card-danger-divider" />
+      <div className="card card--danger card--danger-compact">
         <div className="card-danger-row">
-          <div className="card-danger-text">
-            <div className="card-danger-title">Supprimer ce dossier</div>
-            <div className="card-danger-desc">
-              {(() => {
-                const count = node.children?.length ?? node.items?.length ?? 0;
-                return count > 0
-                  ? `Les ${count} élément${count > 1 ? 's' : ''} qu'il contient ${count > 1 ? 'seront déplacés' : 'sera déplacé'} à la racine.`
-                  : 'Le dossier sera retiré du projet.';
-              })()}
-            </div>
-          </div>
-          <button className="btn btn-danger-outline" onClick={onDelete}>
-            Supprimer
+          <button
+            className="card-danger-trash"
+            type="button"
+            onClick={onDelete}
+            aria-label="Supprimer ce dossier"
+            title="Supprimer ce dossier"
+          >
+            <Trash2 className="card-danger-icon" />
           </button>
+          <span className="card-danger-title">Supprimer ce dossier</span>
+          <p className="card-danger-desc">
+            {(() => {
+              const count = node.children?.length ?? node.items?.length ?? 0;
+              return count > 0
+                ? `Les ${count} élément${count > 1 ? 's' : ''} qu'il contient ${count > 1 ? 'seront déplacés' : 'sera déplacé'} à la racine.`
+                : 'Le dossier sera retiré du projet.';
+            })()}
+          </p>
         </div>
       </div>
 

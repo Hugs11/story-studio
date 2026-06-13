@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
-import { hasVisibleEndNode } from '../../../store/generatedNavigation';
-import { getNavigationSelectHint, NavigationTargetSelect } from './storyUtils';
+import { encodeMenuNavigationTarget } from '../../../store/navigationTargets';
+import { NavigationTargetSelect } from './storyUtils';
 import { StoryDisclosure } from './StoryDisclosure';
 
 const TITLE_CONTROL_DEFAULTS = {
@@ -37,20 +37,8 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
   const [showAdvanced, setShowAdvanced] = useState(duringPlaySelectionAdvancedOpen);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
-  const homeDefaultTargetName = parentMenu?.name || "le menu d'accueil du pack";
-  const endNodeBypassNote = hasVisibleEndNode(project)
-    ? ' (sans passer par le message de fin)'
-    : '';
-  const homeResolvedHint = `Retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}`;
-  const homeResolvedDestinationLabel = getNavigationSelectHint({
-    value: node.returnOnHome ?? '',
-    emptyResolvedLabel: homeResolvedHint,
-    entry: node,
-    parentMenu,
-    project,
-    allMenus,
-    allStories,
-  });
+  const parentMenuTarget = parentMenu?.id ? encodeMenuNavigationTarget(parentMenu.id) : null;
+  const homeSelectValue = node.returnOnHome ?? parentMenuTarget ?? '';
   const pauseEnabled = controls.pause ?? PLAY_CONTROLS[0].def;
   const homeEnabled = !node.returnOnHomeNone;
 
@@ -100,16 +88,15 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
                 <span className="during-play-destination-label">Destination</span>
                 <div className="during-play-home-select">
                   <NavigationTargetSelect
-                    value={node.returnOnHome ?? ''}
+                    value={homeSelectValue}
                     onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
                     allMenus={allMenus}
                     allStories={allStories}
                     currentStoryId={node.id}
-                    emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
-                    includeRoot={false}
+                    emptyLabel="Retour au menu d'accueil"
+                    includeDefault={!parentMenuTarget}
                     includeStoryPlay={false}
                     size="compact"
-                    resolvedDestinationLabel={null}
                   />
                 </div>
               </>

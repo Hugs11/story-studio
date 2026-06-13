@@ -415,10 +415,8 @@ export const MultiEditor = memo(function MultiEditor({
                             allStories={allStories.filter((s) => !ids.includes(s.id))}
                             currentStoryId={null}
                             emptyLabel="Retour direct au menu parent"
-                            includeRoot={false}
                             includeStoryPlay={false}
                             size="compact"
-                            resolvedDestinationLabel={null}
                           />
                         </div>
                       </>
@@ -485,7 +483,7 @@ export const MultiEditor = memo(function MultiEditor({
               <div className="editor-setting-title">Bouton Accueil</div>
               <div className="editor-setting-desc">
                 Destination quand l'enfant appuie sur Accueil pendant la lecture.
-                Sans réglage spécifique : retour direct au menu parent{hasEndNode ? ' (sans passer par le message de fin)' : ''}.
+                Sans réglage spécifique : retour au dossier parent.
               </div>
             </div>
             <div className="editor-setting-control">
@@ -499,7 +497,6 @@ export const MultiEditor = memo(function MultiEditor({
                 allStories={allStories.filter((s) => !ids.includes(s.id))}
                 currentStoryId={null}
                 emptyLabel="Retour direct au menu parent"
-                includeRoot={false}
                 includeStoryPlay={false}
               />
             </div>
@@ -656,7 +653,6 @@ export const MultiEditor = memo(function MultiEditor({
                         allStories={allStories.filter((s) => !ids.includes(s.id))}
                         currentStoryId={null}
                         emptyLabel="Suit la destination du dossier parent"
-                        includeRoot={false}
                         includeStoryPlay={false}
                       />
                     </div>
@@ -687,7 +683,6 @@ export const MultiEditor = memo(function MultiEditor({
                   allStories={[]}
                   currentStoryId={null}
                   emptyLabel="Suit la destination du dossier parent"
-                  includeRoot={false}
                   includeStoryPlay={false}
                 />
               </div>

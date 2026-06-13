@@ -15,14 +15,14 @@ import {
   isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from '../../../store/navigationTargets';
-import { CircleX, FolderOpen, Music, Play, RotateCcw } from '../../icons/LucideLocal';
+import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal';
 
 export { NAV_TARGET_NEXT_STORY };
 
-export const NAV_ROOT_LABEL = 'Première entrée du pack';
+export const NAV_ROOT_LABEL = 'Menu racine';
 
 const NAV_ICON_BY_KIND = {
-  default: RotateCcw,
+  default: Link2,
   none: CircleX,
   root: FolderOpen,
   menu: FolderOpen,
@@ -43,7 +43,7 @@ function buildNavigationTargetOptions({
   includeNone = false,
   noneLabel = 'Aucune transition',
   emptyLabel = 'Destination actuelle',
-  includeRoot = true,
+  includeDefault = true,
   includeNextStory = true,
   includeStoryPlay = true,
 }) {
@@ -56,20 +56,18 @@ function buildNavigationTargetOptions({
       disabled: true,
     });
   }
-  options.push({ value: '', label: emptyLabel, kind: 'default' });
-  if (includeNone) options.push({ value: '__none__', label: noneLabel, kind: 'none' });
-  if (includeRoot) {
-    options.push({ value: 'root', label: NAV_ROOT_LABEL, kind: 'root', group: 'Raccourcis' });
+  if (includeDefault) {
+    options.push({ value: '', label: emptyLabel, kind: 'default' });
   }
+  if (includeNone) options.push({ value: '__none__', label: noneLabel, kind: 'none' });
   if (includeNextStory) {
-    options.push({ value: NAV_TARGET_NEXT_STORY, label: 'Histoire suivante', kind: 'story', group: 'Raccourcis' });
+    options.push({ value: NAV_TARGET_NEXT_STORY, label: 'Histoire suivante', kind: 'story' });
   }
   for (const menu of allMenus) {
     options.push({
       value: encodeMenuNavigationTarget(menu.id),
       label: menu.name || '(sans nom)',
       kind: 'menu',
-      group: 'Dossiers',
     });
   }
   for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
@@ -77,7 +75,6 @@ function buildNavigationTargetOptions({
       value: encodeStoryNavigationTarget(story.id),
       label: story.name || '(sans nom)',
       kind: 'story',
-      group: 'Histoires - titre',
     });
   }
   if (includeStoryPlay) {
@@ -86,7 +83,6 @@ function buildNavigationTargetOptions({
         value: encodeStoryPlayNavigationTarget(story.id),
         label: `Lecture directe - ${story.name || '(sans nom)'}`,
         kind: 'story_play',
-        group: 'Histoires - lecture directe',
       });
     }
   }
@@ -95,7 +91,6 @@ function buildNavigationTargetOptions({
       value: encodeStoryHomeStepNavigationTarget(story.id),
       label: `Retour de fin - ${story.name || '(sans nom)'}`,
       kind: 'story_home_step',
-      group: 'Histoires - retour de fin',
     });
   }
   return options;
@@ -161,17 +156,8 @@ export function targetNameById(allMenus, allStories, targetId, fallback = 'desti
   return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
 }
 
-export function NavigationHint({ label }) {
-  if (!label) return null;
-  return (
-    <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4, paddingLeft: 6 }}>
-      ↳ {label}
-    </div>
-  );
-}
-
-// Calcule le texte de hint à afficher sous un NavigationTargetSelect.
-// - Pour un value vide ou "root" → renvoie le défaut résolu (ex: "Quelle histoire... (premier élément du pack)").
+// Calcule le texte de destination effective pour les résumés de parcours.
+// - Pour un value vide ou "root" → renvoie le défaut résolu (ex: "Quelle histoire...").
 // - Pour "next_story" → renvoie soit le nom de l'histoire suivante si entry est fourni, soit la mention contextuelle.
 // - Pour un menu/story explicite → null (pas de hint nécessaire).
 //
@@ -215,9 +201,8 @@ export function NavigationTargetSelect({
   includeNone = false,
   noneLabel = 'Aucune transition',
   emptyLabel = 'Destination actuelle',
+  includeDefault = true,
   style,
-  resolvedDestinationLabel = null,
-  includeRoot = true,
   includeNextStory = true,
   includeStoryPlay = true,
   size = 'default',
@@ -235,7 +220,7 @@ export function NavigationTargetSelect({
     includeNone,
     noneLabel,
     emptyLabel,
-    includeRoot,
+    includeDefault,
     includeNextStory,
     includeStoryPlay,
   }), [
@@ -246,7 +231,7 @@ export function NavigationTargetSelect({
     includeNone,
     noneLabel,
     emptyLabel,
-    includeRoot,
+    includeDefault,
     includeNextStory,
     includeStoryPlay,
   ]);
@@ -324,8 +309,6 @@ export function NavigationTargetSelect({
     ? `${listboxId}-option-${activeIndex}`
     : undefined;
 
-  let previousGroup = null;
-
   return (
     <div className="navigation-target-select" style={style}>
       <div
@@ -349,15 +332,12 @@ export function NavigationTargetSelect({
         {open ? (
           <div id={listboxId} className="navigation-listbox-popover" role="listbox" tabIndex={-1}>
             {options.map((option) => {
-              const groupChanged = option.group && option.group !== previousGroup;
-              if (option.group) previousGroup = option.group;
               const optionIndex = selectableOptions.findIndex((candidate) => candidate.value === option.value);
               const isActive = optionIndex === activeIndex;
               const isSelected = option.value === selectedValue;
               const Icon = iconForKind(option.kind);
               return (
-                <div key={`${option.group ?? 'top'}:${option.value || 'empty'}`}>
-                  {groupChanged ? <div className="navigation-listbox-group">{option.group}</div> : null}
+                <div key={`${option.value || 'empty'}:${option.label}`}>
                   <button
                     type="button"
                     role="option"
@@ -380,18 +360,6 @@ export function NavigationTargetSelect({
           </div>
         ) : null}
       </div>
-      {resolvedDestinationLabel ? (
-        <div
-          style={{
-            fontSize: 11,
-            color: 'var(--color-text-tertiary)',
-            marginTop: 4,
-            paddingLeft: 6,
-          }}
-        >
-          ↳ {resolvedDestinationLabel}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -183,7 +183,7 @@ export function EndSequenceEditor({
                         allMenus={allMenus}
                         allStories={allStories}
                         currentStoryId={node.id}
-                        emptyLabel="Même destination que la fin d'histoire"
+                        emptyLabel="Comme à la fin de l'histoire"
                       />
                     </div>
                     {continuationMenu ? (
@@ -216,7 +216,7 @@ export function EndSequenceEditor({
                     allStories={allStories}
                     currentStoryId={node.id}
                     includeNone
-                    emptyLabel="Même destination que l'histoire"
+                    emptyLabel="Comme à la fin de l'histoire"
                   />
                 </div>
                 <label className="sequence-control" style={{ justifyContent: 'flex-end' }}>
@@ -318,7 +318,7 @@ export function EndSequenceEditor({
               allStories={allStories}
               currentStoryId={node.id}
               includeNone
-              emptyLabel="Même destination que l'histoire"
+              emptyLabel="Comme à la fin de l'histoire"
             />
           </div>
           <label className="sequence-control" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
