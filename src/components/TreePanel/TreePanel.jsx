@@ -61,6 +61,7 @@ export function TreePanel({
   pathAudit, validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
   showNavigationBadges = true,
+  showTreeGuides = true,
 }) {
   const { activeDropZone, dropOnNode } = useMediaTransfer();
   const [ctxMenu, setCtxMenu] = useState(null);
@@ -777,7 +778,7 @@ export function TreePanel({
           ) : null}
           <div
             ref={treeScrollRef}
-            className="tree"
+            className={`tree${showTreeGuides ? '' : ' tree--no-guides'}`}
             tabIndex={0}
             onKeyDown={handleKeyDown}
             onContextMenu={(e) => handleContextMenu(e, 'root', 'root-bg')}

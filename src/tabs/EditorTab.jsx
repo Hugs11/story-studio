@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TreePanel } from '../components/TreePanel/TreePanel';
-import { TreeReturnsToggle } from '../components/TreePanel/TreeReturnsToggle';
+import { TreeDisplayPopover } from '../components/TreePanel/TreeDisplayPopover';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
-import { KEYS, read, write } from '../store/persistentSettings';
+import { KEYS } from '../store/persistentSettings';
+import { usePersistentState } from '../hooks/usePersistentState';
+
+const BOOL_CODEC = {
+  decode: (value) => value === 'true',
+  encode: (value) => (value ? 'true' : 'false'),
+};
 
 function startResize(e, panelClass, cssVar, direction) {
   e.preventDefault();
@@ -42,9 +48,16 @@ export function EditorTab({
   const { projectType } = project;
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
-  const [showNavigationBadges, setShowNavigationBadges] = useState(
-    () => read(KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES) !== 'false',
+  const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);
+  const [showNavigationBadges, setShowNavigationBadges] = usePersistentState(
+    KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES,
+    true,
+    {
+      decode: (value) => value !== 'false',
+      encode: (value) => (value ? 'true' : 'false'),
+    },
   );
+  const [showTreeGuides, setShowTreeGuides] = usePersistentState(KEYS.TREE_SHOW_GUIDES, true, BOOL_CODEC);
   const skipIdSyncRef = useRef(false);
 
   const handleSimulateNode = useCallback((nodeId) => {
@@ -70,11 +83,6 @@ export function EditorTab({
       onUpdateItem(fields, nodeId);
     }
   }, [onUpdateMedia, onUpdateMenu, onUpdateItem]);
-
-  const handleShowNavigationBadgesChange = useCallback((next) => {
-    setShowNavigationBadges(next);
-    write(KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES, next ? 'true' : 'false');
-  }, []);
 
   useEffect(() => {
     if (skipIdSyncRef.current) {
@@ -108,9 +116,13 @@ export function EditorTab({
           <div className="panel-left-header">
             <span>Structure</span>
             {projectType === 'pack' ? (
-              <TreeReturnsToggle
-                enabled={showNavigationBadges}
-                onChange={handleShowNavigationBadgesChange}
+              <TreeDisplayPopover
+                open={treeDisplayOpen}
+                onOpenChange={setTreeDisplayOpen}
+                showNavigationBadges={showNavigationBadges}
+                onShowNavigationBadgesChange={setShowNavigationBadges}
+                showGuides={showTreeGuides}
+                onShowGuidesChange={setShowTreeGuides}
               />
             ) : null}
           </div>
@@ -118,6 +130,7 @@ export function EditorTab({
             project={project}
             projectType={projectType}
             showNavigationBadges={showNavigationBadges}
+            showTreeGuides={showTreeGuides}
             selectedId={selectedId}
             onSelect={onSelect}
             onSelectionChange={handleSelectionChange}

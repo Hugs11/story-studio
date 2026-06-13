@@ -38,6 +38,12 @@
   pointer-events: none;
 }
 
+.tree--no-guides .tree-depth-guides,
+.tree--no-guides .tree-active-branch-guide,
+.tree--no-guides .tree-hover-branch-guide {
+  display: none;
+}
+
 .tree-item:hover .tree-depth-guides {
   background-image: repeating-linear-gradient(
     to right,
