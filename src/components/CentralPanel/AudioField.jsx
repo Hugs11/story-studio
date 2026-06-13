@@ -14,7 +14,7 @@ const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal
   .then((m) => ({ default: m.AudioEditorModal })));
 import { GenerateVoiceModal } from '../GenerateVoiceModal/GenerateVoiceModal';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
-import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Speech } from '../icons/LucideLocal';
+import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Play, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 
@@ -318,7 +318,7 @@ export function AudioField({
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
                       <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
                     </div>
-                  : <div className="play-arrow" />
+                  : <Play className="play-icon" strokeWidth={2.2} absoluteStrokeWidth />
                 }
               </button>
             </Tooltip>

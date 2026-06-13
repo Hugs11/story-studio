@@ -23,9 +23,6 @@ function canDeleteFromWorkspace(filePath, workspaceDir) {
   return DELETABLE_WORKSPACE_DIRS.some((d) => file.startsWith(`${dir}/${d}/`));
 }
 
-const navigationSelectWrapStyle = { maxWidth: 280, width: '100%' };
-const fieldDescStyle = { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 };
-
 export function EndNodeEditor({
   endNodeName = 'Message de fin',
   nightModeAudio,
@@ -102,61 +99,75 @@ export function EndNodeEditor({
       </div>
 
       <div className="card">
-        <div className="card-title">Pendant le message de fin</div>
-        <div className="field-row" style={{ marginBottom: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span className="field-label">Accueil</span>
-            <div style={fieldDescStyle}>
+        <div className="card-title-row">
+          <div className="card-title">Pendant le message de fin</div>
+        </div>
+        <div className="editor-setting-stack">
+          <div className="editor-setting-row">
+            <div className="editor-setting-copy">
+              <div className="editor-setting-title">Bouton Accueil</div>
+              <div className="editor-setting-desc">
               Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du message de fin.
+              </div>
             </div>
-          </div>
-          <div style={navigationSelectWrapStyle}>
-            <NavigationTargetSelect
-              value={nightModeHomeReturn ?? ''}
-              onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
-              allMenus={allMenus}
-              allStories={allStories}
-              currentStoryId={null}
-              emptyLabel="Suit le retour de l'histoire"
-              resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
-            />
+            <div className="editor-setting-control">
+              <NavigationTargetSelect
+                value={nightModeHomeReturn ?? ''}
+                onChange={(value) => onUpdateNightModeHomeReturn?.(value)}
+                allMenus={allMenus}
+                allStories={allStories}
+                currentStoryId={null}
+                emptyLabel="Suit le retour de l'histoire"
+                resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">Après le message de fin</div>
-        <div className="field-row" style={{ marginBottom: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span className="field-label">À la fin du message de fin, retour vers</span>
-            <div style={fieldDescStyle}>
+        <div className="card-title-row">
+          <div className="card-title">Après le message de fin</div>
+        </div>
+        <div className="editor-setting-stack">
+          <div className="editor-setting-row">
+            <div className="editor-setting-copy">
+              <div className="editor-setting-title">Destination finale</div>
+              <div className="editor-setting-desc">
               Où l'enfant est redirigé après la lecture du message de fin.
+              </div>
             </div>
-          </div>
-          <div style={navigationSelectWrapStyle}>
-            <NavigationTargetSelect
-              value={nightModeReturn ?? ''}
-              onChange={(value) => onUpdateNightModeReturn?.(value)}
-              allMenus={allMenus}
-              allStories={allStories}
-              currentStoryId={null}
-              emptyLabel="Suit la fin de l'histoire"
-              resolvedDestinationLabel={nightModeReturnResolvedLabel}
-            />
+            <div className="editor-setting-control">
+              <NavigationTargetSelect
+                value={nightModeReturn ?? ''}
+                onChange={(value) => onUpdateNightModeReturn?.(value)}
+                allMenus={allMenus}
+                allStories={allStories}
+                currentStoryId={null}
+                emptyLabel="Suit la fin de l'histoire"
+                resolvedDestinationLabel={nightModeReturnResolvedLabel}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">Mode nuit</div>
-        <div className="field-row" style={{ marginBottom: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span className="field-label">Activer</span>
-            <div style={fieldDescStyle}>
+        <div className="card-title-row">
+          <div className="card-title">Mode nuit</div>
+        </div>
+        <div className="editor-setting-stack">
+          <div className="editor-setting-row is-toggle-row">
+            <div className="editor-setting-copy">
+              <div className="editor-setting-title">Activer</div>
+              <div className="editor-setting-desc">
               Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage, le niveau sonore et le nombre d'histoires que l'enfant peut écouter si le mode nuit est activé sur la Lunii et cette option activée.
+              </div>
+            </div>
+            <div className="editor-setting-control">
+              <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
             </div>
           </div>
-          <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
         </div>
       </div>
 
