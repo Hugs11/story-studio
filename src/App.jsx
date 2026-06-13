@@ -244,8 +244,9 @@ function AppContent() {
   }, [keyboardShortcuts]);
 
   useEffect(() => {
-    applyThemePreference(themePreference);
+    const cleanup = applyThemePreference(themePreference);
     saveThemePreference(themePreference);
+    return cleanup;
   }, [themePreference]);
 
   const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
