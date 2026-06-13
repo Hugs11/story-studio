@@ -11,16 +11,16 @@ import {
 
 const EM_DASH = '—';
 
-test('missingField default (masculine) uses an em-dash and "manquant"', () => {
-  assert.equal(missingField('Menu racine', 'audio intro'), `Menu racine ${EM_DASH} audio intro manquant`);
+test('missingField formats a short action with an em-dash', () => {
+  assert.equal(missingField('Menu racine', 'audio intro'), `Menu racine ${EM_DASH} Audio d'accueil à ajouter`);
 });
 
-test('missingField with { feminine: true } uses "manquante"', () => {
-  assert.equal(missingField('X', 'image', { feminine: true }), `X ${EM_DASH} image manquante`);
+test('missingField keeps the feminine option accepted for callers', () => {
+  assert.equal(missingField('X', 'image', { feminine: true }), `X ${EM_DASH} Image à ajouter`);
 });
 
-test('brokenField formats with em-dash and "introuvable ou inaccessible"', () => {
-  assert.equal(brokenField('X', 'audio'), `X ${EM_DASH} audio introuvable ou inaccessible`);
+test('brokenField formats a concise missing file message', () => {
+  assert.equal(brokenField('X', 'audio'), `X ${EM_DASH} Fichier audio introuvable`);
 });
 
 test('missingTarget renders the target kind after "destination"', () => {
@@ -28,19 +28,19 @@ test('missingTarget renders the target kind after "destination"', () => {
 });
 
 test('emptyTarget renders the target kind after "destination"', () => {
-  assert.equal(emptyTarget('X', 'de retour'), `X ${EM_DASH} destination de retour vide ou non jouable`);
+  assert.equal(emptyTarget('X', 'de retour'), `X ${EM_DASH} destination de retour vide`);
 });
 
 test('VALIDATION_MESSAGES.duplicateId quotes the count and the offending id with an em-dash', () => {
   assert.equal(
     VALIDATION_MESSAGES.duplicateId(3, 'abc'),
-    `Identifiant duplique ${EM_DASH} 3 elements partagent l'id abc`,
+    `Identifiant dupliqué ${EM_DASH} 3 éléments partagent l'id abc`,
   );
 });
 
 test('VALIDATION_MESSAGES.emptyMenu uses the em-dash separator', () => {
   assert.equal(
     VALIDATION_MESSAGES.emptyMenu('Menu / Sous-menu'),
-    `Menu / Sous-menu ${EM_DASH} collection vide`,
+    `Menu / Sous-menu ${EM_DASH} Histoire à ajouter`,
   );
 });

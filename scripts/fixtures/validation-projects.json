@@ -39,9 +39,9 @@
     },
     {
       "name": "pack_missing_story_audio",
-      "comment": "Story sans audio doit bloquer JS et Rust (libelles differents : JS dit 'histoire manquante', Rust dit 'audio manquant').",
+      "comment": "Story sans audio doit bloquer JS et Rust (libelles differents : JS dit 'Histoire a ajouter', Rust dit 'audio manquant').",
       "expect": "fail",
-      "jsKeywords": ["histoire", "manquant"],
+      "jsKeywords": ["histoire", "ajouter"],
       "rustKeywords": ["audio"],
       "project": {
         "projectName": "Pack OK",
@@ -124,7 +124,7 @@
       "name": "pack_autoplay_story_missing_selection_audio",
       "comment": "Story autoplay avec image mais sans audio de selection doit bloquer : l'audio de selection est requis dans l'UI.",
       "expect": "fail",
-      "jsKeywords": ["audio titre"],
+      "jsKeywords": ["audio de sélection"],
       "rustKeywords": ["audio titre"],
       "project": {
         "projectName": "Pack autoplay no title audio",
@@ -157,7 +157,7 @@
       "name": "simple_missing_root_audio",
       "comment": "Projet simple sans audio racine doit bloquer JS et Rust.",
       "expect": "fail",
-      "jsKeywords": ["audio intro"],
+      "jsKeywords": ["audio d'accueil"],
       "rustKeywords": ["Audio racine"],
       "project": {
         "projectName": "Simple no audio",

@@ -43,7 +43,7 @@ test('warns and short-circuits when no projectType is set', () => {
   const issues = getProjectValidationIssues(project);
   const warning = find(issues, (i) => i.id === 'root' && i.status === 'warning');
   assert.ok(warning, `un warning root est attendu, reçu: ${JSON.stringify(issues)}`);
-  assert.match(warning.text, /Aucun type de projet/i);
+  assert.match(warning.text, /Type de projet à choisir/i);
   // L'absence de projectType court-circuite : on n'obtient pas d'autres issues structurelles.
   assert.equal(issues.length, 1);
 });
@@ -58,7 +58,7 @@ test('reports an error listing duplicated entry IDs and how many share them', ()
   });
 
   const issues = getProjectValidationIssues(project);
-  const dup = find(issues, (i) => i.status === 'error' && /duplique/i.test(i.text));
+  const dup = find(issues, (i) => i.status === 'error' && /dupliqué/i.test(i.text));
   assert.ok(dup, 'erreur de duplication attendue');
   assert.match(dup.text, /shared/);
   assert.match(dup.text, /3/); // count = 3
@@ -72,15 +72,15 @@ test('reports an error when an entry uses the reserved id "root"', () => {
   });
 
   const issues = getProjectValidationIssues(project);
-  const reservedAtRoot = find(issues, (i) => i.id === 'root' && /Identifiant reserve utilise/i.test(i.text));
+  const reservedAtRoot = find(issues, (i) => i.id === 'root' && /Identifiant réservé à corriger/i.test(i.text));
   assert.ok(reservedAtRoot, `erreur sur l'ID racine réservé attendue, reçu: ${JSON.stringify(issues)}`);
 });
 
-test('warns with "Menu racine — audio intro manquant" when rootAudio is missing', () => {
+test('warns with "Menu racine — Audio d’accueil à ajouter" when rootAudio is missing', () => {
   const project = buildProject({ rootAudio: '' });
 
   const issues = getProjectValidationIssues(project);
-  const missingAudio = find(issues, (i) => i.text === 'Menu racine — audio intro manquant');
+  const missingAudio = find(issues, (i) => i.text === "Menu racine — Audio d'accueil à ajouter");
   assert.ok(missingAudio, `warning audio intro attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
   assert.equal(missingAudio.status, 'warning');
 });
@@ -89,13 +89,13 @@ test('pack project missing thumbnailImage hints at the « même image » checkbo
   const project = buildProject({ thumbnailImage: '' });
 
   const issues = getProjectValidationIssues(project);
-  const thumb = find(issues, (i) => /image bibliothèque manquante/.test(i.text));
+  const thumb = find(issues, (i) => /Image bibliothèque à ajouter/.test(i.text));
   assert.ok(thumb, 'warning image bibliothèque attendu');
   assert.match(thumb.text, /cocher « même image » ou en choisir une/);
   assert.equal(thumb.status, 'warning');
 });
 
-test('warns "histoire manquante" when a story has no audio', () => {
+test('warns "Histoire à ajouter" when a story has no audio', () => {
   const project = buildProject({
     rootEntries: [
       { id: 'story-x', type: 'story', name: 'Histoire X', audio: '' },
@@ -103,12 +103,12 @@ test('warns "histoire manquante" when a story has no audio', () => {
   });
 
   const issues = getProjectValidationIssues(project);
-  const missing = find(issues, (i) => i.id === 'story-x' && /histoire manquante/.test(i.text));
-  assert.ok(missing, `warning « histoire manquante » attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
+  const missing = find(issues, (i) => i.id === 'story-x' && /Histoire à ajouter/.test(i.text));
+  assert.ok(missing, `warning « Histoire à ajouter » attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
   assert.equal(missing.status, 'warning');
 });
 
-test('warns "collection vide" for a menu with no playable descendant', () => {
+test('warns "Histoire à ajouter" for a menu with no playable descendant', () => {
   const project = buildProject({
     rootEntries: [
       {
@@ -124,16 +124,16 @@ test('warns "collection vide" for a menu with no playable descendant', () => {
   });
 
   const issues = getProjectValidationIssues(project);
-  const empty = find(issues, (i) => i.id === 'menu-empty' && /collection vide/.test(i.text));
+  const empty = find(issues, (i) => i.id === 'menu-empty' && /Histoire à ajouter/.test(i.text));
   assert.ok(empty, `warning emptyMenu attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
   assert.equal(empty.status, 'warning');
 });
 
-test('warns "Le pack ne contient aucune histoire." when a pack project has no playable entry', () => {
+test('warns "Histoire à ajouter dans le pack." when a pack project has no playable entry', () => {
   const project = buildProject({ rootEntries: [] });
 
   const issues = getProjectValidationIssues(project);
-  const empty = find(issues, (i) => i.text === 'Le pack ne contient aucune histoire.');
+  const empty = find(issues, (i) => i.text === 'Histoire à ajouter dans le pack.');
   assert.ok(empty, `warning emptyPack attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
   assert.equal(empty.status, 'warning');
 });
@@ -204,11 +204,11 @@ test('a story with controlSettings.autoplay = true still requires selection imag
   const issues = getProjectValidationIssues(project);
   const aboutStory = issues.filter((i) => i.id === 'story-autoplay');
   assert.ok(
-    aboutStory.some((issue) => /image manquante/.test(issue.text)),
+    aboutStory.some((issue) => /Image à ajouter/.test(issue.text)),
     `warning image attendu pour une histoire autoplay, reçu: ${JSON.stringify(aboutStory)}`,
   );
   assert.ok(
-    aboutStory.some((issue) => /audio titre manquant/.test(issue.text)),
+    aboutStory.some((issue) => /Audio de sélection à ajouter/.test(issue.text)),
     `warning audio titre attendu pour une histoire autoplay, reçu: ${JSON.stringify(aboutStory)}`,
   );
 });
@@ -231,11 +231,11 @@ test('a story with controlSettings.autoplay = true still requires selection audi
   const issues = getProjectValidationIssues(project);
   const aboutStory = issues.filter((i) => i.id === 'story-autoplay-audio');
   assert.ok(
-    aboutStory.some((issue) => /audio titre manquant/.test(issue.text)),
+    aboutStory.some((issue) => /Audio de sélection à ajouter/.test(issue.text)),
     `warning audio titre attendu pour une histoire autoplay avec image, reçu: ${JSON.stringify(aboutStory)}`,
   );
   assert.equal(
-    aboutStory.some((issue) => /image manquante/.test(issue.text)),
+    aboutStory.some((issue) => /Image à ajouter/.test(issue.text)),
     false,
     `aucun warning image attendu quand l'image est presente, reçu: ${JSON.stringify(aboutStory)}`,
   );

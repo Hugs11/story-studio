@@ -4,12 +4,28 @@
 
 const SEPARATOR = ' — ';
 
+const FIELD_LABELS = Object.freeze({
+  audio: 'Audio',
+  'audio intro': "Audio d'accueil",
+  'audio titre': 'Audio de sélection',
+  histoire: 'Histoire',
+  image: 'Image',
+  'image de couverture': 'Image de couverture',
+  'image bibliothèque': 'Image bibliothèque',
+  zip: 'Archive ZIP',
+});
+
+function fieldLabel(field) {
+  return FIELD_LABELS[field] || String(field || 'Élément');
+}
+
 export function missingField(label, field, { feminine = false } = {}) {
-  return `${label}${SEPARATOR}${field} ${feminine ? 'manquante' : 'manquant'}`;
+  void feminine;
+  return `${label}${SEPARATOR}${fieldLabel(field)} à ajouter`;
 }
 
 export function brokenField(label, field) {
-  return `${label}${SEPARATOR}${field} introuvable ou inaccessible`;
+  return `${label}${SEPARATOR}Fichier ${fieldLabel(field).toLowerCase()} introuvable`;
 }
 
 export function missingTarget(label, what) {
@@ -17,18 +33,18 @@ export function missingTarget(label, what) {
 }
 
 export function emptyTarget(label, what) {
-  return `${label}${SEPARATOR}destination ${what} vide ou non jouable`;
+  return `${label}${SEPARATOR}destination ${what} vide`;
 }
 
 export const VALIDATION_MESSAGES = Object.freeze({
-  noProjectType: 'Aucun type de projet selectionne.',
-  importedTransitionUnmodeled: 'Transition importee non modelisee.',
-  rootReservedId: "Identifiant reserve utilise — aucun element ne doit porter l'id root",
-  missingInternalId: (label) => `${label}${SEPARATOR}identifiant interne manquant`,
-  unsupportedEntryType: (label) => `${label}${SEPARATOR}type d'element non pris en charge`,
-  reservedIdInvalid: (label) => `${label}${SEPARATOR}identifiant reserve invalide`,
-  duplicateId: (count, entryId) => `Identifiant duplique${SEPARATOR}${count} elements partagent l'id ${entryId}`,
-  storyReturnLost: (label) => `${label}${SEPARATOR}retour de fin introuvable pour cette histoire`,
-  emptyMenu: (label) => `${label}${SEPARATOR}collection vide`,
-  emptyPack: 'Le pack ne contient aucune histoire.',
+  noProjectType: 'Type de projet à choisir.',
+  importedTransitionUnmodeled: 'Transition importée à vérifier.',
+  rootReservedId: "Identifiant réservé à corriger — aucun élément ne doit porter l'id root",
+  missingInternalId: (label) => `${label}${SEPARATOR}Identifiant interne à corriger`,
+  unsupportedEntryType: (label) => `${label}${SEPARATOR}Type d'élément non pris en charge`,
+  reservedIdInvalid: (label) => `${label}${SEPARATOR}Identifiant réservé à corriger`,
+  duplicateId: (count, entryId) => `Identifiant dupliqué${SEPARATOR}${count} éléments partagent l'id ${entryId}`,
+  storyReturnLost: (label) => `${label}${SEPARATOR}Retour de fin introuvable`,
+  emptyMenu: (label) => `${label}${SEPARATOR}Histoire à ajouter`,
+  emptyPack: 'Histoire à ajouter dans le pack.',
 });

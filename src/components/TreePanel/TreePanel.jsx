@@ -35,14 +35,13 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
-import { getItemValidationStatus, getMenuValidationStatus, getRootValidationStatus, getEndNodeValidationStatus } from '../../store/projectValidation';
 import {
   TREE_COLOR_PALETTE,
   countDescendants,
   hasSelectedAncestor,
   resolveDropTargetForNode,
 } from '../tree/treeOperations';
-import { computeBadgesData, formatBadgeTitle, getStrongestStatus } from '../tree/treeNavigationBadges';
+import { computeBadgesData, formatBadgeTitle } from '../tree/treeNavigationBadges';
 import {
   getGeneratedEndNodeHomeNavigation,
   getGeneratedEndNodeReturnNavigation,
@@ -101,11 +100,6 @@ export function TreePanel({
     }
     return map;
   }, [validationIssues]);
-
-  const getNodeStatus = useCallback((entry, getFallbackStatus) => {
-    const issueStatus = getStrongestStatus(issuesById.get(entry?.id) ?? []);
-    return issueStatus ?? getFallbackStatus();
-  }, [issuesById]);
 
   const flatNodes = useMemo(() => {
     const nodes = [{ id: 'root', type: 'root', level: 0 }];
@@ -672,9 +666,6 @@ export function TreePanel({
                 hoverGuide,
                 guideScopeIdsById,
               })}
-              status={getNodeStatus(entry, () => entry.type === 'menu'
-                ? getMenuValidationStatus(entry, pathAudit)
-                : getItemValidationStatus(entry, pathAudit, project))}
               dragging={!!activeId}
               containerDroppableId={entry.type === 'menu' ? `container:${entry.id}` : null}
               navigationBadges={navigationBadgesById.get(entry.id) ?? EMPTY_BADGES}
@@ -804,7 +795,6 @@ export function TreePanel({
               level={0}
               selected={selectedIds.has('root')}
               color={project.treeColor}
-              status={getNodeStatus({ id: 'root' }, () => getRootValidationStatus(project, pathAudit))}
               dragging={!!activeId}
               containerDroppableId="container:root"
               navigationBadges={showNavigationBadgeColumn && project?.nativeGraph?.preserveForRoundTrip === true ? [{
@@ -835,7 +825,6 @@ export function TreePanel({
                   label={`${project.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`}
                   level={0}
                   selected={selectedIds.has(END_NODE_ID)}
-                  status={getNodeStatus({ id: END_NODE_ID }, () => getEndNodeValidationStatus(project, pathAudit))}
                   dragging={false}
                   navigationBadges={showNavigationBadgeColumn ? endNodeNavigationBadges : EMPTY_BADGES}
                   showNavigationBadgeColumn={showNavigationBadgeColumn}

@@ -927,7 +927,7 @@ function AppContent() {
     canGenerate,
     canUndo: store.canUndo,
     canRedo: store.canRedo,
-    hasValidationErrors: errors > 0,
+    hasValidationErrors: totalIssues > 0,
   });
 
   const optionsTabProps = {

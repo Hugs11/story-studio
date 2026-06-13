@@ -43,7 +43,7 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'tabOptions',       scope: 'general', label: 'Onglet options',                     defaultShortcut: { ctrl: true, key: '4', code: 'Digit4' }, aliases: [{ ctrl: true, key: '4', code: 'Numpad4' }] },
   { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
   { id: 'treeSearch',       scope: 'general', label: 'Rechercher dans la structure',        defaultShortcut: { ctrl: true, key: 'f', code: 'KeyF' } },
-  { id: 'toggleValidation', scope: 'general', label: 'Ouvrir la validation',                defaultShortcut: { ctrl: true, shift: true, key: 'e', code: 'KeyE' } },
+  { id: 'toggleValidation', scope: 'general', label: 'Ouvrir les éléments à corriger',      defaultShortcut: { ctrl: true, shift: true, key: 'e', code: 'KeyE' } },
   { id: 'undo',             scope: 'general', label: 'Annuler',                             defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
   { id: 'redo',             scope: 'general', label: 'Rétablir',                            defaultShortcut: { ctrl: true, shift: true, key: 'z', code: 'KeyZ' } },
 

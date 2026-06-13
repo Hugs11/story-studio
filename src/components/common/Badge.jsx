@@ -18,7 +18,3 @@ export function Badge({ type }) {
     </span>
   );
 }
-
-export function StatusDot({ status }) {
-  return <span className={`status-dot ${status}`} />;
-}
