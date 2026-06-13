@@ -13,7 +13,13 @@ const TITLE_CONTROL_DEFAULTS = {
 };
 
 const PLAY_CONTROLS = [
-  { key: 'pause',    label: 'Bouton Pause',        tip: "L'enfant peut mettre l'histoire en pause en appuyant sur le bouton pause.",            def: false },
+  {
+    key: 'pause',
+    label: 'Bouton Pause',
+    onText: "L'enfant peut utiliser le bouton pause pendant l'histoire.",
+    offText: "L'enfant ne peut pas utiliser le bouton pause pendant l'histoire.",
+    def: false,
+  },
 ];
 
 const TITLE_CONTROLS = [
@@ -24,8 +30,10 @@ const TITLE_CONTROLS = [
   { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pour parcourir les autres histoires.",   def: true },
 ];
 
+let duringPlaySelectionAdvancedOpen = false;
+
 export function DuringPlaySection({ node, project = null, allMenus = [], allStories = [], parentMenu = null, onUpdate }) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(duringPlaySelectionAdvancedOpen);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
   const homeDefaultTargetName = parentMenu?.name || "le menu d'accueil du pack";
@@ -42,21 +50,27 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
     allMenus,
     allStories,
   });
+  const pauseEnabled = controls.pause ?? PLAY_CONTROLS[0].def;
+  const homeEnabled = !node.returnOnHomeNone;
 
   return (
     <div className="card during-play-card">
       <div className="card-title">Pendant l'histoire</div>
+      <div className="during-play-help">
+        Choisis les boutons utilisables pendant la lecture de l'histoire.
+      </div>
 
       <div className="during-play-stack">
         <div className="sequence-controls during-play-toggles">
-          {PLAY_CONTROLS.map(({ key, label, tip, def }) => (
+          {PLAY_CONTROLS.map(({ key, label, onText, offText, def }) => (
             <label key={key} className="sequence-control">
               <Toggle
                 on={controls[key] ?? def}
                 onChange={(v) => onUpdate({ controlSettings: { ...controls, [key]: v } })}
+                ariaLabel={label}
               />
-              <Tooltip text={tip} placement="above" style={{ flex: 1 }}>
-                <span>{label}</span>
+              <Tooltip text={pauseEnabled ? onText : offText} placement="above" style={{ minWidth: 0 }}>
+                <span className="during-play-control-title">{label}</span>
               </Tooltip>
             </label>
           ))}
@@ -65,56 +79,62 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
         <div className="during-play-home">
           <div className="sequence-control during-play-home-head">
             <Toggle
-              on={!node.returnOnHomeNone}
+              on={homeEnabled}
               onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
+              ariaLabel="Bouton Accueil"
             />
             <Tooltip
-              text={node.returnOnHomeNone
-                ? "Le bouton Accueil est désactivé pendant la lecture — l'enfant ne peut pas quitter l'histoire."
-                : `Destination quand l'enfant appuie sur Accueil pendant la lecture : retour direct vers ${homeDefaultTargetName}${endNodeBypassNote}.`}
+              text={homeEnabled
+                ? "L'enfant peut appuyer sur le bouton Accueil pendant l'histoire."
+                : "L'enfant ne peut pas appuyer sur le bouton Accueil pendant l'histoire."}
               placement="above"
+              style={{ minWidth: 0 }}
             >
-              <span>Bouton Accueil</span>
+              <span className="during-play-control-title">Bouton Accueil</span>
             </Tooltip>
-            {!node.returnOnHomeNone ? (
-              <div className="during-play-home-select">
-                <NavigationTargetSelect
-                  value={node.returnOnHome ?? ''}
-                  onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
-                  allMenus={allMenus}
-                  allStories={allStories}
-                  currentStoryId={node.id}
-                  emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
-                  includeRoot={false}
-                  includeStoryPlay={false}
-                  size="compact"
-                  resolvedDestinationLabel={null}
-                />
-              </div>
+            {homeEnabled ? (
+              <>
+                <span className="during-play-destination-label">Au retour</span>
+                <div className="during-play-home-select">
+                  <NavigationTargetSelect
+                    value={node.returnOnHome ?? ''}
+                    onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
+                    allMenus={allMenus}
+                    allStories={allStories}
+                    currentStoryId={node.id}
+                    emptyLabel={homeResolvedDestinationLabel || 'Retour vers la destination de lecture'}
+                    includeRoot={false}
+                    includeStoryPlay={false}
+                    size="compact"
+                    resolvedDestinationLabel={null}
+                  />
+                </div>
+              </>
             ) : null}
           </div>
         </div>
       </div>
 
-      <div className="advanced-toggle-row">
-        <div className="advanced-toggle-copy">
-          <div className="field-label">Écran de sélection</div>
-          <div className="advanced-toggle-desc">
-            Boutons actifs pendant l'audio de sélection, avant que l'histoire ne commence.
-          </div>
-        </div>
-        <button
-          type="button"
-          className={`btn advanced-toggle-btn ${showAdvanced ? 'is-active' : ''}`}
-          aria-expanded={showAdvanced}
-          onClick={() => setShowAdvanced((v) => !v)}
-        >
-          Réglages avancés
-        </button>
-      </div>
+      <button
+        type="button"
+        className={`during-play-advanced-disclosure ${showAdvanced ? 'is-open' : ''}`}
+        aria-expanded={showAdvanced}
+        onClick={() => setShowAdvanced((v) => {
+          const next = !v;
+          duringPlaySelectionAdvancedOpen = next;
+          return next;
+        })}
+      >
+        <span className="during-play-advanced-chevron" aria-hidden="true">{showAdvanced ? '▾' : '▸'}</span>
+        <span>Réglages avancés</span>
+      </button>
 
       {showAdvanced && (
-        <div style={{ marginTop: 10 }}>
+        <div className="during-play-advanced-panel">
+          <div className="during-play-advanced-title">Écran de sélection</div>
+          <div className="during-play-advanced-desc">
+            Boutons actifs pendant l'audio de sélection, avant que l'histoire ne commence.
+          </div>
           <div className="sequence-controls">
             {TITLE_CONTROLS.map(({ key, label, tip, def }) => (
               <label key={key} className="sequence-control">

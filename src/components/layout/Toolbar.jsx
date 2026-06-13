@@ -4,9 +4,9 @@ import {
   FilePlus,
   FolderInput,
   FolderPlus,
-  Kanban,
   Mic,
   Package,
+  PanelLeft,
   SlidersHorizontal,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -160,7 +160,7 @@ export function Toolbar({
               active={projectMenuOpen}
               trailing={<span className="chrome-project-caret" aria-hidden="true">▾</span>}
             >
-              <ToolbarIcon Icon={Kanban} />
+              <ToolbarIcon Icon={PanelLeft} />
             </ToolbarButton>
           )}
         />

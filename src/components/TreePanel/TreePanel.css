@@ -153,6 +153,27 @@
   border-radius: 4px;
 }
 
+.tree-item--menu:not(.active) {
+  color: var(--text);
+}
+
+.tree-item--menu:not(.active)::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.tree-item--menu:not(.active) .ti-label {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+}
+
 /* ── Hover — two separate zones ─────────────────────────────────────────── */
 /* Body hover: subtle tint when hovering the row (but not the chevron) */
 .tree-item:hover .tree-item-body {
@@ -268,13 +289,14 @@
 /* Count badge: shows total direct children when folder is collapsed */
 .badge-count {
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: var(--text-caption);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
   color: var(--muted);
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
 }
 
 .badge-zip {

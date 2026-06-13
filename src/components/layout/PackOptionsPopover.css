@@ -1,21 +1,6 @@
 .pack-options-wrap {
-  --pack-options-accent: #6548d8;
   position: relative;
   display: inline-flex;
-}
-
-:root[data-theme="light"] .pack-options-wrap {
-  --pack-options-accent: #6548d8;
-}
-
-:root[data-theme="dark"] .pack-options-wrap {
-  --pack-options-accent: #9a8cff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .pack-options-wrap {
-    --pack-options-accent: #9a8cff;
-  }
 }
 
 .pack-options-wrap.is-open .chrome-pack-options-caret {
@@ -38,11 +23,11 @@
   right: 0;
   width: 280px;
   padding: 10px;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 8px;
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
+  background: var(--bg1);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
   animation: pack-options-popover-in 0.12s ease-out;
 }
 
@@ -53,10 +38,10 @@
   top: -7px;
   width: 12px;
   height: 12px;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   border-right: 0;
   border-bottom: 0;
-  background: var(--color-background-primary);
+  background: var(--bg1);
   transform: rotate(45deg);
 }
 
@@ -82,13 +67,14 @@
 }
 
 .pack-options-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
 }
 
 .pack-options-subtitle {
-  color: var(--color-text-tertiary);
-  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
   line-height: 1.35;
 }
 
@@ -104,9 +90,10 @@
 .pack-options-section-title {
   margin: 0 2px 6px;
   color: var(--color-text-tertiary);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.11em;
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
   line-height: 1.2;
   text-transform: uppercase;
 }
@@ -144,6 +131,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--text-control);
+  font-weight: var(--weight-medium);
 }

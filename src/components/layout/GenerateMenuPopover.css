@@ -19,12 +19,12 @@
   top: calc(100% + 12px);
   width: 290px;
   padding: 10px;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 8px;
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38);
-  animation: chrome-generate-menu-in 0.12s ease-out;
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
+  background: var(--bg1);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  animation: chrome-generate-menu-in var(--dur-fast) ease-out;
 }
 
 .chrome-generate-menu::before {
@@ -34,10 +34,10 @@
   top: -7px;
   width: 12px;
   height: 12px;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   border-right: 0;
   border-bottom: 0;
-  background: var(--color-background-primary);
+  background: var(--bg1);
   transform: rotate(45deg);
 }
 
@@ -57,7 +57,7 @@
   border: 0;
   background: transparent;
   color: var(--color-text-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 10px;
@@ -87,8 +87,8 @@
 }
 
 .chrome-generate-menu-item strong {
-  font-size: 12px;
-  font-weight: 650;
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
 }
 
 .chrome-generate-menu-item small {

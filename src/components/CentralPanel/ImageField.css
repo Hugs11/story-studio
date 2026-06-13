@@ -81,8 +81,8 @@
 }
 
 .image-drop.missing {
-  border-color: #E24B4A;
-  background: #FCEBEB22;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
 }
 
 .image-drop.filled {
@@ -233,9 +233,9 @@
   min-height: 30px;
   padding: 0 10px;
   border-radius: 7px;
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--control-text-muted);
+  border: 1px solid var(--accent-2-border);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -247,15 +247,15 @@
 }
 
 .image-gen-btn:hover:not(:disabled) {
-  background: var(--control-bg-hover);
-  border-color: var(--control-border-hover);
-  color: var(--control-text);
+  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
+  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
+  color: var(--accent-2-text);
 }
 
 .image-gen-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  box-shadow: var(--ring);
 }
 
 .image-gen-btn:disabled {
@@ -266,15 +266,15 @@
 }
 
 .image-gen-btn--accent {
-  color: var(--color-accent);
-  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--control-border));
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--control-bg));
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
 }
 
 .image-gen-btn--accent:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 24%, var(--control-bg));
-  border-color: color-mix(in srgb, var(--color-accent) 80%, var(--control-border));
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
+  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
+  color: var(--accent-2-text);
 }
 
 .image-gen-btn--accent:disabled {
@@ -289,7 +289,7 @@
 }
 
 .image-gen-btn.is-generating {
-  color: var(--color-accent);
+  color: var(--accent-2-text);
 }
 
 .image-gen-spinner {
@@ -297,8 +297,8 @@
   height: 12px;
   display: inline-block;
   border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
-  border-top-color: var(--color-accent);
+  border: 2px solid color-mix(in srgb, var(--accent-2) 25%, transparent);
+  border-top-color: var(--accent-2);
   animation: image-gen-spin 0.7s linear infinite;
 }
 

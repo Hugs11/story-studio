@@ -7,7 +7,7 @@
 }
 
 .fd-tree-shell {
-  --fd-tree-line: color-mix(in srgb, var(--color-accent) 28%, var(--color-border-secondary));
+  --fd-tree-line: color-mix(in srgb, var(--borderLt) 70%, transparent);
   --fd-inline-indent: 14px;
   --fd-inline-elbow: 10px;
   display: flex;
@@ -356,8 +356,8 @@
   flex-shrink: 0;
   border-radius: 999px;
   padding: 2px 5px;
-  background: color-mix(in srgb, #ffc66d 18%, var(--color-background-secondary));
-  border: 1px solid color-mix(in srgb, #ffc66d 48%, var(--color-border-secondary));
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
   color: var(--color-text-primary);
   font-size: 9px;
   font-weight: 700;
@@ -393,7 +393,7 @@
 .fd-complete-legend-line {
   width: 28px;
   height: 0;
-  border-top: 1.5px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border-secondary));
+  border-top: 1.5px solid #43435a;
   flex-shrink: 0;
 }
 
@@ -409,7 +409,7 @@
 
 .fd-complete-legend-line--sequence {
   border-top-style: dashed;
-  border-top-color: color-mix(in srgb, #ffc66d 76%, white 14%);
+  border-top-color: var(--warning);
 }
 
 .fd-complete-stage {
@@ -424,11 +424,11 @@
   position: relative;
   touch-action: none;
   border: 1px solid color-mix(in srgb, var(--color-border-secondary) 70%, transparent);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     linear-gradient(var(--fd-stage-grid-color, color-mix(in srgb, var(--color-background-secondary) 92%, transparent)) 1px, transparent 1px),
     linear-gradient(90deg, var(--fd-stage-grid-color, color-mix(in srgb, var(--color-background-secondary) 92%, transparent)) 1px, transparent 1px),
-    radial-gradient(circle at top, var(--fd-stage-glow-color, color-mix(in srgb, var(--color-accent) 8%, transparent)), transparent 34%),
+    radial-gradient(circle at top, var(--fd-stage-glow-color, color-mix(in srgb, var(--warning) 6%, transparent)), transparent 34%),
     var(--fd-stage-background, color-mix(in srgb, var(--color-background-primary) 96%, black 4%));
   background-size: 28px 28px, 28px 28px, auto, auto;
   cursor: grab;
@@ -437,14 +437,14 @@
 :root:not([data-theme="dark"]) .fd-complete-stage {
   --fd-stage-background: #E7EBF0;
   --fd-stage-grid-color: rgba(112, 130, 150, 0.26);
-  --fd-stage-glow-color: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  --fd-stage-glow-color: color-mix(in srgb, var(--warning) 5%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .fd-complete-stage {
     --fd-stage-background: color-mix(in srgb, var(--color-background-primary) 96%, black 4%);
     --fd-stage-grid-color: color-mix(in srgb, var(--color-background-secondary) 92%, transparent);
-    --fd-stage-glow-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    --fd-stage-glow-color: color-mix(in srgb, var(--warning) 6%, transparent);
   }
 }
 
@@ -544,10 +544,10 @@
   max-width: min(760px, calc(100% - 88px));
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--color-border-secondary) 70%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-background-primary) 88%, black 12%);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg1) 88%, transparent);
+  backdrop-filter: blur(5px);
+  box-shadow: var(--shadow-md);
 }
 
 .fd-complete-zoom {
@@ -659,8 +659,8 @@
 
 .fd-complete-line {
   fill: none;
-  stroke: color-mix(in srgb, var(--color-accent) 34%, var(--color-border-secondary));
-  stroke-width: 1.2;
+  stroke: #43435a;
+  stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
   stroke-linecap: square;
   stroke-linejoin: miter;
@@ -693,7 +693,7 @@
 }
 
 .fd-complete-sibling-group--tone-3 {
-  --fd-sibling-tone: #ffc66d;
+  --fd-sibling-tone: var(--warning);
 }
 
 .fd-complete-sibling-group--tone-4 {
@@ -705,20 +705,20 @@
 }
 
 .fd-complete-line--story {
-  stroke: color-mix(in srgb, var(--color-accent) 24%, var(--color-border-secondary));
-  stroke-width: 0.95;
-  opacity: 0.72;
+  stroke: color-mix(in srgb, #43435a 78%, var(--borderLt));
+  stroke-width: 1.2;
+  opacity: 0.84;
 }
 
 .fd-complete-line--return {
-  stroke: color-mix(in srgb, var(--info) 58%, var(--color-text-tertiary) 42%);
-  stroke-width: 1;
-  stroke-dasharray: 4 4;
-  opacity: 0.5;
+  stroke: var(--info);
+  stroke-width: 1.35;
+  stroke-dasharray: 5 5;
+  opacity: 0.92;
 }
 
 .fd-complete-line--return.fd-complete-line--configured {
-  stroke: color-mix(in srgb, var(--info) 62%, var(--color-text-tertiary) 38%);
+  stroke: var(--info);
 }
 
 .fd-complete-line--return.fd-complete-line--inherited {
@@ -730,7 +730,7 @@
 }
 
 .fd-complete-line--return.fd-complete-line--contextual {
-  stroke: color-mix(in srgb, #ffc66d 68%, var(--color-text-tertiary) 32%);
+  stroke: var(--warning);
   stroke-dasharray: 2 5;
   opacity: 0.68;
 }
@@ -782,7 +782,7 @@
 }
 
 .fd-complete-line--sequence {
-  stroke: color-mix(in srgb, #ffc66d 72%, var(--color-text-tertiary) 28%);
+  stroke: var(--warning);
   stroke-width: 1.15;
   stroke-dasharray: 7 3;
   opacity: 0.72;
@@ -799,7 +799,7 @@
   stroke-width: 2.7;
   stroke-dasharray: 12 7;
   opacity: 1;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, #ffc66d 64%, transparent));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--warning) 64%, transparent));
   animation: fd-active-flow 0.8s linear infinite;
 }
 
@@ -813,7 +813,7 @@
   stroke-width: 3px;
   paint-order: stroke;
   font-size: 9px;
-  font-weight: 800;
+  font-weight: var(--weight-bold);
   letter-spacing: 0;
   pointer-events: none;
   dominant-baseline: middle;
@@ -829,7 +829,7 @@
 }
 
 .fd-complete-edge-label--sequence {
-  fill: color-mix(in srgb, #ffc66d 74%, var(--color-text-primary));
+  fill: var(--warning-text);
 }
 
 .fd-complete-placed-node {
@@ -880,7 +880,7 @@
   width: 1px;
   height: var(--fd-connector-v);
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-root-entries::after {
@@ -890,7 +890,7 @@
   left: calc(var(--fd-node-width) / 2);
   right: calc(var(--fd-node-width) / 2);
   height: 1px;
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-branch {
@@ -921,7 +921,7 @@
   width: 1px;
   height: var(--fd-connector-v);
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-branch-children {
@@ -946,7 +946,7 @@
   width: 1px;
   bottom: calc(100% - var(--fd-connector-v));
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-children-group {
@@ -970,7 +970,7 @@
   left: calc(var(--fd-node-width) / 2);
   right: calc(var(--fd-node-width) / 2);
   height: 1px;
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-row-item {
@@ -988,16 +988,16 @@
   width: 1px;
   height: var(--fd-connector-v);
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-border-secondary));
+  background: #43435a;
 }
 
 .fd-complete-node {
   width: var(--fd-node-width);
-  background: var(--color-background-primary);
-  border: 1px solid var(--color-border-tertiary);
-  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  box-shadow: none;
   flex-shrink: 0;
   color: inherit;
   text-align: left;
@@ -1015,8 +1015,8 @@
 }
 
 .fd-complete-node.is-selected {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-border);
 }
 
 .fd-complete-node.is-drop-target,
@@ -1034,7 +1034,7 @@
 }
 
 .fd-complete-node--menu {
-  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border-tertiary));
+  border-color: var(--borderLt);
 }
 
 .fd-complete-branch--menu > .fd-complete-branch-node .fd-complete-node {
@@ -1045,7 +1045,7 @@
   width: 100%;
   height: 60px;
   overflow: hidden;
-  background: var(--color-background-secondary);
+  background: var(--bg2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1059,10 +1059,10 @@
   max-width: calc(100% - 10px);
   padding: 3px 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, #ffc66d 88%, black 12%);
-  color: #1d1607;
+  background: var(--warning);
+  color: var(--accent-contrast);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: var(--weight-bold);
   white-space: nowrap;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
 }
@@ -1082,28 +1082,29 @@
 .fd-complete-node-action {
   width: 28px;
   height: 28px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 80%, transparent);
-  background: color-mix(in srgb, var(--color-background-primary) 72%, transparent);
-  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
+  background: color-mix(in srgb, var(--bg0) 70%, transparent);
+  color: var(--muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   line-height: 1;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
   pointer-events: auto;
 }
 
 .fd-complete-node-action:hover {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-background-primary));
+  border-color: var(--borderLt);
+  background: var(--bg3);
+  color: var(--text);
 }
 
 .fd-complete-node-action--collapse {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: var(--weight-bold);
 }
 
 .fd-complete-drag-ghost {
@@ -1183,6 +1184,16 @@
   opacity: 1;
 }
 
+.fd-complete-node--end-node .fd-complete-node-thumb,
+.fd-complete-node--end-node .fd-complete-node-placeholder {
+  background: color-mix(in srgb, var(--cat-night) 16%, var(--bg2));
+  color: var(--cat-night);
+}
+
+.fd-complete-node--end-node {
+  border-color: color-mix(in srgb, var(--cat-night) 46%, var(--borderLt));
+}
+
 .fd-complete-node-label {
   padding: 4px 6px;
   display: flex;
@@ -1227,8 +1238,12 @@
 }
 
 .fd-complete-node-kind {
-  font-size: 9px;
-  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

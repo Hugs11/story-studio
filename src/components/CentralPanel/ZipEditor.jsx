@@ -61,7 +61,7 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn" style={{ color: '#E24B4A', borderColor: '#E24B4A' }} onClick={onDelete}>
+        <button className="btn btn-danger-outline" onClick={onDelete}>
           Supprimer cette archive
         </button>
       </div>

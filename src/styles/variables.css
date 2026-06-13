@@ -6,17 +6,69 @@
   font-display: swap;
 }
 
-/* Default light palette and non-theme tokens. */
+/* Story Studio v0.9.2 design foundations.
+   New semantic roles live beside legacy aliases so older screens keep working
+   while the redesign migrates screen by screen. */
 :root {
   color-scheme: light;
+
+  /* Layout */
   --col-left: clamp(180px, 18vw, 280px);
   --center-content-max: 980px;
-  --border-radius-sm: 4px;
-  --border-radius-md: 6px;
-  --border-radius-lg: 10px;
-  --font-sans: 'Space Grotesk', -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --chrome-rail-width: 52px;
+  --titlebar-height: 38px;
+  --toolbar-height: 50px;
+  --rail-width: 52px;
 
+  /* Typography */
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, monospace;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --text-caption: 11px;
+  --text-control: 12.5px;
+  --text-body: 13px;
+  --text-title: 15px;
+  --text-display: 22px;
+
+  --tracking-eyebrow: 0.18em;
+  --tracking-tight: -0.01em;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 14px 42px rgba(0, 0, 0, 0.22);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.28);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 0.12s;
+  --dur-base: 0.15s;
+
+  /* Surfaces */
   --bg0: #F5F6F8;
   --bg1: #FFFFFF;
   --bg2: #EEF0F4;
@@ -25,83 +77,132 @@
   --borderLt: #C2C9D4;
   --text: #171923;
   --muted: #667085;
+
+  /* Orange: identity, primary actions and selection */
   --accent: oklch(0.72 0.15 50);
-  --accentDim: oklch(0.72 0.15 50 / 0.12);
-  --accentBorder: oklch(0.72 0.15 50 / 0.35);
+  --accent-dim: oklch(0.72 0.15 50 / 0.12);
+  --accent-border: oklch(0.72 0.15 50 / 0.35);
+  --accent-contrast: #1a1206;
+  --accent-text: oklch(0.52 0.16 45);
+  --accent-hover: color-mix(in srgb, var(--accent) 92%, white);
 
-  --color-background-primary: #FFFFFF;
-  --color-background-secondary: #F5F5F5;
-  --color-background-tertiary: #EBEBEB;
-  --color-border-tertiary: #E0E0E0;
-  --color-border-secondary: #C8C8C8;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-accent: #185FA5;
-  --color-accent-light: #E6F1FB;
-  --color-accent-contrast: #FFFFFF;
-  --color-accent-hover: #0C447C;
-  --color-scrollbar-track: #F0F2F5;
-  --color-scrollbar-thumb: #C4CBD5;
-  --color-scrollbar-thumb-hover: #AEB7C4;
-  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
-  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
-  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
-  --tree-scope-hover-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  /* Legacy camelCase aliases */
+  --accentDim: var(--accent-dim);
+  --accentBorder: var(--accent-border);
 
+  /* Amber: blocking validation */
+  --warning: oklch(0.82 0.15 92);
+  --warning-text: oklch(0.50 0.12 85);
+  --warning-bg: color-mix(in srgb, oklch(0.82 0.15 92) 18%, var(--bg1));
+  --warning-bg-hover: color-mix(in srgb, oklch(0.82 0.15 92) 28%, var(--bg1));
+  --warning-border: color-mix(in srgb, oklch(0.82 0.15 92) 55%, var(--borderLt));
+  --warning-border-hover: color-mix(in srgb, oklch(0.82 0.15 92) 72%, var(--borderLt));
+
+  /* Violet: secondary tools and configuration */
+  --accent-2: oklch(0.52 0.13 285);
+  --accent-2-text: oklch(0.45 0.14 285);
+  --accent-2-dim: oklch(0.52 0.13 285 / 0.14);
+  --accent-2-border: oklch(0.52 0.13 285 / 0.42);
+
+  /* Green: ready, complete and available */
+  --success: #2FA05C;
+  --success-text: #1E7A43;
+  --success-bg: color-mix(in srgb, #2FA05C 14%, var(--bg1));
+  --success-bg-hover: color-mix(in srgb, #2FA05C 22%, var(--bg1));
+  --success-border: color-mix(in srgb, #2FA05C 48%, var(--borderLt));
+  --success-border-hover: color-mix(in srgb, #2FA05C 68%, var(--borderLt));
+
+  /* Red: destructive only */
+  --danger: #D33F3E;
+  --danger-text: #B42318;
+  --danger-bg: #FDECEC;
+  --danger-bg-hover: #FBDADA;
+  --danger-border: #E56B6A;
+  --danger-border-hover: color-mix(in srgb, var(--danger) 82%, var(--borderLt));
+
+  /* Blue: information, links, return paths and journey flow */
+  --info: #185FA5;
+  --info-text: #0C447C;
+  --info-bg: color-mix(in srgb, #185FA5 12%, var(--bg1));
+  --info-bg-hover: color-mix(in srgb, #185FA5 20%, var(--bg1));
+  --info-border: color-mix(in srgb, #185FA5 42%, var(--borderLt));
+  --info-border-hover: color-mix(in srgb, #185FA5 58%, var(--borderLt));
+
+  /* Category colors, for non-tree uses during the redesign. */
+  --cat-night: oklch(0.52 0.12 285);
+  --cat-home: oklch(0.50 0.11 250);
+  --cat-return: var(--info);
+  --cat-end: oklch(0.55 0.14 350);
+
+  /* Audio waveforms */
+  --wave-rest: color-mix(in srgb, var(--muted) 55%, var(--borderLt));
+  --wave-played: var(--accent);
+
+  /* Controls */
   --control-bg: #FFFFFF;
   --control-bg-subtle: #F5F6F8;
   --control-bg-hover: #EEF3F8;
   --control-bg-active: #E4ECF5;
   --control-border: #C8D0DA;
-  --control-border-hover: color-mix(in srgb, var(--color-accent) 46%, #C8D0DA);
+  --control-border-hover: color-mix(in srgb, var(--info) 42%, var(--control-border));
   --control-text: #171923;
   --control-text-muted: #667085;
+
   --control-disabled-bg: #F1F3F6;
   --control-disabled-border: #D9DEE7;
   --control-disabled-text: #8A94A3;
+
   --primary-disabled-bg: #E8ECF2;
   --primary-disabled-border: #D4DBE5;
   --primary-disabled-text: #7F8997;
-  --focus-ring: #185FA5;
-  --focus-ring-soft: rgba(24, 95, 165, 0.18);
 
-  --danger: #D33F3E;
+  /* Focus */
+  --focus-ring: var(--accent-text);
+  --focus-ring-soft: color-mix(in srgb, var(--accent) 24%, transparent);
+  --ring: 0 0 0 4px var(--focus-ring-soft);
+
+  /* Legacy color aliases */
+  --color-background-primary: var(--bg1);
+  --color-background-secondary: var(--bg2);
+  --color-background-tertiary: var(--bg0);
+  --color-bg-primary: var(--bg1);
+  --color-bg-secondary: var(--bg2);
+  --color-bg-hover: var(--control-bg-hover);
+  --color-surface-2: var(--bg2);
+  --color-surface-secondary: var(--bg2);
+  --color-border: var(--border);
+  --color-border-primary: var(--border);
+  --color-border-secondary: var(--borderLt);
+  --color-border-tertiary: var(--border);
+  --color-text: var(--text);
+  --color-text-primary: var(--text);
+  --color-text-secondary: color-mix(in srgb, var(--text) 62%, transparent);
+  --color-text-tertiary: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-dim);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-hover: var(--accent-hover);
   --color-danger: var(--danger);
-  --danger-text: #B42318;
-  --danger-bg: #FDECEC;
-  --danger-bg-hover: #FBDADA;
-  --danger-border: #E56B6A;
-  --danger-border-hover: color-mix(in srgb, var(--danger) 82%, #C8D0DA);
-
-  --warning: #E89510;
   --color-warning: var(--warning);
-  --warning-text: #A86600;
-  --warning-bg: #FEF3DD;
-  --warning-bg-hover: #FCE7BD;
-  --warning-border: #ECB570;
-  --warning-border-hover: color-mix(in srgb, var(--warning) 82%, #C8D0DA);
-
-  --success: #4CAF50;
+  --color-warning-text: var(--warning-text);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
   --color-success: var(--success);
-  --success-text: #2F7D32;
-  --success-bg: #EDF7ED;
-  --success-bg-hover: #DFF0E0;
-  --success-border: #77C77A;
-  --success-border-hover: color-mix(in srgb, var(--success) 82%, #C8D0DA);
-
-  --info: #3D9BE9;
   --color-info: var(--info);
-  --info-text: #185FA5;
-  --info-bg: #EAF4FE;
-  --info-bg-hover: #D9ECFD;
-  --info-border: #7DBBF0;
-  --info-border-hover: color-mix(in srgb, var(--info) 82%, #C8D0DA);
+
+  --color-scrollbar-track: #F0F2F5;
+  --color-scrollbar-thumb: #C4CBD5;
+  --color-scrollbar-thumb-hover: #AEB7C4;
+
+  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
-/* Dark palette. System mode resolves to data-theme="dark" before React mounts. */
 :root[data-theme="dark"] {
   color-scheme: dark;
+
   --bg0: #111116;
   --bg1: #18181f;
   --bg2: #1e1e27;
@@ -110,29 +211,56 @@
   --borderLt: #36364a;
   --text: #ddd9f2;
   --muted: #6e6c8a;
-  --accent: oklch(0.72 0.15 50);
-  --accentDim: oklch(0.72 0.15 50 / 0.12);
-  --accentBorder: oklch(0.72 0.15 50 / 0.35);
 
-  --color-background-primary: var(--bg1);
-  --color-background-secondary: var(--bg2);
-  --color-background-tertiary: var(--bg0);
-  --color-border-tertiary: var(--border);
-  --color-border-secondary: var(--borderLt);
-  --color-text-primary: var(--text);
-  --color-text-secondary: color-mix(in srgb, var(--text) 68%, transparent);
-  --color-text-tertiary: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-light: var(--accentDim);
-  --color-accent-contrast: var(--bg0);
-  --color-accent-hover: oklch(0.77 0.16 55);
-  --color-scrollbar-track: var(--bg0);
-  --color-scrollbar-thumb: var(--bg3);
-  --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
-  --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
-  --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
-  --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
-  --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
+  --accent: oklch(0.72 0.15 50);
+  --accent-dim: oklch(0.72 0.15 50 / 0.14);
+  --accent-border: oklch(0.72 0.15 50 / 0.40);
+  --accent-contrast: #1a1206;
+  --accent-text: oklch(0.80 0.15 55);
+  --accent-hover: color-mix(in srgb, var(--accent) 90%, white);
+  --accentDim: var(--accent-dim);
+  --accentBorder: var(--accent-border);
+
+  --warning: oklch(0.82 0.15 92);
+  --warning-text: oklch(0.88 0.12 95);
+  --warning-bg: color-mix(in srgb, oklch(0.82 0.15 92) 15%, var(--bg2));
+  --warning-bg-hover: color-mix(in srgb, oklch(0.82 0.15 92) 24%, var(--bg2));
+  --warning-border: color-mix(in srgb, oklch(0.82 0.15 92) 52%, var(--borderLt));
+  --warning-border-hover: color-mix(in srgb, oklch(0.82 0.15 92) 72%, var(--borderLt));
+
+  --accent-2: oklch(0.62 0.11 285);
+  --accent-2-text: oklch(0.82 0.08 286);
+  --accent-2-dim: oklch(0.62 0.11 285 / 0.18);
+  --accent-2-border: oklch(0.62 0.11 285 / 0.46);
+
+  --success: #4FD17B;
+  --success-text: #86E2A3;
+  --success-bg: color-mix(in srgb, #4FD17B 14%, var(--bg2));
+  --success-bg-hover: color-mix(in srgb, #4FD17B 24%, var(--bg2));
+  --success-border: color-mix(in srgb, #4FD17B 48%, var(--borderLt));
+  --success-border-hover: color-mix(in srgb, #4FD17B 68%, var(--borderLt));
+
+  --danger: #e35a58;
+  --danger-text: #FF9A96;
+  --danger-bg: color-mix(in srgb, #e35a58 14%, var(--bg2));
+  --danger-bg-hover: color-mix(in srgb, #e35a58 24%, var(--bg2));
+  --danger-border: color-mix(in srgb, #e35a58 48%, var(--borderLt));
+  --danger-border-hover: color-mix(in srgb, #e35a58 74%, var(--borderLt));
+
+  --info: #79B8FF;
+  --info-text: #A9D2FF;
+  --info-bg: color-mix(in srgb, var(--info) 14%, var(--bg2));
+  --info-bg-hover: color-mix(in srgb, var(--info) 24%, var(--bg2));
+  --info-border: color-mix(in srgb, var(--info) 48%, var(--borderLt));
+  --info-border-hover: color-mix(in srgb, var(--info) 68%, var(--borderLt));
+
+  --cat-night: oklch(0.70 0.10 285);
+  --cat-home: oklch(0.66 0.10 250);
+  --cat-return: var(--info);
+  --cat-end: oklch(0.68 0.13 350);
+
+  --wave-rest: color-mix(in srgb, var(--muted) 62%, var(--borderLt));
+  --wave-played: var(--accent);
 
   --control-bg: var(--bg2);
   --control-bg-subtle: color-mix(in srgb, var(--bg2) 78%, var(--bg0));
@@ -142,44 +270,53 @@
   --control-border-hover: color-mix(in srgb, var(--accent) 55%, var(--borderLt));
   --control-text: var(--text);
   --control-text-muted: color-mix(in srgb, var(--text) 72%, transparent);
+
   --control-disabled-bg: color-mix(in srgb, var(--bg2) 72%, var(--bg0));
   --control-disabled-border: color-mix(in srgb, var(--borderLt) 56%, transparent);
   --control-disabled-text: color-mix(in srgb, var(--text) 42%, transparent);
-  --primary-disabled-bg: color-mix(in srgb, var(--accent) 22%, var(--bg2));
-  --primary-disabled-border: color-mix(in srgb, var(--accent) 32%, var(--borderLt));
-  --primary-disabled-text: color-mix(in srgb, var(--text) 55%, transparent);
+
+  --primary-disabled-bg: var(--bg2);
+  --primary-disabled-border: color-mix(in srgb, var(--borderLt) 72%, transparent);
+  --primary-disabled-text: var(--muted);
+
   --focus-ring: color-mix(in srgb, var(--accent) 72%, white);
   --focus-ring-soft: color-mix(in srgb, var(--accent) 28%, transparent);
+  --ring: 0 0 0 4px var(--focus-ring-soft);
 
-  --danger: #e35a58;
+  --color-background-primary: var(--bg1);
+  --color-background-secondary: var(--bg2);
+  --color-background-tertiary: var(--bg0);
+  --color-bg-primary: var(--bg1);
+  --color-bg-secondary: var(--bg2);
+  --color-bg-hover: var(--control-bg-hover);
+  --color-surface-2: var(--bg2);
+  --color-surface-secondary: var(--bg2);
+  --color-border: var(--border);
+  --color-border-primary: var(--border);
+  --color-border-secondary: var(--borderLt);
+  --color-border-tertiary: var(--border);
+  --color-text: var(--text);
+  --color-text-primary: var(--text);
+  --color-text-secondary: color-mix(in srgb, var(--text) 68%, transparent);
+  --color-text-tertiary: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-dim);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-hover: var(--accent-hover);
   --color-danger: var(--danger);
-  --danger-text: #FF9A96;
-  --danger-bg: color-mix(in srgb, #e35a58 14%, var(--bg2));
-  --danger-bg-hover: color-mix(in srgb, #e35a58 24%, var(--bg2));
-  --danger-border: color-mix(in srgb, #e35a58 60%, var(--borderLt));
-  --danger-border-hover: color-mix(in srgb, #e35a58 82%, var(--borderLt));
-
-  --warning: #E59A3A;
   --color-warning: var(--warning);
-  --warning-text: #F5C674;
-  --warning-bg: color-mix(in srgb, #E59A3A 14%, var(--bg2));
-  --warning-bg-hover: color-mix(in srgb, #E59A3A 24%, var(--bg2));
-  --warning-border: color-mix(in srgb, #E59A3A 60%, var(--borderLt));
-  --warning-border-hover: color-mix(in srgb, #E59A3A 82%, var(--borderLt));
-
-  --success: #5FBF6B;
+  --color-warning-text: var(--warning-text);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
   --color-success: var(--success);
-  --success-text: #7DDC9B;
-  --success-bg: color-mix(in srgb, var(--success) 14%, var(--bg2));
-  --success-bg-hover: color-mix(in srgb, var(--success) 24%, var(--bg2));
-  --success-border: color-mix(in srgb, var(--success) 60%, var(--borderLt));
-  --success-border-hover: color-mix(in srgb, var(--success) 82%, var(--borderLt));
-
-  --info: #79B8FF;
   --color-info: var(--info);
-  --info-text: #A8D0FF;
-  --info-bg: color-mix(in srgb, var(--info) 14%, var(--bg2));
-  --info-bg-hover: color-mix(in srgb, var(--info) 24%, var(--bg2));
-  --info-border: color-mix(in srgb, var(--info) 60%, var(--borderLt));
-  --info-border-hover: color-mix(in srgb, var(--info) 82%, var(--borderLt));
+
+  --color-scrollbar-track: var(--bg0);
+  --color-scrollbar-thumb: var(--bg3);
+  --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+
+  --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--bg3) 26%, transparent);
+  --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 17%, transparent);
 }

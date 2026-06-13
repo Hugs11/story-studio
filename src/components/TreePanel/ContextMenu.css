@@ -2,10 +2,10 @@
   position: fixed;
   z-index: 9999;
   min-width: 200px;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-lg);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  background: var(--bg1);
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   padding: 4px;
   user-select: none;
 }
@@ -20,7 +20,7 @@
   color: var(--color-text-primary);
   background: none;
   border: none;
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: left;
 }
@@ -29,8 +29,11 @@
   background: var(--color-background-secondary);
 }
 
-.ctx-item.danger { color: #E24B4A; }
-.ctx-item.danger:hover { background: #FCEBEB; }
+.ctx-item.danger { color: var(--danger-text); }
+.ctx-item.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
 
 .ctx-icon {
   min-width: 16px;

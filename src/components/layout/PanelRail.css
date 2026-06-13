@@ -41,9 +41,9 @@
 }
 
 .chrome-rail-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  box-shadow: var(--ring);
 }
 
 .chrome-rail-btn.is-active {
@@ -81,12 +81,12 @@
   font-size: 12px;
   font-weight: 500;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   pointer-events: none;
   z-index: 200;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  animation: chrome-rail-flyout-in 0.12s ease;
+  box-shadow: var(--shadow-md);
+  animation: chrome-rail-flyout-in var(--dur-fast) ease;
 }
 
 .chrome-rail-flyout-arrow {

@@ -137,6 +137,7 @@ function TreeNodeInner({
       {...(sortable ? { ...attributes, ...listeners } : {})}
       className={[
         'tree-item',
+        `tree-item--${type}`,
         selected ? 'active' : '',
         color ? 'is-colored' : '',
         isAncestor && !selected ? 'ancestor-sel' : '',

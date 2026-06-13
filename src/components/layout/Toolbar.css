@@ -1,5 +1,5 @@
 .chrome-toolbar {
-  min-height: 50px;
+  min-height: var(--toolbar-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,24 +36,28 @@
 .chrome-toolbar-btn {
   height: 30px;
   padding: 0 10px;
-  gap: 6px;
-  border-radius: 5px;
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--control-text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .chrome-toolbar-btn:hover:not(:disabled),
 .chrome-toolbar-btn.is-active {
   color: var(--control-text);
-  border-color: var(--control-border-hover);
+  border-color: transparent;
   background: var(--control-bg-hover);
 }
 
@@ -62,9 +66,9 @@
 }
 
 .chrome-toolbar-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  box-shadow: var(--ring);
 }
 
 .chrome-toolbar-btn:disabled {
@@ -98,14 +102,11 @@
 }
 
 .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
-  --pack-options-accent: #6548d8;
-  color: color-mix(in srgb, var(--pack-options-accent) 82%, var(--control-text));
-  border-color: color-mix(in srgb, var(--pack-options-accent) 34%, var(--control-border));
-  background: color-mix(in srgb, var(--control-bg) 94%, var(--pack-options-accent) 6%);
-  font-weight: 600;
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
   padding-left: 9px;
   padding-right: 8px;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06);
 }
 
 .chrome-toolbar-btn[data-toolbar-id='project-menu'] {
@@ -117,30 +118,15 @@
 
 .chrome-toolbar-btn[data-toolbar-id='project-menu']:hover:not(:disabled),
 .chrome-toolbar-btn[data-toolbar-id='project-menu'].is-active {
-  border-color: var(--control-border-hover);
+  border-color: transparent;
   background: var(--control-bg-hover);
-}
-
-:root[data-theme="light"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
-  --pack-options-accent: #6548d8;
-}
-
-:root[data-theme="dark"] .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
-  --pack-options-accent: #9a8cff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .chrome-toolbar-btn[data-toolbar-id='pack-options'] {
-    --pack-options-accent: #9a8cff;
-  }
 }
 
 .chrome-toolbar-btn[data-toolbar-id='pack-options']:hover:not(:disabled),
 .chrome-toolbar-btn[data-toolbar-id='pack-options'].is-active {
-  color: color-mix(in srgb, var(--pack-options-accent) 74%, var(--control-text));
-  border-color: color-mix(in srgb, var(--pack-options-accent) 46%, var(--control-border));
-  background: color-mix(in srgb, var(--control-bg-hover) 88%, var(--pack-options-accent) 12%);
-  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
+  color: var(--accent-2-text);
+  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
+  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
 }
 
 .chrome-pack-options-caret {
@@ -163,24 +149,30 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 5px;
-  border: 1px solid color-mix(in oklch, oklch(0.74 0.115 50) 75%, #000 25%);
-  background: oklch(0.74 0.115 50);
-  color: #23160a;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--accent) 82%, black);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, filter 0.12s;
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    filter var(--dur-fast),
+    box-shadow var(--dur-fast);
 }
 
 .chrome-toolbar-cta:hover:not(:disabled) {
-  filter: brightness(1.05);
+  background: var(--accent-hover);
+  border-color: color-mix(in srgb, var(--accent-hover) 82%, black);
 }
 
 .chrome-toolbar-cta:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  box-shadow: var(--ring);
 }
 
 .chrome-toolbar-cta:disabled {
@@ -207,7 +199,7 @@
   width: 30px;
   min-width: 30px;
   padding: 0;
-  border-left-color: color-mix(in srgb, #23160a 26%, transparent);
+  border-left-color: color-mix(in srgb, var(--accent-contrast) 26%, transparent);
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   justify-content: center;
