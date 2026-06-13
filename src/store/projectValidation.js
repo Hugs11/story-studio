@@ -24,6 +24,14 @@
 //
 // Si une regle est ajoutee : l'implementer des deux cotes, etendre
 // validation-projects.json + le module tests::parity_* de Rust.
+//
+// Taxonomie UI actuelle :
+//   - aucune issue bloquante/warning -> "Pack prêt" ;
+//   - status "error" ou "warning" -> "À corriger".
+// Les deux statuts empechent aujourd'hui la generation cote React
+// (voir App.jsx/canGenerate et getGenerateErrors). La distinction interne
+// reste utile pour diagnostiquer les erreurs structurelles, mais elle n'est
+// pas exposee comme deux categories dans l'UI parent.
 
 import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel.js';
 import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
@@ -324,54 +332,4 @@ export function getGenerateErrors(project, fileAudit = {}) {
   return getProjectValidationIssues(project, fileAudit)
     .filter((issue) => issue.status === 'error' || issue.status === 'warning')
     .map((issue) => issue.text);
-}
-
-export function getItemValidationStatus(item, fileAudit = {}, project = null) {
-  const autoNext = !!project?.globalOptions?.autoNext;
-  if (item.type === 'zip') return isAccessiblePath(item.zipPath, fileAudit) ? 'ok' : 'error';
-  if (!isAccessiblePath(item.audio, fileAudit)) return 'error';
-  if (!isAccessiblePath(item.itemImage, fileAudit)) return 'error';
-  if (!isAccessiblePath(item.itemAudio, fileAudit)) return 'error';
-  if (autoNext) return 'ok';
-  if (hasPath(item.afterPlaybackPromptAudio) && !isAccessiblePath(item.afterPlaybackPromptAudio, fileAudit)) return 'error';
-  for (const step of item.afterPlaybackSequence ?? []) {
-    if (!isAccessiblePath(step?.audio, fileAudit)) return 'error';
-    if (hasPath(step?.image) && !isAccessiblePath(step.image, fileAudit)) return 'error';
-  }
-  if (item.afterPlaybackHomeStep?.audio && !isAccessiblePath(item.afterPlaybackHomeStep.audio, fileAudit)) return 'error';
-  if (item.afterPlaybackHomeStep?.image && !isAccessiblePath(item.afterPlaybackHomeStep.image, fileAudit)) return 'error';
-  return 'ok';
-}
-
-export function getEndNodeValidationStatus(project, fileAudit = {}) {
-  if (project?.globalOptions?.autoNext) return 'ok';
-  if (!isAccessiblePath(project?.nightModeAudio, fileAudit)) return 'error';
-  return 'ok';
-}
-
-export function getMenuValidationStatus(menu, fileAudit = {}) {
-  if (!menu.importedContinuation && !isAccessiblePath(menu.audio, fileAudit)) return 'error';
-  if (!menu.autoBlackImage && !isAccessiblePath(menu.image, fileAudit)) return 'error';
-  return 'ok';
-}
-
-export function getRootValidationStatus(project, fileAudit = {}) {
-  if (!isAccessiblePath(project?.rootAudio, fileAudit)) return 'error';
-  if (!isAccessiblePath(project?.rootImage, fileAudit)) return 'error';
-
-  if (project?.projectType === 'pack') {
-    if (!isAccessiblePath(project?.thumbnailImage, fileAudit)) return 'error';
-    return 'ok';
-  }
-
-  if (project?.projectType === 'simple') {
-    if (hasPath(project?.thumbnailImage) && !isAccessiblePath(project?.thumbnailImage, fileAudit)) return 'error';
-    let story = null;
-    visitProjectEntries(project, (entry) => {
-      if (!story && entry?.type === 'story') story = entry;
-    });
-    return isAccessiblePath(story?.audio, fileAudit) ? 'ok' : 'error';
-  }
-
-  return 'ok';
 }

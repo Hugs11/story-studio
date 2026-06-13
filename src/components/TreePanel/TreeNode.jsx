@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { StatusDot } from '../common/Badge';
 import { Tooltip } from '../common/Tooltip';
 import {
   IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon,
@@ -39,7 +38,6 @@ function TreeNodeInner({
   isAncestor,
   isActiveScope,
   isHoverScope,
-  status,
   sortable,
   dragging,
   containerDroppableId,
@@ -198,7 +196,6 @@ function TreeNodeInner({
         {hasToggle && !expanded && childCount > 0 && (
           <span className="badge-count">{childCount}</span>
         )}
-        {status && <StatusDot status={status} />}
       </div>
     </div>
   );
@@ -216,7 +213,6 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.isActiveScope === next.isActiveScope
   && prev.isHoverScope === next.isHoverScope
   && prev.isHoverGuide === next.isHoverGuide
-  && prev.status === next.status
   && prev.dragging === next.dragging
   && prev.containerDroppableId === next.containerDroppableId
   && prev.showNavigationBadgeColumn === next.showNavigationBadgeColumn
