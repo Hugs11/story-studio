@@ -100,40 +100,10 @@
   overflow: hidden;
 }
 
-.card-danger-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0;
-  font-size: var(--text-title);
-  font-weight: var(--weight-semibold);
-  color: var(--text);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.card-danger-icon-box {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  background: var(--bg2);
-  border: 1px solid var(--border);
-}
-
 .card-danger-icon {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
-}
-
-.card-danger-divider {
-  height: 1px;
-  background: var(--border);
-  margin: var(--space-4) 0;
 }
 
 .card-danger-row {
@@ -142,13 +112,6 @@
   align-items: center;
   gap: 16px;
   padding: 0;
-  min-width: 0;
-}
-
-.card-danger-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
@@ -312,7 +275,7 @@
   min-width: 0;
   min-height: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 42%);
   align-items: center;
   gap: 16px;
   padding: 11px 15px;
@@ -360,6 +323,43 @@
 
 .editor-setting-control > .navigation-target-select {
   width: 100%;
+}
+
+.end-node-setting-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+
+.end-node-setting-copy .editor-setting-title {
+  flex: 0 0 auto;
+}
+
+.end-node-setting-copy .editor-setting-desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-setting-row.end-node-toggle-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: flex-start;
+}
+
+@container (max-width: 560px) {
+  .end-node-setting-copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .end-node-setting-copy .editor-setting-desc {
+    white-space: normal;
+    overflow: visible;
+  }
 }
 
 .editor-setting-actions {
@@ -1079,6 +1079,61 @@
   line-height: 1.35;
 }
 
+.menu-behavior-card {
+  container-type: inline-size;
+}
+
+.menu-behavior-stack {
+  display: grid;
+  gap: 11px;
+  min-width: 0;
+}
+
+.menu-behavior-control {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.menu-behavior-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+
+.menu-behavior-copy .during-play-control-title {
+  flex: 0 0 auto;
+}
+
+.menu-behavior-desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 520px) {
+  .menu-behavior-control {
+    align-items: flex-start;
+  }
+
+  .menu-behavior-copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .menu-behavior-desc {
+    white-space: normal;
+    overflow: visible;
+  }
+}
+
 .story-disclosure {
   margin-top: 14px;
   padding-top: 4px;
@@ -1250,7 +1305,8 @@
 }
 
 .after-play-destination-select {
-  width: min(260px, 100%);
+  width: min(420px, 42%);
+  min-width: min(280px, 100%);
   flex-shrink: 0;
 }
 
@@ -1540,15 +1596,6 @@
   border: 1px solid var(--borderLt);
   background: var(--bg2);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
-}
-
-.navigation-listbox-group {
-  padding: 7px 8px 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
 }
 
 .navigation-listbox-option {

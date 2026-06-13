@@ -17,7 +17,6 @@ import {
 import {
   CONTROL_DEFS,
   SEQUENCE_CONTROL_DEFAULTS,
-  NavigationHint,
   NavigationTargetSelect,
   getNavigationSelectHint,
   NAV_ROOT_LABEL,
@@ -390,7 +389,7 @@ export function AfterPlaySection({
                   allMenus={allMenus}
                   allStories={allStories}
                   currentStoryId={node.id}
-                  emptyLabel="Même destination que la fin d'histoire"
+                  emptyLabel="Comme à la fin de l'histoire"
                 />
               </div>
               <div className="field-row" style={{ marginBottom: 0 }}>
@@ -536,11 +535,9 @@ export function AfterPlaySection({
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={node.id}
-              emptyLabel={returnEmptyResolvedLabel}
-              includeRoot={false}
+              emptyLabel={autoNextApplies ? 'Suit auto-next global' : 'Suit la destination du dossier'}
               includeStoryPlay={false}
             />
-            <NavigationHint label={returnDestinationHint} />
           </div>
         </div>
       )}

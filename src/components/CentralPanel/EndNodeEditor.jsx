@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
@@ -9,8 +9,8 @@ import {
   IMAGES_GENEREES,
   VOIX_GENEREES,
 } from '../../store/workspaceDirs';
-import { NavigationTargetSelect } from './story/storyUtils';
-import { TriangleAlert } from '../icons/LucideLocal';
+import { NAV_TARGET_NEXT_STORY, NavigationTargetSelect } from './story/storyUtils';
+import { Trash2 } from '../icons/LucideLocal';
 import './CentralPanel.css';
 
 const DELETABLE_WORKSPACE_DIRS = [FICHIERS_IMPORTES, ENREGISTREMENTS, VOIX_GENEREES, IMAGES_GENEREES];
@@ -61,13 +61,19 @@ export function EndNodeEditor({
     onRemove?.({ skipConfirm: true });
   }
 
+  useEffect(() => {
+    if (!nightModeReturn) {
+      onUpdateNightModeReturn?.(NAV_TARGET_NEXT_STORY);
+    }
+  }, [nightModeReturn, onUpdateNightModeReturn]);
+
   return (
     <>
       <div className="card">
         <div className="card-title-row">
           <div className="card-title">Message de fin</div>
           <div className="card-copy card-copy--inline">
-            Message audio joué à la fin de chaque histoire, avant d'atteindre la destination suivante (ex : « Tu veux encore écouter une histoire ? »). La lecture est toujours automatique.
+            Audio joué après chaque histoire, avant la destination finale.
           </div>
         </div>
 
@@ -100,14 +106,14 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Pendant le message de fin</div>
+          <div className="card-title">Pendant la lecture</div>
         </div>
         <div className="editor-setting-stack">
-          <div className="editor-setting-row">
-            <div className="editor-setting-copy">
+          <div className="editor-setting-row end-node-setting-row">
+            <div className="editor-setting-copy end-node-setting-copy">
               <div className="editor-setting-title">Bouton Accueil</div>
               <div className="editor-setting-desc">
-              Destination quand l'enfant appuie sur le bouton Accueil pendant la lecture du message de fin.
+                Destination si l'enfant appuie sur Accueil pendant le message de fin.
               </div>
             </div>
             <div className="editor-setting-control">
@@ -117,8 +123,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Suit le retour de l'histoire"
-                resolvedDestinationLabel={nightModeHomeReturnResolvedLabel}
+                emptyLabel="Identique à après la lecture"
               />
             </div>
           </div>
@@ -127,25 +132,24 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Après le message de fin</div>
+          <div className="card-title">Après la lecture</div>
         </div>
         <div className="editor-setting-stack">
-          <div className="editor-setting-row">
-            <div className="editor-setting-copy">
-              <div className="editor-setting-title">Destination finale</div>
+          <div className="editor-setting-row end-node-setting-row">
+            <div className="editor-setting-copy end-node-setting-copy">
+              <div className="editor-setting-title">Retour après le message</div>
               <div className="editor-setting-desc">
-              Où l'enfant est redirigé après la lecture du message de fin.
+                Destination après le message de fin.
               </div>
             </div>
             <div className="editor-setting-control">
               <NavigationTargetSelect
-                value={nightModeReturn ?? ''}
+                value={nightModeReturn ?? NAV_TARGET_NEXT_STORY}
                 onChange={(value) => onUpdateNightModeReturn?.(value)}
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Suit la fin de l'histoire"
-                resolvedDestinationLabel={nightModeReturnResolvedLabel}
+                includeDefault={false}
               />
             </div>
           </div>
@@ -154,39 +158,33 @@ export function EndNodeEditor({
 
       <div className="card">
         <div className="card-title-row">
-          <div className="card-title">Mode nuit</div>
+          <div className="card-title">Réglage du message de fin</div>
         </div>
         <div className="editor-setting-stack">
-          <div className="editor-setting-row is-toggle-row">
-            <div className="editor-setting-copy">
-              <div className="editor-setting-title">Activer</div>
-              <div className="editor-setting-desc">
-              Marque le pack comme « mode nuit » dans les métadonnées exportées. Certaines Lunii peuvent ajuster leur affichage, le niveau sonore et le nombre d'histoires que l'enfant peut écouter si le mode nuit est activé sur la Lunii et cette option activée.
-              </div>
-            </div>
-            <div className="editor-setting-control">
-              <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
+          <div className="editor-setting-row is-toggle-row end-node-setting-row end-node-toggle-row">
+            <Toggle on={nightModeActive} onChange={onUpdateNightMode} />
+            <div className="editor-setting-copy end-node-setting-copy">
+              <div className="editor-setting-title">Activer le mode nuit</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card card--danger">
-        <div className="card-danger-header">
-          <TriangleAlert className="card-danger-icon" />
-          <span>Zone sensible</span>
-        </div>
-        <div className="card-danger-divider" />
+      <div className="card card--danger card--danger-compact">
         <div className="card-danger-row">
-          <div className="card-danger-text">
-            <div className="card-danger-title">Supprimer le message de fin</div>
-            <div className="card-danger-desc">
-              Retire le message de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
-            </div>
-          </div>
-          <button className="btn btn-danger-outline" type="button" onClick={handleRemove}>
-            Supprimer
+          <button
+            className="card-danger-trash"
+            type="button"
+            onClick={handleRemove}
+            aria-label="Supprimer le message de fin"
+            title="Supprimer le message de fin"
+          >
+            <Trash2 className="card-danger-icon" />
           </button>
+          <span className="card-danger-title">Supprimer le message de fin</span>
+          <p className="card-danger-desc">
+            Retire le message de fin du pack. Les histoires ne joueront plus de message commun à leur conclusion. Désactive aussi le mode nuit.
+          </p>
         </div>
       </div>
 

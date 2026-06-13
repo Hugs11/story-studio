@@ -1661,27 +1661,6 @@ body.fd-fullscreen-open {
     padding: 12px;
   }
 
-  .fd-floating-panel-body .card.card--danger {
-    padding: 0;
-    min-height: max-content;
-    overflow: visible;
-  }
-
-  .fd-floating-panel-body .card-danger-header {
-    padding: 8px 12px;
-  }
-
-  .fd-floating-panel-body .card-danger-row {
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 9px;
-    padding: 10px 12px 12px;
-  }
-
-  .fd-floating-panel-body .card-danger-row .btn {
-    justify-self: start;
-  }
-
   .fd-floating-panel-body .card-danger-desc {
     font-size: 10px;
     line-height: 1.35;
