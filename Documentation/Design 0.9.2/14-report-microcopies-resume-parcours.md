@@ -17,7 +17,7 @@
   - titre explicite ;
   - chips plus lisibles ;
   - fleche plus visible ;
-  - mention courte du contexte quand utile (`Auto-next active`, `via message de fin du pack`, `via scenario de fin`, etc.).
+  - mention courte uniquement quand les chips ne suffisent pas, par exemple `Auto-next active`.
 - Conservation de la source de verite existante : le resume continue d'utiliser `getEffectiveEndBehavior()` depuis `generatedNavigation.js`.
 - Harmonisation des microcopies du multi-editeur pour eviter l'ancien couple `Pendant/Apres la lecture`.
 

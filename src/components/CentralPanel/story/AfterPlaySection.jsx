@@ -255,15 +255,7 @@ export function AfterPlaySection({
       : `${project?.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`;
   const routeContextText = autoNextApplies
     ? 'Auto-next activé'
-    : routeUsesEndStep
-      ? hasSequence
-        ? 'via scénario de fin'
-        : hasPrompt && !usesGlobalEndNodeAudio
-          ? 'via message personnalisé'
-          : 'via message de fin du pack'
-      : autoContinuationEnabled
-        ? 'enchaînement automatique'
-        : "attente sur l'écran";
+    : null;
   const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
   const showReturnDestinationRow = allMenus.length > 0
     && !hasGeneratedEndNode
