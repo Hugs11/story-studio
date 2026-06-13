@@ -67,39 +67,6 @@
   color: var(--color-text-primary);
 }
 
-.tree-returns-toggle {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 78%, transparent);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--color-background-secondary) 74%, transparent);
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
-}
-
-.tree-returns-toggle:hover {
-  color: var(--color-accent);
-  border-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
-  background: color-mix(in srgb, var(--color-accent-light) 62%, var(--color-background-secondary));
-}
-
-.tree-returns-toggle.is-active {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent-light) 74%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
-}
-
-.tree-returns-toggle-icon {
-  width: 16px;
-  height: 16px;
-}
-
 /* ── End-node separator ─────────────────────────────────────────────────── */
 .tree-end-node-sep {
   flex-shrink: 0;

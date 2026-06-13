@@ -37,6 +37,7 @@ export const KEYS = Object.freeze({
   FLOW_DIAGRAM_INSPECTOR_WIDTH: 'fd_inspector_width',
   FLOW_DIAGRAM_SHOW_RETURNS: 'fd_show_returns',
   TREE_SHOW_DEFAULT_NAVIGATION_BADGES: 'tree_show_default_navigation_badges',
+  TREE_SHOW_GUIDES: 'tree_show_guides',
   XTTS_LAST_VOICE: 'xtts_last_voice',
   XTTS_LAST_SPEAKER: 'xtts_last_speaker',
   SIMPLE_MODE_INFO_DISMISS: 'storyStudio.simpleModeInfoDismissed',
