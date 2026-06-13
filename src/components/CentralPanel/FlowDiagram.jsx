@@ -44,12 +44,24 @@ function EmptyDiagramState({ onImportStories = null }) {
 
 function inspectorTitle(node) {
   if (!node) return 'Réglages';
-  if (node.id === END_NODE_ID) return node.name || 'Message de fin';
+  if (node.type === 'root') return node.name || 'Pack';
+  return node.name || TYPE_LABELS[node.type] || 'Réglages';
+}
+
+function inspectorSubtitle(node) {
+  if (!node) return null;
+  const typeLabel = inspectorTypeLabel(node);
+  if (!typeLabel || typeLabel === node.name) return null;
+  if (node.type === 'root' && inspectorTitle(node) === typeLabel) return null;
+  return typeLabel;
+}
+
+function inspectorTypeLabel(node) {
+  if (!node) return 'Réglages';
+  if (node.id === END_NODE_ID) return 'Message de fin';
   if (node.type === 'root') return 'Pack';
-  if (node.type === 'menu') return 'Dossier';
-  if (node.type === 'story') return "Histoire";
-  if (node.type === 'zip') return 'Archive ZIP';
-  return TYPE_LABELS[node.type] || 'Réglages';
+  const label = TYPE_LABELS[node.type] || null;
+  return label || 'Réglages';
 }
 
 function DiagramNodeIcon({ type }) {
@@ -383,13 +395,14 @@ export function FlowDiagram({
         return {
           id: END_NODE_ID,
           type: 'end-node',
-          name: 'Message de fin',
+          name: project?.endNodeName || 'Message de fin',
         };
       }
       return buildSelectedNode(project, inspectorNodeId, projectIndex);
     },
     [project, inspectorNodeId, projectIndex],
   );
+  const inspectorSubtitleText = inspectorSubtitle(inspectorNode);
 
   if (project?.projectType !== 'pack' && project?.projectType !== 'simple') return null;
 
@@ -488,7 +501,9 @@ export function FlowDiagram({
           <div className="fd-floating-panel-head">
             <div>
               <div className="fd-floating-panel-title">{inspectorTitle(inspectorNode)}</div>
-              <div className="fd-floating-panel-sub">{inspectorNode.name || TYPE_LABELS[inspectorNode.type]}</div>
+              {inspectorSubtitleText ? (
+                <div className="fd-floating-panel-sub">{inspectorSubtitleText}</div>
+              ) : null}
             </div>
             <button type="button" className="modal-close" onClick={() => setInspectorNodeId(null)}>✕</button>
           </div>
