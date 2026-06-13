@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FilePen, MonitorPlay, Network, Wrench } from '../icons/LucideLocal';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
+import './PanelRail.css';
 
 const ITEMS = [
   {
