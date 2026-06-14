@@ -467,36 +467,19 @@
   position: relative;
 }
 
-.me-col-picker-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 26px;
+/* Sélecteur de couleur : .btn dimensionné en icône 26px ; actif = sélection orange. */
+.btn.me-col-picker-btn {
   width: 26px;
-  border: 0.5px solid var(--control-border);
-  border-radius: 5px;
-  background: var(--control-bg);
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
   color: var(--control-text-muted);
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-
-.me-col-picker-btn:hover {
-  background: var(--control-bg-hover);
-  color: var(--control-text);
-  border-color: var(--control-border-hover);
 }
 
 .me-col-picker-btn.is-active {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--control-bg));
-  color: var(--color-accent);
-  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--control-border));
-}
-
-.me-col-picker-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+  background: color-mix(in srgb, var(--accent) 14%, var(--control-bg));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--control-border));
 }
 
 .me-col-picker-icon {

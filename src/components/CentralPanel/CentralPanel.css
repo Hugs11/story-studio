@@ -495,7 +495,7 @@
   border-radius: 50%;
   background: transparent;
   border: 1px solid var(--control-border);
-  color: var(--accent-soft);
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
