@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { Button } from '../common/Button';
 import './MediaPopover.css';
 
 function fmt(secs) {
@@ -214,9 +215,9 @@ export function MediaPopover({
         <>
           <PopoverAudioPlayer path={item.path} name={item.name} />
           {firstUsage?.entryId && onSelectNode ? (
-            <button className="btn mp-action-btn mp-action-btn--goto" type="button" onClick={handleGoTo}>
+            <Button className="mp-action-btn mp-action-btn--goto" onClick={handleGoTo}>
               → Aller vers « {firstUsage.label} »
-            </button>
+            </Button>
           ) : null}
         </>
       )}

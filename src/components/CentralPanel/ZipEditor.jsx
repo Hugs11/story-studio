@@ -1,5 +1,6 @@
 import { pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
+import { Button } from '../common/Button';
 import { useZipCover } from './useZipCover.js';
 import './CentralPanel.css';
 import './ImageField.css';
@@ -50,9 +51,9 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
           <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {filename || 'Aucun fichier'}
           </span>
-          <button className="btn-xs" onClick={handlePick}>
+          <Button size="sm" onClick={handlePick}>
             {filename ? 'Remplacer' : 'Choisir'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -61,9 +62,9 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-danger-outline" onClick={onDelete}>
+        <Button variant="danger-outline" onClick={onDelete}>
           Supprimer cette archive
-        </button>
+        </Button>
       </div>
     </>
   );

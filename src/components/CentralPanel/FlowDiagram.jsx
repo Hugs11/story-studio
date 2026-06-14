@@ -9,6 +9,7 @@ import { CompleteDiagramTree } from './FullDiagramTree';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { Download } from '../icons/LucideLocal';
+import { Button } from '../common/Button';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID, TYPE_LABELS, describeContainer, countStories } from './flowDiagramLayout';
 import './FlowDiagram.css';
@@ -458,13 +459,13 @@ export function FlowDiagram({
         <div className="fd-multi-panel">
           <div className="fd-floating-panel-head">
             <div className="fd-floating-panel-title">Sélection multiple</div>
-            <button
-              type="button"
-              className="btn btn-icon modal-close"
+            <Button
+              variant="icon"
+              className="modal-close"
               onClick={() => setMultiPanelOpen(false)}
             >
               ✕
-            </button>
+            </Button>
           </div>
           <div className="fd-multi-panel-body">
             <MultiEditor
@@ -516,7 +517,7 @@ export function FlowDiagram({
                 <div className="fd-floating-panel-sub">{inspectorSubtitleText}</div>
               ) : null}
             </div>
-            <button type="button" className="btn btn-icon modal-close" onClick={() => setInspectorNodeId(null)}>✕</button>
+            <Button variant="icon" className="modal-close" onClick={() => setInspectorNodeId(null)}>✕</Button>
           </div>
           <div className="fd-floating-panel-body">
             {inspectorNode.id === END_NODE_ID ? (
@@ -575,7 +576,7 @@ export function FlowDiagram({
           <span>Diagramme complet du pack</span>
           <div className="fd-fullscreen-actions">
             {autoOpenCheckbox}
-            <button type="button" className="btn btn-icon modal-close" onClick={() => setFullscreenOpen(false)}>✕</button>
+            <Button variant="icon" className="modal-close" onClick={() => setFullscreenOpen(false)}>✕</Button>
           </div>
         </div>
         <div className="fd-fullscreen-body">

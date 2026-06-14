@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
 import { FilePen, FolderOpen, ListTodo, SlidersHorizontal, SwatchBook } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
 
@@ -172,7 +173,7 @@ export function ModeSelector({
               Je n'ai pas encore eu le temps de m'en occuper. Si tu es volontaire, une contribution sera la bienvenue.
             </div>
             <div className="mode-doc-link">Lien GitHub à ajouter plus tard.</div>
-            <button className="btn" onClick={() => setDocumentationOpen(false)}>Fermer</button>
+            <Button onClick={() => setDocumentationOpen(false)}>Fermer</Button>
           </div>
         </div>
       )}

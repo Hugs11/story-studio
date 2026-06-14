@@ -1,4 +1,5 @@
 import { Package } from '../icons/LucideLocal';
+import { Button } from '../common/Button';
 import { COLUMNS } from './useColumnWidths';
 import { MediaTile } from './MediaTile';
 
@@ -69,13 +70,13 @@ export function MediaExplorerContent({
         <span>Aucun média pour l'instant</span>
         <p className="media-empty-hint">Tes médias importés, générés ou extraits apparaîtront ici, prêts à être glissés-déposés.</p>
         <div className="media-empty-actions">
-          <button className="btn media-empty-btn" type="button" onClick={onImportMedia || onImportStories}>
+          <Button className="media-empty-btn" onClick={onImportMedia || onImportStories}>
             + Importer un fichier
-          </button>
+          </Button>
           {onImportMediaFolder && (
-            <button className="btn media-empty-btn" type="button" onClick={onImportMediaFolder}>
+            <Button className="media-empty-btn" onClick={onImportMediaFolder}>
               + Importer un dossier
-            </button>
+            </Button>
           )}
         </div>
       </div>

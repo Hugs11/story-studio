@@ -12,6 +12,7 @@ import { readImageEditMetadata, writeImageEditMetadata } from '../ImageEditorMod
 const ImageEditorModal = lazy(() => import('../ImageEditorModal/ImageEditorModal')
   .then((m) => ({ default: m.ImageEditorModal })));
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { Copy, Scissors, FolderOpen, ClipboardPaste, Sparkles, Image as ImageIcon } from '../icons/LucideLocal';
 import './ImageField.css';
@@ -208,8 +209,9 @@ export function ImageField({
       {(aiEnabled || extraActions.length > 0) && (
         <div className="image-action-row">
           {aiEnabled && (
-            <button
-              className={`btn btn-secondary-violet image-gen-btn${isGeneratingForField ? ' is-generating' : ''}`}
+            <Button
+              variant="secondary-violet"
+              className={`image-gen-btn${isGeneratingForField ? ' is-generating' : ''}`}
               onClick={() => onOpenSDGenerate({
                 currentImagePath: fileAvailable ? file : null,
                 currentImageLabel: label || 'image actuelle',
@@ -221,17 +223,18 @@ export function ImageField({
                 {isGeneratingForField ? <span className="image-gen-spinner" /> : <Sparkles style={{ width: 12, height: 12 }} />}
               </span>
               <span>{isGeneratingForField ? 'Génération…' : 'Générer IA'}</span>
-            </button>
+            </Button>
           )}
           {extraActions.map((action) => (
             <Tooltip key={action.key} text={action.title || action.label}>
-              <button
-                className="btn btn-secondary-violet image-gen-btn"
+              <Button
+                variant="secondary-violet"
+                className="image-gen-btn"
                 onClick={action.onClick}
               >
                 {action.icon && <span className="image-gen-btn-icon" aria-hidden="true">{action.icon}</span>}
                 <span>{action.label}</span>
-              </button>
+              </Button>
             </Tooltip>
           ))}
         </div>
