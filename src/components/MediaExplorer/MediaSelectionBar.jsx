@@ -1,4 +1,5 @@
 import { tagStyle } from './helpers';
+import { Button } from '../common/Button';
 
 export function MediaSelectionBar({
   selectedCount,
@@ -32,16 +33,16 @@ export function MediaSelectionBar({
       <span className="media-selection-count">{selectedCount} sélectionné{selectedCount > 1 ? 's' : ''}</span>
       {selectedAudioItems.length > 0 ? (
         <>
-          <button className="btn media-selection-btn" type="button" onClick={onCopyAudio}>
+          <Button className="media-selection-btn" onClick={onCopyAudio}>
             Copier {selectedAudioItems.length} son{selectedAudioItems.length > 1 ? 's' : ''}
-          </button>
-          <button className="btn media-selection-btn" type="button" onClick={onCutAudio}>
+          </Button>
+          <Button className="media-selection-btn" onClick={onCutAudio}>
             Couper {selectedAudioItems.length} son{selectedAudioItems.length > 1 ? 's' : ''}
-          </button>
+          </Button>
           {selectedAudioItems.length >= 2 && (
-            <button className="btn btn-primary media-selection-btn" type="button" onClick={onOpenAssembly}>
+            <Button variant="primary" className="media-selection-btn" onClick={onOpenAssembly}>
               Assembler les audios
-            </button>
+            </Button>
           )}
         </>
       ) : null}
@@ -56,9 +57,9 @@ export function MediaSelectionBar({
               onBlur={() => setTimeout(() => onBulkTagOpenChange(false), 150)}
               placeholder="+ Tag commun"
             />
-            <button className="btn media-selection-btn" type="submit" disabled={!bulkTag.trim()}>
+            <Button type="submit" className="media-selection-btn" disabled={!bulkTag.trim()}>
               Appliquer
-            </button>
+            </Button>
           </form>
           {bulkTagOpen && allTags.length > 0 && (
             <div className="media-tag-suggestions">
@@ -83,7 +84,7 @@ export function MediaSelectionBar({
           )}
         </div>
       ) : null}
-      <button className="btn media-selection-btn" type="button" onClick={onClear}>Effacer</button>
+      <Button className="media-selection-btn" onClick={onClear}>Effacer</Button>
     </div>
   );
 }

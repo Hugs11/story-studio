@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { logger } from '../../utils/logger';
 import { basename } from '../../utils/fileUtils';
+import { Button } from '../common/Button';
 import './RenderQueuePanel.css';
 
 const STATUS_LABEL = {
@@ -86,19 +87,21 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
             {job.cancelRequested ? 'Annulation…' : STATUS_LABEL[job.status]}
           </span>
           {(job.status === 'pending' || job.status === 'running') && (
-            <button
-              className="btn-xs rq-cancel-btn"
+            <Button
+              size="sm"
+              className="rq-cancel-btn"
               title={job.status === 'pending' ? 'Annuler ce rendu' : 'Annuler la génération en cours'}
               disabled={job.cancelRequested}
               onClick={(e) => { e.stopPropagation(); onCancel?.(job.id); }}
-            >Annuler</button>
+            >Annuler</Button>
           )}
           {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
-            <button
-              className="btn-xs rq-remove-btn"
+            <Button
+              size="sm"
+              className="rq-remove-btn"
               title="Retirer"
               onClick={(e) => { e.stopPropagation(); onRemove(job.id); }}
-            >✕</button>
+            >✕</Button>
           )}
           <span className="rq-chevron">{expanded ? '▲' : '▼'}</span>
         </div>
@@ -120,14 +123,14 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
           </div>
           <div className="rq-job-actions">
             {job.logs.length > 0 && (
-              <button className="btn-xs" onClick={handleCopyLogs}>
+              <Button size="sm" onClick={handleCopyLogs}>
                 {copyStatus === 'copied' ? 'Copié ✓' : copyStatus === 'error' ? 'Erreur' : 'Copier logs'}
-              </button>
+              </Button>
             )}
             {(job.status === 'done' || job.status === 'error' || job.status === 'canceled') && (
-              <button className="btn-xs" onClick={handleOpenFolder}>
+              <Button size="sm" onClick={handleOpenFolder}>
                 {openFolderError ? 'Erreur' : 'Ouvrir dossier'}
-              </button>
+              </Button>
             )}
             {job.status === 'done' && job.resultPath && (
               <span className="rq-result-path" title={job.resultPath}>
@@ -214,9 +217,9 @@ export function RenderQueuePanel({ jobs, onRemove, onCancel, onClearDone, onClos
         </span>
         <div className="rq-panel-header-actions">
           {doneCount > 0 && (
-            <button className="btn-xs" onClick={onClearDone}>Vider terminés</button>
+            <Button size="sm" onClick={onClearDone}>Vider terminés</Button>
           )}
-          <button className="btn-xs" onClick={onClose} title="Fermer">✕</button>
+          <Button size="sm" onClick={onClose} title="Fermer">✕</Button>
         </div>
       </div>
 
