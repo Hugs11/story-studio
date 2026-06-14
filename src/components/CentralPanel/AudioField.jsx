@@ -16,6 +16,7 @@ import { GenerateVoiceModal } from '../GenerateVoiceModal/GenerateVoiceModal';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Play, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 
 const WAVE_HEIGHTS = [6, 10, 14, 10, 16, 12, 8, 14, 10, 6, 12, 8, 14, 10, 16, 8, 12, 6, 10, 14];
@@ -396,7 +397,7 @@ export function AudioField({
               Le fichier enregistré est au format <strong>.webm</strong>. L'option <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> a été activée automatiquement dans les réglages de l'histoire pour garantir la compatibilité avec votre Boîte à Histoires.
             </div>
             <div className="audio-notice-actions">
-              <button className="btn btn-primary" onClick={() => setShowConvertNotice(false)}>Compris</button>
+              <Button variant="primary" onClick={() => setShowConvertNotice(false)}>Compris</Button>
             </div>
           </div>
         </div>
@@ -430,16 +431,15 @@ export function AudioField({
               )}
             </div>
             <div className="audio-notice-actions">
-              <button
-                className="btn"
+              <Button
                 onClick={() => { setShowNoSaveWarning(false); setPendingGeneratedSource(null); }}
                 disabled={savingGeneratedAudio}
               >
                 Annuler
-              </button>
-              <button className="btn btn-primary" onClick={handleSaveAndContinue} disabled={savingGeneratedAudio}>
+              </Button>
+              <Button variant="primary" onClick={handleSaveAndContinue} disabled={savingGeneratedAudio}>
                 {savingGeneratedAudio ? 'Sauvegarde…' : 'Sauvegarder le projet…'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
