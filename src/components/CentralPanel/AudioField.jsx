@@ -276,13 +276,13 @@ export function AudioField({
               <span className="audio-empty-plus">+</span>
               <div className="audio-bar-actions" aria-label="Actions audio">
                 <Tooltip text="Enregistrer l'audio">
-                  <button className="mic-btn" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
+                  <button className="btn btn-icon btn-icon-sm" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                   </button>
                 </Tooltip>
                 {xttsSettings?.enabled && (
                   <Tooltip text="Générer une voix depuis un texte">
-                    <button className="tts-btn" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
+                    <button className="btn btn-icon btn-icon-sm" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
                       <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                     </button>
                   </Tooltip>
@@ -365,19 +365,19 @@ export function AudioField({
             )}
             <div className="audio-bar-actions" aria-label="Actions audio">
               <Tooltip text="Remplacer par un enregistrement">
-                <button className="mic-btn" type="button" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
+                <button className="btn btn-icon btn-icon-sm" type="button" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
                   <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                 </button>
               </Tooltip>
               {xttsSettings?.enabled && (
                 <Tooltip text="Générer une nouvelle voix depuis un texte">
-                  <button className="tts-btn" type="button" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
+                  <button className="btn btn-icon btn-icon-sm" type="button" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
                     <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                   </button>
                 </Tooltip>
               )}
               <Tooltip text="Éditer l'audio">
-                <button className="tts-btn" type="button" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
+                <button className="btn btn-icon btn-icon-sm" type="button" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                 </button>
               </Tooltip>

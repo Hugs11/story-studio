@@ -228,59 +228,15 @@
   justify-content: center;
 }
 
-.image-gen-btn {
+/* Bouton génération IA : .btn .btn-secondary-violet + dimensions compactes locales.
+   États (hover/focus/disabled/couleurs violet) fournis par le variant global. */
+.btn.image-gen-btn {
   flex: 0 1 auto;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 7px;
-  border: 1px solid var(--accent-2-border);
-  background: var(--accent-2-dim);
-  color: var(--accent-2-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 5px;
   font-size: 11px;
   font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.image-gen-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
-  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
-  color: var(--accent-2-text);
-}
-
-.image-gen-btn:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
-}
-
-.image-gen-btn:disabled {
-  background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
-  color: var(--control-disabled-text);
-  cursor: not-allowed;
-}
-
-.image-gen-btn--accent {
-  color: var(--accent-2-text);
-  border-color: var(--accent-2-border);
-  background: var(--accent-2-dim);
-}
-
-.image-gen-btn--accent:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
-  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
-  color: var(--accent-2-text);
-}
-
-.image-gen-btn--accent:disabled {
-  background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
-  color: var(--control-disabled-text);
 }
 
 .image-gen-btn-icon {

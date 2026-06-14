@@ -385,6 +385,13 @@ body {
   color: var(--text);
 }
 
+/* Variante compacte 28px (actions media : micro / TTS / ciseaux) */
+.btn-icon-sm {
+  width: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
 @media (max-width: 900px) {
   .btn {
     padding-left: 8px;
