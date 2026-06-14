@@ -334,7 +334,7 @@ export function OptionsTab({
               />
             </div>
           )}
-          <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
+          <div className="opts-help">
             Raccourcis : <strong>Ctrl+S</strong> pour sauvegarder, <strong>Ctrl+Maj+S</strong> pour sauvegarder sous
           </div>
         </section>
@@ -419,7 +419,7 @@ export function OptionsTab({
             </button>
           </div>
           {consolidationResult && (
-            <div className={`info-box ${consolidationResult.errors?.length ? 'warn' : ''}`} style={{ marginTop: 8 }}>
+            <div className={`info-box info-box--spaced ${consolidationResult.errors?.length ? 'warn' : ''}`}>
               Projet consolidé : {consolidationResult.copiedCount} média(s) copié(s)
               {consolidationResult.errors?.length ? `, ${consolidationResult.errors.length} fichier(s) manquant(s).` : '.'}
             </div>
@@ -479,7 +479,7 @@ export function OptionsTab({
                 </label>
               </div>
 
-              <div className="opts-row" style={{ paddingTop: 10 }}>
+              <div className="opts-row opts-row--pt">
                 <div className="opts-row-info">
                   <div className="opts-row-label">Demarrer XTTS automatiquement si le serveur est arrete</div>
                   <div className="opts-row-sub">
@@ -489,7 +489,7 @@ export function OptionsTab({
                 <Toggle on={xttsSettings.autoStart} onChange={(v) => onUpdateXttsSettings({ autoStart: v })} />
               </div>
 
-              <div className="opts-row" style={{ paddingTop: 10 }}>
+              <div className="opts-row opts-row--pt">
                 <div className="opts-row-info">
                   <div className="opts-row-label">Forcer le CPU (compatible ComfyUI simultané)</div>
                   <div className="opts-row-sub">
@@ -603,7 +603,7 @@ export function OptionsTab({
                 </label>
               </div>
 
-              <div className="opts-row" style={{ paddingTop: 10 }}>
+              <div className="opts-row opts-row--pt">
                 <div className="opts-row-info">
                   <div className="opts-row-label">Démarrer ComfyUI automatiquement</div>
                   <div className="opts-row-sub">
@@ -711,7 +711,7 @@ export function OptionsTab({
               Copier le chemin
             </button>
           </div>
-          <div className="opts-row-sub" style={{ padding: '4px 0 0', color: 'var(--color-text-tertiary)', fontSize: 11 }}>
+          <div className="opts-help">
             Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement.
           </div>
         </section>

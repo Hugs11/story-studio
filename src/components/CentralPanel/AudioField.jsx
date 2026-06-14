@@ -316,10 +316,7 @@ export function AudioField({
                 title={isPlaying ? 'Pause' : 'Lire'}
               >
                 {isPlaying
-                  ? <div style={{ width: 8, height: 10, display: 'flex', gap: 2 }}>
-                      <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
-                      <div style={{ width: 3, height: 10, background: 'currentColor', borderRadius: 1 }} />
-                    </div>
+                  ? <span className="audio-pause-icon"><span className="audio-pause-bar" /><span className="audio-pause-bar" /></span>
                   : <Play className="play-icon" strokeWidth={2.2} absoluteStrokeWidth />
                 }
               </button>
@@ -395,10 +392,10 @@ export function AudioField({
               <span>Conversion activée automatiquement</span>
               <button className="modal-close" onClick={() => setShowConvertNotice(false)}>×</button>
             </div>
-            <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            <div className="audio-notice-body">
               Le fichier enregistré est au format <strong>.webm</strong>. L'option <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> a été activée automatiquement dans les réglages de l'histoire pour garantir la compatibilité avec votre Boîte à Histoires.
             </div>
-            <div style={{ padding: '0 20px 16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="audio-notice-actions">
               <button className="btn btn-primary" onClick={() => setShowConvertNotice(false)}>Compris</button>
             </div>
           </div>
@@ -419,7 +416,7 @@ export function AudioField({
                 ×
               </button>
             </div>
-            <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+            <div className="audio-notice-body">
               {pendingGeneratedSource === 'tts' ? (
                 <>
                   L'audio genere sera stocke dans <strong>voix-generees/</strong> a cote du fichier <strong>.mbah</strong>.
@@ -432,7 +429,7 @@ export function AudioField({
                 </>
               )}
             </div>
-            <div style={{ padding: '0 20px 16px', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <div className="audio-notice-actions">
               <button
                 className="btn"
                 onClick={() => { setShowNoSaveWarning(false); setPendingGeneratedSource(null); }}

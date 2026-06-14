@@ -335,7 +335,7 @@ export function AfterPlaySection({
   } else if (hasPrompt || showPromptField) {
     endContent = (
       <>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div className="end-field-head">
           <span className="field-label">
             {usesGlobalEndNodeAudio ? 'Message de fin importé' : 'Message audio de fin'}
           </span>
@@ -352,7 +352,7 @@ export function AfterPlaySection({
           </Tooltip>
         </div>
         {hasEndNode && !usesGlobalEndNodeAudio && (
-          <div className="sequence-note" style={{ marginBottom: 10 }}>
+          <div className="sequence-note sequence-note--spaced">
             Cette histoire jouera ce message <strong>à la place</strong> du message de fin du pack.
           </div>
         )}
@@ -375,7 +375,7 @@ export function AfterPlaySection({
         {hasPrompt && (
           <div className="end-simple-settings">
             {usesGlobalEndNodeAudio && (
-              <div className="sequence-note" style={{ marginBottom: 10 }}>
+              <div className="sequence-note sequence-note--spaced">
                 Ce message vient du message de fin importé. Remplacer l'audio ici personnalisera uniquement cette histoire.
               </div>
             )}
@@ -400,7 +400,7 @@ export function AfterPlaySection({
               ))}
             </div>
             <div className="sequence-targets">
-              <div className="field-row" style={{ marginBottom: 0 }}>
+              <div className="field-row field-row--flush">
                 <div style={{ flex: 1 }}>
                   <span className="field-label">Bouton OK</span>
                 </div>
@@ -413,7 +413,7 @@ export function AfterPlaySection({
                   emptyLabel="Comme à la fin de l'histoire"
                 />
               </div>
-              <div className="field-row" style={{ marginBottom: 0 }}>
+              <div className="field-row field-row--flush">
                 <div style={{ flex: 1 }}>
                   <span className="field-label">Bouton Accueil</span>
                 </div>
@@ -435,7 +435,7 @@ export function AfterPlaySection({
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+            <div className="end-actions-end">
               <button type="button" className="btn-xs" onClick={startSequence}>
                 Convertir en scénario de fin
               </button>

@@ -237,6 +237,32 @@
   min-width: 0;
 }
 
+.field-row--flush {
+  margin-bottom: 0;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.menu-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.menu-destination-help {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
 .field-label {
   font-size: 12px;
   font-weight: var(--weight-medium);
@@ -1826,6 +1852,53 @@
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.sequence-note--spaced {
+  margin-bottom: 10px;
+}
+
+.end-field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.end-actions-end {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* Icône pause dessinée (deux barres) dans le bouton play du champ audio */
+.audio-pause-icon {
+  width: 8px;
+  height: 10px;
+  display: flex;
+  gap: 2px;
+}
+
+.audio-pause-bar {
+  width: 3px;
+  height: 10px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+/* Petites modales de notice du champ audio (corps + actions) */
+.audio-notice-body {
+  padding: 16px 20px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.audio-notice-actions {
+  padding: 0 20px 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .sequence-footer {
