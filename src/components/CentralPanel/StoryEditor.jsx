@@ -82,11 +82,11 @@ function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEff
   if (autoNextEffective) return 'Lecture de l’histoire suivante';
   const inheritedTargetId = parentMenu.returnAfterPlay ?? null;
   if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) {
-    return `Retour vers ${parentMenu.name || 'ce dossier'}`;
+    return `Revient à ${parentMenu.name || 'ce dossier'}`;
   }
-  if (isRootNavigationTarget(inheritedTargetId)) return `Retour vers ${NAV_ROOT_LABEL}`;
+  if (isRootNavigationTarget(inheritedTargetId)) return `Revient à ${NAV_ROOT_LABEL}`;
   const name = targetNameById(allMenus, allStories, resolveNavigationTargetId(inheritedTargetId, parentMenu.id));
-  return `Retour vers ${name}`;
+  return `Revient à ${name}`;
 }
 
 function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffective, isLastInMenu) {
