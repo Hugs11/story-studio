@@ -858,6 +858,7 @@ export function CompleteDiagramTree({
                 const isActive = activeNavigationEdgeIds.has(id);
                 const isDimmed = hasActiveNavigationEdge && !isActive;
                 const d = `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
+                const labelOnly = edge.from === END_NODE_ID && edge.to === END_NODE_ID && edge.source === 'contextual';
                 return (
                   <g
                     key={id}
@@ -877,14 +878,18 @@ export function CompleteDiagramTree({
                       setPinnedNavigationEdgeId((current) => (current === id ? null : id));
                     }}
                   >
-                    <path
-                      className="fd-complete-line-hitbox"
-                      d={d}
-                    />
-                    <path
-                      className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
-                      d={d}
-                    />
+                    {labelOnly ? null : (
+                      <>
+                        <path
+                          className="fd-complete-line-hitbox"
+                          d={d}
+                        />
+                        <path
+                          className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
+                          d={d}
+                        />
+                      </>
+                    )}
                   </g>
                 );
               })}
