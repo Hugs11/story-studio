@@ -205,6 +205,24 @@ const chevronRightNode = [
   ['path', { d: 'm9 18 6-6-6-6' }],
 ];
 
+const chevronDownNode = [
+  ['path', { d: 'm6 9 6 6 6-6' }],
+];
+
+const chevronUpNode = [
+  ['path', { d: 'm18 15-6-6-6 6' }],
+];
+
+const moveUpNode = [
+  ['path', { d: 'M8 6 12 2 16 6' }],
+  ['path', { d: 'M12 2v20' }],
+];
+
+const moveDownNode = [
+  ['path', { d: 'M8 18 12 22 16 18' }],
+  ['path', { d: 'M12 2v20' }],
+];
+
 const undo2Node = [
   ['path', { d: 'M9 14 4 9l5-5' }],
   ['path', { d: 'M4 9h10.5a5.5 5.5 0 1 1 0 11H11' }],
@@ -364,6 +382,10 @@ export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
 export const ChevronRight = createLocalLucideIcon(chevronRightNode);
+export const ChevronDown = createLocalLucideIcon(chevronDownNode);
+export const ChevronUp = createLocalLucideIcon(chevronUpNode);
+export const MoveUp = createLocalLucideIcon(moveUpNode);
+export const MoveDown = createLocalLucideIcon(moveDownNode);
 export const Undo2 = createLocalLucideIcon(undo2Node);
 export const Copy = createLocalLucideIcon(copyNode);
 export const ClipboardPaste = createLocalLucideIcon(clipboardPasteNode);
