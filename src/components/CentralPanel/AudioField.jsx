@@ -288,20 +288,22 @@ export function AudioField({
                   </Tooltip>
                 )}
               </div>
+              {file && !fileAvailable && onClear && (
+                <Tooltip text="Retirer le lien cassé">
+                  <button
+                    className="audio-clear-btn"
+                    type="button"
+                    onPointerDown={stopButtonEvent}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClear();
+                    }}
+                    aria-label="Retirer le lien cassé"
+                    title="Retirer le lien cassé"
+                  >×</button>
+                </Tooltip>
+              )}
             </div>
-            {file && !fileAvailable && onClear && (
-              <Tooltip text="Retirer le lien cassé">
-                <button
-                  className="audio-clear-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClear();
-                  }}
-                  aria-label="Retirer le lien cassé"
-                  title="Retirer le lien cassé"
-                >×</button>
-              </Tooltip>
-            )}
           </div>
         ) : (
           <div className="audio-empty-row">
