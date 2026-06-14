@@ -6,7 +6,7 @@ import { getEntryThumbnailPath } from '../../store/projectModel';
 import { Tooltip } from '../common/Tooltip';
 import { Eye, Settings } from '../icons/LucideLocal';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
-import { TYPE_LABELS, END_NODE_ID } from './flowDiagramLayout';
+import { END_NODE_ID } from './flowDiagramLayout';
 import { useZipCover } from './useZipCover.js';
 
 function DiagramNodeTypeIcon({ entry }) {
@@ -161,11 +161,9 @@ export function FullDiagramNode({
         <span className="fd-complete-node-icon"><DiagramNodeTypeIcon entry={entry} /></span>
         <div className="fd-complete-node-texts">
           <span className="fd-complete-node-name">{entry.name || '(sans nom)'}</span>
-          {!compact ? (
+          {!compact && isCollapsed && childSummary ? (
             <span className="fd-complete-node-kind">
-              {isCollapsed && childSummary
-                ? `${TYPE_LABELS[entry.type]} · ${childSummary.descendants} element${childSummary.descendants > 1 ? 's' : ''} masques`
-                : TYPE_LABELS[entry.type]}
+              {`${childSummary.descendants} element${childSummary.descendants > 1 ? 's' : ''} masques`}
             </span>
           ) : null}
         </div>
