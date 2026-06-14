@@ -60,7 +60,7 @@
   display: grid;
   gap: 2px;
   padding: 0 2px 9px;
-  border-bottom: 1px solid var(--color-border-tertiary);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .project-menu-head span {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-size: 11px;
 }
 
@@ -79,7 +79,7 @@
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--color-text-primary);
+  color: var(--text);
   border-radius: var(--radius-md);
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
@@ -115,7 +115,7 @@
 }
 
 .project-menu-item small {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -124,6 +124,6 @@
 .project-menu-sep {
   display: block;
   height: 1px;
-  background: var(--color-border-tertiary);
+  background: var(--border);
   margin: 8px 2px;
 }

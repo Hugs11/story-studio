@@ -13,8 +13,8 @@
   width: 580px;
   max-width: 92vw;
   max-height: 75vh;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg1);
+  border: 0.5px solid var(--borderLt);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   display: flex;
@@ -24,14 +24,14 @@
 
 .gen-header {
   padding: 12px 16px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-bottom: 0.5px solid var(--border);
   flex-shrink: 0;
 }
 
 .gen-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .gen-log {
@@ -41,7 +41,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.6;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
   min-height: 220px;
   max-height: 55vh;
   user-select: text;
@@ -53,7 +53,7 @@
 }
 
 .gen-log-line {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -65,7 +65,7 @@
 
 .gen-footer {
   padding: 10px 16px;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 0.5px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -77,7 +77,7 @@
 .gen-copy-status {
   margin-right: auto;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   opacity: 0;
   transition: opacity 0.18s ease;
   pointer-events: none;
@@ -140,8 +140,8 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  border: 2px solid var(--color-border-secondary);
-  border-top-color: var(--color-accent);
+  border: 2px solid var(--borderLt);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }

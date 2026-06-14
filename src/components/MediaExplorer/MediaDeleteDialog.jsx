@@ -17,7 +17,7 @@ export function MediaDeleteDialog({
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {usedCount > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--color-warning-text, #f5c542)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: 'var(--warning-text)', lineHeight: 1.5 }}>
               {usedCount === 1
                 ? '1 fichier est utilisé dans le projet'
                 : `${usedCount} fichiers sont utilisés dans le projet`}

@@ -9,14 +9,14 @@
   gap: 14px;
   padding: 16px;
   overflow: auto;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .audio-assembly-intro {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -40,17 +40,17 @@
   margin: 0;
   font-size: 12px;
   font-weight: 650;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .audio-assembly-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 0.5px solid var(--color-border-secondary);
+  border: 0.5px solid var(--borderLt);
   border-radius: 6px;
   padding: 6px;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
 }
 
 .audio-assembly-row {
@@ -61,13 +61,13 @@
   min-height: 32px;
   padding: 4px 6px;
   border-radius: 5px;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border: 0.5px solid var(--border);
   user-select: none;
 }
 
 .audio-assembly-grip {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   text-align: center;
   cursor: grab;
   user-select: none;
@@ -88,7 +88,7 @@
   left: 4px;
   right: 4px;
   height: 2px;
-  background: var(--color-accent);
+  background: var(--accent);
   border-radius: 1px;
   pointer-events: none;
 }
@@ -107,7 +107,7 @@
 }
 
 .audio-assembly-duration {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-family: var(--font-mono);
   font-size: 11px;
   text-align: right;
@@ -129,7 +129,7 @@
   align-items: center;
   gap: 8px;
   width: fit-content;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -138,7 +138,7 @@
   flex-direction: column;
   gap: 6px;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .audio-assembly-field.is-inline {
@@ -150,15 +150,15 @@
 .audio-assembly-field input {
   height: 30px;
   border-radius: 5px;
-  border: 0.5px solid var(--color-border-secondary);
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
+  border: 0.5px solid var(--borderLt);
+  background: var(--bg2);
+  color: var(--text);
   padding: 0 9px;
   outline: none;
 }
 
 .audio-assembly-field input:focus {
-  border-color: var(--color-accent);
+  border-color: var(--accent);
 }
 
 .audio-assembly-field.is-inline input {
@@ -170,11 +170,11 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .audio-assembly-destination strong {
-  color: var(--color-text-primary);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -194,7 +194,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 0.5px solid var(--border);
 }
 
 .audio-assembly-submit {

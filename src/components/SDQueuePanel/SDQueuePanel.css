@@ -7,13 +7,13 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--color-background-primary);
+  background: var(--bg1);
 }
 
 .sd-queue-embedded-header {
   height: 36px;
   padding: 0 12px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-bottom: 0.5px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -23,7 +23,7 @@
 .sd-queue-embedded-header > span {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .sd-queue-body {
@@ -43,20 +43,20 @@
 
 .sd-queue-empty {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   padding: 12px 0;
   text-align: center;
 }
 
 /* Job card */
 .sd-job-card {
-  border: 0.5px solid var(--color-border-tertiary);
+  border: 0.5px solid var(--border);
   border-radius: var(--border-radius-md);
   padding: 7px 11px;
   display: flex;
   flex-direction: column;
   gap: 5px;
-  background: var(--color-background-secondary);
+  background: var(--bg2);
 }
 
 .sd-job-header {
@@ -78,7 +78,7 @@
 .sd-job-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -88,7 +88,7 @@
 
 .sd-job-subtitle {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -98,7 +98,7 @@
 
 .sd-job-meta {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 .sd-job-badge {
@@ -136,13 +136,13 @@
 }
 
 .sd-badge-pending, .sd-badge-submitting {
-  background: color-mix(in srgb, var(--color-text-tertiary) 15%, transparent);
-  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--muted) 15%, transparent);
+  color: var(--text-secondary);
 }
 
 .sd-badge-running {
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
 }
 
 .sd-badge-done {
@@ -159,12 +159,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-size: 11px;
   padding: 2px 4px;
 }
 
-.sd-job-remove:hover { color: var(--color-text-primary); }
+.sd-job-remove:hover { color: var(--text); }
 
 .sd-job-action {
   white-space: nowrap;
@@ -193,7 +193,7 @@
 
 .sd-audio-file {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -210,8 +210,8 @@
   gap: 8px;
   padding: 4px 6px;
   border-radius: var(--border-radius-sm);
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border: 0.5px solid var(--border);
 }
 
 .sd-audio-mini-btn {
@@ -243,7 +243,7 @@
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--color-text-tertiary) 22%, transparent);
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
   cursor: pointer;
   overflow: hidden;
   position: relative;
@@ -251,7 +251,7 @@
 
 .sd-audio-mini-fill {
   height: 100%;
-  background: var(--color-accent);
+  background: var(--accent);
   border-radius: 2px;
   transition: width 0.08s linear;
 }
@@ -260,7 +260,7 @@
   flex: 0 0 auto;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -278,13 +278,13 @@
   border-radius: var(--border-radius-sm);
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--color-border-tertiary);
+  border: 1px solid var(--border);
   background: #111;
   padding: 0;
 }
 
 .sd-result-thumb:hover {
-  border-color: var(--color-accent);
+  border-color: var(--accent);
 }
 
 .sd-result-thumb,
@@ -304,7 +304,7 @@
 .sd-result-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--color-background-secondary);
+  background: var(--bg2);
 }
 
 .sd-preview-overlay {
@@ -355,7 +355,7 @@
   justify-content: center;
   flex: 0 0 14px;
   background:
-    radial-gradient(circle, var(--color-background-secondary) 48%, transparent 52%),
+    radial-gradient(circle, var(--bg2) 48%, transparent 52%),
     conic-gradient(currentColor var(--progress), color-mix(in srgb, currentColor 18%, transparent) 0);
 }
 
@@ -373,9 +373,9 @@
   padding: 7px 10px;
   border-radius: 8px;
   background: rgba(18, 18, 24, 0.95);
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-  color: var(--color-text-primary);
+  color: var(--text);
   font-size: 11px;
   max-width: 220px;
   overflow: hidden;
@@ -385,7 +385,7 @@
 }
 
 .sd-queue-drag-ghost.is-over-target {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--accent);
+  color: var(--accent);
   opacity: 1;
 }

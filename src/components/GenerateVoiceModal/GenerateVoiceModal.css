@@ -17,8 +17,8 @@
   gap: 12px;
   padding: 12px;
   border-radius: var(--border-radius-md);
-  background: var(--color-background-secondary);
-  border-left: 2px solid var(--color-accent);
+  background: var(--bg2);
+  border-left: 2px solid var(--accent);
 }
 
 .tts-hero-main {
@@ -38,9 +38,9 @@
   min-height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-secondary);
-  color: var(--color-text-secondary);
+  background: var(--bg1);
+  border: 0.5px solid var(--borderLt);
+  color: var(--text-secondary);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -53,14 +53,14 @@
 
 .tts-context-label {
   font-size: 13px;
-  color: var(--color-text-primary);
+  color: var(--text);
   font-weight: 600;
 }
 
 .tts-context-sub {
   margin-top: 3px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -69,7 +69,7 @@
   flex-direction: column;
   gap: 5px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .tts-field-row {
@@ -81,13 +81,13 @@
 
 .tts-helper {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   line-height: 1.4;
 }
 
 .tts-count {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -97,9 +97,9 @@
   font-size: 12px;
   padding: 8px 10px;
   border-radius: var(--border-radius-md);
-  border: 0.5px solid var(--color-border-secondary);
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
+  border: 0.5px solid var(--borderLt);
+  background: var(--bg1);
+  color: var(--text);
   outline: none;
 }
 
@@ -111,7 +111,7 @@
 
 .tts-textarea:focus,
 .tts-input:focus {
-  border-color: var(--color-accent);
+  border-color: var(--accent);
 }
 
 .tts-grid {
@@ -126,8 +126,8 @@
   align-items: center;
   padding: 0 10px;
   border-radius: var(--border-radius-md);
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
+  background: var(--bg2);
+  color: var(--text);
   font-size: 12px;
 }
 
@@ -140,8 +140,8 @@
 }
 
 .tts-status {
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
+  background: var(--bg2);
+  color: var(--text-secondary);
 }
 
 .tts-error {

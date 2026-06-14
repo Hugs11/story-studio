@@ -4,8 +4,8 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--color-background-primary);
-  border-top: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border-top: 0.5px solid var(--border);
   min-width: 0;
   position: relative;
 }
@@ -29,7 +29,7 @@
   width: 32px;
   height: 2px;
   border-radius: 1px;
-  background: var(--color-border-secondary);
+  background: var(--borderLt);
   opacity: 0.5;
   transition: opacity 0.15s;
 }
@@ -44,8 +44,8 @@
   align-items: flex-end;
   gap: 2px;
   padding: 0 8px;
-  background: var(--color-background-primary);
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border-bottom: 0.5px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -55,7 +55,7 @@
   border-top: 2px solid transparent;
   border-radius: 5px 5px 0 0;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 500;
   padding: 0 13px;
@@ -66,9 +66,9 @@
 }
 
 .bottom-workspace-tabs button.is-active {
-  background: var(--color-background-tertiary);
-  border-top-color: var(--color-accent);
-  color: var(--color-text-primary);
+  background: var(--bg0);
+  border-top-color: var(--accent);
+  color: var(--text);
 }
 
 .bottom-workspace-tabs button span {
@@ -79,8 +79,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-background-secondary);
-  color: var(--color-text-tertiary);
+  background: var(--bg2);
+  color: var(--muted);
   font-size: 10px;
   font-family: var(--font-mono);
 }

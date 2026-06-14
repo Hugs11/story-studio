@@ -2,8 +2,8 @@
   z-index: 9000;
   min-width: 260px;
   max-width: 340px;
-  background: var(--color-background-primary);
-  border: 1px solid var(--color-border-secondary);
+  background: var(--bg1);
+  border: 1px solid var(--borderLt);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
   padding: 12px;
@@ -25,7 +25,7 @@
   min-width: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -37,7 +37,7 @@
   height: 20px;
   border: none;
   background: none;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -49,8 +49,8 @@
 }
 
 .mp-close-btn:hover {
-  background: var(--color-background-tertiary);
-  color: var(--color-text-primary);
+  background: var(--bg0);
+  color: var(--text);
 }
 
 /* ── Image preview ── */
@@ -59,7 +59,7 @@
   aspect-ratio: 4 / 3;
   border-radius: var(--border-radius-md);
   overflow: hidden;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,16 +77,16 @@
   height: 100%;
   background: repeating-linear-gradient(
     45deg,
-    var(--color-background-tertiary),
-    var(--color-background-tertiary) 4px,
-    var(--color-background-secondary) 4px,
-    var(--color-background-secondary) 8px
+    var(--bg0),
+    var(--bg0) 4px,
+    var(--bg2) 4px,
+    var(--bg2) 8px
   );
 }
 
 .mp-meta-row {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   text-align: center;
 }
 
@@ -113,14 +113,14 @@
   flex: 1;
   min-width: 0;
   border-radius: 2px;
-  background: var(--color-border-secondary);
+  background: var(--borderLt);
   transition: background 80ms;
   position: relative;
   z-index: 1;
 }
 
 .mp-wave-bar.is-played {
-  background: var(--color-accent);
+  background: var(--accent);
 }
 
 .mp-waveform-progress {
@@ -128,7 +128,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  background: var(--color-accent-light);
+  background: var(--accent-dim);
   pointer-events: none;
   z-index: 0;
   border-radius: var(--border-radius-md);
@@ -144,9 +144,9 @@
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--color-border-secondary);
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--borderLt);
+  background: var(--bg2);
+  color: var(--text);
   border-radius: 50%;
   cursor: pointer;
   font-size: 11px;
@@ -157,15 +157,15 @@
 }
 
 .mp-play-btn:hover {
-  background: var(--color-accent-light);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .mp-timer {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   letter-spacing: 0.02em;
 }
 
@@ -179,20 +179,20 @@
 
 .mp-action-btn--goto {
   background: none;
-  border: 1px solid var(--color-border-secondary);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--borderLt);
+  color: var(--text-secondary);
 }
 
 .mp-action-btn--goto:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: var(--color-accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ── Separator ── */
 .mp-sep {
   height: 0.5px;
-  background: var(--color-border-tertiary);
+  background: var(--border);
   margin: 0 -2px;
 }
 
@@ -258,13 +258,13 @@
 
 .mp-tag-input {
   flex: 1;
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border-secondary);
+  background: var(--bg2);
+  border: 1px solid var(--borderLt);
   border-radius: var(--border-radius-sm);
   padding: 4px 8px;
   font-size: 11px;
-  color: var(--color-text-primary);
+  color: var(--text);
   outline: none;
 }
-.mp-tag-input:focus { border-color: var(--color-accent, #7c6af7); }
+.mp-tag-input:focus { border-color: var(--accent); }
 .mp-tag-input::placeholder { opacity: 0.4; }

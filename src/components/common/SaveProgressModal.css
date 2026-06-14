@@ -29,7 +29,7 @@
 }
 
 .save-progress-check {
-  color: var(--color-accent);
+  color: var(--accent);
   width: 18px;
   text-align: center;
   flex-shrink: 0;
@@ -41,18 +41,18 @@
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  border: 2px solid var(--color-border-secondary);
-  border-top-color: var(--color-accent);
+  border: 2px solid var(--borderLt);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 .save-progress-text {
-  color: var(--color-text-primary);
+  color: var(--text);
   font-weight: 600;
 }
 
 .save-progress-line.is-done .save-progress-text {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-weight: 400;
 }

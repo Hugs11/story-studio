@@ -1,7 +1,7 @@
 /* Modal éditeur d'images — layout */
 .image-editor-box {
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg1);
+  border: 0.5px solid var(--borderLt);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   display: flex;
@@ -72,7 +72,7 @@
   flex: 1;
   min-width: 0;
   padding: 14px 16px;
-  border-left: 0.5px solid var(--color-border-tertiary);
+  border-left: 0.5px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -82,7 +82,7 @@
 .filter-section-title {
   font-size: var(--text-caption);
   font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
   margin-bottom: 2px;
@@ -96,7 +96,7 @@
 
 .filter-label {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   min-width: 70px;
   flex-shrink: 0;
 }
@@ -104,13 +104,13 @@
 .filter-slider {
   flex: 1;
   height: 3px;
-  accent-color: var(--color-accent);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
 .filter-value {
   font-size: 10px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   min-width: 30px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -126,15 +126,15 @@
   gap: 9px;
   margin: 2px 0;
   padding: 10px 9px;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 72%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--color-background-secondary) 35%, transparent);
+  background: color-mix(in srgb, var(--bg2) 35%, transparent);
 }
 
 .filter-group-title {
   font-size: var(--text-caption);
   font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: var(--tracking-eyebrow);
 }
@@ -143,7 +143,7 @@
   margin-top: -5px;
   font-size: var(--text-body);
   line-height: 1.35;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .filter-group .filter-label {
@@ -154,14 +154,14 @@
   background: none;
   border: none;
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   cursor: pointer;
   padding: 0;
   text-align: left;
   margin-top: 2px;
 }
 
-.filter-advanced-toggle:hover { color: var(--color-text-primary); }
+.filter-advanced-toggle:hover { color: var(--text); }
 
 .filter-reset {
   margin-top: auto;
@@ -171,7 +171,7 @@
 /* Footer */
 .modal-footer {
   padding: 10px 16px;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 0.5px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 8px;

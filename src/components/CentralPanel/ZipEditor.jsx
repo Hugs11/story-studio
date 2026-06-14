@@ -47,7 +47,7 @@ export function ZipEditor({ node, onUpdate, onDelete }) {
         </div>
         <div className="field-row">
           <span className="field-label">Fichier</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {filename || 'Aucun fichier'}
           </span>
           <button className="btn-xs" onClick={handlePick}>
