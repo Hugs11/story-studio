@@ -3,6 +3,7 @@ import { ImageField } from '../ImageField';
 import { useErrorDialog } from '../../common/Dialog';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
+import { Button } from '../../common/Button';
 import { MoveDown, MoveUp, Trash2 } from '../../icons/LucideLocal';
 import {
   CONTROL_DEFS,
