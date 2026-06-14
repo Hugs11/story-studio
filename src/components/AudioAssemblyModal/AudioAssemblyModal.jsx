@@ -5,6 +5,7 @@ import { basename } from '../../utils/fileUtils';
 import { useProjectContext } from '../../store/ProjectContext';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { useErrorDialog } from '../common/Dialog';
+import { Button } from '../common/Button';
 import './AudioAssemblyModal.css';
 
 function fileStem(name) {
@@ -221,7 +222,7 @@ export function AudioAssemblyModal({
       <div className="modal-box audio-assembly-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Assembler des audios</span>
-          <button className="btn btn-icon modal-close" type="button" onClick={onClose} disabled={submitting}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onClose} disabled={submitting}>×</Button>
         </div>
 
         <div className="audio-assembly-body">
@@ -252,9 +253,9 @@ export function AudioAssemblyModal({
                   >≡</span>
                   <span className="audio-assembly-name" title={item.name}>{index + 1}. {item.name}</span>
                   <span className="audio-assembly-duration">{formatDuration(item.durationSecs)}</span>
-                  <button className="btn btn-icon audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title="Monter">↑</button>
-                  <button className="btn btn-icon audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title="Descendre">↓</button>
-                  <button className="btn btn-icon audio-assembly-icon-btn is-danger" type="button" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title="Retirer">×</button>
+                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title="Monter">↑</Button>
+                  <Button variant="icon" className="audio-assembly-icon-btn" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title="Descendre">↓</Button>
+                  <Button variant="icon" className="audio-assembly-icon-btn is-danger" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title="Retirer">×</Button>
                 </div>
               ))}
             </div>
@@ -334,11 +335,11 @@ export function AudioAssemblyModal({
         </div>
 
         <div className="audio-assembly-footer">
-          <button className="btn" type="button" onClick={onClose} disabled={submitting}>Annuler</button>
-          <button className="btn btn-primary audio-assembly-submit" type="button" onClick={handleSubmit} disabled={!canSubmit}>
+          <Button onClick={onClose} disabled={submitting}>Annuler</Button>
+          <Button variant="primary" className="audio-assembly-submit" onClick={handleSubmit} disabled={!canSubmit}>
             {submitting && <span className="audio-assembly-spinner" />}
             {submitting ? 'Assemblage…' : 'Assembler'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
