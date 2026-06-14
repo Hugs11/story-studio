@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { KEYS, read, write } from '../../store/persistentSettings';
+import { Button } from '../common/Button';
 import './GenerateVoiceModal.css';
 
 const LANGUAGE_OPTIONS = [
@@ -126,7 +127,7 @@ export function GenerateVoiceModal({
       <div className="modal-box tts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Generer une voix</span>
-          <button className="btn btn-icon modal-close" onClick={onClose} disabled={submitting}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onClose} disabled={submitting}>×</Button>
         </div>
 
         <div className="tts-body">
@@ -219,17 +220,17 @@ export function GenerateVoiceModal({
         </div>
 
         <div className="tts-footer">
-          <button className="btn" onClick={loadStatus} disabled={loading || submitting}>
+          <Button onClick={loadStatus} disabled={loading || submitting}>
             Actualiser XTTS
-          </button>
+          </Button>
           <div className="tts-footer-actions">
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={handleGenerate}
               disabled={loading || submitting || visibleVoices.length === 0}
             >
               {submitting ? 'Ajout…' : 'Generer'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

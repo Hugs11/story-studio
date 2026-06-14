@@ -1,3 +1,5 @@
+import { Button } from '../common/Button';
+
 export function MediaDeleteDialog({
   items,
   deleteDisk,
@@ -30,8 +32,8 @@ export function MediaDeleteDialog({
           </label>
         </div>
         <div className="gen-footer">
-          <button className="btn" type="button" onClick={onCancel}>Annuler</button>
-          <button className="btn" type="button" onClick={onConfirm} style={{ background: 'oklch(0.50 0.18 20)', color: '#fff', border: 'none' }}>Supprimer</button>
+          <Button type="button" onClick={onCancel}>Annuler</Button>
+          <Button type="button" onClick={onConfirm} style={{ background: 'oklch(0.50 0.18 20)', color: '#fff', border: 'none' }}>Supprimer</Button>
         </div>
       </div>
     </div>

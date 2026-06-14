@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { exists } from '@tauri-apps/plugin-fs';
 import { CircleCheck, Image, Package, TriangleAlert } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { generateConventionName, getExportPackName } from '../../utils/packConvention';
@@ -203,7 +204,7 @@ export function PackNameModal({
             <h2 title={exportName || undefined}>{exportName || 'Métadonnées du pack'}</h2>
             <p>Ces informations s'affichent dans la liseuse et constituent le nom du fichier exporté.</p>
           </div>
-          <button className="btn btn-icon modal-close pack-meta-close" onClick={onClose} aria-label="Fermer">×</button>
+          <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label="Fermer">×</Button>
         </header>
 
         <div className="pack-meta-body">
@@ -306,17 +307,17 @@ export function PackNameModal({
             <span>{stats.media} média{stats.media > 1 ? 's' : ''} lié{stats.media > 1 ? 's' : ''}</span>
           </div>
           <div className="pack-meta-actions">
-            <button className="btn" onClick={onClose} disabled={saving}>Annuler</button>
-            <button className="btn" onClick={() => submit('save')} disabled={saving}>{saving === 'save' ? 'Application...' : 'Appliquer'}</button>
+            <Button onClick={onClose} disabled={saving}>Annuler</Button>
+            <Button onClick={() => submit('save')} disabled={saving}>{saving === 'save' ? 'Application...' : 'Appliquer'}</Button>
             <Tooltip text={generateButtonTooltip} wrap>
-              <button
-                className="btn btn-primary"
+              <Button
+                variant="primary"
                 onClick={() => submit('generate')}
                 disabled={generateButtonDisabled}
                 aria-label={generateButtonTooltip}
               >
                 {saving === 'generate' ? 'Préparation...' : 'Appliquer & générer'}
-              </button>
+              </Button>
             </Tooltip>
           </div>
         </footer>

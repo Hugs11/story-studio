@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Button } from '../common/Button';
 import {
   DEFAULT_SHORTCUTS,
   SHORTCUT_DEFINITIONS,
@@ -104,7 +105,7 @@ export function KeyboardShortcutsModal({
       >
         <div className="modal-header">
           <span>Raccourcis clavier</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>
         </div>
 
         <div className="keyboard-shortcuts-body">
@@ -200,8 +201,8 @@ export function KeyboardShortcutsModal({
           {message ? <div className="keyboard-shortcuts-message">{message}</div> : null}
 
           <div className="keyboard-shortcuts-actions">
-            <button className="btn" type="button" onClick={handleResetAll}>Tout réinitialiser</button>
-            <button className="btn btn-primary" type="button" onClick={onClose}>Fermer</button>
+            <Button onClick={handleResetAll}>Tout réinitialiser</Button>
+            <Button variant="primary" onClick={onClose}>Fermer</Button>
           </div>
         </div>
       </div>

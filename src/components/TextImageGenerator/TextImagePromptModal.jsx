@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { generateTextImage } from './generateTextImage';
 import { drawTextImage, TEXT_IMG_W, TEXT_IMG_H } from './drawTextImage';
+import { Button } from '../common/Button';
 import './TextImagePromptModal.css';
 
 const OVERLAY_STYLE = {
@@ -70,10 +71,10 @@ export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
           />
         </div>
         <div className="text-img-footer">
-          <button className="btn btn-ghost" onClick={onCancel}>Annuler</button>
-          <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
+          <Button variant="ghost" onClick={onCancel}>Annuler</Button>
+          <Button variant="primary" onClick={handleGenerate} disabled={generating}>
             {generating ? 'Génération…' : 'Générer'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,
