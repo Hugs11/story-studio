@@ -120,33 +120,33 @@ export function EndSequenceEditor({
                 />
                 <div className="sequence-step-actions">
                   <Tooltip text="Monter">
-                    <button
-                      type="button"
-                      className="btn-xs sequence-icon-btn"
+                    <Button
+                      size="sm"
+                      className="sequence-icon-btn"
                       disabled={index === 0}
                       onClick={() => moveStep(index, -1)}
                     >
                       <MoveUp className="sequence-icon" />
-                    </button>
+                    </Button>
                   </Tooltip>
                   <Tooltip text="Descendre">
-                    <button
-                      type="button"
-                      className="btn-xs sequence-icon-btn"
+                    <Button
+                      size="sm"
+                      className="sequence-icon-btn"
                       disabled={isLast}
                       onClick={() => moveStep(index, 1)}
                     >
                       <MoveDown className="sequence-icon" />
-                    </button>
+                    </Button>
                   </Tooltip>
                   <Tooltip text="Supprimer cette étape">
-                    <button
-                      type="button"
-                      className="btn-xs sequence-icon-btn sequence-icon-btn--danger"
+                    <Button
+                      size="sm"
+                      className="sequence-icon-btn sequence-icon-btn--danger"
                       onClick={() => deleteStep(index)}
                     >
                       <Trash2 className="sequence-icon" />
-                    </button>
+                    </Button>
                   </Tooltip>
                 </div>
               </div>
@@ -241,9 +241,9 @@ export function EndSequenceEditor({
       </div>
 
       <div className="sequence-footer">
-        <button type="button" className="btn btn-secondary-violet" onClick={addStep}>
+        <Button variant="secondary-violet" onClick={addStep}>
           Ajouter une étape
-        </button>
+        </Button>
       </div>
 
       {/* Réaction au bouton Accueil (afterPlaybackHomeStep) */}
@@ -267,9 +267,9 @@ export function EndSequenceEditor({
             </button>
           </Tooltip>
         ) : (
-          <button type="button" className="btn-xs" onClick={() => updateHomeStep({})}>
+          <Button size="sm" onClick={() => updateHomeStep({})}>
             Ajouter
-          </button>
+          </Button>
         )}
       </div>
 

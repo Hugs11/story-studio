@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AudioField } from '../AudioField';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
+import { Button } from '../../common/Button';
 import {
   decodeNavigationStoryId,
   isNextStoryNavigationTarget,
@@ -436,9 +437,9 @@ export function AfterPlaySection({
               </div>
             </div>
             <div className="end-actions-end">
-              <button type="button" className="btn-xs" onClick={startSequence}>
+              <Button size="sm" onClick={startSequence}>
                 Convertir en scénario de fin
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -448,14 +449,14 @@ export function AfterPlaySection({
     endContent = (
       <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
         <Tooltip text={addPromptTooltip} placement="above">
-          <button type="button" className="btn-xs" onClick={() => setShowPromptField(true)}>
+          <Button size="sm" onClick={() => setShowPromptField(true)}>
             Ajouter un audio de fin
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip text={addSequenceTooltip} placement="above">
-          <button type="button" className="btn-xs" onClick={startSequence}>
+          <Button size="sm" onClick={startSequence}>
             Ajouter un scénario de fin
-          </button>
+          </Button>
         </Tooltip>
       </div>
     );

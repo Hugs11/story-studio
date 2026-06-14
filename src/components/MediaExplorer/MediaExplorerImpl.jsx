@@ -3,6 +3,7 @@ import { collectMediaLibrary } from '../../store/mediaLibrary';
 import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaMetadata } from '../../hooks/useMediaMetadata';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
@@ -436,13 +437,12 @@ export function MediaExplorer({
       {view === 'list' && (
         <div className="me-col-picker-wrap" ref={colPickerRef}>
           <Tooltip text="Colonnes visibles">
-          <button
-            type="button"
-            className={`btn me-col-picker-btn${colPickerOpen ? ' is-active' : ''}`}
+          <Button
+            className={`me-col-picker-btn${colPickerOpen ? ' is-active' : ''}`}
             onClick={() => setColPickerOpen((v) => !v)}
           >
             <SlidersHorizontal className="me-col-picker-icon" strokeWidth={2} absoluteStrokeWidth />
-          </button>
+          </Button>
           </Tooltip>
           {colPickerOpen && (
             <div className="me-col-picker-panel">
@@ -500,15 +500,15 @@ export function MediaExplorer({
   const actionButtons = (
     <>
       <Tooltip text="Importer des fichiers médias">
-        <button className="btn media-import-btn" type="button" onClick={onImportMedia || onImportStories}>
+        <Button className="media-import-btn" onClick={onImportMedia || onImportStories}>
           <FilePlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-        </button>
+        </Button>
       </Tooltip>
       {onImportMediaFolder && (
         <Tooltip text="Importer un dossier (récursif)">
-          <button className="btn media-import-btn" type="button" onClick={onImportMediaFolder}>
+          <Button className="media-import-btn" onClick={onImportMediaFolder}>
             <FolderPlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-          </button>
+          </Button>
         </Tooltip>
       )}
     </>
