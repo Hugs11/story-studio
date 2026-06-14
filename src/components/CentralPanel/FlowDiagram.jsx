@@ -235,6 +235,7 @@ export function FlowDiagram({
   projectIndex,
   selectedId = 'root',
   selectedIds,
+  inspectRequest = null,
   onSelect,
   onSelectionChange,
   onMoveToMenu,
@@ -345,6 +346,16 @@ export function FlowDiagram({
     const containerKey = selectedPath.length > 1 ? selectedPath[selectedPath.length - 2].id : 'root';
     setExpandedInlineStories((prev) => (prev[containerKey] ? prev : { ...prev, [containerKey]: true }));
   }, [selectedPath]);
+
+  useEffect(() => {
+    const targetId = inspectRequest?.id;
+    if (!targetId) return;
+    setPreviewNodeId(null);
+    setMultiPanelOpen(false);
+    onSelectionChange?.(new Set([targetId]));
+    onSelect?.(targetId);
+    setInspectorNodeId(targetId);
+  }, [inspectRequest, onSelect, onSelectionChange]);
 
   const fullViewActive = displayMode === 'screen' || fullscreenOpen;
 
