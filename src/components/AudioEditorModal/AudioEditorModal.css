@@ -190,21 +190,9 @@
   flex-shrink: 0;
 }
 
-.audio-tb-btn {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  border-radius: 5px;
-  color: var(--color-text-secondary, #9ca3af);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  transition: background 0.1s, color 0.1s;
-  padding: 0;
+/* Boutons transport de l'éditeur audio : .btn .btn-icon + glyphes/états locaux.
+   Hover/focus/disabled fournis par le système global ; actif = sélection orange. */
+.btn.audio-tb-btn {
   flex-shrink: 0;
 }
 
@@ -213,25 +201,15 @@
   height: 15px;
 }
 
-.audio-tb-btn:hover:not(:disabled) {
-  background: var(--color-bg-hover, #262c36);
-  color: var(--color-text-primary, #e6edf3);
-}
-
-.audio-tb-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
 .audio-tb-btn.is-active {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .audio-tb-btn-marker {
   font-size: 15px;
   font-weight: 400;
-  color: var(--color-text-primary, #e6edf3);
+  color: var(--text);
 }
 
 .audio-tb-btn-text {
@@ -240,8 +218,8 @@
 }
 
 .audio-tb-btn-danger:hover:not(:disabled) {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.12);
+  color: var(--danger-text);
+  background: var(--danger-bg);
 }
 
 /* ── Fades ────────────────────────────────────────────────────── */

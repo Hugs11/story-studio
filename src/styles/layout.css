@@ -385,6 +385,12 @@ body {
   color: var(--text);
 }
 
+/* Bouton icône désactivé : reste transparent (estompé, pas de boîte grise) */
+.btn-icon:disabled {
+  background: transparent;
+  border-color: transparent;
+}
+
 /* Variante compacte 28px (actions media : micro / TTS / ciseaux) */
 .btn-icon-sm {
   width: 28px;
