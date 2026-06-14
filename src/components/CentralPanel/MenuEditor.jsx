@@ -59,7 +59,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
           <div className="card-copy card-copy--inline">Page de choix où l'enfant sélectionne une histoire à la molette. Configure ici son nom, son visuel et l'audio d'invitation.</div>
         </div>
 
-        <div className="field-row" style={{ marginBottom: 0 }}>
+        <div className="field-row field-row--flush">
           <span className="field-label">Nom</span>
           <input
             className="field-input"
@@ -67,30 +67,30 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
             onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder="Nom du dossier"
           />
-          <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>
+          <span className="menu-count">
             {node.children?.length ?? node.items?.length ?? 0} élément(s)
           </span>
         </div>
         <div className="card-sep" />
 
         {node.importedContinuation && (
-          <div className="sequence-note" style={{ marginBottom: 10 }}>
+          <div className="sequence-note sequence-note--spaced">
             Continuation native importée depuis {node.importedContinuation.sourceStoryName || 'une histoire'}
             {node.importedContinuation.sourceStepName ? ` · étape ${node.importedContinuation.sourceStepName}` : ''}.
           </div>
         )}
         {isAutoplaySelector ? (
-          <div className="sequence-note" style={{ marginBottom: 10 }}>
+          <div className="sequence-note sequence-note--spaced">
             Sélecteur autoplay transparent : ce dossier joue son audio puis enchaîne vers ses choix sans navigation à la molette.
           </div>
         ) : null}
         {forcedAutoplay ? (
-          <div className="sequence-note" style={{ marginBottom: 10 }}>
+          <div className="sequence-note sequence-note--spaced">
             Ce dossier sera traversé automatiquement à l'export : il sert d'étape technique vers son contenu, pas d'écran de choix.
           </div>
         ) : null}
         {nativeGraph ? (
-          <div className="sequence-note" style={{ marginBottom: 10 }}>
+          <div className="sequence-note sequence-note--spaced">
             Graphe interactif natif attaché à ce pack extrait : {nativeGraphStageCount} stages, {nativeGraphActionCount} actions.
           </div>
         ) : null}
@@ -215,7 +215,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
           <div className="field-row">
             <div style={{ flex: 1 }}>
               <span className="field-label">Destination des histoires</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              <div className="field-hint">
                 Où l'enfant retourne quand une histoire de ce dossier se termine, si l'histoire n'a pas sa propre destination configurée.
               </div>
             </div>
@@ -229,17 +229,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
               style={{ minWidth: 240, maxWidth: 360 }}
             />
           </div>
-          <div
-            style={{
-              marginTop: 10,
-              fontSize: 11,
-              color: 'var(--color-text-secondary)',
-              padding: '8px 10px',
-              borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
+          <div className="menu-destination-help">
             {destinationHelp}
           </div>
         </div>
