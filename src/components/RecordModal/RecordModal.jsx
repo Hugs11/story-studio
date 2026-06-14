@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Mic } from '../icons/LucideLocal';
+import { Button } from '../common/Button';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
 import './RecordModal.css';
 
@@ -116,7 +117,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       <div className="modal-box record-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Enregistrement audio</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>×</Button>
         </div>
 
         <div className="record-body">
@@ -131,7 +132,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
             <>
               <div className="record-pulse" />
               <div className="record-timer">{formatDuration(duration)}</div>
-              <button className="btn btn-danger" onClick={stopRecording}>⏹ Arrêter</button>
+              <Button variant="danger" onClick={stopRecording}>⏹ Arrêter</Button>
             </>
           )}
 
@@ -152,10 +153,10 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
                 <span className="record-name-ext">.webm</span>
               </div>
               <div className="record-actions">
-                <button className="btn" onClick={playPreview}>▶ Écouter</button>
-                <button className="btn" onClick={stopPreview}>⏸ Pause</button>
-                <button className="btn" onClick={retry}>↺ Recommencer</button>
-                <button className="btn btn-primary" onClick={confirm}>✓ Utiliser</button>
+                <Button onClick={playPreview}>▶ Écouter</Button>
+                <Button onClick={stopPreview}>⏸ Pause</Button>
+                <Button onClick={retry}>↺ Recommencer</Button>
+                <Button variant="primary" onClick={confirm}>✓ Utiliser</Button>
               </div>
             </>
           )}
@@ -167,7 +168,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
           {phase === 'error' && (
             <>
               <div className="record-hint" style={{ color: '#E24B4A' }}>{error}</div>
-              <button className="btn" onClick={onClose}>Fermer</button>
+              <Button onClick={onClose}>Fermer</Button>
             </>
           )}
         </div>

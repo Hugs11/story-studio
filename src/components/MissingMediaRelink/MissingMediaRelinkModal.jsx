@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { exists, readDir } from '@tauri-apps/plugin-fs';
 import { AppModalPortal } from '../common/AppModalPortal';
+import { Button } from '../common/Button';
 import { CircleCheck, CircleX, FolderOpen, Link2, Loader2, TriangleAlert } from '../icons/LucideLocal';
 import { basename, dirname, joinPath, pathKey } from '../../utils/fileUtils';
 import { candidatePathsForRelinkRoot, mediaKindFromPath } from '../../store/missingMediaRelink';
@@ -207,7 +208,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
       <div className="modal-box missing-media-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <span>Médias introuvables</span>
-          <button className="btn btn-icon modal-close" type="button" onClick={onClose} disabled={applying}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onClose} disabled={applying}>×</Button>
         </div>
 
         <div className="missing-media-body">
@@ -220,20 +221,18 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
           </div>
 
           <div className="missing-media-actions">
-            <button className="btn btn-primary" type="button" onClick={handleChooseFolder} disabled={scanning || applying}>
+            <Button variant="primary" onClick={handleChooseFolder} disabled={scanning || applying}>
               {scanning ? <Loader2 className="missing-media-spin" /> : <FolderOpen />}
               Retrouver un dossier
-            </button>
-            <button
-              className="btn"
-              type="button"
+            </Button>
+            <Button
               onClick={handleUseWorkspace}
               disabled={!workspaceDir || scanning || applying}
               title={workspaceDir || 'Workspace non configuré'}
             >
               <Link2 />
               Utiliser le workspace
-            </button>
+            </Button>
             {selectedRoot && <span className="missing-media-root" title={selectedRoot}>{selectedRoot}</span>}
           </div>
 
@@ -274,9 +273,9 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
                       ))}
                     </select>
                   )}
-                  <button className="btn-xs" type="button" onClick={() => handleChooseFile(row)} disabled={applying}>
+                  <Button size="sm" onClick={() => handleChooseFile(row)} disabled={applying}>
                     Choisir
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -284,13 +283,13 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
         </div>
 
         <div className="missing-media-footer">
-          <button className="btn" type="button" onClick={onClose} disabled={applying}>Ignorer</button>
-          <button className="btn" type="button" onClick={() => handleApply({ saveAfter: false })} disabled={resolvedRows.length === 0 || applying}>
+          <Button onClick={onClose} disabled={applying}>Ignorer</Button>
+          <Button onClick={() => handleApply({ saveAfter: false })} disabled={resolvedRows.length === 0 || applying}>
             Appliquer
-          </button>
-          <button className="btn btn-primary" type="button" onClick={() => handleApply({ saveAfter: true })} disabled={resolvedRows.length === 0 || applying}>
+          </Button>
+          <Button variant="primary" onClick={() => handleApply({ saveAfter: true })} disabled={resolvedRows.length === 0 || applying}>
             {applying ? 'Application...' : 'Appliquer et sauvegarder'}
-          </button>
+          </Button>
         </div>
       </div>
     </AppModalPortal>

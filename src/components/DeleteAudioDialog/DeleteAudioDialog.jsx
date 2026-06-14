@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useErrorDialog } from '../common/Dialog';
 import { AppModalPortal } from '../common/AppModalPortal';
+import { Button } from '../common/Button';
 import {
   ENREGISTREMENTS,
   FICHIERS_IMPORTES,
@@ -53,7 +54,7 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
         <div className="modal-header">
           <span>Supprimer l'audio</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>×</Button>
         </div>
 
         <div className="delete-dialog-body">
@@ -86,8 +87,8 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
         </div>
 
         <div className="delete-dialog-footer">
-          <button className="btn" onClick={onClose}>Annuler</button>
-          <button className="btn btn-danger" onClick={handleConfirm}>Supprimer</button>
+          <Button onClick={onClose}>Annuler</Button>
+          <Button variant="danger" onClick={handleConfirm}>Supprimer</Button>
         </div>
       </div>
     </AppModalPortal>
