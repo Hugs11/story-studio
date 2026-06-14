@@ -319,26 +319,26 @@
   font-weight: 500;
   padding: 3px 9px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
 .rq-bottombar-btn:hover {
-  background: rgba(255,255,255,0.09);
-  color: var(--color-text-primary);
+  background: var(--bg3);
+  color: var(--text);
 }
 
 .rq-bottombar-btn.is-active {
-  background: color-mix(in srgb, var(--color-accent, var(--info)) 15%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent, var(--info)) 30%, transparent);
-  color: var(--color-accent, var(--info));
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
 }
 
 .rq-bottombar-btn.has-active {
-  color: var(--color-accent, var(--info));
-  border-color: color-mix(in srgb, var(--color-accent, var(--info)) 30%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
