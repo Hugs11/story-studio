@@ -24,7 +24,7 @@ import {
 } from './storyUtils';
 import { EndSequenceEditor } from './EndSequenceEditor';
 import { StoryDisclosure } from './StoryDisclosure';
-import { CircleStop, Pause } from '../../icons/LucideLocal';
+import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/LucideLocal';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
 import { useErrorDialog } from '../../common/Dialog';
 import { pathKey } from '../../../utils/fileUtils';
@@ -283,23 +283,40 @@ export function AfterPlaySection({
         <div className="end-summary">
           <div>
             <div className="end-summary-title">
-              Scénario de fin — {afterPlaybackSequence.length} étape{afterPlaybackSequence.length > 1 ? 's' : ''}
+              <span>Scénario de fin</span>
+              <span className="end-summary-badge">
+                {afterPlaybackSequence.length} étape{afterPlaybackSequence.length > 1 ? 's' : ''}
+              </span>
             </div>
             <div className="end-summary-copy">
               Séquence jouée après la fin de l'histoire, avant la destination suivante.
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button type="button" className="btn-xs" onClick={() => setShowSequenceEditor((v) => !v)}>
-              {showSequenceEditor ? 'Masquer' : 'Modifier'}
-            </button>
-            <button
-              type="button"
-              className="btn-xs btn-danger-outline"
-              onClick={clearEndAfterPlayback}
-            >
-              Retirer
-            </button>
+            <Tooltip text={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}>
+              <button
+                type="button"
+                className="sequence-summary-icon-btn"
+                onClick={() => setShowSequenceEditor((v) => !v)}
+                aria-label={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}
+                title={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}
+              >
+                {showSequenceEditor
+                  ? <ChevronUp className="sequence-icon" />
+                  : <ChevronDown className="sequence-icon" />}
+              </button>
+            </Tooltip>
+            <Tooltip text="Retirer le scénario de fin">
+              <button
+                type="button"
+                className="story-prompt-trash"
+                onClick={clearEndAfterPlayback}
+                aria-label="Retirer le scénario de fin"
+                title="Retirer le scénario de fin"
+              >
+                <Trash2 className="card-danger-icon" />
+              </button>
+            </Tooltip>
           </div>
         </div>
         {showSequenceEditor && (
@@ -322,13 +339,17 @@ export function AfterPlaySection({
           <span className="field-label">
             {usesGlobalEndNodeAudio ? 'Message de fin importé' : 'Message audio de fin'}
           </span>
-          <button
-            type="button"
-            className="btn-xs btn-danger-outline"
-            onClick={clearEndAfterPlayback}
-          >
-            Retirer
-          </button>
+          <Tooltip text="Retirer le message audio de fin">
+            <button
+              type="button"
+              className="story-prompt-trash"
+              onClick={clearEndAfterPlayback}
+              aria-label="Retirer le message audio de fin"
+              title="Retirer le message audio de fin"
+            >
+              <Trash2 className="card-danger-icon" />
+            </button>
+          </Tooltip>
         </div>
         {hasEndNode && !usesGlobalEndNodeAudio && (
           <div className="sequence-note" style={{ marginBottom: 10 }}>

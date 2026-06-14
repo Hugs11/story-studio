@@ -3,6 +3,7 @@ import { ImageField } from '../ImageField';
 import { useErrorDialog } from '../../common/Dialog';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
+import { MoveDown, MoveUp, Trash2 } from '../../icons/LucideLocal';
 import {
   CONTROL_DEFS,
   SEQUENCE_CONTROL_DEFAULTS,
@@ -124,7 +125,9 @@ export function EndSequenceEditor({
                       className="btn-xs sequence-icon-btn"
                       disabled={index === 0}
                       onClick={() => moveStep(index, -1)}
-                    >↑</button>
+                    >
+                      <MoveUp className="sequence-icon" />
+                    </button>
                   </Tooltip>
                   <Tooltip text="Descendre">
                     <button
@@ -132,14 +135,18 @@ export function EndSequenceEditor({
                       className="btn-xs sequence-icon-btn"
                       disabled={isLast}
                       onClick={() => moveStep(index, 1)}
-                    >↓</button>
+                    >
+                      <MoveDown className="sequence-icon" />
+                    </button>
                   </Tooltip>
                   <Tooltip text="Supprimer cette étape">
                     <button
                       type="button"
                       className="btn-xs sequence-icon-btn sequence-icon-btn--danger"
                       onClick={() => deleteStep(index)}
-                    >×</button>
+                    >
+                      <Trash2 className="sequence-icon" />
+                    </button>
                   </Tooltip>
                 </div>
               </div>
@@ -157,12 +164,12 @@ export function EndSequenceEditor({
 
               <div className="sequence-controls">
                 {CONTROL_DEFS.map(({ key, label, def }) => (
-                  <label key={key} className="sequence-control">
-                    <span>{label}</span>
+                  <label key={key} className="sequence-control sequence-control--toggle-left">
                     <Toggle
                       on={controls[key] ?? def}
                       onChange={(v) => updateStepControls(index, key, v)}
                     />
+                    <span className="sequence-control-title">{label}</span>
                   </label>
                 ))}
               </div>
@@ -170,12 +177,9 @@ export function EndSequenceEditor({
               <div className="sequence-targets">
                 {isLast ? (
                   <>
-                    <div className="field-row" style={{ marginBottom: 0 }}>
-                      <div style={{ flex: 1 }}>
-                        <span className="field-label">Bouton OK (dernière étape)</span>
-                        <div className="sequence-help">
-                          Choisir l'option « Lecture directe » d'une histoire pour la lancer sans rejouer son audio de sélection.
-                        </div>
+                    <div className="sequence-destination-row">
+                      <div className="sequence-destination-copy">
+                        <span className="sequence-destination-title">Destination après cette étape</span>
                       </div>
                       <NavigationTargetSelect
                         value={step.okTarget ?? ''}
@@ -198,10 +202,9 @@ export function EndSequenceEditor({
                 ) : (
                   <div className="sequence-next-note">Bouton OK enchaîne vers l'étape suivante.</div>
                 )}
-                <div className="field-row" style={{ marginBottom: 0 }}>
-                  <div style={{ flex: 1 }}>
-                    <span className="field-label">Bouton Accueil</span>
-                    <div className="sequence-help">Suit la destination de fin d'histoire si rien n'est choisi ici.</div>
+                <div className="sequence-destination-row">
+                  <div className="sequence-destination-copy">
+                    <span className="sequence-destination-title">Destination du bouton Accueil</span>
                   </div>
                   <NavigationTargetSelect
                     value={homeSelectValue}
@@ -219,8 +222,7 @@ export function EndSequenceEditor({
                     emptyLabel="Comme à la fin de l'histoire"
                   />
                 </div>
-                <label className="sequence-control" style={{ justifyContent: 'flex-end' }}>
-                  <span>Accueil vers la même destination que OK</span>
+                <label className="sequence-control sequence-control--toggle-left">
                   <Toggle
                     on={!!step.homeFollowsOk}
                     onChange={(v) => updateStep(index, {
@@ -229,6 +231,7 @@ export function EndSequenceEditor({
                       homeTarget: v ? null : step.homeTarget,
                     })}
                   />
+                  <span className="sequence-control-title">Même destination que OK</span>
                 </label>
               </div>
             </div>
@@ -237,7 +240,7 @@ export function EndSequenceEditor({
       </div>
 
       <div className="sequence-footer">
-        <button type="button" className="btn btn-primary" onClick={addStep}>
+        <button type="button" className="btn btn-secondary-violet" onClick={addStep}>
           Ajouter une étape
         </button>
       </div>
@@ -250,15 +253,23 @@ export function EndSequenceEditor({
             Étape jouée si l'enfant appuie sur le bouton Accueil pendant l'histoire, avant qu'elle ne se termine.
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-xs"
-          onClick={() => homeStep
-            ? onUpdate({ afterPlaybackHomeStep: null })
-            : updateHomeStep({})}
-        >
-          {homeStep ? 'Retirer' : 'Ajouter'}
-        </button>
+        {homeStep ? (
+          <Tooltip text="Retirer la réaction Accueil">
+            <button
+              type="button"
+              className="story-prompt-trash"
+              onClick={() => onUpdate({ afterPlaybackHomeStep: null })}
+              aria-label="Retirer la réaction Accueil"
+              title="Retirer la réaction Accueil"
+            >
+              <Trash2 className="card-danger-icon" />
+            </button>
+          </Tooltip>
+        ) : (
+          <button type="button" className="btn-xs" onClick={() => updateHomeStep({})}>
+            Ajouter
+          </button>
+        )}
       </div>
 
       {homeStep ? (
@@ -292,18 +303,18 @@ export function EndSequenceEditor({
           />
           <div className="sequence-controls">
             {CONTROL_DEFS.map(({ key, label, def }) => (
-              <label key={key} className="sequence-control">
-                <span>{label}</span>
+              <label key={key} className="sequence-control sequence-control--toggle-left">
                 <Toggle
                   on={homeStep.controlSettings?.[key] ?? def}
                   onChange={(v) => updateHomeStepControls(key, v)}
                 />
+                <span className="sequence-control-title">{label}</span>
               </label>
             ))}
           </div>
-          <div className="field-row" style={{ marginBottom: 0 }}>
-            <div style={{ flex: 1 }}>
-              <span className="field-label">Bouton Accueil</span>
+          <div className="sequence-destination-row">
+            <div className="sequence-destination-copy">
+              <span className="sequence-destination-title">Destination du bouton Accueil</span>
             </div>
             <NavigationTargetSelect
               value={homeStep.homeNone ? '__none__' : (homeStep.homeTarget ?? '')}
@@ -321,8 +332,7 @@ export function EndSequenceEditor({
               emptyLabel="Comme à la fin de l'histoire"
             />
           </div>
-          <label className="sequence-control" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
-            <span>Accueil vers la même destination que OK</span>
+          <label className="sequence-control sequence-control--toggle-left" style={{ marginTop: 8 }}>
             <Toggle
               on={!!homeStep.homeFollowsOk}
               onChange={(v) => updateHomeStep({
@@ -331,6 +341,7 @@ export function EndSequenceEditor({
                 homeTarget: v ? null : homeStep.homeTarget,
               })}
             />
+            <span className="sequence-control-title">Même destination que OK</span>
           </label>
         </div>
       ) : null}

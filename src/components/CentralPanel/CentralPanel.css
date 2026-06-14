@@ -896,15 +896,33 @@
   min-width: 0;
   padding: 10px 12px;
   border-radius: var(--border-radius-md);
-  border: 1px solid var(--warning-border);
-  background: var(--warning-bg);
+  border: 1px solid var(--border);
+  background: var(--bg2);
   margin-bottom: 12px;
 }
 
 .end-summary-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 12px;
   font-weight: 700;
   color: var(--color-text-primary);
+}
+
+.end-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 7px;
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--bg3) 70%, transparent);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
 }
 
 .end-summary-copy {
@@ -983,6 +1001,36 @@
   padding: 0;
 }
 
+.sequence-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.sequence-summary-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--color-text-secondary);
+  transition:
+    background 0.16s var(--ease-standard),
+    border-color 0.16s var(--ease-standard),
+    color 0.16s var(--ease-standard);
+}
+
+.sequence-summary-icon-btn:hover:not(:disabled),
+.sequence-summary-icon-btn:focus-visible {
+  background: var(--control-bg-hover);
+  border-color: var(--control-border-hover);
+  color: var(--color-text-primary);
+}
+
 .sequence-icon-btn:disabled {
   background: var(--control-disabled-bg);
   border-color: var(--control-disabled-border);
@@ -1001,9 +1049,37 @@
   color: var(--danger-text);
 }
 
+.story-prompt-trash {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  transition:
+    background 0.16s var(--ease-standard),
+    transform 0.12s var(--ease-standard),
+    box-shadow 0.16s var(--ease-standard);
+}
+
+.story-prompt-trash:hover:not(:disabled),
+.story-prompt-trash:focus-visible {
+  background: color-mix(in srgb, var(--danger) 26%, var(--bg2));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 13%, transparent);
+}
+
+.story-prompt-trash:active {
+  transform: scale(0.94);
+}
+
 .sequence-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
   gap: 11px;
   min-width: 0;
 }
@@ -1021,6 +1097,53 @@
   border: 1px solid var(--border);
   font-size: var(--text-control);
   color: var(--color-text-secondary);
+}
+
+.sequence-control--toggle-left {
+  justify-content: flex-start;
+}
+
+.sequence-control-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+}
+
+.sequence-destination-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.3fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 13px;
+  border-radius: var(--radius-md);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+.sequence-destination-copy {
+  min-width: 0;
+}
+
+.sequence-destination-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+}
+
+.sequence-destination-row .navigation-target-select {
+  min-width: 0;
 }
 
 .during-play-card {
@@ -1520,6 +1643,11 @@
 
   .after-play-destination-select {
     width: 100%;
+  }
+
+  .sequence-destination-row {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 }
 
