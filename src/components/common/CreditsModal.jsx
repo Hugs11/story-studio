@@ -8,7 +8,7 @@ export function CreditsModal({ appVersion, onClose }) {
       <div className="modal-box credits-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>À propos de Story Studio</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="credits-body">
           <div className="credits-head">

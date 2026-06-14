@@ -460,7 +460,7 @@ export function FlowDiagram({
             <div className="fd-floating-panel-title">Sélection multiple</div>
             <button
               type="button"
-              className="modal-close"
+              className="btn btn-icon modal-close"
               onClick={() => setMultiPanelOpen(false)}
             >
               ✕
@@ -516,7 +516,7 @@ export function FlowDiagram({
                 <div className="fd-floating-panel-sub">{inspectorSubtitleText}</div>
               ) : null}
             </div>
-            <button type="button" className="modal-close" onClick={() => setInspectorNodeId(null)}>✕</button>
+            <button type="button" className="btn btn-icon modal-close" onClick={() => setInspectorNodeId(null)}>✕</button>
           </div>
           <div className="fd-floating-panel-body">
             {inspectorNode.id === END_NODE_ID ? (
@@ -575,7 +575,7 @@ export function FlowDiagram({
           <span>Diagramme complet du pack</span>
           <div className="fd-fullscreen-actions">
             {autoOpenCheckbox}
-            <button type="button" className="modal-close" onClick={() => setFullscreenOpen(false)}>✕</button>
+            <button type="button" className="btn btn-icon modal-close" onClick={() => setFullscreenOpen(false)}>✕</button>
           </div>
         </div>
         <div className="fd-fullscreen-body">

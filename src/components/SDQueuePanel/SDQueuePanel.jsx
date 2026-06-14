@@ -187,7 +187,7 @@ function ImagePreviewModal({ path, onClose }) {
       <div className="modal-box sd-preview-box" onMouseDown={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>{filename || 'Image générée'}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="sd-preview-body">
           {url ? <img src={url} alt={filename} className="sd-preview-img" /> : <div className="sd-result-placeholder" />}
@@ -339,7 +339,7 @@ export function SDQueuePanel({
               Effacer terminées
             </button>
           )}
-          {!embedded && <button className="modal-close" onClick={onClose}>✕</button>}
+          {!embedded && <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>}
         </div>
       </div>
 

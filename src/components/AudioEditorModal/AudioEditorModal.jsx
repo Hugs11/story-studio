@@ -878,7 +878,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           <span>Éditer l'audio — {filename}</span>
           {shuttleStatus && <span className="audio-editor-shuttle-status">{shuttleStatus}</span>}
           <span className="audio-editor-cursor-time">{formatTime(currentTime)}</span>
-          <button className="modal-close" onClick={onCancel} disabled={isApplying}>×</button>
+          <button className="btn btn-icon modal-close" onClick={onCancel} disabled={isApplying}>×</button>
         </div>
 
         <div className="audio-editor-body">

@@ -221,7 +221,7 @@ export function AudioAssemblyModal({
       <div className="modal-box audio-assembly-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Assembler des audios</span>
-          <button className="modal-close" type="button" onClick={onClose} disabled={submitting}>×</button>
+          <button className="btn btn-icon modal-close" type="button" onClick={onClose} disabled={submitting}>×</button>
         </div>
 
         <div className="audio-assembly-body">
