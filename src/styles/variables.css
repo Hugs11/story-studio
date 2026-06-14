@@ -95,9 +95,9 @@
   --muted: #667085;
 
   /* Orange: identity, primary actions and selection */
-  --accent: oklch(0.72 0.15 50);
-  --accent-dim: oklch(0.72 0.15 50 / 0.12);
-  --accent-border: oklch(0.72 0.15 50 / 0.35);
+  --accent: oklch(0.74 0.115 50);
+  --accent-dim: oklch(0.74 0.115 50 / 0.12);
+  --accent-border: oklch(0.74 0.115 50 / 0.35);
   --accent-contrast: #1a1206;
   --accent-text: oklch(0.52 0.16 45);
   --accent-hover: color-mix(in srgb, var(--accent) 92%, white);
@@ -203,9 +203,9 @@
   --text: #ddd9f2;
   --muted: #6e6c8a;
 
-  --accent: oklch(0.72 0.15 50);
-  --accent-dim: oklch(0.72 0.15 50 / 0.14);
-  --accent-border: oklch(0.72 0.15 50 / 0.40);
+  --accent: oklch(0.74 0.115 50);
+  --accent-dim: oklch(0.74 0.115 50 / 0.14);
+  --accent-border: oklch(0.74 0.115 50 / 0.40);
   --accent-contrast: #1a1206;
   --accent-text: oklch(0.80 0.15 55);
   --accent-hover: color-mix(in srgb, var(--accent) 90%, white);
