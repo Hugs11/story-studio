@@ -3,6 +3,7 @@ import { logger } from '../../utils/logger';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { coverFit, containFit, renderFrame, CANVAS_W, CANVAS_H } from './useImageEditor';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { FilterSlider } from './FilterSlider';
 import { exportEditedImage } from './imageEditorExport';
 import { useImageCanvasInteractions } from './useImageCanvasInteractions';
@@ -211,7 +212,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
       <div className="image-editor-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Recadrer et ajuster l'image</span>
-          <button className="btn btn-icon modal-close" onClick={onCancel}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onCancel}>×</Button>
         </div>
 
         <div className="image-editor-body">
@@ -232,10 +233,10 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
             <div className="image-editor-canvas-hint">Glisser pour repositionner · Molette pour zoomer</div>
             <div className="image-editor-fit-btns">
               <Tooltip text="Remplir le cadre (rogné)">
-                <button className="btn-xs" onClick={handleCoverFit}>Ajuster</button>
+                <Button size="sm" onClick={handleCoverFit}>Ajuster</Button>
               </Tooltip>
               <Tooltip text="Image entière visible">
-                <button className="btn-xs" onClick={handleContainFit}>Centrer</button>
+                <Button size="sm" onClick={handleContainFit}>Centrer</Button>
               </Tooltip>
             </div>
           </div>
@@ -290,15 +291,15 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
               </>
             )}
 
-            <button className="btn-xs filter-reset" onClick={resetFilters}>Réinitialiser les filtres</button>
+            <Button size="sm" className="filter-reset" onClick={resetFilters}>Réinitialiser les filtres</Button>
           </div>
         </div>
 
         <div className="modal-footer">
-          <button className="btn" onClick={onCancel}>Annuler</button>
-          <button className="btn btn-primary" onClick={handleConfirm} disabled={!imgLoaded || saving}>
+          <Button onClick={onCancel}>Annuler</Button>
+          <Button variant="primary" onClick={handleConfirm} disabled={!imgLoaded || saving}>
             {saving ? 'Enregistrement…' : 'Utiliser cette image'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

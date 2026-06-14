@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { basename } from '../../utils/fileUtils';
 import { mediaDrag } from '../../store/dragState';
 import './SDQueuePanel.css';
@@ -187,7 +188,7 @@ function ImagePreviewModal({ path, onClose }) {
       <div className="modal-box sd-preview-box" onMouseDown={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>{filename || 'Image générée'}</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>
         </div>
         <div className="sd-preview-body">
           {url ? <img src={url} alt={filename} className="sd-preview-img" /> : <div className="sd-result-placeholder" />}
@@ -281,12 +282,12 @@ function JobCard({ job, onRemove, onPreviewImage, onRegenerateImage, getAudioUsa
         {job.status === 'done' && isImageJob && <UsageBadge usage={imageUsage} />}
         {job.status === 'done' && !isImageJob && <UsageBadge usage={audioUsage} />}
         {job.status === 'done' && isImageJob && (
-          <button className="sd-job-action btn-xs" onClick={() => onRegenerateImage?.(job)}>
+          <Button size="sm" className="sd-job-action" onClick={() => onRegenerateImage?.(job)}>
             Regénérer image
-          </button>
+          </Button>
         )}
         {(job.status === 'done' || job.status === 'error') && (
-          <button className="sd-job-remove btn-xs" onClick={() => onRemove(job.id)}>✕</button>
+          <Button size="sm" className="sd-job-remove" onClick={() => onRemove(job.id)}>✕</Button>
         )}
       </div>
       {job.status === 'error' && job.errorMessage && (
@@ -335,11 +336,11 @@ export function SDQueuePanel({
         <span>Générations IA</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {hasDone && (
-            <button className="btn btn-xs" onClick={onClearDone}>
+            <Button size="sm" onClick={onClearDone}>
               Effacer terminées
-            </button>
+            </Button>
           )}
-          {!embedded && <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>}
+          {!embedded && <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>}
         </div>
       </div>
 

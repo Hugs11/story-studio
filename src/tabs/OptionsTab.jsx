@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Button } from '../components/common/Button';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
@@ -297,9 +298,9 @@ export function OptionsTab({
     <div className={`opts-screen${asModal ? ' is-modal' : ''}`} ref={screenRef}>
         {onBackToHome && (
           <div className="opts-back-row">
-            <button className="btn" onClick={onBackToHome}>
+            <Button onClick={onBackToHome}>
               Retour à l'accueil
-            </button>
+            </Button>
           </div>
         )}
         <div className="opts-layout">
@@ -365,9 +366,9 @@ export function OptionsTab({
               <div className="opts-row-label">Raccourcis clavier</div>
               <div className="opts-row-sub">Voir et modifier les raccourcis de l'application</div>
             </div>
-            <button className="btn" type="button" onClick={() => setShortcutsOpen(true)}>
+            <Button onClick={() => setShortcutsOpen(true)}>
               Modifier
-            </button>
+            </Button>
           </div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -394,9 +395,9 @@ export function OptionsTab({
                 {workspaceDir || 'Initialisation...'}
               </div>
             </div>
-            <button className="btn" type="button" onClick={onPickWorkspaceDir}>
+            <Button onClick={onPickWorkspaceDir}>
               Choisir
-            </button>
+            </Button>
           </div>
           <div className="opts-row">
             <div className="opts-row-info">
@@ -414,9 +415,9 @@ export function OptionsTab({
                 Copie le `.mbah` et tous les médias référencés dans un dossier cible, sans supprimer les originaux.
               </div>
             </div>
-            <button className="btn" type="button" onClick={handleConsolidate} disabled={consolidating || !project}>
+            <Button onClick={handleConsolidate} disabled={consolidating || !project}>
               {consolidating ? 'Consolidation...' : 'Consolider'}
-            </button>
+            </Button>
           </div>
           {consolidationResult && (
             <div className={`info-box info-box--spaced ${consolidationResult.errors?.length ? 'warn' : ''}`}>
@@ -500,9 +501,9 @@ export function OptionsTab({
               </div>
 
               <div className="xtts-actions">
-                <button className="btn" onClick={handleTestXtts} disabled={xttsProbe.state === 'loading'}>
+                <Button onClick={handleTestXtts} disabled={xttsProbe.state === 'loading'}>
                   {xttsProbe.state === 'loading' ? 'Test en cours…' : 'Tester et actualiser les voix'}
-                </button>
+                </Button>
                 <span className="opts-row-sub">
                   {favoriteVoices.length > 0
                     ? `${favoriteVoices.length} voix favorite(s) affichee(s) dans le modal.`
@@ -532,9 +533,9 @@ export function OptionsTab({
                       Coche uniquement les voix que tu veux voir dans le modal de generation.
                     </div>
                   </div>
-                  <button className="btn" onClick={handleClearXttsFavorites} disabled={favoriteVoices.length === 0}>
+                  <Button onClick={handleClearXttsFavorites} disabled={favoriteVoices.length === 0}>
                     Tout afficher
-                  </button>
+                  </Button>
                 </div>
 
                 {!xttsVoicesLoaded ? (
@@ -614,11 +615,11 @@ export function OptionsTab({
               </div>
 
               <div className="xtts-actions">
-                <button className="btn" onClick={handleTestSd} disabled={sdProbe.state === 'loading'}>
+                <Button onClick={handleTestSd} disabled={sdProbe.state === 'loading'}>
                   {sdProbe.state === 'loading'
                     ? (sdSettings?.autoStart && sdSettings?.batPath ? 'Démarrage…' : 'Test en cours…')
                     : 'Tester ComfyUI'}
-                </button>
+                </Button>
               </div>
 
               {sdProbe.state !== 'idle' && (
@@ -641,12 +642,12 @@ export function OptionsTab({
                           {!wf.isCustom && <span className="sd-workflow-item-tag">intégré</span>}
                         </div>
                         {wf.isCustom && (
-                          <button
-                            className="btn-xs"
+                          <Button
+                            size="sm"
                             onClick={() => handleDeleteWorkflow(wf.id)}
                           >
                             Supprimer
-                          </button>
+                          </Button>
                         )}
                       </div>
                     ))}
@@ -656,19 +657,20 @@ export function OptionsTab({
                 <div className="sd-import-section">
                   <div className="opts-row-label" style={{ marginBottom: 6 }}>Importer un workflow custom</div>
                   <div className="sd-import-row">
-                    <button className="btn btn-xs" onClick={handlePickApiJson}>
+                    <Button size="sm" onClick={handlePickApiJson}>
                       {importApiPath ? '✓ API JSON' : 'Choisir *-api.json…'}
-                    </button>
-                    <button className="btn btn-xs" onClick={handlePickConfigJson}>
+                    </Button>
+                    <Button size="sm" onClick={handlePickConfigJson}>
                       {importConfigPath ? '✓ Config JSON' : 'Choisir *.config.json…'}
-                    </button>
-                    <button
-                      className="btn btn-xs btn-primary"
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="primary"
                       onClick={handleImportWorkflow}
                       disabled={!importApiPath || !importConfigPath || importing}
                     >
                       {importing ? 'Import…' : 'Importer'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -707,9 +709,9 @@ export function OptionsTab({
                 ) : null}
               </div>
             </div>
-            <button className="btn" type="button" onClick={handleCopyLogPathClick} disabled={!onCopyLogPath} style={{ flexShrink: 0 }}>
+            <Button onClick={handleCopyLogPathClick} disabled={!onCopyLogPath} style={{ flexShrink: 0 }}>
               Copier le chemin
-            </button>
+            </Button>
           </div>
           <div className="opts-help">
             Le fichier peut contenir des chemins locaux (noms de fichiers, dossier utilisateur). Vérifie son contenu avant de le partager publiquement.
@@ -728,7 +730,7 @@ export function OptionsTab({
           <div className="modal-box opts-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span>Préférences</span>
-              <button className="btn btn-icon modal-close" type="button" onClick={onClose}>×</button>
+              <Button variant="icon" className="modal-close" onClick={onClose}>×</Button>
             </div>
             {content}
           </div>
