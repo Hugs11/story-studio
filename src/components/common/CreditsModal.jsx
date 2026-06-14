@@ -1,4 +1,5 @@
 import { AppModalPortal } from './AppModalPortal';
+import { Button } from './Button';
 import './CreditsModal.css';
 
 /** Modale « À propos de Story Studio » (crédits). */
@@ -8,7 +9,7 @@ export function CreditsModal({ appVersion, onClose }) {
       <div className="modal-box credits-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>À propos de Story Studio</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>
         </div>
         <div className="credits-body">
           <div className="credits-head">
