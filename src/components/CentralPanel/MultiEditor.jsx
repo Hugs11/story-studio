@@ -653,7 +653,6 @@ export const MultiEditor = memo(function MultiEditor({
                         allStories={allStories.filter((s) => !ids.includes(s.id))}
                         currentStoryId={null}
                         emptyLabel="Suit la destination du dossier parent"
-                        includeStoryPlay={false}
                       />
                     </div>
                   </div>
@@ -680,10 +679,9 @@ export const MultiEditor = memo(function MultiEditor({
                     handleNavChange('returnAfterPlay', target);
                   }}
                   allMenus={allMenus}
-                  allStories={[]}
+                  allStories={allStories.filter((s) => !ids.includes(s.id))}
                   currentStoryId={null}
                   emptyLabel="Suit la destination du dossier parent"
-                  includeStoryPlay={false}
                 />
               </div>
             </div>

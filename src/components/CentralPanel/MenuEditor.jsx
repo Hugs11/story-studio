@@ -30,7 +30,7 @@ const MENU_BEHAVIOR_CONTROLS = [
   },
 ];
 
-export const MenuEditor = memo(function MenuEditor({ node, project = null, parentMenu = null, allMenus = [], onUpdate, onDelete }) {
+export const MenuEditor = memo(function MenuEditor({ node, project = null, parentMenu = null, allMenus = [], allStories = [], onUpdate, onDelete }) {
   const isImportedContinuation = !!node.importedContinuation;
   const isAutoplaySelector = node.controlSettings?.autoplay === true && node.controlSettings?.wheel === false;
   const generatedMenuControls = getGeneratedMenuControls(node, parentMenu, project);
@@ -223,12 +223,10 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
               value={node.returnAfterPlay ?? ''}
               onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
               allMenus={allMenus.filter((m) => m.id !== node.id)}
-              allStories={[]}
+              allStories={allStories}
               currentStoryId={null}
               emptyLabel="Reste dans ce dossier"
-              includeNextStory={false}
-              includeStoryPlay={false}
-              style={{ maxWidth: 180 }}
+              style={{ minWidth: 240, maxWidth: 360 }}
             />
           </div>
           <div

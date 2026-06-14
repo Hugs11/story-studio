@@ -431,6 +431,7 @@ export function AfterPlaySection({
                   currentStoryId={node.id}
                   includeNone
                   emptyLabel="Identique au bouton OK"
+                  includeStoryPlay={false}
                 />
               </div>
             </div>
@@ -557,7 +558,6 @@ export function AfterPlaySection({
               allStories={allStories}
               currentStoryId={node.id}
               emptyLabel={autoNextApplies ? 'Suit auto-next global' : 'Suit la destination du dossier'}
-              includeStoryPlay={false}
             />
           </div>
         </div>

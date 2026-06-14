@@ -1,5 +1,15 @@
-import { decodeNavigationMenuId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
-import { getGeneratedStoryNavigation } from '../../store/generatedNavigation';
+import {
+  decodeNavigationMenuId,
+  decodeNavigationStoryId,
+  encodeStoryNavigationTarget,
+  isCurrentMenuNavigationTarget,
+  isNextStoryNavigationTarget,
+  isRootNavigationTarget,
+  isStoryNavigationTarget,
+  isStoryPlayNavigationTarget,
+  normalizeNavigationTarget,
+} from '../../store/navigationTargets.js';
+import { getGeneratedStoryNavigation } from '../../store/generatedNavigation.js';
 
 export function findEntryLocation(entries, targetId, menuPath = []) {
   for (let index = 0; index < (entries?.length ?? 0); index += 1) {
@@ -63,7 +73,7 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
   if (project && entry?.type === 'story') {
     const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, project.rootEntries ?? []);
     if (navigation.storyHome.isNone) return null;
-    if (navigation.storyHome.targetId) return navigation.storyHome.targetId;
+    if (navigation.storyHome.targetId) return normalizeHomeTarget(navigation.storyHome.targetId);
   }
 
   if (entry?.returnOnHome) {
@@ -72,11 +82,19 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
       if (isRootNavigationTarget(normalized)) return 'root';
       if (isCurrentMenuNavigationTarget(normalized)) return parentMenu?.id ?? null;
       if (isNextStoryNavigationTarget(normalized)) return 'next_story';
-      if (isStoryNavigationTarget(normalized)) return normalized;
+      if (isStoryNavigationTarget(normalized)) return normalizeHomeTarget(normalized);
       return decodeNavigationMenuId(normalized);
     }
   }
   return resolveStoryReturnTarget(entry, parentMenu, project);
+}
+
+export function normalizeHomeTarget(target) {
+  const normalized = normalizeNavigationTarget(target);
+  if (!normalized) return null;
+  if (!isStoryPlayNavigationTarget(normalized)) return normalized;
+  const storyId = decodeNavigationStoryId(normalized);
+  return encodeStoryNavigationTarget(storyId);
 }
 
 export function resolveSequenceTarget(target, parentMenu) {
@@ -96,4 +114,3 @@ export function formatPlaybackTime(totalSeconds) {
   const seconds = rounded % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
-
