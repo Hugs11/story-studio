@@ -140,8 +140,6 @@ export function AfterPlaySection({
 
   const promptControls = node.afterPlaybackPromptControlSettings ?? {};
   const storyControls = node.controlSettings ?? {};
-  const hasExplicitReturnTarget = !!node.returnAfterPlay;
-  const localAutoContinuationEnabled = !!(storyControls.autoplay || hasExplicitReturnTarget);
   const autoContinuationEnabled = !!effectiveEndBehavior?.autoContinuation;
   const routeFinalTargetId = effectiveEndBehavior?.finalTargetId ?? null;
   const routeFinalDestination = routeDestinationFromTarget(routeFinalTargetId, project, allMenus, allStories);
@@ -264,7 +262,7 @@ export function AfterPlaySection({
   const showReturnDestinationRow = allMenus.length > 0
     && !hasGeneratedEndNode
     && !autoNextApplies
-    && (localAutoContinuationEnabled || autoNextApplies);
+    && autoContinuationEnabled;
   const autoNextContextText = getAutoNextContextText(autoNextResolution);
   const afterPlayNotes = [
     autoNextContextText,
@@ -509,6 +507,31 @@ export function AfterPlaySection({
         </div>
       ) : null}
 
+      {showReturnDestinationRow && (
+        <div className="after-play-destination-row">
+          <div className="after-play-destination-copy">
+            <span className="field-label">
+              {autoNextApplies ? 'Exception à auto-next' : "Destination après l'histoire"}
+            </span>
+            <div className="after-play-muted">
+              {autoNextApplies
+                ? 'Laisser vide pour suivre le comportement auto-next global.'
+                : "L'écran ou le menu affiché à la sortie automatique."}
+            </div>
+          </div>
+          <div className="after-play-destination-select">
+            <NavigationTargetSelect
+              value={node.returnAfterPlay ?? ''}
+              onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={node.id}
+              emptyLabel={autoNextApplies ? 'Suit auto-next global' : (inheritedReturnLabel || 'Revient à ce dossier')}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="after-play-route">
         <div className="after-play-route-head">
           <div className="after-play-route-title">Résumé du parcours</div>
@@ -538,31 +561,6 @@ export function AfterPlaySection({
           )}
         </div>
       </div>
-
-      {showReturnDestinationRow && (
-        <div className="after-play-destination-row">
-          <div className="after-play-destination-copy">
-            <span className="field-label">
-              {autoNextApplies ? 'Exception à auto-next' : "Destination après l'histoire"}
-            </span>
-            <div className="after-play-muted">
-              {autoNextApplies
-                ? 'Laisser vide pour suivre le comportement auto-next global.'
-                : "L'écran ou le menu affiché à la sortie automatique."}
-            </div>
-          </div>
-          <div className="after-play-destination-select">
-            <NavigationTargetSelect
-              value={node.returnAfterPlay ?? ''}
-              onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
-              allMenus={allMenus}
-              allStories={allStories}
-              currentStoryId={node.id}
-              emptyLabel={autoNextApplies ? 'Suit auto-next global' : 'Suit la destination du dossier'}
-            />
-          </div>
-        </div>
-      )}
 
       {showAdvancedControls ? (
         <StoryDisclosure

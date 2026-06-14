@@ -39,8 +39,8 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
   const destinationHelp = node.returnAfterPlay
-    ? "Toutes les histoires de ce dossier qui n'ont pas leur propre destination configurée reviendront vers le dossier choisi ci-dessous."
-    : "À la fin de chaque histoire, l'enfant revient sur ce dossier. Choisis un autre dossier seulement si tu veux le rediriger ailleurs.";
+    ? "Les histoires de ce dossier sans destination propre iront vers la destination choisie ci-dessous, au lieu de revenir à ce dossier."
+    : "À la fin d'une histoire sans destination propre, l'enfant revient à ce dossier (son audio de sélection, puis la molette pour rechoisir une histoire). Choisis un autre dossier seulement pour le rediriger ailleurs.";
 
   const [textImgModal, setTextImgModal] = useState(null);
 
@@ -213,19 +213,14 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
         <div className="card">
           <div className="card-title">Après chaque histoire de ce dossier</div>
           <div className="field-row">
-            <div style={{ flex: 1 }}>
-              <span className="field-label">Destination des histoires</span>
-              <div className="field-hint">
-                Où l'enfant retourne quand une histoire de ce dossier se termine, si l'histoire n'a pas sa propre destination configurée.
-              </div>
-            </div>
+            <span className="field-label" style={{ flex: 1 }}>Destination des histoires</span>
             <NavigationTargetSelect
               value={node.returnAfterPlay ?? ''}
               onChange={(target) => onUpdate({ returnAfterPlay: target || null })}
               allMenus={allMenus.filter((m) => m.id !== node.id)}
               allStories={allStories}
               currentStoryId={null}
-              emptyLabel="Reste dans ce dossier"
+              emptyLabel={node.name ? `Revient à « ${node.name} »` : 'Revient à ce dossier'}
               style={{ minWidth: 240, maxWidth: 360 }}
             />
           </div>
