@@ -1,4 +1,4 @@
-use crate::services::pack_reader;
+use crate::services::{community_pack_checker, pack_reader};
 
 #[tauri::command]
 pub async fn load_pack_zip(zip_path: String) -> Result<String, String> {
@@ -40,4 +40,54 @@ pub async fn unpack_zip_to_entries(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn analyze_community_pack(
+    zip_path: String,
+) -> Result<community_pack_checker::PackValidationReport, String> {
+    log::info!(target: "pack_checker", "analyze_community_pack: '{}'", zip_path);
+    let zip_path_for_log = zip_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let safe_zip = crate::services::project_files::validate_existing_pack_path(&zip_path)?;
+        if safe_zip
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| !value.eq_ignore_ascii_case("zip"))
+            .unwrap_or(true)
+        {
+            return Err("Le vérificateur communautaire V1 accepte uniquement les fichiers ZIP.".to_string());
+        }
+        Ok(community_pack_checker::analyze_pack(&safe_zip))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .inspect_err(|err| {
+        log::error!(target: "pack_checker", "analyze_community_pack failed for '{}': {}", zip_path_for_log, err)
+    })
+}
+
+#[tauri::command]
+pub async fn create_fixed_community_pack(
+    zip_path: String,
+) -> Result<community_pack_checker::FixedPackResult, String> {
+    log::info!(target: "pack_checker", "create_fixed_community_pack: '{}'", zip_path);
+    let zip_path_for_log = zip_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let safe_zip = crate::services::project_files::validate_existing_pack_path(&zip_path)?;
+        if safe_zip
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| !value.eq_ignore_ascii_case("zip"))
+            .unwrap_or(true)
+        {
+            return Err("La correction communautaire V1 accepte uniquement les fichiers ZIP.".to_string());
+        }
+        community_pack_checker::create_fixed_pack(&safe_zip)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .inspect_err(|err| {
+        log::error!(target: "pack_checker", "create_fixed_community_pack failed for '{}': {}", zip_path_for_log, err)
+    })
 }
