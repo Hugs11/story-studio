@@ -768,32 +768,8 @@
   border: 1px dashed var(--danger-border);
 }
 
-/* Famille media-action : micro / TTS / ciseaux partagent la meme silhouette neutre. */
-.mic-btn,
-.tts-btn {
-  flex-shrink: 0;
-  height: 28px;
-  min-width: 28px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  line-height: 1;
-}
-
-.mic-btn,
-.tts-btn {
-  width: 28px;
-  min-width: 28px;
-  padding: 0;
-}
-
+/* Actions media (micro / TTS / ciseaux) : boutons = .btn .btn-icon .btn-icon-sm ;
+   seules les icônes 15px restent local. */
 .audio-empty-row > .tooltip-wrap {
   flex: 0 0 auto;
 }
@@ -805,28 +781,6 @@
 .audio-action-icon {
   width: 15px;
   height: 15px;
-}
-
-.mic-btn:hover:not(:disabled),
-.tts-btn:hover:not(:disabled) {
-  background: var(--bg3);
-  border-color: transparent;
-  color: var(--text);
-}
-
-.mic-btn:focus-visible,
-.tts-btn:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
-}
-
-.mic-btn:disabled,
-.tts-btn:disabled {
-  background: var(--control-disabled-bg);
-  border-color: var(--control-disabled-border);
-  color: var(--control-disabled-text);
-  cursor: not-allowed;
 }
 
 .mic-btn-icon {

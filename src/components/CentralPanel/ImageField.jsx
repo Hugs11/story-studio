@@ -209,7 +209,7 @@ export function ImageField({
         <div className="image-action-row">
           {aiEnabled && (
             <button
-              className={`image-gen-btn image-gen-btn--accent${isGeneratingForField ? ' is-generating' : ''}`}
+              className={`btn btn-secondary-violet image-gen-btn${isGeneratingForField ? ' is-generating' : ''}`}
               onClick={() => onOpenSDGenerate({
                 currentImagePath: fileAvailable ? file : null,
                 currentImageLabel: label || 'image actuelle',
@@ -226,7 +226,7 @@ export function ImageField({
           {extraActions.map((action) => (
             <Tooltip key={action.key} text={action.title || action.label}>
               <button
-                className="image-gen-btn"
+                className="btn btn-secondary-violet image-gen-btn"
                 onClick={action.onClick}
               >
                 {action.icon && <span className="image-gen-btn-icon" aria-hidden="true">{action.icon}</span>}
