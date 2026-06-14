@@ -438,7 +438,7 @@ export function MediaExplorer({
           <Tooltip text="Colonnes visibles">
           <button
             type="button"
-            className={`me-col-picker-btn${colPickerOpen ? ' is-active' : ''}`}
+            className={`btn me-col-picker-btn${colPickerOpen ? ' is-active' : ''}`}
             onClick={() => setColPickerOpen((v) => !v)}
           >
             <SlidersHorizontal className="me-col-picker-icon" strokeWidth={2} absoluteStrokeWidth />

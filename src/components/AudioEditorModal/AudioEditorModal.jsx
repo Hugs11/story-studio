@@ -1001,7 +1001,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           {editInfo?.original_available && (
             <div className="audio-editor-restore-row">
               <Tooltip text="Restaurer le fichier avant édition">
-                <button className="audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isApplying}>
+                <button className="btn btn-xs audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isApplying}>
                   <RotateCcw />
                   Restaurer l'original
                 </button>

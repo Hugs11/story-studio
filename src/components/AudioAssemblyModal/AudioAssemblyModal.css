@@ -113,28 +113,15 @@
   text-align: right;
 }
 
-.audio-assembly-icon-btn {
+/* Boutons de réordonnancement (↑ ↓ ×) : .btn .btn-icon compact 26×24. */
+.btn.audio-assembly-icon-btn {
   width: 26px;
-  height: 24px;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 5px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.audio-assembly-icon-btn:hover:not(:disabled) {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-}
-
-.audio-assembly-icon-btn:disabled {
-  opacity: 0.36;
-  cursor: not-allowed;
+  min-width: 26px;
+  min-height: 24px;
 }
 
 .audio-assembly-icon-btn.is-danger {
-  color: #e05555;
+  color: var(--danger-text);
 }
 
 .audio-assembly-check {

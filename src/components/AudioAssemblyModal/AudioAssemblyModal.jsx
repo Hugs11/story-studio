@@ -252,9 +252,9 @@ export function AudioAssemblyModal({
                   >≡</span>
                   <span className="audio-assembly-name" title={item.name}>{index + 1}. {item.name}</span>
                   <span className="audio-assembly-duration">{formatDuration(item.durationSecs)}</span>
-                  <button className="audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title="Monter">↑</button>
-                  <button className="audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title="Descendre">↓</button>
-                  <button className="audio-assembly-icon-btn is-danger" type="button" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title="Retirer">×</button>
+                  <button className="btn btn-icon audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, -1)} disabled={submitting || index === 0} title="Monter">↑</button>
+                  <button className="btn btn-icon audio-assembly-icon-btn" type="button" onClick={() => moveItem(index, 1)} disabled={submitting || index === orderedItems.length - 1} title="Descendre">↓</button>
+                  <button className="btn btn-icon audio-assembly-icon-btn is-danger" type="button" onClick={() => removeItem(index)} disabled={submitting || orderedItems.length <= 2} title="Retirer">×</button>
                 </div>
               ))}
             </div>

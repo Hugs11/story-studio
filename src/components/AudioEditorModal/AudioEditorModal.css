@@ -310,18 +310,11 @@
   gap: 8px;
 }
 
-.audio-editor-restore-btn {
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--color-border, #30363d);
-  background: transparent;
-  color: var(--color-text-secondary, #9ca3af);
-  border-radius: 5px;
+/* « Rétablir l'original » : .btn .btn-xs transparent au repos ; actif = ambre (warning). */
+.btn.audio-editor-restore-btn {
   padding: 0 9px;
-  font-size: 12px;
-  cursor: pointer;
+  gap: 6px;
+  background: transparent;
 }
 
 .audio-editor-restore-btn svg {
@@ -329,20 +322,10 @@
   height: 14px;
 }
 
-.audio-editor-restore-btn:hover:not(:disabled) {
-  color: var(--color-text-primary, #e6edf3);
-  background: var(--color-bg-hover, #262c36);
-}
-
 .audio-editor-restore-btn.is-active {
-  color: var(--color-text-primary, #e6edf3);
-  border-color: rgba(245, 158, 11, 0.75);
-  background: rgba(245, 158, 11, 0.14);
-}
-
-.audio-editor-restore-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+  color: var(--text);
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
 }
 
 /* ── Error ────────────────────────────────────────────────────── */
