@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { pickSdReferenceImage } from '../../hooks/useFileDialog';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Tooltip } from '../common/Tooltip';
+import { Button } from '../common/Button';
 import { Dices } from '../icons/LucideLocal';
 import { basename } from '../../utils/fileUtils';
 import './SDGenerateModal.css';
@@ -160,7 +161,7 @@ export function SDGenerateModal({
       <div className="modal-box sd-generate-box">
         <div className="modal-header">
           <span>Générer une image avec ComfyUI</span>
-          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
+          <Button variant="icon" className="modal-close" onClick={onClose}>✕</Button>
         </div>
 
         <div className="sd-generate-body">
@@ -219,13 +220,13 @@ export function SDGenerateModal({
                 </label>
               )}
               <div className="sd-ref-row">
-                <button
-                  className="btn btn-xs"
+                <Button
+                  size="sm"
                   onClick={handlePickReference}
                   disabled={useCurrentImageAsReference || useRootImageAsReference}
                 >
                   Choisir une image…
-                </button>
+                </Button>
                 {refName && <span className="sd-ref-name">{refName}</span>}
               </div>
             </div>
@@ -262,13 +263,14 @@ export function SDGenerateModal({
             <div className="sd-section-label">Variantes</div>
             <div className="sd-variants-toggle">
               {[1, 2].map(n => (
-                <button
+                <Button
                   key={n}
-                  className={`btn btn-xs ${variants === n ? 'btn-primary' : ''}`}
+                  size="sm"
+                  variant={variants === n ? 'primary' : 'secondary'}
                   onClick={() => setVariants(n)}
                 >
                   {n}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -295,10 +297,10 @@ export function SDGenerateModal({
                           onChange={e => setParams(p => ({ ...p, seed: parseInt(e.target.value, 10) || 0 }))}
                         />
                         <Tooltip text="Seed aléatoire">
-                          <button
-                            className="btn-xs"
+                          <Button
+                            size="sm"
                             onClick={() => setParams(p => ({ ...p, seed: randomSeed() }))}
-                          ><Dices style={{ width: 12, height: 12, verticalAlign: '-2px' }} /></button>
+                          ><Dices style={{ width: 12, height: 12, verticalAlign: '-2px' }} /></Button>
                         </Tooltip>
                       </div>
                     </div>
@@ -345,16 +347,16 @@ export function SDGenerateModal({
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-xs" onClick={onClose} disabled={submitting}>
+          <Button size="sm" onClick={onClose} disabled={submitting}>
             Annuler
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={submitting || !selected || loadingWorkflows}
           >
             {submitting ? 'Envoi…' : `Générer${variants > 1 ? ` ×${variants}` : ''}`}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

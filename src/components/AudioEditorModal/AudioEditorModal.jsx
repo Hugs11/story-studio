@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -878,7 +879,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           <span>Éditer l'audio — {filename}</span>
           {shuttleStatus && <span className="audio-editor-shuttle-status">{shuttleStatus}</span>}
           <span className="audio-editor-cursor-time">{formatTime(currentTime)}</span>
-          <button className="btn btn-icon modal-close" onClick={onCancel} disabled={isApplying}>×</button>
+          <Button variant="icon" className="modal-close" onClick={onCancel} disabled={isApplying}>×</Button>
         </div>
 
         <div className="audio-editor-body">
@@ -913,57 +914,59 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             </div>
           <div className="audio-tb">
             <Tooltip text="Marquer le point d'entrée à la position du curseur (i)">
-              <button className="btn btn-icon audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</button>
+              <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</Button>
             </Tooltip>
             <Tooltip text="Marquer le point de sortie à la position du curseur (o)">
-              <button className="btn btn-icon audio-tb-btn audio-tb-btn-marker" onClick={markEndHere} disabled={isLoading}>{`}`}</button>
+              <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markEndHere} disabled={isLoading}>{`}`}</Button>
             </Tooltip>
 
             <div className="audio-tb-sep" />
 
             <Tooltip text={isPlaying ? 'Pause (Espace)' : 'Play / Pause (Espace)'}>
-              <button className={`btn btn-icon audio-tb-btn${isPlaying ? ' is-active' : ''}`} onClick={handlePlayPause} disabled={isLoading}>
+              <Button variant="icon" className={`audio-tb-btn${isPlaying ? ' is-active' : ''}`} onClick={handlePlayPause} disabled={isLoading}>
                 {isPlaying ? <Pause /> : <Play />}
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip text="Stop">
-              <button className="btn btn-icon audio-tb-btn" onClick={stopPlayback} disabled={isLoading}><Square /></button>
+              <Button variant="icon" className="audio-tb-btn" onClick={stopPlayback} disabled={isLoading}><Square /></Button>
             </Tooltip>
             <Tooltip text="Reculer de 5s">
-              <button className="btn btn-icon audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }} disabled={isLoading}><SkipBack /></button>
+              <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }} disabled={isLoading}><SkipBack /></Button>
             </Tooltip>
             <Tooltip text="Avancer de 5s">
-              <button className="btn btn-icon audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }} disabled={isLoading}><SkipForward /></button>
+              <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }} disabled={isLoading}><SkipForward /></Button>
             </Tooltip>
 
             <div className="audio-tb-sep" />
 
             <Tooltip text="Aller au point d'entrée (Shift+I)">
-              <button className="btn btn-icon audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</button>
+              <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</Button>
             </Tooltip>
             <Tooltip text="Aller au point de sortie (Shift+O)">
-              <button className="btn btn-icon audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</button>
+              <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</Button>
             </Tooltip>
 
             <div className="audio-tb-sep" />
 
             <Tooltip text="Garder la sélection (Ctrl+K)">
-              <button
-                className="btn btn-icon audio-tb-btn"
+              <Button
+                variant="icon"
+                className="audio-tb-btn"
                 onClick={() => handleStageAction('trim')}
                 disabled={!canOperate}
               >
                 <Crop />
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip text="Supprimer la sélection (Ctrl+X)">
-              <button
-                className="btn btn-icon audio-tb-btn audio-tb-btn-danger"
+              <Button
+                variant="icon"
+                className="audio-tb-btn audio-tb-btn-danger"
                 onClick={() => handleStageAction('cut')}
                 disabled={!canCut}
               >
                 <Scissors />
-              </button>
+              </Button>
             </Tooltip>
           </div>
             <div className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('out', e)}>
@@ -1001,10 +1004,10 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           {editInfo?.original_available && (
             <div className="audio-editor-restore-row">
               <Tooltip text="Restaurer le fichier avant édition">
-                <button className="btn btn-xs audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isApplying}>
+                <Button size="sm" className="audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isApplying}>
                   <RotateCcw />
                   Restaurer l'original
-                </button>
+                </Button>
               </Tooltip>
             </div>
           )}
@@ -1013,15 +1016,15 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
         </div>
 
         <div className="audio-editor-footer">
-          <button className="btn" onClick={onCancel} disabled={isApplying}>Annuler</button>
+          <Button onClick={onCancel} disabled={isApplying}>Annuler</Button>
           <Tooltip text={canValidate ? 'Valider les modifications' : 'Aucune modification à valider'} placement="above">
-            <button className="btn btn-primary" onClick={handleApply} disabled={!canValidate}>
+            <Button variant="primary" onClick={handleApply} disabled={!canValidate}>
               {applyMode === 'trim' || applyMode === 'cut'
                 ? 'Application…'
                 : canValidate
                   ? 'Valider les modifications'
                   : 'Aucune modification'}
-            </button>
+            </Button>
           </Tooltip>
         </div>
 
@@ -1067,8 +1070,8 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
                 <span className="audio-editor-zoom-val">{formatTime(config.value)}</span>
               </div>
               <div className="audio-editor-fade-popover-actions">
-                <button className="btn btn-xs" onClick={() => setFadeValue(fadePopover.target, 0)}>Retirer</button>
-                <button className="btn btn-xs btn-primary" onClick={handleFadePopoverOk}>OK</button>
+                <Button size="sm" onClick={() => setFadeValue(fadePopover.target, 0)}>Retirer</Button>
+                <Button size="sm" variant="primary" onClick={handleFadePopoverOk}>OK</Button>
               </div>
             </div>
           );
