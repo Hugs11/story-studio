@@ -5,6 +5,7 @@ import { coverFit, containFit, renderFrame, CANVAS_W, CANVAS_H } from './useImag
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { FilterSlider } from './FilterSlider';
+import { LevelsControl } from './LevelsControl';
 import { exportEditedImage } from './imageEditorExport';
 import { useImageCanvasInteractions } from './useImageCanvasInteractions';
 import './ImageEditorModal.css';
@@ -22,6 +23,11 @@ const DEFAULT_FILTERS = {
   vignette: 0,
   vignetteSize: 70,
   vignetteFeather: 35,
+  // Niveaux — plage 0..255, gamma 0.1..9.99 (1 = neutre). Neutres par défaut :
+  // la passe pixel est sautée tant que ces valeurs ne bougent pas.
+  levelsBlack: 0,
+  levelsWhite: 255,
+  levelsGamma: 1.0,
 };
 
 function createDefaultFilters() {
@@ -266,6 +272,14 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
               <FilterSlider label="Diffusion" value={filters.vignetteFeather} min={5} max={80} unit="%" signed={false}
                 onChange={v => setFilter('vignetteFeather', v)} />
             </div>
+
+            <LevelsControl
+              filters={filters}
+              setFilter={setFilter}
+              image={imgRef.current}
+              transform={transform}
+              imgLoaded={imgLoaded}
+            />
 
             <div className="filter-row filter-toggle">
               <span className="filter-label">Niveaux de gris</span>

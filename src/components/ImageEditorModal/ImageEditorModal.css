@@ -150,6 +150,17 @@
   min-width: 61px;
 }
 
+.levels-histogram {
+  width: 100%;
+  height: 56px;
+  display: block;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg2) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 60%, transparent);
+  color: var(--muted);
+  image-rendering: pixelated;
+}
+
 .filter-advanced-toggle {
   background: none;
   border: none;

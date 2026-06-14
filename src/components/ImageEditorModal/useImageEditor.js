@@ -1,4 +1,5 @@
 import { logger } from '../../utils/logger';
+import { applyLevels } from './imageLevels';
 
 export const CANVAS_W = 320;
 export const CANVAS_H = 240;
@@ -87,21 +88,18 @@ function applyVignette(ctx, filters = {}) {
 }
 
 /**
- * Rend l'image sur le canvas avec la transform et les filtres donnés
+ * Dessine l'image filtrée (filtres CSS) dans le contexte, après clearRect.
+ * Laisse ctx.filter à 'none'. Réutilisé tel quel pour calculer l'histogramme
+ * (source = pixels après filtres CSS, avant niveaux et vignette).
+ * Retourne false si la transform est invalide (rien dessiné).
  */
-export function renderFrame(canvas, img, transform, filters) {
-  if (!canvas || !img) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    logger.error('image-editor:context-unavailable');
-    return;
-  }
+export function drawFilteredImage(ctx, img, transform, filters) {
   const scale = Number.isFinite(transform?.scale) ? transform.scale : 1;
   const offsetX = Number.isFinite(transform?.offsetX) ? transform.offsetX : 0;
   const offsetY = Number.isFinite(transform?.offsetY) ? transform.offsetY : 0;
   if (!Number.isFinite(scale) || scale <= 0) {
     logger.error('image-editor:invalid-scale', transform);
-    return;
+    return false;
   }
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   ctx.filter = buildFilter(filters);
@@ -124,5 +122,27 @@ export function renderFrame(canvas, img, transform, filters) {
     throw error;
   }
   ctx.filter = 'none';
+  return true;
+}
+
+/**
+ * Rend l'image sur le canvas avec la transform et les filtres donnés.
+ *
+ * Pipeline :
+ * 1. filtres CSS + drawImage   (drawFilteredImage)
+ * 2. passe niveaux pixel (LUT) — sautée si neutre
+ * 3. vignettage (overlay) — toujours en dernier
+ */
+export function renderFrame(canvas, img, transform, filters) {
+  if (!canvas || !img) return;
+  // willReadFrequently : la passe niveaux relit le canvas via getImageData à
+  // chaque tick de curseur → contexte optimisé pour les readbacks répétés.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    logger.error('image-editor:context-unavailable');
+    return;
+  }
+  if (!drawFilteredImage(ctx, img, transform, filters)) return;
+  applyLevels(ctx, filters, CANVAS_W, CANVAS_H);
   applyVignette(ctx, filters);
 }
