@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
+import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
 const AUDIO_OPTIONS = [
@@ -12,7 +13,7 @@ const AUDIO_OPTIONS = [
   {
     key: 'addSilence',
     label: 'Silence début / fin',
-    help: 'Ajoute 1 sec de silence au début et à la fin.',
+    help: `Ajoute ${formatPackAudioEdgeSilence()} de silence au début et à la fin.`,
   },
 ];
 

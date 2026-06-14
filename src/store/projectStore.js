@@ -350,7 +350,7 @@ export function useProjectStore() {
       };
       if (menu.audio) {
         next.audioProcessing = { ...(p.audioProcessing ?? {}) };
-        if (menu.audioProcessing?.audio?.skipSilence === true) {
+        if (menu.audioProcessing?.audio?.skipSilence === true || menu.audioProcessing?.__allAudio?.skipSilence === true) {
           next.audioProcessing.rootAudio = { skipSilence: true };
         } else {
           delete next.audioProcessing.rootAudio;

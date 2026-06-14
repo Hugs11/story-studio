@@ -11,6 +11,7 @@ import {
 import { replaceEntryWithEntries } from '../store/projectModel';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { markEntryAudioSkipSilence } from '../store/projectHelpers';
+import { formatPackAudioEdgeSilence } from '../config/audioProcessing';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
@@ -194,7 +195,7 @@ export function useImportSession({
     }
 
     const skipSilenceForExtractedAudio = await ask(
-      "Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout de silence global ?",
+      `Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout global de ${formatPackAudioEdgeSilence()} ?`,
       {
         title: 'Extraction du pack',
         kind: 'info',
@@ -313,6 +314,16 @@ export function useImportSession({
           globalOptions: {
             ...nextProject.globalOptions,
             nightMode: true,
+          },
+        };
+      }
+      if (skipSilenceForExtractedAudio) {
+        nextProject = {
+          ...nextProject,
+          audioProcessing: {
+            ...(nextProject.audioProcessing ?? {}),
+            ...(nextProject.rootAudio ? { rootAudio: { skipSilence: true } } : {}),
+            ...(nextProject.nightModeAudio ? { nightModeAudio: { skipSilence: true } } : {}),
           },
         };
       }

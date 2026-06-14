@@ -35,6 +35,7 @@ pub(crate) struct AssetRequest {
     pub(crate) source_path: String,
     pub(crate) source_kind: AssetSourceKind,
     pub(crate) skip_silence: bool,
+    pub(crate) silence_duration_sec: f64,
 }
 
 // Resultat du preprocess parallele d'une AssetRequest. Contient tout ce dont
@@ -105,6 +106,7 @@ fn preprocess_request(
                     ffmpeg,
                     processed_audio_dir,
                     canonical_options,
+                    request.silence_duration_sec,
                     request.skip_silence,
                     &request.role,
                 )?;
@@ -151,7 +153,11 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     should_cancel: &(dyn Fn() -> bool + Sync),
 ) -> Result<NativeAssetPreparationReport, String> {
     let canonical = canonicalize_project(project);
-    let requests = collect_asset_requests(&canonical, &project.audio_processing);
+    let requests = collect_asset_requests(
+        &canonical,
+        &project.audio_processing,
+        project.global_options.add_silence_duration_sec,
+    );
     let has_audio_processing = requests.iter().any(|request| {
         matches!(request.source_kind, AssetSourceKind::Audio)
             && audio_needs_processing(
@@ -396,6 +402,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 pub(crate) fn collect_asset_requests(
     project: &CanonicalProject,
     root_audio_processing: &HashMap<String, AudioFieldProcessing>,
+    silence_duration_sec: f64,
 ) -> Vec<AssetRequest> {
     let mut requests = Vec::new();
 
@@ -404,6 +411,7 @@ pub(crate) fn collect_asset_requests(
             "rootAudio",
             path,
             skip_silence_for(root_audio_processing, "rootAudio"),
+            silence_duration_sec,
         ));
     }
     if let Some(path) = project.root_image.as_ref() {
@@ -418,12 +426,19 @@ pub(crate) fn collect_asset_requests(
                 "nightModeAudio",
                 path,
                 skip_silence_for(root_audio_processing, "nightModeAudio"),
+                silence_duration_sec,
             ));
         }
     }
 
     for entry in &project.entries {
-        collect_entry_requests(entry, "root", &mut requests, project.options.auto_next);
+        collect_entry_requests(
+            entry,
+            "root",
+            &mut requests,
+            project.options.auto_next,
+            silence_duration_sec,
+        );
     }
     if !project.options.auto_next {
         collect_native_graph_requests(project.native_graph.as_ref(), &mut requests);
@@ -481,6 +496,7 @@ fn collect_native_graph_requests(
                 &native_graph_asset_role(stage_id, "audio"),
                 path,
                 true,
+                1.0,
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -497,6 +513,7 @@ fn collect_entry_requests(
     prefix: &str,
     requests: &mut Vec<AssetRequest>,
     auto_next: bool,
+    silence_duration_sec: f64,
 ) {
     match entry {
         CanonicalEntry::Menu(menu) => {
@@ -506,13 +523,14 @@ fn collect_entry_requests(
                     &format!("{}/menuAudio", label),
                     path,
                     skip_silence_for(&menu.audio_processing, "audio"),
+                    silence_duration_sec,
                 ));
             }
             if let Some(path) = menu.image.as_ref() {
                 requests.push(image_request(&format!("{}/menuImage", label), path));
             }
             for child in &menu.children {
-                collect_entry_requests(child, &label, requests, auto_next);
+                collect_entry_requests(child, &label, requests, auto_next, silence_duration_sec);
             }
         }
         CanonicalEntry::Story(story) => {
@@ -522,6 +540,7 @@ fn collect_entry_requests(
                     &format!("{}/storyAudio", label),
                     path,
                     skip_silence_for(&story.audio_processing, "audio"),
+                    silence_duration_sec,
                 ));
             }
             if let Some(path) = story.item_audio.as_ref() {
@@ -529,6 +548,7 @@ fn collect_entry_requests(
                     &format!("{}/itemAudio", label),
                     path,
                     skip_silence_for(&story.audio_processing, "itemAudio"),
+                    silence_duration_sec,
                 ));
             }
             if !auto_next {
@@ -537,6 +557,7 @@ fn collect_entry_requests(
                         &format!("{}/afterPlaybackPromptAudio", label),
                         path,
                         skip_silence_for(&story.audio_processing, "afterPlaybackPromptAudio"),
+                        silence_duration_sec,
                     ));
                 }
                 for (index, step) in story.after_playback_sequence.iter().enumerate() {
@@ -544,7 +565,8 @@ fn collect_entry_requests(
                         requests.push(audio_request_with_processing(
                             &format!("{}/afterPlaybackSequence/{}/audio", label, index),
                             path,
-                            false,
+                            skip_silence_for(&story.audio_processing, "afterPlaybackSequence"),
+                            silence_duration_sec,
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -559,7 +581,8 @@ fn collect_entry_requests(
                         requests.push(audio_request_with_processing(
                             &format!("{}/afterPlaybackHomeStep/audio", label),
                             path,
-                            false,
+                            skip_silence_for(&story.audio_processing, "afterPlaybackHomeStep"),
+                            silence_duration_sec,
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -602,18 +625,21 @@ fn audio_request_with_processing(
     role: &str,
     source_path: &str,
     skip_silence: bool,
+    silence_duration_sec: f64,
 ) -> AssetRequest {
     AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Audio,
         skip_silence,
+        silence_duration_sec,
     }
 }
 
 fn skip_silence_for(processing: &HashMap<String, AudioFieldProcessing>, field: &str) -> bool {
     processing
-        .get(field)
+        .get("__allAudio")
+        .or_else(|| processing.get(field))
         .map(|value| value.skip_silence)
         .unwrap_or(false)
 }
@@ -624,5 +650,6 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Zip,
         skip_silence: false,
+        silence_duration_sec: 1.0,
     }
 }
