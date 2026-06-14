@@ -325,7 +325,7 @@ export const MultiEditor = memo(function MultiEditor({
             </div>
           </div>
           {batchError && (
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-danger, #ff7676)' }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--danger)' }}>
               {batchError}
             </div>
           )}

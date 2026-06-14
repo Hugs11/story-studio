@@ -14,7 +14,7 @@
 .sd-section-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 5px;
@@ -24,7 +24,7 @@
 
 .sd-loading, .sd-empty {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   padding: 8px 0;
 }
 
@@ -36,8 +36,8 @@
 }
 
 .sd-workflow-card {
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border-tertiary);
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-radius: var(--border-radius-md);
   padding: 9px 12px;
   cursor: pointer;
@@ -46,24 +46,24 @@
 }
 
 .sd-workflow-card:hover {
-  border-color: var(--color-border-secondary);
+  border-color: var(--borderLt);
 }
 
 .sd-workflow-card.selected {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-background-secondary));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg2));
 }
 
 .sd-workflow-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   margin-bottom: 2px;
 }
 
 .sd-workflow-desc {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
@@ -73,9 +73,9 @@
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  color: var(--color-accent);
-  border: 0.5px solid var(--color-accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border: 0.5px solid var(--accent);
 }
 
 /* Image de référence */
@@ -84,7 +84,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -100,7 +100,7 @@
 
 .sd-ref-name {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -111,10 +111,10 @@
 .sd-textarea {
   width: 100%;
   box-sizing: border-box;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg2);
+  border: 0.5px solid var(--borderLt);
   border-radius: var(--border-radius-md);
-  color: var(--color-text-primary);
+  color: var(--text);
   font-size: 12px;
   font-family: inherit;
   padding: 7px 9px;
@@ -124,7 +124,7 @@
 
 .sd-textarea:focus {
   outline: none;
-  border-color: var(--color-accent);
+  border-color: var(--accent);
 }
 
 /* Variantes */
@@ -141,7 +141,7 @@
 
 /* Avancé */
 .sd-advanced {
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 0.5px solid var(--border);
   padding-top: 10px;
 }
 
@@ -150,11 +150,11 @@
   border: none;
   cursor: pointer;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   padding: 0;
 }
 
-.sd-advanced-toggle:hover { color: var(--color-text-primary); }
+.sd-advanced-toggle:hover { color: var(--text); }
 
 .sd-advanced-body {
   display: flex;
@@ -171,7 +171,7 @@
 
 .sd-param-label {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   min-width: 80px;
   display: flex;
   gap: 5px;
@@ -179,26 +179,26 @@
 }
 
 .sd-param-value {
-  color: var(--color-text-primary);
+  color: var(--text);
   font-weight: 600;
 }
 
 .sd-slider {
   flex: 1;
-  accent-color: var(--color-accent);
+  accent-color: var(--accent);
 }
 
 .sd-seed-input {
   width: 90px;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg2);
+  border: 0.5px solid var(--borderLt);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-primary);
+  color: var(--text);
   font-size: 12px;
   padding: 3px 7px;
 }
 
-.sd-seed-input:focus { outline: none; border-color: var(--color-accent); }
+.sd-seed-input:focus { outline: none; border-color: var(--accent); }
 
 .sd-error {
   font-size: 11px;
@@ -209,7 +209,7 @@
 /* Footer */
 .modal-footer {
   padding: 10px 16px;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  border-top: 0.5px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 8px;

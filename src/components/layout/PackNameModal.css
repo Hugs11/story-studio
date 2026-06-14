@@ -67,7 +67,7 @@
 
 .pack-meta-heading p {
   margin: 3px 0 0;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: var(--text-body);
   line-height: 1.5;
 }
@@ -315,7 +315,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 10.5px;
 }
 
@@ -403,7 +403,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 

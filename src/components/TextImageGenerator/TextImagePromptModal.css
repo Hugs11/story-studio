@@ -1,6 +1,6 @@
 .text-img-box {
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg1);
+  border: 0.5px solid var(--borderLt);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   display: flex;
@@ -14,8 +14,8 @@
   padding: 14px 16px 10px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
-  border-bottom: 0.5px solid var(--color-border-secondary);
+  color: var(--text);
+  border-bottom: 0.5px solid var(--borderLt);
 }
 
 .text-img-body {
@@ -45,5 +45,5 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 0.5px solid var(--color-border-secondary);
+  border-top: 0.5px solid var(--borderLt);
 }

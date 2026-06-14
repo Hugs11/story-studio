@@ -8,7 +8,7 @@ html, body, #root {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar {
@@ -17,17 +17,17 @@ html, body, #root {
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--color-scrollbar-track);
+  background: var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-scrollbar-thumb);
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
-  border: 3px solid var(--color-scrollbar-track);
+  border: 3px solid var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-scrollbar-thumb-hover);
+  background: var(--scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-corner {
@@ -37,8 +37,8 @@ html, body, #root {
 body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  background: var(--color-background-tertiary);
-  color: var(--color-text-primary);
+  background: var(--bg0);
+  color: var(--text);
   overflow: hidden;
   user-select: none;
 }
@@ -47,7 +47,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
   overflow: hidden;
 }
 
@@ -81,13 +81,13 @@ body {
   position: relative;
   z-index: 10;
 }
-.resize-handle:hover { background: var(--color-accent); opacity: 0.4; }
+.resize-handle:hover { background: var(--accent); opacity: 0.4; }
 
 /* Panel gauche — arborescence */
 .panel-left {
   flex: 0 1 var(--col-left);
-  background: var(--color-background-primary);
-  border-right: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border-right: 0.5px solid var(--border);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -95,7 +95,7 @@ body {
 
 .panel-left-header {
   padding: 8px 10px 8px 11px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-bottom: 0.5px solid var(--border);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -105,7 +105,7 @@ body {
 .panel-left-header > span {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   flex: 1;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -117,7 +117,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
   min-width: 0;
 }
 
@@ -143,8 +143,8 @@ body {
 /* Bottom bar */
 .bottombar {
   padding: 8px 14px;
-  background: var(--color-background-primary);
-  border-top: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border-top: 0.5px solid var(--border);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -160,8 +160,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
   font-size: 10px;
   font-family: var(--font-mono);
   line-height: 1;
@@ -174,7 +174,7 @@ body {
 
 .status-text {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   flex: 1;
 }
 

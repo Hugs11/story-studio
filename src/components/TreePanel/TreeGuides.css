@@ -33,7 +33,7 @@
   left: var(--tree-hover-guide-left, 13px);
   width: 2px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--color-accent) 42%, var(--tree-path-guide));
+  background: color-mix(in srgb, var(--accent) 42%, var(--tree-path-guide));
   opacity: 0;
   pointer-events: none;
 }
@@ -58,7 +58,7 @@
 }
 
 .tree-item.active-scope:not(.active):not(.ancestor-sel):hover {
-  background: color-mix(in srgb, var(--tree-scope-bg) 76%, var(--color-accent-light));
+  background: color-mix(in srgb, var(--tree-scope-bg) 76%, var(--accent-dim));
 }
 
 .tree-item.hover-scope:not(.active) {
@@ -71,7 +71,7 @@
 
 .tree-item.hover-scope:not(.active) .ti-icon,
 .tree-item.hover-scope:not(.active) .tree-chevron {
-  color: color-mix(in srgb, var(--color-accent) 72%, var(--muted));
+  color: color-mix(in srgb, var(--accent) 72%, var(--muted));
 }
 
 .tree-item.hover-guide .tree-hover-branch-guide {
@@ -92,14 +92,14 @@
 }
 
 .tree-item.ancestor-sel:hover {
-  background: color-mix(in srgb, var(--color-accent-light) 32%, transparent);
+  background: color-mix(in srgb, var(--accent-dim) 32%, transparent);
 }
 
 .tree-item.ancestor-sel .ti-icon,
 .tree-item.ancestor-sel .tree-chevron {
-  color: color-mix(in srgb, var(--color-text-secondary) 78%, var(--muted));
+  color: color-mix(in srgb, var(--text-secondary) 78%, var(--muted));
 }
 
 .tree-item.is-colored.hover-scope:not(.active) {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--tree-node-color));
+  background: color-mix(in srgb, var(--accent) 10%, var(--tree-node-color));
 }

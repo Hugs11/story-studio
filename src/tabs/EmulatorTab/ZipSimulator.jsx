@@ -232,11 +232,11 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
     <div style={{ padding: 24, color: '#E24B4A', fontSize: 13, lineHeight: 1.6 }}>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>Erreur de chargement</div>
       <div>{loadError}</div>
-      <div style={{ marginTop: 8, color: 'var(--color-text-tertiary)', fontSize: 11 }}>{zipPath}</div>
+      <div style={{ marginTop: 8, color: 'var(--muted)', fontSize: 11 }}>{zipPath}</div>
     </div>
   );
   if (!graph) return (
-    <div style={{ padding: 24, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+    <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13 }}>
       Chargement du pack…
     </div>
   );

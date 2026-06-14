@@ -20,13 +20,13 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  border-bottom: 0.5px solid var(--border);
   flex-shrink: 0;
 }
 
 .tree-search-icon {
   font-size: 14px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   flex-shrink: 0;
   line-height: 1;
 }
@@ -34,22 +34,22 @@
 .tree-search-input {
   flex: 1;
   min-width: 0;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-secondary);
+  background: var(--bg2);
+  border: 0.5px solid var(--borderLt);
   border-radius: 4px;
   padding: 3px 6px;
   font-size: 11px;
-  color: var(--color-text-primary);
+  color: var(--text);
   outline: none;
 }
 
 .tree-search-input:focus {
-  border-color: var(--color-accent);
-  background: var(--color-background-primary);
+  border-color: var(--accent);
+  background: var(--bg1);
 }
 
 .tree-search-input::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 .tree-search-clear {
@@ -60,18 +60,18 @@
   font-size: 14px;
   line-height: 1;
   padding: 0 2px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 .tree-search-clear:hover {
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 /* ── End-node separator ─────────────────────────────────────────────────── */
 .tree-end-node-sep {
   flex-shrink: 0;
   height: 1px;
-  background: var(--border, #333);
+  background: var(--border);
   margin: 4px 8px;
   opacity: 0.5;
 }
@@ -192,16 +192,16 @@
 
 /* ── Selection state ─────────────────────────────────────────────────────── */
 .tree-item.active {
-  background: var(--color-accent-light);
-  box-shadow: inset 2px 0 0 var(--color-accent);
+  background: var(--accent-dim);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .tree-item.active .ti-label {
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 .tree-item.active .tree-chevron {
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 /* ── Icon and label ─────────────────────────────────────────────────────── */
@@ -224,7 +224,7 @@
 }
 
 .tree-item.is-colored.active {
-  background: color-mix(in srgb, var(--tree-node-color) 50%, var(--color-accent-light));
+  background: color-mix(in srgb, var(--tree-node-color) 50%, var(--accent-dim));
 }
 
 .tree-item.is-colored .tree-item-body,
@@ -235,7 +235,7 @@
 }
 
 .tree-item.active .ti-icon {
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 .ti-label {
@@ -257,7 +257,7 @@
   right: 0;
   top: -1px;
   height: 2px;
-  background: var(--color-accent);
+  background: var(--accent);
   border-radius: 1px;
   pointer-events: none;
   z-index: 10;
@@ -270,7 +270,7 @@
   right: 0;
   bottom: -1px;
   height: 2px;
-  background: var(--color-accent);
+  background: var(--accent);
   border-radius: 1px;
   pointer-events: none;
   z-index: 10;
@@ -279,7 +279,7 @@
 /* ── DnD — drop-target (drop inside a folder) ───────────────────────────── */
 .tree-item.drop-target,
 .tree-item.is-drop-over {
-  outline: 1.5px dashed var(--color-accent);
+  outline: 1.5px dashed var(--accent);
   outline-offset: -1px;
   border-radius: 3px;
 }

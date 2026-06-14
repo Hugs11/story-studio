@@ -8,8 +8,8 @@
   height: var(--rq-panel-height, 340px);
   min-height: 120px;
   max-height: calc(100vh - 72px);
-  background: var(--color-background-primary);
-  border-top: 1px solid var(--color-border-primary, rgba(255,255,255,0.1));
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
   box-shadow: 0 -6px 24px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
@@ -46,7 +46,7 @@
   width: 52px;
   height: 3px;
   border-radius: 3px;
-  background: var(--color-border-tertiary, rgba(255,255,255,0.16));
+  background: var(--border);
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.12s ease, background 0.12s ease;
@@ -55,7 +55,7 @@
 .rq-panel-resize-handle:hover::before,
 .rq-panel-resizing .rq-panel-resize-handle::before {
   opacity: 1;
-  background: var(--color-accent, var(--info));
+  background: var(--accent, var(--info));
 }
 
 .rq-panel-resizing {
@@ -68,14 +68,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  border-bottom: 1px solid var(--color-border-tertiary, rgba(255,255,255,0.07));
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .rq-panel-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -84,9 +84,9 @@
 .rq-panel-count {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-accent, var(--info));
-  background: color-mix(in srgb, var(--color-accent, var(--info)) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent, var(--info)) 30%, transparent);
+  color: var(--accent, var(--info));
+  background: color-mix(in srgb, var(--accent, var(--info)) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--info)) 30%, transparent);
   border-radius: 10px;
   padding: 1px 7px;
 }
@@ -109,13 +109,13 @@
   justify-content: center;
   height: 100%;
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 /* ── Job card ──────────────────────────────────────────────────────────────── */
 
 .rq-job {
-  border-bottom: 1px solid var(--color-border-tertiary, rgba(255,255,255,0.06));
+  border-bottom: 1px solid var(--border);
 }
 
 .rq-job:last-child {
@@ -147,7 +147,7 @@
 .rq-job-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -156,7 +156,7 @@
 
 .rq-job-folder {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -165,7 +165,7 @@
 
 .rq-job-time {
   font-size: 10px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
@@ -178,7 +178,7 @@
 
 .rq-chevron {
   font-size: 9px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 /* ── Badges statut ─────────────────────────────────────────────────────────── */
@@ -195,15 +195,15 @@
 }
 
 .rq-badge-pending {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.1);
 }
 
 .rq-badge-running {
-  color: var(--color-accent, var(--info));
-  background: color-mix(in srgb, var(--color-accent, var(--info)) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent, var(--info)) 25%, transparent);
+  color: var(--accent, var(--info));
+  background: color-mix(in srgb, var(--accent, var(--info)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--info)) 25%, transparent);
 }
 
 .rq-badge-done {
@@ -219,7 +219,7 @@
 }
 
 .rq-badge-canceled {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
 }
@@ -262,7 +262,7 @@
 }
 
 .rq-log-line {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -272,7 +272,7 @@
 }
 
 .rq-log-empty {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-style: italic;
   font-family: inherit;
 }
@@ -301,12 +301,12 @@
 }
 
 .rq-cancel-btn {
-  border-color: color-mix(in srgb, var(--danger, #ef4444) 42%, transparent);
-  color: color-mix(in srgb, var(--danger-text, #fca5a5) 86%, var(--color-text-primary));
+  border-color: color-mix(in srgb, var(--danger) 42%, transparent);
+  color: color-mix(in srgb, var(--danger-text) 86%, var(--text));
 }
 
 .rq-cancel-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger, #ef4444) 16%, transparent);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
 }
 
 /* ── Bouton bottombar ──────────────────────────────────────────────────────── */

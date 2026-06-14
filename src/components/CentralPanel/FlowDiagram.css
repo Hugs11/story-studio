@@ -27,7 +27,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .fd-breadcrumbs-list {
@@ -36,7 +36,7 @@
   gap: 6px;
   align-items: center;
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   min-width: 0;
 }
 
@@ -50,20 +50,20 @@
 
 .fd-breadcrumbs-list span:not(:last-child)::after {
   content: '→';
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 .fd-breadcrumbs-list .is-active {
-  color: var(--color-text-primary);
+  color: var(--text);
   font-weight: 600;
 }
 
 .fd-empty {
-  border: 1px dashed var(--color-border-tertiary);
+  border: 1px dashed var(--border);
   border-radius: var(--border-radius-md);
   padding: 14px 16px;
   text-align: center;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   font-size: 11px;
   display: flex;
   flex-direction: column;
@@ -76,9 +76,9 @@
   min-height: 30px;
   padding: 0 11px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 36%, var(--color-border-secondary));
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-background-secondary));
-  color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--borderLt));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg2));
+  color: var(--accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -90,8 +90,8 @@
 }
 
 .fd-empty-btn:hover {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-background-secondary));
-  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg2));
+  border-color: var(--accent);
 }
 
 .fd-empty-btn-icon {
@@ -173,9 +173,9 @@
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 7px;
   align-items: center;
-  border: 1px solid var(--color-border-tertiary);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--color-background-secondary);
+  background: var(--bg2);
   padding: 7px 8px;
   color: inherit;
   text-align: left;
@@ -184,29 +184,29 @@
 }
 
 .fd-node-card:hover {
-  border-color: var(--color-border-secondary);
+  border-color: var(--borderLt);
 }
 
 .fd-node-card.is-selected {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-background-secondary));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .fd-node-card--root {
-  background: color-mix(in srgb, var(--color-background-secondary) 72%, var(--color-accent) 6%);
+  background: color-mix(in srgb, var(--bg2) 72%, var(--accent) 6%);
 }
 
 .fd-node-icon {
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  background: var(--color-background-primary);
+  background: var(--bg1);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  border: 1px solid color-mix(in srgb, var(--color-border-tertiary) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
 .fd-node-copy {
@@ -233,16 +233,16 @@
   align-items: center;
   justify-content: center;
   font-size: 9px;
-  color: var(--color-text-primary);
-  background: var(--color-background-primary);
-  border: 1px solid var(--color-border-secondary);
+  color: var(--text);
+  background: var(--bg1);
+  border: 1px solid var(--borderLt);
 }
 
 .fd-node-name {
   min-width: 0;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -251,7 +251,7 @@
 
 .fd-node-detail {
   font-size: 9px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,10 +267,10 @@
 .fd-story-toggle {
   width: fit-content;
   max-width: 100%;
-  border: 1px dashed var(--color-border-secondary);
+  border: 1px dashed var(--borderLt);
   border-radius: 999px;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -282,8 +282,8 @@
 }
 
 .fd-story-toggle:hover {
-  border-color: var(--color-accent);
-  color: var(--color-text-primary);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .fd-story-toggle-label {
@@ -300,9 +300,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-background-primary);
-  border: 1px solid var(--color-border-tertiary);
-  color: var(--color-text-primary);
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  color: var(--text);
   font-size: 9px;
   font-weight: 700;
 }
@@ -317,10 +317,10 @@
 .fd-story-chip {
   max-width: 100%;
   min-width: 0;
-  border: 1px solid var(--color-border-tertiary);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--color-background-primary);
-  color: var(--color-text-secondary);
+  background: var(--bg1);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -329,14 +329,14 @@
 }
 
 .fd-story-chip:hover {
-  border-color: var(--color-border-secondary);
-  color: var(--color-text-primary);
+  border-color: var(--borderLt);
+  color: var(--text);
 }
 
 .fd-story-chip.is-selected {
-  border-color: var(--color-accent);
-  color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-background-primary));
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg1));
 }
 
 .fd-story-chip-icon {
@@ -358,7 +358,7 @@
   padding: 2px 5px;
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
-  color: var(--color-text-primary);
+  color: var(--text);
   font-size: 9px;
   font-weight: 700;
 }
@@ -377,7 +377,7 @@
   gap: 10px 16px;
   margin-top: 6px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .fd-complete-legend-item {
@@ -387,7 +387,7 @@
 }
 
 .fd-complete-legend-item--hint {
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 .fd-complete-legend-line {
@@ -423,13 +423,13 @@
   padding-bottom: 12px;
   position: relative;
   touch-action: none;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 70%, transparent);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(var(--fd-stage-grid-color, color-mix(in srgb, var(--color-background-secondary) 92%, transparent)) 1px, transparent 1px),
-    linear-gradient(90deg, var(--fd-stage-grid-color, color-mix(in srgb, var(--color-background-secondary) 92%, transparent)) 1px, transparent 1px),
+    linear-gradient(var(--fd-stage-grid-color, color-mix(in srgb, var(--bg2) 92%, transparent)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--fd-stage-grid-color, color-mix(in srgb, var(--bg2) 92%, transparent)) 1px, transparent 1px),
     radial-gradient(circle at top, var(--fd-stage-glow-color, color-mix(in srgb, var(--warning) 6%, transparent)), transparent 34%),
-    var(--fd-stage-background, color-mix(in srgb, var(--color-background-primary) 96%, black 4%));
+    var(--fd-stage-background, color-mix(in srgb, var(--bg1) 96%, black 4%));
   background-size: 28px 28px, 28px 28px, auto, auto;
   cursor: grab;
 }
@@ -442,8 +442,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .fd-complete-stage {
-    --fd-stage-background: color-mix(in srgb, var(--color-background-primary) 96%, black 4%);
-    --fd-stage-grid-color: color-mix(in srgb, var(--color-background-secondary) 92%, transparent);
+    --fd-stage-background: color-mix(in srgb, var(--bg1) 96%, black 4%);
+    --fd-stage-grid-color: color-mix(in srgb, var(--bg2) 92%, transparent);
     --fd-stage-glow-color: color-mix(in srgb, var(--warning) 6%, transparent);
   }
 }
@@ -473,9 +473,9 @@
   gap: 8px;
   max-width: calc(100% - 28px);
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 70%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--color-background-primary) 88%, black 12%);
+  background: color-mix(in srgb, var(--bg1) 88%, black 12%);
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
 }
@@ -501,8 +501,8 @@
   gap: 7px;
   padding: 0 9px;
   border-radius: 7px;
-  background: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
-  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -513,12 +513,12 @@
   width: 13px;
   height: 13px;
   margin: 0;
-  accent-color: var(--color-accent);
+  accent-color: var(--accent);
 }
 
 .fd-complete-toggle:has(input:checked) {
-  color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-accent) 13%, var(--color-background-primary));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg1));
 }
 
 .fd-complete-mode-btn:hover,
@@ -543,7 +543,7 @@
   gap: 8px 14px;
   max-width: min(760px, calc(100% - 88px));
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--color-border-secondary) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--borderLt) 70%, transparent);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg1) 88%, transparent);
   backdrop-filter: blur(5px);
@@ -668,15 +668,15 @@
 }
 
 .fd-complete-sibling-group {
-  fill: color-mix(in srgb, var(--color-background-primary) 26%, transparent);
-  stroke: color-mix(in srgb, var(--color-border-secondary) 44%, transparent);
+  fill: color-mix(in srgb, var(--bg1) 26%, transparent);
+  stroke: color-mix(in srgb, var(--borderLt) 44%, transparent);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .fd-complete-sibling-group--stories {
   fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 5%, transparent);
-  stroke: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 22%, var(--color-border-secondary));
+  stroke: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 22%, var(--borderLt));
   stroke-dasharray: 5 5;
 }
 
@@ -722,11 +722,11 @@
 }
 
 .fd-complete-line--return.fd-complete-line--inherited {
-  stroke: color-mix(in srgb, #72d0c3 58%, var(--color-text-tertiary) 42%);
+  stroke: color-mix(in srgb, #72d0c3 58%, var(--muted) 42%);
 }
 
 .fd-complete-line--return.fd-complete-line--implicit {
-  stroke: color-mix(in srgb, #9aa8b6 56%, var(--color-text-tertiary) 44%);
+  stroke: color-mix(in srgb, #9aa8b6 56%, var(--muted) 44%);
 }
 
 .fd-complete-line--return.fd-complete-line--contextual {
@@ -760,7 +760,7 @@
 }
 
 .fd-complete-line--home {
-  stroke: color-mix(in srgb, #a98dff 62%, var(--color-text-tertiary) 38%);
+  stroke: color-mix(in srgb, #a98dff 62%, var(--muted) 38%);
   stroke-width: 1.05;
   stroke-dasharray: 4 4;
   opacity: 0.58;
@@ -808,8 +808,8 @@
 }
 
 .fd-complete-edge-label {
-  fill: var(--color-text-secondary);
-  stroke: color-mix(in srgb, var(--color-background-primary) 92%, transparent);
+  fill: var(--text-secondary);
+  stroke: color-mix(in srgb, var(--bg1) 92%, transparent);
   stroke-width: 3px;
   paint-order: stroke;
   font-size: 9px;
@@ -824,7 +824,7 @@
 }
 
 .fd-complete-edge-label.is-active {
-  fill: var(--color-text-primary);
+  fill: var(--text);
   font-size: 10px;
 }
 
@@ -846,7 +846,7 @@
 }
 
 .fd-complete-placed-node.is-navigation-active .fd-complete-node {
-  border-color: color-mix(in srgb, var(--info) 74%, var(--color-accent) 26%);
+  border-color: color-mix(in srgb, var(--info) 74%, var(--accent) 26%);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--info) 35%, transparent),
     0 10px 24px rgba(0, 0, 0, 0.24);
@@ -1007,7 +1007,7 @@
 }
 
 .fd-complete-node:hover {
-  border-color: var(--color-border-secondary);
+  border-color: var(--borderLt);
 }
 
 .fd-complete-node.is-dragging {
@@ -1029,7 +1029,7 @@
 
 .fd-complete-node--root {
   width: var(--fd-node-root-width);
-  border-color: var(--color-accent);
+  border-color: var(--accent);
   border-width: 1.5px;
 }
 
@@ -1127,10 +1127,10 @@
   z-index: 9;
   max-width: min(360px, calc(100% - 32px));
   padding: 8px 10px;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--color-background-primary) 94%, black 6%);
-  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--bg1) 94%, black 6%);
+  color: var(--text);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.35;
@@ -1165,7 +1165,7 @@
 }
 
 .fd-complete-node-placeholder {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1199,15 +1199,15 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  border-top: 0.5px solid var(--color-border-tertiary);
-  background: var(--color-background-secondary);
+  border-top: 0.5px solid var(--border);
+  background: var(--bg2);
 }
 
 .fd-complete-node-icon {
   width: 12px;
   height: 12px;
   flex: 0 0 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1229,7 +1229,7 @@
 .fd-complete-node-name {
   font-size: 10px;
   font-family: var(--font-sans);
-  color: var(--color-text-primary);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1375,10 +1375,10 @@
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-background-secondary) 70%, transparent), transparent 14%),
-    var(--color-background-primary);
+    linear-gradient(180deg, color-mix(in srgb, var(--bg2) 70%, transparent), transparent 14%),
+    var(--bg1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1407,23 +1407,23 @@
   align-items: center;
   gap: 7px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
   padding: 4px 8px;
   border-radius: 8px;
-  border: 1px solid var(--color-border-tertiary);
-  background: var(--color-background-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg2);
   transition: border-color 0.12s ease, color 0.12s ease;
 }
 
 .fd-header-setting:hover {
-  border-color: var(--color-border-secondary);
-  color: var(--color-text-primary);
+  border-color: var(--borderLt);
+  color: var(--text);
 }
 
 .fd-header-setting input[type="checkbox"] {
-  accent-color: var(--color-accent);
+  accent-color: var(--accent);
   width: 13px;
   height: 13px;
   cursor: pointer;
@@ -1448,10 +1448,10 @@ body.fd-fullscreen-open {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   border-radius: 18px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-background-primary) 94%, black 6%);
+  background: color-mix(in srgb, var(--bg1) 94%, black 6%);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(8px);
 }
@@ -1487,7 +1487,7 @@ body.fd-fullscreen-open {
   left: 4px;
   width: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-accent) 36%, transparent);
+  background: color-mix(in srgb, var(--accent) 36%, transparent);
   opacity: 0;
   transition: opacity 0.12s ease, background 0.12s ease;
 }
@@ -1508,20 +1508,20 @@ body.fd-fullscreen-open {
   justify-content: space-between;
   gap: 12px;
   padding: 18px 22px;
-  border-bottom: 1px solid var(--color-border-tertiary);
-  background: color-mix(in srgb, var(--color-background-secondary) 84%, transparent);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg2) 84%, transparent);
 }
 
 .fd-floating-panel-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .fd-floating-panel-sub {
   margin-top: 3px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .fd-floating-panel-body {
@@ -1718,7 +1718,7 @@ body.fd-fullscreen-open {
     width: 100%;
     margin-top: 0;
     padding-top: 16px;
-    border-top: 1px solid color-mix(in srgb, var(--color-border-secondary) 60%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--borderLt) 60%, transparent);
   }
 
   .fd-floating-panel-body .media-split-divider {
@@ -1797,11 +1797,11 @@ body.fd-fullscreen-open {
 
 /* Multi-sélection */
 .fd-complete-node.is-multi-selected {
-  border-color: color-mix(in srgb, var(--color-accent) 80%, #a78bfa 20%);
-  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-background-primary));
+  border-color: color-mix(in srgb, var(--accent) 80%, #a78bfa 20%);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg1));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, #a78bfa 12%),
-    0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--accent) 28%, #a78bfa 12%),
+    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 /* Panneau MultiEditor flottant dans le diagramme plein écran */
@@ -1814,10 +1814,10 @@ body.fd-fullscreen-open {
   max-height: calc(100% - 48px);
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--borderLt);
   border-radius: 18px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-background-primary) 94%, black 6%);
+  background: color-mix(in srgb, var(--bg1) 94%, black 6%);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(8px);
 }

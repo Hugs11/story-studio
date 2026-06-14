@@ -55,7 +55,7 @@
   padding: 16px;
   white-space: pre-wrap;
   line-height: 1.45;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -88,7 +88,7 @@
 
 .dialog-actions .secondary-btn {
   background: var(--control-bg);
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .dialog-actions .primary-btn:hover,

@@ -177,42 +177,17 @@
   --focus-ring-soft: color-mix(in srgb, var(--accent) 24%, transparent);
   --ring: 0 0 0 4px var(--focus-ring-soft);
 
-  /* Legacy color aliases */
-  --color-background-primary: var(--bg1);
-  --color-background-secondary: var(--bg2);
-  --color-background-tertiary: var(--bg0);
-  --color-bg-primary: var(--bg1);
-  --color-bg-secondary: var(--bg2);
-  --color-bg-hover: var(--control-bg-hover);
-  --color-surface-2: var(--bg2);
-  --color-surface-secondary: var(--bg2);
-  --color-border: var(--border);
-  --color-border-primary: var(--border);
-  --color-border-secondary: var(--borderLt);
-  --color-border-tertiary: var(--border);
-  --color-text: var(--text);
-  --color-text-primary: var(--text);
-  --color-text-secondary: color-mix(in srgb, var(--text) 62%, transparent);
-  --color-text-tertiary: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-light: var(--accent-dim);
-  --color-accent-contrast: var(--accent-contrast);
-  --color-accent-hover: var(--accent-hover);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
-  --color-warning-text: var(--warning-text);
-  --color-warning-bg: var(--warning-bg);
-  --color-warning-border: var(--warning-border);
-  --color-success: var(--success);
-  --color-info: var(--info);
+  /* Texte secondaire (entre --text et --muted) */
+  --text-secondary: color-mix(in srgb, var(--text) 62%, transparent);
 
-  --color-scrollbar-track: #F0F2F5;
-  --color-scrollbar-thumb: #C4CBD5;
-  --color-scrollbar-thumb-hover: #AEB7C4;
+  /* Scrollbars */
+  --scrollbar-track: #F0F2F5;
+  --scrollbar-thumb: #C4CBD5;
+  --scrollbar-thumb-hover: #AEB7C4;
 
-  --tree-depth-guide: color-mix(in srgb, var(--color-border-secondary) 40%, transparent);
-  --tree-path-guide: color-mix(in srgb, var(--color-text-secondary) 52%, var(--tree-depth-guide));
-  --tree-scope-bg: color-mix(in srgb, var(--color-background-secondary) 72%, transparent);
+  --tree-depth-guide: color-mix(in srgb, var(--borderLt) 40%, transparent);
+  --tree-path-guide: color-mix(in srgb, var(--text-secondary) 52%, var(--tree-depth-guide));
+  --tree-scope-bg: color-mix(in srgb, var(--bg2) 72%, transparent);
   --tree-scope-hover-bg: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
@@ -299,37 +274,11 @@
   --focus-ring-soft: color-mix(in srgb, var(--accent) 28%, transparent);
   --ring: 0 0 0 4px var(--focus-ring-soft);
 
-  --color-background-primary: var(--bg1);
-  --color-background-secondary: var(--bg2);
-  --color-background-tertiary: var(--bg0);
-  --color-bg-primary: var(--bg1);
-  --color-bg-secondary: var(--bg2);
-  --color-bg-hover: var(--control-bg-hover);
-  --color-surface-2: var(--bg2);
-  --color-surface-secondary: var(--bg2);
-  --color-border: var(--border);
-  --color-border-primary: var(--border);
-  --color-border-secondary: var(--borderLt);
-  --color-border-tertiary: var(--border);
-  --color-text: var(--text);
-  --color-text-primary: var(--text);
-  --color-text-secondary: #a6a2c0;
-  --color-text-tertiary: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-light: var(--accent-dim);
-  --color-accent-contrast: var(--accent-contrast);
-  --color-accent-hover: var(--accent-hover);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
-  --color-warning-text: var(--warning-text);
-  --color-warning-bg: var(--warning-bg);
-  --color-warning-border: var(--warning-border);
-  --color-success: var(--success);
-  --color-info: var(--info);
+  --text-secondary: #a6a2c0;
 
-  --color-scrollbar-track: var(--bg0);
-  --color-scrollbar-thumb: var(--bg3);
-  --color-scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+  --scrollbar-track: var(--bg0);
+  --scrollbar-thumb: var(--bg3);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
 
   --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
   --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));

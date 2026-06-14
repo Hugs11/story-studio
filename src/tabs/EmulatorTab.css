@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-background-tertiary);
+  background: var(--bg0);
   gap: 16px;
   width: 100%;
   min-width: 0;
@@ -272,7 +272,7 @@
 /* Aide en bas */
 .lunii-hint {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
 }
 
 /* Carte de transfert */
@@ -282,8 +282,8 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 8px 14px;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border: 0.5px solid var(--border);
   border-radius: var(--border-radius-lg);
   margin-top: 4px;
   max-width: 100%;
@@ -291,7 +291,7 @@
 
 .lunii-transfer-label {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .lunii-transfer-links {
@@ -304,9 +304,9 @@
 .lunii-transfer-link {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-accent);
+  color: var(--accent);
   background: none;
-  border: 0.5px solid var(--color-accent);
+  border: 0.5px solid var(--accent);
   border-radius: var(--border-radius-md);
   padding: 3px 9px;
   cursor: pointer;
@@ -314,7 +314,7 @@
 }
 
 .lunii-transfer-link:hover {
-  background: var(--color-accent-light);
+  background: var(--accent-dim);
 }
 
 /* ── Barre de mode projet / ZIP ─────────────────────────────────────── */
@@ -323,8 +323,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--bg1);
+  border: 0.5px solid var(--border);
   border-radius: var(--border-radius-lg);
   padding: 3px;
 }
@@ -332,7 +332,7 @@
 .emu-mode-btn {
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   background: none;
   border: none;
   border-radius: calc(var(--border-radius-lg) - 2px);
@@ -341,16 +341,16 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.emu-mode-btn:hover { background: var(--color-background-secondary); }
+.emu-mode-btn:hover { background: var(--bg2); }
 .emu-mode-btn.active {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
+  background: var(--bg2);
+  color: var(--text);
 }
 
 /* Nom du ZIP chargé (dans la mode bar) */
 .emu-zip-label {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--muted);
   padding: 0 8px;
   max-width: 500px;
   overflow: hidden;

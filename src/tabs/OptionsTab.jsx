@@ -703,7 +703,7 @@ export function OptionsTab({
                   <>Sous <code>%LOCALAPPDATA%\com.hugs11.story-studio\logs\</code>. Fichier courant : <code>story-studio.log</code>.</>
                 )}
                 {copiedLogPath ? (
-                  <span style={{ color: 'var(--color-accent)', marginLeft: 6 }}>(copié)</span>
+                  <span style={{ color: 'var(--accent)', marginLeft: 6 }}>(copié)</span>
                 ) : null}
               </div>
             </div>
