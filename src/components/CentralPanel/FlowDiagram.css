@@ -487,7 +487,7 @@
   border-radius: 7px;
   padding: 0 9px;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -523,14 +523,14 @@
 
 .fd-complete-mode-btn:hover,
 .fd-complete-clear-collapse:hover {
-  color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .fd-complete-mode-btn.is-active {
-  color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--color-accent) 44%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-background-primary));
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 44%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg1));
 }
 
 .fd-stage-legend {
@@ -570,9 +570,9 @@
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  border: 1px solid var(--color-border-secondary);
-  background: color-mix(in srgb, var(--color-background-primary) 92%, black 8%);
-  color: var(--color-text-primary);
+  border: 1px solid var(--borderLt);
+  background: color-mix(in srgb, var(--bg1) 92%, black 8%);
+  color: var(--text);
   box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
   display: flex;
   align-items: center;
@@ -591,7 +591,7 @@
 }
 
 .fd-complete-zoom-btn:hover {
-  border-color: var(--color-accent);
+  border-color: var(--accent);
 }
 
 .fd-complete-zoom-value {

@@ -219,9 +219,9 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 0.5px solid var(--color-border-secondary);
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
+  border: 0.5px solid var(--borderLt);
+  background: var(--bg2);
+  color: var(--muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -231,8 +231,8 @@
 }
 
 .sd-audio-mini-btn:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .sd-audio-mini-btn svg {
