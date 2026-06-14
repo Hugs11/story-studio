@@ -277,15 +277,15 @@ export function AudioField({
               <span className="audio-empty-plus">+</span>
               <div className="audio-bar-actions" aria-label="Actions audio">
                 <Tooltip text="Enregistrer l'audio">
-                  <button className="btn btn-icon btn-icon-sm" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
+                  <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  </button>
+                  </Button>
                 </Tooltip>
                 {xttsSettings?.enabled && (
                   <Tooltip text="Générer une voix depuis un texte">
-                    <button className="btn btn-icon btn-icon-sm" type="button" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
+                    <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
                       <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                    </button>
+                    </Button>
                   </Tooltip>
                 )}
               </div>
@@ -363,21 +363,21 @@ export function AudioField({
             )}
             <div className="audio-bar-actions" aria-label="Actions audio">
               <Tooltip text="Remplacer par un enregistrement">
-                <button className="btn btn-icon btn-icon-sm" type="button" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
+                <Button variant="icon" size="sm" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
                   <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                </button>
+                </Button>
               </Tooltip>
               {xttsSettings?.enabled && (
                 <Tooltip text="Générer une nouvelle voix depuis un texte">
-                  <button className="btn btn-icon btn-icon-sm" type="button" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
+                  <Button variant="icon" size="sm" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
                     <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                  </button>
+                  </Button>
                 </Tooltip>
               )}
               <Tooltip text="Éditer l'audio">
-                <button className="btn btn-icon btn-icon-sm" type="button" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
+                <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                </button>
+                </Button>
               </Tooltip>
             </div>
           </div>
@@ -391,7 +391,7 @@ export function AudioField({
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
             <div className="modal-header">
               <span>Conversion activée automatiquement</span>
-              <button className="btn btn-icon modal-close" onClick={() => setShowConvertNotice(false)}>×</button>
+              <Button variant="icon" className="modal-close" onClick={() => setShowConvertNotice(false)}>×</Button>
             </div>
             <div className="audio-notice-body">
               Le fichier enregistré est au format <strong>.webm</strong>. L'option <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> a été activée automatiquement dans les réglages de l'histoire pour garantir la compatibilité avec votre Boîte à Histoires.
@@ -409,13 +409,14 @@ export function AudioField({
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 360 }}>
             <div className="modal-header">
               <span>Projet non sauvegardé</span>
-              <button
-                className="btn btn-icon modal-close"
+              <Button
+                variant="icon"
+                className="modal-close"
                 onClick={() => { setShowNoSaveWarning(false); setPendingGeneratedSource(null); }}
                 disabled={savingGeneratedAudio}
               >
                 ×
-              </button>
+              </Button>
             </div>
             <div className="audio-notice-body">
               {pendingGeneratedSource === 'tts' ? (
