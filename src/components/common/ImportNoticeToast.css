@@ -1,0 +1,44 @@
+.import-notice {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 540px;
+  z-index: 9999;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.import-notice-text {
+  flex: 1;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.import-notice-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.import-notice-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}

@@ -46,9 +46,10 @@ import {
   setCurrentShortcuts,
 } from './store/keyboardShortcuts';
 import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
-import { Loader2, TriangleAlert } from './components/icons/LucideLocal';
-import { AppModalPortal } from './components/common/AppModalPortal';
 import { SaveProgressModal } from './components/common/SaveProgressModal';
+import { GenerateProgressModal } from './components/GenerateModal/GenerateProgressModal';
+import { ImportNoticeToast } from './components/common/ImportNoticeToast';
+import { CreditsModal } from './components/common/CreditsModal';
 import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
 import { PanelRail } from './components/layout/PanelRail';
@@ -79,7 +80,6 @@ import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
-import './components/GenerateModal/GenerateModal.css';
 
 const EditorTab = lazy(() => import('./tabs/EditorTab').then((module) => ({ default: module.EditorTab })));
 const DiagramTab = lazy(() => import('./tabs/DiagramTab').then((module) => ({ default: module.DiagramTab })));
@@ -1253,74 +1253,26 @@ function AppContent() {
       )}
 
       {unpacking && (
-        <AppModalPortal className="gen-overlay">
-          <div className="gen-modal" style={{ width: 420, maxWidth: '92vw' }}>
-            <div className="gen-header">
-              <span className="gen-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
-                Extraction en cours...
-              </span>
-            </div>
-            <div style={{ padding: '22px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div className="gen-spinner" style={{ flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                  {unpacking.name}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  Story Studio analyse le pack et extrait les éléments éditables.
-                </div>
-              </div>
-            </div>
+        <GenerateProgressModal title="Extraction en cours...">
+          <div className="gen-progress-name">{unpacking.name}</div>
+          <div className="gen-progress-desc">
+            Story Studio analyse le pack et extrait les éléments éditables.
           </div>
-        </AppModalPortal>
+        </GenerateProgressModal>
       )}
 
       {importing && (
-        <AppModalPortal className="gen-overlay">
-          <div className="gen-modal" style={{ width: 420, maxWidth: '92vw' }}>
-            <div className="gen-header">
-              <span className="gen-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
-                Import en cours...
-              </span>
-            </div>
-            <div style={{ padding: '22px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div className="gen-spinner" style={{ flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                  {importing.name}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  {importing.phase}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
-                  {importing.total > 1 ? `Fichier ${Math.max(importing.index, 1)} sur ${importing.total}` : 'Traitement du fichier importé'}
-                </div>
-              </div>
-            </div>
+        <GenerateProgressModal title="Import en cours...">
+          <div className="gen-progress-name">{importing.name}</div>
+          <div className="gen-progress-desc">{importing.phase}</div>
+          <div className="gen-progress-meta">
+            {importing.total > 1 ? `Fichier ${Math.max(importing.index, 1)} sur ${importing.total}` : 'Traitement du fichier importé'}
           </div>
-        </AppModalPortal>
+        </GenerateProgressModal>
       )}
 
       {importNotice && (
-        <div style={{
-          position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--color-warning-bg, #3a2e00)', border: '1px solid var(--color-warning-border, #a07800)',
-          color: 'var(--color-warning-text, #f5d060)', borderRadius: 8, padding: '10px 14px',
-          display: 'flex', alignItems: 'flex-start', gap: 10, maxWidth: 540, zIndex: 9999,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)', fontSize: 12, lineHeight: 1.5,
-        }}>
-          <span style={{ flex: 1, display: 'inline-flex', alignItems: 'flex-start', gap: 8 }}>
-            <TriangleAlert style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} />
-            <span>{importNotice}</span>
-          </span>
-          <button
-            onClick={() => setImportNotice(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0 2px', fontSize: 14, lineHeight: 1, flexShrink: 0 }}
-            title="Fermer"
-          >✕</button>
-        </div>
+        <ImportNoticeToast message={importNotice} onClose={() => setImportNotice(null)} />
       )}
 
       {/* Bottom bar */}
@@ -1346,7 +1298,7 @@ function AppContent() {
               setBottomPanelOpen(true);
             }}
           >
-            {renderQueue.activeCount > 0 && <span className="rq-spinner" style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }} />}
+            {renderQueue.activeCount > 0 && <span className="rq-spinner" />}
             File de rendu
             {renderQueue.activeCount > 0 && <span className="bottom-status-pill">{renderQueue.activeCount}</span>}
             {renderQueue.activeCount === 0 && renderQueue.hasResults && <span className="bottom-status-pill is-done">✓</span>}
@@ -1360,44 +1312,18 @@ function AppContent() {
               setBottomPanelOpen(true);
             }}
           >
-            {aiQueueActiveCount > 0 && <span className="rq-spinner" style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }} />}
+            {aiQueueActiveCount > 0 && <span className="rq-spinner" />}
             File IA
             {aiQueueActiveCount > 0 && <span className="bottom-status-pill">{aiQueueActiveCount}</span>}
             {aiQueueActiveCount === 0 && aiQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}
-        {appVersion && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>v{appVersion}</span>}
+        {appVersion && <span className="bottombar-version">v{appVersion}</span>}
       </div>
 
       {/* Credits modal */}
       {creditsOpen && (
-        <AppModalPortal>
-          <div className="modal-box" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <span>À propos de Story Studio</span>
-              <button className="modal-close" onClick={() => setCreditsOpen(false)}>✕</button>
-            </div>
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)' }}>Story Studio</span>
-                {appVersion && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>v{appVersion}</span>}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                Né d'une envie simple : créer des histoires pour Armand.
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                Créé par hugs11, assisté de Claude-code et Codex
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', lineHeight: 1.6 }}>
-                Grâce au travail de<br />
-                <strong style={{ color: 'var(--color-text-secondary)' }}>Jersou</strong>,{' '}
-                <strong style={{ color: 'var(--color-text-secondary)' }}>Dantsu</strong>,{' '}
-                <strong style={{ color: 'var(--color-text-secondary)' }}>o.Daneel</strong> et{' '}
-                <strong style={{ color: 'var(--color-text-secondary)' }}>LuckyTheCookie</strong>
-              </div>
-            </div>
-          </div>
-        </AppModalPortal>
+        <CreditsModal appVersion={appVersion} onClose={() => setCreditsOpen(false)} />
       )}
     </div>
     </ProjectContext.Provider>

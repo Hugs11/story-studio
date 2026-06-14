@@ -178,6 +178,11 @@ body {
   flex: 1;
 }
 
+.bottombar-version {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* Boutons */
 .btn {
   min-height: 32px;
