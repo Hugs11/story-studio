@@ -200,6 +200,7 @@ function AppContent() {
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
   const [validationOpen, setValidationOpen] = useState(false);
+  const [diagramInspectRequest, setDiagramInspectRequest] = useState(null);
   const [dismissedMissingMediaSignature, setDismissedMissingMediaSignature] = useState('');
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
@@ -1038,8 +1039,12 @@ function AppContent() {
           onValidationOpenChange={setValidationOpen}
           onSelectIssue={(id) => {
             if (!id) return;
-            store.setActiveTab('edit');
             store.setSelectedId(id);
+            if (store.activeTab === 'diagram') {
+              setDiagramInspectRequest({ id, nonce: Date.now() });
+              return;
+            }
+            store.setActiveTab('edit');
           }}
         />
       )}
@@ -1106,6 +1111,7 @@ function AppContent() {
               allMenus={allMenus}
               allStories={allStories}
               selectedId={store.selectedId}
+              inspectRequest={diagramInspectRequest}
               onSelect={store.setSelectedId}
               onMoveToMenu={store.moveItemToMenu}
               onImportStories={() => handleAddStory()}

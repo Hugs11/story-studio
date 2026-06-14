@@ -17,6 +17,7 @@ export function DiagramTab({
   onDeleteItem,
   allMenus,
   allStories,
+  inspectRequest,
   onImportStories,
   onAddMenu,
   onAddStory,
@@ -61,6 +62,7 @@ export function DiagramTab({
         projectIndex={projectIndex}
         selectedId={selectedId}
         selectedIds={selectedIds}
+        inspectRequest={inspectRequest}
         onSelect={onSelect}
         onSelectionChange={handleSelectionChange}
         onMoveToMenu={onMoveToMenu}
