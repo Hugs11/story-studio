@@ -1459,10 +1459,13 @@ body.fd-fullscreen-open {
 .fd-floating-panel--editor {
   top: 24px;
   right: 24px;
+  bottom: 24px;
   min-width: min(420px, calc(100vw - 96px));
   max-width: calc(100vw - 96px);
-  max-height: calc(100% - 48px);
+  height: auto;
+  max-height: none;
   container-type: inline-size;
+  overflow: visible;
 }
 
 .fd-floating-panel-resize-handle {
@@ -1500,6 +1503,7 @@ body.fd-fullscreen-open {
 
 .fd-floating-panel-head {
   display: flex;
+  flex-shrink: 0;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -1526,10 +1530,31 @@ body.fd-fullscreen-open {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .fd-floating-panel-body > * {
   width: 100%;
+}
+
+.fd-floating-panel--editor .fd-floating-panel-body .image-field {
+  --image-field-width: min(100%, 320px);
+  width: min(100%, 320px);
+  flex: 0 0 auto;
+}
+
+.fd-floating-panel--editor .fd-floating-panel-body .image-field > .image-drop-wrap,
+.fd-floating-panel--editor .fd-floating-panel-body .image-field > .image-drop {
+  width: var(--image-field-width);
+}
+
+.fd-floating-panel-body > .card:first-child > .card-title-row .card-title {
+  display: none;
+}
+
+.fd-floating-panel-body > .card:first-child > .card-title-row {
+  margin-bottom: 12px;
 }
 
 .fd-floating-panel-body--simulator {
@@ -1680,18 +1705,18 @@ body.fd-fullscreen-open {
   }
 
   .fd-floating-panel-body .media-split {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .fd-floating-panel-body .media-split-left {
-    flex: none;
     width: 100%;
+    align-items: center;
   }
 
   .fd-floating-panel-body .media-split-right {
-    flex: none;
     width: 100%;
-    margin-top: 20px;
+    margin-top: 0;
     padding-top: 16px;
     border-top: 1px solid color-mix(in srgb, var(--color-border-secondary) 60%, transparent);
   }
@@ -1700,8 +1725,73 @@ body.fd-fullscreen-open {
     display: none;
   }
 
-  .fd-floating-panel-body .image-field {
-    --image-field-width: min(100%, 240px);
+  .fd-floating-panel-body .root-image-split-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .fd-floating-panel-body .root-image-col {
+    width: min(100%, 320px);
+    align-items: center;
+  }
+
+  .fd-floating-panel-body .root-image-col .media-col-header {
+    width: 100%;
+  }
+
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start {
+    align-items: center;
+  }
+
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .media-label {
+    text-align: center;
+  }
+
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .media-label,
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .image-drop,
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .image-drop-wrap,
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .image-action-row,
+  .fd-floating-panel-body .root-image-col .image-field.is-align-start > .image-sd-results {
+    margin-inline: auto;
+  }
+
+  .fd-floating-panel-body .editor-setting-row,
+  .fd-floating-panel-body .editor-setting-row.is-action-row,
+  .fd-floating-panel-body .editor-setting-row.is-toggle-row,
+  .fd-floating-panel-body .editor-setting-row.is-note-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .fd-floating-panel-body .editor-setting-control,
+  .fd-floating-panel-body .editor-setting-actions {
+    justify-content: flex-start;
+  }
+
+  .fd-floating-panel-body .end-node-setting-copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .fd-floating-panel-body .end-node-setting-copy .editor-setting-desc {
+    white-space: normal;
+    overflow: visible;
+  }
+}
+
+@container (max-width: 520px) {
+  .fd-floating-panel-body .audio-empty-row {
+    flex-wrap: wrap;
+  }
+
+  .fd-floating-panel-body .audio-empty-row .audio-bar,
+  .fd-floating-panel-body .audio-empty-row .audio-empty {
+    flex-basis: 100%;
+  }
+
+  .fd-floating-panel-body .audio-label-wrap {
+    max-width: min(52%, 180px);
   }
 }
 
