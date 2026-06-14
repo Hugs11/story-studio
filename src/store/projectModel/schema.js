@@ -1,4 +1,5 @@
 import { normalizeNavigationTarget } from '../navigationTargets.js';
+import { PACK_AUDIO_EDGE_SILENCE_SECONDS } from '../../config/audioProcessing.js';
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
 
@@ -75,7 +76,7 @@ function normalizeControlSettings(entry, defaults) {
 function normalizeAudioProcessing(value, fields) {
   if (!value || typeof value !== 'object') return {};
   const result = {};
-  for (const field of fields) {
+  for (const field of ['__allAudio', ...fields]) {
     const processing = value[field];
     if (processing?.skipSilence === true) {
       result[field] = { skipSilence: true };
@@ -608,5 +609,9 @@ export function projectToRustExport(project) {
     name: getExportPackName(packMetadata),
     packVersion: packMetadata.version,
     packDescription: packMetadata.description,
+    globalOptions: {
+      ...serializable.globalOptions,
+      addSilenceDurationSec: PACK_AUDIO_EDGE_SILENCE_SECONDS,
+    },
   };
 }

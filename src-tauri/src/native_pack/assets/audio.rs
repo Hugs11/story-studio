@@ -9,6 +9,7 @@ use crate::services::project_files::validate_existing_file_path;
 use crate::support::ffmpeg::{apply_no_window, file_ext, now_millis};
 
 const MP3_HEADER_SCAN_BYTES: usize = 1024 * 1024;
+const DEFAULT_AUDIO_EDGE_SILENCE_SECONDS: f64 = 1.0;
 
 pub(crate) fn audio_needs_processing(
     source_path: &str,
@@ -84,13 +85,14 @@ pub(crate) fn process_audio_asset(
     ffmpeg: &Path,
     processed_audio_dir: &Path,
     options: &CanonicalOptions,
+    silence_duration_sec: f64,
     skip_silence: bool,
     role: &str,
 ) -> Result<PathBuf, String> {
     let source = validate_existing_file_path(source_path, role)?;
     let output_name = processed_audio_output_name(role);
     let output = processed_audio_dir.join(output_name);
-    let filters = audio_filters(options, skip_silence);
+    let filters = audio_filters_with_duration(options, skip_silence, silence_duration_sec);
 
     let mut cmd = Command::new(ffmpeg);
     cmd.args([
@@ -136,7 +138,16 @@ pub(crate) fn process_audio_asset(
     Ok(output)
 }
 
+#[cfg(test)]
 pub(crate) fn audio_filters(options: &CanonicalOptions, skip_silence: bool) -> String {
+    audio_filters_with_duration(options, skip_silence, DEFAULT_AUDIO_EDGE_SILENCE_SECONDS)
+}
+
+pub(crate) fn audio_filters_with_duration(
+    options: &CanonicalOptions,
+    skip_silence: bool,
+    silence_duration_sec: f64,
+) -> String {
     let mut filters = vec![
         "aformat=channel_layouts=mono".to_string(),
         "loudnorm=I=-12:TP=-1.5:LRA=11".to_string(),
@@ -146,10 +157,38 @@ pub(crate) fn audio_filters(options: &CanonicalOptions, skip_silence: bool) -> S
         // On force donc d'abord un vrai mono, on normalise le contenu utile,
         // puis on applique le silence en dernier pour qu'il reste numeriquement
         // silencieux et ne perturbe pas la mesure loudnorm.
-        filters.push("adelay=1000".to_string());
-        filters.push("apad=pad_dur=1".to_string());
+        let silence_duration_sec = normalized_silence_duration_sec(silence_duration_sec);
+        filters.push(format!(
+            "adelay={}",
+            (silence_duration_sec * 1000.0).round()
+        ));
+        filters.push(format!(
+            "apad=pad_dur={}",
+            format_ffmpeg_seconds(silence_duration_sec)
+        ));
     }
     filters.join(",")
+}
+
+fn normalized_silence_duration_sec(value: f64) -> f64 {
+    if value.is_finite() && value >= 0.0 {
+        value
+    } else {
+        DEFAULT_AUDIO_EDGE_SILENCE_SECONDS
+    }
+}
+
+fn format_ffmpeg_seconds(value: f64) -> String {
+    let formatted = format!("{:.3}", value);
+    let trimmed = formatted
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string();
+    if trimmed.is_empty() {
+        "0".to_string()
+    } else {
+        trimmed
+    }
 }
 
 pub(crate) fn hashed_asset_name(bytes: &[u8], extension: &str) -> String {

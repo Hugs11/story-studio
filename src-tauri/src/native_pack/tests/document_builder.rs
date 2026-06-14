@@ -675,7 +675,7 @@ fn collects_asset_requests_for_pack() {
         ],
     };
 
-    let requests = collect_asset_requests(&project, &HashMap::new());
+    let requests = collect_asset_requests(&project, &HashMap::new(), 1.0);
     assert_eq!(requests.len(), 10);
     assert!(requests
         .iter()
@@ -764,6 +764,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         global_options: GlobalOptions {
             convert_format: false,
             add_silence: false,
+            add_silence_duration_sec: 1.0,
             auto_next: false,
             select_next: false,
             night_mode: false,

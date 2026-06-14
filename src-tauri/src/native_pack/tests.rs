@@ -21,6 +21,7 @@ fn sample_options() -> GlobalOptions {
     GlobalOptions {
         convert_format: true,
         add_silence: false,
+        add_silence_duration_sec: 1.0,
         auto_next: false,
         select_next: false,
         night_mode: false,

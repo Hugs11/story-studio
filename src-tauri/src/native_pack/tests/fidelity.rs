@@ -99,6 +99,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         global_options: GlobalOptions {
             convert_format: false,
             add_silence: false,
+            add_silence_duration_sec: 1.0,
             auto_next: false,
             select_next: false,
             night_mode,
@@ -112,7 +113,7 @@ fn fidelity_fake_assets(
     canonical: &CanonicalProject,
     ap: &HashMap<String, AudioFieldProcessing>,
 ) -> Vec<PreparedAsset> {
-    collect_asset_requests(canonical, ap)
+    collect_asset_requests(canonical, ap, 1.0)
         .into_iter()
         .enumerate()
         .map(|(i, req)| {

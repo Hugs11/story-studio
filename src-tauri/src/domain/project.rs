@@ -7,12 +7,21 @@ pub(crate) struct GlobalOptions {
     pub(crate) convert_format: bool,
     #[serde(rename = "addSilence")]
     pub(crate) add_silence: bool,
+    #[serde(
+        rename = "addSilenceDurationSec",
+        default = "default_add_silence_duration_sec"
+    )]
+    pub(crate) add_silence_duration_sec: f64,
     #[serde(rename = "autoNext")]
     pub(crate) auto_next: bool,
     #[serde(rename = "selectNext")]
     pub(crate) select_next: bool,
     #[serde(rename = "nightMode")]
     pub(crate) night_mode: bool,
+}
+
+fn default_add_silence_duration_sec() -> f64 {
+    1.0
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]

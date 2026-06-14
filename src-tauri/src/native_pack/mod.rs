@@ -10,7 +10,10 @@ mod writer;
 use assets::pipeline::*;
 #[cfg(test)]
 use assets::{
-    audio::{audio_filters, mp3_header_is_native_compatible, processed_audio_output_name},
+    audio::{
+        audio_filters, audio_filters_with_duration, mp3_header_is_native_compatible,
+        processed_audio_output_name,
+    },
     image::stage_binary_asset,
 };
 #[cfg(test)]

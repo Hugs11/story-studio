@@ -6,7 +6,7 @@
 // (médiathèque, scans d'import, drop OS, nettoyage projet), sauf s'ils sont explicitement
 // référencés par une entrée projet.
 
-import { basename } from './fileUtils';
+import { basename } from './fileUtils.js';
 
 const ORIGINAL_BACKUP_RE = /\.original(?:-\d+)?\.[^.]+$/i;
 

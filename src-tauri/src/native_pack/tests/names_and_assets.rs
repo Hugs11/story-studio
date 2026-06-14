@@ -133,3 +133,19 @@ fn builds_legacy_ffmpeg_compatible_audio_filters() {
         "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11"
     );
 }
+
+#[test]
+fn builds_audio_filters_with_configured_silence_duration() {
+    let with_silence = CanonicalOptions {
+        convert_format: true,
+        add_silence: true,
+        auto_next: false,
+        select_next: false,
+        night_mode: false,
+    };
+
+    assert_eq!(
+        audio_filters_with_duration(&with_silence, false, 0.5),
+        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=500,apad=pad_dur=0.5"
+    );
+}

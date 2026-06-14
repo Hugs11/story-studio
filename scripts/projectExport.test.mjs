@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { normalizeProjectData, projectToRustExport, projectToSerializable } from '../src/store/projectModel.js';
+import { PACK_AUDIO_EDGE_SILENCE_SECONDS } from '../src/config/audioProcessing.js';
 
 test('projectToRustExport injects pack export metadata', () => {
   const project = normalizeProjectData({
@@ -23,6 +24,7 @@ test('projectToRustExport injects pack export metadata', () => {
   assert.equal(rustExport.name, '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2');
   assert.equal(rustExport.packVersion, 2);
   assert.equal(rustExport.packDescription, 'Changelog');
+  assert.equal(rustExport.globalOptions.addSilenceDurationSec, PACK_AUDIO_EDGE_SILENCE_SECONDS);
   assert.equal(Object.hasOwn(rustExport, 'rootItems'), false);
   assert.equal(Object.hasOwn(rustExport, 'menus'), false);
 });
@@ -39,6 +41,7 @@ test('projectToSerializable keeps Rust-only and legacy model fields out of the m
   assert.equal(Object.hasOwn(serializable, 'name'), false);
   assert.equal(Object.hasOwn(serializable, 'packVersion'), false);
   assert.equal(Object.hasOwn(serializable, 'packDescription'), false);
+  assert.equal(Object.hasOwn(serializable.globalOptions, 'addSilenceDurationSec'), false);
   assert.equal(Object.hasOwn(serializable, 'rootItems'), false);
   assert.equal(Object.hasOwn(serializable, 'menus'), false);
 });
