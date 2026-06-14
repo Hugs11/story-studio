@@ -87,10 +87,59 @@
   opacity: 1;
 }
 
+/* Modale de progression (extraction / import) */
+.gen-progress-modal {
+  width: 420px;
+}
+
+.gen-title-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gen-title-icon svg {
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+.gen-progress-body {
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gen-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.gen-progress-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gen-progress-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.gen-progress-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* Spinner */
 .gen-spinner {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
   border: 2px solid var(--color-border-secondary);
   border-top-color: var(--color-accent);
   border-radius: 50%;
