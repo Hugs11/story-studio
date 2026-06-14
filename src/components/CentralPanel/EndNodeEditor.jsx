@@ -124,6 +124,7 @@ export function EndNodeEditor({
                 allStories={allStories}
                 currentStoryId={null}
                 emptyLabel="Identique à après la lecture"
+                includeStoryPlay={false}
               />
             </div>
           </div>

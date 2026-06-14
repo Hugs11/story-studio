@@ -73,14 +73,6 @@ function collectProjectGraphStats(projectIndex) {
   };
 }
 
-function resolveNavigationMenuTarget(target, currentMenuId = null) {
-  const normalized = normalizeNavigationTarget(target);
-  if (!normalized) return currentMenuId;
-  if (isCurrentMenuNavigationTarget(normalized)) return currentMenuId;
-  if (isRootNavigationTarget(normalized)) return 'root';
-  return decodeNavigationMenuId(normalized);
-}
-
 function validateNavigationTarget(issues, id, label, target, projectIndex, menuIds) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return;
@@ -226,13 +218,15 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       if (getPlayableDescendantCount(projectIndex, entry.id) === 0) {
         pushWarning(issues, menuId, VALIDATION_MESSAGES.emptyMenu(pathLabel));
       }
-      if (!autoNext) {
-        const menuReturnTarget = resolveNavigationMenuTarget(entry?.returnAfterPlay, menuId);
-        if (hasPath(entry?.returnAfterPlay) && menuReturnTarget !== 'root' && menuReturnTarget && !menuIds.has(menuReturnTarget)) {
-          pushError(issues, menuId, missingTarget(entryLabel, 'de retour'));
-        } else if (hasPath(entry?.returnAfterPlay) && menuReturnTarget && menuReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, menuReturnTarget) === 0) {
-          pushError(issues, menuId, emptyTarget(entryLabel, 'de retour'));
-        }
+      if (!autoNext && hasPath(entry?.returnAfterPlay)) {
+        validateNavigationTarget(
+          issues,
+          menuId,
+          `${entryLabel} — destination des histoires`,
+          entry?.returnAfterPlay,
+          projectIndex,
+          menuIds,
+        );
       }
       validateNavigationTarget(
         issues,
@@ -245,22 +239,26 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       return;
     }
 
-    const storyReturnTarget = autoNext
-      ? (parentMenu?.id ?? null)
-      : resolveNavigationMenuTarget(entry?.returnAfterPlay, parentMenu?.id ?? null);
-    if (!autoNext) {
-      if (hasPath(entry?.returnAfterPlay) && storyReturnTarget !== 'root' && storyReturnTarget && !menuIds.has(storyReturnTarget)) {
-        pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'de retour'));
-      } else if (hasPath(entry?.returnAfterPlay) && storyReturnTarget && storyReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, storyReturnTarget) === 0) {
-        pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'de retour'));
-      }
+    if (!autoNext && hasPath(entry?.returnAfterPlay)) {
+      validateNavigationTarget(
+        issues,
+        entry?.id ?? null,
+        `${entryLabel} — destination de fin`,
+        entry?.returnAfterPlay,
+        projectIndex,
+        menuIds,
+      );
     }
 
-    const homeReturnTarget = resolveNavigationMenuTarget(entry?.returnOnHome, storyReturnTarget);
-    if (hasPath(entry?.returnOnHome) && homeReturnTarget !== 'root' && homeReturnTarget && !menuIds.has(homeReturnTarget)) {
-      pushError(issues, entry?.id ?? null, missingTarget(entryLabel, 'bouton Accueil'));
-    } else if (hasPath(entry?.returnOnHome) && homeReturnTarget && homeReturnTarget !== 'root' && getPlayableDescendantCount(projectIndex, homeReturnTarget) === 0) {
-      pushError(issues, entry?.id ?? null, emptyTarget(entryLabel, 'bouton Accueil'));
+    if (hasPath(entry?.returnOnHome)) {
+      validateNavigationTarget(
+        issues,
+        entry?.id ?? null,
+        `${entryLabel} — bouton Accueil`,
+        entry?.returnOnHome,
+        projectIndex,
+        menuIds,
+      );
     }
 
     if (!entry?.titleReturnOnHomeNone) {

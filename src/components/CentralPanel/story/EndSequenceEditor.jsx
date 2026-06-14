@@ -220,6 +220,7 @@ export function EndSequenceEditor({
                     currentStoryId={node.id}
                     includeNone
                     emptyLabel="Comme à la fin de l'histoire"
+                    includeStoryPlay={false}
                   />
                 </div>
                 <label className="sequence-control sequence-control--toggle-left">
@@ -330,6 +331,7 @@ export function EndSequenceEditor({
               currentStoryId={node.id}
               includeNone
               emptyLabel="Comme à la fin de l'histoire"
+              includeStoryPlay={false}
             />
           </div>
           <label className="sequence-control sequence-control--toggle-left" style={{ marginTop: 8 }}>

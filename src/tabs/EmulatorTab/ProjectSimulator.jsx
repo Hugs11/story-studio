@@ -10,7 +10,7 @@ import { LuniiShell } from './LuniiShell';
 import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
-import { findEntryLocation, getMenuBrowseState, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
 
 export function ProjectSimulator({
   project,
@@ -164,7 +164,13 @@ export function ProjectSimulator({
   const navigateSequenceHome = useCallback(() => {
     const step = activeSequence[sequenceIndex];
     if (step?.homeNone) return;
-    const target = resolveSequenceTarget(step?.homeTarget, currentMenu) ?? resolveStoryHomeTarget(activeStory, currentMenu, project);
+    if (step?.homeFollowsOk && sequenceIndex + 1 < activeSequence.length) {
+      setSequenceIndex((index) => index + 1);
+      return;
+    }
+    const target = step?.homeFollowsOk
+      ? (resolveSequenceTarget(step?.okTarget, currentMenu) ?? resolveStoryReturnTarget(activeStory, currentMenu, project))
+      : (normalizeHomeTarget(resolveSequenceTarget(step?.homeTarget, currentMenu)) ?? resolveStoryHomeTarget(activeStory, currentMenu, project));
     if (target === 'next_story') {
       if (navigateToNextStory()) return;
     } else if (target && navigateToTarget(target)) {
@@ -186,7 +192,7 @@ export function ProjectSimulator({
 
   const navigatePromptHome = useCallback(() => {
     if (activeStory?.afterPlaybackPromptHomeNone) return;
-    const target = resolveSequenceTarget(activeStory?.afterPlaybackPromptHomeTarget, currentMenu)
+    const target = normalizeHomeTarget(resolveSequenceTarget(activeStory?.afterPlaybackPromptHomeTarget, currentMenu))
       ?? resolveSequenceTarget(activeStory?.afterPlaybackPromptOkTarget, currentMenu)
       ?? resolveStoryHomeTarget(activeStory, currentMenu, project);
     if (target === 'next_story') {

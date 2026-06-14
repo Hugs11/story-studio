@@ -154,7 +154,7 @@ test('reports a missingTarget error when returnAfterPlay points to a nonexistent
   });
 
   const issues = getProjectValidationIssues(project);
-  const broken = find(issues, (i) => i.id === 'story-broken' && i.status === 'error' && /destination de retour introuvable/.test(i.text));
+  const broken = find(issues, (i) => i.id === 'story-broken' && i.status === 'error' && /destination dossier introuvable/.test(i.text));
   assert.ok(broken, `erreur missingTarget attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
 });
 
@@ -182,8 +182,56 @@ test('reports an emptyTarget error when returnAfterPlay points to a menu with no
   });
 
   const issues = getProjectValidationIssues(project);
-  const empty = find(issues, (i) => i.id === 'story-points-to-empty' && i.status === 'error' && /destination de retour vide/.test(i.text));
+  const empty = find(issues, (i) => i.id === 'story-points-to-empty' && i.status === 'error' && /destination dossier vide/.test(i.text));
   assert.ok(empty, `erreur emptyTarget attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
+});
+
+test('accepts direct story playback as an after-play destination', () => {
+  const project = buildProject({
+    rootEntries: [
+      {
+        id: 'story-source',
+        type: 'story',
+        name: 'Histoire source',
+        audio: 'source.mp3',
+        itemAudio: 'source-title.mp3',
+        itemImage: 'source.png',
+        returnAfterPlay: 'story_play:story-target',
+      },
+      {
+        id: 'story-target',
+        type: 'story',
+        name: 'Histoire cible',
+        audio: 'target.mp3',
+        itemAudio: 'target-title.mp3',
+        itemImage: 'target.png',
+      },
+    ],
+  });
+
+  const issues = getProjectValidationIssues(project);
+  const brokenTarget = find(issues, (i) => i.id === 'story-source' && /destination de retour/.test(i.text));
+  assert.equal(brokenTarget, null, `aucune erreur de destination attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
+});
+
+test('reports a missingTarget error when direct story playback points to a nonexistent story', () => {
+  const project = buildProject({
+    rootEntries: [
+      {
+        id: 'story-source',
+        type: 'story',
+        name: 'Histoire source',
+        audio: 'source.mp3',
+        itemAudio: 'source-title.mp3',
+        itemImage: 'source.png',
+        returnAfterPlay: 'story_play:missing-story',
+      },
+    ],
+  });
+
+  const issues = getProjectValidationIssues(project);
+  const broken = find(issues, (i) => i.id === 'story-source' && i.status === 'error' && /destination histoire introuvable/.test(i.text));
+  assert.ok(broken, `erreur missingTarget attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
 });
 
 test('a story with controlSettings.autoplay = true still requires selection image and audio', () => {

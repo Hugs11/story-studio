@@ -66,6 +66,7 @@ export const NodeEditorContent = memo(function NodeEditorContent({
         project={project}
         parentMenu={parentMenu}
         allMenus={allMenus}
+        allStories={allStories}
         onUpdate={onUpdateMenu}
         onDelete={onDeleteMenu}
       />
