@@ -116,7 +116,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       <div className="modal-box record-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Enregistrement audio</span>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="record-body">

@@ -445,17 +445,10 @@ body {
   color: var(--text);
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  cursor: pointer;
+/* Bouton de fermeture des modales : .btn .btn-icon + glyphe 16px. */
+.btn.modal-close {
   font-size: 16px;
-  color: var(--color-text-tertiary);
-  padding: 0 2px;
-  line-height: 1;
 }
-
-.modal-close:hover { color: var(--color-text-primary); }
 
 input,
 select,

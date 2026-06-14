@@ -390,7 +390,7 @@ export function AudioField({
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
             <div className="modal-header">
               <span>Conversion activée automatiquement</span>
-              <button className="modal-close" onClick={() => setShowConvertNotice(false)}>×</button>
+              <button className="btn btn-icon modal-close" onClick={() => setShowConvertNotice(false)}>×</button>
             </div>
             <div className="audio-notice-body">
               Le fichier enregistré est au format <strong>.webm</strong>. L'option <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> a été activée automatiquement dans les réglages de l'histoire pour garantir la compatibilité avec votre Boîte à Histoires.
@@ -409,7 +409,7 @@ export function AudioField({
             <div className="modal-header">
               <span>Projet non sauvegardé</span>
               <button
-                className="modal-close"
+                className="btn btn-icon modal-close"
                 onClick={() => { setShowNoSaveWarning(false); setPendingGeneratedSource(null); }}
                 disabled={savingGeneratedAudio}
               >

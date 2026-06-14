@@ -211,7 +211,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
       <div className="image-editor-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Recadrer et ajuster l'image</span>
-          <button className="modal-close" onClick={onCancel}>×</button>
+          <button className="btn btn-icon modal-close" onClick={onCancel}>×</button>
         </div>
 
         <div className="image-editor-body">

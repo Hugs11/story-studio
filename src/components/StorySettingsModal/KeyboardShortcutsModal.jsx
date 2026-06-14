@@ -104,7 +104,7 @@ export function KeyboardShortcutsModal({
       >
         <div className="modal-header">
           <span>Raccourcis clavier</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="keyboard-shortcuts-body">

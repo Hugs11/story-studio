@@ -53,7 +53,7 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
         <div className="modal-header">
           <span>Supprimer l'audio</span>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="delete-dialog-body">

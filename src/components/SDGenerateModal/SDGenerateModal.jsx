@@ -160,7 +160,7 @@ export function SDGenerateModal({
       <div className="modal-box sd-generate-box">
         <div className="modal-header">
           <span>Générer une image avec ComfyUI</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="btn btn-icon modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="sd-generate-body">

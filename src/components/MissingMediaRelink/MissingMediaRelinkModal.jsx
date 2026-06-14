@@ -207,7 +207,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
       <div className="modal-box missing-media-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <span>Médias introuvables</span>
-          <button className="modal-close" type="button" onClick={onClose} disabled={applying}>×</button>
+          <button className="btn btn-icon modal-close" type="button" onClick={onClose} disabled={applying}>×</button>
         </div>
 
         <div className="missing-media-body">

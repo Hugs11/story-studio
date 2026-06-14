@@ -728,7 +728,7 @@ export function OptionsTab({
           <div className="modal-box opts-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span>Préférences</span>
-              <button className="modal-close" type="button" onClick={onClose}>×</button>
+              <button className="btn btn-icon modal-close" type="button" onClick={onClose}>×</button>
             </div>
             {content}
           </div>

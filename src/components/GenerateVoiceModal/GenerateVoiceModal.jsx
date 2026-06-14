@@ -126,7 +126,7 @@ export function GenerateVoiceModal({
       <div className="modal-box tts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Generer une voix</span>
-          <button className="modal-close" onClick={onClose} disabled={submitting}>×</button>
+          <button className="btn btn-icon modal-close" onClick={onClose} disabled={submitting}>×</button>
         </div>
 
         <div className="tts-body">
