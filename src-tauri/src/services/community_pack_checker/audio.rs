@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use crate::support::ffmpeg::apply_no_window;
+use crate::support::ffmpeg::{apply_no_window, loudnorm_filter, measure_loudnorm};
 
 use super::models::{
     issue, round_secs, AudioValidationItem, PackValidationIssue, PackValidationSeverity,
@@ -285,7 +285,7 @@ pub(crate) fn fix_audio_file(
         None
     };
 
-    let mut filters = Vec::new();
+    let mut pre_filters = Vec::new();
     if trim_start > 0.001 || trim_end.is_some() {
         let mut trim = format!("atrim=start={}", format_seconds(trim_start));
         if let Some(end) = trim_end {
@@ -297,16 +297,31 @@ pub(crate) fn fix_audio_file(
             }
             trim.push_str(&format!(":end={}", format_seconds(end)));
         }
-        filters.push(trim);
-        filters.push("asetpts=PTS-STARTPTS".to_string());
+        pre_filters.push(trim);
+        pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
 
-    filters.push("aformat=channel_layouts=mono".to_string());
-    filters.push(format!(
-        "loudnorm=I={}:TP={}:LRA={}",
-        format_seconds(AUDIO_TARGET_INTEGRATED_LUFS),
-        format_seconds(AUDIO_TARGET_TRUE_PEAK_DB),
-        format_seconds(AUDIO_TARGET_LRA)
+    pre_filters.push("aformat=channel_layouts=mono".to_string());
+
+    // Loudnorm deux passes : on mesure sur le contenu réellement normalisé
+    // (après trim des bords + mono), puis application en mode linéaire pour
+    // viser précisément I=-12 sans compression dynamique. Repli une passe si
+    // la mesure échoue.
+    let stats = measure_loudnorm(
+        ffmpeg,
+        input,
+        &pre_filters,
+        AUDIO_TARGET_INTEGRATED_LUFS,
+        AUDIO_TARGET_TRUE_PEAK_DB,
+        AUDIO_TARGET_LRA,
+    );
+
+    let mut filters = pre_filters;
+    filters.push(loudnorm_filter(
+        stats,
+        AUDIO_TARGET_INTEGRATED_LUFS,
+        AUDIO_TARGET_TRUE_PEAK_DB,
+        AUDIO_TARGET_LRA,
     ));
 
     if rebuild_leading {
