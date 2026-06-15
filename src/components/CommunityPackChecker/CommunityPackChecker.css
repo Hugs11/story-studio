@@ -39,7 +39,7 @@
   flex: 0 0 auto;
   border-radius: var(--border-radius-md);
   background: var(--bg1);
-  color: var(--accent);
+  color: var(--accent-2);
 }
 
 .checker-icon {
@@ -112,7 +112,7 @@
   min-width: 0;
   padding: 8px 10px;
   border-radius: var(--border-radius-md);
-  background: var(--accentDim);
+  background: var(--accent-2-dim);
   color: var(--text-secondary);
   font-size: 11px;
 }
@@ -136,15 +136,15 @@
 }
 
 .checker-verdict--ok {
-  border-color: rgba(70, 160, 110, 0.45);
+  border-color: var(--success-border);
 }
 
 .checker-verdict--warning {
-  border-color: rgba(239, 159, 39, 0.58);
+  border-color: var(--warning-border);
 }
 
 .checker-verdict--error {
-  border-color: rgba(220, 84, 84, 0.55);
+  border-color: var(--danger-border);
 }
 
 .checker-verdict-main {
@@ -275,19 +275,19 @@
 }
 
 .checker-quick-line--ok > span:first-child {
-  color: #4aa471;
+  color: var(--success-text);
 }
 
 .checker-quick-line--warning > span:first-child {
-  color: #d8912c;
+  color: var(--warning-text);
 }
 
 .checker-quick-line--error > span:first-child {
-  color: #d35a5a;
+  color: var(--danger-text);
 }
 
 .checker-quick-line--info > span:first-child {
-  color: var(--accent);
+  color: var(--info-text);
 }
 
 .checker-accused-list {
@@ -420,11 +420,11 @@
 }
 
 .checker-issue--error {
-  border-color: rgba(220, 84, 84, 0.45);
+  border-color: var(--danger-border);
 }
 
 .checker-issue--warning {
-  border-color: rgba(239, 159, 39, 0.45);
+  border-color: var(--warning-border);
 }
 
 .checker-issue--compact {
@@ -441,15 +441,15 @@
 
 .checker-severity,
 .checker-status--error {
-  color: #d35a5a;
+  color: var(--danger-text);
 }
 
 .checker-status--warning {
-  color: #c47a19;
+  color: var(--warning-text);
 }
 
 .checker-status--ok {
-  color: #2f8a61;
+  color: var(--success-text);
 }
 
 .checker-issue-text {
@@ -481,7 +481,7 @@
 }
 
 .checker-issue-fix {
-  color: var(--accent);
+  color: var(--accent-2-text);
 }
 
 .checker-empty {
@@ -512,9 +512,9 @@
 
 .checker-filter:hover,
 .checker-filter.is-active {
-  color: var(--accent);
-  border-color: var(--accentBorder);
-  background: var(--accentDim);
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
 }
 
 .checker-subsection {
@@ -577,15 +577,15 @@
 }
 
 .checker-diagnostic--ok {
-  color: #2f8a61;
+  color: var(--success-text);
 }
 
 .checker-diagnostic--warning {
-  color: #c47a19;
+  color: var(--warning-text);
 }
 
 .checker-diagnostic--error {
-  color: #d35a5a;
+  color: var(--danger-text);
 }
 
 .checker-image-list {

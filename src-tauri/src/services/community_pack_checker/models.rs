@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.5;
+pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.4;
 pub(crate) const AUDIO_MAX_EDGE_SILENCE_SECONDS: f64 = 1.0;
-pub(crate) const AUDIO_TARGET_EDGE_SILENCE_SECONDS: f64 = 0.75;
+pub(crate) const AUDIO_TARGET_EDGE_SILENCE_SECONDS: f64 = 0.5;
 pub(crate) const AUDIO_TARGET_INTEGRATED_LUFS: f64 = -12.0;
 pub(crate) const AUDIO_TARGET_TRUE_PEAK_DB: f64 = -1.5;
 pub(crate) const AUDIO_TARGET_LRA: f64 = 11.0;

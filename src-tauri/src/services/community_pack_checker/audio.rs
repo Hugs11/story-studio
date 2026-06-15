@@ -201,7 +201,11 @@ pub(crate) fn analyze_audio_file(
             }
             fix_parts.push("normaliser le volume");
         }
-        _ => {
+        // Volume mesuré et dans la plage recommandée : rien à signaler.
+        Some(_) => {}
+        // Uniquement le cas réellement non mesurable (loudnorm n'a pas produit
+        // de mesure exploitable). Un volume correct ne doit JAMAIS atterrir ici.
+        None => {
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Warning,
@@ -257,18 +261,31 @@ pub(crate) fn fix_audio_file(
     output: &Path,
     item: &AudioValidationItem,
 ) -> Result<(), String> {
-    let mut filters = Vec::new();
-    let trim_start = item
-        .leading_silence_secs
-        .filter(|value| *value > AUDIO_MAX_EDGE_SILENCE_SECONDS)
-        .map(|value| (value - AUDIO_TARGET_EDGE_SILENCE_SECONDS).max(0.0))
-        .unwrap_or(0.0);
-    let trim_end = match (item.trailing_silence_secs, item.duration_secs) {
-        (Some(trailing), Some(duration)) if trailing > AUDIO_MAX_EDGE_SILENCE_SECONDS => {
-            Some(duration - (trailing - AUDIO_TARGET_EDGE_SILENCE_SECONDS))
-        }
-        _ => None,
+    // Stratégie anti « dé-silençage » : pour tout bord dont le silence est
+    // mesurable, on retire le silence existant AVANT loudnorm, puis on recrée
+    // un silence numériquement pur (zéros) à la cible APRÈS loudnorm. La
+    // réanalyse mesure ainsi toujours un bord propre et converge, au lieu de
+    // voir un ancien silence dont le plancher de bruit aurait été remonté par
+    // la normalisation. C'est aligné sur la génération native (loudnorm puis
+    // adelay/apad). Un bord non mesurable est laissé intact.
+    let rebuild_leading = item.leading_silence_secs.is_some();
+    let rebuild_trailing =
+        item.trailing_silence_secs.is_some() && item.duration_secs.is_some();
+
+    let trim_start = if rebuild_leading {
+        item.leading_silence_secs.unwrap_or(0.0).max(0.0)
+    } else {
+        0.0
     };
+    let trim_end = if rebuild_trailing {
+        let trailing = item.trailing_silence_secs.unwrap_or(0.0).max(0.0);
+        let duration = item.duration_secs.unwrap_or(0.0);
+        Some((duration - trailing).max(0.0))
+    } else {
+        None
+    };
+
+    let mut filters = Vec::new();
     if trim_start > 0.001 || trim_end.is_some() {
         let mut trim = format!("atrim=start={}", format_seconds(trim_start));
         if let Some(end) = trim_end {
@@ -292,17 +309,17 @@ pub(crate) fn fix_audio_file(
         format_seconds(AUDIO_TARGET_LRA)
     ));
 
-    if let Some(leading) = item.leading_silence_secs {
-        if leading < AUDIO_MIN_EDGE_SILENCE_SECONDS {
-            let missing = (AUDIO_TARGET_EDGE_SILENCE_SECONDS - leading).max(0.0);
-            filters.push(format!("adelay={}", (missing * 1000.0).round()));
-        }
+    if rebuild_leading {
+        filters.push(format!(
+            "adelay={}",
+            (AUDIO_TARGET_EDGE_SILENCE_SECONDS * 1000.0).round()
+        ));
     }
-    if let Some(trailing) = item.trailing_silence_secs {
-        if trailing < AUDIO_MIN_EDGE_SILENCE_SECONDS {
-            let missing = (AUDIO_TARGET_EDGE_SILENCE_SECONDS - trailing).max(0.0);
-            filters.push(format!("apad=pad_dur={}", format_seconds(missing)));
-        }
+    if rebuild_trailing {
+        filters.push(format!(
+            "apad=pad_dur={}",
+            format_seconds(AUDIO_TARGET_EDGE_SILENCE_SECONDS)
+        ));
     }
 
     let mut cmd = Command::new(ffmpeg);
@@ -565,8 +582,11 @@ fn add_silence_issue(
             target,
             format!("Le silence au {} est trop court.", side),
             Some(format!(
-                "Détecté : {:.2} s. Accepté : 0.5 à 1.0 s. Correction proposée : ajouter {:.2} s.",
-                measured, missing.max(0.0)
+                "Détecté : {:.2} s. Accepté : {:.1} à {:.1} s. Correction proposée : ajouter {:.2} s.",
+                measured,
+                AUDIO_MIN_EDGE_SILENCE_SECONDS,
+                AUDIO_MAX_EDGE_SILENCE_SECONDS,
+                missing.max(0.0)
             )),
             true,
             Some(format!(
@@ -585,8 +605,11 @@ fn add_silence_issue(
             target,
             format!("Le silence au {} est trop long.", side),
             Some(format!(
-                "Détecté : {:.2} s. Accepté : 0.5 à 1.0 s. Correction proposée : ramener à {:.2} s.",
-                measured, AUDIO_TARGET_EDGE_SILENCE_SECONDS
+                "Détecté : {:.2} s. Accepté : {:.1} à {:.1} s. Correction proposée : ramener à {:.2} s.",
+                measured,
+                AUDIO_MIN_EDGE_SILENCE_SECONDS,
+                AUDIO_MAX_EDGE_SILENCE_SECONDS,
+                AUDIO_TARGET_EDGE_SILENCE_SECONDS
             )),
             true,
             Some(format!(

@@ -76,8 +76,10 @@ export function useCommunityPackChecker() {
     setStatus('fixing');
     try {
       const result = await invoke('create_fixed_community_pack', { zipPath });
-      setFixedResult(result);
+      // La réanalyse réinitialise fixedResult (via analyzePath) : on positionne
+      // donc le résultat APRÈS, pour que la bannière « ZIP corrigé » persiste.
       await analyzePath(result.fixedZipPath);
+      setFixedResult(result);
       setStatus('idle');
     } catch (err) {
       setError(String(err));
