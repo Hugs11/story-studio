@@ -6,10 +6,15 @@ use std::process::{Command, Stdio};
 
 use super::super::{sanitize_stage_label, CanonicalOptions};
 use crate::services::project_files::validate_existing_file_path;
-use crate::support::ffmpeg::{apply_no_window, file_ext, now_millis};
+use crate::support::ffmpeg::{
+    apply_no_window, file_ext, loudnorm_filter, measure_loudnorm, now_millis, LoudnormStats,
+};
 
 const MP3_HEADER_SCAN_BYTES: usize = 1024 * 1024;
 const DEFAULT_AUDIO_EDGE_SILENCE_SECONDS: f64 = 1.0;
+const LOUDNORM_TARGET_I: f64 = -12.0;
+const LOUDNORM_TARGET_TP: f64 = -1.5;
+const LOUDNORM_TARGET_LRA: f64 = 11.0;
 
 pub(crate) fn audio_needs_processing(
     source_path: &str,
@@ -92,7 +97,18 @@ pub(crate) fn process_audio_asset(
     let source = validate_existing_file_path(source_path, role)?;
     let output_name = processed_audio_output_name(role);
     let output = processed_audio_dir.join(output_name);
-    let filters = audio_filters_with_duration(options, skip_silence, silence_duration_sec);
+    // Loudnorm deux passes : on mesure d'abord (sur le contenu passé en mono),
+    // puis on normalise en mode linéaire pour viser précisément I=-12 sans
+    // compression dynamique. En cas d'échec de mesure, repli une passe.
+    let stats = measure_loudnorm(
+        ffmpeg,
+        &source,
+        &["aformat=channel_layouts=mono".to_string()],
+        LOUDNORM_TARGET_I,
+        LOUDNORM_TARGET_TP,
+        LOUDNORM_TARGET_LRA,
+    );
+    let filters = audio_filters_two_pass(options, skip_silence, silence_duration_sec, stats);
 
     let mut cmd = Command::new(ffmpeg);
     cmd.args([
@@ -143,14 +159,31 @@ pub(crate) fn audio_filters(options: &CanonicalOptions, skip_silence: bool) -> S
     audio_filters_with_duration(options, skip_silence, DEFAULT_AUDIO_EDGE_SILENCE_SECONDS)
 }
 
+#[cfg(test)]
 pub(crate) fn audio_filters_with_duration(
     options: &CanonicalOptions,
     skip_silence: bool,
     silence_duration_sec: f64,
 ) -> String {
+    audio_filters_two_pass(options, skip_silence, silence_duration_sec, None)
+}
+
+/// Construit la chaîne de filtres. Si `stats` est fourni, loudnorm passe en
+/// mode linéaire (seconde passe) ; sinon une passe dynamique (repli ou tests).
+pub(crate) fn audio_filters_two_pass(
+    options: &CanonicalOptions,
+    skip_silence: bool,
+    silence_duration_sec: f64,
+    stats: Option<LoudnormStats>,
+) -> String {
     let mut filters = vec![
         "aformat=channel_layouts=mono".to_string(),
-        "loudnorm=I=-12:TP=-1.5:LRA=11".to_string(),
+        loudnorm_filter(
+            stats,
+            LOUDNORM_TARGET_I,
+            LOUDNORM_TARGET_TP,
+            LOUDNORM_TARGET_LRA,
+        ),
     ];
     if options.add_silence && !skip_silence {
         // ffmpeg 4.2 (fourni avec SPG) ne supporte pas `adelay=...:all=1`.
