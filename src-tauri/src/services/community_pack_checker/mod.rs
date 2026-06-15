@@ -13,13 +13,15 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+use rayon::prelude::*;
+
 use crate::services::pack_reader;
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 
 use models::{
     issue, AudioValidationItem, CategorySummary, FixedPackResult as FixedPackResultModel,
-    ImageValidationItem, NightModeSummary, PackValidationReport as ReportModel, PackValidationSeverity,
-    PackValidationVerdict, StructureSummary, ValidationSummary,
+    ImageValidationItem, NightModeSummary, PackValidationIssue, PackValidationReport as ReportModel,
+    PackValidationSeverity, PackValidationVerdict, StructureSummary, ValidationSummary,
 };
 use zip_doc::{read_pack_doc, read_zip_entry_bytes, update_story_asset_refs, LoadedPackDoc};
 
@@ -437,6 +439,44 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
             }
         }
     }
+
+    // Sens inverse : chaque transition d'étape doit pointer vers une action
+    // existante, sinon la navigation est cassée (étape sans suite valide).
+    let action_ids: HashSet<&str> = actions
+        .iter()
+        .filter_map(|action| action.get("id").and_then(|value| value.as_str()))
+        .collect();
+    for (stage_index, stage) in stages.iter().enumerate() {
+        for field in ["okTransition", "homeTransition"] {
+            let Some(transition) = stage.get(field).filter(|value| !value.is_null()) else {
+                continue;
+            };
+            let Some(action_node) = transition
+                .get("actionNode")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.is_empty())
+            else {
+                continue;
+            };
+            if !action_ids.contains(action_node) {
+                let stage_label = stage
+                    .get("name")
+                    .and_then(|value| value.as_str())
+                    .filter(|value| !value.trim().is_empty())
+                    .map(str::to_string)
+                    .unwrap_or_else(|| format!("Élément {}", stage_index + 1));
+                report.issues.push(issue(
+                    PackValidationSeverity::Error,
+                    "structure",
+                    stage_label,
+                    format!(
+                        "Une transition de navigation pointe vers une action introuvable : {}.",
+                        action_node
+                    ),
+                ));
+            }
+        }
+    }
 }
 
 fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &mut ReportModel) {
@@ -485,71 +525,151 @@ fn analyze_audio(doc: &LoadedPackDoc, zip_path: &Path, temp_dir: &Path, report: 
         }
     };
 
-    for asset_ref in unique_refs.values() {
-        if !doc.asset_names.contains(&asset_ref.asset_name) {
-            continue;
+    // Chaque fichier est indépendant (lecture ZIP + ffmpeg dans son propre
+    // processus), donc on parallélise sur un pool borné. `collect()` préserve
+    // l'ordre source, ce qui garde un rapport déterministe.
+    let ffmpeg_ref = ffmpeg.as_path();
+    let results: Vec<(Option<AudioValidationItem>, Vec<PackValidationIssue>)> = run_in_analysis_pool(
+        || {
+            unique_refs
+                .par_iter()
+                .enumerate()
+                .map(|(index, asset_ref)| {
+                    analyze_one_audio(doc, zip_path, temp_dir, ffmpeg_ref, index, asset_ref)
+                })
+                .collect()
+        },
+    );
+
+    for (item, mut issues) in results {
+        report.issues.append(&mut issues);
+        if let Some(item) = item {
+            add_item_to_summary(&mut report.audio_summary, &item.status, item.auto_fix_available);
+            report.audio_items.push(item);
         }
-        let entry_name = format!("assets/{}", asset_ref.asset_name);
-        match read_zip_entry_bytes(zip_path, &entry_name) {
-            Ok(bytes) => {
-                let input_path = temp_dir.join(safe_temp_name(&asset_ref.asset_name, "probe"));
-                if let Err(err) = fs::write(&input_path, bytes) {
-                    report.issues.push(issue(
+    }
+}
+
+fn analyze_one_audio(
+    doc: &LoadedPackDoc,
+    zip_path: &Path,
+    temp_dir: &Path,
+    ffmpeg: &Path,
+    index: usize,
+    asset_ref: &zip_doc::StageAssetRef,
+) -> (Option<AudioValidationItem>, Vec<PackValidationIssue>) {
+    if !doc.asset_names.contains(&asset_ref.asset_name) {
+        return (None, Vec::new());
+    }
+    let entry_name = format!("assets/{}", asset_ref.asset_name);
+    match read_zip_entry_bytes(zip_path, &entry_name) {
+        Ok(bytes) => {
+            let input_path =
+                temp_dir.join(safe_temp_name(&asset_ref.asset_name, &format!("probe{}", index)));
+            if let Err(err) = fs::write(&input_path, bytes) {
+                return (
+                    None,
+                    vec![issue(
                         PackValidationSeverity::Error,
                         "audio",
                         &asset_ref.stage_name,
                         format!("Impossible de préparer l'audio pour analyse : {}", err),
-                    ));
-                    continue;
-                }
-                let (item, mut issues) = audio::analyze_audio_file(
-                    &ffmpeg,
-                    &input_path,
-                    &asset_ref.asset_name,
-                    &asset_ref.stage_name,
-                    &asset_ref.item_type,
+                    )],
                 );
-                add_item_to_summary(&mut report.audio_summary, &item.status, item.auto_fix_available);
-                report.issues.append(&mut issues);
-                report.audio_items.push(item);
             }
-            Err(err) => {
-                report.issues.push(issue(
-                    PackValidationSeverity::Error,
-                    "audio",
-                    &asset_ref.stage_name,
-                    format!("Lecture audio impossible : {}", err),
-                ));
-            }
+            let (item, issues) = audio::analyze_audio_file(
+                ffmpeg,
+                &input_path,
+                &asset_ref.asset_name,
+                &asset_ref.stage_name,
+                &asset_ref.item_type,
+            );
+            let _ = fs::remove_file(&input_path);
+            (Some(item), issues)
         }
+        Err(err) => (
+            None,
+            vec![issue(
+                PackValidationSeverity::Error,
+                "audio",
+                &asset_ref.stage_name,
+                format!("Lecture audio impossible : {}", err),
+            )],
+        ),
     }
 }
 
 fn analyze_images(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel) {
     let unique_refs = first_refs_by_asset(&doc.image_refs);
     report.image_summary.total = unique_refs.len();
-    for asset_ref in unique_refs.values() {
-        if !doc.asset_names.contains(&asset_ref.asset_name) {
-            continue;
+    if unique_refs.is_empty() {
+        return;
+    }
+
+    let results: Vec<(Option<ImageValidationItem>, Vec<PackValidationIssue>)> =
+        run_in_analysis_pool(|| {
+            unique_refs
+                .par_iter()
+                .map(|asset_ref| analyze_one_image(doc, zip_path, asset_ref))
+                .collect()
+        });
+
+    for (item, mut issues) in results {
+        report.issues.append(&mut issues);
+        if let Some(item) = item {
+            add_item_to_summary(&mut report.image_summary, &item.status, item.auto_fix_available);
+            report.image_items.push(item);
         }
-        let entry_name = format!("assets/{}", asset_ref.asset_name);
-        match read_zip_entry_bytes(zip_path, &entry_name) {
-            Ok(bytes) => {
-                let (item, mut issues) =
-                    image::analyze_image_bytes(&bytes, &asset_ref.asset_name, &asset_ref.stage_name);
-                add_item_to_summary(&mut report.image_summary, &item.status, item.auto_fix_available);
-                report.issues.append(&mut issues);
-                report.image_items.push(item);
-            }
-            Err(err) => {
-                report.issues.push(issue(
-                    PackValidationSeverity::Error,
-                    "image",
-                    &asset_ref.stage_name,
-                    format!("Lecture image impossible : {}", err),
-                ));
-            }
+    }
+}
+
+fn analyze_one_image(
+    doc: &LoadedPackDoc,
+    zip_path: &Path,
+    asset_ref: &zip_doc::StageAssetRef,
+) -> (Option<ImageValidationItem>, Vec<PackValidationIssue>) {
+    if !doc.asset_names.contains(&asset_ref.asset_name) {
+        return (None, Vec::new());
+    }
+    let entry_name = format!("assets/{}", asset_ref.asset_name);
+    match read_zip_entry_bytes(zip_path, &entry_name) {
+        Ok(bytes) => {
+            let (item, issues) =
+                image::analyze_image_bytes(&bytes, &asset_ref.asset_name, &asset_ref.stage_name);
+            (Some(item), issues)
         }
+        Err(err) => (
+            None,
+            vec![issue(
+                PackValidationSeverity::Error,
+                "image",
+                &asset_ref.stage_name,
+                format!("Lecture image impossible : {}", err),
+            )],
+        ),
+    }
+}
+
+/// Exécute `f` sur un pool rayon borné pour ne pas saturer les processeurs
+/// moyens : au plus `cœurs - 1` workers (un cœur laissé au système/à l'UI),
+/// plafonné à 8 pour éviter une nuée de ffmpeg simultanés sur les machines à
+/// nombreux cœurs. En cas d'échec de création du pool, on retombe sur le pool
+/// global par défaut.
+fn run_in_analysis_pool<R, F>(f: F) -> R
+where
+    F: FnOnce() -> R + Send,
+    R: Send,
+{
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(2);
+    let workers = cores.saturating_sub(1).clamp(1, 8);
+    match rayon::ThreadPoolBuilder::new()
+        .num_threads(workers)
+        .build()
+    {
+        Ok(pool) => pool.install(f),
+        Err(_) => f(),
     }
 }
 
@@ -772,13 +892,15 @@ fn asset_name_with_extension(original: &str, ext: &str) -> String {
         .unwrap_or(file_name)
 }
 
-fn first_refs_by_asset(
-    refs: &[zip_doc::StageAssetRef],
-) -> HashMap<String, zip_doc::StageAssetRef> {
-    let mut out = HashMap::new();
+/// Déduplique les références par nom d'asset en conservant l'ordre de première
+/// apparition (ordre des stages), pour un rapport déterministe.
+fn first_refs_by_asset(refs: &[zip_doc::StageAssetRef]) -> Vec<zip_doc::StageAssetRef> {
+    let mut seen = HashSet::new();
+    let mut out = Vec::new();
     for asset_ref in refs {
-        out.entry(asset_ref.asset_name.clone())
-            .or_insert_with(|| asset_ref.clone());
+        if seen.insert(asset_ref.asset_name.clone()) {
+            out.push(asset_ref.clone());
+        }
     }
     out
 }
