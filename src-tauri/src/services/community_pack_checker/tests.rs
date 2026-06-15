@@ -105,6 +105,26 @@ fn long_title_is_allowed_when_zip_name_matches_community_convention() {
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }
 
+#[test]
+fn unsupported_image_format_is_flagged_and_converted_to_png() {
+    let gif = gif_bytes(320, 240);
+    let (item, issues) = image::analyze_image_bytes(&gif, "cover.gif", "Cover");
+    assert_eq!(item.status, "warning");
+    assert!(item.auto_fix_available);
+    assert_eq!(item.format.as_deref(), Some("GIF"));
+    assert!(issues
+        .iter()
+        .any(|entry| entry.message.contains("format non pris en charge")));
+
+    let fixed = image::fix_image_bytes(&gif).expect("convert gif to png");
+    assert_eq!(
+        ::image::guess_format(&fixed).ok(),
+        Some(::image::ImageFormat::Png)
+    );
+    let png = ::image::load_from_memory(&fixed).expect("decode png");
+    assert_eq!((png.width(), png.height()), (320, 240));
+}
+
 fn temp_dir(label: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
         "story_studio_checker_test_{}_{}",
@@ -141,6 +161,15 @@ fn png_bytes(width: u32, height: u32) -> Vec<u8> {
     ::image::DynamicImage::ImageRgba8(img)
         .write_to(&mut std::io::Cursor::new(&mut bytes), ::image::ImageFormat::Png)
         .expect("encode png");
+    bytes
+}
+
+fn gif_bytes(width: u32, height: u32) -> Vec<u8> {
+    let img = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_pixel(width, height, Rgba([20, 120, 90, 255]));
+    let mut bytes = Vec::new();
+    ::image::DynamicImage::ImageRgba8(img)
+        .write_to(&mut std::io::Cursor::new(&mut bytes), ::image::ImageFormat::Gif)
+        .expect("encode gif");
     bytes
 }
 
