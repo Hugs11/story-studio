@@ -97,8 +97,12 @@ export function OptionsTab({
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
   const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
+  const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const screenRef = useRef(null);
   const sectionRefs = useRef({});
+  const observerSuppressedUntilRef = useRef(0);
+  const highlightTimerRef = useRef(null);
+  const highlightFrameRef = useRef(null);
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
 
   useEffect(() => {
@@ -252,6 +256,7 @@ export function OptionsTab({
     if (!root || sections.length === 0 || typeof IntersectionObserver === 'undefined') return undefined;
 
     const observer = new IntersectionObserver((entries) => {
+      if (Date.now() < observerSuppressedUntilRef.current) return;
       const visibleEntries = entries
         .filter((entry) => entry.isIntersecting)
         .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
@@ -267,9 +272,30 @@ export function OptionsTab({
     return () => observer.disconnect();
   }, [asModal]);
 
+  useEffect(() => () => {
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+    if (highlightFrameRef.current) window.cancelAnimationFrame(highlightFrameRef.current);
+  }, []);
+
+  function sectionClass(sectionId) {
+    return `opts-card${highlightedSectionId === sectionId ? ' is-highlighted' : ''}`;
+  }
+
+  function highlightSection(sectionId) {
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+    if (highlightFrameRef.current) window.cancelAnimationFrame(highlightFrameRef.current);
+    setHighlightedSectionId(null);
+    highlightFrameRef.current = window.requestAnimationFrame(() => {
+      setHighlightedSectionId(sectionId);
+      highlightTimerRef.current = window.setTimeout(() => setHighlightedSectionId(null), 900);
+    });
+  }
+
   function scrollToSection(sectionId) {
+    observerSuppressedUntilRef.current = Date.now() + 650;
     sectionRefs.current[sectionId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveSectionId(sectionId);
+    highlightSection(sectionId);
   }
 
   function renderSectionNav() {
@@ -310,7 +336,7 @@ export function OptionsTab({
           <div className="opts-content">
         <section
           id="save"
-          className="opts-card"
+          className={sectionClass('save')}
           ref={(node) => { sectionRefs.current.save = node; }}
         >
           <div className="opts-card-title">Sauvegarde</div>
@@ -344,7 +370,7 @@ export function OptionsTab({
 
         <section
           id="interface"
-          className="opts-card"
+          className={sectionClass('interface')}
           ref={(node) => { sectionRefs.current.interface = node; }}
         >
           <div className="opts-card-title">Interface</div>
@@ -383,7 +409,7 @@ export function OptionsTab({
 
         <section
           id="projects-media"
-          className="opts-card"
+          className={sectionClass('projects-media')}
           ref={(node) => { sectionRefs.current['projects-media'] = node; }}
         >
           <div className="opts-card-title">Gestion des projets et médias</div>
@@ -431,7 +457,7 @@ export function OptionsTab({
 
         <section
           id="xtts"
-          className="opts-card"
+          className={sectionClass('xtts')}
           ref={(node) => { sectionRefs.current.xtts = node; }}
         >
           <div className="opts-card-title">Generation de voix locale — XTTS</div>
@@ -569,7 +595,7 @@ export function OptionsTab({
 
         <section
           id="comfyui"
-          className="opts-card"
+          className={sectionClass('comfyui')}
           ref={(node) => { sectionRefs.current.comfyui = node; }}
         >
           <div className="opts-card-title">Génération d'images IA — ComfyUI</div>
@@ -682,7 +708,7 @@ export function OptionsTab({
 
         <section
           id="community-pack"
-          className="opts-card"
+          className={sectionClass('community-pack')}
           ref={(node) => { sectionRefs.current['community-pack'] = node; }}
         >
           <div className="opts-card-title">Vérifier un pack</div>
@@ -691,7 +717,7 @@ export function OptionsTab({
 
         <section
           id="diagnostic"
-          className="opts-card"
+          className={sectionClass('diagnostic')}
           ref={(node) => { sectionRefs.current.diagnostic = node; }}
         >
           <div className="opts-card-title">Diagnostic</div>

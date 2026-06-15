@@ -112,6 +112,23 @@
   padding: 12px 14px;
 }
 
+.opts-card.is-highlighted {
+  animation: opts-section-highlight 0.9s ease-out;
+}
+
+@keyframes opts-section-highlight {
+  0%,
+  100% {
+    border-color: var(--border);
+    box-shadow: none;
+  }
+  18%,
+  58% {
+    border-color: var(--accentBorder);
+    box-shadow: 0 0 0 2px var(--accentDim), 0 0 24px rgba(239, 159, 39, 0.2);
+  }
+}
+
 .opts-card-title {
   font-size: 10px;
   font-weight: 500;
