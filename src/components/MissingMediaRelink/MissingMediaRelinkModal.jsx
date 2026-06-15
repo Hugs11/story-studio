@@ -2,25 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { exists, readDir } from '@tauri-apps/plugin-fs';
 import { AppModalPortal } from '../common/AppModalPortal';
-import { Button } from '../common/Button';
-import { CircleCheck, CircleX, FolderOpen, Link2, Loader2, TriangleAlert } from '../icons/LucideLocal';
+import {
+  Check,
+  ChevronDown,
+  CircleX,
+  FolderOpen,
+  Link2,
+  Loader2,
+  Search,
+  TriangleAlert,
+  X,
+} from '../icons/LucideLocal';
 import { basename, dirname, joinPath, pathKey } from '../../utils/fileUtils';
 import { candidatePathsForRelinkRoot, mediaKindFromPath } from '../../store/missingMediaRelink';
 import './MissingMediaRelinkModal.css';
 
 const MAX_SCAN_FILES = 12000;
-
-function statusLabel(status) {
-  if (status === 'found') return 'Retrouvé';
-  if (status === 'ambiguous') return 'À choisir';
-  return 'Introuvable';
-}
-
-function rowStatusIcon(status) {
-  if (status === 'found') return <CircleCheck />;
-  if (status === 'ambiguous') return <TriangleAlert />;
-  return <CircleX />;
-}
 
 function buildInitialRows(missingMedia) {
   return missingMedia.map((item) => ({
@@ -29,6 +26,26 @@ function buildInitialRows(missingMedia) {
     replacementPath: '',
     matches: [],
   }));
+}
+
+function isResolved(row) {
+  return row.status === 'found' && Boolean(row.replacementPath);
+}
+
+// Coupe le nom à la dernière extension pour styliser celle-ci à part.
+function splitFileName(fileName) {
+  const name = String(fileName || '');
+  const dot = name.lastIndexOf('.');
+  if (dot <= 0) return [name, ''];
+  return [name.slice(0, dot), name.slice(dot)];
+}
+
+function rowMeta(row) {
+  if (isResolved(row)) return 'Relié · chemin mis à jour';
+  if (row.status === 'ambiguous') return `${row.matches.length} correspondances à départager`;
+  const labels = row.labels ?? [];
+  if (labels.length === 0) return 'Introuvable';
+  return `${labels.slice(0, 2).join(' · ')}${labels.length > 2 ? ` +${labels.length - 2}` : ''}`;
 }
 
 async function findFirstExisting(candidates) {
@@ -78,104 +95,153 @@ function mergeResolvedRows(rows, resolvedByPath) {
   });
 }
 
+// Rôle représentatif d'un groupe : préfixes distincts des libellés (avant « : »).
+function groupRoleSummary(rows) {
+  const roles = new Set();
+  for (const row of rows) {
+    for (const label of row.labels ?? []) {
+      const role = String(label).split(':')[0].trim();
+      if (role) roles.add(role);
+    }
+  }
+  const list = [...roles];
+  if (list.length === 0) return '';
+  if (list.length === 1) return list[0];
+  return `${list[0]} +${list.length - 1}`;
+}
+
+// Regroupe les médias par dossier d'origine, en préservant l'ordre des lignes.
+function groupRowsByFolder(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const dir = dirname(row.path) || row.path;
+    const key = pathKey(dir);
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, dir, rows: [] };
+      groups.set(key, group);
+    }
+    group.rows.push(row);
+  }
+  return [...groups.values()];
+}
+
+function rowMatchesQuery(row, query) {
+  if (!query) return true;
+  const haystack = `${row.fileName} ${row.path} ${(row.labels ?? []).join(' ')}`.toLowerCase();
+  return haystack.includes(query);
+}
+
+function rowMatchesFilter(row, filter) {
+  if (filter === 'resolved') return isResolved(row);
+  if (filter === 'remaining') return !isResolved(row);
+  return true;
+}
+
 export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApply, onClose }) {
   const [rows, setRows] = useState(() => buildInitialRows(missingMedia));
-  const [selectedRoot, setSelectedRoot] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const [scanningKey, setScanningKey] = useState('');
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     setRows(buildInitialRows(missingMedia));
-    setScanMessage('');
+    setQuery('');
+    setFilter('all');
+    setCollapsed(new Set());
   }, [missingMedia]);
 
-  const resolvedRows = rows.filter((row) => row.status === 'found' && row.replacementPath);
-  const ambiguousCount = rows.filter((row) => row.status === 'ambiguous').length;
-  const missingCount = rows.length - resolvedRows.length - ambiguousCount;
+  const total = rows.length;
+  const resolvedRows = useMemo(() => rows.filter(isResolved), [rows]);
+  const resolvedCount = resolvedRows.length;
+  const remainingCount = total - resolvedCount;
   const replacements = useMemo(() => Object.fromEntries(
     resolvedRows.map((row) => [row.path, row.replacementPath]),
   ), [resolvedRows]);
 
-  async function runFolderScan(folder) {
-    setSelectedRoot(folder);
-    setScanning(true);
-    setScanMessage('Recherche des médias...');
-    try {
-      const directResolved = new Map();
-      const unresolved = [];
-      for (const row of rows) {
-        const direct = await findFirstExisting(candidatePathsForRelinkRoot(row.path, folder));
-        if (direct) {
-          directResolved.set(pathKey(row.path), {
-            status: 'found',
-            replacementPath: direct,
-            matches: [direct],
-          });
-        } else {
-          unresolved.push(row);
-        }
-      }
+  const groups = useMemo(() => groupRowsByFolder(rows), [rows]);
+  const normalizedQuery = query.trim().toLowerCase();
 
-      const resolved = new Map(directResolved);
-      let truncated = false;
-      if (unresolved.length > 0) {
-        const names = new Set(unresolved.map((row) => row.fileName));
-        const scanResult = await scanFolderByName(folder, names);
-        truncated = scanResult.truncated;
-        for (const row of unresolved) {
-          const rowMatches = scanResult.matches.get(row.fileName.toLowerCase()) ?? [];
-          if (rowMatches.length === 1) {
-            resolved.set(pathKey(row.path), {
-              status: 'found',
-              replacementPath: rowMatches[0],
-              matches: rowMatches,
-            });
-          } else if (rowMatches.length > 1) {
-            resolved.set(pathKey(row.path), {
-              status: 'ambiguous',
-              replacementPath: '',
-              matches: rowMatches,
-            });
-          } else {
-            resolved.set(pathKey(row.path), {
-              status: 'missing',
-              replacementPath: '',
-              matches: [],
-            });
-          }
+  const visibleGroups = useMemo(() => (
+    groups
+      .map((group) => ({
+        ...group,
+        visibleRows: group.rows.filter(
+          (row) => rowMatchesQuery(row, normalizedQuery) && rowMatchesFilter(row, filter),
+        ),
+      }))
+      .filter((group) => group.visibleRows.length > 0)
+  ), [groups, normalizedQuery, filter]);
+
+  async function runFolderScan(folder, targetRows) {
+    const directResolved = new Map();
+    const unresolved = [];
+    for (const row of targetRows) {
+      const direct = await findFirstExisting(candidatePathsForRelinkRoot(row.path, folder));
+      if (direct) {
+        directResolved.set(pathKey(row.path), {
+          status: 'found',
+          replacementPath: direct,
+          matches: [direct],
+        });
+      } else {
+        unresolved.push(row);
+      }
+    }
+
+    const resolved = new Map(directResolved);
+    if (unresolved.length > 0) {
+      const names = new Set(unresolved.map((row) => row.fileName));
+      const scanResult = await scanFolderByName(folder, names);
+      for (const row of unresolved) {
+        const rowMatches = scanResult.matches.get(row.fileName.toLowerCase()) ?? [];
+        if (rowMatches.length === 1) {
+          resolved.set(pathKey(row.path), { status: 'found', replacementPath: rowMatches[0], matches: rowMatches });
+        } else if (rowMatches.length > 1) {
+          resolved.set(pathKey(row.path), { status: 'ambiguous', replacementPath: '', matches: rowMatches });
+        } else {
+          resolved.set(pathKey(row.path), { status: 'missing', replacementPath: '', matches: [] });
         }
       }
-      setRows((current) => mergeResolvedRows(current, resolved));
-      const found = [...resolved.values()].filter((row) => row.status === 'found').length;
-      const ambiguous = [...resolved.values()].filter((row) => row.status === 'ambiguous').length;
-      setScanMessage(`${found} média(s) retrouvé(s), ${ambiguous} choix à confirmer${truncated ? ' — recherche limitée' : ''}.`);
-    } finally {
-      setScanning(false);
     }
+    setRows((current) => mergeResolvedRows(current, resolved));
   }
 
-  async function handleChooseFolder() {
+  async function handleChooseGroupFolder(group) {
+    if (scanningKey || applying) return;
     const folder = await openDialog({
       directory: true,
       multiple: false,
-      title: 'Choisir le dossier où chercher les médias manquants',
-      defaultPath: selectedRoot || workspaceDir || dirname(rows[0]?.path),
+      title: 'Choisir le dossier qui contient ces médias',
+      defaultPath: group.dir || workspaceDir || dirname(group.rows[0]?.path),
     });
     if (!folder) return;
-    await runFolderScan(folder);
+    setScanningKey(group.key);
+    try {
+      await runFolderScan(folder, group.rows);
+    } finally {
+      setScanningKey('');
+    }
   }
 
-  async function handleUseWorkspace() {
-    if (!workspaceDir) return;
-    await runFolderScan(workspaceDir);
+  async function handleScanWorkspace() {
+    if (!workspaceDir || scanningKey || applying) return;
+    setScanningKey('__workspace__');
+    try {
+      await runFolderScan(workspaceDir, rows);
+    } finally {
+      setScanningKey('');
+    }
   }
 
   async function handleChooseFile(row) {
+    if (applying) return;
     const file = await openDialog({
       multiple: false,
       title: `Relier ${row.fileName}`,
-      defaultPath: dirname(row.path),
+      defaultPath: dirname(row.path) || workspaceDir,
     });
     if (!file) return;
     setRows((current) => current.map((item) => (
@@ -193,104 +259,204 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
     )));
   }
 
-  async function handleApply({ saveAfter = false } = {}) {
-    if (resolvedRows.length === 0) return;
+  function toggleGroup(key) {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function handleApply() {
+    if (resolvedCount === 0 || applying) return;
     setApplying(true);
     try {
-      await onApply(replacements, { saveAfter });
+      await onApply(replacements, { saveAfter: true });
     } finally {
       setApplying(false);
     }
   }
 
-  return (
-    <AppModalPortal className="modal-overlay">
-      <div className="modal-box missing-media-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header">
-          <span>Médias introuvables</span>
-          <Button variant="icon" className="modal-close" onClick={onClose} disabled={applying}>×</Button>
-        </div>
+  const progressPct = total === 0 ? 0 : Math.round((resolvedCount / total) * 100);
 
-        <div className="missing-media-body">
-          <div className="missing-media-summary">
-            <div className="missing-media-summary-icon"><Link2 /></div>
-            <div>
-              <strong>{rows.length} média(s) à relier</strong>
-              <p>Choisis le dossier qui contient les médias déplacés. Story Studio essaiera de relier les chemins par structure puis par nom de fichier.</p>
+  return (
+    <AppModalPortal>
+      <div className="relink-modal" role="dialog" aria-label="Médias introuvables" onClick={(event) => event.stopPropagation()}>
+        <header className="relink-head">
+          <span className="relink-head-icon"><Link2 /></span>
+          <span className="relink-head-title">Médias introuvables</span>
+          <span className="relink-head-count">
+            {remainingCount > 0 ? `${remainingCount} fichier${remainingCount > 1 ? 's' : ''}` : 'Tout relié'}
+          </span>
+          <span className="relink-spacer" />
+          <button type="button" className="relink-icon-btn" aria-label="Fermer" onClick={onClose} disabled={applying}>
+            <X />
+          </button>
+        </header>
+
+        <div className="relink-subhead">
+          <div className="relink-progress">
+            <span className="relink-progress-label">
+              <b>{resolvedCount}</b> reliés sur <b>{total}</b>
+            </span>
+            <div className="relink-bar"><div className="relink-bar-fill" style={{ width: `${progressPct}%` }} /></div>
+          </div>
+          <div className="relink-toolbar">
+            <label className="relink-search">
+              <Search />
+              <input
+                type="text"
+                placeholder="Filtrer par nom de fichier ou dossier…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <div className="relink-segmented" role="group" aria-label="Filtre">
+              <button type="button" className="relink-seg" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
+                Tous <span className="relink-seg-n">{total}</span>
+              </button>
+              <button type="button" className="relink-seg" aria-pressed={filter === 'remaining'} onClick={() => setFilter('remaining')}>
+                Restants <span className="relink-seg-n">{remainingCount}</span>
+              </button>
+              <button type="button" className="relink-seg" aria-pressed={filter === 'resolved'} onClick={() => setFilter('resolved')}>
+                Reliés <span className="relink-seg-n">{resolvedCount}</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          <div className="missing-media-actions">
-            <Button variant="primary" onClick={handleChooseFolder} disabled={scanning || applying}>
-              {scanning ? <Loader2 className="missing-media-spin" /> : <FolderOpen />}
-              Retrouver un dossier
-            </Button>
-            <Button
-              onClick={handleUseWorkspace}
-              disabled={!workspaceDir || scanning || applying}
-              title={workspaceDir || 'Workspace non configuré'}
-            >
-              <Link2 />
-              Utiliser le workspace
-            </Button>
-            {selectedRoot && <span className="missing-media-root" title={selectedRoot}>{selectedRoot}</span>}
-          </div>
+        <div className="relink-scroll">
+          {visibleGroups.length === 0 && (
+            <div className="relink-empty">
+              <Search />
+              <span>Aucun fichier ne correspond à ce filtre.</span>
+            </div>
+          )}
 
-          <div className="missing-media-stats">
-            <span className="is-found">{resolvedRows.length} retrouvé(s)</span>
-            <span className="is-ambiguous">{ambiguousCount} à choisir</span>
-            <span className="is-missing">{missingCount} restant(s)</span>
-          </div>
-          {scanMessage && <div className="missing-media-scan-message">{scanMessage}</div>}
-
-          <div className="missing-media-list">
-            {rows.map((row) => (
-              <div className={`missing-media-row is-${row.status}`} key={row.path}>
-                <div className="missing-media-row-icon" title={statusLabel(row.status)}>
-                  {rowStatusIcon(row.status)}
-                </div>
-                <div className="missing-media-main">
-                  <div className="missing-media-name" title={row.fileName}>{row.fileName}</div>
-                  <div className="missing-media-meta">
-                    <span>{row.kind}</span>
-                    <span>{row.labels.slice(0, 2).join(' · ')}{row.labels.length > 2 ? ` +${row.labels.length - 2}` : ''}</span>
+          {visibleGroups.map((group) => {
+            const groupRemaining = group.rows.filter((row) => !isResolved(row)).length;
+            const groupResolved = groupRemaining === 0;
+            const isCollapsed = collapsed.has(group.key);
+            const isScanning = scanningKey === group.key;
+            const groupRole = groupRoleSummary(group.rows);
+            return (
+              <div
+                key={group.key}
+                className={`relink-group${groupResolved ? ' is-resolved' : ''}${isCollapsed ? ' is-collapsed' : ''}`}
+              >
+                <div className="relink-ghead">
+                  <button
+                    type="button"
+                    className="relink-ghead-chev"
+                    aria-label={isCollapsed ? 'Déplier' : 'Replier'}
+                    onClick={() => toggleGroup(group.key)}
+                  >
+                    <ChevronDown />
+                  </button>
+                  <span className="relink-ghead-icon">{groupResolved ? <Check /> : <FolderOpen />}</span>
+                  <div className="relink-ghead-main">
+                    <div className="relink-ghead-path" title={group.dir}>{group.dir}</div>
+                    <div className="relink-ghead-sub">
+                      {groupResolved
+                        ? `${group.rows.length} fichier${group.rows.length > 1 ? 's' : ''} relié${group.rows.length > 1 ? 's' : ''}`
+                        : `${groupRemaining} fichier${groupRemaining > 1 ? 's' : ''} manquant${groupRemaining > 1 ? 's' : ''}`}
+                      {groupRole && ` · ${groupRole}`}
+                    </div>
                   </div>
-                  <div className="missing-media-path" title={row.path}>{row.path}</div>
-                  {row.replacementPath && (
-                    <div className="missing-media-new-path" title={row.replacementPath}>{row.replacementPath}</div>
+                  {group.rows.length > 1 && (
+                    <button
+                      type="button"
+                      className="relink-gbtn"
+                      onClick={() => handleChooseGroupFolder(group)}
+                      disabled={Boolean(scanningKey) || applying}
+                    >
+                      {isScanning ? <Loader2 className="relink-spin" /> : <FolderOpen />}
+                      {groupResolved ? 'Modifier le dossier' : 'Choisir le dossier'}
+                    </button>
                   )}
                 </div>
-                <div className="missing-media-row-actions">
-                  {row.status === 'ambiguous' && (
-                    <select
-                      value={row.replacementPath}
-                      onChange={(event) => handleAmbiguousChoice(row, event.target.value)}
-                      disabled={applying}
-                    >
-                      <option value="">Choisir...</option>
-                      {row.matches.map((match) => (
-                        <option key={match} value={match}>{match}</option>
-                      ))}
-                    </select>
-                  )}
-                  <Button size="sm" onClick={() => handleChooseFile(row)} disabled={applying}>
-                    Choisir
-                  </Button>
+
+                <div className="relink-glist">
+                  {group.visibleRows.map((row) => {
+                    const resolved = isResolved(row);
+                    const [base, ext] = splitFileName(row.fileName);
+                    return (
+                      <div className={`relink-row is-${row.status}`} key={row.path}>
+                        <span className="relink-row-orb">
+                          {resolved ? <Check /> : row.status === 'ambiguous' ? <TriangleAlert /> : <CircleX />}
+                        </span>
+                        <div className="relink-row-main">
+                          <div className="relink-row-name" title={row.path}>
+                            {base}<span className="relink-row-ext">{ext}</span>
+                          </div>
+                          <div className="relink-row-meta">
+                            <span className="relink-kind">{row.kind}</span>
+                            <span title={resolved ? row.replacementPath : undefined}>{rowMeta(row)}</span>
+                          </div>
+                        </div>
+                        {!resolved && (
+                          <div className="relink-row-actions">
+                            {row.status === 'ambiguous' && (
+                              <select
+                                className="relink-row-select"
+                                value={row.replacementPath}
+                                onChange={(event) => handleAmbiguousChoice(row, event.target.value)}
+                                disabled={applying}
+                              >
+                                <option value="">Choisir…</option>
+                                {row.matches.map((match) => (
+                                  <option key={match} value={match}>{match}</option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              className="relink-row-cta"
+                              onClick={() => handleChooseFile(row)}
+                              disabled={applying}
+                            >
+                              Choisir
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <div className="missing-media-footer">
-          <Button onClick={onClose} disabled={applying}>Ignorer</Button>
-          <Button onClick={() => handleApply({ saveAfter: false })} disabled={resolvedRows.length === 0 || applying}>
-            Appliquer
-          </Button>
-          <Button variant="primary" onClick={() => handleApply({ saveAfter: true })} disabled={resolvedRows.length === 0 || applying}>
-            {applying ? 'Application...' : 'Appliquer et sauvegarder'}
-          </Button>
-        </div>
+        <footer className="relink-foot">
+          <button type="button" className="relink-btn relink-btn-ghost" onClick={onClose} disabled={applying}>
+            Ignorer tout
+          </button>
+          {workspaceDir && (
+            <button
+              type="button"
+              className="relink-btn relink-btn-ghost"
+              onClick={handleScanWorkspace}
+              disabled={Boolean(scanningKey) || applying}
+              title={workspaceDir}
+            >
+              {scanningKey === '__workspace__' ? <Loader2 className="relink-spin" /> : <FolderOpen />}
+              Chercher dans le workspace
+            </button>
+          )}
+          <span className="relink-spacer" />
+          <span className="relink-foot-status"><b>{resolvedCount}</b> / {total} prêts à appliquer</span>
+          <button
+            type="button"
+            className="relink-btn relink-btn-primary"
+            onClick={handleApply}
+            disabled={resolvedCount === 0 || applying}
+          >
+            {applying && <Loader2 className="relink-spin" />}
+            {applying ? 'Application…' : 'Appliquer et sauvegarder'}
+          </button>
+        </footer>
       </div>
     </AppModalPortal>
   );
