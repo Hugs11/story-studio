@@ -23,10 +23,11 @@ function looksLikeProducerCandidate(value) {
 
 export function parseConventionName(raw) {
   if (!raw) return null;
-  const ageMatch = String(raw).match(/^(\d+)\+\]/);
+  const value = String(raw).trim().replace(/\.(zip|7z)$/i, '');
+  const ageMatch = value.match(/^(\d+)\+\]/);
   if (!ageMatch) return null;
   const minAge = ageMatch[1];
-  let rest = String(raw).slice(ageMatch[0].length);
+  let rest = value.slice(ageMatch[0].length);
 
   let author = '';
   let version = 1;

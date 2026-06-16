@@ -43,7 +43,10 @@ pub async fn generate_pack(
 }
 
 #[tauri::command]
-pub fn cancel_generate_pack(app: AppHandle, cancel_state: State<'_, Arc<GenerationCancelState>>) -> Result<(), String> {
+pub fn cancel_generate_pack(
+    app: AppHandle,
+    cancel_state: State<'_, Arc<GenerationCancelState>>,
+) -> Result<(), String> {
     cancel_state.cancelled.store(true, Ordering::SeqCst);
     let _ = app.emit("generate-log", "⏹ Annulation demandée…".to_string());
     log::warn!(target: "generation", "generate_pack cancellation requested");
@@ -61,17 +64,21 @@ fn run_generate_pack_sync(
         let _ = app.emit("generate-log", msg.to_string());
     };
     let should_cancel = || cancel_state.cancelled.load(Ordering::SeqCst);
-    let zip_path =
-        match crate::native_pack::generate_native_pack_v1_with_cancel(&project, &output_folder, &emit, &should_cancel) {
-            Ok(path) => path,
-            Err(err) => {
-                log::error!(target: "generation",
-                    "generate_pack failed after {} ms: {}",
-                    started.elapsed().as_millis(), err,
-                );
-                return Err(err);
-            }
-        };
+    let zip_path = match crate::native_pack::generate_native_pack_v1_with_cancel(
+        &project,
+        &output_folder,
+        &emit,
+        &should_cancel,
+    ) {
+        Ok(path) => path,
+        Err(err) => {
+            log::error!(target: "generation",
+                "generate_pack failed after {} ms: {}",
+                started.elapsed().as_millis(), err,
+            );
+            return Err(err);
+        }
+    };
     let zip_size = std::fs::metadata(&zip_path).map(|m| m.len()).unwrap_or(0);
     log::info!(target: "generation",
         "generate_pack done in {} ms: zip='{}' size={} bytes",

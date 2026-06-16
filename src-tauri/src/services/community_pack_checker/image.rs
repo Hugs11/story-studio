@@ -40,12 +40,14 @@ pub(crate) fn analyze_image_bytes(
     // Détection par le contenu réel (et non l'extension) : un .png qui est en
     // réalité un JPEG/WebP est correctement diagnostiqué.
     let detected = guess_format(bytes).ok();
-    let format = detected.map(|fmt| format_label(fmt).to_string()).or_else(|| {
-        Path::new(asset_name)
-            .extension()
-            .and_then(|value| value.to_str())
-            .map(|value| value.to_ascii_uppercase())
-    });
+    let format = detected
+        .map(|fmt| format_label(fmt).to_string())
+        .or_else(|| {
+            Path::new(asset_name)
+                .extension()
+                .and_then(|value| value.to_str())
+                .map(|value| value.to_ascii_uppercase())
+        });
 
     let Ok(img) = image::load_from_memory(bytes) else {
         let mut image_issue = issue(
@@ -110,7 +112,10 @@ pub(crate) fn analyze_image_bytes(
         ),
         (true, false) => (
             "Cette image n'a pas les dimensions attendues.",
-            format!("redimensionner en {}×{}", IMAGE_TARGET_WIDTH, IMAGE_TARGET_HEIGHT),
+            format!(
+                "redimensionner en {}×{}",
+                IMAGE_TARGET_WIDTH, IMAGE_TARGET_HEIGHT
+            ),
             "Redimensionner l'image au format Lunii attendu.".to_string(),
         ),
         (true, true) => unreachable!("cas conforme déjà traité"),

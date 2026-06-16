@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { AppModalPortal } from '../common/AppModalPortal';
+import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
 import {
   Check,
   ChevronDown,
   CircleCheck,
   Download,
+  FilePen,
   Image,
   Info,
   Loader2,
@@ -40,7 +42,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     Icon: Scissors,
     explanation: 'Le blanc avant ou après la voix sort de la fenêtre attendue.',
-    action: 'On ajuste le silence vers 0,75 s.',
+    action: 'On ajuste le silence vers 0,50 s.',
     match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('silence'),
   },
   {
@@ -79,6 +81,16 @@ const PROBLEM_SECTIONS = [
     match: (issue) => issue.autoFixAvailable && issue.category === 'image',
   },
   {
+    id: 'title',
+    title: 'Nom du pack à corriger',
+    badge: 'Assisté',
+    bucket: 'fix',
+    Icon: FilePen,
+    explanation: 'Le nom ou la convention du pack demande une correction.',
+    action: 'On ouvre les métadonnées avant de créer le ZIP corrigé.',
+    match: (issue) => issue.category === 'title',
+  },
+  {
     id: 'structure',
     title: 'Structure à vérifier',
     badge: 'Manuel',
@@ -86,7 +98,7 @@ const PROBLEM_SECTIONS = [
     Icon: Network,
     explanation: 'Un lien, une référence ou un champ du pack demande une vérification.',
     action: 'Vérifie la navigation ou les fichiers référencés.',
-    match: (issue) => issue.category === 'structure' || issue.category === 'title',
+    match: (issue) => issue.category === 'structure',
   },
 ];
 
@@ -137,22 +149,28 @@ function measuredIssueSummary(issue, item, kind) {
       return sides.length ? sides.join(' | ') : message;
     }
     if (lower.includes('volume')) {
-      return `Niveau sonore = ${formatLufs(item?.integratedLufs)}`;
+      const lufs = item?.integratedLufs;
+      const direction = typeof lufs === 'number' && lufs > -10
+        ? 'trop haut'
+        : 'trop bas';
+      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
     }
     if (lower.includes('fréquence')) {
-      return `${message} (${item?.sampleRate ? `${item.sampleRate} Hz` : 'non mesuré'})`;
+      return `Échantillonnage incorrect (${item?.sampleRate ? `${item.sampleRate} Hz` : 'non mesuré'})`;
     }
     if (lower.includes('mono')) {
-      return `${message} (${item?.channels || 'canaux non mesurés'})`;
+      return `Audio non mono (${item?.channels || 'canaux non mesurés'})`;
     }
     if (lower.includes('format')) {
-      return `${message} (${item?.codec || 'format non mesuré'})`;
+      return `Mauvais format audio (${item?.codec || 'format non mesuré'})`;
     }
   }
   if (kind === 'image') {
     const dimensions = item?.width && item?.height ? `${item.width}×${item.height}` : 'dimensions non mesurées';
     const format = item?.format || 'format non mesuré';
-    return `Image = ${dimensions} · ${format}`;
+    if (lower.includes('format')) return `Mauvais format image (${format})`;
+    if (lower.includes('dimension') || lower.includes('taille')) return `Dimensions incorrectes (${dimensions})`;
+    return `Image incorrecte (${dimensions} · ${format})`;
   }
   return message;
 }
@@ -170,27 +188,29 @@ function silenceSummaryParts(issues, item) {
 }
 
 function recordProblemSummary(record) {
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : [record.issue];
   if (record.kind === 'audio') {
-    const silenceIssues = record.issues.filter((issue) => (issue.message || '').toLowerCase().includes('silence'));
+    const silenceIssues = scopedIssues.filter((issue) => (issue.message || '').toLowerCase().includes('silence'));
     if (silenceIssues.length > 0) {
       const parts = silenceSummaryParts(silenceIssues, record.item);
       if (parts.length > 0) return parts.join(' | ');
     }
 
-    if (record.issues.some((issue) => (issue.message || '').toLowerCase().includes('volume'))) {
-      return `Niveau sonore = ${formatLufs(record.item?.integratedLufs)}`;
+    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('volume'))) {
+      const lufs = record.item?.integratedLufs;
+      const direction = typeof lufs === 'number' && lufs > -10 ? 'trop haut' : 'trop bas';
+      return `Niveau sonore ${direction} (${formatLufs(lufs)})`;
     }
   }
 
   if (record.kind === 'image') {
-    const dimensions = record.item?.width && record.item?.height
-      ? `${record.item.width}×${record.item.height}`
-      : 'dimensions non mesurées';
-    const format = record.item?.format || 'format non mesuré';
-    return `Image = ${dimensions} · ${format}`;
+    return scopedIssues
+      .map((issue) => measuredIssueSummary(issue, record.item, record.kind))
+      .filter(Boolean)
+      .join(' · ');
   }
 
-  return record.issues
+  return scopedIssues
     .map((issue) => measuredIssueSummary(issue, record.item, record.kind))
     .filter(Boolean)
     .join(' · ');
@@ -287,10 +307,12 @@ function buildProblemGroups(report) {
       if (seen.has(key)) continue;
       seen.add(key);
       const itemEntry = issue.filePath ? itemMap.get(issue.filePath) : null;
+      const allFileIssues = issue.filePath ? (issuesByFilePath(report).get(issue.filePath) || [issue]) : [issue];
       records.push({
         id: `${section.id}:${key}`,
         issue,
-        issues: issue.filePath ? (issuesByFilePath(report).get(issue.filePath) || [issue]) : [issue],
+        issues: allFileIssues,
+        sectionIssues: allFileIssues.filter((candidate) => section.match(candidate)),
         item: itemEntry?.item || null,
         kind: itemEntry?.kind || issue.category,
       });
@@ -299,9 +321,11 @@ function buildProblemGroups(report) {
       ...section,
       records,
       count: records.length,
-      fixCount: records.reduce((sum, record) => (
-        sum + record.issues.filter((issue) => issue.autoFixAvailable).length
-      ), 0),
+      fixCount: section.id === 'title'
+        ? records.length
+        : records.reduce((sum, record) => (
+          sum + record.issues.filter((issue) => issue.autoFixAvailable).length
+        ), 0),
     };
   }).filter((group) => group.count > 0);
 }
@@ -367,6 +391,10 @@ function categoryStats(summary) {
   };
 }
 
+function titleNeedsCorrection(report) {
+  return (report?.titleSummary?.warnings || 0) > 0 || (report?.titleSummary?.errors || 0) > 0;
+}
+
 function SummaryTile({ title, Icon, tone = 'neutral', children }) {
   return (
     <div className={`checker-summary-tile checker-summary-tile--${tone}`}>
@@ -391,6 +419,8 @@ function SplitStat({ ok, needsFix }) {
 function SummaryTiles({ report }) {
   const audio = categoryStats(report.audioSummary);
   const images = categoryStats(report.imageSummary);
+  const title = categoryStats(report.titleSummary);
+  const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
   return (
@@ -400,6 +430,12 @@ function SummaryTiles({ report }) {
       </SummaryTile>
       <SummaryTile title="Images" Icon={Image} tone={images.needsFix ? 'fix' : 'ok'}>
         <SplitStat ok={images.ok} needsFix={images.needsFix} />
+      </SummaryTile>
+      <SummaryTile title="Nom du pack" Icon={FilePen} tone={titleOk ? 'ok' : 'fix'}>
+        <div className="checker-single-stat">
+          <strong>{titleOk ? 'Valide' : 'À corriger'}</strong>
+          <span>{titleOk ? 'Convention OK' : 'Métadonnées'}</span>
+        </div>
       </SummaryTile>
       <SummaryTile title="Structure" Icon={Network} tone={structureOk ? 'ok' : 'listen'}>
         <div className="checker-single-stat">
@@ -542,9 +578,13 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const [expanded, setExpanded] = useState(groups[0]?.id || null);
-  const [confirmFix, setConfirmFix] = useState(false);
+  const [metadataOpen, setMetadataOpen] = useState(false);
   if (!report) return null;
   const SummaryIcon = summary.Icon;
+
+  function startFixFlow() {
+    setMetadataOpen(true);
+  }
 
   return (
     <div className="checker-report">
@@ -557,7 +597,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </div>
         <div className="checker-report-callout">
           <Info className="checker-icon" aria-hidden="true" />
-          <span><strong>{summary.listenCount}</strong> à écouter · <strong>{summary.fixCount}</strong> corrections auto</span>
+          <span><strong>{summary.listenCount}</strong> à écouter · <strong>{summary.fixCount}</strong> corrections proposées</span>
         </div>
       </div>
 
@@ -582,7 +622,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
       )}
 
       <div className="checker-report-footer">
-        <span><strong>{summary.fixCount}</strong> corrections automatiques prêtes.</span>
+        <span><strong>{summary.fixCount}</strong> corrections prêtes.</span>
         <Button size="sm" onClick={() => onExportReport('report')}>
           <Download className="checker-button-icon" aria-hidden="true" />
           Exporter le rapport
@@ -590,54 +630,23 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         <button
           type="button"
           className="chrome-toolbar-cta checker-correction-cta"
-          onClick={() => setConfirmFix(true)}
+          onClick={startFixFlow}
           disabled={!canFix || busy}
         >
           {busy ? 'Correction...' : 'Corriger le pack'}
         </button>
       </div>
 
-      {confirmFix ? (
-        <div className="checker-fix-sheet">
-          <div className="checker-fix-card">
-            <div className="checker-fix-head">
-              <strong>Corriger le pack ?</strong>
-              <span>Story Studio crée une copie corrigée. Le ZIP d'origine n'est jamais modifié.</span>
-            </div>
-            <div className="checker-fix-list">
-              {groups.filter((group) => group.bucket === 'fix').map((group) => (
-                <div className="checker-fix-row" key={group.id}>
-                  <span className="checker-group-icon"><IconFrame Icon={group.Icon} /></span>
-                  <div>
-                    <strong>{group.action}</strong>
-                    <span>{group.title}</span>
-                  </div>
-                  <em>{group.count}</em>
-                </div>
-              ))}
-              {summary.listenCount > 0 ? (
-                <div className="checker-listen-note">
-                  <IconFrame Icon={Info} />
-                  <span><strong>{summary.listenCount} fichiers</strong> resteront à vérifier manuellement.</span>
-                </div>
-              ) : null}
-            </div>
-            <div className="checker-fix-actions">
-              <Button onClick={() => setConfirmFix(false)}>Annuler</Button>
-              <button
-                type="button"
-                className="chrome-toolbar-cta checker-correction-cta"
-                onClick={() => {
-                  setConfirmFix(false);
-                  onFixPack();
-                }}
-                disabled={!canFix || busy}
-              >
-                Créer le pack corrigé
-              </button>
-            </div>
-          </div>
-        </div>
+      {metadataOpen ? (
+        <CommunityPackMetadataModal
+          report={report}
+          busy={busy}
+          onCancel={() => setMetadataOpen(false)}
+          onSubmit={(metadataPatch) => {
+            setMetadataOpen(false);
+            onFixPack(metadataPatch);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -658,9 +667,39 @@ function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
   );
 }
 
+function ProcessLog({ status, lines }) {
+  const linesRef = useRef(null);
+  useEffect(() => {
+    const node = linesRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [lines]);
+
+  if (!lines?.length) return null;
+  const title = status === 'fixing'
+    ? 'Correction en cours'
+    : status === 'analyzing'
+      ? 'Analyse en cours'
+      : 'Dernières opérations';
+  return (
+    <div className={`checker-process-log ${status === 'idle' ? 'is-idle' : 'is-active'}`}>
+      <div className="checker-process-log-head">
+        {status !== 'idle' ? <IconFrame Icon={Loader2} /> : <IconFrame Icon={CircleCheck} />}
+        <strong>{title}</strong>
+      </div>
+      <div className="checker-process-log-lines" ref={linesRef} aria-live="polite">
+        {lines.map((line, index) => (
+          <div key={`${index}-${line}`}>{line}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
   const busy = checker.status === 'analyzing' || checker.status === 'fixing';
-  const canFix = checker.report?.correctionsAvailable > 0 && checker.status !== 'fixing';
+  const canFix = (checker.report?.correctionsAvailable > 0 || titleNeedsCorrection(checker.report))
+    && checker.status !== 'fixing';
 
   function handleDrop(event) {
     event.preventDefault();
@@ -682,7 +721,7 @@ function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
         <div className="checker-modal-window-actions">
           <button
             type="button"
-            className="checker-modal-close"
+            className="checker-modal-close checker-modal-maximize"
             onClick={onMaximizeToggle}
             aria-label={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
             title={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
@@ -721,12 +760,7 @@ function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
           </div>
         </div>
 
-        {busy ? (
-          <div className="checker-loading">
-            <IconFrame Icon={Loader2} />
-            <span>{checker.status === 'fixing' ? 'Création du ZIP corrigé...' : 'Analyse du pack...'}</span>
-          </div>
-        ) : null}
+        <ProcessLog status={checker.status} lines={checker.liveLog} />
 
         {checker.error ? <div className="info-box warn">{checker.error}</div> : null}
         {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}

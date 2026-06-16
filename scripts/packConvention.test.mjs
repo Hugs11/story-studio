@@ -17,6 +17,14 @@ test('non convention name returns null', () => {
   assert.equal(parseConventionName('Mon pack perso'), null);
 });
 
+test('parses a convention zip filename without keeping the extension', () => {
+  const parsed = parseConventionName('4+]Azuro_V2.zip');
+
+  assert.equal(parsed.minAge, '4');
+  assert.equal(parsed.title, 'Azuro');
+  assert.equal(parsed.version, 2);
+});
+
 test('generates a minimal convention name', () => {
   assert.equal(generateConventionName({ title: 'Mon pack' }), '3+]Mon_pack');
 });

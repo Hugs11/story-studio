@@ -14,20 +14,24 @@ fn image_fix_creates_new_zip_without_overwriting_source() {
     fs::create_dir_all(&dir).expect("create temp dir");
     let zip_path = dir.join("pack-image.zip");
     let cover = png_bytes(512, 512);
-    write_studio_zip(&zip_path, story_with_image_only("cover.png"), &[("cover.png", cover)]);
+    write_studio_zip(
+        &zip_path,
+        story_with_image_only("cover.png"),
+        &[("cover.png", cover)],
+    );
 
     let report = analyze_pack(&zip_path);
     assert_eq!(report.image_summary.total, 1);
     assert_eq!(report.image_summary.warnings, 1);
     assert!(report.corrections_available > 0);
 
-    let fixed = create_fixed_pack(&zip_path).expect("create fixed pack");
+    let fixed = create_fixed_pack(&zip_path, None).expect("create fixed pack");
     assert_ne!(fixed.source_zip_path, fixed.fixed_zip_path);
     assert!(zip_path.is_file());
     assert!(PathBuf::from(&fixed.fixed_zip_path).is_file());
 
-    let original = zip_doc::read_zip_entry_bytes(&zip_path, "assets/cover.png")
-        .expect("read original image");
+    let original =
+        zip_doc::read_zip_entry_bytes(&zip_path, "assets/cover.png").expect("read original image");
     let fixed_bytes =
         zip_doc::read_zip_entry_bytes(Path::new(&fixed.fixed_zip_path), "assets/cover.png")
             .expect("read fixed image");
@@ -57,7 +61,10 @@ fn audio_silence_is_evaluated_per_file_when_ffmpeg_is_available() {
         story_with_two_audios("ok.mp3", "short.mp3"),
         &[
             ("ok.mp3", fs::read(&ok_audio).expect("read ok audio")),
-            ("short.mp3", fs::read(&short_audio).expect("read short audio")),
+            (
+                "short.mp3",
+                fs::read(&short_audio).expect("read short audio"),
+            ),
             ("cover.png", png_bytes(320, 240)),
         ],
     );
@@ -81,6 +88,96 @@ fn audio_silence_is_evaluated_per_file_when_ffmpeg_is_available() {
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }
 
+const WIN: f64 = 1024.0 / 44_100.0; // ≈ 0.02322 s, comme la passe enveloppe
+
+/// Construit une enveloppe `(temps, RMS)` à partir de segments `(niveau_dB, nb_fenêtres)`.
+fn build_env(segments: &[(f64, usize)]) -> Vec<(f64, f64)> {
+    let mut env = Vec::new();
+    let mut time = 0.0;
+    for (level, count) in segments {
+        for _ in 0..*count {
+            env.push((time, *level));
+            time += WIN;
+        }
+    }
+    env
+}
+
+fn measured(measure: audio::EdgeMeasure) -> (f64, f64) {
+    match measure {
+        audio::EdgeMeasure::Measured { leading, trailing } => {
+            (models::round_secs(leading), models::round_secs(trailing))
+        }
+        other => panic!("attendu Measured, obtenu {:?}", other),
+    }
+}
+
+#[test]
+fn rms_envelope_parser_reads_pairs_and_handles_inf() {
+    let stderr = "\
+[Parsed_ametadata_1 @ x] frame:0 pts:0 pts_time:0
+[Parsed_ametadata_1 @ x] lavfi.astats.Overall.RMS_level=-43.2
+[Parsed_ametadata_1 @ x] frame:1 pts:1024 pts_time:0.0232
+[Parsed_ametadata_1 @ x] lavfi.astats.Overall.RMS_level=-inf
+[Parsed_ametadata_1 @ x] frame:2 pts:2048 pts_time:0.0464
+[Parsed_ametadata_1 @ x] lavfi.astats.Overall.RMS_level=-12.0
+";
+    let env = audio::parse_rms_envelope(stderr);
+    assert_eq!(env.len(), 3);
+    assert_eq!(env[0].0, 0.0);
+    assert_eq!(env[0].1, -43.2);
+    assert!(!env[1].1.is_finite()); // -inf
+    assert_eq!(env[2].1, -12.0);
+}
+
+#[test]
+fn edges_measure_leading_and_trailing_on_studio_like_floor() {
+    // Plancher de bruit haut (-43 dB), contenu à -27 dB : silencedetect -50 dB
+    // raterait tout ; l'enveloppe RMS sépare proprement.
+    let env = build_env(&[(-43.0, 26), (-27.0, 43), (-43.0, 30)]);
+    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    assert!((leading - 26.0 * WIN).abs() < WIN, "début {}", leading);
+    assert!((trailing - 30.0 * WIN).abs() < WIN, "fin {}", trailing);
+}
+
+#[test]
+fn edges_measure_trailing_without_relying_on_declared_duration() {
+    // Pur silence numérique en fin : doit être mesuré via l'horodatage interne.
+    let env = build_env(&[(-12.0, 40), (f64::NEG_INFINITY, 30)]);
+    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    assert_eq!(leading, 0.0);
+    assert!((trailing - 30.0 * WIN).abs() < WIN, "fin {}", trailing);
+}
+
+#[test]
+fn edges_ignore_isolated_leading_click() {
+    // Un clic isolé d'une fenêtre à t=0 ne doit pas écraser le silence de début.
+    let env = build_env(&[(-10.0, 1), (f64::NEG_INFINITY, 20), (-20.0, 30)]);
+    let (leading, _) = measured(audio::edges_from_envelope(&env));
+    assert!(leading > 10.0 * WIN, "le clic n'a pas été ignoré : {}", leading);
+}
+
+#[test]
+fn edges_do_not_trim_soft_intro() {
+    // Intro douce à -34 dB sur un plancher -43 dB : le contenu doit rester
+    // contenu (pas classé silence), donc début ≈ 0.
+    let env = build_env(&[(-34.0, 40), (-20.0, 40)]);
+    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    assert_eq!(leading, 0.0, "intro douce rognée à tort");
+    assert_eq!(trailing, 0.0);
+}
+
+#[test]
+fn edges_all_silence_for_pure_digital_silence() {
+    let env = build_env(&[(f64::NEG_INFINITY, 50)]);
+    assert_eq!(audio::edges_from_envelope(&env), audio::EdgeMeasure::AllSilence);
+}
+
+#[test]
+fn edges_unreadable_for_empty_envelope() {
+    assert_eq!(audio::edges_from_envelope(&[]), audio::EdgeMeasure::Unreadable);
+}
+
 #[test]
 fn long_title_is_allowed_when_zip_name_matches_community_convention() {
     let dir = temp_dir("community_name");
@@ -98,9 +195,50 @@ fn long_title_is_allowed_when_zip_name_matches_community_convention() {
             && issue.severity == models::PackValidationSeverity::Ok
             && issue.message.contains("convention communautaire")
     }));
-    assert!(!report.issues.iter().any(|issue| {
-        issue.category == "title" && issue.message.contains("long")
-    }));
+    assert!(!report
+        .issues
+        .iter()
+        .any(|issue| { issue.category == "title" && issue.message.contains("long") }));
+
+    fs::remove_dir_all(dir).expect("cleanup temp dir");
+}
+
+#[test]
+fn metadata_fix_uses_convention_name_for_output_zip() {
+    let dir = temp_dir("metadata_name");
+    fs::create_dir_all(&dir).expect("create temp dir");
+    let zip_path = dir.join("4+]Azuro.zip");
+    write_studio_zip(
+        &zip_path,
+        story_with_long_title("Azuro"),
+        &[("cover.png", png_bytes(320, 240))],
+    );
+
+    let fixed = create_fixed_pack(
+        &zip_path,
+        Some(models::PackMetadataPatch {
+            title: Some("Azuro".to_string()),
+            description: Some("Version corrigée".to_string()),
+            version: Some(2),
+            min_age: Some("4".to_string()),
+            author: None,
+            producer: None,
+            bonus: None,
+            naming_mode: Some("convention".to_string()),
+        }),
+    )
+    .expect("create fixed pack");
+
+    let fixed_path = PathBuf::from(&fixed.fixed_zip_path);
+    assert_eq!(
+        fixed_path.file_name().and_then(|value| value.to_str()),
+        Some("4+]Azuro_V2.zip")
+    );
+    let fixed_json = zip_doc::read_pack_doc(&fixed_path)
+        .expect("read fixed story")
+        .story;
+    assert_eq!(fixed_json["title"], "Azuro");
+    assert_eq!(fixed_json["version"], 2);
 
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }
@@ -159,7 +297,10 @@ fn png_bytes(width: u32, height: u32) -> Vec<u8> {
     let img = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_pixel(width, height, Rgba([32, 80, 140, 255]));
     let mut bytes = Vec::new();
     ::image::DynamicImage::ImageRgba8(img)
-        .write_to(&mut std::io::Cursor::new(&mut bytes), ::image::ImageFormat::Png)
+        .write_to(
+            &mut std::io::Cursor::new(&mut bytes),
+            ::image::ImageFormat::Png,
+        )
         .expect("encode png");
     bytes
 }
@@ -168,7 +309,10 @@ fn gif_bytes(width: u32, height: u32) -> Vec<u8> {
     let img = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_pixel(width, height, Rgba([20, 120, 90, 255]));
     let mut bytes = Vec::new();
     ::image::DynamicImage::ImageRgba8(img)
-        .write_to(&mut std::io::Cursor::new(&mut bytes), ::image::ImageFormat::Gif)
+        .write_to(
+            &mut std::io::Cursor::new(&mut bytes),
+            ::image::ImageFormat::Gif,
+        )
         .expect("encode gif");
     bytes
 }
@@ -258,7 +402,11 @@ fn story_with_two_audios(root_audio: &str, story_audio: &str) -> serde_json::Val
     })
 }
 
-fn make_audio_with_edge_silence(ffmpeg: &Path, output: &Path, silence_sec: f64) -> Result<(), String> {
+fn make_audio_with_edge_silence(
+    ffmpeg: &Path,
+    output: &Path,
+    silence_sec: f64,
+) -> Result<(), String> {
     let mut cmd = Command::new(ffmpeg);
     apply_no_window(&mut cmd);
     cmd.arg("-y")

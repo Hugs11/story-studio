@@ -1,0 +1,350 @@
+.checker-meta-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 5, 12, 0.66);
+  backdrop-filter: blur(5px);
+}
+
+.checker-meta-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(820px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: 1px solid var(--borderLt);
+  border-radius: 12px;
+  background: var(--bg1);
+  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.52);
+}
+
+.checker-meta-header {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 30px;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  flex: 0 0 auto;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.checker-meta-header-icon,
+.checker-meta-pack-icon {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--warning-border);
+  border-radius: 9px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.checker-meta-header-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.checker-meta-heading {
+  min-width: 0;
+}
+
+.checker-meta-heading span,
+.checker-meta-preview > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.checker-meta-heading h2 {
+  margin: 1px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checker-meta-heading p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.checker-meta-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.checker-meta-close:hover {
+  border-color: var(--border);
+  background: var(--bg2);
+  color: var(--text);
+}
+
+.checker-meta-body {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 18px;
+  overflow: auto;
+}
+
+.checker-meta-side,
+.checker-meta-form {
+  min-width: 0;
+}
+
+.checker-meta-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checker-meta-pack-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.checker-meta-side strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checker-meta-side span {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+}
+
+.checker-meta-issues,
+.checker-meta-ok {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--border-radius-md);
+  background: var(--warning-bg);
+}
+
+.checker-meta-ok {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+}
+
+.checker-meta-issues > div,
+.checker-meta-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.checker-meta-issues .checker-icon,
+.checker-meta-ok .checker-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.checker-meta-issues .checker-icon {
+  color: var(--warning-text);
+}
+
+.checker-meta-ok .checker-icon {
+  color: var(--success-text);
+}
+
+.checker-meta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checker-meta-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.checker-meta-form input,
+.checker-meta-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.checker-meta-form input {
+  height: 34px;
+  padding: 0 10px;
+}
+
+.checker-meta-form textarea {
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.checker-meta-form input:focus,
+.checker-meta-form textarea:focus {
+  border-color: var(--accentBorder);
+}
+
+.checker-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
+  gap: 10px;
+}
+
+.checker-meta-age {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(72px, 0.9fr);
+  gap: 6px;
+}
+
+.checker-meta-age button {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+  color: var(--control-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.checker-meta-age button.is-active {
+  border-color: var(--accentBorder);
+  background: var(--accentDim);
+  color: var(--accent);
+}
+
+.checker-meta-preview {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 7px;
+  margin: 0 18px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg0);
+}
+
+.checker-meta-preview > div {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checker-meta-preview em {
+  font-style: normal;
+}
+
+.checker-meta-preview .is-age {
+  color: var(--success-text);
+}
+
+.checker-meta-preview .is-author {
+  color: var(--accent-2-text);
+}
+
+.checker-meta-preview .is-ext,
+.checker-meta-preview .is-empty {
+  color: var(--muted);
+}
+
+.checker-meta-footer {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 0.5px solid var(--border);
+  background: var(--bg0);
+}
+
+@media (max-width: 760px) {
+  .checker-meta-overlay {
+    padding: 12px;
+  }
+
+  .checker-meta-modal {
+    max-height: calc(100vh - 24px);
+  }
+
+  .checker-meta-body {
+    grid-template-columns: 1fr;
+  }
+
+  .checker-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checker-meta-age {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 620px) {
+  .checker-meta-overlay {
+    padding: 10px;
+  }
+
+  .checker-meta-header {
+    padding: 12px 14px;
+  }
+
+  .checker-meta-heading p {
+    display: none;
+  }
+
+  .checker-meta-body {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .checker-meta-preview {
+    margin: 0 14px 10px;
+  }
+
+  .checker-meta-footer {
+    padding: 10px 14px;
+  }
+}

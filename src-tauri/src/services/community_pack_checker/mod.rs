@@ -6,12 +6,13 @@ mod zip_doc;
 #[cfg(test)]
 mod tests;
 
-pub use models::{FixedPackResult, PackValidationReport};
+pub use models::{FixedPackResult, PackMetadataPatch, PackValidationReport};
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 
 use rayon::prelude::*;
 
@@ -20,15 +21,22 @@ use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 
 use models::{
     issue, AudioValidationItem, CategorySummary, FixedPackResult as FixedPackResultModel,
-    ImageValidationItem, NightModeSummary, PackValidationIssue, PackValidationReport as ReportModel,
-    PackValidationSeverity, PackValidationVerdict, StructureSummary, ValidationSummary,
+    ImageValidationItem, NightModeSummary, PackMetadataPatch as PackMetadataPatchModel,
+    PackValidationIssue, PackValidationReport as ReportModel, PackValidationSeverity,
+    PackValidationVerdict, StructureSummary, ValidationSummary,
 };
 use zip_doc::{read_pack_doc, read_zip_entry_bytes, update_story_asset_refs, LoadedPackDoc};
 
+#[cfg(test)]
 pub fn analyze_pack(zip_path: &Path) -> ReportModel {
+    analyze_pack_with_log(zip_path, &|_| {})
+}
+
+pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportModel {
     let pack_name = pack_name_from_path(zip_path);
     let zip_path_string = zip_path.to_string_lossy().to_string();
     let mut report = empty_report(&pack_name, &zip_path_string);
+    emit(&format!("Analyse demandée pour {}", pack_name));
     report
         .technical_log
         .push(format!("[OK] Analyse demandée pour {}", pack_name));
@@ -45,16 +53,30 @@ pub fn analyze_pack(zip_path: &Path) -> ReportModel {
             "Dossier temporaire",
             format!("Impossible de préparer l'analyse : {}", err),
         ));
-        return finalize_report(report, true);
+        emit("Impossible de préparer le dossier temporaire.");
+        return finalize_report_with_log(report, true, emit);
     }
 
-    let result = analyze_pack_inner(zip_path, &temp_dir, report);
+    let result = analyze_pack_inner(zip_path, &temp_dir, report, emit);
     let _ = fs::remove_dir_all(&temp_dir);
     result
 }
 
-pub fn create_fixed_pack(zip_path: &Path) -> Result<FixedPackResultModel, String> {
-    let report = analyze_pack(zip_path);
+#[cfg(test)]
+pub fn create_fixed_pack(
+    zip_path: &Path,
+    metadata_patch: Option<PackMetadataPatchModel>,
+) -> Result<FixedPackResultModel, String> {
+    create_fixed_pack_with_log(zip_path, metadata_patch, &|_| {})
+}
+
+pub fn create_fixed_pack_with_log(
+    zip_path: &Path,
+    metadata_patch: Option<PackMetadataPatchModel>,
+    emit: &dyn Fn(&str),
+) -> Result<FixedPackResultModel, String> {
+    emit("Analyse préparatoire du pack source...");
+    let report = analyze_pack_with_log(zip_path, emit);
     let audio_items: Vec<AudioValidationItem> = report
         .audio_items
         .iter()
@@ -67,10 +89,21 @@ pub fn create_fixed_pack(zip_path: &Path) -> Result<FixedPackResultModel, String
         .filter(|item| item.auto_fix_available)
         .cloned()
         .collect();
-    if audio_items.is_empty() && image_items.is_empty() {
+    let metadata_will_change = metadata_patch
+        .as_ref()
+        .map(metadata_patch_has_changes)
+        .unwrap_or(false);
+    if audio_items.is_empty() && image_items.is_empty() && !metadata_will_change {
+        emit("Aucune correction automatique disponible.");
         return Err("Aucune correction automatique disponible pour ce pack.".to_string());
     }
 
+    emit(&format!(
+        "Corrections à appliquer : {} audio, {} image, métadonnées {}.",
+        audio_items.len(),
+        image_items.len(),
+        if metadata_will_change { "oui" } else { "non" }
+    ));
     let mut doc = read_pack_doc(zip_path)?;
     let temp_dir = std::env::temp_dir().join(format!(
         "story_studio_pack_fix_{}_{}",
@@ -88,46 +121,58 @@ pub fn create_fixed_pack(zip_path: &Path) -> Result<FixedPackResultModel, String
         let ffmpeg = if audio_items.is_empty() {
             None
         } else {
+            emit("Recherche de FFmpeg pour les corrections audio...");
             Some(get_ffmpeg_path()?)
         };
 
-        for item in &audio_items {
-            let Some(short_name) = item.file_path.strip_prefix("assets/") else {
-                continue;
-            };
-            let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
-            let input_path = temp_dir.join(safe_temp_name(short_name, "input"));
-            let output_path = temp_dir.join(safe_temp_name(short_name, "fixed.mp3"));
-            fs::write(&input_path, &bytes)
-                .map_err(|e| format!("Impossible de préparer {} : {}", item.file_path, e))?;
-            audio::fix_audio_file(
-                ffmpeg.as_ref().expect("ffmpeg required for audio fixes"),
-                &input_path,
-                &output_path,
-                item,
-            )?;
-            let fixed_bytes = fs::read(&output_path)
-                .map_err(|e| format!("Lecture audio corrigé impossible : {}", e))?;
-            let desired_name = asset_name_with_extension(short_name, "mp3");
-            let new_name = unique_asset_name(short_name, &desired_name, &mut used_asset_names);
-            original_to_new_audio.insert(short_name.to_string(), new_name.clone());
-            fixed_assets.insert(new_name, fixed_bytes);
+        let prepared_fixes = prepare_fixed_assets_parallel(
+            zip_path,
+            &temp_dir,
+            &audio_items,
+            &image_items,
+            ffmpeg.as_deref(),
+            emit,
+        )?;
+
+        for prepared in prepared_fixes {
+            match prepared {
+                PreparedFixedAsset::Audio {
+                    original_short,
+                    desired_name,
+                    bytes,
+                } => {
+                    let new_name =
+                        unique_asset_name(&original_short, &desired_name, &mut used_asset_names);
+                    original_to_new_audio.insert(original_short, new_name.clone());
+                    fixed_assets.insert(new_name, bytes);
+                }
+                PreparedFixedAsset::Image {
+                    original_short,
+                    desired_name,
+                    bytes,
+                } => {
+                    let new_name =
+                        unique_asset_name(&original_short, &desired_name, &mut used_asset_names);
+                    original_to_new_image.insert(original_short, new_name.clone());
+                    fixed_assets.insert(new_name, bytes);
+                }
+            }
         }
 
-        for item in &image_items {
-            let Some(short_name) = item.file_path.strip_prefix("assets/") else {
-                continue;
-            };
-            let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
-            let fixed_bytes = image::fix_image_bytes(&bytes)?;
-            let desired_name = asset_name_with_extension(short_name, "png");
-            let new_name = unique_asset_name(short_name, &desired_name, &mut used_asset_names);
-            original_to_new_image.insert(short_name.to_string(), new_name.clone());
-            fixed_assets.insert(new_name, fixed_bytes);
+        update_story_asset_refs(
+            &mut doc.story,
+            &original_to_new_audio,
+            &original_to_new_image,
+        );
+        if let Some(patch) = metadata_patch.as_ref() {
+            emit("Application des métadonnées au story.json...");
+            apply_metadata_patch(&mut doc.story, patch);
         }
-
-        update_story_asset_refs(&mut doc.story, &original_to_new_audio, &original_to_new_image);
-        let fixed_zip_path = unique_fixed_zip_path(zip_path);
+        let fixed_zip_path = unique_fixed_zip_path(zip_path, metadata_patch.as_ref());
+        emit(&format!(
+            "Écriture du ZIP corrigé : {}",
+            fixed_zip_path.display()
+        ));
         write_fixed_zip(
             zip_path,
             &fixed_zip_path,
@@ -136,13 +181,15 @@ pub fn create_fixed_pack(zip_path: &Path) -> Result<FixedPackResultModel, String
             &original_to_new_audio,
             &original_to_new_image,
         )?;
+        emit("ZIP corrigé finalisé.");
 
         Ok(FixedPackResultModel {
             source_zip_path: zip_path.to_string_lossy().to_string(),
             fixed_zip_path: fixed_zip_path.to_string_lossy().to_string(),
-            fixed_count: audio_items.len() + image_items.len(),
+            fixed_count: audio_items.len() + image_items.len() + usize::from(metadata_will_change),
             audio_fixed: audio_items.len(),
             image_fixed: image_items.len(),
+            metadata_fixed: metadata_will_change,
         })
     })();
 
@@ -150,9 +197,135 @@ pub fn create_fixed_pack(zip_path: &Path) -> Result<FixedPackResultModel, String
     fixed_result
 }
 
-fn analyze_pack_inner(zip_path: &Path, temp_dir: &Path, mut report: ReportModel) -> ReportModel {
+enum PreparedFixedAsset {
+    Audio {
+        original_short: String,
+        desired_name: String,
+        bytes: Vec<u8>,
+    },
+    Image {
+        original_short: String,
+        desired_name: String,
+        bytes: Vec<u8>,
+    },
+}
+
+fn prepare_fixed_assets_parallel(
+    zip_path: &Path,
+    temp_dir: &Path,
+    audio_items: &[AudioValidationItem],
+    image_items: &[ImageValidationItem],
+    ffmpeg: Option<&Path>,
+    emit: &dyn Fn(&str),
+) -> Result<Vec<PreparedFixedAsset>, String> {
+    let audio_workers = audio_items.len();
+    let image_workers = image_items.len();
+    if audio_workers + image_workers == 0 {
+        return Ok(Vec::new());
+    }
+    emit(&format!(
+        "Préparation des corrections en parallèle : {} worker(s) max.",
+        correction_worker_count()
+    ));
+
+    let (progress_tx, progress_rx) = mpsc::channel::<String>();
+    let prepared: Result<Vec<PreparedFixedAsset>, String> = std::thread::scope(|scope| {
+        let worker_tx = progress_tx.clone();
+        let handle = scope.spawn(move || {
+            run_in_correction_pool(|| {
+                let audio_results = audio_items.par_iter().enumerate().map(|(index, item)| {
+                    let tx = worker_tx.clone();
+                    prepare_one_fixed_audio(zip_path, temp_dir, ffmpeg, index, item, &tx)
+                });
+                let image_results = image_items.par_iter().map(|item| {
+                    let tx = worker_tx.clone();
+                    prepare_one_fixed_image(zip_path, item, &tx)
+                });
+                audio_results.chain(image_results).collect()
+            })
+        });
+        drop(progress_tx);
+        for message in progress_rx {
+            emit(&message);
+        }
+        handle
+            .join()
+            .map_err(|_| "Correction parallèle interrompue.".to_string())?
+    });
+
+    prepared
+}
+
+fn prepare_one_fixed_audio(
+    zip_path: &Path,
+    temp_dir: &Path,
+    ffmpeg: Option<&Path>,
+    index: usize,
+    item: &AudioValidationItem,
+    progress_tx: &mpsc::Sender<String>,
+) -> Result<PreparedFixedAsset, String> {
+    let Some(short_name) = item.file_path.strip_prefix("assets/") else {
+        return Err(format!("Chemin audio inattendu : {}", item.file_path));
+    };
+    let _ = progress_tx.send(format!("Correction audio : {}", item.file_path));
+    let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
+    let input_path = temp_dir.join(safe_temp_name(
+        short_name,
+        &format!("input_audio_{}", index),
+    ));
+    let output_path = temp_dir.join(safe_temp_name(
+        short_name,
+        &format!("fixed_audio_{}.mp3", index),
+    ));
+    fs::write(&input_path, &bytes)
+        .map_err(|e| format!("Impossible de préparer {} : {}", item.file_path, e))?;
+    audio::fix_audio_file(
+        ffmpeg.ok_or_else(|| "FFmpeg requis pour les corrections audio.".to_string())?,
+        &input_path,
+        &output_path,
+        item,
+    )?;
+    let fixed_bytes =
+        fs::read(&output_path).map_err(|e| format!("Lecture audio corrigé impossible : {}", e))?;
+    let _ = fs::remove_file(&input_path);
+    let _ = fs::remove_file(&output_path);
+    let _ = progress_tx.send(format!("Audio corrigé : {}", item.file_path));
+    Ok(PreparedFixedAsset::Audio {
+        original_short: short_name.to_string(),
+        desired_name: asset_name_with_extension(short_name, "mp3"),
+        bytes: fixed_bytes,
+    })
+}
+
+fn prepare_one_fixed_image(
+    zip_path: &Path,
+    item: &ImageValidationItem,
+    progress_tx: &mpsc::Sender<String>,
+) -> Result<PreparedFixedAsset, String> {
+    let Some(short_name) = item.file_path.strip_prefix("assets/") else {
+        return Err(format!("Chemin image inattendu : {}", item.file_path));
+    };
+    let _ = progress_tx.send(format!("Correction image : {}", item.file_path));
+    let bytes = read_zip_entry_bytes(zip_path, &item.file_path)?;
+    let fixed_bytes = image::fix_image_bytes(&bytes)?;
+    let _ = progress_tx.send(format!("Image corrigée : {}", item.file_path));
+    Ok(PreparedFixedAsset::Image {
+        original_short: short_name.to_string(),
+        desired_name: asset_name_with_extension(short_name, "png"),
+        bytes: fixed_bytes,
+    })
+}
+
+fn analyze_pack_inner(
+    zip_path: &Path,
+    temp_dir: &Path,
+    mut report: ReportModel,
+    emit: &dyn Fn(&str),
+) -> ReportModel {
+    emit("Lecture du ZIP et de story.json...");
     let doc = match read_pack_doc(zip_path) {
         Ok(doc) => {
+            emit("ZIP et story.json lus.");
             report
                 .technical_log
                 .push("[OK] Lecture du ZIP et de story.json".to_string());
@@ -166,15 +339,39 @@ fn analyze_pack_inner(zip_path: &Path, temp_dir: &Path, mut report: ReportModel)
                 friendly_zip_error(&err),
             ));
             report.technical_log.push(format!("[ERROR] {}", err));
-            return finalize_report(report, true);
+            emit("Lecture du pack impossible.");
+            return finalize_report_with_log(report, true, emit);
         }
     };
 
+    report.pack_title = doc
+        .story
+        .get("title")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    report.pack_description = doc
+        .story
+        .get("description")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    report.pack_version = doc
+        .story
+        .get("version")
+        .and_then(|value| value.as_u64())
+        .and_then(|value| u32::try_from(value).ok())
+        .unwrap_or(1);
+
+    emit("Vérification des métadonnées et du nom du pack...");
     validate_title(&doc, zip_path, &mut report);
+    emit("Vérification de la structure et des références...");
     validate_structure(&doc, zip_path, temp_dir, &mut report);
-    analyze_audio(&doc, zip_path, temp_dir, &mut report);
-    analyze_images(&doc, zip_path, &mut report);
-    finalize_report(report, false)
+    analyze_audio(&doc, zip_path, temp_dir, &mut report, emit);
+    analyze_images(&doc, zip_path, &mut report, emit);
+    finalize_report_with_log(report, false, emit)
 }
 
 fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel) {
@@ -221,7 +418,10 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
             PackValidationSeverity::Ok,
             "title",
             "Convention communautaire",
-            format!("Le pack respecte la convention communautaire via le {}.", source),
+            format!(
+                "Le pack respecte la convention communautaire via le {}.",
+                source
+            ),
         ));
     } else {
         report.issues.push(issue(
@@ -262,7 +462,10 @@ fn validate_structure(
                         .and_then(|value| value.get("autoplay"))
                         .and_then(|value| value.as_bool())
                         .unwrap_or(false)
-                        && stage.get("audio").and_then(|value| value.as_str()).is_some()
+                        && stage
+                            .get("audio")
+                            .and_then(|value| value.as_str())
+                            .is_some()
                 })
                 .count()
         })
@@ -394,7 +597,11 @@ fn validate_asset_presence(doc: &LoadedPackDoc, report: &mut ReportModel) {
 }
 
 fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
-    let Some(stages) = doc.story.get("stageNodes").and_then(|value| value.as_array()) else {
+    let Some(stages) = doc
+        .story
+        .get("stageNodes")
+        .and_then(|value| value.as_array())
+    else {
         return;
     };
     let stage_ids: HashSet<&str> = stages
@@ -415,7 +622,11 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
         ));
     }
 
-    let Some(actions) = doc.story.get("actionNodes").and_then(|value| value.as_array()) else {
+    let Some(actions) = doc
+        .story
+        .get("actionNodes")
+        .and_then(|value| value.as_array())
+    else {
         return;
     };
     for (action_index, action) in actions.iter().enumerate() {
@@ -434,7 +645,10 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
                     PackValidationSeverity::Error,
                     "structure",
                     "Structure du pack",
-                    format!("Une destination de navigation est introuvable : {}.", target),
+                    format!(
+                        "Une destination de navigation est introuvable : {}.",
+                        target
+                    ),
                 ));
             }
         }
@@ -499,22 +713,35 @@ fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &
             );
             entry.technical_details = Some(err.clone());
             report.issues.push(entry);
-            report
-                .technical_log
-                .push(format!("[WARN] Projection Story Studio impossible : {}", err));
+            report.technical_log.push(format!(
+                "[WARN] Projection Story Studio impossible : {}",
+                err
+            ));
         }
     }
 }
 
-fn analyze_audio(doc: &LoadedPackDoc, zip_path: &Path, temp_dir: &Path, report: &mut ReportModel) {
+fn analyze_audio(
+    doc: &LoadedPackDoc,
+    zip_path: &Path,
+    temp_dir: &Path,
+    report: &mut ReportModel,
+    emit: &dyn Fn(&str),
+) {
     let unique_refs = first_refs_by_asset(&doc.audio_refs);
     report.audio_summary.total = unique_refs.len();
     if unique_refs.is_empty() {
+        emit("Aucun audio référencé à analyser.");
         return;
     }
+    emit(&format!(
+        "Analyse audio FFmpeg : {} fichier(s)...",
+        unique_refs.len()
+    ));
     let ffmpeg = match get_ffmpeg_path() {
         Ok(path) => path,
         Err(err) => {
+            emit("FFmpeg introuvable pour l'analyse audio.");
             report.issues.push(issue(
                 PackValidationSeverity::Error,
                 "audio",
@@ -529,8 +756,8 @@ fn analyze_audio(doc: &LoadedPackDoc, zip_path: &Path, temp_dir: &Path, report: 
     // processus), donc on parallélise sur un pool borné. `collect()` préserve
     // l'ordre source, ce qui garde un rapport déterministe.
     let ffmpeg_ref = ffmpeg.as_path();
-    let results: Vec<(Option<AudioValidationItem>, Vec<PackValidationIssue>)> = run_in_analysis_pool(
-        || {
+    let results: Vec<(Option<AudioValidationItem>, Vec<PackValidationIssue>)> =
+        run_in_analysis_pool(|| {
             unique_refs
                 .par_iter()
                 .enumerate()
@@ -538,16 +765,23 @@ fn analyze_audio(doc: &LoadedPackDoc, zip_path: &Path, temp_dir: &Path, report: 
                     analyze_one_audio(doc, zip_path, temp_dir, ffmpeg_ref, index, asset_ref)
                 })
                 .collect()
-        },
-    );
+        });
 
     for (item, mut issues) in results {
         report.issues.append(&mut issues);
         if let Some(item) = item {
-            add_item_to_summary(&mut report.audio_summary, &item.status, item.auto_fix_available);
+            add_item_to_summary(
+                &mut report.audio_summary,
+                &item.status,
+                item.auto_fix_available,
+            );
             report.audio_items.push(item);
         }
     }
+    emit(&format!(
+        "Analyse audio terminée : {} OK, {} à corriger.",
+        report.audio_summary.ok, report.audio_summary.auto_fixable
+    ));
 }
 
 fn analyze_one_audio(
@@ -564,8 +798,10 @@ fn analyze_one_audio(
     let entry_name = format!("assets/{}", asset_ref.asset_name);
     match read_zip_entry_bytes(zip_path, &entry_name) {
         Ok(bytes) => {
-            let input_path =
-                temp_dir.join(safe_temp_name(&asset_ref.asset_name, &format!("probe{}", index)));
+            let input_path = temp_dir.join(safe_temp_name(
+                &asset_ref.asset_name,
+                &format!("probe{}", index),
+            ));
             if let Err(err) = fs::write(&input_path, bytes) {
                 return (
                     None,
@@ -599,12 +835,22 @@ fn analyze_one_audio(
     }
 }
 
-fn analyze_images(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel) {
+fn analyze_images(
+    doc: &LoadedPackDoc,
+    zip_path: &Path,
+    report: &mut ReportModel,
+    emit: &dyn Fn(&str),
+) {
     let unique_refs = first_refs_by_asset(&doc.image_refs);
     report.image_summary.total = unique_refs.len();
     if unique_refs.is_empty() {
+        emit("Aucune image référencée à analyser.");
         return;
     }
+    emit(&format!(
+        "Analyse images : {} fichier(s)...",
+        unique_refs.len()
+    ));
 
     let results: Vec<(Option<ImageValidationItem>, Vec<PackValidationIssue>)> =
         run_in_analysis_pool(|| {
@@ -617,10 +863,18 @@ fn analyze_images(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
     for (item, mut issues) in results {
         report.issues.append(&mut issues);
         if let Some(item) = item {
-            add_item_to_summary(&mut report.image_summary, &item.status, item.auto_fix_available);
+            add_item_to_summary(
+                &mut report.image_summary,
+                &item.status,
+                item.auto_fix_available,
+            );
             report.image_items.push(item);
         }
     }
+    emit(&format!(
+        "Analyse images terminée : {} OK, {} à corriger.",
+        report.image_summary.ok, report.image_summary.auto_fixable
+    ));
 }
 
 fn analyze_one_image(
@@ -664,13 +918,32 @@ where
         .map(|n| n.get())
         .unwrap_or(2);
     let workers = cores.saturating_sub(1).clamp(1, 8);
-    match rayon::ThreadPoolBuilder::new()
-        .num_threads(workers)
-        .build()
-    {
+    match rayon::ThreadPoolBuilder::new().num_threads(workers).build() {
         Ok(pool) => pool.install(f),
         Err(_) => f(),
     }
+}
+
+/// Pool plus conservateur pour la correction : chaque audio peut lancer des
+/// passes FFmpeg coûteuses. On laisse au moins un cœur au système et on plafonne
+/// à 4 corrections simultanées pour les petits CPU.
+fn run_in_correction_pool<R, F>(f: F) -> R
+where
+    F: FnOnce() -> R + Send,
+    R: Send,
+{
+    let workers = correction_worker_count();
+    match rayon::ThreadPoolBuilder::new().num_threads(workers).build() {
+        Ok(pool) => pool.install(f),
+        Err(_) => f(),
+    }
+}
+
+fn correction_worker_count() -> usize {
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(2);
+    cores.saturating_sub(1).clamp(1, 4)
 }
 
 fn finalize_report(mut report: ReportModel, fatal: bool) -> ReportModel {
@@ -683,7 +956,8 @@ fn finalize_report(mut report: ReportModel, fatal: bool) -> ReportModel {
             PackValidationSeverity::Ok => report.summary.ok += 1,
         }
     }
-    report.summary.ok += report.audio_summary.ok + report.image_summary.ok + report.title_summary.ok;
+    report.summary.ok +=
+        report.audio_summary.ok + report.image_summary.ok + report.title_summary.ok;
     report.corrections_available = report
         .issues
         .iter()
@@ -708,9 +982,21 @@ fn finalize_report(mut report: ReportModel, fatal: bool) -> ReportModel {
     report
 }
 
+fn finalize_report_with_log(report: ReportModel, fatal: bool, emit: &dyn Fn(&str)) -> ReportModel {
+    let report = finalize_report(report, fatal);
+    emit(&format!(
+        "Rapport prêt : {} erreur(s), {} avertissement(s), {} correction(s).",
+        report.summary.errors, report.summary.warnings, report.corrections_available
+    ));
+    report
+}
+
 fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
     ReportModel {
         pack_name: pack_name.to_string(),
+        pack_title: String::new(),
+        pack_description: String::new(),
+        pack_version: 1,
         zip_path: zip_path.to_string(),
         verdict: PackValidationVerdict::Invalid,
         summary: ValidationSummary::default(),
@@ -724,6 +1010,97 @@ fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
         audio_items: Vec::new(),
         image_items: Vec::new(),
         technical_log: Vec::new(),
+    }
+}
+
+fn metadata_patch_has_changes(patch: &PackMetadataPatchModel) -> bool {
+    patch
+        .title
+        .as_ref()
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+        || patch.description.is_some()
+        || patch.version.is_some()
+        || patch.min_age.is_some()
+        || patch.author.is_some()
+        || patch.producer.is_some()
+        || patch.bonus.is_some()
+        || patch.naming_mode.is_some()
+}
+
+fn apply_metadata_patch(story: &mut serde_json::Value, patch: &PackMetadataPatchModel) {
+    let Some(object) = story.as_object_mut() else {
+        return;
+    };
+    if let Some(title) = patch
+        .title
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        object.insert(
+            "title".to_string(),
+            serde_json::Value::String(title.to_string()),
+        );
+    }
+    if let Some(description) = patch.description.as_ref() {
+        object.insert(
+            "description".to_string(),
+            serde_json::Value::String(description.trim().to_string()),
+        );
+    }
+    if let Some(version) = patch.version {
+        object.insert(
+            "version".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(version.max(1))),
+        );
+    }
+
+    let has_community_metadata = patch.min_age.is_some()
+        || patch.author.is_some()
+        || patch.producer.is_some()
+        || patch.bonus.is_some()
+        || patch.naming_mode.is_some();
+    if has_community_metadata {
+        let mut metadata = object
+            .get("storyStudioMetadata")
+            .and_then(|value| value.as_object())
+            .cloned()
+            .unwrap_or_default();
+        if let Some(value) = patch.min_age.as_ref() {
+            metadata.insert(
+                "minAge".to_string(),
+                serde_json::Value::String(value.trim().to_string()),
+            );
+        }
+        if let Some(value) = patch.author.as_ref() {
+            metadata.insert(
+                "author".to_string(),
+                serde_json::Value::String(value.trim().to_string()),
+            );
+        }
+        if let Some(value) = patch.producer.as_ref() {
+            metadata.insert(
+                "producer".to_string(),
+                serde_json::Value::String(value.trim().to_string()),
+            );
+        }
+        if let Some(value) = patch.bonus.as_ref() {
+            metadata.insert(
+                "bonus".to_string(),
+                serde_json::Value::String(value.trim().to_string()),
+            );
+        }
+        if let Some(value) = patch.naming_mode.as_ref() {
+            metadata.insert(
+                "namingMode".to_string(),
+                serde_json::Value::String(value.trim().to_string()),
+            );
+        }
+        object.insert(
+            "storyStudioMetadata".to_string(),
+            serde_json::Value::Object(metadata),
+        );
     }
 }
 
@@ -771,14 +1148,12 @@ fn write_fixed_zip(
         if entry_name == "story.json" {
             continue;
         }
-        let replacement_short = entry_name
-            .strip_prefix("assets/")
-            .and_then(|short| {
-                audio_replacements
-                    .get(short)
-                    .or_else(|| image_replacements.get(short))
-                    .map(|new_name| (short.to_string(), new_name.to_string()))
-            });
+        let replacement_short = entry_name.strip_prefix("assets/").and_then(|short| {
+            audio_replacements
+                .get(short)
+                .or_else(|| image_replacements.get(short))
+                .map(|new_name| (short.to_string(), new_name.to_string()))
+        });
         if let Some((_, new_short)) = replacement_short {
             if let Some(bytes) = fixed_assets.get(&new_short) {
                 let new_entry_name = format!("assets/{}", new_short);
@@ -825,24 +1200,111 @@ fn write_fixed_zip(
     Ok(())
 }
 
-fn unique_fixed_zip_path(source: &Path) -> PathBuf {
+fn unique_fixed_zip_path(
+    source: &Path,
+    metadata_patch: Option<&PackMetadataPatchModel>,
+) -> PathBuf {
     let parent = source.parent().unwrap_or_else(|| Path::new("."));
-    let stem = source
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or("pack");
-    let first = parent.join(format!("{} - corrigé.zip", stem));
+    let stem = metadata_patch
+        .and_then(convention_zip_stem)
+        .or_else(|| {
+            source
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .filter(|value| !value.trim().is_empty())
+                .map(|value| format!("{} - corrigé", value))
+        })
+        .unwrap_or_else(|| "pack - corrigé".to_string());
+    let first = parent.join(format!("{}.zip", stem));
     if !first.exists() {
         return first;
     }
     for index in 2..1000 {
-        let candidate = parent.join(format!("{} - corrigé {}.zip", stem, index));
+        let candidate = parent.join(format!("{} {}.zip", stem, index));
         if !candidate.exists() {
             return candidate;
         }
     }
-    parent.join(format!("{} - corrigé {}.zip", stem, now_millis()))
+    parent.join(format!("{} {}.zip", stem, now_millis()))
+}
+
+fn convention_zip_stem(patch: &PackMetadataPatchModel) -> Option<String> {
+    let title = filename_token(patch.title.as_deref()?);
+    if title.is_empty() {
+        return None;
+    }
+    let min_age = patch
+        .min_age
+        .as_deref()
+        .map(|value| {
+            value
+                .chars()
+                .filter(|ch| ch.is_ascii_digit())
+                .collect::<String>()
+        })
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "3".to_string());
+    let author = patch
+        .author
+        .as_deref()
+        .map(filename_token)
+        .unwrap_or_default();
+    let producer = patch
+        .producer
+        .as_deref()
+        .map(filename_token)
+        .unwrap_or_default();
+    let bonus = patch
+        .bonus
+        .as_deref()
+        .map(filename_token)
+        .unwrap_or_default();
+    let version = patch.version.unwrap_or(1).max(1);
+    let raw_author = patch.author.as_deref().unwrap_or("").trim();
+    let raw_producer = patch.producer.as_deref().unwrap_or("").trim();
+    let bonus_part = if bonus.is_empty() {
+        String::new()
+    } else {
+        format!("_({})", bonus)
+    };
+    let title_part = if !producer.is_empty() && (author.is_empty() || raw_producer != raw_author) {
+        format!("{}-{}{}", producer, title, bonus_part)
+    } else {
+        format!("{}{}", title, bonus_part)
+    };
+    let version_suffix = if version > 1 {
+        format!("_V{}", version)
+    } else {
+        String::new()
+    };
+    let stem = if author.is_empty() {
+        format!("{}+]{}{}", min_age, title_part, version_suffix)
+    } else {
+        format!(
+            "{}+]{}[by_{}{}",
+            min_age, title_part, author, version_suffix
+        )
+    };
+    Some(stem)
+}
+
+fn filename_token(value: &str) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join("_")
+        .chars()
+        .map(|ch| {
+            if ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+            {
+                '_'
+            } else {
+                ch
+            }
+        })
+        .collect::<String>()
+        .trim_matches('_')
+        .to_string()
 }
 
 fn unique_asset_name(original: &str, desired: &str, used: &mut HashSet<String>) -> String {
@@ -860,7 +1322,10 @@ fn unique_asset_name(original: &str, desired: &str, used: &mut HashSet<String>) 
         .and_then(|value| value.to_str())
         .filter(|value| !value.is_empty())
         .unwrap_or("asset");
-    let ext = path.extension().and_then(|value| value.to_str()).unwrap_or("bin");
+    let ext = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("bin");
     for index in 2..1000 {
         let file_name = format!("{}-corrige-{}.{}", stem, index, ext);
         let candidate = parent
@@ -947,9 +1412,9 @@ fn pack_name_from_path(path: &Path) -> String {
 }
 
 fn has_forbidden_filename_char(value: &str) -> bool {
-    value
-        .chars()
-        .any(|ch| ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'))
+    value.chars().any(|ch| {
+        ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+    })
 }
 
 fn parse_community_convention_name(raw: &str) -> bool {

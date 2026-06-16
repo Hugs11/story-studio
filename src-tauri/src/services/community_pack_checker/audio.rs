@@ -7,7 +7,9 @@ use super::models::{
     issue, round_secs, AudioValidationItem, PackValidationIssue, PackValidationSeverity,
     AUDIO_MAX_EDGE_SILENCE_SECONDS, AUDIO_MAX_RECOMMENDED_LUFS, AUDIO_MIN_EDGE_SILENCE_SECONDS,
     AUDIO_MIN_RECOMMENDED_LUFS, AUDIO_TARGET_EDGE_SILENCE_SECONDS, AUDIO_TARGET_INTEGRATED_LUFS,
-    AUDIO_TARGET_LRA, AUDIO_TARGET_TRUE_PEAK_DB,
+    AUDIO_TARGET_LRA, AUDIO_TARGET_TRUE_PEAK_DB, EDGE_MIN_ONSET_MS, EDGE_RMS_ABS_CEIL_DB,
+    EDGE_RMS_ABS_FLOOR_DB, EDGE_RMS_CONTENT_PERCENTILE, EDGE_RMS_FLOOR_PERCENTILE,
+    EDGE_RMS_GAP_FRACTION, EDGE_RMS_MARGIN_DB, EDGE_RMS_WINDOW_SAMPLES, EDGE_TRIM_GUARD_SECONDS,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -18,6 +20,7 @@ struct AudioProbe {
     channels: Option<String>,
     leading_silence_secs: Option<f64>,
     trailing_silence_secs: Option<f64>,
+    audio_is_silent: bool,
     integrated_lufs: Option<f64>,
     true_peak_db: Option<f64>,
 }
@@ -147,22 +150,36 @@ pub(crate) fn analyze_audio_file(
         manual_block = true;
     }
 
-    add_silence_issue(
-        &mut issues,
-        &mut status,
-        &mut fix_parts,
-        target,
-        "début",
-        probe.leading_silence_secs,
-    );
-    add_silence_issue(
-        &mut issues,
-        &mut status,
-        &mut fix_parts,
-        target,
-        "fin",
-        probe.trailing_silence_secs,
-    );
+    if probe.audio_is_silent {
+        push_audio_issue(
+            &mut issues,
+            PackValidationSeverity::Error,
+            target,
+            "Cet audio ne contient aucun son audible.",
+            Some("Aucun contenu détecté au-dessus du plancher de bruit.".to_string()),
+            false,
+            None,
+        );
+        status = PackValidationSeverity::Error;
+        manual_block = true;
+    } else {
+        add_silence_issue(
+            &mut issues,
+            &mut status,
+            &mut fix_parts,
+            target,
+            "début",
+            probe.leading_silence_secs,
+        );
+        add_silence_issue(
+            &mut issues,
+            &mut status,
+            &mut fix_parts,
+            target,
+            "fin",
+            probe.trailing_silence_secs,
+        );
+    }
 
     match probe.integrated_lufs {
         Some(lufs) if lufs < -45.0 => {
@@ -178,28 +195,47 @@ pub(crate) fn analyze_audio_file(
             status = PackValidationSeverity::Error;
             manual_block = true;
         }
-        Some(lufs) if !(AUDIO_MIN_RECOMMENDED_LUFS..=AUDIO_MAX_RECOMMENDED_LUFS).contains(&lufs) => {
+        Some(lufs)
+            if !(AUDIO_MIN_RECOMMENDED_LUFS..=AUDIO_MAX_RECOMMENDED_LUFS).contains(&lufs) =>
+        {
             let direction = if lufs < AUDIO_MIN_RECOMMENDED_LUFS {
                 "trop faible"
             } else {
                 "trop fort"
+            };
+            let can_normalize = probe
+                .true_peak_db
+                .map(|peak| has_loudness_gain_headroom(lufs, peak))
+                .unwrap_or(true);
+            let details = if can_normalize {
+                format!(
+                    "Volume moyen mesuré : {:.1} LUFS. Recommandé : {:.0} à {:.0} LUFS.",
+                    lufs, AUDIO_MIN_RECOMMENDED_LUFS, AUDIO_MAX_RECOMMENDED_LUFS
+                )
+            } else {
+                format!(
+                    "Volume moyen mesuré : {:.1} LUFS, crête vraie : {:.1} dBTP. Recommandé : {:.0} à {:.0} LUFS. La crête laisse trop peu de marge pour une normalisation automatique transparente.",
+                    lufs,
+                    probe.true_peak_db.unwrap_or_default(),
+                    AUDIO_MIN_RECOMMENDED_LUFS,
+                    AUDIO_MAX_RECOMMENDED_LUFS
+                )
             };
             push_audio_issue(
                 &mut issues,
                 PackValidationSeverity::Warning,
                 target,
                 format!("Le volume moyen de cet audio est {}.", direction),
-                Some(format!(
-                    "Volume moyen mesuré : {:.1} LUFS. Recommandé : -18 à -10 LUFS.",
-                    lufs
-                )),
-                true,
-                Some("Normaliser le volume.".to_string()),
+                Some(details),
+                can_normalize,
+                can_normalize.then(|| "Normaliser le volume.".to_string()),
             );
             if status != PackValidationSeverity::Error {
                 status = PackValidationSeverity::Warning;
             }
-            fix_parts.push("normaliser le volume");
+            if can_normalize {
+                fix_parts.push("normaliser le volume");
+            }
         }
         // Volume mesuré et dans la plage recommandée : rien à signaler.
         Some(_) => {}
@@ -248,8 +284,12 @@ pub(crate) fn analyze_audio_file(
             channels: probe.channels,
             leading_silence_secs: probe.leading_silence_secs.map(round_secs),
             trailing_silence_secs: probe.trailing_silence_secs.map(round_secs),
-            integrated_lufs: probe.integrated_lufs.map(|value| (value * 10.0).round() / 10.0),
-            true_peak_db: probe.true_peak_db.map(|value| (value * 10.0).round() / 10.0),
+            integrated_lufs: probe
+                .integrated_lufs
+                .map(|value| (value * 10.0).round() / 10.0),
+            true_peak_db: probe
+                .true_peak_db
+                .map(|value| (value * 10.0).round() / 10.0),
         },
         issues,
     )
@@ -269,36 +309,56 @@ pub(crate) fn fix_audio_file(
     // la normalisation. C'est aligné sur la génération native (loudnorm puis
     // adelay/apad). Un bord non mesurable est laissé intact.
     let rebuild_leading = item.leading_silence_secs.is_some();
-    let rebuild_trailing =
-        item.trailing_silence_secs.is_some() && item.duration_secs.is_some();
+    let rebuild_trailing = item.trailing_silence_secs.is_some();
 
+    // Trim conservateur : on coupe un poil moins que la mesure réelle (la valeur
+    // affichée à l'utilisateur reste, elle, la mesure exacte) pour ne jamais
+    // entamer l'attaque du contenu. Le silence pur réinjecté ensuite garantit la
+    // convergence de la ré-analyse.
     let trim_start = if rebuild_leading {
-        item.leading_silence_secs.unwrap_or(0.0).max(0.0)
+        (item.leading_silence_secs.unwrap_or(0.0) - EDGE_TRIM_GUARD_SECONDS).max(0.0)
     } else {
         0.0
     };
-    let trim_end = if rebuild_trailing {
-        let trailing = item.trailing_silence_secs.unwrap_or(0.0).max(0.0);
-        let duration = item.duration_secs.unwrap_or(0.0);
-        Some((duration - trailing).max(0.0))
+    let trim_trailing = if rebuild_trailing {
+        (item.trailing_silence_secs.unwrap_or(0.0) - EDGE_TRIM_GUARD_SECONDS).max(0.0)
     } else {
-        None
+        0.0
     };
 
     let mut pre_filters = Vec::new();
-    if trim_start > 0.001 || trim_end.is_some() {
-        let mut trim = format!("atrim=start={}", format_seconds(trim_start));
-        if let Some(end) = trim_end {
-            if end <= trim_start + 0.05 {
+    if let Some(duration) = item.duration_secs {
+        if trim_start + trim_trailing >= duration - 0.05 {
+            return Err(format!(
+                "Audio trop court après ajustement des silences : {}",
+                item.file_path
+            ));
+        }
+    }
+    if trim_start > 0.001 {
+        pre_filters.push(format!("atrim=start={}", format_seconds(trim_start)));
+        pre_filters.push("asetpts=PTS-STARTPTS".to_string());
+    }
+    if trim_trailing > 0.001 {
+        pre_filters.push("areverse".to_string());
+        pre_filters.push(format!("atrim=start={}", format_seconds(trim_trailing)));
+        pre_filters.push("asetpts=PTS-STARTPTS".to_string());
+        pre_filters.push("areverse".to_string());
+        pre_filters.push("asetpts=PTS-STARTPTS".to_string());
+    }
+
+    if pre_filters
+        .iter()
+        .any(|filter| filter.starts_with("atrim="))
+    {
+        if let Some(duration) = item.duration_secs {
+            if duration <= 0.05 {
                 return Err(format!(
                     "Audio trop court après ajustement des silences : {}",
                     item.file_path
                 ));
             }
-            trim.push_str(&format!(":end={}", format_seconds(end)));
         }
-        pre_filters.push(trim);
-        pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
 
     pre_filters.push("aformat=channel_layouts=mono".to_string());
@@ -384,7 +444,14 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
     probe.sample_rate = sample_rate;
     probe.channels = channels;
 
-    if let Ok(silence) = run_ffmpeg(
+    // Une seule passe avant : enveloppe RMS par fenêtre (mono mixdown). On en
+    // déduit les deux bords sans `areverse` ni dépendance à la durée déclarée du
+    // MP3 (la fin est calculée depuis l'horodatage mesuré de la dernière fenêtre).
+    let envelope_filter = format!(
+        "aformat=channel_layouts=mono,asetnsamples=n={}:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level",
+        EDGE_RMS_WINDOW_SAMPLES
+    );
+    if let Ok(stderr) = run_ffmpeg(
         ffmpeg,
         input,
         &[
@@ -392,16 +459,25 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
             "-nostats",
             "-i",
             "__INPUT__",
+            "-map",
+            "0:a:0",
             "-af",
-            "silencedetect=noise=-50dB:d=0.05",
+            envelope_filter.as_str(),
             "-f",
             "null",
             "-",
         ],
     ) {
-        let (leading, trailing) = parse_silence_edges(&silence, probe.duration_secs);
-        probe.leading_silence_secs = leading;
-        probe.trailing_silence_secs = trailing;
+        match edges_from_envelope(&parse_rms_envelope(&stderr)) {
+            EdgeMeasure::Measured { leading, trailing } => {
+                probe.leading_silence_secs = Some(leading);
+                probe.trailing_silence_secs = Some(trailing);
+            }
+            EdgeMeasure::AllSilence => {
+                probe.audio_is_silent = true;
+            }
+            EdgeMeasure::Unreadable => {}
+        }
     }
 
     if let Ok(loudness) = run_ffmpeg(
@@ -490,44 +566,156 @@ fn parse_audio_stream(stderr: &str) -> (Option<String>, Option<u32>, Option<Stri
     (codec, sample_rate, channels)
 }
 
-fn parse_silence_edges(stderr: &str, duration: Option<f64>) -> (Option<f64>, Option<f64>) {
-    let mut starts: Vec<f64> = Vec::new();
-    let mut events: Vec<(f64, Option<f64>)> = Vec::new();
+/// Résultat de la mesure des silences de bord à partir de l'enveloppe RMS.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum EdgeMeasure {
+    /// Bords mesurés (en secondes). `0.0` = pas de silence de ce côté.
+    Measured { leading: f64, trailing: f64 },
+    /// Aucune fenêtre de contenu soutenue : fichier silencieux / sans son audible.
+    AllSilence,
+    /// Enveloppe vide : impossible à mesurer.
+    Unreadable,
+}
+
+/// Lit les paires `(temps, RMS_dB)` produites par
+/// `astats=metadata=1:reset=1,ametadata=print`. `pts_time:` et `RMS_level=`
+/// sont sur deux lignes successives. Les valeurs non finies (`-inf`, `nan`,
+/// silence numérique pur) sont conservées comme `-inf` (donc « sous tout seuil »).
+pub(super) fn parse_rms_envelope(stderr: &str) -> Vec<(f64, f64)> {
+    let mut out: Vec<(f64, f64)> = Vec::new();
+    let mut pending_time: Option<f64> = None;
     for line in stderr.lines() {
-        if let Some(value) = parse_after(line, "silence_start:") {
-            starts.push(value);
-            events.push((value, None));
-        }
-        if let Some(end) = parse_after(line, "silence_end:") {
-            if let Some(last) = events.last_mut() {
-                if last.1.is_none() {
-                    last.1 = Some(end);
-                }
+        if let Some(pos) = line.find("pts_time:") {
+            let token = line[pos + "pts_time:".len()..]
+                .split_whitespace()
+                .next()
+                .unwrap_or("");
+            if let Ok(time) = token.trim().parse::<f64>() {
+                pending_time = Some(time);
+            }
+        } else if let Some(pos) = line.find("RMS_level=") {
+            let token = line[pos + "RMS_level=".len()..]
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .trim();
+            // f64::parse gère « -inf » / « nan » nativement.
+            let rms = token.parse::<f64>().unwrap_or(f64::NEG_INFINITY);
+            let rms = if rms.is_nan() {
+                f64::NEG_INFINITY
+            } else {
+                rms
+            };
+            if let Some(time) = pending_time.take() {
+                out.push((time, rms));
             }
         }
     }
+    out
+}
 
-    let leading = if events.is_empty() && duration.is_some() {
-        Some(0.0)
+/// Calcule les silences de bord depuis l'enveloppe RMS. Seuil auto-calibré sur
+/// le plancher du fichier, plafonné à une fraction de l'écart plancher→contenu
+/// (jamais de rognage d'une intro douce), et exigence d'« attaque soutenue »
+/// (≥ `EDGE_MIN_ONSET_MS`) pour ignorer un clic isolé en bord.
+pub(super) fn edges_from_envelope(env: &[(f64, f64)]) -> EdgeMeasure {
+    if env.is_empty() {
+        return EdgeMeasure::Unreadable;
+    }
+    if env.iter().all(|(_, rms)| !rms.is_finite()) {
+        return EdgeMeasure::AllSilence; // que du silence numérique
+    }
+
+    let win = median_window_len(env);
+    let env_end = env.last().map(|(time, _)| time + win).unwrap_or(0.0);
+
+    let mut sorted: Vec<f64> = env.iter().map(|(_, rms)| *rms).collect();
+    sorted.sort_by(f64::total_cmp);
+    let floor = percentile_sorted(&sorted, EDGE_RMS_FLOOR_PERCENTILE);
+    let content = percentile_sorted(&sorted, EDGE_RMS_CONTENT_PERCENTILE);
+    let gap = content - floor;
+    let margin = if gap.is_finite() {
+        EDGE_RMS_MARGIN_DB.min(gap * EDGE_RMS_GAP_FRACTION)
     } else {
-        events.first().map(|(start, end)| {
-            if *start <= 0.05 {
-                end.or(duration).unwrap_or(*start) - *start
-            } else {
-                0.0
+        EDGE_RMS_MARGIN_DB
+    };
+    let thresh = (floor + margin).clamp(EDGE_RMS_ABS_FLOOR_DB, EDGE_RMS_ABS_CEIL_DB);
+
+    let need = (((EDGE_MIN_ONSET_MS / 1000.0) / win).ceil()).max(2.0) as usize;
+
+    match (
+        first_sustained_above(env, thresh, need),
+        last_sustained_above(env, thresh, need),
+    ) {
+        (Some(first), Some(last)) => EdgeMeasure::Measured {
+            leading: env[first].0,
+            trailing: (env_end - (env[last].0 + win)).max(0.0),
+        },
+        _ => EdgeMeasure::AllSilence,
+    }
+}
+
+fn median_window_len(env: &[(f64, f64)]) -> f64 {
+    let mut gaps: Vec<f64> = env
+        .windows(2)
+        .map(|pair| pair[1].0 - pair[0].0)
+        .filter(|gap| *gap > 0.0)
+        .collect();
+    if gaps.is_empty() {
+        return EDGE_RMS_WINDOW_SAMPLES as f64 / 44_100.0;
+    }
+    gaps.sort_by(f64::total_cmp);
+    gaps[gaps.len() / 2]
+}
+
+fn percentile_sorted(sorted: &[f64], percentile: f64) -> f64 {
+    if sorted.is_empty() {
+        return f64::NEG_INFINITY;
+    }
+    let idx = (((sorted.len() - 1) as f64) * percentile).round() as usize;
+    sorted[idx.min(sorted.len() - 1)]
+}
+
+/// Indice de la première fenêtre d'un palier de `need` fenêtres consécutives
+/// au-dessus du seuil (= début du contenu utile).
+fn first_sustained_above(env: &[(f64, f64)], thresh: f64, need: usize) -> Option<usize> {
+    if env.len() < need {
+        return (!env.is_empty() && env.iter().all(|(_, rms)| *rms > thresh)).then_some(0);
+    }
+    let mut run = 0usize;
+    for (idx, (_, rms)) in env.iter().enumerate() {
+        if *rms > thresh {
+            run += 1;
+            if run >= need {
+                return Some(idx + 1 - need);
             }
-        })
-    };
-    let trailing = match (events.last(), duration) {
-        (None, Some(_)) => Some(0.0),
-        (Some((start, Some(end))), Some(duration)) if *end >= duration - 0.08 => {
-            Some((duration - *start).max(0.0))
+        } else {
+            run = 0;
         }
-        (Some((start, None)), Some(duration)) => Some((duration - *start).max(0.0)),
-        (Some(_), Some(_)) => Some(0.0),
-        _ => None,
-    };
-    (leading, trailing)
+    }
+    None
+}
+
+/// Indice de la dernière fenêtre du dernier palier de `need` fenêtres
+/// consécutives au-dessus du seuil (= fin du contenu utile). Un clic isolé en
+/// toute fin n'est pas « soutenu » et n'écrase donc pas le silence de fin.
+fn last_sustained_above(env: &[(f64, f64)], thresh: f64, need: usize) -> Option<usize> {
+    if env.len() < need {
+        return (!env.is_empty() && env.iter().all(|(_, rms)| *rms > thresh))
+            .then_some(env.len() - 1);
+    }
+    let mut run = 0usize;
+    for idx in (0..env.len()).rev() {
+        if env[idx].1 > thresh {
+            run += 1;
+            if run >= need {
+                return Some(idx + need - 1);
+            }
+        } else {
+            run = 0;
+        }
+    }
+    None
 }
 
 fn parse_loudnorm(stderr: &str) -> (Option<f64>, Option<f64>) {
@@ -552,13 +740,13 @@ fn parse_loudnorm(stderr: &str) -> (Option<f64>, Option<f64>) {
     (input_i, input_tp)
 }
 
-fn parse_after(line: &str, marker: &str) -> Option<f64> {
-    let start = line.find(marker)? + marker.len();
-    line[start..]
-        .trim()
-        .split([' ', '|'])
-        .next()
-        .and_then(parse_finite_float)
+fn has_loudness_gain_headroom(measured_i: f64, measured_tp: f64) -> bool {
+    let needed_gain = AUDIO_TARGET_INTEGRATED_LUFS - measured_i;
+    if needed_gain <= 0.0 {
+        return true;
+    }
+    let peak_headroom = AUDIO_TARGET_TRUE_PEAK_DB - measured_tp;
+    needed_gain <= peak_headroom + 0.25
 }
 
 fn parse_finite_float(raw: &str) -> Option<f64> {

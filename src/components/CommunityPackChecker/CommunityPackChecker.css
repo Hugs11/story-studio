@@ -160,7 +160,7 @@
 .checker-modal-window-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex: 0 0 auto;
 }
 
@@ -206,6 +206,17 @@
   cursor: pointer;
 }
 
+.checker-modal-close .checker-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.checker-modal-maximize .checker-icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.35;
+}
+
 .checker-modal-close:hover {
   border-color: var(--border);
   background: var(--bg2);
@@ -220,6 +231,7 @@
   min-height: 0;
   padding: 16px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .checker-drop--modal {
@@ -241,7 +253,6 @@
   flex: 0 0 auto;
 }
 
-.checker-loading,
 .checker-fixed {
   display: flex;
   align-items: center;
@@ -254,12 +265,58 @@
   font-size: 12px;
 }
 
-.checker-loading .checker-icon {
-  animation: checker-spin 0.9s linear infinite;
-}
-
 @keyframes checker-spin {
   to { transform: rotate(360deg); }
+}
+
+.checker-process-log {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 10px;
+  flex: 0 0 auto;
+  min-height: 78px;
+  max-height: 132px;
+  overflow: hidden;
+  padding: 9px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+}
+
+.checker-process-log-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.checker-process-log.is-active .checker-process-log-head .checker-icon {
+  animation: checker-spin 0.9s linear infinite;
+  color: var(--accent-2-text);
+}
+
+.checker-process-log.is-idle .checker-process-log-head .checker-icon {
+  color: var(--success-text);
+}
+
+.checker-process-log-lines {
+  min-width: 0;
+  max-height: 112px;
+  overflow: auto;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.55;
+  scrollbar-gutter: stable;
+}
+
+.checker-process-log-lines div {
+  min-height: 1.55em;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .checker-fixed {
@@ -279,6 +336,7 @@
 .checker-report {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   min-width: 0;
   overflow: visible;
@@ -291,6 +349,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 0 0 auto;
   min-width: 0;
   padding: 16px 18px;
   border-bottom: 0.5px solid var(--border);
@@ -369,7 +428,8 @@
 
 .checker-summary-tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 0 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   padding: 14px 18px 0;
 }
@@ -476,6 +536,7 @@
 
 .checker-groups {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 10px;
   padding: 14px 18px;
@@ -626,9 +687,10 @@
 }
 
 .checker-mini-list {
-  max-height: 240px;
+  max-height: clamp(260px, 42vh, 520px);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .checker-mini-file {
@@ -815,8 +877,7 @@
 }
 
 .checker-report-footer {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   z-index: 4;
   justify-content: flex-end;
   min-height: 66px;
@@ -951,6 +1012,9 @@
 }
 
 .checker-log {
+  flex: 0 0 auto;
+  max-height: 260px;
+  overflow: auto;
   border: 0.5px solid var(--border);
   border-radius: var(--border-radius-md);
   background: var(--bg2);
@@ -994,6 +1058,10 @@
   .checker-report-footer,
   .checker-fix-actions {
     justify-content: flex-start;
+  }
+
+  .checker-process-log {
+    grid-template-columns: 1fr;
   }
 
   .checker-modal-backdrop {

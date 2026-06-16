@@ -25,8 +25,8 @@ pub(crate) struct LoadedPackDoc {
 }
 
 pub(crate) fn read_pack_doc(zip_path: &Path) -> Result<LoadedPackDoc, String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
+    let file =
+        fs::File::open(zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| format!("Archive ZIP invalide : {}", e))?;
     ensure_entry_count(archive.len(), zip_path)?;
@@ -64,8 +64,8 @@ pub(crate) fn read_pack_doc(zip_path: &Path) -> Result<LoadedPackDoc, String> {
 }
 
 pub(crate) fn read_zip_entry_bytes(zip_path: &Path, entry_name: &str) -> Result<Vec<u8>, String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
+    let file =
+        fs::File::open(zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| format!("Archive ZIP invalide : {}", e))?;
     ensure_entry_count(archive.len(), zip_path)?;
@@ -85,7 +85,10 @@ pub(crate) fn update_story_asset_refs(
     audio_map: &HashMap<String, String>,
     image_map: &HashMap<String, String>,
 ) {
-    let Some(stages) = story.get_mut("stageNodes").and_then(|value| value.as_array_mut()) else {
+    let Some(stages) = story
+        .get_mut("stageNodes")
+        .and_then(|value| value.as_array_mut())
+    else {
         return;
     };
     for stage in stages {
