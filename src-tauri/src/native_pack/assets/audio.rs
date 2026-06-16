@@ -11,7 +11,7 @@ use crate::support::ffmpeg::{
 };
 
 const MP3_HEADER_SCAN_BYTES: usize = 1024 * 1024;
-const DEFAULT_AUDIO_EDGE_SILENCE_SECONDS: f64 = 1.0;
+const DEFAULT_AUDIO_EDGE_SILENCE_SECONDS: f64 = 0.5;
 const LOUDNORM_TARGET_I: f64 = -12.0;
 const LOUDNORM_TARGET_TP: f64 = -1.5;
 const LOUDNORM_TARGET_LRA: f64 = 11.0;

@@ -496,7 +496,7 @@ fn collect_native_graph_requests(
                 &native_graph_asset_role(stage_id, "audio"),
                 path,
                 true,
-                1.0,
+                0.5,
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -650,6 +650,6 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Zip,
         skip_silence: false,
-        silence_duration_sec: 1.0,
+        silence_duration_sec: 0.5,
     }
 }

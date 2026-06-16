@@ -126,7 +126,7 @@ fn builds_legacy_ffmpeg_compatible_audio_filters() {
     );
     assert_eq!(
         audio_filters(&with_silence, false),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=1000,apad=pad_dur=1"
+        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=500,apad=pad_dur=0.5"
     );
     assert_eq!(
         audio_filters(&with_silence, true),
@@ -145,7 +145,7 @@ fn builds_audio_filters_with_configured_silence_duration() {
     };
 
     assert_eq!(
-        audio_filters_with_duration(&with_silence, false, 0.5),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=500,apad=pad_dur=0.5"
+        audio_filters_with_duration(&with_silence, false, 1.0),
+        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=1000,apad=pad_dur=1"
     );
 }
