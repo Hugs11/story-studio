@@ -1,54 +1,31 @@
 use sha1::{Digest, Sha1};
-use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use super::super::{sanitize_stage_label, CanonicalOptions};
+use crate::domain::project::SilenceMode;
 use crate::services::project_files::validate_existing_file_path;
-use crate::support::ffmpeg::{
-    apply_no_window, file_ext, loudnorm_filter, measure_loudnorm, now_millis, LoudnormStats,
+use crate::support::audio_norm::{
+    build_edge_silence_filters, build_loudness_filters, measure_edge_silence,
+    measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, EdgeSilenceFilters, LoudnessAction,
+    EDGE_SILENCE_SEC,
 };
+use crate::support::ffmpeg::{apply_no_window, now_millis};
 
-const MP3_HEADER_SCAN_BYTES: usize = 1024 * 1024;
-const DEFAULT_AUDIO_EDGE_SILENCE_SECONDS: f64 = 0.5;
-const LOUDNORM_TARGET_I: f64 = -12.0;
-const LOUDNORM_TARGET_TP: f64 = -1.5;
-const LOUDNORM_TARGET_LRA: f64 = 11.0;
+struct GenerationEdgePlan {
+    measure_pre_filters: Vec<String>,
+    output_filters: Option<EdgeSilenceFilters>,
+}
 
 pub(crate) fn audio_needs_processing(
-    source_path: &str,
-    options: &CanonicalOptions,
-    skip_silence: bool,
+    _source_path: &str,
+    _options: &CanonicalOptions,
+    _skip_silence: bool,
 ) -> bool {
-    let ext = file_ext(source_path).to_ascii_lowercase();
-    if options.add_silence && !skip_silence {
-        return true;
-    }
-    if ext == "webm" {
-        return true;
-    }
-    if !options.convert_format {
-        return false;
-    }
-    if ext != "mp3" {
-        return true;
-    }
-
-    !mp3_file_is_native_compatible(source_path).unwrap_or(false)
+    true
 }
 
-fn mp3_file_is_native_compatible(source_path: &str) -> Result<bool, String> {
-    let mut file = fs::File::open(source_path)
-        .map_err(|e| format!("Lecture header MP3 impossible pour {} : {}", source_path, e))?;
-    let mut bytes = Vec::with_capacity(MP3_HEADER_SCAN_BYTES);
-    Read::by_ref(&mut file)
-        .take(MP3_HEADER_SCAN_BYTES as u64)
-        .read_to_end(&mut bytes)
-        .map_err(|e| format!("Lecture header MP3 impossible pour {} : {}", source_path, e))?;
-    Ok(mp3_header_is_native_compatible(&bytes))
-}
-
+#[cfg(test)]
 pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
     let Some(offset) = find_mpeg_sync(bytes) else {
         return false;
@@ -65,6 +42,7 @@ pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
     mpeg_version == 3 && sample_rate_index == 0 && channel_mode == 3
 }
 
+#[cfg(test)]
 pub(crate) fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
     let start = if bytes.starts_with(b"ID3") && bytes.len() >= 10 {
         let size = ((bytes[6] as usize) << 21)
@@ -97,18 +75,34 @@ pub(crate) fn process_audio_asset(
     let source = validate_existing_file_path(source_path, role)?;
     let output_name = processed_audio_output_name(role);
     let output = processed_audio_dir.join(output_name);
-    // Loudnorm deux passes : on mesure d'abord (sur le contenu passé en mono),
-    // puis on normalise en mode linéaire pour viser précisément I=-12 sans
-    // compression dynamique. En cas d'échec de mesure, repli une passe.
-    let stats = measure_loudnorm(
+    let edge_plan = edge_plan_for_generation(
         ffmpeg,
         &source,
-        &["aformat=channel_layouts=mono".to_string()],
-        LOUDNORM_TARGET_I,
-        LOUDNORM_TARGET_TP,
-        LOUDNORM_TARGET_LRA,
+        options,
+        silence_duration_sec,
+        skip_silence,
+        role,
+    )?;
+    let mut measure_filters = edge_plan.measure_pre_filters.clone();
+    measure_filters.push("aformat=channel_layouts=mono".to_string());
+
+    let measure = measure_loudness_ebur128(ffmpeg, &source, &measure_filters)
+        .map_err(|e| format!("Mesure audio native échouée pour {} : {}", role, e))?;
+    let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
+    if matches!(action, LoudnessAction::Uncorrectable { .. }) {
+        return Err(format!(
+            "Preparation audio native impossible pour {} : {}",
+            role,
+            loudness_action_reason(&action)
+        ));
+    }
+    let filters = audio_filter_chain(
+        options,
+        skip_silence,
+        silence_duration_sec,
+        &action,
+        edge_plan.output_filters.as_ref(),
     );
-    let filters = audio_filters_two_pass(options, skip_silence, silence_duration_sec, stats);
 
     let mut cmd = Command::new(ffmpeg);
     cmd.args([
@@ -156,7 +150,7 @@ pub(crate) fn process_audio_asset(
 
 #[cfg(test)]
 pub(crate) fn audio_filters(options: &CanonicalOptions, skip_silence: bool) -> String {
-    audio_filters_with_duration(options, skip_silence, DEFAULT_AUDIO_EDGE_SILENCE_SECONDS)
+    audio_filters_with_duration(options, skip_silence, EDGE_SILENCE_SEC)
 }
 
 #[cfg(test)]
@@ -165,49 +159,125 @@ pub(crate) fn audio_filters_with_duration(
     skip_silence: bool,
     silence_duration_sec: f64,
 ) -> String {
-    audio_filters_two_pass(options, skip_silence, silence_duration_sec, None)
+    audio_filters_with_action(
+        options,
+        skip_silence,
+        silence_duration_sec,
+        &LoudnessAction::None,
+    )
 }
 
-/// Construit la chaîne de filtres. Si `stats` est fourni, loudnorm passe en
-/// mode linéaire (seconde passe) ; sinon une passe dynamique (repli ou tests).
-pub(crate) fn audio_filters_two_pass(
+#[cfg(test)]
+pub(crate) fn audio_filters_with_action(
     options: &CanonicalOptions,
     skip_silence: bool,
     silence_duration_sec: f64,
-    stats: Option<LoudnormStats>,
+    action: &LoudnessAction,
 ) -> String {
-    let mut filters = vec![
-        "aformat=channel_layouts=mono".to_string(),
-        loudnorm_filter(
-            stats,
-            LOUDNORM_TARGET_I,
-            LOUDNORM_TARGET_TP,
-            LOUDNORM_TARGET_LRA,
-        ),
-    ];
-    if options.add_silence && !skip_silence {
-        // ffmpeg 4.2 (fourni avec SPG) ne supporte pas `adelay=...:all=1`.
-        // On force donc d'abord un vrai mono, on normalise le contenu utile,
-        // puis on applique le silence en dernier pour qu'il reste numeriquement
-        // silencieux et ne perturbe pas la mesure loudnorm.
-        let silence_duration_sec = normalized_silence_duration_sec(silence_duration_sec);
-        filters.push(format!(
-            "adelay={}",
-            (silence_duration_sec * 1000.0).round()
-        ));
-        filters.push(format!(
-            "apad=pad_dur={}",
-            format_ffmpeg_seconds(silence_duration_sec)
-        ));
+    audio_filter_chain(options, skip_silence, silence_duration_sec, action, None)
+}
+
+/// Construit la chaîne de filtres audio natifs : mono, correction de niveau
+/// planifiée par `audio_norm`, puis silence final si l'option le demande.
+fn audio_filter_chain(
+    options: &CanonicalOptions,
+    skip_silence: bool,
+    silence_duration_sec: f64,
+    action: &LoudnessAction,
+    edge_filters: Option<&EdgeSilenceFilters>,
+) -> String {
+    let mut filters = Vec::new();
+    if matches!(options.silence_mode, SilenceMode::Normalize) && !skip_silence {
+        if let Some(edge_filters) = edge_filters {
+            filters.extend(edge_filters.pre_filters.clone());
+        }
+    }
+    filters.push("aformat=channel_layouts=mono".to_string());
+    filters.extend(build_loudness_filters(action));
+    match options.silence_mode {
+        SilenceMode::Off => {}
+        SilenceMode::Add if !skip_silence => {
+            let silence_duration_sec = normalized_silence_duration_sec(silence_duration_sec);
+            filters.push(format!(
+                "adelay={}",
+                (silence_duration_sec * 1000.0).round()
+            ));
+            filters.push(format!(
+                "apad=pad_dur={}",
+                format_ffmpeg_seconds(silence_duration_sec)
+            ));
+        }
+        SilenceMode::Normalize if !skip_silence => {
+            if let Some(edge_filters) = edge_filters {
+                filters.extend(edge_filters.post_filters.clone());
+            } else {
+                filters.extend(
+                    build_edge_silence_filters(0.0, 0.0, silence_duration_sec).post_filters,
+                );
+            }
+        }
+        _ => {}
     }
     filters.join(",")
+}
+
+fn edge_plan_for_generation(
+    ffmpeg: &Path,
+    source: &Path,
+    options: &CanonicalOptions,
+    silence_duration_sec: f64,
+    skip_silence: bool,
+    role: &str,
+) -> Result<GenerationEdgePlan, String> {
+    let measured_edges = match measure_edge_silence(ffmpeg, source)
+        .map_err(|e| format!("Mesure des silences native échouée pour {} : {}", role, e))?
+    {
+        EdgeMeasure::Measured { leading, trailing } => Some((leading, trailing)),
+        EdgeMeasure::AllSilence => {
+            return Err(format!(
+                "Preparation audio native impossible pour {} : audio silencieux",
+                role
+            ))
+        }
+        EdgeMeasure::Unreadable => None,
+    };
+
+    let measure_pre_filters = measured_edges
+        .map(|(leading, trailing)| {
+            build_edge_silence_filters(leading, trailing, EDGE_SILENCE_SEC).pre_filters
+        })
+        .unwrap_or_default();
+
+    let output_filters = if matches!(options.silence_mode, SilenceMode::Normalize) && !skip_silence
+    {
+        let (leading, trailing) = measured_edges.unwrap_or((0.0, 0.0));
+        Some(build_edge_silence_filters(
+            leading,
+            trailing,
+            silence_duration_sec,
+        ))
+    } else {
+        None
+    };
+
+    Ok(GenerationEdgePlan {
+        measure_pre_filters,
+        output_filters,
+    })
+}
+
+fn loudness_action_reason(action: &LoudnessAction) -> &str {
+    match action {
+        LoudnessAction::Uncorrectable { reason } => reason,
+        _ => "correction non requise",
+    }
 }
 
 fn normalized_silence_duration_sec(value: f64) -> f64 {
     if value.is_finite() && value >= 0.0 {
         value
     } else {
-        DEFAULT_AUDIO_EDGE_SILENCE_SECONDS
+        EDGE_SILENCE_SEC
     }
 }
 

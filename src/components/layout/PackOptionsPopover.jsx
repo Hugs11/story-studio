@@ -4,17 +4,10 @@ import { Tooltip } from '../common/Tooltip';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
-const AUDIO_OPTIONS = [
-  {
-    key: 'convertFormat',
-    label: 'Normaliser le volume',
-    help: 'Convertit en MP3 44.1 kHz mono et normalise le volume.',
-  },
-  {
-    key: 'addSilence',
-    label: 'Silence début / fin',
-    help: `Ajoute ${formatPackAudioEdgeSilence()} de silence au début et à la fin.`,
-  },
+const SILENCE_MODE_OPTIONS = [
+  ['normalize', 'Normaliser', `Mesure les bords et pose ${formatPackAudioEdgeSilence()} de silence.`],
+  ['add', 'Ajouter', `Ajoute ${formatPackAudioEdgeSilence()} sans mesurer les bords existants.`],
+  ['off', 'Off', 'Ne modifie pas les silences de début et de fin.'],
 ];
 
 export function PackOptionsPopover({
@@ -89,18 +82,23 @@ export function PackOptionsPopover({
 
             <div className="pack-options-section">
               <div className="pack-options-section-title">Traitement audio du pack</div>
-              {AUDIO_OPTIONS.map(({ key, label, help }) => (
-                <Tooltip key={key} text={help} wrap className="pack-options-row-tip">
-                  <div className="pack-options-row">
-                    <span className="pack-options-label">{label}</span>
-                    <Toggle
-                      on={!!globalOptions[key]}
-                      onChange={(value) => updateOption(key, value)}
-                      ariaLabel={`${label}. ${help}`}
-                    />
-                  </div>
-                </Tooltip>
-              ))}
+              <div className="pack-options-row pack-options-row-stack">
+                <span className="pack-options-label">Silence début / fin</span>
+                <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
+                  {SILENCE_MODE_OPTIONS.map(([mode, label, help]) => (
+                    <Tooltip key={mode} text={help} wrap>
+                      <button
+                        type="button"
+                        className={`pack-options-segment ${globalOptions.silenceMode === mode ? 'is-active' : ''}`}
+                        aria-pressed={globalOptions.silenceMode === mode}
+                        onClick={() => updateOption('silenceMode', mode)}
+                      >
+                        {label}
+                      </button>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="pack-options-section">

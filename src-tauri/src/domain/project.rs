@@ -1,12 +1,21 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum SilenceMode {
+    Off,
+    Add,
+    #[default]
+    Normalize,
+}
+
 #[derive(Deserialize)]
 pub(crate) struct GlobalOptions {
-    #[serde(rename = "convertFormat")]
-    pub(crate) convert_format: bool,
-    #[serde(rename = "addSilence")]
+    #[serde(rename = "addSilence", default)]
     pub(crate) add_silence: bool,
+    #[serde(rename = "silenceMode", default)]
+    pub(crate) silence_mode: Option<SilenceMode>,
     #[serde(
         rename = "addSilenceDurationSec",
         default = "default_add_silence_duration_sec"
@@ -18,6 +27,15 @@ pub(crate) struct GlobalOptions {
     pub(crate) select_next: bool,
     #[serde(rename = "nightMode")]
     pub(crate) night_mode: bool,
+}
+
+impl GlobalOptions {
+    pub(crate) fn silence_mode(&self) -> SilenceMode {
+        self.silence_mode.unwrap_or(match self.add_silence {
+            true => SilenceMode::Add,
+            false => SilenceMode::Off,
+        })
+    }
 }
 
 fn default_add_silence_duration_sec() -> f64 {

@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 use ::image::{ImageBuffer, Rgba};
 
 use super::*;
+use crate::support::audio_norm::{edges_from_envelope, parse_rms_envelope, EdgeMeasure};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 
 #[test]
@@ -103,9 +104,9 @@ fn build_env(segments: &[(f64, usize)]) -> Vec<(f64, f64)> {
     env
 }
 
-fn measured(measure: audio::EdgeMeasure) -> (f64, f64) {
+fn measured(measure: EdgeMeasure) -> (f64, f64) {
     match measure {
-        audio::EdgeMeasure::Measured { leading, trailing } => {
+        EdgeMeasure::Measured { leading, trailing } => {
             (models::round_secs(leading), models::round_secs(trailing))
         }
         other => panic!("attendu Measured, obtenu {:?}", other),
@@ -122,7 +123,7 @@ fn rms_envelope_parser_reads_pairs_and_handles_inf() {
 [Parsed_ametadata_1 @ x] frame:2 pts:2048 pts_time:0.0464
 [Parsed_ametadata_1 @ x] lavfi.astats.Overall.RMS_level=-12.0
 ";
-    let env = audio::parse_rms_envelope(stderr);
+    let env = parse_rms_envelope(stderr);
     assert_eq!(env.len(), 3);
     assert_eq!(env[0].0, 0.0);
     assert_eq!(env[0].1, -43.2);
@@ -135,7 +136,7 @@ fn edges_measure_leading_and_trailing_on_studio_like_floor() {
     // Plancher de bruit haut (-43 dB), contenu à -27 dB : silencedetect -50 dB
     // raterait tout ; l'enveloppe RMS sépare proprement.
     let env = build_env(&[(-43.0, 26), (-27.0, 43), (-43.0, 30)]);
-    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    let (leading, trailing) = measured(edges_from_envelope(&env));
     assert!((leading - 26.0 * WIN).abs() < WIN, "début {}", leading);
     assert!((trailing - 30.0 * WIN).abs() < WIN, "fin {}", trailing);
 }
@@ -144,7 +145,7 @@ fn edges_measure_leading_and_trailing_on_studio_like_floor() {
 fn edges_measure_trailing_without_relying_on_declared_duration() {
     // Pur silence numérique en fin : doit être mesuré via l'horodatage interne.
     let env = build_env(&[(-12.0, 40), (f64::NEG_INFINITY, 30)]);
-    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    let (leading, trailing) = measured(edges_from_envelope(&env));
     assert_eq!(leading, 0.0);
     assert!((trailing - 30.0 * WIN).abs() < WIN, "fin {}", trailing);
 }
@@ -153,8 +154,12 @@ fn edges_measure_trailing_without_relying_on_declared_duration() {
 fn edges_ignore_isolated_leading_click() {
     // Un clic isolé d'une fenêtre à t=0 ne doit pas écraser le silence de début.
     let env = build_env(&[(-10.0, 1), (f64::NEG_INFINITY, 20), (-20.0, 30)]);
-    let (leading, _) = measured(audio::edges_from_envelope(&env));
-    assert!(leading > 10.0 * WIN, "le clic n'a pas été ignoré : {}", leading);
+    let (leading, _) = measured(edges_from_envelope(&env));
+    assert!(
+        leading > 10.0 * WIN,
+        "le clic n'a pas été ignoré : {}",
+        leading
+    );
 }
 
 #[test]
@@ -162,7 +167,7 @@ fn edges_do_not_trim_soft_intro() {
     // Intro douce à -34 dB sur un plancher -43 dB : le contenu doit rester
     // contenu (pas classé silence), donc début ≈ 0.
     let env = build_env(&[(-34.0, 40), (-20.0, 40)]);
-    let (leading, trailing) = measured(audio::edges_from_envelope(&env));
+    let (leading, trailing) = measured(edges_from_envelope(&env));
     assert_eq!(leading, 0.0, "intro douce rognée à tort");
     assert_eq!(trailing, 0.0);
 }
@@ -170,12 +175,12 @@ fn edges_do_not_trim_soft_intro() {
 #[test]
 fn edges_all_silence_for_pure_digital_silence() {
     let env = build_env(&[(f64::NEG_INFINITY, 50)]);
-    assert_eq!(audio::edges_from_envelope(&env), audio::EdgeMeasure::AllSilence);
+    assert_eq!(edges_from_envelope(&env), EdgeMeasure::AllSilence);
 }
 
 #[test]
 fn edges_unreadable_for_empty_envelope() {
-    assert_eq!(audio::edges_from_envelope(&[]), audio::EdgeMeasure::Unreadable);
+    assert_eq!(edges_from_envelope(&[]), EdgeMeasure::Unreadable);
 }
 
 #[test]

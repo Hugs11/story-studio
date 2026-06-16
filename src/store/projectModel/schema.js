@@ -10,6 +10,7 @@ import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUt
 //   `rootEntries` or `children`.
 // - Legacy `rootItems` / `menus` are read only as migration inputs.
 export const PROJECT_SCHEMA_VERSION = 3;
+export const SILENCE_MODES = Object.freeze(['off', 'add', 'normalize']);
 
 export const DEFAULT_PACK_METADATA = Object.freeze({
   title: '',
@@ -42,9 +43,16 @@ export function isSameMediaPath(a, b) {
 }
 
 function normalizeOptions(options) {
+  const explicitSilenceMode = typeof options?.silenceMode === 'string'
+    ? options.silenceMode.toLowerCase()
+    : null;
+  const silenceMode = SILENCE_MODES.includes(explicitSilenceMode)
+    ? explicitSilenceMode
+    : Object.prototype.hasOwnProperty.call(options ?? {}, 'addSilence')
+      ? (options?.addSilence ? 'add' : 'off')
+      : 'normalize';
   return {
-    convertFormat: options?.convertFormat ?? true,
-    addSilence: options?.addSilence ?? true,
+    silenceMode,
     autoNext: options?.autoNext ?? false,
     selectNext: options?.selectNext ?? false,
     nightMode: options?.nightMode ?? false,
@@ -611,6 +619,7 @@ export function projectToRustExport(project) {
     packDescription: packMetadata.description,
     globalOptions: {
       ...serializable.globalOptions,
+      silenceMode: serializable.globalOptions.silenceMode,
       addSilenceDurationSec: PACK_AUDIO_EDGE_SILENCE_SECONDS,
     },
   };

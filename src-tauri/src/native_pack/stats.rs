@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use crate::domain::project::SilenceMode;
+
 use super::CanonicalOptions;
 
 #[derive(Debug, Clone, Serialize)]
@@ -16,13 +18,19 @@ pub(crate) fn build_asset_notes(
 ) -> Vec<String> {
     let mut notes = Vec::new();
     notes.push("Le pipeline assets natif prepare deja les medias hors SPG.".to_string());
-    if options.convert_format {
-        notes.push("Les audios sont reencodes en mp3 44.1 kHz mono quand necessaire.".to_string());
-    } else {
-        notes.push("La conversion audio globale est desactivee : les fichiers compatibles sont conserves tels quels.".to_string());
-    }
-    if options.add_silence {
-        notes.push("Le silence debut/fin est ajoute pendant la preparation native.".to_string());
+    notes.push("Les audios sont reencodes en mp3 44.1 kHz mono et normalises.".to_string());
+    match options.silence_mode {
+        SilenceMode::Off => {}
+        SilenceMode::Add => {
+            notes
+                .push("Le silence debut/fin est ajoute pendant la preparation native.".to_string());
+        }
+        SilenceMode::Normalize => {
+            notes.push(
+                "Le silence debut/fin est mesure puis pose pendant la preparation native."
+                    .to_string(),
+            );
+        }
     }
     if stats.imported_zip_count > 0 {
         notes.push("Les ZIPs importes sont prepares pour fusion native sans SPG.".to_string());

@@ -104,17 +104,15 @@ fn detects_mp3_frame_after_id3_header() {
 }
 
 #[test]
-fn builds_legacy_ffmpeg_compatible_audio_filters() {
+fn builds_audio_filters_with_shared_normalizer() {
     let no_silence = CanonicalOptions {
-        convert_format: true,
-        add_silence: false,
+        silence_mode: crate::domain::project::SilenceMode::Off,
         auto_next: false,
         select_next: false,
         night_mode: false,
     };
     let with_silence = CanonicalOptions {
-        convert_format: true,
-        add_silence: true,
+        silence_mode: crate::domain::project::SilenceMode::Add,
         auto_next: false,
         select_next: false,
         night_mode: false,
@@ -122,23 +120,45 @@ fn builds_legacy_ffmpeg_compatible_audio_filters() {
 
     assert_eq!(
         audio_filters(&no_silence, false),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11"
+        "aformat=channel_layouts=mono"
     );
     assert_eq!(
         audio_filters(&with_silence, false),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=500,apad=pad_dur=0.5"
+        "aformat=channel_layouts=mono,adelay=500,apad=pad_dur=0.5"
     );
     assert_eq!(
         audio_filters(&with_silence, true),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11"
+        "aformat=channel_layouts=mono"
+    );
+}
+
+#[test]
+fn builds_audio_filters_with_gain_limiter_before_silence() {
+    let with_silence = CanonicalOptions {
+        silence_mode: crate::domain::project::SilenceMode::Add,
+        auto_next: false,
+        select_next: false,
+        night_mode: false,
+    };
+
+    assert_eq!(
+        audio_filters_with_action(
+            &with_silence,
+            false,
+            0.5,
+            &crate::support::audio_norm::LoudnessAction::GainLimit {
+                gain_db: 4.0,
+                expected_limiting_db: 2.0,
+            },
+        ),
+        "aformat=channel_layouts=mono,volume=4dB,alimiter=limit=0.794328:level=disabled,adelay=500,apad=pad_dur=0.5"
     );
 }
 
 #[test]
 fn builds_audio_filters_with_configured_silence_duration() {
     let with_silence = CanonicalOptions {
-        convert_format: true,
-        add_silence: true,
+        silence_mode: crate::domain::project::SilenceMode::Add,
         auto_next: false,
         select_next: false,
         night_mode: false,
@@ -146,6 +166,6 @@ fn builds_audio_filters_with_configured_silence_duration() {
 
     assert_eq!(
         audio_filters_with_duration(&with_silence, false, 1.0),
-        "aformat=channel_layouts=mono,loudnorm=I=-12:TP=-1.5:LRA=11,adelay=1000,apad=pad_dur=1"
+        "aformat=channel_layouts=mono,adelay=1000,apad=pad_dur=1"
     );
 }

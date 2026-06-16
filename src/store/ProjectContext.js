@@ -10,7 +10,6 @@ export const ProjectContext = createContext({
   sdJobs: [],
   xttsJobs: [],
   pathAudit: {},
-  onEnableConvert: null,
   onImportFile: async (path) => path,
   onExtractAudioEmbeddedImage: async () => null,
   onSave: null,

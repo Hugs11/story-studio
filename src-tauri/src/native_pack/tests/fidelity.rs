@@ -97,8 +97,8 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         audio_processing: ap,
         root_entries: entries,
         global_options: GlobalOptions {
-            convert_format: false,
             add_silence: false,
+            silence_mode: None,
             add_silence_duration_sec: 1.0,
             auto_next: false,
             select_next: false,

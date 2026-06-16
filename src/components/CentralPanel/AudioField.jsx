@@ -47,10 +47,8 @@ export function AudioField({
     savePath,
     workspaceDir,
     projectName,
-    globalOptions,
     xttsSettings,
     pathAudit,
-    onEnableConvert,
     onImportFile,
     onSave,
     onQueueXttsGenerate,
@@ -64,7 +62,6 @@ export function AudioField({
   const [pendingGeneratedSource, setPendingGeneratedSource] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAudioEditor, setShowAudioEditor] = useState(false);
-  const [showConvertNotice, setShowConvertNotice] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -79,7 +76,6 @@ export function AudioField({
   const progressRatio = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
   const playedBars = Math.round(progressRatio * FILLED_WAVE_HEIGHTS.length);
 
-  useEscapeKey(showConvertNotice, () => setShowConvertNotice(false));
   useEscapeKey(showNoSaveWarning && !savingGeneratedAudio, () => {
     setShowNoSaveWarning(false);
     setPendingGeneratedSource(null);
@@ -134,11 +130,6 @@ export function AudioField({
   async function handlePicked(path) {
     if (!path) return;
     const importedPath = await onImportFile?.(path) ?? path;
-    const isWebm = importedPath.toLowerCase().endsWith('.webm');
-    if (isWebm && onEnableConvert && !globalOptions?.convertFormat) {
-      onEnableConvert();
-      setShowConvertNotice(true);
-    }
     if (onPick) await onPick(importedPath);
   }
 
@@ -386,23 +377,6 @@ export function AudioField({
       </div>
 
       {/* Notice conversion webm activée automatiquement */}
-      {showConvertNotice && (
-        <div className="modal-overlay">
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 340 }}>
-            <div className="modal-header">
-              <span>Conversion activée automatiquement</span>
-              <Button variant="icon" className="modal-close" onClick={() => setShowConvertNotice(false)}>×</Button>
-            </div>
-            <div className="audio-notice-body">
-              Le fichier enregistré est au format <strong>.webm</strong>. L'option <strong>«&nbsp;Convertir au bon format&nbsp;»</strong> a été activée automatiquement dans les réglages de l'histoire pour garantir la compatibilité avec votre Boîte à Histoires.
-            </div>
-            <div className="audio-notice-actions">
-              <Button variant="primary" onClick={() => setShowConvertNotice(false)}>Compris</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Warning projet non sauvegardé — propose de sauvegarder */}
       {showNoSaveWarning && (
         <div className="modal-overlay">

@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 
 fn canonical_options() -> CanonicalOptions {
     CanonicalOptions {
-        convert_format: false,
-        add_silence: false,
+        silence_mode: crate::domain::project::SilenceMode::Off,
         auto_next: false,
         select_next: false,
         night_mode: false,

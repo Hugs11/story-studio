@@ -16,8 +16,7 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: true,
@@ -166,8 +165,7 @@ fn night_stage_preserves_story_specific_return_after_play() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: true,
@@ -302,8 +300,7 @@ fn night_mode_return_next_story_creates_story_specific_night_stages() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: true,
@@ -436,8 +433,7 @@ fn night_mode_return_global_menu_reuses_single_night_stage() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: true,
@@ -586,8 +582,7 @@ fn night_mode_return_story_target_routes_to_story_title() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: true,

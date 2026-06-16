@@ -126,6 +126,12 @@
   background: transparent;
 }
 
+.pack-options-row-stack {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .pack-options-label {
   min-width: 0;
   overflow: hidden;
@@ -133,4 +139,44 @@
   white-space: nowrap;
   font-size: var(--text-control);
   font-weight: var(--weight-medium);
+}
+
+.pack-options-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  min-height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--control-bg);
+}
+
+.pack-options-segmented .tooltip-wrap {
+  min-width: 0;
+}
+
+.pack-options-segment {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.pack-options-segment:hover {
+  background: var(--control-bg-hover);
+  color: var(--text);
+}
+
+.pack-options-segment.is-active {
+  background: var(--bg1);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
