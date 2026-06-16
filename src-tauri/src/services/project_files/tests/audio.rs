@@ -208,7 +208,10 @@ fn audio_edit_info_reopens_current_file_after_saved_edit() {
     assert_eq!(fs::read(original_path).expect("read original"), b"original");
     let source_path = PathBuf::from(&info.source_path);
     assert_eq!(fs::read(&source_path).expect("read source"), b"edited");
-    assert_eq!(source_path.file_name().and_then(OsStr::to_str), Some("song.mp3"));
+    assert_eq!(
+        source_path.file_name().and_then(OsStr::to_str),
+        Some("song.mp3")
+    );
     assert_eq!(info.mode, None);
     assert_eq!(info.start_sec, None);
     assert_eq!(info.end_sec, None);

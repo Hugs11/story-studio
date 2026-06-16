@@ -1,14 +1,16 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath } from '@tauri-apps/plugin-opener';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   formatDiagnosticJson,
   formatReadableReport,
   formatTechnicalLog,
   reportBaseName,
 } from './communityPackExports';
+import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 const EXPORTS = {
   report: {
@@ -38,26 +40,69 @@ export function useCommunityPackChecker() {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [exportNotice, setExportNotice] = useState('');
+  const [liveLog, setLiveLog] = useState([]);
+  const statusRef = useRef(status);
 
-  const analyzePath = useCallback(async (path) => {
+  const appendLiveLog = useCallback((line) => {
+    if (!line) return;
+    setLiveLog((current) => [...current, line].slice(-10));
+  }, []);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+    let cancelled = false;
+    let unlisten = null;
+    listen('community-pack-checker-log', (event) => {
+      if (statusRef.current !== 'analyzing' && statusRef.current !== 'fixing') return;
+      appendLiveLog(String(event.payload || ''));
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    });
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, [appendLiveLog]);
+
+  const analyzePath = useCallback(async (path, options = {}) => {
     const nextPath = String(path || '').trim();
     if (!nextPath) return null;
     setZipPath(nextPath);
     setFixedResult(null);
     setError('');
     setExportNotice('');
+    statusRef.current = 'analyzing';
     setStatus('analyzing');
+    if (options.appendLog) {
+      appendLiveLog(options.label || 'Réanalyse du ZIP corrigé...');
+    } else {
+      setLiveLog(['Analyse du pack demandée...']);
+    }
     try {
       const nextReport = await invoke('analyze_community_pack', { zipPath: nextPath });
       setReport(nextReport);
+      const finalLines = (nextReport?.technicalLog || []).slice(-3);
+      setLiveLog((current) => [
+        ...current,
+        ...finalLines,
+        'Analyse terminée.',
+      ].slice(-9));
+      statusRef.current = 'idle';
       setStatus('idle');
       return nextReport;
     } catch (err) {
+      appendLiveLog(`Analyse interrompue : ${err}`);
       setError(String(err));
+      statusRef.current = 'idle';
       setStatus('idle');
       return null;
     }
-  }, []);
+  }, [appendLiveLog]);
 
   const pickPack = useCallback(async () => {
     const selected = await open({
@@ -69,23 +114,33 @@ export function useCommunityPackChecker() {
     }
   }, [analyzePath]);
 
-  const fixPack = useCallback(async () => {
+  const fixPack = useCallback(async (metadataPatch = null) => {
     if (!zipPath) return;
     setError('');
     setExportNotice('');
+    statusRef.current = 'fixing';
     setStatus('fixing');
+    setLiveLog(['Correction du pack demandée...']);
     try {
-      const result = await invoke('create_fixed_community_pack', { zipPath });
+      const result = await invoke('create_fixed_community_pack', { zipPath, metadataPatch });
+      appendLiveLog(`ZIP corrigé créé : ${result.fixedZipPath}`);
+      appendLiveLog('Réanalyse automatique du ZIP corrigé...');
       // La réanalyse réinitialise fixedResult (via analyzePath) : on positionne
       // donc le résultat APRÈS, pour que la bannière « ZIP corrigé » persiste.
-      await analyzePath(result.fixedZipPath);
+      await analyzePath(result.fixedZipPath, {
+        appendLog: true,
+        label: 'Analyse du ZIP corrigé...',
+      });
       setFixedResult(result);
+      statusRef.current = 'idle';
       setStatus('idle');
     } catch (err) {
+      appendLiveLog(`Correction interrompue : ${err}`);
       setError(String(err));
+      statusRef.current = 'idle';
       setStatus('idle');
     }
-  }, [analyzePath, zipPath]);
+  }, [analyzePath, appendLiveLog, zipPath]);
 
   const exportReport = useCallback(async (kind) => {
     if (!report || !EXPORTS[kind]) return;
@@ -130,6 +185,7 @@ export function useCommunityPackChecker() {
     status,
     error,
     exportNotice,
+    liveLog,
     analyzePath,
     pickPack,
     fixPack,

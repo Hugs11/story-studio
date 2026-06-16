@@ -1,4 +1,5 @@
 use crate::services::{community_pack_checker, pack_reader};
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn load_pack_zip(zip_path: String) -> Result<String, String> {
@@ -44,6 +45,7 @@ pub async fn unpack_zip_to_entries(
 
 #[tauri::command]
 pub async fn analyze_community_pack(
+    app: AppHandle,
     zip_path: String,
 ) -> Result<community_pack_checker::PackValidationReport, String> {
     log::info!(target: "pack_checker", "analyze_community_pack: '{}'", zip_path);
@@ -58,7 +60,10 @@ pub async fn analyze_community_pack(
         {
             return Err("Le vérificateur communautaire V1 accepte uniquement les fichiers ZIP.".to_string());
         }
-        Ok(community_pack_checker::analyze_pack(&safe_zip))
+        let emit = |msg: &str| {
+            let _ = app.emit("community-pack-checker-log", msg.to_string());
+        };
+        Ok(community_pack_checker::analyze_pack_with_log(&safe_zip, &emit))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -69,7 +74,9 @@ pub async fn analyze_community_pack(
 
 #[tauri::command]
 pub async fn create_fixed_community_pack(
+    app: AppHandle,
     zip_path: String,
+    metadata_patch: Option<community_pack_checker::PackMetadataPatch>,
 ) -> Result<community_pack_checker::FixedPackResult, String> {
     log::info!(target: "pack_checker", "create_fixed_community_pack: '{}'", zip_path);
     let zip_path_for_log = zip_path.clone();
@@ -83,7 +90,10 @@ pub async fn create_fixed_community_pack(
         {
             return Err("La correction communautaire V1 accepte uniquement les fichiers ZIP.".to_string());
         }
-        community_pack_checker::create_fixed_pack(&safe_zip)
+        let emit = |msg: &str| {
+            let _ = app.emit("community-pack-checker-log", msg.to_string());
+        };
+        community_pack_checker::create_fixed_pack_with_log(&safe_zip, metadata_patch, &emit)
     })
     .await
     .map_err(|e| e.to_string())?
