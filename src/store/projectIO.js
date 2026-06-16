@@ -598,7 +598,7 @@ export async function ensureExportsDir(workspaceDir) {
 
 function mediaKindForPath(path) {
   const ext = String(path || '').toLowerCase().replace(/^.*\./, '');
-  if (['mp3', 'ogg', 'wav', 'm4a', 'webm'].includes(ext)) return 'audio';
+  if (['mp3', 'ogg', 'wav', 'm4a', 'webm', 'flac'].includes(ext)) return 'audio';
   if (['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'].includes(ext)) return 'images';
   if (['zip', '7z'].includes(ext)) return 'archives';
   return 'assets';

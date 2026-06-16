@@ -5,7 +5,7 @@ mod types;
 
 pub(crate) use filters::build_loudness_filters;
 pub(crate) use loudness::{
-    loudness_in_validation_window, measure_loudness_ebur128, plan_loudness_fix,
+    loudness_in_deadband, loudness_in_validation_window, measure_loudness_ebur128, plan_loudness_fix,
 };
 pub(crate) use silence::{
     build_edge_silence_filters, measure_edge_silence, EdgeMeasure, EdgeSilenceFilters,

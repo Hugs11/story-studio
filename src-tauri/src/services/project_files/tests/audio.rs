@@ -1,14 +1,16 @@
 use super::*;
 
 #[test]
-fn audio_assembly_filename_forces_mp3_and_rejects_paths() {
+fn audio_assembly_filename_forces_flac_and_rejects_paths() {
+    // L'assemblage produit un fichier de travail FLAC (sans perte) : l'encodage
+    // MP3 n'a plus lieu qu'à la génération du pack.
     assert_eq!(
         validate_audio_assembly_filename("histoire_complete").unwrap(),
-        "histoire_complete.mp3"
+        "histoire_complete.flac"
     );
     assert_eq!(
-        validate_audio_assembly_filename("histoire_complete.wav").unwrap(),
-        "histoire_complete.mp3"
+        validate_audio_assembly_filename("histoire_complete.mp3").unwrap(),
+        "histoire_complete.flac"
     );
     let err = validate_audio_assembly_filename("../histoire.mp3").unwrap_err();
     assert!(err.contains("invalide"));
@@ -68,7 +70,7 @@ fn concat_audio_files_smoke_with_ffmpeg_when_available() {
             input_a.to_string_lossy().to_string(),
             input_b.to_string_lossy().to_string(),
         ],
-        "histoire_complete.wav",
+        "histoire_complete.mp3",
         0.05,
         None,
     )
@@ -82,9 +84,10 @@ fn concat_audio_files_smoke_with_ffmpeg_when_available() {
         path_without_windows_extended_prefix(actual_dir),
         path_without_windows_extended_prefix(&expected_dir),
     );
+    // Quel que soit le nom demandé, l'assemblage écrit un FLAC de travail.
     assert_eq!(
         output_path.file_name().and_then(OsStr::to_str),
-        Some("histoire_complete.mp3")
+        Some("histoire_complete.flac")
     );
 
     fs::remove_dir_all(project_dir).expect("cleanup temp project dir");

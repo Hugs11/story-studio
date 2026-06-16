@@ -12,13 +12,12 @@ use super::super::{
     build_asset_notes, canonicalize_project, sanitize_stage_label, scoped_label_id, CanonicalEntry,
     CanonicalProject, NativeAssetPreparationReport, NativeAssetStats, PreparedAsset,
 };
-use super::audio::{audio_needs_processing, process_audio_asset};
+use super::audio::{prepare_audio_asset, AudioPreparation};
 use super::image::{
     ensure_image_320x240, image_request, stage_binary_asset, stage_binary_asset_bytes,
 };
 use super::zip_bundle::stage_imported_zip_bundle;
 use crate::domain::project::{AudioFieldProcessing, Project};
-use crate::services::project_files::validate_existing_file_path;
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
@@ -92,29 +91,28 @@ fn preprocess_request(
             }
         }
         AssetSourceKind::Audio => {
-            let needs_processing = audio_needs_processing(
+            let ffmpeg = ffmpeg.ok_or_else(|| {
+                "ffmpeg requis pour la preparation audio native mais introuvable.".to_string()
+            })?;
+            match prepare_audio_asset(
                 &request.source_path,
+                ffmpeg,
+                processed_audio_dir,
                 canonical_options,
+                request.silence_duration_sec,
                 request.skip_silence,
-            );
-            if needs_processing {
-                let ffmpeg = ffmpeg.ok_or_else(|| {
-                    "ffmpeg requis pour la preparation audio native mais introuvable.".to_string()
-                })?;
-                let prepared_source = process_audio_asset(
-                    &request.source_path,
-                    ffmpeg,
-                    processed_audio_dir,
-                    canonical_options,
-                    request.silence_duration_sec,
-                    request.skip_silence,
-                    &request.role,
-                )?;
-                PreprocessedAsset::AudioProcessed { prepared_source }
-            } else {
-                let prepared_source =
-                    validate_existing_file_path(&request.source_path, &request.role)?;
-                PreprocessedAsset::AudioPassthrough { prepared_source }
+                &request.role,
+            )? {
+                AudioPreparation::Encoded { output } => {
+                    PreprocessedAsset::AudioProcessed {
+                        prepared_source: output,
+                    }
+                }
+                AudioPreparation::Verbatim { source } => {
+                    PreprocessedAsset::AudioPassthrough {
+                        prepared_source: source,
+                    }
+                }
             }
         }
     };
@@ -158,15 +156,12 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
         &project.audio_processing,
         project.global_options.add_silence_duration_sec,
     );
-    let has_audio_processing = requests.iter().any(|request| {
-        matches!(request.source_kind, AssetSourceKind::Audio)
-            && audio_needs_processing(
-                &request.source_path,
-                &canonical.options,
-                request.skip_silence,
-            )
-    });
-    let ffmpeg = if has_audio_processing {
+    // ffmpeg est requis dès qu'il y a de l'audio : la mesure (niveau + silences)
+    // sert à décider entre copie verbatim et ré-encodage.
+    let has_audio = requests
+        .iter()
+        .any(|request| matches!(request.source_kind, AssetSourceKind::Audio));
+    let ffmpeg = if has_audio {
         Some(get_ffmpeg_path()?)
     } else {
         None

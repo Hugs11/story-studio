@@ -20,18 +20,7 @@ pub(crate) fn run_ffmpeg_cut(
         "[out]",
     ]);
 
-    match ext {
-        "mp3" => {
-            cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
-        }
-        "wav" => {
-            cmd.args(["-c:a", "pcm_s16le"]);
-        }
-        "ogg" => {
-            cmd.args(["-c:a", "libvorbis", "-q:a", "4"]);
-        }
-        _ => {}
-    }
+    apply_audio_output_codec(&mut cmd, ext);
 
     cmd.arg(output);
 
@@ -46,6 +35,30 @@ pub(crate) fn run_ffmpeg_cut(
     }
 
     Ok(())
+}
+
+/// Sélectionne l'encodeur audio de sortie selon l'extension du fichier de
+/// travail. FLAC est le format de travail sans perte ; MP3 n'est plus produit
+/// par les éditions internes (cf. `working_output_extension`).
+fn apply_audio_output_codec(cmd: &mut Command, ext: &str) {
+    match ext {
+        "flac" => {
+            cmd.args(["-c:a", "flac"]);
+        }
+        "wav" => {
+            cmd.args(["-c:a", "pcm_s16le"]);
+        }
+        "mp3" => {
+            cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
+        }
+        "ogg" => {
+            cmd.args(["-c:a", "libvorbis", "-q:a", "4"]);
+        }
+        "m4a" | "aac" => {
+            cmd.args(["-c:a", "aac", "-b:a", "160k"]);
+        }
+        _ => {}
+    }
 }
 
 pub(crate) fn audio_edit_filter(
@@ -171,21 +184,7 @@ pub(crate) fn run_ffmpeg_audio_edit(request: FfmpegAudioEditRequest<'_>) -> Resu
     ]);
     cmd.arg(format!("[{}]", map_label));
 
-    match request.ext {
-        "mp3" => {
-            cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
-        }
-        "wav" => {
-            cmd.args(["-c:a", "pcm_s16le"]);
-        }
-        "ogg" => {
-            cmd.args(["-c:a", "libvorbis", "-q:a", "4"]);
-        }
-        "m4a" | "aac" => {
-            cmd.args(["-c:a", "aac", "-b:a", "160k"]);
-        }
-        _ => {}
-    }
+    apply_audio_output_codec(&mut cmd, request.ext);
 
     cmd.arg(request.output);
 
@@ -213,21 +212,7 @@ pub(crate) fn run_ffmpeg_transcode(
 
     cmd.args(["-y", "-i", input, "-vn"]);
 
-    match ext {
-        "mp3" => {
-            cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
-        }
-        "wav" => {
-            cmd.args(["-c:a", "pcm_s16le"]);
-        }
-        "ogg" => {
-            cmd.args(["-c:a", "libvorbis", "-q:a", "4"]);
-        }
-        "m4a" | "aac" => {
-            cmd.args(["-c:a", "aac", "-b:a", "160k"]);
-        }
-        _ => {}
-    }
+    apply_audio_output_codec(&mut cmd, ext);
 
     cmd.arg(output);
 
@@ -285,6 +270,7 @@ pub(crate) fn run_ffmpeg_trim(
     start: f64,
     end: f64,
     ext: &str,
+    copy_stream: bool,
 ) -> Result<(), String> {
     let mut cmd = Command::new(ffmpeg);
     apply_no_window(&mut cmd);
@@ -297,14 +283,12 @@ pub(crate) fn run_ffmpeg_trim(
         .arg("-to")
         .arg(format!("{:.3}", end));
 
-    match ext {
-        "wav" | "flac" => {
-            cmd.args(["-c", "copy"]);
-        }
-        "mp3" => {
-            cmd.args(["-c:a", "libmp3lame", "-q:a", "4"]);
-        }
-        _ => {}
+    // Découpe sans perte : copie du flux quand l'entrée est déjà dans le format
+    // de travail (flac/wav). En conversion (entrée lossy -> flac), on encode.
+    if copy_stream {
+        cmd.args(["-c", "copy"]);
+    } else {
+        apply_audio_output_codec(&mut cmd, ext);
     }
 
     cmd.arg(output);

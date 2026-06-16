@@ -21,7 +21,7 @@ function formatDuration(value) {
 
 function defaultOutputName(items) {
   const firstName = fileStem(items[0]?.name || 'audio');
-  if (items.length <= 1) return `${firstName}_assemble.mp3`;
+  if (items.length <= 1) return `${firstName}_assemble.flac`;
   const commonPrefix = items
     .map((item) => fileStem(item.name || 'audio'))
     .reduce((prefix, name) => {
@@ -30,7 +30,7 @@ function defaultOutputName(items) {
       return prefix.slice(0, i);
     }, firstName)
     .replace(/[_\-\s]+$/g, '');
-  return `${commonPrefix || firstName}_assemble.mp3`;
+  return `${commonPrefix || firstName}_assemble.flac`;
 }
 
 export function AudioAssemblyModal({
@@ -177,11 +177,13 @@ export function AudioAssemblyModal({
     setSubmitting(true);
     try {
       const inputPaths = orderedItems.map((item) => item.path);
-      const rawName = outputFileName.trim().replace(/\.mp3$/i, '') || 'montage';
+      // Le backend force l'extension du fichier de travail (FLAC) ; on n'envoie
+      // que le radical, en retirant une extension audio éventuellement saisie.
+      const rawName = outputFileName.trim().replace(/\.(mp3|flac|wav|ogg|m4a)$/i, '') || 'montage';
       const outputPath = await invoke('concat_audio_files', {
         savePath: savePath || '',
         inputPaths,
-        outputFileName: `${rawName}.mp3`,
+        outputFileName: rawName,
         silenceBetweenSec: silence,
         workspaceDir: workspaceDir || null,
       });
@@ -322,7 +324,7 @@ export function AudioAssemblyModal({
                 value={outputFileName}
                 onChange={(e) => setOutputFileName(e.target.value)}
                 disabled={submitting}
-                placeholder="histoire_complete.mp3"
+                placeholder="histoire_complete.flac"
               />
             </label>
             <div className="audio-assembly-destination">

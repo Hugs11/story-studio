@@ -253,6 +253,20 @@
   flex: 0 0 auto;
 }
 
+.checker-harmonize-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checker-harmonize-toggle input {
+  cursor: pointer;
+}
+
 .checker-fixed {
   display: flex;
   align-items: center;
