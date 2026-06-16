@@ -757,6 +757,18 @@ function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
             <Button onClick={() => checker.analyzePath(checker.zipPath)} disabled={busy || !checker.zipPath}>
               {checker.status === 'analyzing' ? 'Analyse...' : 'Relancer'}
             </Button>
+            <label
+              className="checker-harmonize-toggle"
+              title="Propose (sans avertir) de ramener à -14 LUFS les fichiers déjà valides mais inégaux. N'affecte pas le verdict."
+            >
+              <input
+                type="checkbox"
+                checked={checker.harmonizeLoudness}
+                onChange={(event) => checker.setHarmonizeLoudness(event.target.checked)}
+                disabled={busy}
+              />
+              <span>Harmoniser le volume à -14 LUFS</span>
+            </label>
           </div>
         </div>
 

@@ -2,10 +2,10 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::support::audio_norm::{
-    build_edge_silence_filters, build_loudness_filters, loudness_in_validation_window,
-    measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, LoudnessAction,
-    EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS, TARGET_LUFS,
-    VALIDATION_WINDOW_LUFS,
+    build_edge_silence_filters, build_loudness_filters, loudness_in_deadband,
+    loudness_in_validation_window, measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix,
+    EdgeMeasure, LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS,
+    TARGET_LUFS, VALIDATION_WINDOW_LUFS,
 };
 use crate::support::ffmpeg::apply_no_window;
 
@@ -40,6 +40,7 @@ pub(crate) fn analyze_audio_file(
     asset_name: &str,
     label: &str,
     item_type: &str,
+    harmonize_loudness: bool,
 ) -> (AudioValidationItem, Vec<PackValidationIssue>) {
     let probe = probe_audio(ffmpeg, input).unwrap_or_default();
     let mut issues = Vec::new();
@@ -245,8 +246,21 @@ pub(crate) fn analyze_audio_file(
                 fix_parts.push("normaliser le volume");
             }
         }
-        // Volume mesuré et dans la plage recommandée : rien à signaler.
-        Some(_) => {}
+        // Volume dans la fenêtre valide : jamais un avertissement. Si
+        // l'harmonisation opt-in est demandée, on propose (Info, non bloquant)
+        // de ramener vers ‑14 les fichiers hors bande morte.
+        Some(lufs) => {
+            if harmonize_loudness && !loudness_in_deadband(lufs) {
+                add_harmonization_suggestion(
+                    &mut issues,
+                    &mut status,
+                    &mut fix_parts,
+                    target,
+                    lufs,
+                    probe.true_peak_db,
+                );
+            }
+        }
         // Uniquement le cas réellement non mesurable. Un volume correct ne doit
         // JAMAIS atterrir ici.
         None => {
@@ -308,6 +322,7 @@ pub(crate) fn fix_audio_file(
     input: &Path,
     output: &Path,
     item: &AudioValidationItem,
+    harmonize_loudness: bool,
 ) -> Result<(), String> {
     let rebuild_leading = item.leading_silence_secs.is_some();
     let rebuild_trailing = item.trailing_silence_secs.is_some();
@@ -345,9 +360,14 @@ pub(crate) fn fix_audio_file(
     pre_filters.push("aformat=channel_layouts=mono".to_string());
 
     let mut filters = pre_filters;
+    // On corrige le niveau quand il est hors fenêtre, ou — si l'harmonisation
+    // opt-in est demandée — quand il est dans la fenêtre mais hors bande morte.
     let should_fix_loudness = item
         .integrated_lufs
-        .map(|value| !loudness_in_validation_window(value))
+        .map(|value| {
+            !loudness_in_validation_window(value)
+                || (harmonize_loudness && !loudness_in_deadband(value))
+        })
         .unwrap_or(false);
     if should_fix_loudness {
         let measure = measure_loudness_ebur128(ffmpeg, input, &filters).map_err(|e| {
@@ -603,6 +623,47 @@ fn add_silence_issue(
         }
         fix_parts.push("ajuster les silences");
     }
+}
+
+/// Suggestion opt-in d'harmonisation vers ‑14 LUFS pour un fichier déjà dans la
+/// fenêtre valide mais hors bande morte. Sévérité **Info** (jamais Warning) :
+/// non bloquante, mais rend l'auto-fix disponible. Réutilise `plan_loudness_fix`.
+fn add_harmonization_suggestion(
+    issues: &mut Vec<PackValidationIssue>,
+    status: &mut PackValidationSeverity,
+    fix_parts: &mut Vec<&'static str>,
+    target: AudioIssueTarget<'_>,
+    lufs: f64,
+    true_peak_db: Option<f64>,
+) {
+    let Some(peak) = true_peak_db else {
+        return;
+    };
+    let action = plan_loudness_fix(lufs, peak);
+    if !action.is_correctable() {
+        return;
+    }
+    push_audio_issue(
+        issues,
+        PackValidationSeverity::Info,
+        target,
+        "Ce volume est valide mais pourrait être harmonisé.",
+        Some(format!(
+            "Volume moyen mesuré : {:.1} LUFS (fenêtre valide : {:.0} à {:.0} LUFS). Harmonisation optionnelle vers {:.0} LUFS, crête MP3 attendue ≈ {:.1} dBTP.",
+            lufs,
+            VALIDATION_WINDOW_LUFS.0,
+            VALIDATION_WINDOW_LUFS.1,
+            TARGET_LUFS,
+            EXPECTED_FINAL_TRUE_PEAK_DBTP
+        )),
+        true,
+        Some(format!("Harmoniser le volume à {:.0} LUFS.", TARGET_LUFS)),
+    );
+    // Une suggestion Info ne dégrade jamais un statut OK en Warning.
+    if *status == PackValidationSeverity::Ok {
+        *status = PackValidationSeverity::Info;
+    }
+    fix_parts.push("harmoniser le volume");
 }
 
 fn push_audio_issue(

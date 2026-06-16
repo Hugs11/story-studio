@@ -1,3 +1,4 @@
+use super::super::working_output_extension;
 use super::*;
 
 pub fn trim_audio(
@@ -19,15 +20,20 @@ pub fn trim_audio(
         return Err(format!("Fichier audio introuvable : {}", input_path));
     }
 
-    let ext = input
+    let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("mp3")
         .to_lowercase();
+    let ext = working_output_extension(&input_ext);
+    // Copie sans perte uniquement si le format de travail ne change pas.
+    let copy_stream = ext == input_ext;
 
     let ffmpeg = get_ffmpeg_path()?;
 
-    let in_place = is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
+    // Édition en place réservée aux fichiers gérés dont le format ne change pas.
+    // Une conversion (entrée lossy -> FLAC) produit un nouveau fichier de travail.
+    let in_place = copy_stream && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
 
     if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -44,6 +50,7 @@ pub fn trim_audio(
             start_sec,
             end_sec,
             &ext,
+            copy_stream,
         )?;
 
         match fs::rename(&tmp_path, input) {
@@ -89,6 +96,7 @@ pub fn trim_audio(
             start_sec,
             end_sec,
             &ext,
+            copy_stream,
         )?;
 
         Ok(TrimAudioResult {
@@ -118,11 +126,13 @@ pub fn cut_audio(
         return Err(format!("Fichier audio introuvable : {}", input_path));
     }
 
-    let ext = input
+    let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("mp3")
         .to_lowercase();
+    let ext = working_output_extension(&input_ext);
+    let same_format = ext == input_ext;
 
     let ffmpeg = get_ffmpeg_path()?;
 
@@ -134,7 +144,9 @@ pub fn cut_audio(
         ce = cut_end,
     );
 
-    let in_place = is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
+    // Édition en place uniquement si le format de travail ne change pas.
+    let in_place =
+        same_format && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
 
     if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -298,14 +310,17 @@ pub fn commit_audio_preview(
 ) -> Result<TrimAudioResult, String> {
     let input = validate_existing_file_path(input_path, "Fichier audio")?;
     let preview = validate_existing_file_path(preview_path, "Aperçu audio")?;
-    let ext = input
+    let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("mp3")
         .to_lowercase();
+    let ext = working_output_extension(&input_ext);
+    let same_format = ext == input_ext;
     let ffmpeg = get_ffmpeg_path()?;
 
-    let in_place = is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
+    let in_place =
+        same_format && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
 
     let (output, final_path, path_changed) = if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -343,7 +358,7 @@ pub fn commit_audio_preview(
         let source_ext = input
             .extension()
             .and_then(|value| value.to_str())
-            .unwrap_or(&ext);
+            .unwrap_or(&input_ext);
         let original_path = audio_edit_original_path(&final_path, source_ext)?;
         if let Some(parent) = original_path.parent() {
             fs::create_dir_all(parent)
@@ -396,16 +411,21 @@ pub fn commit_audio_preview(
 
 pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult, String> {
     let input = validate_existing_file_path(request.input_path, "Fichier audio")?;
-    let ext = input
+    let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("mp3")
         .to_lowercase();
+    // Le résultat édité passe au format de travail (FLAC) ; l'original conserve
+    // son format pour la restauration.
+    let ext = working_output_extension(&input_ext);
+    let same_format = ext == input_ext;
     let source = audio_edit_source_for(&input);
     let ffmpeg = get_ffmpeg_path()?;
 
-    let in_place = is_in_trim_dir(request.input_path, request.workspace_dir, request.save_path)
-        .unwrap_or(false);
+    let in_place = same_format
+        && is_in_trim_dir(request.input_path, request.workspace_dir, request.save_path)
+            .unwrap_or(false);
 
     let (output, final_path, path_changed) = if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -443,7 +463,7 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
         let source_ext = source
             .extension()
             .and_then(|value| value.to_str())
-            .unwrap_or(&ext);
+            .unwrap_or(&input_ext);
         let original_path = audio_edit_original_path(&final_path, source_ext)?;
         if let Some(parent) = original_path.parent() {
             fs::create_dir_all(parent)

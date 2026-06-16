@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::super::{project_dir_from_save_path, validate_existing_file_path};
+use super::WORKING_AUDIO_EXTENSION;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
 pub(crate) const AUDIO_ASSEMBLY_EXTENSIONS: &[&str] =
@@ -31,7 +32,7 @@ pub(crate) fn validate_audio_assembly_filename(output_file_name: &str) -> Result
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "Nom du fichier final invalide.".to_string())?;
-    Ok(format!("{}.mp3", stem))
+    Ok(format!("{}.{}", stem, WORKING_AUDIO_EXTENSION))
 }
 
 pub(crate) fn unique_audio_assembly_path(
@@ -48,7 +49,7 @@ pub(crate) fn unique_audio_assembly_path(
         .extension()
         .and_then(OsStr::to_str)
         .filter(|value| !value.is_empty())
-        .unwrap_or("mp3");
+        .unwrap_or(WORKING_AUDIO_EXTENSION);
 
     let first = target_dir.join(file_name);
     if !first.exists() {
@@ -187,9 +188,7 @@ pub(crate) fn run_ffmpeg_concat_audio(
         .arg(list_path)
         .arg("-vn")
         .arg("-c:a")
-        .arg("libmp3lame")
-        .arg("-q:a")
-        .arg("4")
+        .arg("flac")
         .arg(output);
 
     let out = cmd

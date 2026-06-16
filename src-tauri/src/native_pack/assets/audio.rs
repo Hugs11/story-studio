@@ -1,4 +1,5 @@
 use sha1::{Digest, Sha1};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -15,17 +16,27 @@ use crate::support::ffmpeg::{apply_no_window, now_millis};
 struct GenerationEdgePlan {
     measure_pre_filters: Vec<String>,
     output_filters: Option<EdgeSilenceFilters>,
+    measured_edges: Option<(f64, f64)>,
 }
 
-pub(crate) fn audio_needs_processing(
-    _source_path: &str,
-    _options: &CanonicalOptions,
-    _skip_silence: bool,
-) -> bool {
-    true
+/// Tolérance sur les silences de bord pour la copie verbatim : un MP3 dont les
+/// bords sont déjà ≈ `EDGE_SILENCE_SEC` n'a pas besoin d'être re-traité en mode
+/// `Normalize`.
+const VERBATIM_EDGE_TOLERANCE_SEC: f64 = 0.05;
+
+/// Taille max lue pour sonder l'en-tête MP3 lors de la décision de copie verbatim
+/// (l'en-tête de trame se trouve au tout début, après un éventuel tag ID3).
+const MP3_HEADER_SCAN_BYTES: u64 = 1024 * 1024;
+
+/// Résultat de la préparation d'un asset audio pour le pack natif.
+pub(crate) enum AudioPreparation {
+    /// Asset déjà parfait (MP3 natif mono 44.1, niveau en bande morte, silences
+    /// conformes) : copié verbatim, sans ré-encodage lossy.
+    Verbatim { source: PathBuf },
+    /// Asset ré-encodé en MP3 dans `processed_audio_dir`.
+    Encoded { output: PathBuf },
 }
 
-#[cfg(test)]
 pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
     let Some(offset) = find_mpeg_sync(bytes) else {
         return false;
@@ -42,7 +53,6 @@ pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
     mpeg_version == 3 && sample_rate_index == 0 && channel_mode == 3
 }
 
-#[cfg(test)]
 pub(crate) fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
     let start = if bytes.starts_with(b"ID3") && bytes.len() >= 10 {
         let size = ((bytes[6] as usize) << 21)
@@ -63,7 +73,11 @@ pub(crate) fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
     None
 }
 
-pub(crate) fn process_audio_asset(
+/// Prépare un asset audio : mesure (niveau + silences), décide entre **copie
+/// verbatim** (asset déjà parfait) et **ré-encodage MP3**, et n'encode que si
+/// nécessaire. La mesure sert aussi bien à la décision qu'à l'encodage : un seul
+/// passage ffmpeg d'analyse.
+pub(crate) fn prepare_audio_asset(
     source_path: &str,
     ffmpeg: &Path,
     processed_audio_dir: &Path,
@@ -71,10 +85,8 @@ pub(crate) fn process_audio_asset(
     silence_duration_sec: f64,
     skip_silence: bool,
     role: &str,
-) -> Result<PathBuf, String> {
+) -> Result<AudioPreparation, String> {
     let source = validate_existing_file_path(source_path, role)?;
-    let output_name = processed_audio_output_name(role);
-    let output = processed_audio_dir.join(output_name);
     let edge_plan = edge_plan_for_generation(
         ffmpeg,
         &source,
@@ -96,12 +108,108 @@ pub(crate) fn process_audio_asset(
             loudness_action_reason(&action)
         ));
     }
+
+    if audio_can_copy_verbatim(
+        &source,
+        &action,
+        edge_plan.measured_edges,
+        options,
+        skip_silence,
+    )? {
+        return Ok(AudioPreparation::Verbatim { source });
+    }
+
+    let output = encode_audio_asset(
+        &source,
+        ffmpeg,
+        processed_audio_dir,
+        options,
+        silence_duration_sec,
+        skip_silence,
+        &action,
+        edge_plan.output_filters.as_ref(),
+        role,
+    )?;
+    Ok(AudioPreparation::Encoded { output })
+}
+
+/// Décide si l'asset peut être copié verbatim (aucun ré-encodage) : MP3 natif
+/// mono 44.1 kHz, niveau dans la bande morte (`LoudnessAction::None`) et
+/// silences déjà conformes au `silence_mode` demandé.
+fn audio_can_copy_verbatim(
+    source: &Path,
+    action: &LoudnessAction,
+    measured_edges: Option<(f64, f64)>,
+    options: &CanonicalOptions,
+    skip_silence: bool,
+) -> Result<bool, String> {
+    if !matches!(action, LoudnessAction::None) {
+        return Ok(false);
+    }
+    if !silence_is_already_conform(measured_edges, options.silence_mode, skip_silence) {
+        return Ok(false);
+    }
+    let bytes = read_leading_bytes(source, MP3_HEADER_SCAN_BYTES)
+        .map_err(|e| format!("Lecture audio pour copie verbatim échouée : {}", e))?;
+    Ok(mp3_header_is_native_compatible(&bytes))
+}
+
+/// Lit au plus `max` octets du début d'un fichier : la détection d'en-tête MP3
+/// n'a besoin que du début, inutile de charger une grosse histoire entière.
+fn read_leading_bytes(path: &Path, max: u64) -> std::io::Result<Vec<u8>> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(path)?.take(max).read_to_end(&mut bytes)?;
+    Ok(bytes)
+}
+
+/// Silences conformes au mode demandé, sans aucune opération de silence requise :
+/// - `skip_silence` ou `Off` → rien à poser, conforme ;
+/// - `Add` → on ajoute toujours du silence, donc jamais verbatim ;
+/// - `Normalize` → conforme uniquement si les bords mesurés sont déjà ≈ 0.5 s.
+fn silence_is_already_conform(
+    measured_edges: Option<(f64, f64)>,
+    silence_mode: SilenceMode,
+    skip_silence: bool,
+) -> bool {
+    if skip_silence {
+        return true;
+    }
+    match silence_mode {
+        SilenceMode::Off => true,
+        SilenceMode::Add => false,
+        SilenceMode::Normalize => match measured_edges {
+            Some((leading, trailing)) => {
+                (leading - EDGE_SILENCE_SEC).abs() <= VERBATIM_EDGE_TOLERANCE_SEC
+                    && (trailing - EDGE_SILENCE_SEC).abs() <= VERBATIM_EDGE_TOLERANCE_SEC
+            }
+            None => false,
+        },
+    }
+}
+
+/// Ré-encode l'asset en MP3 (mono, 44.1 kHz, q5) en appliquant la correction de
+/// niveau planifiée et la normalisation de silence.
+#[allow(clippy::too_many_arguments)]
+fn encode_audio_asset(
+    source: &Path,
+    ffmpeg: &Path,
+    processed_audio_dir: &Path,
+    options: &CanonicalOptions,
+    silence_duration_sec: f64,
+    skip_silence: bool,
+    action: &LoudnessAction,
+    output_filters: Option<&EdgeSilenceFilters>,
+    role: &str,
+) -> Result<PathBuf, String> {
+    let output_name = processed_audio_output_name(role);
+    let output = processed_audio_dir.join(output_name);
     let filters = audio_filter_chain(
         options,
         skip_silence,
         silence_duration_sec,
-        &action,
-        edge_plan.output_filters.as_ref(),
+        action,
+        output_filters,
     );
 
     let mut cmd = Command::new(ffmpeg);
@@ -263,6 +371,7 @@ fn edge_plan_for_generation(
     Ok(GenerationEdgePlan {
         measure_pre_filters,
         output_filters,
+        measured_edges,
     })
 }
 
@@ -312,4 +421,59 @@ pub(crate) fn processed_audio_output_name(role: &str) -> String {
         Sha1::digest(role.as_bytes()),
         now_millis()
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verbatim_silence_conform_when_no_silence_work_needed() {
+        // skip_silence : aucune opération de silence, quel que soit le mode.
+        assert!(silence_is_already_conform(
+            Some((1.0, 1.0)),
+            SilenceMode::Normalize,
+            true,
+        ));
+        // Off : on ne touche pas aux silences -> conforme.
+        assert!(silence_is_already_conform(None, SilenceMode::Off, false));
+    }
+
+    #[test]
+    fn verbatim_silence_never_conform_in_add_mode() {
+        // Add ajoute toujours du silence -> jamais de copie verbatim.
+        assert!(!silence_is_already_conform(
+            Some((0.5, 0.5)),
+            SilenceMode::Add,
+            false,
+        ));
+    }
+
+    #[test]
+    fn verbatim_silence_conform_in_normalize_only_when_edges_are_half_second() {
+        // Bords déjà ≈ 0.5 s (dans la tolérance) -> conforme.
+        assert!(silence_is_already_conform(
+            Some((0.5, 0.48)),
+            SilenceMode::Normalize,
+            false,
+        ));
+        // Bords trop longs -> traitement requis.
+        assert!(!silence_is_already_conform(
+            Some((1.0, 0.5)),
+            SilenceMode::Normalize,
+            false,
+        ));
+        // Bords absents (pas de silence du tout) -> traitement requis.
+        assert!(!silence_is_already_conform(
+            Some((0.0, 0.0)),
+            SilenceMode::Normalize,
+            false,
+        ));
+        // Mesure illisible -> on traite par sécurité.
+        assert!(!silence_is_already_conform(
+            None,
+            SilenceMode::Normalize,
+            false,
+        ));
+    }
 }

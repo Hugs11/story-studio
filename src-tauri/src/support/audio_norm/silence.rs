@@ -14,6 +14,10 @@ pub(crate) const EDGE_RMS_GAP_FRACTION: f64 = 0.4;
 pub(crate) const EDGE_RMS_ABS_FLOOR_DB: f64 = -55.0;
 pub(crate) const EDGE_RMS_ABS_CEIL_DB: f64 = -36.0;
 pub(crate) const EDGE_MIN_ONSET_MS: f64 = 60.0;
+/// Marge de sécurité retirée du trim mesuré : on coupe un peu moins que le
+/// silence détecté pour ne jamais entamer l'attaque du contenu. Le pad propre
+/// (zéros) réinjecté ensuite garantit la convergence de la ré-analyse.
+pub(crate) const EDGE_TRIM_GUARD_SEC: f64 = 0.02;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum EdgeMeasure {
@@ -75,13 +79,16 @@ pub(crate) fn build_edge_silence_filters(
     let mut pre_filters = Vec::new();
     let mut post_filters = Vec::new();
 
-    if leading > 0.001 {
-        pre_filters.push(format!("atrim=start={}", format_seconds(leading)));
+    let lead_trim = (leading - EDGE_TRIM_GUARD_SEC).max(0.0);
+    let trail_trim = (trailing - EDGE_TRIM_GUARD_SEC).max(0.0);
+
+    if lead_trim > 0.001 {
+        pre_filters.push(format!("atrim=start={}", format_seconds(lead_trim)));
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
-    if trailing > 0.001 {
+    if trail_trim > 0.001 {
         pre_filters.push("areverse".to_string());
-        pre_filters.push(format!("atrim=start={}", format_seconds(trailing)));
+        pre_filters.push(format!("atrim=start={}", format_seconds(trail_trim)));
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
         pre_filters.push("areverse".to_string());
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
@@ -335,15 +342,17 @@ mod tests {
     }
 
     #[test]
-    fn builds_exact_edge_silence_filters() {
+    fn builds_edge_silence_filters_with_trim_guard() {
+        // Le trim retire EDGE_TRIM_GUARD_SEC (0.02 s) pour ne pas entamer l'attaque :
+        // 1.0 -> 0.98, 0.25 -> 0.23.
         assert_eq!(
             build_edge_silence_filters(1.0, 0.25, EDGE_SILENCE_SEC),
             EdgeSilenceFilters {
                 pre_filters: vec![
-                    "atrim=start=1".to_string(),
+                    "atrim=start=0.98".to_string(),
                     "asetpts=PTS-STARTPTS".to_string(),
                     "areverse".to_string(),
-                    "atrim=start=0.25".to_string(),
+                    "atrim=start=0.23".to_string(),
                     "asetpts=PTS-STARTPTS".to_string(),
                     "areverse".to_string(),
                     "asetpts=PTS-STARTPTS".to_string(),
@@ -351,5 +360,12 @@ mod tests {
                 post_filters: vec!["adelay=500".to_string(), "apad=pad_dur=0.5".to_string()],
             }
         );
+    }
+
+    #[test]
+    fn edge_silence_trim_guard_skips_tiny_edges() {
+        // Un silence plus court que le garde-fou ne déclenche aucun trim.
+        let filters = build_edge_silence_filters(0.01, 0.0, EDGE_SILENCE_SEC);
+        assert!(filters.pre_filters.is_empty());
     }
 }
