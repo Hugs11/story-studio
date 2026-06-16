@@ -19,8 +19,8 @@ fn simple_story_controls() -> ControlSettings {
 
 fn sample_options() -> GlobalOptions {
     GlobalOptions {
-        convert_format: true,
         add_silence: false,
+        silence_mode: None,
         add_silence_duration_sec: 1.0,
         auto_next: false,
         select_next: false,

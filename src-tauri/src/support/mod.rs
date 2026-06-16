@@ -1,4 +1,5 @@
 pub(crate) mod archive_limits;
+pub(crate) mod audio_norm;
 pub mod ffmpeg;
 pub mod fs_pack_reader;
 pub mod imported_pack;

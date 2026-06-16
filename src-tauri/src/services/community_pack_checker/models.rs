@@ -2,33 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.4;
 pub(crate) const AUDIO_MAX_EDGE_SILENCE_SECONDS: f64 = 1.0;
-pub(crate) const AUDIO_TARGET_EDGE_SILENCE_SECONDS: f64 = 0.5;
 
-// Détection des silences de bord par enveloppe RMS fenêtrée (et non par
-// `silencedetect`, qui réagit aux crêtes et rate les planchers de bruit réels
-// des enregistrements studio/podcast). Le seuil est auto-calibré sur le
-// plancher propre à chaque fichier, plafonné à une fraction de l'écart
-// plancher→contenu pour ne jamais rogner une intro douce.
-pub(crate) const EDGE_RMS_WINDOW_SAMPLES: usize = 1024; // ≈ 23 ms @ 44.1 kHz
-pub(crate) const EDGE_RMS_FLOOR_PERCENTILE: f64 = 0.05;
-pub(crate) const EDGE_RMS_CONTENT_PERCENTILE: f64 = 0.75;
-pub(crate) const EDGE_RMS_MARGIN_DB: f64 = 8.0;
-pub(crate) const EDGE_RMS_GAP_FRACTION: f64 = 0.4;
-pub(crate) const EDGE_RMS_ABS_FLOOR_DB: f64 = -55.0;
-// Plafond du seuil : il doit rester sous une intro douce audible (~-34 dB) tout
-// en restant au-dessus d'un plancher de podcast compressé (~-38 dB). -36 dB est
-// le compromis qui satisfait ces deux contraintes ; valeur à reconfirmer sur le
-// corpus réel (pack Radio France).
-pub(crate) const EDGE_RMS_ABS_CEIL_DB: f64 = -36.0;
-pub(crate) const EDGE_MIN_ONSET_MS: f64 = 60.0;
-// Marge de sécurité retranchée au trim (≈ une fenêtre) pour ne jamais entamer
-// l'attaque du contenu ; on réinjecte ensuite un silence pur à la cible.
-pub(crate) const EDGE_TRIM_GUARD_SECONDS: f64 = 0.02;
-pub(crate) const AUDIO_TARGET_INTEGRATED_LUFS: f64 = -12.0;
-pub(crate) const AUDIO_TARGET_TRUE_PEAK_DB: f64 = -1.5;
-pub(crate) const AUDIO_TARGET_LRA: f64 = 11.0;
-pub(crate) const AUDIO_MIN_RECOMMENDED_LUFS: f64 = -20.0;
-pub(crate) const AUDIO_MAX_RECOMMENDED_LUFS: f64 = -10.0;
 pub(crate) const IMAGE_TARGET_WIDTH: u32 = 320;
 pub(crate) const IMAGE_TARGET_HEIGHT: u32 = 240;
 

@@ -25,7 +25,7 @@ import {
   relinkMediaTags,
   relinkProjectMedia,
 } from './store/missingMediaRelink';
-import { buildProjectIndex, collectProjectAudioPaths } from './store/projectModel';
+import { buildProjectIndex } from './store/projectModel';
 import {
   hasExplicitExportPackName,
   isProjectDirty,
@@ -780,24 +780,7 @@ function AppContent() {
   useSyncedRef(saveHandlerRef, handleSaveProject);
   useSyncedRef(saveAsHandlerRef, handleSaveProjectAs);
 
-  function hasWebmFiles(project) {
-    const allAudio = collectProjectAudioPaths(project);
-    return allAudio.some(f => f && f.toLowerCase().endsWith('.webm'));
-  }
-
   async function handleUpdateGlobalOption(key, value) {
-    if (key === 'convertFormat' && !value && hasWebmFiles(store.project)) {
-      const confirmed = await showConfirmDialog({
-        title: 'Fichiers .webm détectés',
-        message:
-          "Un ou plusieurs fichiers audio sont au format .webm, qui n'est pas compatible avec la Boîte à Histoires.\n\n"
-          + "Désactiver « Convertir au bon format » risque de produire un pack non fonctionnel.",
-        variant: 'warning',
-        okLabel: 'Désactiver quand même',
-        cancelLabel: 'Garder activé',
-      });
-      if (!confirmed) return;
-    }
     store.updateGlobalOption(key, value);
   }
 
@@ -976,7 +959,6 @@ function AppContent() {
       sdJobs: sdStore.jobs,
       xttsJobs: xttsStore.jobs,
       pathAudit,
-      onEnableConvert: () => store.updateGlobalOption('convertFormat', true),
       onImportFile: maybeCopyToProject,
       onExtractAudioEmbeddedImage: extractAudioEmbeddedImage,
       onSave: handleSaveProject,

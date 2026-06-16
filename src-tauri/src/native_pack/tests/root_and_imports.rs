@@ -16,8 +16,7 @@ fn makes_root_menu_selectable_when_pack_has_multiple_root_entries() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -127,8 +126,7 @@ fn keeps_single_cover_stage_when_pack_has_multiple_root_entries() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -286,8 +284,7 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -471,8 +468,7 @@ fn omits_menu_image_when_auto_black_image_is_enabled() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -626,8 +622,7 @@ fn builds_regular_imported_zip_under_root() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -853,8 +848,7 @@ fn builds_collection_import_without_extra_square_one() {
             night_mode_home_return: None,
             native_graph: None,
             options: CanonicalOptions {
-                convert_format: false,
-                add_silence: false,
+                silence_mode: crate::domain::project::SilenceMode::Off,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,

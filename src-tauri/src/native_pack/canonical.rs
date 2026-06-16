@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::domain::project::{
     AfterPlaybackSequenceStep, AudioFieldProcessing, EntryControlSettings, GlobalOptions, Project,
-    ProjectEntry,
+    ProjectEntry, SilenceMode,
 };
 use crate::domain::validation::project_root_entries;
 
@@ -26,8 +26,7 @@ pub(crate) struct CanonicalProject {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CanonicalOptions {
-    pub(crate) convert_format: bool,
-    pub(crate) add_silence: bool,
+    pub(crate) silence_mode: SilenceMode,
     pub(crate) auto_next: bool,
     pub(crate) select_next: bool,
     pub(crate) night_mode: bool,
@@ -262,8 +261,7 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
 
 fn canonicalize_options(options: &GlobalOptions) -> CanonicalOptions {
     CanonicalOptions {
-        convert_format: options.convert_format,
-        add_silence: options.add_silence,
+        silence_mode: options.silence_mode(),
         auto_next: options.auto_next,
         select_next: options.select_next,
         night_mode: options.night_mode,

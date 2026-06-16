@@ -24,7 +24,9 @@ test('projectToRustExport injects pack export metadata', () => {
   assert.equal(rustExport.name, '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2');
   assert.equal(rustExport.packVersion, 2);
   assert.equal(rustExport.packDescription, 'Changelog');
+  assert.equal(rustExport.globalOptions.silenceMode, 'normalize');
   assert.equal(rustExport.globalOptions.addSilenceDurationSec, PACK_AUDIO_EDGE_SILENCE_SECONDS);
+  assert.equal(Object.hasOwn(rustExport.globalOptions, 'convertFormat'), false);
   assert.equal(Object.hasOwn(rustExport, 'rootItems'), false);
   assert.equal(Object.hasOwn(rustExport, 'menus'), false);
 });
@@ -41,9 +43,23 @@ test('projectToSerializable keeps Rust-only and legacy model fields out of the m
   assert.equal(Object.hasOwn(serializable, 'name'), false);
   assert.equal(Object.hasOwn(serializable, 'packVersion'), false);
   assert.equal(Object.hasOwn(serializable, 'packDescription'), false);
+  assert.equal(serializable.globalOptions.silenceMode, 'normalize');
+  assert.equal(Object.hasOwn(serializable.globalOptions, 'convertFormat'), false);
+  assert.equal(Object.hasOwn(serializable.globalOptions, 'addSilence'), false);
   assert.equal(Object.hasOwn(serializable.globalOptions, 'addSilenceDurationSec'), false);
   assert.equal(Object.hasOwn(serializable, 'rootItems'), false);
   assert.equal(Object.hasOwn(serializable, 'menus'), false);
+});
+
+test('normalizeProjectData migrates legacy addSilence to silenceMode', () => {
+  assert.equal(
+    normalizeProjectData({ globalOptions: { addSilence: true } }).globalOptions.silenceMode,
+    'add',
+  );
+  assert.equal(
+    normalizeProjectData({ globalOptions: { addSilence: false } }).globalOptions.silenceMode,
+    'off',
+  );
 });
 
 test('projectToRustExport preserves a legacy raw export name', () => {
