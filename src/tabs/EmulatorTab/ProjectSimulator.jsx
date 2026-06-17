@@ -49,6 +49,13 @@ export function ProjectSimulator({
   const activeSequence = activeStory?.type === 'story' ? (activeStory.afterPlaybackSequence ?? []) : [];
   const activeSequenceStep = state === 'sequence' ? activeSequence[sequenceIndex] : null;
 
+  // rootEntries change a chaque edition du projet (frappe dans un champ). On ne
+  // doit re-synchroniser le simulateur sur son ancre que lorsque l'ancre change,
+  // pas a chaque edition -- sinon la frappe replace le simulateur sur l'ancre,
+  // qui repousse ensuite la selection de l'arbre via onActiveNodeChange.
+  const rootEntriesRef = useRef(rootEntries);
+  rootEntriesRef.current = rootEntries;
+
   useEffect(() => {
     if (isSimple) return;
     if (!initialSelectionId || initialSelectionId === 'root') {
@@ -58,13 +65,13 @@ export function ProjectSimulator({
       return;
     }
 
-    const location = findEntryLocation(rootEntries, initialSelectionId);
+    const location = findEntryLocation(rootEntriesRef.current, initialSelectionId);
     if (!location) return;
 
     setState(location.entry?.type === 'story' ? 'playing' : 'browse');
     setMenuPath(location.menuPath);
     setEntryIdx(location.entryIdx);
-  }, [initialSelectionId, isSimple, rootEntries]);
+  }, [initialSelectionId, isSimple]);
 
   useEffect(() => {
     if (!isSimple && currentEntries.length > 0 && entryIdx >= currentEntries.length) {
@@ -313,19 +320,30 @@ export function ProjectSimulator({
       playAudio(activeSequenceStep?.audio);
     }
     else if (state === 'endnode') playAudio(project.nightModeAudio);
-  // reason: re-jouer l'audio uniquement sur changement d'etat logique du simulateur ;
-  // les helpers playAudio / playZipItemAudio / playZipCoverAudio capturent les valeurs
-  // courantes via closures stables et ne doivent pas declencher de nouveau cycle.
+  // reason: re-jouer l'audio uniquement sur changement d'etat logique du simulateur.
+  // On depend d'identifiants stables (id du noeud, index de sequence) et non des
+  // objets currentEntry / simpleStory / activeSequenceStep, dont la reference change
+  // a chaque edition du projet (frappe dans un champ) et relancerait l'audio.
+  // Les helpers playAudio / playZipItemAudio capturent les valeurs courantes via
+  // closures stables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, currentEntry, simpleStory, activeSequenceStep]);
+  }, [state, currentEntry?.id, simpleStory?.id, sequenceIndex]);
 
+  // On ne pousse la selection vers l'arbre que lorsque le noeud actif du
+  // simulateur change reellement (navigation), pas a chaque re-rendu provoque
+  // par une edition du projet -- sinon le simulateur ecrase une selection en
+  // cours d'edition portant sur un autre noeud.
+  const lastEmittedActiveIdRef = useRef(null);
   useEffect(() => {
     const activeId =
       state === 'cover' ? 'root' :
       state === 'sequence' || state === 'postplay' || state === 'endnode' ? activeStory?.id :
       isSimple ? simpleStory?.id :
       currentEntry?.id;
-    if (activeId) onActiveNodeChange?.(activeId);
+    if (activeId && activeId !== lastEmittedActiveIdRef.current) {
+      lastEmittedActiveIdRef.current = activeId;
+      onActiveNodeChange?.(activeId);
+    }
   }, [activeStory, currentEntry, isSimple, onActiveNodeChange, simpleStory, state]);
 
   useEffect(() => {
