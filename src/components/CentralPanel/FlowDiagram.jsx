@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { buildSelectedNode, findEntryPath as getProjectEntryPath } from '../../store/projectModel';
 import { NodeEditorContent } from './NodeEditorContent';
@@ -251,7 +251,6 @@ export function FlowDiagram({
   onAddMenu,
   onAddStory,
   onUnpackZip,
-  onSimulateZip,
   onSetMenuAsRoot,
   onBulkUpdateItems,
   onBulkDeleteItems,
@@ -270,6 +269,7 @@ export function FlowDiagram({
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [expandedInlineStories, setExpandedInlineStories] = useState({});
   const [previewNodeId, setPreviewNodeId] = useState(null);
+  const [previewZipPath, setPreviewZipPath] = useState(null);
   const [inspectorNodeId, setInspectorNodeId] = useState(null);
   const [multiPanelOpen, setMultiPanelOpen] = useState(false);
   const [autoOpenSettings, setAutoOpenSettings] = useState(
@@ -352,6 +352,7 @@ export function FlowDiagram({
     const targetId = inspectRequest?.id;
     if (!targetId) return;
     setPreviewNodeId(null);
+    setPreviewZipPath(null);
     setMultiPanelOpen(false);
     onSelectionChange?.(new Set([targetId]));
     onSelect?.(targetId);
@@ -373,6 +374,7 @@ export function FlowDiagram({
     if (selectedIds && selectedIds.size > 1) {
       setInspectorNodeId(null);
       setPreviewNodeId(null);
+      setPreviewZipPath(null);
       if (autoOpenSettings) setMultiPanelOpen(true);
     } else {
       setMultiPanelOpen(false);
@@ -385,8 +387,9 @@ export function FlowDiagram({
   }, [selectedId, selectedIds, autoOpenSettings]);
 
   useEscapeKey(fullViewActive, () => {
-    if (previewNodeId) {
+    if (previewNodeId || previewZipPath) {
       setPreviewNodeId(null);
+      setPreviewZipPath(null);
       return;
     }
     if (inspectorNodeId) {
@@ -400,6 +403,24 @@ export function FlowDiagram({
     () => (previewNodeId ? buildSelectedNode(project, previewNodeId, projectIndex) : null),
     [project, previewNodeId, projectIndex],
   );
+
+  // Simulation depuis le diagramme via le FloatingSimulator : un noeud ou, pour
+  // un pack importe, un zip standalone (« Simuler ce pack… »). Les deux sont
+  // exclusifs.
+  const handlePreviewNode = useCallback((nodeId) => {
+    setPreviewZipPath(null);
+    setPreviewNodeId(nodeId);
+  }, []);
+
+  const handleSimulateZip = useCallback((zipPath) => {
+    setPreviewNodeId(null);
+    setPreviewZipPath(zipPath);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewNodeId(null);
+    setPreviewZipPath(null);
+  }, []);
   const inspectorNode = useMemo(
     () => {
       if (!inspectorNodeId) return null;
@@ -433,14 +454,14 @@ export function FlowDiagram({
         selectedIds={selectedIds}
         onSelect={onSelect}
         onSelectionChange={onSelectionChange}
-        onPreview={setPreviewNodeId}
+        onPreview={handlePreviewNode}
         onInspect={handleInspect}
         onMoveToMenu={onMoveToMenu}
         onImportStories={onImportStories}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}
-        onSimulateZip={onSimulateZip}
+        onSimulateZip={handleSimulateZip}
         onSetMenuAsRoot={onSetMenuAsRoot}
         onDeleteMenu={onDeleteMenu}
         onDeleteItem={onDeleteItem}
@@ -481,17 +502,18 @@ export function FlowDiagram({
         </div>
       )}
 
-      {previewNode && (
+      {(previewNode || previewZipPath) && (
         <FloatingSimulator
           project={project}
           anchorId={previewNodeId}
+          zipPath={previewZipPath}
           hostSelector=".fd-fullscreen-body"
           escapeEnabled={false}
           onActiveNodeChange={(nodeId) => {
             onSelectionChange?.(new Set([nodeId]));
             onSelect?.(nodeId);
           }}
-          onClose={() => setPreviewNodeId(null)}
+          onClose={closePreview}
         />
       )}
 

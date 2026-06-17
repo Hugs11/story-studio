@@ -65,13 +65,6 @@ const panelLeftNode = [
   ['path', { d: 'M9 3v18' }],
 ];
 
-const monitorPlayNode = [
-  ['path', { d: 'M15.033 9.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56V7.648a.645.645 0 0 1 .967-.56z' }],
-  ['path', { d: 'M12 17v4' }],
-  ['path', { d: 'M8 21h8' }],
-  ['rect', { x: '2', y: '3', width: '20', height: '14', rx: '2' }],
-];
-
 const micNode = [
   ['path', { d: 'M12 19a7 7 0 0 0 7-7v-2' }],
   ['path', { d: 'M5 10v2a7 7 0 0 0 7 7' }],
@@ -366,7 +359,6 @@ export const FilePen = createLocalLucideIcon(filePenNode);
 export const Kanban = createLocalLucideIcon(kanbanNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
 export const Mic = createLocalLucideIcon(micNode);
-export const MonitorPlay = createLocalLucideIcon(monitorPlayNode);
 export const Network = createLocalLucideIcon(networkNode);
 export const Wrench = createLocalLucideIcon(wrenchNode);
 export const FilePlus = createLocalLucideIcon(filePlusNode);

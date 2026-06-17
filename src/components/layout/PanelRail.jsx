@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FilePen, MonitorPlay, Network, Wrench } from '../icons/LucideLocal';
+import { FilePen, Network, Wrench } from '../icons/LucideLocal';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import './PanelRail.css';
 
@@ -9,12 +9,6 @@ const ITEMS = [
     label: 'Éditeur',
     shortcutId: 'tabEdit',
     Icon: FilePen,
-  },
-  {
-    id: 'emu',
-    label: 'Simulateur',
-    shortcutId: 'tabEmulator',
-    Icon: MonitorPlay,
   },
   {
     id: 'diagram',

@@ -1561,12 +1561,6 @@ body.fd-fullscreen-open {
   padding: 18px 16px 14px;
 }
 
-.fd-floating-panel-body--simulator .lunii-hint,
-.fd-floating-panel-body--simulator .lunii-transfer-card,
-.fd-floating-panel-body--simulator .emu-mode-bar {
-  display: none;
-}
-
 @media (max-width: 720px) {
   .fd-fullscreen-overlay {
     padding: 0;

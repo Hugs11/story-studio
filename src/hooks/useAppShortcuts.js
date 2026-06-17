@@ -77,13 +77,6 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
         return;
       }
 
-      if (actionId === 'tabEmulator') {
-        if (!actions.projectActionsVisible) return;
-        stopShortcut();
-        actions.setActiveTab?.('emu');
-        return;
-      }
-
       if (actionId === 'tabDiagram') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();

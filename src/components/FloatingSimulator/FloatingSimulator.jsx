@@ -1,17 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ProjectSimulator, ZipSimulator } from '../../tabs/EmulatorTab';
+import { revokeUrlCache } from '../../tabs/EmulatorTab/useUrlCache';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFloatingSimulator } from '../../hooks/useFloatingSimulator';
 import './FloatingSimulator.css';
 
-function EmbeddedSimulator({ project, initialSelectionId, onActiveNodeChange, onClose, dragHandleProps = null }) {
-  const [mode, setMode] = useState('project');
-  const [zipPath, setZipPath] = useState(null);
+function EmbeddedSimulator({ project, initialSelectionId, initialZipPath = null, onActiveNodeChange, onClose, dragHandleProps = null }) {
+  const [mode, setMode] = useState(initialZipPath ? 'zip' : 'project');
+  const [zipPath, setZipPath] = useState(initialZipPath);
+  // fromProject : le zip a-t-il ete atteint en naviguant dans le projet ? Si oui,
+  // ZipSimulator propose un retour au projet ; un zip simule en standalone (action
+  // « Simuler ce pack… ») n'a pas d'origine projet.
+  const [zipFromProject, setZipFromProject] = useState(false);
+
+  // Révoquer les blob URLs du cache simulateur quand le simulateur se ferme
+  // (EmbeddedSimulator démonté), pour ne pas accumuler de blobs entre sessions.
+  useEffect(() => () => revokeUrlCache(), []);
 
   useEffect(() => {
-    setMode('project');
-    setZipPath(null);
-  }, [initialSelectionId]);
+    if (initialZipPath) {
+      setMode('zip');
+      setZipPath(initialZipPath);
+      setZipFromProject(false);
+    } else {
+      setMode('project');
+      setZipPath(null);
+      setZipFromProject(false);
+    }
+  }, [initialSelectionId, initialZipPath]);
 
   return mode === 'project' ? (
     <ProjectSimulator
@@ -22,6 +38,7 @@ function EmbeddedSimulator({ project, initialSelectionId, onActiveNodeChange, on
       dragHandleProps={dragHandleProps}
       onOpenZip={(path) => {
         setZipPath(path);
+        setZipFromProject(true);
         setMode('zip');
       }}
     />
@@ -29,7 +46,7 @@ function EmbeddedSimulator({ project, initialSelectionId, onActiveNodeChange, on
     <ZipSimulator
       key={zipPath}
       zipPath={zipPath}
-      fromProject
+      fromProject={zipFromProject}
       onExit={() => setMode('project')}
       onClose={onClose}
       dragHandleProps={dragHandleProps}
@@ -40,6 +57,7 @@ function EmbeddedSimulator({ project, initialSelectionId, onActiveNodeChange, on
 export function FloatingSimulator({
   project,
   anchorId,
+  zipPath = null,
   onActiveNodeChange,
   onClose,
   hostSelector,
@@ -51,9 +69,10 @@ export function FloatingSimulator({
     onClose?.();
   }, [onClose]);
 
-  useEscapeKey(escapeEnabled && Boolean(anchorId), handleClose);
+  const isOpen = Boolean(anchorId || zipPath);
+  useEscapeKey(escapeEnabled && isOpen, handleClose);
 
-  if (!anchorId) return null;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -67,6 +86,7 @@ export function FloatingSimulator({
       <EmbeddedSimulator
         project={project}
         initialSelectionId={anchorId}
+        initialZipPath={zipPath}
         dragHandleProps={{ onPointerDown: beginDrag }}
         onActiveNodeChange={onActiveNodeChange}
         onClose={handleClose}
