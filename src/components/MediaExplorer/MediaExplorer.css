@@ -1,4 +1,14 @@
 .media-explorer {
+  --accent: var(--accent-2);
+  --accent-dim: var(--accent-2-dim);
+  --accent-border: var(--accent-2-border);
+  --accent-text: var(--accent-2-text);
+  --accent-contrast: var(--accent-2-contrast);
+  --accent-hover: var(--accent-2-hover);
+  --accentDim: var(--accent-2-dim);
+  --accentBorder: var(--accent-2-border);
+  --focus-ring: var(--accent-2-text);
+  --focus-ring-soft: color-mix(in srgb, var(--accent-2) 24%, transparent);
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -474,7 +484,7 @@
   position: relative;
 }
 
-/* Sélecteur de couleur : .btn dimensionné en icône 26px ; actif = sélection orange. */
+/* Sélecteur de colonnes : .btn dimensionné en icône 26px ; actif = réglage local violet. */
 .btn.me-col-picker-btn {
   width: 26px;
   min-width: 26px;

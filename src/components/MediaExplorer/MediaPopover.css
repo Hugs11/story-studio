@@ -1,4 +1,14 @@
 .media-popover {
+  --accent: var(--accent-2);
+  --accent-dim: var(--accent-2-dim);
+  --accent-border: var(--accent-2-border);
+  --accent-text: var(--accent-2-text);
+  --accent-contrast: var(--accent-2-contrast);
+  --accent-hover: var(--accent-2-hover);
+  --accentDim: var(--accent-2-dim);
+  --accentBorder: var(--accent-2-border);
+  --focus-ring: var(--accent-2-text);
+  --focus-ring-soft: color-mix(in srgb, var(--accent-2) 24%, transparent);
   z-index: 9000;
   min-width: 260px;
   max-width: 340px;

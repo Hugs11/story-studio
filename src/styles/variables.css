@@ -153,7 +153,7 @@
 
   /* Audio waveforms */
   --wave-rest: color-mix(in srgb, var(--muted) 55%, var(--borderLt));
-  --wave-played: var(--accent);
+  --wave-played: var(--accent-2);
 
   /* Controls */
   --control-bg: #FFFFFF;
@@ -254,7 +254,7 @@
   --cat-end: oklch(0.68 0.13 350);
 
   --wave-rest: color-mix(in srgb, var(--muted) 62%, var(--borderLt));
-  --wave-played: var(--accent);
+  --wave-played: var(--accent-2);
 
   --control-bg: var(--bg2);
   --control-bg-subtle: color-mix(in srgb, var(--bg2) 78%, var(--bg0));
