@@ -57,6 +57,7 @@ fn builds_story_title_without_item_audio() {
         native_graph: None,
         options: CanonicalOptions {
             silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
             auto_next: false,
             select_next: false,
             night_mode: false,
@@ -132,6 +133,7 @@ fn generates_imported_prompt_controls_and_home_null() {
         native_graph: None,
         options: CanonicalOptions {
             silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
             auto_next: false,
             select_next: false,
             night_mode: false,
@@ -216,6 +218,7 @@ fn exports_after_playback_sequence_before_story_return() {
         native_graph: None,
         options: CanonicalOptions {
             silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
             auto_next: false,
             select_next: false,
             night_mode: true,
@@ -394,6 +397,7 @@ fn auto_next_overrides_end_steps_and_story_returns() {
         native_graph: None,
         options: CanonicalOptions {
             silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
             auto_next: true,
             select_next: false,
             night_mode: true,
@@ -643,6 +647,7 @@ fn collects_asset_requests_for_pack() {
         native_graph: None,
         options: CanonicalOptions {
             silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
             auto_next: false,
             select_next: false,
             night_mode: true,
@@ -759,6 +764,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         global_options: GlobalOptions {
             add_silence: false,
             silence_mode: None,
+            harmonize_loudness: true,
             add_silence_duration_sec: 1.0,
             auto_next: false,
             select_next: false,
@@ -868,6 +874,7 @@ fn builds_simple_story_pack() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -939,6 +946,7 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -1073,6 +1081,7 @@ fn builds_recursive_menu_story_tree() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -1217,6 +1226,7 @@ fn preserves_explicit_menu_home_transition() {
                 native_graph: None,
                 options: CanonicalOptions {
                     silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
                     auto_next: false,
                     select_next: false,
                     night_mode: false,
@@ -1327,6 +1337,7 @@ fn preserves_imported_story_title_home_transition() {
             native_graph: None,
                 options: CanonicalOptions {
                     silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
                     auto_next: false,
                     select_next: false,
                     night_mode: false,

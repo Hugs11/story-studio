@@ -17,6 +17,7 @@ fn makes_root_menu_selectable_when_pack_has_multiple_root_entries() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -127,6 +128,7 @@ fn keeps_single_cover_stage_when_pack_has_multiple_root_entries() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -285,6 +287,7 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -469,6 +472,7 @@ fn omits_menu_image_when_auto_black_image_is_enabled() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -623,6 +627,7 @@ fn builds_regular_imported_zip_under_root() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,
@@ -849,6 +854,7 @@ fn builds_collection_import_without_extra_square_one() {
             native_graph: None,
             options: CanonicalOptions {
                 silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
                 auto_next: false,
                 select_next: false,
                 night_mode: false,

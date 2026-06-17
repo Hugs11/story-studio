@@ -107,12 +107,14 @@ fn detects_mp3_frame_after_id3_header() {
 fn builds_audio_filters_with_shared_normalizer() {
     let no_silence = CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Off,
+        harmonize_loudness: true,
         auto_next: false,
         select_next: false,
         night_mode: false,
     };
     let with_silence = CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Add,
+        harmonize_loudness: true,
         auto_next: false,
         select_next: false,
         night_mode: false,
@@ -136,6 +138,7 @@ fn builds_audio_filters_with_shared_normalizer() {
 fn builds_audio_filters_with_gain_limiter_before_silence() {
     let with_silence = CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Add,
+        harmonize_loudness: true,
         auto_next: false,
         select_next: false,
         night_mode: false,
@@ -159,6 +162,7 @@ fn builds_audio_filters_with_gain_limiter_before_silence() {
 fn builds_audio_filters_with_configured_silence_duration() {
     let with_silence = CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Add,
+        harmonize_loudness: true,
         auto_next: false,
         select_next: false,
         night_mode: false,
