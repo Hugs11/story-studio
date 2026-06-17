@@ -22,7 +22,6 @@ export function DiagramTab({
   onAddMenu,
   onAddStory,
   onUnpackZip,
-  onSimulateZip,
   onSetMenuAsRoot,
   onBulkUpdateItems,
   onBulkDeleteItems,
@@ -77,7 +76,6 @@ export function DiagramTab({
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}
-        onSimulateZip={onSimulateZip}
         onSetMenuAsRoot={onSetMenuAsRoot}
         onBulkUpdateItems={onBulkUpdateItems}
         onBulkDeleteItems={onBulkDeleteItems}

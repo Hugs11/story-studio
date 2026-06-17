@@ -50,12 +50,6 @@
   height: clamp(38px, min(8.6cqw, 13cqh), 58px);
 }
 
-.floating-simulator .lunii-hint,
-.floating-simulator .lunii-transfer-card,
-.floating-simulator .emu-mode-bar {
-  display: none;
-}
-
 .floating-simulator-resize {
   position: absolute;
   right: 8px;

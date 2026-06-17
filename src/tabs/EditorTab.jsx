@@ -37,7 +37,7 @@ export function EditorTab({
   onOpenPreferences, recentProjects, onOpenRecentProject,
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
-  onAddStoryToMenu, onImportFolder, onUnpackZip, onSimulateZip,
+  onAddStoryToMenu, onImportFolder, onUnpackZip,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
   onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
@@ -48,6 +48,7 @@ export function EditorTab({
   const { projectType } = project;
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
+  const [simulatorZipPath, setSimulatorZipPath] = useState(null);
   const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);
   const [showNavigationBadges, setShowNavigationBadges] = usePersistentState(
     KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES,
@@ -61,11 +62,18 @@ export function EditorTab({
   const skipIdSyncRef = useRef(false);
 
   const handleSimulateNode = useCallback((nodeId) => {
+    setSimulatorZipPath(null);
     setSimulatorAnchorId(nodeId);
+  }, []);
+
+  const handleSimulateZip = useCallback((zipPath) => {
+    setSimulatorAnchorId(null);
+    setSimulatorZipPath(zipPath);
   }, []);
 
   const handleCloseSimulator = useCallback(() => {
     setSimulatorAnchorId(null);
+    setSimulatorZipPath(null);
   }, []);
 
   const handleSelectionChange = useCallback((ids) => {
@@ -144,7 +152,7 @@ export function EditorTab({
             onBulkDeleteItems={onBulkDeleteItems}
             onBulkUpdateItems={onBulkUpdateItems}
             onUnpackZip={onUnpackZip}
-            onSimulateZip={onSimulateZip}
+            onSimulateZip={handleSimulateZip}
             onPasteEntries={onPasteEntries}
             onCutPasteEntries={onCutPasteEntries}
             onSetMenuAsRoot={onSetMenuAsRoot}
@@ -195,6 +203,7 @@ export function EditorTab({
         <FloatingSimulator
           project={project}
           anchorId={simulatorAnchorId}
+          zipPath={simulatorZipPath}
           hostSelector=".workspace"
           onActiveNodeChange={onSelect}
           onClose={handleCloseSimulator}

@@ -84,7 +84,6 @@ import './components/RenderQueuePanel/RenderQueuePanel.css';
 const EditorTab = lazy(() => import('./tabs/EditorTab').then((module) => ({ default: module.EditorTab })));
 const DiagramTab = lazy(() => import('./tabs/DiagramTab').then((module) => ({ default: module.DiagramTab })));
 const OptionsTab = lazy(() => import('./tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
-const EmulatorTab = lazy(() => import('./tabs/EmulatorTab').then((module) => ({ default: module.EmulatorTab })));
 const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
 const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
@@ -159,7 +158,6 @@ function AppContent() {
   const [saveToast, setSaveToast] = useState(null); // null | 'ok' | 'error'
   const [autoSavedPath, setAutoSavedPath] = useState(null); // path of last autosave (display only)
   const [appVersion, setAppVersion] = useState('');
-  const [pendingZipPath, setPendingZipPath] = useState(null); // ZIP à simuler depuis l'éditeur
   const [xttsSettings, setXttsSettings] = useState(() => loadXttsSettings());
   const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => loadKeyboardShortcuts());
   const [themePreference, setThemePreference] = useState(() => loadThemePreference());
@@ -557,11 +555,6 @@ function AppContent() {
     const resolvedId = typeof itemId === 'string' ? itemId : store.selectedId;
     if (resolvedId) store.deleteItem(resolvedId);
   }, [store.deleteItem, store.selectedId]);
-
-  function handleSimulateZip(zipPath) {
-    setPendingZipPath(zipPath);
-    store.setActiveTab('emu');
-  }
 
   const {
     maybeCopyToProject,
@@ -1073,7 +1066,6 @@ function AppContent() {
               onAddStoryToMenu={handleAddStoryToMenu}
               onImportFolder={handleImportFolder}
               onUnpackZip={handleUnpackZip}
-              onSimulateZip={handleSimulateZip}
               onPasteEntries={store.pasteEntriesToMenu}
               onCutPasteEntries={store.cutPasteEntriesToMenu}
               onDuplicate={store.duplicateEntry}
@@ -1113,7 +1105,6 @@ function AppContent() {
               onAddMenu={handleAddMenu}
               onAddStory={handleAddStoryToMenu}
               onUnpackZip={handleUnpackZip}
-              onSimulateZip={handleSimulateZip}
               onSetMenuAsRoot={handleSetMenuAsRoot}
               onDemoteRootToMenu={handleDemoteRootToMenu}
               onBulkUpdateItems={handleBulkUpdateItems}
@@ -1128,9 +1119,6 @@ function AppContent() {
               onUpdateNightModeReturn={(value) => store.updateRootMedia('nightModeReturn', value)}
               onUpdateNightModeHomeReturn={(value) => store.updateRootMedia('nightModeHomeReturn', value)}
             />,
-          )}
-          {store.activeTab === 'emu' && renderDeferred(
-            <EmulatorTab project={store.project} initialZipPath={pendingZipPath} onConsumeZipPath={() => setPendingZipPath(null)} />,
           )}
           {store.activeTab === 'opts' && renderDeferred(
             <OptionsTab

@@ -1,5 +1,6 @@
 import { Tooltip } from '../../components/common/Tooltip';
 import { formatPlaybackTime } from './navigationResolvers';
+import '../EmulatorTab.css';
 
 export function LuniiShell({
   image,

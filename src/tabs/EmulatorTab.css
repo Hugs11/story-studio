@@ -1,17 +1,3 @@
-.emu-screen {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg0);
-  gap: 16px;
-  width: 100%;
-  min-width: 0;
-  overflow-x: hidden;
-  padding: 16px;
-}
-
 .lunii-sim {
   width: min(680px, 100%);
   max-width: 100%;
@@ -269,95 +255,6 @@
   letter-spacing: 0.04em;
 }
 
-/* Aide en bas */
-.lunii-hint {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* Carte de transfert */
-.lunii-transfer-card {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 14px;
-  background: var(--bg1);
-  border: 0.5px solid var(--border);
-  border-radius: var(--border-radius-lg);
-  margin-top: 4px;
-  max-width: 100%;
-}
-
-.lunii-transfer-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.lunii-transfer-links {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.lunii-transfer-link {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--accent);
-  background: none;
-  border: 0.5px solid var(--accent);
-  border-radius: var(--border-radius-md);
-  padding: 3px 9px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.lunii-transfer-link:hover {
-  background: var(--accent-dim);
-}
-
-/* ── Barre de mode projet / ZIP ─────────────────────────────────────── */
-
-.emu-mode-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg1);
-  border: 0.5px solid var(--border);
-  border-radius: var(--border-radius-lg);
-  padding: 3px;
-}
-
-.emu-mode-btn {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  border-radius: calc(var(--border-radius-lg) - 2px);
-  padding: 5px 14px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.emu-mode-btn:hover { background: var(--bg2); }
-.emu-mode-btn.active {
-  background: var(--bg2);
-  color: var(--text);
-}
-
-/* Nom du ZIP chargé (dans la mode bar) */
-.emu-zip-label {
-  font-size: 11px;
-  color: var(--muted);
-  padding: 0 8px;
-  max-width: 500px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* Bouton désactivé */
 .lunii-btn-round:disabled {
   opacity: 0.3;
@@ -366,11 +263,6 @@
 }
 
 @media (max-width: 760px) {
-  .emu-screen {
-    justify-content: flex-start;
-    padding: 12px;
-  }
-
   .lunii-body {
     height: auto;
     padding: 18px 16px 22px;
