@@ -1430,8 +1430,8 @@
 .after-play-context-note {
   padding: 7px 9px;
   border-radius: var(--border-radius-md);
-  border: 1px solid var(--accent-2-border);
-  background: var(--accent-2-dim);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
@@ -1482,9 +1482,9 @@
   max-width: 100%;
   padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--accent-2-border);
-  background: var(--accent-2-dim);
-  color: var(--accent-2-text);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+  color: var(--accent-text);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1.3;
@@ -1524,7 +1524,7 @@
 
 .after-play-route-chip.is-destination {
   background: var(--bg3);
-  border-color: color-mix(in srgb, var(--accent-2-border) 82%, var(--borderLt));
+  border-color: color-mix(in srgb, var(--accent-border) 82%, var(--borderLt));
 }
 
 .after-play-route-chip.is-destination > span:nth-child(2) {

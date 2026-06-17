@@ -141,8 +141,8 @@
 }
 
 .sd-badge-running {
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
 }
 
 .sd-badge-done {
@@ -231,8 +231,8 @@
 }
 
 .sd-audio-mini-btn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
 }
 
 .sd-audio-mini-btn svg {
@@ -251,7 +251,7 @@
 
 .sd-audio-mini-fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-2);
   border-radius: 2px;
   transition: width 0.08s linear;
 }
@@ -284,7 +284,7 @@
 }
 
 .sd-result-thumb:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-2-border);
 }
 
 .sd-result-thumb,
@@ -385,7 +385,7 @@
 }
 
 .sd-queue-drag-ghost.is-over-target {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-2-border);
+  color: var(--accent-2-text);
   opacity: 1;
 }

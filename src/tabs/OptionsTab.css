@@ -93,9 +93,9 @@
 }
 
 .opts-nav-item.is-active {
-  color: var(--accent);
-  background: var(--accentDim);
-  border-color: var(--accentBorder);
+  color: var(--accent-2-text);
+  background: var(--accent-2-dim);
+  border-color: var(--accent-2-border);
 }
 
 .opts-nav-item:focus-visible {
@@ -124,8 +124,10 @@
   }
   18%,
   58% {
-    border-color: var(--accentBorder);
-    box-shadow: 0 0 0 2px var(--accentDim), 0 0 24px rgba(239, 159, 39, 0.2);
+    border-color: var(--accent-2-border);
+    box-shadow:
+      0 0 0 2px var(--accent-2-dim),
+      0 0 24px color-mix(in srgb, var(--accent-2) 22%, transparent);
   }
 }
 
@@ -272,7 +274,7 @@
 }
 
 .xtts-input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-2-border);
 }
 
 .xtts-actions {

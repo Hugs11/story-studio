@@ -5,12 +5,13 @@ import { forwardRef } from 'react';
  * vers le système de classes `.btn` de `layout.css` (source unique des états
  * hover/focus/active/disabled). Spread des props natives + `className` composable.
  *
- *   variant : 'secondary' (défaut) | 'primary' | 'secondary-violet' | 'ghost'
+ *   variant : 'secondary' (défaut) | 'primary' | 'primary-violet' | 'secondary-violet' | 'ghost'
  *             | 'danger' | 'danger-outline' | 'icon'
  *   size    : 'md' (défaut) | 'sm'
  */
 const VARIANT_CLASS = {
   primary: 'btn-primary',
+  'primary-violet': 'btn-primary-violet',
   secondary: '',
   'secondary-violet': 'btn-secondary-violet',
   ghost: 'btn-ghost',

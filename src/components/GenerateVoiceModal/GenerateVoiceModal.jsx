@@ -220,12 +220,12 @@ export function GenerateVoiceModal({
         </div>
 
         <div className="tts-footer">
-          <Button onClick={loadStatus} disabled={loading || submitting}>
+          <Button variant="secondary-violet" onClick={loadStatus} disabled={loading || submitting}>
             Actualiser XTTS
           </Button>
           <div className="tts-footer-actions">
             <Button
-              variant="primary"
+              variant="primary-violet"
               onClick={handleGenerate}
               disabled={loading || submitting || visibleVoices.length === 0}
             >

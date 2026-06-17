@@ -50,8 +50,8 @@
 }
 
 .sd-workflow-card.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--bg2));
+  border-color: var(--accent-2-border);
+  background: color-mix(in srgb, var(--accent-2-dim) 82%, var(--bg2));
 }
 
 .sd-workflow-name {
@@ -73,9 +73,9 @@
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-  border: 0.5px solid var(--accent);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 0.5px solid var(--accent-2-border);
 }
 
 /* Image de référence */
@@ -124,7 +124,7 @@
 
 .sd-textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-2-border);
 }
 
 /* Variantes */
@@ -185,7 +185,7 @@
 
 .sd-slider {
   flex: 1;
-  accent-color: var(--accent);
+  accent-color: var(--accent-2);
 }
 
 .sd-seed-input {
@@ -198,7 +198,7 @@
   padding: 3px 7px;
 }
 
-.sd-seed-input:focus { outline: none; border-color: var(--accent); }
+.sd-seed-input:focus { outline: none; border-color: var(--accent-2-border); }
 
 .sd-error {
   font-size: 11px;

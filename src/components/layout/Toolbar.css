@@ -191,6 +191,22 @@
   border-color: color-mix(in srgb, var(--accent-hover) 82%, black);
 }
 
+.chrome-toolbar-cta--violet {
+  color: var(--accent-2-contrast);
+  border-color: color-mix(in srgb, var(--accent-2) 82%, black);
+  background: var(--accent-2);
+}
+
+.chrome-toolbar-cta--violet:hover:not(:disabled) {
+  background: var(--accent-2-hover);
+  border-color: color-mix(in srgb, var(--accent-2-hover) 82%, black);
+}
+
+.chrome-toolbar-cta--violet:focus-visible {
+  outline-color: var(--accent-2-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 26%, transparent);
+}
+
 .chrome-toolbar-cta:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;

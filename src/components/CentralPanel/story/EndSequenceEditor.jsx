@@ -242,7 +242,7 @@ export function EndSequenceEditor({
       </div>
 
       <div className="sequence-footer">
-        <Button variant="secondary-violet" onClick={addStep}>
+        <Button onClick={addStep}>
           Ajouter une étape
         </Button>
       </div>

@@ -32,6 +32,11 @@
   box-sizing: border-box;
 }
 
+.text-img-input:focus {
+  border-color: var(--accent-2-border);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
+}
+
 .text-img-preview {
   width: 240px;
   height: 180px;
