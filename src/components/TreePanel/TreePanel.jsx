@@ -31,6 +31,7 @@ import {
   IconTrash,
 } from './TreeIcons';
 import { deepCloneEntry } from '../../store/projectModel';
+import { pickAudio } from '../../hooks/useFileDialog';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
@@ -385,6 +386,12 @@ export function TreePanel({
     }
   }
 
+  async function handleReplaceAudio(nodeId, nodeType) {
+    const picked = await pickAudio();
+    if (!picked) return;
+    await dropOnNode({ nodeId, nodeType, path: picked, kind: 'audio' });
+  }
+
   function handlePasteMedia(nodeId, nodeType, kind) {
     const clipboard = kind === 'image' ? imageClipboard : audioClipboard;
     const clip = clipboard.getEntry();
@@ -501,6 +508,15 @@ export function TreePanel({
 
       if (clipboardRef.current?.entries?.length) {
         actions.push({ icon: <IconClipboardPaste />, label: 'Coller ici', fn: () => handlePaste(nodeId) });
+      }
+
+      if (nodeType === 'story') {
+        const hasAudio = !!getEntry(nodeId)?.audio;
+        actions.push({
+          icon: <IconImport />,
+          label: hasAudio ? 'Remplacer le fichier audio…' : 'Choisir un fichier audio…',
+          fn: () => handleReplaceAudio(nodeId, nodeType),
+        });
       }
 
       if ((isRootCtx || nodeType === 'menu' || nodeType === 'story') && audioClipboard.get()) {

@@ -6,7 +6,7 @@ import { pickAudio } from '../../hooks/useFileDialog';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { useProjectContext } from '../../store/ProjectContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { basename, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
+import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 import { RecordModal } from '../RecordModal/RecordModal';
 // reason: lazy() pour sortir wavesurfer.js (~18 KB gz) + AudioEditorModal du
 // chunk partage. Charge uniquement quand l'utilisateur ouvre l'editeur audio.
@@ -14,7 +14,7 @@ const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal
   .then((m) => ({ default: m.AudioEditorModal })));
 import { GenerateVoiceModal } from '../GenerateVoiceModal/GenerateVoiceModal';
 import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
-import { Mic, Copy, Scissors, FolderOpen, ClipboardPaste, Play, Speech } from '../icons/LucideLocal';
+import { Mic, Copy, Scissors, FolderOpen, FolderInput, ClipboardPaste, Play, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { ContextMenu } from '../TreePanel/ContextMenu';
@@ -129,8 +129,13 @@ export function AudioField({
 
   async function handlePicked(path) {
     if (!path) return;
+    const previous = file;
     const importedPath = await onImportFile?.(path) ?? path;
     if (onPick) await onPick(importedPath);
+    // L'ancien fichier n'est plus référencé : on le garde visible dans le
+    // gestionnaire de médias (filtre « Non utilisés ») plutôt que de le rendre
+    // orphelin invisible sur le disque.
+    if (previous && pathKey(previous) !== pathKey(importedPath)) onMediaCreated?.(previous);
   }
 
   function handleRecorded(path) {
@@ -224,7 +229,7 @@ export function AudioField({
   }, []);
 
   function handleContextMenu(e) {
-    if (!file && !audioClipboard.get()) return;
+    if (!file && !audioClipboard.get() && !onPick) return;
     e.preventDefault();
     e.stopPropagation();
     setCtxMenu({ x: e.clientX, y: e.clientY });
@@ -478,7 +483,11 @@ export function AudioField({
           y={ctxMenu.y}
           onClose={() => setCtxMenu(null)}
           actions={[
+            ...(onPick ? [
+              { icon: <FolderInput />, label: file ? "Remplacer l'audio…" : 'Choisir un fichier audio…', fn: handleReplace },
+            ] : []),
             ...(file ? [
+              ...(onPick ? ['sep'] : []),
               { icon: <Copy />, label: 'Copier', fn: () => audioClipboard.set(file) },
               { icon: <Scissors />, label: 'Couper', fn: () => audioClipboard.set(file, { mode: 'cut' }) },
               { icon: <FolderOpen />, label: 'Afficher dans l\'explorateur', fn: () => revealItemInDir(file) },
