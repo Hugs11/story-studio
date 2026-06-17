@@ -72,15 +72,6 @@ export function TreePanel({
   const osDropHover = activeDropZone === 'treepanel';
 
   const isExpanded = useCallback((id) => !collapsedIds.has(id), [collapsedIds]);
-
-  const handleToggleExpand = useCallback((id) => {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
   const treeScrollRef = useRef(null);
   const [searchActive, setSearchActive] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,6 +128,23 @@ export function TreePanel({
     flatNodes,
     flatNodeIndexById,
   });
+
+  const handleToggleExpand = useCallback((id) => {
+    // Dossier dans une multi-selection : on applique le meme repli/depli a tous
+    // les dossiers selectionnes. L'etat cible suit le dossier sur lequel on clique.
+    const targets = selectedIds.has(id) && selectedIds.size > 1
+      ? [...selectedIds].filter((sid) => getEntry(sid)?.type === 'menu')
+      : [id];
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      const willCollapse = !next.has(id);
+      for (const folderId of (targets.length > 0 ? targets : [id])) {
+        if (willCollapse) next.add(folderId);
+        else next.delete(folderId);
+      }
+      return next;
+    });
+  }, [selectedIds, getEntry]);
 
   const ancestorIds = useMemo(() => {
     const ancestors = new Set();
