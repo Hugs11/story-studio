@@ -1,4 +1,4 @@
-import { Check, X } from '../icons/LucideLocal';
+import { Check } from '../icons/LucideLocal';
 import './Toggle.css';
 
 export function Toggle({ on, onChange, mixed = false, disabled = false, ariaLabel }) {
@@ -18,9 +18,7 @@ export function Toggle({ on, onChange, mixed = false, disabled = false, ariaLabe
           <span className="tog-thumb-mixed" />
         ) : on ? (
           <Check className="tog-thumb-icon" strokeWidth={2.35} absoluteStrokeWidth />
-        ) : (
-          <X className="tog-thumb-icon" strokeWidth={2.35} absoluteStrokeWidth />
-        )}
+        ) : null}
       </span>
     </button>
   );

@@ -228,14 +228,19 @@
 }
 
 .pack-options-segment:hover {
-  background: var(--control-bg-hover);
   color: var(--text);
 }
 
 .pack-options-segment.is-active {
-  background: var(--bg1);
+  background: var(--bg3);
   color: var(--text);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 0 0 1px var(--borderLt);
+}
+
+.pack-options-segment:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .pack-options-preferences-btn {

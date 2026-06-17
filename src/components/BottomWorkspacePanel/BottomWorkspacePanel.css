@@ -51,9 +51,9 @@
 
 .bottom-workspace-tabs button {
   height: 30px;
-  border: none;
-  border-top: 2px solid transparent;
-  border-radius: 5px 5px 0 0;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: transparent;
   color: var(--text-secondary);
   font-size: 11px;
@@ -65,15 +65,22 @@
   cursor: pointer;
 }
 
-.bottom-workspace-tabs button.is-active {
-  background: var(--bg0);
-  border-top-color: var(--accent);
+.bottom-workspace-tabs button:hover:not(.is-active) {
+  background: var(--control-bg-hover);
   color: var(--text);
 }
 
-.bottom-workspace-tabs .bottom-workspace-tab--media.is-active,
-.bottom-workspace-tabs .bottom-workspace-tab--ai.is-active {
-  border-top-color: var(--accent-2);
+.bottom-workspace-tabs button:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: -2px;
+  box-shadow: var(--ring);
+}
+
+.bottom-workspace-tabs button.is-active {
+  background: var(--bg3);
+  border-color: var(--borderLt);
+  border-bottom-color: var(--bg3);
+  color: var(--text);
 }
 
 .bottom-workspace-tabs .bottom-workspace-tab--media.is-active span,

@@ -71,6 +71,12 @@
   background: var(--control-bg-hover);
 }
 
+.chrome-generate-menu-item:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
 .chrome-generate-menu-item:disabled {
   color: var(--control-disabled-text);
   cursor: not-allowed;

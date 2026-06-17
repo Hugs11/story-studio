@@ -187,6 +187,12 @@
   border-color: var(--borderLt);
 }
 
+.fd-node-card:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
 .fd-node-card.is-selected {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, var(--bg2));
@@ -282,8 +288,14 @@
 }
 
 .fd-story-toggle:hover {
-  border-color: var(--accent);
+  border-color: var(--borderLt);
   color: var(--text);
+}
+
+.fd-story-toggle:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .fd-story-toggle-label {
@@ -331,6 +343,12 @@
 .fd-story-chip:hover {
   border-color: var(--borderLt);
   color: var(--text);
+}
+
+.fd-story-chip:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .fd-story-chip.is-selected {
@@ -536,24 +554,32 @@
   width: 13px;
   height: 13px;
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--info);
 }
 
 .fd-complete-toggle:has(input:checked) {
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 13%, var(--bg1));
+  background: var(--info-bg);
 }
 
 .fd-complete-mode-btn:hover,
 .fd-complete-clear-collapse:hover {
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--bg3);
 }
 
 .fd-complete-mode-btn.is-active {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--accent) 44%, transparent);
-  background: color-mix(in srgb, var(--accent) 16%, var(--bg1));
+  border-color: var(--borderLt);
+  background: var(--bg3);
+}
+
+.fd-complete-mode-btn:focus-visible,
+.fd-complete-clear-collapse:focus-visible,
+.fd-complete-toggle:focus-within {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .fd-stage-legend {
@@ -614,7 +640,14 @@
 }
 
 .fd-complete-zoom-btn:hover {
-  border-color: var(--accent);
+  border-color: var(--borderLt);
+  background: var(--bg3);
+}
+
+.fd-complete-zoom-btn:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .fd-complete-zoom-value {
@@ -1033,6 +1066,12 @@
   border-color: var(--borderLt);
 }
 
+.fd-complete-node:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
 .fd-complete-node.is-dragging {
   opacity: 0.42;
 }
@@ -1106,7 +1145,7 @@
   width: 28px;
   height: 28px;
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
+  border: 1px solid transparent;
   background: color-mix(in srgb, var(--bg0) 70%, transparent);
   color: var(--muted);
   cursor: pointer;
@@ -1120,9 +1159,15 @@
 }
 
 .fd-complete-node-action:hover {
-  border-color: var(--borderLt);
+  border-color: transparent;
   background: var(--bg3);
   color: var(--text);
+}
+
+.fd-complete-node-action:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .fd-complete-node-action--collapse {
