@@ -1204,12 +1204,15 @@ function AppContent() {
       {packMetadataOpen && renderDeferred(
         <PackNameModal
           open={packMetadataOpen}
-          packMetadata={projectType === 'simple'
-            ? {
-                ...(store.project.packMetadata ?? {}),
-                title: store.project.packMetadata?.title || store.project.projectName || '',
-              }
-            : store.project.packMetadata}
+          packMetadata={{
+            ...(store.project.packMetadata ?? {}),
+            // Titre pré-rempli si vide : nom du menu racine (pack) puis nom du
+            // projet, en cohérence avec le titre affiché dans RootEditor.
+            title: store.project.packMetadata?.title
+              || (projectType === 'pack' ? store.project.rootName : '')
+              || store.project.projectName
+              || '',
+          }}
           project={store.project}
           coverImage={store.project.thumbnailImage || store.project.rootImage}
           exportFolder={modalExportFolder}
