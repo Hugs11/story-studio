@@ -393,6 +393,68 @@ export function useImportSession({
     }
   }
 
+  async function handleImportPodcastEpisodes(episodes, feed) {
+    if (!Array.isArray(episodes) || episodes.length === 0) return;
+
+    const selectedId = store.selectedId;
+    const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
+    const targetMenuId = selectedNode?.type === 'menu'
+      ? selectedNode.id
+      : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+
+    const total = episodes.length;
+    const feedTitle = feed?.title || 'Podcast';
+    const feedImage = feed?.imageUrl || null;
+    logger.info(`import-podcast:start count=${total} target=${targetMenuId ?? 'root'}`);
+    setImporting({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
+
+    let failures = 0;
+    try {
+      for (let index = 0; index < episodes.length; index += 1) {
+        const episode = episodes[index];
+        const displayName = episode.title || `Épisode ${index + 1}`;
+        try {
+          setImporting({ name: displayName, index: index + 1, total, phase: "Téléchargement de l'épisode..." });
+          const tmpAudio = await invoke('download_podcast_media', { url: episode.audioUrl, fileName: displayName });
+          const audio = await copyGeneratedMediaToProject(tmpAudio);
+
+          let itemImage = null;
+          const imageUrl = episode.imageUrl || feedImage;
+          if (imageUrl) {
+            setImporting({ name: displayName, index: index + 1, total, phase: 'Récupération de la jaquette...' });
+            try {
+              const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-jaquette` });
+              itemImage = await copyGeneratedMediaToProject(tmpImage);
+            } catch (imageError) {
+              logger.warn(`import-podcast:cover-error name='${displayName}' error=${imageError}`);
+            }
+          }
+          if (!itemImage) {
+            itemImage = await extractAudioEmbeddedImage(audio);
+          }
+
+          const storyId = store.addStory(targetMenuId, audio);
+          if (itemImage) store.updateItem(storyId, { itemImage });
+        } catch (episodeError) {
+          failures += 1;
+          logger.error(`import-podcast:episode-error name='${displayName}' error=${episodeError}`);
+        }
+      }
+    } finally {
+      setImporting(null);
+    }
+
+    if (failures > 0) {
+      showErrorDialog({
+        title: 'Import du podcast',
+        message: failures === total
+          ? "Aucun épisode n'a pu être importé. Vérifiez votre connexion ou l'adresse du flux."
+          : `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+        variant: failures === total ? 'warning' : 'info',
+      });
+    }
+  }
+
   return {
     dispatchFiles,
     handleAddStory,
@@ -401,5 +463,6 @@ export function useImportSession({
     handleUnpackZip,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
+    handleImportPodcastEpisodes,
   };
 }

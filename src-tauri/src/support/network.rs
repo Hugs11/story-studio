@@ -1,6 +1,17 @@
 use std::net::{IpAddr, Ipv6Addr};
+use std::time::Duration;
 
 use reqwest::Url;
+
+/// Construit un client HTTP bloquant avec un timeout donné.
+/// Partagé par les services qui font des requêtes réseau (ComfyUI, XTTS gardent
+/// historiquement leur propre copie ; les nouveaux usages passent par ici).
+pub(crate) fn http_client(timeout: Duration) -> Result<reqwest::blocking::Client, String> {
+    reqwest::blocking::Client::builder()
+        .timeout(timeout)
+        .build()
+        .map_err(|e| format!("Impossible de créer le client HTTP : {}", e))
+}
 
 fn is_allowed_local_host(host: &str) -> bool {
     if matches!(host, "localhost") {

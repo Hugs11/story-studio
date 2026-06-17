@@ -7,6 +7,7 @@ import {
   Mic,
   Package,
   PanelLeft,
+  Rss,
   SlidersHorizontal,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -67,6 +68,7 @@ export function Toolbar({
   onSaveProjectAs,
   onImportStories,
   onImportFolder,
+  onImportPodcast,
   onAddFolder,
   onRecord,
   canRecord,
@@ -125,6 +127,14 @@ export function Toolbar({
       onClick: onImportFolder,
       disabled: !canImportFolder,
       icon: <ToolbarIcon Icon={FolderInput} />,
+    },
+    {
+      id: 'import-podcast',
+      title: 'Importer un podcast (flux RSS)',
+      label: 'Importer Podcast',
+      onClick: onImportPodcast,
+      disabled: !canImportStories,
+      icon: <ToolbarIcon Icon={Rss} />,
     },
   ];
 
