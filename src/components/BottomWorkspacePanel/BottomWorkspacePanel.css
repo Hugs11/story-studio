@@ -71,10 +71,13 @@
   color: var(--text);
 }
 
+.bottom-workspace-tabs .bottom-workspace-tab--media.is-active,
 .bottom-workspace-tabs .bottom-workspace-tab--ai.is-active {
   border-top-color: var(--accent-2);
 }
 
+.bottom-workspace-tabs .bottom-workspace-tab--media.is-active span,
+.bottom-workspace-tabs .bottom-workspace-tab--media span:not(:empty),
 .bottom-workspace-tabs .bottom-workspace-tab--ai.is-active span,
 .bottom-workspace-tabs .bottom-workspace-tab--ai span:not(:empty) {
   background: var(--accent-2-dim);

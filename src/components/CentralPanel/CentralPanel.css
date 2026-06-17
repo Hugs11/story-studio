@@ -619,10 +619,10 @@
   left: var(--audio-progress, 0%);
   width: 2px;
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: var(--wave-played);
   transform: translateX(-1px);
   opacity: 0;
-  box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--wave-played) 55%, transparent);
   pointer-events: none;
 }
 

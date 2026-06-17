@@ -1,4 +1,14 @@
 .audio-editor-modal {
+  --accent: var(--accent-2);
+  --accent-dim: var(--accent-2-dim);
+  --accent-border: var(--accent-2-border);
+  --accent-text: var(--accent-2-text);
+  --accent-contrast: var(--accent-2-contrast);
+  --accent-hover: var(--accent-2-hover);
+  --accentDim: var(--accent-2-dim);
+  --accentBorder: var(--accent-2-border);
+  --focus-ring: var(--accent-2-text);
+  --focus-ring-soft: color-mix(in srgb, var(--accent-2) 24%, transparent);
   width: 720px;
   max-width: 96vw;
 }
@@ -84,7 +94,7 @@
 }
 
 .audio-editor-waveform ::part(cursor) {
-  background: #f59e0b;
+  background: var(--accent);
 }
 
 /* ── Lignes communes ──────────────────────────────────────────── */
@@ -98,7 +108,7 @@
 .audio-editor-row input[type="range"] {
   flex: 1;
   min-width: 0;
-  accent-color: #2563EB;
+  accent-color: var(--accent-2);
 }
 
 .audio-editor-label {
@@ -113,7 +123,7 @@
 .audio-editor-zoom-slider {
   flex: 1;
   cursor: pointer;
-  accent-color: #2563EB;
+  accent-color: var(--accent-2);
 }
 
 .audio-editor-zoom-val {
@@ -143,11 +153,11 @@
   margin-left: 10px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--accent-text);
+  border: 1px solid var(--accent-border);
   border-radius: 4px;
   padding: 2px 6px;
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--accent-dim);
 }
 
 /* ── Trim stats ───────────────────────────────────────────────── */
@@ -191,7 +201,7 @@
 }
 
 /* Boutons transport de l'éditeur audio : .btn .btn-icon + glyphes/états locaux.
-   Hover/focus/disabled fournis par le système global ; actif = sélection orange. */
+   Hover/focus/disabled fournis par le système global ; actif = outil violet. */
 .btn.audio-tb-btn {
   flex-shrink: 0;
 }
