@@ -66,11 +66,11 @@
 .chrome-toolbar-btn.is-active {
   color: var(--control-text);
   border-color: transparent;
-  background: var(--control-bg-hover);
+  background: var(--bg3);
 }
 
 .chrome-toolbar-btn.is-active {
-  background: var(--control-bg-active);
+  background: var(--bg3);
 }
 
 .chrome-toolbar-btn:focus-visible {
@@ -118,7 +118,7 @@
 }
 
 .chrome-toolbar-btn[data-toolbar-id='project-menu'] {
-  color: var(--control-text);
+  color: var(--control-text-muted);
   font-weight: 600;
   padding-left: 9px;
   padding-right: 8px;
@@ -127,14 +127,19 @@
 .chrome-toolbar-btn[data-toolbar-id='project-menu']:hover:not(:disabled),
 .chrome-toolbar-btn[data-toolbar-id='project-menu'].is-active {
   border-color: transparent;
-  background: var(--control-bg-hover);
+  background: var(--bg3);
 }
 
 .chrome-toolbar-btn[data-toolbar-id='pack-options']:hover:not(:disabled),
 .chrome-toolbar-btn[data-toolbar-id='pack-options'].is-active {
   color: var(--accent-2-text);
-  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
-  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
+  border-color: var(--accent-2-border);
+  background: color-mix(in srgb, var(--accent-2-dim) 70%, var(--bg3));
+}
+
+.chrome-toolbar-btn[data-toolbar-id='pack-options']:focus-visible {
+  outline-color: var(--accent-2-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
 }
 
 .chrome-toolbar-btn[data-toolbar-id='tab-edit'],
@@ -144,11 +149,18 @@
   background: transparent;
 }
 
+.chrome-toolbar-btn[data-toolbar-id='tab-edit']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='tab-diagram']:hover:not(:disabled) {
+  color: var(--text);
+  border-color: transparent;
+  background: transparent;
+}
+
 .chrome-toolbar-btn[data-toolbar-id='tab-edit'].is-active,
 .chrome-toolbar-btn[data-toolbar-id='tab-diagram'].is-active {
-  color: var(--accent-text);
-  border-color: var(--accent-border);
-  background: var(--accent-dim);
+  color: var(--text);
+  border-color: var(--borderLt);
+  background: var(--bg3);
 }
 
 .chrome-pack-options-caret {

@@ -249,6 +249,16 @@ body {
   border-color: color-mix(in srgb, var(--accent-hover) 82%, black);
 }
 
+.btn-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 92%, black);
+  border-color: color-mix(in srgb, var(--accent) 82%, black);
+}
+
+.btn-primary:focus-visible {
+  outline-color: var(--accent-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
 .btn-primary:disabled {
   background: var(--primary-disabled-bg);
   border-color: var(--primary-disabled-border);
@@ -264,6 +274,11 @@ body {
 .btn-primary-violet:hover:not(:disabled) {
   background: var(--accent-2-hover);
   border-color: color-mix(in srgb, var(--accent-2-hover) 82%, black);
+}
+
+.btn-primary-violet:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-2) 92%, black);
+  border-color: color-mix(in srgb, var(--accent-2) 82%, black);
 }
 
 .btn-primary-violet:focus-visible {
@@ -427,6 +442,7 @@ body {
 .btn-icon:disabled {
   background: transparent;
   border-color: transparent;
+  color: var(--control-disabled-text);
 }
 
 /* Variante compacte 28px (actions media : micro / TTS / ciseaux) */

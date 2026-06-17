@@ -43,9 +43,10 @@
   outline: none;
 }
 
-.tree-search-input:focus {
+.tree-search-input:focus-visible {
   border-color: var(--accent);
   background: var(--bg1);
+  box-shadow: var(--ring);
 }
 
 .tree-search-input::placeholder {
@@ -65,6 +66,12 @@
 
 .tree-search-clear:hover {
   color: var(--text);
+}
+
+.tree-search-clear:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 /* ── End-node separator ─────────────────────────────────────────────────── */
@@ -91,6 +98,12 @@
 
 .tree-item:focus {
   outline: none;
+}
+
+.tree-item:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: -2px;
+  box-shadow: var(--ring);
 }
 
 /* ── Chevron zone (14 × 27 px) ──────────────────────────────────────────── */
@@ -177,7 +190,7 @@
 /* ── Hover — two separate zones ─────────────────────────────────────────── */
 /* Body hover: subtle tint when hovering the row (but not the chevron) */
 .tree-item:hover .tree-item-body {
-  background: color-mix(in srgb, var(--bg3) 40%, transparent);
+  background: var(--tree-scope-hover-bg);
 }
 
 /* Cancel body tint when the chevron itself is hovered */
@@ -197,11 +210,11 @@
 }
 
 .tree-item.active .ti-label {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tree-item.active .tree-chevron {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ── Icon and label ─────────────────────────────────────────────────────── */
@@ -235,7 +248,7 @@
 }
 
 .tree-item.active .ti-icon {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .ti-label {

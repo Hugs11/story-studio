@@ -161,7 +161,7 @@
   --control-bg-hover: #EEF3F8;
   --control-bg-active: #E4ECF5;
   --control-border: #C8D0DA;
-  --control-border-hover: color-mix(in srgb, var(--info) 42%, var(--control-border));
+  --control-border-hover: color-mix(in srgb, var(--text) 18%, var(--control-border));
   --control-text: #171923;
   --control-text-muted: #667085;
 
@@ -261,7 +261,7 @@
   --control-bg-hover: color-mix(in srgb, var(--bg3) 86%, white);
   --control-bg-active: var(--bg3);
   --control-border: var(--borderLt);
-  --control-border-hover: color-mix(in srgb, var(--accent) 55%, var(--borderLt));
+  --control-border-hover: color-mix(in srgb, var(--text) 24%, var(--borderLt));
   --control-text: var(--text);
   --control-text-muted: color-mix(in srgb, var(--text) 72%, transparent);
 
