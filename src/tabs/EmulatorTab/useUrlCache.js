@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 // consommateurs historiques (ProjectSimulator, ZipSimulator) qui l'importaient
 // depuis ce module, et utilise en interne (getLocalUrl / get_pack_asset).
 import { MIME } from '../../utils/mimeTypes';
+import { FILE_CHANGED_EVENT } from '../../store/fileMetadataCache';
 
 export { MIME };
 
@@ -16,6 +17,17 @@ export function revokeUrlCache() {
     try { URL.revokeObjectURL(url); } catch {}
   }
   urlCache.clear();
+}
+
+// Un fichier a changé sur disque sans changer de chemin (ex : édition audio en
+// place) : on purge son blob en cache pour relire le contenu au prochain accès.
+if (typeof window !== 'undefined') {
+  window.addEventListener(FILE_CHANGED_EVENT, (event) => {
+    const path = event?.detail?.path;
+    if (!path || !urlCache.has(path)) return;
+    try { URL.revokeObjectURL(urlCache.get(path)); } catch {}
+    urlCache.delete(path);
+  });
 }
 
 export async function getLocalUrl(path) {
