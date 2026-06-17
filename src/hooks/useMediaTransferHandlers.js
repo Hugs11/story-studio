@@ -8,6 +8,8 @@ import {
   isAlreadyManagedFile,
   transferProjectFilesToProject,
 } from '../store/projectIO';
+import { findEntryById } from '../store/projectModel';
+import { pathKey } from '../utils/fileUtils';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
 import { buildTransferPromptSignature } from '../store/projectHelpers';
@@ -27,6 +29,7 @@ export function useMediaTransferHandlers({
   setSaveToast,
   persistProjectSnapshotRef,
   showErrorDialog,
+  addPathsToMediaLibrary,
 }) {
   const maybeCopyToProject = useCallback(async (filePath) => {
     if (!copyImportedFilesEnabled) return filePath;
@@ -99,9 +102,16 @@ export function useMediaTransferHandlers({
         store.addStory(nodeId, finalPath);
       }
     } else if (nodeType === 'story') {
+      // Remplacement de l'audio principal : on garde l'ancien fichier visible
+      // dans le gestionnaire de médias (« Non utilisés ») au lieu de le rendre
+      // orphelin invisible sur le disque.
+      const previousAudio = findEntryById(store.project, nodeId)?.audio;
       store.updateItem(nodeId, { audio: finalPaths[0] });
+      if (previousAudio && pathKey(previousAudio) !== pathKey(finalPaths[0])) {
+        addPathsToMediaLibrary?.([previousAudio]);
+      }
     }
-  }, [maybeCopyToProject, store]);
+  }, [addPathsToMediaLibrary, maybeCopyToProject, store]);
 
   const notifyCutPaste = useCallback(({ path, kind } = {}) => {
     if (!path) return;

@@ -584,6 +584,7 @@ function AppContent() {
     setSaveToast,
     persistProjectSnapshotRef,
     showErrorDialog,
+    addPathsToMediaLibrary,
   });
 
   const mediaLibraryCount = useMemo(
