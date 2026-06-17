@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CircleCheck,
-  FilePlus,
-  FolderInput,
-  FolderPlus,
-  Mic,
+  FilePen,
+  Network,
   Package,
   PanelLeft,
-  Rss,
   SlidersHorizontal,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -57,26 +54,20 @@ function ToolbarButton({
 export function Toolbar({
   showProjectActions,
   shortcutLabels = DEFAULT_SHORTCUT_LABELS,
-  canImportStories,
-  canImportFolder,
-  canAddFolder,
   saveState,
   generateDisabled,
   onNewProject,
   onOpenProject,
   onSaveProject,
   onSaveProjectAs,
-  onImportStories,
-  onImportFolder,
-  onImportPodcast,
-  onAddFolder,
-  onRecord,
-  canRecord,
+  activeTab = 'edit',
+  onActiveTabChange,
   packOptionsOpen = false,
   onPackOptionsOpenChange,
   projectType,
   globalOptions,
   onUpdateGlobalOption,
+  onOpenPreferences,
   onGenerate,
   onOpenPackMetadata,
   onOpenExportFolder,
@@ -103,49 +94,18 @@ export function Toolbar({
     successToastTimerRef.current = setTimeout(() => setSuccessToast(false), 2200);
   }
 
-  const addGroup = [
+  const panelTabs = [
     {
-      id: 'import',
-      title: withShortcut('Ajouter des fichiers audio / ZIP / 7z', shortcutLabels.importStories),
-      label: 'Ajouter une histoire',
-      onClick: onImportStories,
-      disabled: !canImportStories,
-      icon: <ToolbarIcon Icon={FilePlus} />,
+      id: 'edit',
+      label: 'Éditeur',
+      title: withShortcut('Éditeur', shortcutLabels.tabEdit),
+      Icon: FilePen,
     },
     {
-      id: 'folder',
-      title: withShortcut('Ajouter un dossier dans le pack', shortcutLabels.addFolder),
-      label: 'Ajouter un dossier',
-      onClick: onAddFolder,
-      disabled: !canAddFolder,
-      icon: <ToolbarIcon Icon={FolderPlus} />,
-    },
-    {
-      id: 'import-folder',
-      title: 'Importer un dossier audio et son contenu',
-      label: 'Importer un dossier',
-      onClick: onImportFolder,
-      disabled: !canImportFolder,
-      icon: <ToolbarIcon Icon={FolderInput} />,
-    },
-    {
-      id: 'import-podcast',
-      title: 'Importer un podcast (flux RSS)',
-      label: 'Importer Podcast',
-      onClick: onImportPodcast,
-      disabled: !canImportStories,
-      icon: <ToolbarIcon Icon={Rss} />,
-    },
-  ];
-
-  const captureGroup = [
-    {
-      id: 'record',
-      title: 'Enregistrer une histoire au micro',
-      label: 'Micro',
-      onClick: onRecord,
-      disabled: !canRecord,
-      icon: <ToolbarIcon Icon={Mic} />,
+      id: 'diagram',
+      label: 'Diagramme',
+      title: withShortcut('Diagramme', shortcutLabels.tabDiagram),
+      Icon: Network,
     },
   ];
 
@@ -174,16 +134,19 @@ export function Toolbar({
             </ToolbarButton>
           )}
         />
-        <span className="chrome-toolbar-sep" />
-        {addGroup.map((item) => (
-          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
-            {item.icon}
-          </ToolbarButton>
-        ))}
-        <span className="chrome-toolbar-sep" />
-        {captureGroup.map((item) => (
-          <ToolbarButton key={item.id} id={item.id} title={item.title} label={item.label} onClick={item.onClick} disabled={item.disabled}>
-            {item.icon}
+      </div>
+
+      <div className="chrome-toolbar-center" role="tablist" aria-label="Vue principale">
+        {panelTabs.map(({ id, label, title, Icon }) => (
+          <ToolbarButton
+            key={id}
+            id={`tab-${id}`}
+            title={title}
+            label={label}
+            onClick={() => onActiveTabChange?.(id)}
+            active={activeTab === id}
+          >
+            <ToolbarIcon Icon={Icon} />
           </ToolbarButton>
         ))}
       </div>
@@ -191,6 +154,27 @@ export function Toolbar({
       <div className="chrome-toolbar-right">
         {showProjectActions ? (
           <>
+            <PackOptionsPopover
+              open={packOptionsOpen}
+              projectType={projectType}
+              globalOptions={globalOptions}
+              onOpenChange={onPackOptionsOpenChange}
+              onUpdateOption={onUpdateGlobalOption}
+              onOpenPreferences={onOpenPreferences}
+              preferencesShortcut={shortcutLabels.tabOptions}
+              trigger={(
+                <ToolbarButton
+                  id="pack-options"
+                  title={withShortcut('Options', shortcutLabels.storySettings)}
+                  label="Options"
+                  onClick={() => onPackOptionsOpenChange?.(true)}
+                  active={packOptionsOpen}
+                  trailing={<span className="chrome-pack-options-caret" aria-hidden="true">▾</span>}
+                >
+                  <ToolbarIcon Icon={SlidersHorizontal} />
+                </ToolbarButton>
+              )}
+            />
             <span className="chrome-toolbar-sep" />
             <ValidationPill
               validationIssues={validationIssues}
@@ -200,26 +184,6 @@ export function Toolbar({
               onSelectIssue={onSelectIssue}
               onCountZeroTransition={handleCountZeroTransition}
               shortcutLabel={shortcutLabels.toggleValidation}
-            />
-            <span className="chrome-toolbar-sep" />
-            <PackOptionsPopover
-              open={packOptionsOpen}
-              projectType={projectType}
-              globalOptions={globalOptions}
-              onOpenChange={onPackOptionsOpenChange}
-              onUpdateOption={onUpdateGlobalOption}
-              trigger={(
-                <ToolbarButton
-                  id="pack-options"
-                  title={withShortcut('Options du pack', shortcutLabels.storySettings)}
-                  label="Options du pack"
-                  onClick={() => onPackOptionsOpenChange?.(true)}
-                  active={packOptionsOpen}
-                  trailing={<span className="chrome-pack-options-caret" aria-hidden="true">▾</span>}
-                >
-                  <ToolbarIcon Icon={SlidersHorizontal} />
-                </ToolbarButton>
-              )}
             />
             <span className="chrome-toolbar-sep" />
             <div className="chrome-generate-split">

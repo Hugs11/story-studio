@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
+import { SlidersHorizontal, Wrench } from '../icons/LucideLocal';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
@@ -19,6 +20,8 @@ export function PackOptionsPopover({
   globalOptions = {},
   onOpenChange,
   onUpdateOption,
+  onOpenPreferences,
+  preferencesShortcut = '',
 }) {
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -61,6 +64,11 @@ export function PackOptionsPopover({
     closeTimerRef.current = setTimeout(() => onOpenChange?.(false), 140);
   }
 
+  function handleOpenPreferences() {
+    onOpenChange?.(false);
+    onOpenPreferences?.();
+  }
+
   return (
     <div
       className={`pack-options-wrap ${open ? 'is-open' : ''}`}
@@ -78,8 +86,14 @@ export function PackOptionsPopover({
           <div className="pack-options-hover-bridge" aria-hidden="true" />
           <div className="pack-options-popover" role="dialog" aria-label="Options du pack">
             <div className="pack-options-head">
-              <span className="pack-options-title">Options du pack</span>
-              <span className="pack-options-subtitle">Appliquées lors de la génération du pack.</span>
+              <span className="pack-options-eyebrow">Ce pack</span>
+              <div className="pack-options-heading">
+                <span className="pack-options-heading-icon"><SlidersHorizontal strokeWidth={2} absoluteStrokeWidth /></span>
+                <div>
+                  <span className="pack-options-title">Réglages du pack</span>
+                  <span className="pack-options-subtitle">Options propres au projet ouvert.</span>
+                </div>
+              </div>
             </div>
 
             <div className="pack-options-section">
@@ -131,6 +145,26 @@ export function PackOptionsPopover({
                 </div>
               </Tooltip>
             </div>
+
+            {onOpenPreferences ? (
+              <div className="pack-options-section pack-options-section--app">
+                <div className="pack-options-section-title">Application Story Studio</div>
+                <button
+                  type="button"
+                  className="pack-options-preferences-btn"
+                  onClick={handleOpenPreferences}
+                >
+                  <span className="pack-options-preferences-icon"><Wrench strokeWidth={2} absoluteStrokeWidth /></span>
+                  <span className="pack-options-preferences-copy">
+                    <span className="pack-options-preferences-title">
+                      Préférences de l’application
+                      {preferencesShortcut ? <span className="pack-options-shortcut">{preferencesShortcut}</span> : null}
+                    </span>
+                    <span className="pack-options-preferences-subtitle">Thème, dossiers de travail, audio, raccourcis.</span>
+                  </span>
+                </button>
+              </div>
+            ) : null}
           </div>
         </>
       ) : null}

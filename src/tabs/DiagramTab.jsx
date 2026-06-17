@@ -19,6 +19,9 @@ export function DiagramTab({
   allStories,
   inspectRequest,
   onImportStories,
+  onImportFolder,
+  onImportPodcast,
+  onRecord,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -73,6 +76,9 @@ export function DiagramTab({
         onUpdateItem={onUpdateItem}
         onDeleteItem={onDeleteItem}
         onImportStories={onImportStories}
+        onImportFolder={onImportFolder}
+        onImportPodcast={onImportPodcast}
+        onRecord={onRecord}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}

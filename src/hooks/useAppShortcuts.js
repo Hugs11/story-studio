@@ -87,7 +87,7 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
       if (actionId === 'tabOptions') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
-        actions.setActiveTab?.('opts');
+        actions.openPreferences?.();
         return;
       }
 

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { TreePanel } from '../components/TreePanel/TreePanel';
 import { TreeDisplayPopover } from '../components/TreePanel/TreeDisplayPopover';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
+import { StructureActionsBar } from '../components/structure/StructureActionsBar';
 import { KEYS } from '../store/persistentSettings';
 import { usePersistentState } from '../hooks/usePersistentState';
 
@@ -38,6 +39,7 @@ export function EditorTab({
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
   onAddStoryToMenu, onImportFolder, onUnpackZip,
+  onImportPodcast, onRecord, canRecord = true,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
   onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
@@ -60,6 +62,13 @@ export function EditorTab({
   );
   const [showTreeGuides, setShowTreeGuides] = usePersistentState(KEYS.TREE_SHOW_GUIDES, true, BOOL_CODEC);
   const skipIdSyncRef = useRef(false);
+
+  const structureActionTargetMenuId = useMemo(() => {
+    if (projectType !== 'pack' || !selectedId || selectedId === 'root') return null;
+    const entry = projectIndex.entryById.get(selectedId);
+    if (entry?.type === 'menu') return selectedId;
+    return projectIndex.parentMenuById.get(selectedId) ?? null;
+  }, [projectIndex, projectType, selectedId]);
 
   const handleSimulateNode = useCallback((nodeId) => {
     setSimulatorZipPath(null);
@@ -121,19 +130,33 @@ export function EditorTab({
     <div className="screen visible">
       <div className="workspace">
         <div className="panel-left">
-          <div className="panel-left-header">
-            <span>Structure</span>
-            {projectType === 'pack' ? (
-              <TreeDisplayPopover
-                open={treeDisplayOpen}
-                onOpenChange={setTreeDisplayOpen}
-                showNavigationBadges={showNavigationBadges}
-                onShowNavigationBadgesChange={setShowNavigationBadges}
-                showGuides={showTreeGuides}
-                onShowGuidesChange={setShowTreeGuides}
+          {projectType === 'pack' ? (
+            <div className="panel-left-header panel-left-header--actions">
+              <StructureActionsBar
+                variant="panel"
+                targetMenuId={structureActionTargetMenuId}
+                onAddStory={onAddStoryToMenu}
+                onAddFolder={onAddMenu}
+                onImportFolder={onImportFolder}
+                onImportPodcast={onImportPodcast}
+                onRecord={onRecord}
+                canRecord={canRecord}
+                trailing={(
+                  <TreeDisplayPopover
+                    open={treeDisplayOpen}
+                    onOpenChange={setTreeDisplayOpen}
+                    showNavigationBadges={showNavigationBadges}
+                    onShowNavigationBadgesChange={setShowNavigationBadges}
+                    showGuides={showTreeGuides}
+                    onShowGuidesChange={setShowTreeGuides}
+                  />
+                )}
               />
-            ) : null}
-          </div>
+            </div>
+          ) : null}
+          {projectType === 'pack' ? null : (
+            <div className="panel-left-header panel-left-header--empty" aria-hidden="true" />
+          )}
           <TreePanel
             project={project}
             projectType={projectType}

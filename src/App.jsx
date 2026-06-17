@@ -52,7 +52,6 @@ import { ImportNoticeToast } from './components/common/ImportNoticeToast';
 import { CreditsModal } from './components/common/CreditsModal';
 import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
-import { PanelRail } from './components/layout/PanelRail';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { useEscapeKey } from './hooks/useEscapeKey';
@@ -896,6 +895,7 @@ function AppContent() {
     importStories: handleAddStory,
     addFolder: () => store.addMenu(),
     openPackOptions: () => setPackOptionsOpen(true),
+    openPreferences: () => setPrefsModalOpen(true),
     setActiveTab: store.setActiveTab,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
@@ -989,26 +989,20 @@ function AppContent() {
         <Toolbar
           showProjectActions={projectType !== null}
           shortcutLabels={shortcutLabels}
-          canImportStories={canImportStories}
-          canImportFolder={canImportStories}
-          canAddFolder={canAddFolder}
           saveState={saveToast}
           generateDisabled={!canGenerate}
           onNewProject={handleNewProject}
           onOpenProject={handleLoad}
           onSaveProject={handleSave}
           onSaveProjectAs={handleSaveProjectAs}
-          onImportStories={() => handleAddStory()}
-          onImportFolder={() => handleImportFolder()}
-          onImportPodcast={() => setPodcastImportOpen(true)}
-          onAddFolder={() => store.addMenu()}
-          onRecord={handleToolbarRecord}
-          canRecord={canRecord}
+          activeTab={store.activeTab}
+          onActiveTabChange={store.setActiveTab}
           packOptionsOpen={packOptionsOpen}
           onPackOptionsOpenChange={setPackOptionsOpen}
           projectType={store.project.projectType}
           globalOptions={store.project.globalOptions}
           onUpdateGlobalOption={handleUpdateGlobalOption}
+          onOpenPreferences={() => setPrefsModalOpen(true)}
           onGenerate={handleGenerate}
           onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
           onOpenExportFolder={handleOpenExportFolder}
@@ -1031,10 +1025,6 @@ function AppContent() {
       )}
 
       <div className="chrome-shell">
-        {projectType !== null ? (
-          <PanelRail activeTab={store.activeTab} onChange={store.setActiveTab} shortcutLabels={shortcutLabels} />
-        ) : null}
-
         <div className="chrome-content">
           {store.activeTab === 'edit' && renderDeferred(
             <EditorTab
@@ -1051,7 +1041,7 @@ function AppContent() {
               onUpdateStoryAudio={store.updateStoryAudio}
               onSetProjectType={store.setProjectType}
               onOpenProject={handleLoad}
-              onOpenPreferences={() => projectType === null ? setPrefsModalOpen(true) : store.setActiveTab('opts')}
+              onOpenPreferences={() => setPrefsModalOpen(true)}
               recentProjects={recentProjects}
               onOpenRecentProject={handleLoadRecent}
               savePath={store.savePath}
@@ -1065,6 +1055,9 @@ function AppContent() {
               onBulkDeleteItems={handleBulkDeleteItems}
               onAddStoryToMenu={handleAddStoryToMenu}
               onImportFolder={handleImportFolder}
+              onImportPodcast={() => setPodcastImportOpen(true)}
+              onRecord={handleToolbarRecord}
+              canRecord={canRecord}
               onUnpackZip={handleUnpackZip}
               onPasteEntries={store.pasteEntriesToMenu}
               onCutPasteEntries={store.cutPasteEntriesToMenu}
@@ -1095,6 +1088,9 @@ function AppContent() {
               onSelect={store.setSelectedId}
               onMoveToMenu={store.moveItemToMenu}
               onImportStories={() => handleAddStory()}
+              onImportFolder={handleImportFolder}
+              onImportPodcast={() => setPodcastImportOpen(true)}
+              onRecord={handleToolbarRecord}
               onUpdateRoot={handleUpdateRoot}
               onUpdateMedia={store.updateRootMedia}
               onUpdateStoryAudio={store.updateStoryAudio}
@@ -1120,13 +1116,6 @@ function AppContent() {
               onUpdateNightModeHomeReturn={(value) => store.updateRootMedia('nightModeHomeReturn', value)}
             />,
           )}
-          {store.activeTab === 'opts' && renderDeferred(
-            <OptionsTab
-              {...optionsTabProps}
-              onBackToHome={projectType === null ? () => store.setActiveTab('edit') : null}
-            />,
-          )}
-
           {projectType !== null && bottomPanelOpen && (
             <BottomWorkspacePanel
               activeTab={bottomPanelTab}

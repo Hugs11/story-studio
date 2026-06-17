@@ -28,6 +28,7 @@ import {
   buildFocusProject,
 } from './fullDiagramFocus.js';
 import { FullDiagramNode } from './FullDiagramNode.jsx';
+import { StructureActionsBar } from '../structure/StructureActionsBar.jsx';
 
 export function CompleteDiagramTree({
   project,
@@ -40,6 +41,9 @@ export function CompleteDiagramTree({
   onInspect,
   onMoveToMenu,
   onImportStories,
+  onImportFolder,
+  onImportPodcast,
+  onRecord,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -207,6 +211,12 @@ export function CompleteDiagramTree({
     () => buildChildSummaryMap(project.rootEntries ?? []),
     [project.rootEntries],
   );
+  const structureActionTargetMenuId = useMemo(() => {
+    if (!selectedId || selectedId === 'root' || selectedId === END_NODE_ID) return null;
+    const entry = findEntryById(project, selectedId, projectIndex);
+    if (entry?.type === 'menu') return selectedId;
+    return findParentMenuId(project, selectedId, projectIndex) ?? null;
+  }, [project, projectIndex, selectedId]);
   const layout = useMemo(
     () => getCompleteLayout(visibleProject, compactMode, { collapsedIds }),
     [visibleProject, compactMode, collapsedIds],
@@ -471,7 +481,7 @@ export function CompleteDiagramTree({
 
   function handlePointerDown(event) {
     if (event.button !== 0) return;
-    if (event.target.closest('.fd-complete-node, .fd-complete-zoom, .fd-complete-viewbar')) return;
+    if (event.target.closest('.fd-complete-node, .fd-complete-zoom, .fd-complete-topbar')) return;
     setHoveredNavigationEdgeId(null);
     setPinnedNavigationEdgeId(null);
     setNavigationTooltip(null);
@@ -791,31 +801,42 @@ export function CompleteDiagramTree({
         onPointerCancel={(event) => stopPanning(event.pointerId)}
         onLostPointerCapture={(event) => stopPanning(event.pointerId)}
       >
-        <div className="fd-complete-viewbar" aria-label="Modes du diagramme">
-          <label className="fd-complete-toggle">
-            <input
-              type="checkbox"
-              checked={showReturns}
-              onChange={(event) => handleShowReturnsChange(event.target.checked)}
-            />
-            <span>Afficher les retours</span>
-          </label>
-          <button
-            type="button"
-            className={`fd-complete-mode-btn ${focusMode ? 'is-active' : ''}`}
-            onClick={() => setFocusMode((current) => !current)}
-          >
-            Focus branche
-          </button>
-          {collapsedIds.size > 0 ? (
+        <div className="fd-complete-topbar">
+          <StructureActionsBar
+            targetMenuId={structureActionTargetMenuId}
+            onAddStory={onAddStory}
+            onAddFolder={onAddMenu}
+            onImportFolder={onImportFolder}
+            onImportPodcast={onImportPodcast}
+            onRecord={onRecord}
+            showLabel
+          />
+          <div className="fd-complete-viewbar" aria-label="Modes du diagramme">
+            <label className="fd-complete-toggle">
+              <input
+                type="checkbox"
+                checked={showReturns}
+                onChange={(event) => handleShowReturnsChange(event.target.checked)}
+              />
+              <span>Afficher les retours</span>
+            </label>
             <button
               type="button"
-              className="fd-complete-clear-collapse"
-              onClick={() => setCollapsedIds(new Set())}
+              className={`fd-complete-mode-btn ${focusMode ? 'is-active' : ''}`}
+              onClick={() => setFocusMode((current) => !current)}
             >
-              Tout ouvrir
+              Focus branche
             </button>
-          ) : null}
+            {collapsedIds.size > 0 ? (
+              <button
+                type="button"
+                className="fd-complete-clear-collapse"
+                onClick={() => setCollapsedIds(new Set())}
+              >
+                Tout ouvrir
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className="fd-complete-zoom">
           <button type="button" className="fd-complete-zoom-btn" onClick={() => handleZoom(BUTTON_ZOOM_FACTOR)}>+</button>

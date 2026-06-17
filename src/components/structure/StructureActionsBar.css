@@ -1,0 +1,101 @@
+.structure-actions-bar {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  padding: 4px 6px;
+  border: 1px solid color-mix(in srgb, var(--borderLt) 70%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg1) 88%, transparent);
+  color: var(--control-text-muted);
+  box-shadow: none;
+}
+
+.structure-actions-bar--panel {
+  width: 100%;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.structure-actions-label {
+  margin: 0 4px 0 2px;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.structure-actions-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.structure-actions-btn:hover:not(:disabled),
+.structure-actions-btn:focus-visible {
+  color: var(--text);
+  background: var(--control-bg-hover);
+}
+
+.structure-actions-btn:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+.structure-actions-btn:disabled {
+  color: var(--control-disabled-text);
+  cursor: not-allowed;
+}
+
+.structure-actions-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.structure-actions-trailing {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 3px;
+  padding-left: 6px;
+  border-left: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
+}
+
+.structure-actions-bar--panel .structure-actions-trailing {
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 0;
+}
+
+@media (max-width: 720px) {
+  .structure-actions-label {
+    display: none;
+  }
+}
+
+@media (max-width: 240px) {
+  .structure-actions-bar--panel {
+    gap: 1px;
+  }
+
+  .structure-actions-bar--panel .structure-actions-trailing {
+    padding-left: 6px;
+  }
+}

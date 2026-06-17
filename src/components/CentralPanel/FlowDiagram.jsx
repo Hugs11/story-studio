@@ -248,6 +248,9 @@ export function FlowDiagram({
   onUpdateItem,
   onDeleteItem,
   onImportStories,
+  onImportFolder,
+  onImportPodcast,
+  onRecord,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -458,6 +461,9 @@ export function FlowDiagram({
         onInspect={handleInspect}
         onMoveToMenu={onMoveToMenu}
         onImportStories={onImportStories}
+        onImportFolder={onImportFolder}
+        onImportPodcast={onImportPodcast}
+        onRecord={onRecord}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}
