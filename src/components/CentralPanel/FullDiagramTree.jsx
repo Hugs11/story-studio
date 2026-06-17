@@ -119,7 +119,13 @@ export function CompleteDiagramTree({
   onSelectRef.current = onSelect;
   selectedIdsRef.current = selectedIds;
   onSelectionChangeRef.current = onSelectionChange;
-  kbHandlersRef.current = { handleCopy, handleCut, handlePaste, handleDeleteSelection, selectedId };
+  kbHandlersRef.current = {
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleDeleteSelection,
+    selectedId: selectedIds?.size ? selectedId : null,
+  };
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -253,6 +259,28 @@ export function CompleteDiagramTree({
     () => navigationEdges.find((edge) => edgeKey(edge) === activeNavigationEdgeId) ?? null,
     [activeNavigationEdgeId, edgeKey, navigationEdges],
   );
+  const getNavigationEdgeForNode = useCallback((nodeId) => {
+    if (!showReturns || !nodeId) return null;
+    const priority = { sequence: 0, return: 1, home: 2 };
+    const byPriority = (a, b) => (priority[a.kind] ?? 9) - (priority[b.kind] ?? 9);
+    const outgoing = navigationEdges
+      .filter((edge) => edge.from === nodeId)
+      .sort(byPriority);
+    if (outgoing.length > 0) return outgoing[0];
+    const incoming = navigationEdges
+      .filter((edge) => edge.to === nodeId || edge.endNodeTargetId === nodeId)
+      .sort(byPriority);
+    return incoming[0] ?? null;
+  }, [navigationEdges, showReturns]);
+  const handleSelectNode = useCallback((nodeId) => {
+    if (showReturns) {
+      const edge = getNavigationEdgeForNode(nodeId);
+      setPinnedNavigationEdgeId(edge ? edgeKey(edge) : null);
+      setHoveredNavigationEdgeId(null);
+      setNavigationTooltip(null);
+    }
+    onSelect?.(nodeId);
+  }, [edgeKey, getNavigationEdgeForNode, onSelect, showReturns]);
   const activeNavigationEdgeIds = useMemo(() => {
     if (!activeNavigationEdge) return new Set();
     const ids = new Set([edgeKey(activeNavigationEdge)]);
@@ -485,6 +513,9 @@ export function CompleteDiagramTree({
     setHoveredNavigationEdgeId(null);
     setPinnedNavigationEdgeId(null);
     setNavigationTooltip(null);
+    if (selectedIdsRef.current?.size) {
+      onSelectionChangeRef.current?.(new Set());
+    }
     const node = containerRef.current;
     if (!node) return;
     panStateRef.current = {
@@ -532,7 +563,7 @@ export function CompleteDiagramTree({
     if (currentIds?.has(entryId) && currentIds?.size > 1) {
       onSelectionChangeRef.current?.(currentIds); // sets skipIdSyncRef in DiagramTab
     }
-    onSelect?.(entryId);
+    handleSelectNode(entryId);
   }
 
   const handleContextMenu = useCallback((e, nodeId, nodeType) => {
@@ -540,10 +571,10 @@ export function CompleteDiagramTree({
     e.stopPropagation();
     if (!selectedIds?.has(nodeId)) {
       onSelectionChange?.(new Set([nodeId]));
-      onSelect?.(nodeId);
+      handleSelectNode(nodeId);
     }
     setCtxMenu({ x: e.clientX, y: e.clientY, nodeId, nodeType });
-  }, [selectedIds, onSelectionChange, onSelect]);
+  }, [handleSelectNode, selectedIds, onSelectionChange]);
 
   function getTopLevelSelected(nodeId) {
     const ids = (nodeId && !selectedIds?.has(nodeId))
@@ -586,7 +617,7 @@ export function CompleteDiagramTree({
   function handlePaste(nodeId) {
     if (!clipboardRef.current?.entries?.length) return;
     const { entries, isCut, sourceIds } = clipboardRef.current;
-    const targetId = getPasteTargetId(nodeId ?? selectedId);
+    const targetId = getPasteTargetId(nodeId ?? (selectedIds?.size ? selectedId : null));
     if (isCut) {
       onCutPasteEntries?.(sourceIds, targetId);
       clipboardRef.current = null;
@@ -617,7 +648,7 @@ export function CompleteDiagramTree({
       const removed = await onRemoveEndNode?.();
       if (removed === false) return;
       onSelectionChange?.(new Set(['root']));
-      onSelect?.('root');
+      handleSelectNode('root');
       return;
     }
 
@@ -625,7 +656,7 @@ export function CompleteDiagramTree({
     if (!topLevel.length) return;
     onBulkDeleteItems?.(topLevel);
     onSelectionChange?.(new Set(['root']));
-    onSelect?.('root');
+    handleSelectNode('root');
   }
 
   function buildActions(nodeId, nodeType) {
@@ -947,7 +978,7 @@ export function CompleteDiagramTree({
                   cutIds={cutIds}
                   draggingId={draggingId}
                   dragOverContainerId={dragOverContainerId}
-                  onSelect={onSelect}
+                  onSelect={handleSelectNode}
                   onSelectionChange={onSelectionChange}
                   onContextMenu={handleContextMenu}
                   onPreview={onPreview}

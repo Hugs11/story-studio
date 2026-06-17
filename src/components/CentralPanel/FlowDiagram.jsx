@@ -374,6 +374,11 @@ export function FlowDiagram({
 
   // Ouverture auto des panneaux à la sélection (désactivable via checkbox)
   useEffect(() => {
+    if (selectedIds && selectedIds.size === 0) {
+      setInspectorNodeId(null);
+      setMultiPanelOpen(false);
+      return;
+    }
     if (selectedIds && selectedIds.size > 1) {
       setInspectorNodeId(null);
       setPreviewNodeId(null);
