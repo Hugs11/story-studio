@@ -31,7 +31,6 @@
   /* Layout */
   --col-left: clamp(180px, 18vw, 280px);
   --center-content-max: 1020px;
-  --chrome-rail-width: 52px;
   --titlebar-height: 38px;
   --toolbar-height: 50px;
   --rail-width: 52px;

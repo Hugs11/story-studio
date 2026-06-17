@@ -1,15 +1,16 @@
 .chrome-toolbar {
   min-height: var(--toolbar-height);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding: 0 12px 0 calc(var(--chrome-rail-width) + 12px);
+  padding: 0 12px;
   background: var(--bg1);
   border-bottom: 1px solid var(--border);
 }
 
 .chrome-toolbar-left,
+.chrome-toolbar-center,
 .chrome-toolbar-right {
   display: flex;
   align-items: center;
@@ -18,12 +19,19 @@
 }
 
 .chrome-toolbar-left {
-  flex: 1 1 0;
+  justify-content: flex-start;
+}
+
+.chrome-toolbar-center {
+  justify-content: center;
+  padding: 3px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg2) 54%, transparent);
 }
 
 .chrome-toolbar-right {
-  flex: 0 0 auto;
-  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .chrome-toolbar-sep {
@@ -129,6 +137,20 @@
   background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
 }
 
+.chrome-toolbar-btn[data-toolbar-id='tab-edit'],
+.chrome-toolbar-btn[data-toolbar-id='tab-diagram'] {
+  min-width: 96px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.chrome-toolbar-btn[data-toolbar-id='tab-edit'].is-active,
+.chrome-toolbar-btn[data-toolbar-id='tab-diagram'].is-active {
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+}
+
 .chrome-pack-options-caret {
   font-size: 11px;
   line-height: 1;
@@ -217,11 +239,12 @@
 @media (max-width: 1180px) {
   .chrome-toolbar {
     gap: 8px;
-    padding-left: calc(var(--chrome-rail-width) + 10px);
+    padding-left: 10px;
     padding-right: 10px;
   }
 
   .chrome-toolbar-left,
+  .chrome-toolbar-center,
   .chrome-toolbar-right {
     gap: 5px;
   }
@@ -239,27 +262,20 @@
 }
 
 @media (max-width: 1360px) {
-  .chrome-toolbar-btn[data-toolbar-id='import'] .chrome-toolbar-btn-label,
-  .chrome-toolbar-btn[data-toolbar-id='import-folder'] .chrome-toolbar-btn-label,
-  .chrome-toolbar-btn[data-toolbar-id='folder'] .chrome-toolbar-btn-label,
-  .chrome-toolbar-btn[data-toolbar-id='record'] .chrome-toolbar-btn-label {
-    display: none;
-  }
-
-  .chrome-toolbar-btn[data-toolbar-id='import'],
-  .chrome-toolbar-btn[data-toolbar-id='import-folder'],
-  .chrome-toolbar-btn[data-toolbar-id='folder'],
-  .chrome-toolbar-btn[data-toolbar-id='record'] {
-    width: 30px;
-    min-width: 30px;
-    padding-left: 0;
-    padding-right: 0;
+  .chrome-toolbar-btn[data-toolbar-id='tab-edit'],
+  .chrome-toolbar-btn[data-toolbar-id='tab-diagram'] {
+    min-width: 84px;
   }
 }
 
 @media (max-width: 900px)  {
   .chrome-toolbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding: 0 10px;
+  }
+
+  .chrome-toolbar-center {
+    justify-self: center;
   }
 
   .chrome-toolbar-right {

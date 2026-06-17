@@ -21,8 +21,8 @@
   z-index: 260;
   top: calc(100% + 12px);
   right: 0;
-  width: 280px;
-  padding: 10px;
+  width: 292px;
+  padding: 12px;
   border: 1px solid var(--borderLt);
   border-radius: var(--radius-lg);
   background: var(--bg1);
@@ -60,19 +60,59 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 8px;
   min-height: 22px;
-  padding: 0 2px 9px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 2px 12px;
+}
+
+.pack-options-eyebrow {
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.pack-options-heading {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.pack-options-heading-icon,
+.pack-options-preferences-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--accent-2-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  flex: 0 0 32px;
+}
+
+.pack-options-heading-icon svg,
+.pack-options-preferences-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .pack-options-title {
+  display: block;
   font-family: var(--font-display);
   font-size: var(--text-control);
   font-weight: var(--weight-bold);
 }
 
 .pack-options-subtitle {
+  display: block;
   color: var(--text-secondary);
   font-size: var(--text-body);
   line-height: 1.35;
@@ -84,6 +124,11 @@
 
 .pack-options-section + .pack-options-section {
   margin-top: 8px;
+}
+
+.pack-options-section--app {
+  margin-top: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
@@ -179,4 +224,60 @@
   background: var(--bg1);
   color: var(--text);
   box-shadow: var(--shadow-sm);
+}
+
+.pack-options-preferences-btn {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 7px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pack-options-preferences-btn:hover {
+  background: var(--control-bg-hover);
+}
+
+.pack-options-preferences-btn:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+.pack-options-preferences-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pack-options-preferences-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.pack-options-shortcut {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+}
+
+.pack-options-preferences-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.35;
 }

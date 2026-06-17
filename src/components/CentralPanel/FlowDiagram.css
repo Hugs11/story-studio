@@ -462,11 +462,11 @@
   cursor: default;
 }
 
-.fd-complete-viewbar {
+.fd-complete-topbar {
   position: absolute;
   top: 14px;
   left: 14px;
-  z-index: 6;
+  z-index: 7;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -478,6 +478,29 @@
   background: color-mix(in srgb, var(--bg1) 88%, black 12%);
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.fd-complete-viewbar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fd-complete-topbar .structure-actions-bar {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: transparent;
+  border-color: transparent;
+}
+
+.fd-complete-topbar .structure-actions-btn {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
 }
 
 .fd-complete-mode-btn,
@@ -1594,6 +1617,12 @@ body.fd-fullscreen-open {
     top: auto;
     bottom: 14px;
     transform: none;
+  }
+
+  .fd-complete-topbar {
+    left: 10px;
+    right: 10px;
+    max-width: none;
   }
 
   .fd-complete-zoom > * {
