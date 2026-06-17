@@ -356,6 +356,12 @@ const searchNode = [
   ['path', { d: 'm21 21-4.3-4.3' }],
 ];
 
+const rssNode = [
+  ['path', { d: 'M4 11a9 9 0 0 1 9 9' }],
+  ['path', { d: 'M4 4a16 16 0 0 1 16 16' }],
+  ['circle', { cx: '5', cy: '19', r: '1' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
 export const Kanban = createLocalLucideIcon(kanbanNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
@@ -409,3 +415,4 @@ export const Settings = createLocalLucideIcon(settingsNode);
 export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);
 export const Search = createLocalLucideIcon(searchNode);
+export const Rss = createLocalLucideIcon(rssNode);

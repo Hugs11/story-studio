@@ -120,6 +120,8 @@ pub fn run() {
             commands::comfyui::comfyui_poll_job,
             commands::comfyui::comfyui_download_output,
             commands::media_probe::probe_media_files,
+            commands::podcast::fetch_podcast_feed,
+            commands::podcast::download_podcast_media,
             commands::diagnostics::set_log_level,
             commands::diagnostics::get_current_log_file
         ])

@@ -90,6 +90,8 @@ const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').th
 const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
 const MissingMediaRelinkModal = lazy(() => import('./components/MissingMediaRelink/MissingMediaRelinkModal')
   .then((module) => ({ default: module.MissingMediaRelinkModal })));
+const PodcastImportModal = lazy(() => import('./components/PodcastImport/PodcastImportModal')
+  .then((module) => ({ default: module.PodcastImportModal })));
 
 function renderDeferred(children, fallback = null) {
   return (
@@ -173,6 +175,7 @@ function AppContent() {
   const [packOptionsOpen, setPackOptionsOpen] = useState(false);
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
+  const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [importNotice, setImportNotice] = useState(null); // string | null
@@ -748,6 +751,7 @@ function AppContent() {
     handleUnpackZip,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
+    handleImportPodcastEpisodes,
   } = useImportSession({
     store,
     projectIndex,
@@ -1002,6 +1006,7 @@ function AppContent() {
           onSaveProjectAs={handleSaveProjectAs}
           onImportStories={() => handleAddStory()}
           onImportFolder={() => handleImportFolder()}
+          onImportPodcast={() => setPodcastImportOpen(true)}
           onAddFolder={() => store.addMenu()}
           onRecord={handleToolbarRecord}
           canRecord={canRecord}
@@ -1186,6 +1191,13 @@ function AppContent() {
           onSaved={handleToolbarRecordSaved}
           onClose={() => setToolbarRecordOpen(false)}
         />
+      )}
+
+      {podcastImportOpen && renderDeferred(
+        <PodcastImportModal
+          onImport={(episodes, feed) => handleImportPodcastEpisodes(episodes, feed)}
+          onClose={() => setPodcastImportOpen(false)}
+        />,
       )}
 
       {packMetadataOpen && renderDeferred(
