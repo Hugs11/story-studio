@@ -471,6 +471,14 @@
   min-width: 0;
 }
 
+/* L'empilement image/son depend de la largeur reelle du panneau central (plus
+   etroit que la fenetre a cause des panneaux lateraux), pas de la fenetre.
+   On exclut le panneau flottant du diagramme : il a deja son propre conteneur
+   et ses requetes non nommees ne doivent pas se rattacher a ce card. */
+.card:has(> .media-split):not(.fd-floating-panel-body *) {
+  container: media-card / inline-size;
+}
+
 .media-split-left {
   min-width: 0;
   display: flex;
@@ -2069,6 +2077,16 @@
 
 /* Image + audio empilés quand le panneau central est trop étroit */
 @media (max-width: 1024px) {
+  .native-graph-layout,
+  .native-graph-media {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Empilement image/son quand le panneau central lui-meme devient etroit.
+   Seuil sur la largeur de la carte : la colonne audio (play + waveform + duree
+   + actions) doit garder ~430px, soit carte >= ~760px en cote a cote. */
+@container media-card (max-width: 760px) {
   .media-split {
     grid-template-columns: 1fr;
   }
@@ -2091,11 +2109,6 @@
   .media-split .media-col-header {
     width: 100%;
     margin-bottom: 14px;
-  }
-
-  .native-graph-layout,
-  .native-graph-media {
-    grid-template-columns: 1fr;
   }
 }
 
