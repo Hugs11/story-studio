@@ -769,9 +769,12 @@ export function TreePanel({
   }, [searchActive]);
 
   const activeEntry = activeId ? getEntry(activeId) : null;
-  // Suppress dnd-kit's sort animation when the intent is "drop inside" a folder,
-  // so the hovered folder doesn't slide away from its position.
-  const suppressSortAnimation = !!activeId && dropInfo.position === 'inside' && !dropInfo.isContainer;
+  // Garde le dossier survolé stable pendant qu'on vise : on fige la sort-animation
+  // dès qu'on survole un dossier (pas seulement une fois "dedans"), pour qu'il ne
+  // glisse plus sous le curseur et qu'on déborde moins en avant/après.
+  const overEntry = activeId && dropInfo.targetId ? getEntry(dropInfo.targetId) : null;
+  const suppressSortAnimation = !!activeId && !dropInfo.isContainer
+    && (dropInfo.position === 'inside' || overEntry?.type === 'menu');
 
   return (
     <>

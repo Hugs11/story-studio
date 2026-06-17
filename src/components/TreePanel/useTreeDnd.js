@@ -31,10 +31,15 @@ export function useTreeDnd({
   const [activeId, setActiveId] = useState(null);
   const [dropInfo, setDropInfo] = useState(EMPTY_DROP_INFO);
   const dropInfoRef = useRef(EMPTY_DROP_INFO);
+  // Dernière position connue du curseur (coords client), capturée pendant le
+  // drag. Sert à calculer avant/après/dedans par rapport au curseur plutôt
+  // qu'au centre de l'élément tiré — ciblage bien plus prévisible.
+  const pointerRef = useRef(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const collisionDetection = useCallback((args) => {
+    pointerRef.current = args.pointerCoordinates ?? null;
     const pointerHits = pointerWithin(args);
     return pointerHits.length > 0 ? pointerHits : closestCenter(args);
   }, []);
@@ -61,18 +66,21 @@ export function useTreeDnd({
       return { targetId, position: 'inside', isContainer: false };
     }
 
-    const activeMidY = activeRect.top + activeRect.height / 2;
+    // Référence verticale : le curseur si on l'a (ciblage intuitif), sinon le
+    // centre de l'élément tiré (drag clavier, etc.).
+    const pointerY = pointerRef.current?.y;
+    const refY = Number.isFinite(pointerY) ? pointerY : activeRect.top + activeRect.height / 2;
 
     if (entry?.type === 'menu') {
       const zone = Math.min(overRect.height * 0.18, 6);
-      const relativeY = activeMidY - overRect.top;
+      const relativeY = refY - overRect.top;
       if (relativeY < zone) return { targetId, position: 'before', isContainer: false };
       if (relativeY > overRect.height - zone) return { targetId, position: 'after', isContainer: false };
       return { targetId, position: 'inside', isContainer: false };
     }
 
     const overMidY = overRect.top + overRect.height / 2;
-    return { targetId, position: activeMidY < overMidY ? 'before' : 'after', isContainer: false };
+    return { targetId, position: refY < overMidY ? 'before' : 'after', isContainer: false };
   }, [getEntry]);
 
   const handleDragStart = useCallback((event) => {
