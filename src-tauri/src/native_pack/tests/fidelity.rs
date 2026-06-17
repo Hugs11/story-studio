@@ -99,6 +99,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         global_options: GlobalOptions {
             add_silence: false,
             silence_mode: None,
+            harmonize_loudness: true,
             add_silence_duration_sec: 1.0,
             auto_next: false,
             select_next: false,

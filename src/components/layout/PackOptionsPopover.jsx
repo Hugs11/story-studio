@@ -5,10 +5,12 @@ import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
 const SILENCE_MODE_OPTIONS = [
-  ['normalize', 'Normaliser', `Mesure les bords et pose ${formatPackAudioEdgeSilence()} de silence.`],
-  ['add', 'Ajouter', `Ajoute ${formatPackAudioEdgeSilence()} sans mesurer les bords existants.`],
-  ['off', 'Off', 'Ne modifie pas les silences de début et de fin.'],
+  ['normalize', 'Calcul 0,5 s', `Mesure les silences de début/fin et les ramène à exactement ${formatPackAudioEdgeSilence()} (coupe si trop long, complète si trop court).`],
+  ['add', 'Ajoute 0,5 s', `Ajoute ${formatPackAudioEdgeSilence()} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
+  ['off', 'Off', 'Ne touche pas aux silences de début et de fin.'],
 ];
+
+const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si vos fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
 
 export function PackOptionsPopover({
   open,
@@ -82,6 +84,16 @@ export function PackOptionsPopover({
 
             <div className="pack-options-section">
               <div className="pack-options-section-title">Traitement audio du pack</div>
+              <Tooltip text={HARMONIZE_LOUDNESS_HELP} wrap className="pack-options-row-tip">
+                <div className="pack-options-row">
+                  <span className="pack-options-label">Harmoniser le volume</span>
+                  <Toggle
+                    on={globalOptions.harmonizeLoudness !== false}
+                    onChange={(value) => updateOption('harmonizeLoudness', value)}
+                    ariaLabel="Harmoniser le volume des audios vers -14 LUFS à la génération."
+                  />
+                </div>
+              </Tooltip>
               <div className="pack-options-row pack-options-row-stack">
                 <span className="pack-options-label">Silence début / fin</span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">

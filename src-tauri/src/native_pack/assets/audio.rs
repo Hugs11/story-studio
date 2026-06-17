@@ -98,16 +98,13 @@ pub(crate) fn prepare_audio_asset(
     let mut measure_filters = edge_plan.measure_pre_filters.clone();
     measure_filters.push("aformat=channel_layouts=mono".to_string());
 
-    let measure = measure_loudness_ebur128(ffmpeg, &source, &measure_filters)
-        .map_err(|e| format!("Mesure audio native échouée pour {} : {}", role, e))?;
-    let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
-    if matches!(action, LoudnessAction::Uncorrectable { .. }) {
-        return Err(format!(
-            "Preparation audio native impossible pour {} : {}",
-            role,
-            loudness_action_reason(&action)
-        ));
-    }
+    let action = loudness_action_for_generation(
+        ffmpeg,
+        &source,
+        &measure_filters,
+        options.harmonize_loudness,
+        role,
+    )?;
 
     if audio_can_copy_verbatim(
         &source,
@@ -375,6 +372,36 @@ fn edge_plan_for_generation(
     })
 }
 
+/// Niveau planifié pour la génération.
+///
+/// - Harmonisation désactivée → aucune mesure ni correction (`None`) : le volume
+///   d'origine est conservé et un audio quasi-muet/incorrigible ne bloque pas la
+///   génération.
+/// - Harmonisation activée → mesure EBU R128 + plan de correction ; un niveau
+///   incorrigible fait échouer la préparation (comportement historique).
+fn loudness_action_for_generation(
+    ffmpeg: &Path,
+    source: &Path,
+    measure_filters: &[String],
+    harmonize: bool,
+    role: &str,
+) -> Result<LoudnessAction, String> {
+    if !harmonize {
+        return Ok(LoudnessAction::None);
+    }
+    let measure = measure_loudness_ebur128(ffmpeg, source, measure_filters)
+        .map_err(|e| format!("Mesure audio native échouée pour {} : {}", role, e))?;
+    let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
+    if matches!(action, LoudnessAction::Uncorrectable { .. }) {
+        return Err(format!(
+            "Preparation audio native impossible pour {} : {}",
+            role,
+            loudness_action_reason(&action)
+        ));
+    }
+    Ok(action)
+}
+
 fn loudness_action_reason(action: &LoudnessAction) -> &str {
     match action {
         LoudnessAction::Uncorrectable { reason } => reason,
@@ -475,5 +502,109 @@ mod tests {
             SilenceMode::Normalize,
             false,
         ));
+    }
+
+    fn options_with_silence(mode: SilenceMode) -> CanonicalOptions {
+        CanonicalOptions {
+            silence_mode: mode,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn harmonize_off_skips_loudness_action() {
+        // Harmonisation désactivée : aucune mesure ffmpeg, aucune correction,
+        // même pour ce qui serait sinon un niveau incorrigible.
+        let action = loudness_action_for_generation(
+            Path::new("ffmpeg"),
+            Path::new("inexistant.mp3"),
+            &Vec::<String>::new(),
+            false,
+            "test",
+        )
+        .expect("aucune erreur quand l'harmonisation est désactivée");
+        assert_eq!(action, LoudnessAction::None);
+    }
+
+    #[test]
+    fn filter_chain_applies_volume_only_for_a_gain_action() {
+        let options = options_with_silence(SilenceMode::Off);
+        // Volume conforme / harmonisation off -> action None -> pas de filtre volume.
+        let none =
+            audio_filters_with_action(&options, false, EDGE_SILENCE_SEC, &LoudnessAction::None);
+        assert!(
+            !none.contains("volume="),
+            "pas de filtre volume attendu : {none}"
+        );
+        // Volume à corriger -> filtre volume présent.
+        let gain = audio_filters_with_action(
+            &options,
+            false,
+            EDGE_SILENCE_SEC,
+            &LoudnessAction::Gain { gain_db: 4.0 },
+        );
+        assert!(gain.contains("volume="), "filtre volume attendu : {gain}");
+    }
+
+    #[test]
+    fn silence_filters_are_independent_of_loudness_action() {
+        // Orthogonalité : pour un même mode de silence, les filtres de silence
+        // sont identiques que le volume soit corrigé ou non.
+        let strip_volume = |chain: &str| {
+            chain
+                .split(',')
+                .filter(|f| !f.starts_with("volume="))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        for mode in [SilenceMode::Off, SilenceMode::Add, SilenceMode::Normalize] {
+            let options = options_with_silence(mode);
+            let none =
+                audio_filters_with_action(&options, false, EDGE_SILENCE_SEC, &LoudnessAction::None);
+            let gain = audio_filters_with_action(
+                &options,
+                false,
+                EDGE_SILENCE_SEC,
+                &LoudnessAction::Gain { gain_db: 3.0 },
+            );
+            assert_eq!(strip_volume(&none), strip_volume(&gain), "mode {mode:?}");
+        }
+    }
+
+    #[test]
+    fn silence_modes_emit_expected_silence_filters() {
+        let none = &LoudnessAction::None;
+        let off = audio_filters_with_action(
+            &options_with_silence(SilenceMode::Off),
+            false,
+            EDGE_SILENCE_SEC,
+            none,
+        );
+        assert!(
+            !off.contains("adelay") && !off.contains("apad") && !off.contains("atrim"),
+            "Off ne touche pas aux silences : {off}"
+        );
+
+        let add = audio_filters_with_action(
+            &options_with_silence(SilenceMode::Add),
+            false,
+            EDGE_SILENCE_SEC,
+            none,
+        );
+        assert!(
+            add.contains("adelay") && add.contains("apad"),
+            "Add ajoute du silence : {add}"
+        );
+
+        let normalize = audio_filters_with_action(
+            &options_with_silence(SilenceMode::Normalize),
+            false,
+            EDGE_SILENCE_SEC,
+            none,
+        );
+        assert!(
+            normalize.contains("apad") || normalize.contains("atrim"),
+            "Normalize cale les bords : {normalize}"
+        );
     }
 }

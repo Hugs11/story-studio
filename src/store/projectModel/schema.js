@@ -53,6 +53,7 @@ function normalizeOptions(options) {
       : 'normalize';
   return {
     silenceMode,
+    harmonizeLoudness: options?.harmonizeLoudness ?? true,
     autoNext: options?.autoNext ?? false,
     selectNext: options?.selectNext ?? false,
     nightMode: options?.nightMode ?? false,

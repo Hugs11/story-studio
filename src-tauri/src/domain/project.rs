@@ -27,6 +27,10 @@ pub(crate) struct GlobalOptions {
     pub(crate) select_next: bool,
     #[serde(rename = "nightMode")]
     pub(crate) night_mode: bool,
+    // Harmonisation du volume (-14 LUFS) à la génération. Absent des anciens
+    // projets → `true` (comportement historique : volume toujours harmonisé).
+    #[serde(rename = "harmonizeLoudness", default = "default_true")]
+    pub(crate) harmonize_loudness: bool,
 }
 
 impl GlobalOptions {
@@ -43,6 +47,10 @@ fn default_add_silence_duration_sec() -> f64 {
     // frontend PACK_AUDIO_EDGE_SILENCE_SECONDS. Repli pour les projets dont le
     // JSON ne porte pas encore le champ.
     0.5
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]

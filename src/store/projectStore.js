@@ -65,6 +65,7 @@ const DEFAULT_PROJECT = normalizeProjectData({
   nativeGraph: null,
   globalOptions: {
     silenceMode: 'normalize',
+    harmonizeLoudness: true,
     autoNext: false,
     selectNext: false,
     nightMode: false,
