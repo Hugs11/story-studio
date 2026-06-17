@@ -4,6 +4,11 @@
    avec les tokens couleur du projet. */
 
 .relink-modal {
+  --relink-accent: var(--accent-2);
+  --relink-accent-text: var(--accent-2-text);
+  --relink-accent-dim: var(--accent-2-dim);
+  --relink-accent-border: var(--accent-2-border);
+  --relink-accent-contrast: var(--accent-2-contrast);
   width: min(940px, 96vw);
   max-height: calc(100vh - 80px);
   display: flex;
@@ -36,9 +41,9 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
-  background: var(--accentDim);
-  color: var(--accent-text);
-  border: 1px solid var(--accentBorder);
+  background: var(--relink-accent-dim);
+  color: var(--relink-accent-text);
+  border: 1px solid var(--relink-accent-border);
   flex: 0 0 auto;
 }
 
@@ -115,7 +120,7 @@
 .relink-bar-fill {
   height: 100%;
   border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, var(--success) 0%, color-mix(in srgb, var(--success) 70%, var(--accent)) 100%);
+  background: linear-gradient(90deg, var(--success) 0%, color-mix(in srgb, var(--success) 70%, var(--relink-accent)) 100%);
   transition: width 0.35s var(--ease-standard);
 }
 
@@ -138,7 +143,7 @@
   transition: border-color var(--dur-fast);
 }
 
-.relink-search:focus-within { border-color: var(--accentBorder); }
+.relink-search:focus-within { border-color: var(--relink-accent-border); }
 .relink-search svg { width: 15px; height: 15px; color: var(--muted); flex: 0 0 auto; }
 
 /* La chaîne :not() égale la spécificité des styles d'input globaux pour
@@ -214,8 +219,8 @@
 }
 
 .relink-seg[aria-pressed="true"] .relink-seg-n {
-  background: var(--accentDim);
-  color: var(--accent-text);
+  background: var(--relink-accent-dim);
+  color: var(--relink-accent-text);
 }
 
 /* ── Corps scrollable ────────────────────────────────────── */
@@ -336,9 +341,9 @@
   height: 32px;
   padding: 0 13px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--accentBorder);
-  background: var(--accentDim);
-  color: var(--accent-text);
+  border: 1px solid var(--relink-accent-border);
+  background: var(--relink-accent-dim);
+  color: var(--relink-accent-text);
   font-family: inherit;
   font-size: 12px;
   font-weight: var(--weight-semibold);
@@ -347,7 +352,7 @@
 }
 
 .relink-gbtn svg { width: 15px; height: 15px; }
-.relink-gbtn:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.relink-gbtn:hover { background: color-mix(in srgb, var(--relink-accent) 22%, transparent); }
 .relink-gbtn:disabled { cursor: not-allowed; opacity: 0.6; }
 
 .relink-group.is-resolved .relink-gbtn {
@@ -487,7 +492,7 @@
   transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 
-.relink-row-cta:hover { border-color: var(--accentBorder); background: var(--bg3); }
+.relink-row-cta:hover { border-color: var(--relink-accent-border); background: var(--bg3); }
 .relink-row-cta:disabled { cursor: not-allowed; opacity: 0.6; }
 
 /* ── Footer ──────────────────────────────────────────────── */
@@ -524,10 +529,10 @@
 
 .relink-btn-primary {
   border: none;
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--relink-accent);
+  color: var(--relink-accent-contrast);
   font-weight: var(--weight-bold);
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 32%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--relink-accent) 32%, transparent);
 }
 
 .relink-btn-primary:hover { filter: brightness(1.06); }
@@ -543,7 +548,7 @@
 .relink-btn:disabled { cursor: not-allowed; box-shadow: none; filter: none; }
 
 .relink-btn-primary:disabled {
-  background: color-mix(in srgb, var(--accent) 40%, var(--bg3));
+  background: color-mix(in srgb, var(--relink-accent) 40%, var(--bg3));
   color: color-mix(in srgb, var(--text) 55%, transparent);
   border: none;
 }

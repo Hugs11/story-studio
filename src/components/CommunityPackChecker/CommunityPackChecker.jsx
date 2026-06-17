@@ -629,7 +629,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </Button>
         <button
           type="button"
-          className="chrome-toolbar-cta checker-correction-cta"
+          className="chrome-toolbar-cta chrome-toolbar-cta--violet checker-correction-cta"
           onClick={startFixFlow}
           disabled={!canFix || busy}
         >
@@ -838,7 +838,7 @@ export function CommunityPackChecker() {
           <Button onClick={() => setOpen(true)} disabled={busy}>
             Ouvrir
           </Button>
-          <Button variant="primary" onClick={handlePickFromEntry} disabled={busy}>
+          <Button variant="primary-violet" onClick={handlePickFromEntry} disabled={busy}>
             Choisir un ZIP
           </Button>
         </div>

@@ -202,7 +202,7 @@ export function KeyboardShortcutsModal({
 
           <div className="keyboard-shortcuts-actions">
             <Button onClick={handleResetAll}>Tout réinitialiser</Button>
-            <Button variant="primary" onClick={onClose}>Fermer</Button>
+            <Button variant="primary-violet" onClick={onClose}>Fermer</Button>
           </div>
         </div>
       </div>

@@ -84,7 +84,19 @@
   min-width: 0;
 }
 
-.pack-options-heading-icon,
+.pack-options-heading-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-dim);
+  color: var(--accent-text);
+  flex: 0 0 32px;
+}
+
 .pack-options-preferences-icon {
   width: 32px;
   height: 32px;

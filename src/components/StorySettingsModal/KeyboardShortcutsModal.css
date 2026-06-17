@@ -60,13 +60,13 @@
 
 .keyboard-shortcut-capture:hover,
 .keyboard-shortcut-capture:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-2-border);
   outline: none;
 }
 
 .keyboard-shortcut-capture.is-capturing {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
 }
 
 .keyboard-shortcuts-message {
@@ -122,7 +122,7 @@
 }
 
 .keyboard-shortcuts-section-reset:hover {
-  color: var(--accent);
+  color: var(--accent-2-text);
   background: var(--control-bg-hover);
 }
 
@@ -138,7 +138,7 @@
 }
 
 .keyboard-shortcuts-search:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-2-border);
 }
 
 .keyboard-shortcuts-empty {

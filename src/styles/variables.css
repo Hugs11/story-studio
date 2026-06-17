@@ -93,7 +93,7 @@
   --text: #171923;
   --muted: #667085;
 
-  /* Orange: identity, primary actions and selection */
+  /* Orange: pack identity, story content, structure and final pack actions */
   --accent: oklch(0.74 0.115 50);
   --accent-dim: oklch(0.74 0.115 50 / 0.12);
   --accent-border: oklch(0.74 0.115 50 / 0.35);
@@ -113,11 +113,13 @@
   --warning-border: color-mix(in srgb, oklch(0.82 0.15 92) 55%, var(--borderLt));
   --warning-border-hover: color-mix(in srgb, oklch(0.82 0.15 92) 72%, var(--borderLt));
 
-  /* Violet: secondary tools and configuration */
+  /* Violet: studio tools, AI, diagnostics and application configuration */
   --accent-2: oklch(0.52 0.13 285);
   --accent-2-text: oklch(0.45 0.14 285);
   --accent-2-dim: oklch(0.52 0.13 285 / 0.14);
   --accent-2-border: oklch(0.52 0.13 285 / 0.42);
+  --accent-2-contrast: #fff;
+  --accent-2-hover: color-mix(in srgb, var(--accent-2) 88%, white);
 
   /* Green: ready, complete and available */
   --success: #2FA05C;
@@ -222,6 +224,8 @@
   --accent-2-text: oklch(0.82 0.08 286);
   --accent-2-dim: oklch(0.62 0.11 285 / 0.18);
   --accent-2-border: oklch(0.62 0.11 285 / 0.46);
+  --accent-2-contrast: #17111f;
+  --accent-2-hover: color-mix(in srgb, var(--accent-2) 90%, white);
 
   --success: #4FD17B;
   --success-text: #86E2A3;

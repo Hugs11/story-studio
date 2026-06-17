@@ -218,7 +218,7 @@
 
 .checker-meta-form input:focus,
 .checker-meta-form textarea:focus {
-  border-color: var(--accentBorder);
+  border-color: var(--accent-2-border);
 }
 
 .checker-meta-grid {
@@ -247,9 +247,9 @@
 }
 
 .checker-meta-age button.is-active {
-  border-color: var(--accentBorder);
-  background: var(--accentDim);
-  color: var(--accent);
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
 }
 
 .checker-meta-preview {

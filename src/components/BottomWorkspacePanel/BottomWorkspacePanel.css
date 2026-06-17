@@ -71,6 +71,17 @@
   color: var(--text);
 }
 
+.bottom-workspace-tabs .bottom-workspace-tab--ai.is-active {
+  border-top-color: var(--accent-2);
+}
+
+.bottom-workspace-tabs .bottom-workspace-tab--ai.is-active span,
+.bottom-workspace-tabs .bottom-workspace-tab--ai span:not(:empty) {
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 1px solid var(--accent-2-border);
+}
+
 .bottom-workspace-tabs button span {
   min-width: 16px;
   height: 16px;

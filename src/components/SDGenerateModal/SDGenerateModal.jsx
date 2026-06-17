@@ -222,6 +222,7 @@ export function SDGenerateModal({
               <div className="sd-ref-row">
                 <Button
                   size="sm"
+                  variant="secondary-violet"
                   onClick={handlePickReference}
                   disabled={useCurrentImageAsReference || useRootImageAsReference}
                 >
@@ -266,7 +267,7 @@ export function SDGenerateModal({
                 <Button
                   key={n}
                   size="sm"
-                  variant={variants === n ? 'primary' : 'secondary'}
+                  variant={variants === n ? 'secondary-violet' : 'secondary'}
                   onClick={() => setVariants(n)}
                 >
                   {n}
@@ -299,6 +300,7 @@ export function SDGenerateModal({
                         <Tooltip text="Seed aléatoire">
                           <Button
                             size="sm"
+                            variant="secondary-violet"
                             onClick={() => setParams(p => ({ ...p, seed: randomSeed() }))}
                           ><Dices style={{ width: 12, height: 12, verticalAlign: '-2px' }} /></Button>
                         </Tooltip>
@@ -351,7 +353,7 @@ export function SDGenerateModal({
             Annuler
           </Button>
           <Button
-            variant="primary"
+            variant="primary-violet"
             onClick={handleSubmit}
             disabled={submitting || !selected || loadingWorkflows}
           >

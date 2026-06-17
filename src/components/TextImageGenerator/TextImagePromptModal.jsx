@@ -72,7 +72,7 @@ export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
         </div>
         <div className="text-img-footer">
           <Button variant="ghost" onClick={onCancel}>Annuler</Button>
-          <Button variant="primary" onClick={handleGenerate} disabled={generating}>
+          <Button variant="primary-violet" onClick={handleGenerate} disabled={generating}>
             {generating ? 'Génération…' : 'Générer'}
           </Button>
         </div>

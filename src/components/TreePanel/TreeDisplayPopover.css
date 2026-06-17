@@ -21,14 +21,14 @@
 
 .tree-display-trigger:hover,
 .tree-display-trigger.is-active {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 78%, transparent);
-  background: color-mix(in srgb, var(--accent-dim) 62%, var(--bg2));
+  color: var(--accent-2-text);
+  border-color: color-mix(in srgb, var(--accent-2-border) 78%, transparent);
+  background: color-mix(in srgb, var(--accent-2-dim) 72%, var(--bg2));
 }
 
 .tree-display-trigger.is-active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent-2-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 20%, transparent);
 }
 
 .tree-display-trigger:focus-visible {

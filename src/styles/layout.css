@@ -255,6 +255,28 @@ body {
   color: var(--primary-disabled-text);
 }
 
+.btn-primary-violet {
+  background: var(--accent-2);
+  color: var(--accent-2-contrast);
+  border-color: color-mix(in srgb, var(--accent-2) 82%, black);
+}
+
+.btn-primary-violet:hover:not(:disabled) {
+  background: var(--accent-2-hover);
+  border-color: color-mix(in srgb, var(--accent-2-hover) 82%, black);
+}
+
+.btn-primary-violet:focus-visible {
+  outline-color: var(--accent-2-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 26%, transparent);
+}
+
+.btn-primary-violet:disabled {
+  background: var(--primary-disabled-bg);
+  border-color: var(--primary-disabled-border);
+  color: var(--primary-disabled-text);
+}
+
 .btn-xs {
   min-height: 28px;
   padding: 0 11px;
@@ -377,6 +399,11 @@ body {
   background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
   border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
   color: var(--accent-2-text);
+}
+
+.btn-secondary-violet:focus-visible {
+  outline-color: var(--accent-2-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
 }
 
 .btn-icon {

@@ -57,6 +57,11 @@ export function BottomWorkspacePanel({
     () => collectMediaLibrary({ project, statusByPath: pathAudit, sdJobs, xttsJobs, extraPaths: mediaLibraryPaths }).length,
     [project, pathAudit, sdJobs, xttsJobs, mediaLibraryPaths],
   );
+  const tabClassName = (tab) => [
+    'bottom-workspace-tab',
+    `bottom-workspace-tab--${tab}`,
+    activeTab === tab ? 'is-active' : '',
+  ].filter(Boolean).join(' ');
 
   function handleResizeMouseDown(e) {
     e.preventDefault();
@@ -89,7 +94,7 @@ export function BottomWorkspacePanel({
       <div className="bottom-workspace-tabs">
         <button
           type="button"
-          className={activeTab === 'media' ? 'is-active' : ''}
+          className={tabClassName('media')}
           onClick={() => onActiveTabChange('media')}
         >
           Médias
@@ -97,7 +102,7 @@ export function BottomWorkspacePanel({
         </button>
         <button
           type="button"
-          className={activeTab === 'queue' ? 'is-active' : ''}
+          className={tabClassName('queue')}
           onClick={() => onActiveTabChange('queue')}
         >
           File de rendu
@@ -105,7 +110,7 @@ export function BottomWorkspacePanel({
         </button>
         <button
           type="button"
-          className={activeTab === 'ai' ? 'is-active' : ''}
+          className={tabClassName('ai')}
           onClick={() => onActiveTabChange('ai')}
         >
           File IA
