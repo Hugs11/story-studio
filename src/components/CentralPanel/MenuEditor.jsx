@@ -18,8 +18,8 @@ const MENU_BEHAVIOR_CONTROLS = [
   },
   {
     key: 'autoplay',
-    label: 'Lancer la première histoire automatiquement',
-    desc: "Après l'audio de sélection, la première histoire démarre sans appui sur OK.",
+    label: 'Lecture automatique',
+    desc: "Après l'audio de sélection, enchaîne automatiquement vers le contenu du dossier, sans appui sur OK.",
     def: false,
   },
   {
