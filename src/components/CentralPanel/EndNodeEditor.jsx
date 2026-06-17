@@ -54,7 +54,7 @@ export function EndNodeEditor({
         <AudioField
           label="Audio de fin d'histoire"
           file={nightModeAudio}
-          ttsTextSuggestion="Tu veux encore écouter une histoire ?"
+          ttsTextSuggestion={endNodeName || ''}
           ttsFilenameHint={`fin-histoire-${projectName || 'projet'}`}
           xttsTarget={{ kind: 'root', field: 'nightModeAudio' }}
           onPick={(file) => onUpdateNightModeAudio(file)}
