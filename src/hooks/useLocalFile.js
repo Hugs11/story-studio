@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { logger } from '../utils/logger';
 import { MIME } from '../utils/mimeTypes';
-import { FILE_REFRESH_THROTTLE_MS, didPathSnapshotChange, readPathSnapshot } from '../store/fileMetadataCache';
+import { FILE_CHANGED_EVENT, FILE_REFRESH_THROTTLE_MS, didPathSnapshotChange, readPathSnapshot } from '../store/fileMetadataCache';
 
 function revokeObjectUrlSoon(url) {
   if (!url) return;
@@ -39,7 +39,7 @@ export function useLocalFile(path) {
       setUrl(null);
     }
 
-    async function loadCurrentPath({ allowThrottle = false } = {}) {
+    async function loadCurrentPath({ allowThrottle = false, force = false } = {}) {
       const ext = readablePath.split('.').pop().toLowerCase();
       const mime = MIME[ext] || 'application/octet-stream';
 
@@ -56,7 +56,7 @@ export function useLocalFile(path) {
           return;
         }
 
-        const shouldReload = !urlRef.current || didPathSnapshotChange(previousSnapshot, nextSnapshot);
+        const shouldReload = force || !urlRef.current || didPathSnapshotChange(previousSnapshot, nextSnapshot);
         if (!shouldReload) return;
 
         const data = await readFile(readablePath);
@@ -76,14 +76,23 @@ export function useLocalFile(path) {
       void loadCurrentPath({ allowThrottle: true });
     }
 
+    function handleFileChanged(event) {
+      if (normalizeFsPath(event?.detail?.path ?? '') !== readablePath) return;
+      // Le contenu a changé sans changer de chemin : on relit sans s'appuyer sur
+      // la détection mtime/taille (qui peut être indisponible).
+      void loadCurrentPath({ force: true });
+    }
+
     // On force une vraie lecture au montage/changement de chemin pour éviter
     // de réutiliser un cache stale juste après une extraction ou un remplacement.
     void loadCurrentPath({ allowThrottle: false });
     window.addEventListener('focus', handleFocus);
+    window.addEventListener(FILE_CHANGED_EVENT, handleFileChanged);
 
     return () => {
       cancelled = true;
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener(FILE_CHANGED_EVENT, handleFileChanged);
       revokeObjectUrlSoon(urlRef.current);
       urlRef.current = null;
       snapshotRef.current = null;

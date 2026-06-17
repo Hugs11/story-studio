@@ -4,6 +4,7 @@ import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { pickAudio } from '../../hooks/useFileDialog';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { notifyFileChanged } from '../../store/fileMetadataCache';
 import { useProjectContext } from '../../store/ProjectContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
@@ -435,8 +436,15 @@ export function AudioField({
             onConfirm={(outputPath) => {
               stopPlayback(true);
               setShowAudioEditor(false);
-              if (outputPath !== file && onPick) void onPick(outputPath);
-              if (outputPath && outputPath !== file) onMediaCreated?.(outputPath);
+              if (outputPath && outputPath !== file) {
+                if (onPick) void onPick(outputPath);
+                onMediaCreated?.(outputPath);
+              } else if (outputPath) {
+                // Édition en place (format de travail FLAC/WAV) : même chemin,
+                // contenu modifié. useLocalFile est mémoïsé sur le chemin et ne se
+                // rafraîchit pas seul -> on force une relecture du fichier.
+                notifyFileChanged(outputPath);
+              }
             }}
             onCancel={() => setShowAudioEditor(false)}
           />

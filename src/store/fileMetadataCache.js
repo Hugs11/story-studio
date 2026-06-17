@@ -85,6 +85,19 @@ export function hasFreshPathSnapshot(path, maxAgeMs = FILE_REFRESH_THROTTLE_MS) 
   return isFresh(getCachedPathSnapshot(path), maxAgeMs);
 }
 
+export const FILE_CHANGED_EVENT = 'local-file-changed';
+
+// Signale qu'un fichier a changé sur disque sans changer de chemin. Invalide le
+// snapshot et notifie les `useLocalFile` montés sur ce chemin pour qu'ils
+// relisent le contenu, sans dépendre de la détection mtime/taille (qui peut être
+// indisponible si `stat` n'est pas permis).
+export function notifyFileChanged(path) {
+  const normalizedPath = normalizePath(path);
+  if (!normalizedPath) return;
+  pathSnapshotCache.delete(normalizedPath);
+  window.dispatchEvent(new CustomEvent(FILE_CHANGED_EVENT, { detail: { path: normalizedPath } }));
+}
+
 export function didPathSnapshotChange(previousSnapshot, nextSnapshot) {
   if (!previousSnapshot && !nextSnapshot) return false;
   if (!previousSnapshot || !nextSnapshot) return true;
