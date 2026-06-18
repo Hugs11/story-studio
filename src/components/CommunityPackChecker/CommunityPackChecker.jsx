@@ -395,7 +395,7 @@ function summarizeGroups(groups, report) {
       Icon: TriangleAlert,
       title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
       subtitle: fixCount > 0
-        ? 'Le pack peut être corrigé, mais nous conseillons de le refaire depuis une source audio propre.'
+        ? "Le reste sera corrigé ; pour l'audio saturé, refaites le pack depuis une source propre."
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
