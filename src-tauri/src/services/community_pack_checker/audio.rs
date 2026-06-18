@@ -4,8 +4,8 @@ use std::process::{Command, Stdio};
 use crate::support::audio_norm::{
     build_edge_silence_filters, build_loudness_filters, loudness_in_deadband,
     loudness_in_validation_window, measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix,
-    EdgeMeasure, LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS,
-    TARGET_LUFS, VALIDATION_WINDOW_LUFS,
+    EdgeMeasure, LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP,
+    MAX_ACCEPTABLE_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS, TARGET_LUFS, VALIDATION_WINDOW_LUFS,
 };
 use crate::support::ffmpeg::apply_no_window;
 
@@ -279,6 +279,34 @@ pub(crate) fn analyze_audio_file(
         }
     }
 
+    // Crête vraie trop élevée → risque d'écrêtage sur la boîte, **indépendamment**
+    // du niveau moyen. La mesure de niveau ci-dessus ne regarde que le volume : un
+    // fichier déjà saturé (SPG, ou rework antérieur au correctif limiteur) mais par
+    // ailleurs au bon volume passait inaperçu. Auto-fixable : le ré-encodage
+    // applique le limiteur −2 dBFS.
+    if !probe.audio_is_silent {
+        if let Some(peak) = probe.true_peak_db {
+            if true_peak_indicates_clipping(peak) {
+                push_audio_issue(
+                    &mut issues,
+                    PackValidationSeverity::Warning,
+                    target,
+                    "Cet audio sature (crête trop élevée).",
+                    Some(format!(
+                        "Crête vraie mesurée : {:.1} dBTP (seuil : {:.1} dBTP). Au-delà, le signal écrête à la lecture sur la boîte. Correction : limiter la crête, crête MP3 attendue ≈ {:.1} dBTP.",
+                        peak, MAX_ACCEPTABLE_TRUE_PEAK_DBTP, EXPECTED_FINAL_TRUE_PEAK_DBTP
+                    )),
+                    true,
+                    Some("Limiter la crête pour supprimer l'écrêtage.".to_string()),
+                );
+                if status != PackValidationSeverity::Error {
+                    status = PackValidationSeverity::Warning;
+                }
+                fix_parts.push("limiter la crête");
+            }
+        }
+    }
+
     let auto_fix_available = !manual_block && !fix_parts.is_empty();
     if manual_block {
         for issue in &mut issues {
@@ -362,13 +390,20 @@ pub(crate) fn fix_audio_file(
     let mut filters = pre_filters;
     // On corrige le niveau quand il est hors fenêtre, ou — si l'harmonisation
     // opt-in est demandée — quand il est dans la fenêtre mais hors bande morte.
-    let should_fix_loudness = item
-        .integrated_lufs
-        .map(|value| {
-            !loudness_in_validation_window(value)
-                || (harmonize_loudness && !loudness_in_deadband(value))
-        })
+    // On le corrige **aussi** quand la crête sature (écrêtage), même si le volume
+    // moyen est conforme : c'est le ré-encodage qui applique le limiteur.
+    let is_clipping = item
+        .true_peak_db
+        .map(true_peak_indicates_clipping)
         .unwrap_or(false);
+    let should_fix_loudness = is_clipping
+        || item
+            .integrated_lufs
+            .map(|value| {
+                !loudness_in_validation_window(value)
+                    || (harmonize_loudness && !loudness_in_deadband(value))
+            })
+            .unwrap_or(false);
     if should_fix_loudness {
         let measure = measure_loudness_ebur128(ffmpeg, input, &filters).map_err(|e| {
             format!(
@@ -722,5 +757,60 @@ fn loudness_action_reason(action: &LoudnessAction) -> &str {
     match action {
         LoudnessAction::Uncorrectable { reason } => reason,
         _ => "correction non requise",
+    }
+}
+
+/// Une crête vraie au-dessus du seuil indique un risque d'écrêtage : le
+/// générateur (limiteur −2 dBFS) produirait plus propre. Insensible au niveau
+/// moyen — un fichier au bon volume peut quand même saturer.
+fn true_peak_indicates_clipping(true_peak_db: f64) -> bool {
+    true_peak_db.is_finite() && true_peak_db > MAX_ACCEPTABLE_TRUE_PEAK_DBTP
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_clipping_only_above_threshold() {
+        // Overshoot MP3 normal d'un fichier conforme : pas d'alerte.
+        assert!(!true_peak_indicates_clipping(0.8));
+        assert!(!true_peak_indicates_clipping(MAX_ACCEPTABLE_TRUE_PEAK_DBTP));
+        // SPG et packs écrêtés : signalés.
+        assert!(true_peak_indicates_clipping(2.4));
+        assert!(true_peak_indicates_clipping(14.5));
+        // Mesure invalide : jamais d'alerte (évite un faux positif sur NaN/inf).
+        assert!(!true_peak_indicates_clipping(f64::NAN));
+        assert!(!true_peak_indicates_clipping(f64::INFINITY));
+    }
+
+    /// Harnais manuel : passe le vrai `analyze_audio_file` sur des assets réels et
+    /// imprime statut + alertes. No-op sauf si les variables d'env sont posées :
+    ///   SS_CHECK_ASSETS = chemins MP3 séparés par `|`
+    ///   SS_FFMPEG       = chemin de ffmpeg.exe
+    #[test]
+    fn check_assets_from_env() {
+        let Ok(assets) = std::env::var("SS_CHECK_ASSETS") else {
+            return;
+        };
+        let ffmpeg = std::env::var("SS_FFMPEG").expect("SS_FFMPEG");
+        let ffmpeg = std::path::PathBuf::from(ffmpeg);
+        for (i, path) in assets.split('|').enumerate() {
+            let path = path.trim();
+            if path.is_empty() {
+                continue;
+            }
+            let p = std::path::Path::new(path);
+            let name = p.file_name().unwrap().to_string_lossy().to_string();
+            let (item, issues) =
+                analyze_audio_file(&ffmpeg, p, &name, &format!("asset{i}"), "story", true);
+            eprintln!(
+                "[{name}] status={} tp={:?} dBTP lufs={:?}",
+                item.status, item.true_peak_db, item.integrated_lufs
+            );
+            for iss in &issues {
+                eprintln!("    - {:?} | {}", iss.severity, iss.message);
+            }
+        }
     }
 }
