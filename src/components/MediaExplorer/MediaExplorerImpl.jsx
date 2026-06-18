@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { lazy, Suspense, useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { collectMediaLibrary } from '../../store/mediaLibrary';
 import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaMetadata } from '../../hooks/useMediaMetadata';
@@ -21,6 +21,8 @@ import { cleanPath, tagStyle } from './helpers';
 import { COLUMNS, colsToGrid, useColumnWidths } from './useColumnWidths';
 import './MediaExplorer.css';
 
+const AudioSplitterModal = lazy(() => import('../AudioSplitterModal/AudioSplitterModal')
+  .then((m) => ({ default: m.AudioSplitterModal })));
 
 const FILTERS = [
   { id: 'all', label: 'Tout' },
@@ -66,6 +68,7 @@ export function MediaExplorer({
   const [bulkTag, setBulkTag] = useState('');
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
+  const [splitterItem, setSplitterItem] = useState(null);
   const [assemblyToast, setAssemblyToast] = useState('');
   const [pendingSelectPath, setPendingSelectPath] = useState('');
   const { getMeta, markForProbe } = useMediaMetadata();
@@ -428,6 +431,44 @@ export function MediaExplorer({
     setAssemblyToast(`Audio assemblé créé : ${basename(cleanPath(path))}`);
   }
 
+  function openAudioSplitter(item) {
+    if (!item || item.kind !== 'audio' || !item.exists) return;
+    setActivePopover(null);
+    setSplitterItem({
+      ...item,
+      durationSecs: getMeta(item.path)?.duration_secs,
+    });
+  }
+
+  function handleAudioSplitCreated(paths, failures = []) {
+    const createdPaths = paths.filter(Boolean);
+    const sourcePath = splitterItem?.path;
+    const sourceTags = sourcePath ? (mediaTags?.[sourcePath] ?? []) : [];
+    const tagsToCopy = new Set([...sourceTags, 'découpe']);
+    for (const path of createdPaths) {
+      onMediaCreated?.(path);
+      if (onAddMediaTag) {
+        for (const tag of tagsToCopy) onAddMediaTag(path, tag);
+      }
+    }
+    if (createdPaths[0]) setPendingSelectPath(createdPaths[0]);
+    setSplitterItem(null);
+    setAssemblyToast(createdPaths.length === 1
+      ? `Extrait audio créé : ${basename(cleanPath(createdPaths[0]))}`
+      : `${createdPaths.length} extraits audio créés`);
+
+    if (failures.length > 0) {
+      const details = failures
+        .map((failure) => `• ${failure.outputFileName || 'Extrait'}\n  ${failure.error || 'Erreur inconnue'}`)
+        .join('\n\n');
+      showErrorDialog({
+        title: 'Certaines découpes ont échoué',
+        message: `${createdPaths.length} extrait${createdPaths.length > 1 ? 's ont été créés' : ' a été créé'}, mais ${failures.length} découpe${failures.length > 1 ? 's ont échoué' : ' a échoué'} :\n\n${details}`,
+        variant: 'warning',
+      });
+    }
+  }
+
   const viewSwitch = (
     <div className="media-view-switch-row">
       <div className="media-view-switch">
@@ -583,6 +624,7 @@ export function MediaExplorer({
         onDeleteRequest={handleDeleteRequest}
         selectedAudioItems={selectedAudioItems}
         onOpenAssembly={() => setAssemblyOpen(true)}
+        onOpenSplitter={openAudioSplitter}
         selectedIds={selectedIds}
         selectedItems={visibleSelectedItems}
         onSelectItem={handleSelectItem}
@@ -604,6 +646,7 @@ export function MediaExplorer({
           allProjectTags={allTags}
           onAddMediaTag={onAddMediaTag}
           onRemoveMediaTag={onRemoveMediaTag}
+          onSplit={() => openAudioSplitter(sortedVisible[activePopover.idx])}
         />
       )}
       {assemblyOpen && (
@@ -619,6 +662,16 @@ export function MediaExplorer({
           onCreated={handleAudioAssemblyCreated}
           onDeleteMedia={onDeleteMedia}
         />
+      )}
+      {splitterItem && (
+        <Suspense fallback={null}>
+          <AudioSplitterModal
+            item={splitterItem}
+            savePath={savePath}
+            onClose={() => setSplitterItem(null)}
+            onCreated={handleAudioSplitCreated}
+          />
+        </Suspense>
       )}
       {assemblyToast && (
         <div className="media-assembly-toast" role="status">

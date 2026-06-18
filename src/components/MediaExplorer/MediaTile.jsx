@@ -4,7 +4,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { mediaDrag } from '../../store/dragState';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
-import { Copy, FolderOpen, Link2, Trash2 } from '../icons/LucideLocal';
+import { Copy, FolderOpen, Link2, Scissors, Trash2 } from '../icons/LucideLocal';
 import { cleanPath, formatDate, getMetaDisplay, kindLabel, tagStyle } from './helpers';
 import { useAudioDuration } from './useAudioDuration';
 import { MediaThumb } from './MediaThumb';
@@ -15,7 +15,7 @@ export function MediaTile({
   item, view, getMeta, markForProbe, onSelectNode, onOpenAiQueue,
   index, isPopoverOpen, onActivate, onNavigate,
   itemTags, allProjectTags, onAddMediaTag, onRemoveMediaTag,
-  mediaTags, onDeleteRequest, onAssemble,
+  mediaTags, onDeleteRequest, onAssemble, onSplit,
   isSelected, selectedItems, selectedAudioItems, onSelect, onContextMenuSelect,
   visibleCols, dropOnNode,
 }) {
@@ -67,6 +67,10 @@ export function MediaTile({
     ...(onAssemble && contextAudioItems.length >= 2 ? [
       'sep',
       { icon: <Link2 />, label: `Assembler ${contextAudioItems.length} sons`, fn: () => onAssemble() },
+    ] : []),
+    ...(onSplit && item.kind === 'audio' && item.exists ? [
+      'sep',
+      { icon: <Scissors />, label: 'Découper un audio', fn: () => onSplit(item) },
     ] : []),
     ...(onDeleteRequest ? [
       'sep',

@@ -1,10 +1,12 @@
 pub(crate) mod edit;
 pub(crate) mod embed;
 pub(crate) mod pipeline;
+pub(crate) mod split;
 
 pub use edit::*;
 pub use embed::*;
 pub use pipeline::*;
+pub use split::*;
 
 /// Format de travail sans perte de l'espace de travail. On n'encode en MP3
 /// qu'à la génération du pack ; tout l'audio manipulé par l'app (assemblage,
@@ -19,7 +21,10 @@ pub(crate) const LOSSLESS_WORKING_EXTENSIONS: &[&str] = &["flac", "wav"];
 /// Extension de sortie d'une édition pour une entrée donnée : on garde un
 /// format sans perte existant, sinon on bascule vers FLAC.
 pub(crate) fn working_output_extension(input_ext: &str) -> String {
-    let ext = input_ext.trim().trim_start_matches('.').to_ascii_lowercase();
+    let ext = input_ext
+        .trim()
+        .trim_start_matches('.')
+        .to_ascii_lowercase();
     if LOSSLESS_WORKING_EXTENSIONS.contains(&ext.as_str()) {
         ext
     } else {

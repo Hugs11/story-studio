@@ -94,6 +94,42 @@ fn concat_audio_files_smoke_with_ffmpeg_when_available() {
 }
 
 #[test]
+fn split_audio_segments_keeps_successes_when_one_segment_fails() {
+    let Ok(ffmpeg) = get_ffmpeg_path() else {
+        return;
+    };
+    let workspace = temp_workspace_with_dirs("split_partial");
+    let input = workspace.join("fichiers-importes").join("source.wav");
+    run_ffmpeg_make_silence(&ffmpeg, 0.2, &input).expect("create source wav");
+
+    let result = split_audio_segments(
+        "",
+        input.to_str().unwrap(),
+        &[
+            AudioSplitSegment {
+                output_file_name: "source_extrait_01.flac".to_string(),
+                start_sec: 0.0,
+                end_sec: 0.05,
+            },
+            AudioSplitSegment {
+                output_file_name: "source_extrait_02.flac".to_string(),
+                start_sec: 0.1,
+                end_sec: 0.1,
+            },
+        ],
+        Some(workspace.to_str().unwrap()),
+    )
+    .expect("split audio segments");
+
+    assert_eq!(result.created.len(), 1);
+    assert_eq!(result.failed.len(), 1);
+    assert!(PathBuf::from(&result.created[0].output_path).is_file());
+    assert!(result.failed[0].error.contains("après"));
+
+    fs::remove_dir_all(workspace).expect("cleanup workspace");
+}
+
+#[test]
 fn audio_edit_filter_builds_trim_with_fades() {
     let (filter, map) = audio_edit_filter("trim", 1.0, 6.0, 0.5, 0.75, 0.0).expect("trim filter");
     assert_eq!(map, "out");

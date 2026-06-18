@@ -91,6 +91,7 @@ pub fn run() {
             commands::files::delete_file,
             commands::files::delete_workspace_media_file,
             commands::files::concat_audio_files,
+            commands::files::split_audio_segments,
             commands::files::extract_audio_embedded_image,
             commands::files::trim_audio,
             commands::files::cut_audio,
