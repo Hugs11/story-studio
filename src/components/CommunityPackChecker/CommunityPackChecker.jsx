@@ -456,8 +456,29 @@ function SplitStat({ ok, needsFix }) {
   );
 }
 
+// Stat audio à 3 états « selon les cas » : OK toujours ; « à corriger » et
+// « non corrigeable » uniquement quand > 0. Le nombre de colonnes s'adapte.
+function AudioSplitStat({ ok, toFix, blocked }) {
+  const cells = [
+    <span key="ok" className="checker-split-stat-ok"><strong>{ok}</strong> OK</span>,
+  ];
+  if (toFix > 0) {
+    cells.push(<span key="fix" className="checker-split-stat-fix"><strong>{toFix}</strong> à corriger</span>);
+  }
+  if (blocked > 0) {
+    cells.push(<span key="blocked" className="checker-split-stat-blocked"><strong>{blocked}</strong> non corrigeable</span>);
+  }
+  return <div className={`checker-split-stat checker-split-stat--cols-${cells.length}`}>{cells}</div>;
+}
+
 function SummaryTiles({ report, saturatedCount = 0 }) {
-  const audio = categoryStats(report.audioSummary);
+  const audioItems = report.audioItems || [];
+  const audioOk = audioItems.filter((item) => item.status === 'ok').length;
+  // « Non corrigeable » : fichier en défaut que l'app ne sait pas réparer
+  // automatiquement (audio saturé, trop court, muet) — par opposition à
+  // « à corriger » (silence, format… auto-fixables).
+  const audioBlocked = audioItems.filter((item) => item.status !== 'ok' && !item.autoFixAvailable).length;
+  const audioToFix = audioItems.filter((item) => item.status !== 'ok' && item.autoFixAvailable).length;
   const images = categoryStats(report.imageSummary);
   const title = categoryStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
@@ -465,8 +486,8 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
   const nightMode = Boolean(report.nightMode?.detected);
   return (
     <div className="checker-summary-tiles" aria-label="Résumé du pack">
-      <SummaryTile title="Audio" Icon={Music} tone={audio.needsFix ? 'fix' : 'ok'}>
-        <SplitStat ok={audio.ok} needsFix={audio.needsFix} />
+      <SummaryTile title="Audio" Icon={Music} tone={(audioToFix + audioBlocked) > 0 ? 'fix' : 'ok'}>
+        <AudioSplitStat ok={audioOk} toFix={audioToFix} blocked={audioBlocked} />
       </SummaryTile>
       <SummaryTile title="Images" Icon={Image} tone={images.needsFix ? 'fix' : 'ok'}>
         <SplitStat ok={images.ok} needsFix={images.needsFix} />
