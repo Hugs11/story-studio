@@ -5,6 +5,8 @@ import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
 import { StructureActionsBar } from '../components/structure/StructureActionsBar';
+import { Tooltip } from '../components/common/Tooltip';
+import { Search } from '../components/icons/LucideLocal';
 import { KEYS } from '../store/persistentSettings';
 import { usePersistentState } from '../hooks/usePersistentState';
 
@@ -45,6 +47,7 @@ export function EditorTab({
   onUpdateNightModeHomeReturn,
   pathAudit, validationIssues, allMenus, projectIndex,
   treeSearchFocusTrigger,
+  onFocusTreeSearch,
   showCentralDiagram,
 }) {
   const { projectType } = project;
@@ -142,14 +145,29 @@ export function EditorTab({
                 onRecord={onRecord}
                 canRecord={canRecord}
                 trailing={(
-                  <TreeDisplayPopover
-                    open={treeDisplayOpen}
-                    onOpenChange={setTreeDisplayOpen}
-                    showNavigationBadges={showNavigationBadges}
-                    onShowNavigationBadgesChange={setShowNavigationBadges}
-                    showGuides={showTreeGuides}
-                    onShowGuidesChange={setShowTreeGuides}
-                  />
+                  <>
+                    <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">
+                      <button
+                        type="button"
+                        className="tree-display-trigger tree-search-trigger"
+                        aria-label="Rechercher dans la structure"
+                        onClick={() => {
+                          setTreeDisplayOpen(false);
+                          onFocusTreeSearch?.();
+                        }}
+                      >
+                        <Search className="tree-display-trigger-icon" strokeWidth={2.15} absoluteStrokeWidth />
+                      </button>
+                    </Tooltip>
+                    <TreeDisplayPopover
+                      open={treeDisplayOpen}
+                      onOpenChange={setTreeDisplayOpen}
+                      showNavigationBadges={showNavigationBadges}
+                      onShowNavigationBadgesChange={setShowNavigationBadges}
+                      showGuides={showTreeGuides}
+                      onShowGuidesChange={setShowTreeGuides}
+                    />
+                  </>
                 )}
               />
             </div>

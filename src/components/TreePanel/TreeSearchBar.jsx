@@ -1,10 +1,14 @@
 // Barre de recherche du TreePanel : input + bouton clear.
 // Extraite de TreePanel.jsx pour reduire la surface du composant orchestrateur.
 
+import { Search } from '../icons/LucideLocal';
+
 export function TreeSearchBar({ searchTerm, setSearchTerm, setSearchActive, inputRef }) {
   return (
     <div className="tree-search-bar">
-      <span className="tree-search-icon">⌕</span>
+      <span className="tree-search-icon" aria-hidden="true">
+        <Search size={13} strokeWidth={2} />
+      </span>
       <input
         ref={inputRef}
         className="tree-search-input"
