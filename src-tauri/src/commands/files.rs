@@ -60,6 +60,33 @@ pub async fn concat_audio_files(
 }
 
 #[tauri::command]
+pub async fn split_audio_segments(
+    save_path: String,
+    input_path: String,
+    segments: Vec<project_files::AudioSplitSegment>,
+    workspace_dir: Option<String>,
+) -> Result<project_files::AudioSplitResult, String> {
+    log::info!(target: "files",
+        "split_audio_segments: input='{}' segments={}",
+        input_path, segments.len());
+    let input_for_log = input_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::split_audio_segments(
+            &save_path,
+            &input_path,
+            &segments,
+            workspace_dir.as_deref(),
+        )
+        .inspect_err(|err| {
+            log::error!(target: "files",
+                "split_audio_segments failed for '{}': {}", input_for_log, err)
+        })
+    })
+    .await
+    .map_err(|e| format!("Tâche abandonnée : {}", e))?
+}
+
+#[tauri::command]
 pub fn extract_audio_embedded_image(audio_path: String) -> Result<Option<String>, String> {
     project_files::extract_audio_embedded_image(&audio_path)
 }
