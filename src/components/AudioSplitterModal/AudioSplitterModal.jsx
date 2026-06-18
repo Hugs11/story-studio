@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
@@ -7,7 +7,7 @@ import { useProjectContext } from '../../store/ProjectContext';
 import { basename } from '../../utils/fileUtils';
 import { Button } from '../common/Button';
 import { Tooltip } from '../common/Tooltip';
-import { Loader2, Pause, Play, Scissors, SkipBack, SkipForward, Square, Trash2 } from '../icons/LucideLocal';
+import { Pause, Play, Scissors, SkipBack, SkipForward, Square, Trash2 } from '../icons/LucideLocal';
 import {
   formatTime,
   KEYBOARD_ZOOM_STEP,
@@ -60,6 +60,7 @@ export function AudioSplitterModal({
   const durationRef = useRef(0);
   const isClampingRef = useRef(false);
   const skipNextZoomEffectRef = useRef(false);
+  const auditionEndRef = useRef(null);
   const counterRef = useRef(1);
 
   const [duration, setDuration] = useState(0);
@@ -67,9 +68,6 @@ export function AudioSplitterModal({
   const [segments, setSegments] = useState([]);
   const [zoom, setZoom] = useState(80);
   const [loading, setLoading] = useState(true);
-  const [previewPath, setPreviewPath] = useState(null);
-  const previewAudioUrl = useLocalFile(previewPath);
-  const [previewLabel, setPreviewLabel] = useState('');
   const [previewingKey, setPreviewingKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -141,9 +139,33 @@ export function AudioSplitterModal({
       setError('Impossible de charger le fichier audio.');
     });
     ws.on('play', () => { if (mounted) setIsPlaying(true); });
-    ws.on('pause', () => { if (mounted) setIsPlaying(false); });
-    ws.on('finish', () => { if (mounted) setIsPlaying(false); });
-    ws.on('timeupdate', (time) => { if (mounted) setCurrentTime(time); });
+    ws.on('pause', () => {
+      if (!mounted) return;
+      setIsPlaying(false);
+      if (auditionEndRef.current !== null) {
+        auditionEndRef.current = null;
+        setPreviewingKey(null);
+      }
+    });
+    ws.on('finish', () => {
+      if (!mounted) return;
+      setIsPlaying(false);
+      auditionEndRef.current = null;
+      setPreviewingKey(null);
+    });
+    ws.on('timeupdate', (time) => {
+      if (!mounted) return;
+      const auditionEnd = auditionEndRef.current;
+      if (auditionEnd !== null && time >= auditionEnd - 0.01) {
+        auditionEndRef.current = null;
+        setPreviewingKey(null);
+        ws.pause();
+        ws.setTime(Math.min(auditionEnd, durationRef.current || auditionEnd));
+        setCurrentTime(Math.min(auditionEnd, durationRef.current || auditionEnd));
+        return;
+      }
+      setCurrentTime(time);
+    });
 
     wsRegions.on('region-updated', (region) => {
       if (!mounted || region.id !== 'audio-split-selection-region' || isClampingRef.current) return;
@@ -179,6 +201,8 @@ export function AudioSplitterModal({
 
     return () => {
       mounted = false;
+      auditionEndRef.current = null;
+      setPreviewingKey(null);
       stopShuttle();
       containerRef.current?.removeEventListener('wheel', handleWheel);
       ws.destroy();
@@ -303,7 +327,7 @@ export function AudioSplitterModal({
     canOperate: false,
     canCut: false,
     stagedEdit: null,
-    previewPath,
+    previewPath: null,
     actions: {
       undo: () => {},
       zoomIn: () => zoomAtCursor(KEYBOARD_ZOOM_STEP),
@@ -327,32 +351,20 @@ export function AudioSplitterModal({
     },
   });
 
-  async function previewRange(range, label, key) {
+  function previewRange(range, key) {
     if (!range || range.end <= range.start) {
       setError("La sélection doit avoir un point de sortie après le point d'entrée.");
       return;
     }
     setError('');
+    const dur = durationRef.current || duration;
+    const start = Math.max(0, Math.min(range.start, dur));
+    const end = Math.max(start, Math.min(range.end, dur));
+    stopShuttle();
+    auditionEndRef.current = end;
     setPreviewingKey(key);
-    try {
-      const path = await invoke('preview_audio_edit', {
-        inputPath: item.path,
-        mode: 'trim',
-        startSec: range.start,
-        endSec: range.end,
-        savePath: savePath ?? null,
-        workspaceDir: workspaceDir ?? null,
-        fadeInSec: 0,
-        fadeOutSec: 0,
-        cutFadeSec: 0,
-      });
-      setPreviewPath(path);
-      setPreviewLabel(label);
-    } catch (err) {
-      setError(readableError(err));
-    } finally {
-      setPreviewingKey(null);
-    }
+    setWaveTime(start);
+    void wsRef.current?.play();
   }
 
   function addSegment() {
@@ -421,11 +433,6 @@ export function AudioSplitterModal({
       setSubmitting(false);
     }
   }
-
-  const activeRange = useMemo(() => ({
-    start: selection.start,
-    end: selection.end,
-  }), [selection.start, selection.end]);
 
   return (
     <div className="modal-overlay">
@@ -513,8 +520,7 @@ export function AudioSplitterModal({
               <span>Durée <strong>{formatTime(selectionDuration)}</strong></span>
             </div>
             <div className="audio-splitter-selection-actions">
-              <Button onClick={() => previewRange(activeRange, 'Sélection active', 'active')} disabled={!canUseSelection || previewingKey === 'active'}>
-                {previewingKey === 'active' && <Loader2 className="audio-splitter-spin-icon" strokeWidth={2} absoluteStrokeWidth />}
+              <Button onClick={() => previewRange({ start: selection.start, end: selection.end }, 'active')} disabled={!canUseSelection}>
                 Prévisualiser
               </Button>
               <Button variant="primary" onClick={addSegment} disabled={!canUseSelection}>
@@ -523,13 +529,6 @@ export function AudioSplitterModal({
               </Button>
             </div>
           </section>
-
-          {previewPath && previewAudioUrl && (
-            <section className="audio-splitter-preview">
-              <span>{previewLabel || 'Prévisualisation'}</span>
-              <audio key={previewPath} src={previewAudioUrl} controls autoPlay />
-            </section>
-          )}
 
           <section className="audio-splitter-section">
             <h3>Extraits à générer</h3>
@@ -552,11 +551,11 @@ export function AudioSplitterModal({
                     <Button
                       variant="icon"
                       className="audio-splitter-icon-btn"
-                      onClick={() => previewRange({ start: segment.startSec, end: segment.endSec }, segment.outputFileName, segment.id)}
-                      disabled={previewingKey === segment.id || submitting}
+                      onClick={() => previewRange({ start: segment.startSec, end: segment.endSec }, segment.id)}
+                      disabled={submitting}
                       title="Prévisualiser cet extrait"
                     >
-                      {previewingKey === segment.id ? <Loader2 className="audio-splitter-spin-icon" strokeWidth={2} absoluteStrokeWidth /> : <Play strokeWidth={2} absoluteStrokeWidth />}
+                      <Play strokeWidth={2} absoluteStrokeWidth />
                     </Button>
                     <Button
                       variant="icon"
