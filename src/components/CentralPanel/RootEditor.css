@@ -145,10 +145,23 @@
 
 .root-image-split-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 320px) minmax(0, 320px);
   gap: 24px;
   align-items: start;
-  justify-content: center;
+  justify-content: start;
+}
+
+/* Deux images = même cadre : les col-heads démarrent à la même hauteur
+   (sous-titre sur 2 lignes réservées) pour que les frames et les boutons
+   « Générer » s'alignent sur une seule ligne de base, quelle que soit la
+   longueur du sous-titre. */
+.root-image-split-layout .media-col-header {
+  align-items: flex-start;
+}
+
+.root-image-split-layout .media-col-subtitle {
+  flex-basis: 100%;
+  min-height: calc(2 * 1.45em);
 }
 
 .root-image-col {
