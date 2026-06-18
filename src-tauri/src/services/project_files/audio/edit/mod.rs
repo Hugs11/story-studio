@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{project_dir_from_save_path, validate_existing_file_path};
+use super::super::{project_dir_from_save_path, validate_existing_file_path, MANAGED_PROJECT_DIRS};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
 // ── Audio trim ────────────────────────────────────────────────────────────────
@@ -131,6 +131,63 @@ pub(crate) fn audio_edit_original_path(path: &Path, source_ext: &str) -> Result<
         }
     }
     Err("Trop de variantes d'originaux existent déjà pour ce fichier audio.".to_string())
+}
+
+pub(crate) fn is_in_managed_media_dir(
+    path: &Path,
+    workspace_dir: Option<&str>,
+    save_path: Option<&str>,
+) -> bool {
+    let Ok(target) = fs::canonicalize(path) else {
+        return false;
+    };
+
+    let mut bases: Vec<PathBuf> = Vec::new();
+    if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
+        bases.push(PathBuf::from(ws));
+    }
+    if let Some(sp) = save_path.filter(|s| !s.trim().is_empty()) {
+        if let Ok(dir) = project_dir_from_save_path(sp) {
+            bases.push(dir);
+        }
+    }
+
+    for base in bases {
+        for dir_name in MANAGED_PROJECT_DIRS {
+            let dir = base.join(dir_name);
+            if !dir.exists() {
+                continue;
+            }
+            if let Ok(canonical) = fs::canonicalize(&dir) {
+                if target.starts_with(&canonical) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+pub(crate) fn audio_edit_original_for_final(
+    final_path: &Path,
+    source_path: &Path,
+    source_ext: &str,
+    path_changed: bool,
+    workspace_dir: Option<&str>,
+    save_path: Option<&str>,
+) -> Result<PathBuf, String> {
+    if path_changed && is_in_managed_media_dir(source_path, workspace_dir, save_path) {
+        return Ok(source_path.to_path_buf());
+    }
+
+    let original_path = audio_edit_original_path(final_path, source_ext)?;
+    if let Some(parent) = original_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Impossible de créer le dossier original audio : {}", e))?;
+    }
+    fs::copy(source_path, &original_path)
+        .map_err(|e| format!("Impossible de sauvegarder l'audio original : {}", e))?;
+    Ok(original_path)
 }
 
 /// Détecte si un nom de fichier correspond à la convention de backup `{stem}.original{-N}.{ext}`.

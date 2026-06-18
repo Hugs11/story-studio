@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { pathKey } from '../utils/fileUtils';
+import { collectMediaLibrary } from '../store/mediaLibrary';
 
 export function useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef }) {
   const [mediaLibraryPaths, setMediaLibraryPaths] = useState([]);
@@ -53,8 +54,16 @@ export function useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRe
       return { diskDeleted: false, diskError: null };
     }
     const workspace = workspaceDirRef.current || '';
+    const preservePaths = collectMediaLibrary({
+      project: store.project,
+      sdJobs: sdStore.jobs,
+      xttsJobs: xttsStore.jobs,
+      extraPaths: mediaLibraryPathsRef.current,
+    })
+      .map((media) => media.path)
+      .filter((path) => pathKey(path) !== key);
     try {
-      await invoke('delete_workspace_media_file', { path: item.path, workspaceDir: workspace });
+      await invoke('delete_workspace_media_file', { path: item.path, workspaceDir: workspace, preservePaths });
       return { diskDeleted: true, diskError: null };
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));

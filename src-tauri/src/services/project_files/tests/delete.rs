@@ -6,7 +6,7 @@ fn delete_workspace_media_file_accepts_images_generees() {
     let target = workspace.join("images-generees").join("img.png");
     write_temp_file(&target, b"png");
 
-    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
     assert!(!target.exists());
 
@@ -19,7 +19,7 @@ fn delete_workspace_media_file_accepts_fichiers_importes() {
     let target = workspace.join("fichiers-importes").join("audio.mp3");
     write_temp_file(&target, b"mp3");
 
-    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
     assert!(!target.exists());
 
@@ -32,7 +32,7 @@ fn delete_workspace_media_file_accepts_enregistrements() {
     let target = workspace.join("enregistrements").join("rec.webm");
     write_temp_file(&target, b"rec");
 
-    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
     assert!(!target.exists());
 
@@ -45,7 +45,7 @@ fn delete_workspace_media_file_accepts_voix_generees() {
     let target = workspace.join("voix-generees").join("voice.wav");
     write_temp_file(&target, b"wav");
 
-    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
     assert!(!target.exists());
 
@@ -60,8 +60,9 @@ fn delete_workspace_media_file_rejects_external_path() {
     let target = outside.join("external.mp3");
     write_temp_file(&target, b"data");
 
-    let err = delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
-        .unwrap_err();
+    let err =
+        delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+            .unwrap_err();
     assert!(err.contains("refusée"));
     assert!(target.exists(), "external file must not be deleted");
 
@@ -75,8 +76,9 @@ fn delete_workspace_media_file_rejects_zips_extraits() {
     let target = workspace.join("zips-extraits").join("pack.json");
     write_temp_file(&target, b"{}");
 
-    let err = delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
-        .unwrap_err();
+    let err =
+        delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+            .unwrap_err();
     assert!(err.contains("refusée"));
     assert!(target.exists(), "zips-extraits file must not be deleted");
 
@@ -89,8 +91,9 @@ fn delete_workspace_media_file_rejects_directory() {
     let target = workspace.join("images-generees").join("subdir");
     fs::create_dir_all(&target).expect("create subdir");
 
-    let err = delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap())
-        .unwrap_err();
+    let err =
+        delete_workspace_media_file(target.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+            .unwrap_err();
     assert!(err.contains("n'est pas un fichier"));
     assert!(target.exists(), "directory must not be deleted");
 
@@ -103,7 +106,7 @@ fn delete_workspace_media_file_rejects_empty_workspace() {
     let target = workspace.join("images-generees").join("img.png");
     write_temp_file(&target, b"png");
 
-    let err = delete_workspace_media_file(target.to_str().unwrap(), "   ").unwrap_err();
+    let err = delete_workspace_media_file(target.to_str().unwrap(), "   ", &[]).unwrap_err();
     assert!(err.contains("Workspace non défini"));
     assert!(
         target.exists(),
@@ -118,8 +121,9 @@ fn delete_workspace_media_file_rejects_missing_file() {
     let workspace = temp_workspace_with_dirs("delete_missing");
     let missing = workspace.join("images-generees").join("missing.png");
 
-    let err = delete_workspace_media_file(missing.to_str().unwrap(), workspace.to_str().unwrap())
-        .unwrap_err();
+    let err =
+        delete_workspace_media_file(missing.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+            .unwrap_err();
     assert!(err.contains("introuvable") || err.contains("inaccessible"));
 
     fs::remove_dir_all(workspace).expect("cleanup");
@@ -138,7 +142,7 @@ fn delete_workspace_media_file_cascade_removes_sibling_backup_and_sidecar() {
     write_temp_file(&backup, b"original");
     fs::write(&sidecar, b"{}").expect("write sidecar");
 
-    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
 
     assert!(!edited.exists(), "main file removed");
@@ -162,7 +166,7 @@ fn delete_workspace_media_file_cascade_removes_legacy_hidden_backup() {
     write_temp_file(&legacy_backup, b"legacy original");
     fs::write(&sidecar, b"{}").expect("write sidecar");
 
-    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
 
     assert!(!edited.exists());
@@ -185,7 +189,7 @@ fn delete_workspace_media_file_does_not_touch_unrelated_originals() {
     write_temp_file(&edited, b"edited");
     write_temp_file(&unrelated_backup, b"unrelated");
 
-    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap())
+    delete_workspace_media_file(edited.to_str().unwrap(), workspace.to_str().unwrap(), &[])
         .expect("delete should succeed");
 
     assert!(!edited.exists());
@@ -193,6 +197,33 @@ fn delete_workspace_media_file_does_not_touch_unrelated_originals() {
         unrelated_backup.exists(),
         "backup of an unrelated file must NOT be touched"
     );
+
+    fs::remove_dir_all(workspace).expect("cleanup");
+}
+
+#[test]
+fn delete_workspace_media_file_preserves_visible_original_backup() {
+    let workspace = temp_workspace_with_dirs("delete_preserve_original");
+    let imports = workspace.join("fichiers-importes");
+    let edited = imports.join("song.mp3");
+    let backup = imports.join("song.original.mp3");
+    let dot_folder = imports.join(AUDIO_EDIT_DIR);
+    fs::create_dir_all(&dot_folder).expect("create dot folder");
+    let sidecar = dot_folder.join("song.mp3.edit.json");
+    write_temp_file(&edited, b"edited");
+    write_temp_file(&backup, b"original");
+    fs::write(&sidecar, b"{}").expect("write sidecar");
+
+    delete_workspace_media_file(
+        edited.to_str().unwrap(),
+        workspace.to_str().unwrap(),
+        &[backup.to_string_lossy().into_owned()],
+    )
+    .expect("delete should succeed");
+
+    assert!(!edited.exists(), "main file removed");
+    assert!(backup.exists(), "visible original is preserved");
+    assert!(!sidecar.exists(), "sidecar cascade-removed");
 
     fs::remove_dir_all(workspace).expect("cleanup");
 }

@@ -214,6 +214,61 @@ fn audio_edit_original_path_handles_collision() {
 }
 
 #[test]
+fn audio_edit_original_for_final_reuses_managed_source_when_path_changes() {
+    let workspace = temp_workspace_with_dirs("orig_reuse_managed");
+    let imports = workspace.join("fichiers-importes");
+    let source = imports.join("song.mp3");
+    let final_path = imports.join("song_edit.flac");
+    write_temp_file(&source, b"original");
+    write_temp_file(&final_path, b"edited");
+
+    let original = audio_edit_original_for_final(
+        &final_path,
+        &source,
+        "mp3",
+        true,
+        Some(workspace.to_str().unwrap()),
+        None,
+    )
+    .expect("select original");
+
+    assert_eq!(original, source);
+    assert!(
+        !imports.join("song_edit.original.mp3").exists(),
+        "managed source should not be copied to a third file"
+    );
+
+    fs::remove_dir_all(workspace).expect("cleanup");
+}
+
+#[test]
+fn audio_edit_original_for_final_copies_external_source() {
+    let workspace = temp_workspace_with_dirs("orig_copy_external");
+    let outside = temp_project_dir("orig_external_source");
+    let imports = workspace.join("fichiers-importes");
+    let source = outside.join("song.mp3");
+    let final_path = imports.join("song_edit.flac");
+    write_temp_file(&source, b"original");
+    write_temp_file(&final_path, b"edited");
+
+    let original = audio_edit_original_for_final(
+        &final_path,
+        &source,
+        "mp3",
+        true,
+        Some(workspace.to_str().unwrap()),
+        None,
+    )
+    .expect("copy original");
+
+    assert_eq!(original, imports.join("song_edit.original.mp3"));
+    assert_eq!(fs::read(original).expect("read copy"), b"original");
+
+    fs::remove_dir_all(workspace).expect("cleanup workspace");
+    fs::remove_dir_all(outside).expect("cleanup outside");
+}
+
+#[test]
 fn audio_edit_info_reopens_current_file_after_saved_edit() {
     let workspace = temp_workspace_with_dirs("audio_info_current_file");
     let imports = workspace.join("fichiers-importes");

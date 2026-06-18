@@ -1,6 +1,6 @@
-import { visitProjectEntries } from './projectModel';
-import { isOriginalBackup } from '../utils/mediaConventions';
-import { basename, stripWindowsLongPathPrefix } from '../utils/fileUtils';
+import { visitProjectEntries } from './projectModel/index.js';
+import { isOriginalBackup } from '../utils/mediaConventions.js';
+import { basename, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -30,11 +30,11 @@ function detectOrigin(path, source) {
   return 'project';
 }
 
-function addMedia(map, path, label, source, field, statusByPath = {}, isProjectRef = false, entryId = null) {
+function addMedia(map, path, label, source, field, statusByPath = {}, isProjectRef = false, entryId = null, options = {}) {
   if (!hasPath(path)) return;
   // Backups d'édition audio (`*.original.{ext}`) : masqués sauf s'ils sont explicitement
   // référencés par une entrée projet (pour ne jamais rendre invisible une référence existante).
-  if (!isProjectRef && isOriginalBackup(path)) return;
+  if (!isProjectRef && !options.allowOriginalBackup && isOriginalBackup(path)) return;
   const checkedPath = stripWindowsLongPathPrefix(path);
   const key = checkedPath.replace(/\\/g, '/').toLowerCase();
   const existing = map.get(key);
@@ -110,7 +110,7 @@ export function collectMediaLibrary({ project, statusByPath = {}, sdJobs = [], x
     }
   }
   for (const path of extraPaths) {
-    addMedia(map, path, 'Bibliothèque média', 'Explorateur', 'library', statusByPath, false);
+    addMedia(map, path, 'Bibliothèque média', 'Explorateur', 'library', statusByPath, false, null, { allowOriginalBackup: true });
   }
 
   return [...map.values()].sort((a, b) => {

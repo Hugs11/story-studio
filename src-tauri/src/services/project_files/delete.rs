@@ -100,7 +100,11 @@ pub(crate) const DELETABLE_WORKSPACE_DIRS: [&str; 4] = [
     "images-generees",
 ];
 
-pub fn delete_workspace_media_file(path: &str, workspace_dir: &str) -> Result<(), String> {
+pub fn delete_workspace_media_file(
+    path: &str,
+    workspace_dir: &str,
+    preserve_paths: &[String],
+) -> Result<(), String> {
     let workspace_dir = workspace_dir.trim();
     if workspace_dir.is_empty() {
         return Err("Workspace non défini : suppression disque refusée.".to_string());
@@ -133,7 +137,11 @@ pub fn delete_workspace_media_file(path: &str, workspace_dir: &str) -> Result<()
         if target_canonical.starts_with(&managed_canonical) {
             fs::remove_file(&target_canonical)
                 .map_err(|e| format!("Suppression impossible : {}", e))?;
-            cascade_delete_audio_edit_artifacts(&target_canonical, &managed_canonical);
+            cascade_delete_audio_edit_artifacts(
+                &target_canonical,
+                &managed_canonical,
+                preserve_paths,
+            );
             return Ok(());
         }
     }
@@ -154,7 +162,11 @@ pub fn delete_workspace_media_file(path: &str, workspace_dir: &str) -> Result<()
 /// Toutes les opérations sont strictement bornées au dossier managé (`managed_canonical`)
 /// pour éviter toute fuite hors du workspace. Les erreurs sont best-effort : si un artefact
 /// ne peut pas être supprimé, on continue silencieusement.
-fn cascade_delete_audio_edit_artifacts(target: &Path, managed_canonical: &Path) {
+fn cascade_delete_audio_edit_artifacts(
+    target: &Path,
+    managed_canonical: &Path,
+    preserve_paths: &[String],
+) {
     let Some(parent) = target.parent() else {
         return;
     };
@@ -169,6 +181,10 @@ fn cascade_delete_audio_edit_artifacts(target: &Path, managed_canonical: &Path) 
     let Some(file_name) = target.file_name().and_then(OsStr::to_str) else {
         return;
     };
+    let preserved: std::collections::HashSet<PathBuf> = preserve_paths
+        .iter()
+        .filter_map(|path| fs::canonicalize(path).ok())
+        .collect();
 
     // 1) Sauvegardes siblings `{stem}.original{-N}.{ext}` dans le même dossier.
     if let Ok(entries) = fs::read_dir(parent) {
@@ -195,6 +211,12 @@ fn cascade_delete_audio_edit_artifacts(target: &Path, managed_canonical: &Path) 
                 .unwrap_or(backup_stem);
             let backup_ext = path.extension().and_then(OsStr::to_str).unwrap_or("");
             if backup_base == stem && backup_ext.eq_ignore_ascii_case(target_ext) {
+                if fs::canonicalize(&path)
+                    .map(|canonical| preserved.contains(&canonical))
+                    .unwrap_or(false)
+                {
+                    continue;
+                }
                 let _ = fs::remove_file(&path);
             }
         }
