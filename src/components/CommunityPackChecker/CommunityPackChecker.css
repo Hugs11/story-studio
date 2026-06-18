@@ -387,6 +387,12 @@
   border-color: var(--checker-listen-border);
 }
 
+.checker-report-verdict--quality .checker-report-orb {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
 .checker-report-orb {
   width: 40px;
   height: 40px;
@@ -471,6 +477,11 @@
   background: var(--checker-listen-bg);
 }
 
+.checker-summary-tile--danger {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
 .checker-summary-tile-head {
   display: flex;
   align-items: center;
@@ -495,6 +506,14 @@
 
 .checker-summary-tile--listen .checker-summary-tile-head {
   color: var(--checker-listen-text);
+}
+
+.checker-summary-tile--danger .checker-summary-tile-head {
+  color: var(--danger-text);
+}
+
+.checker-summary-tile--danger .checker-single-stat strong {
+  color: var(--danger-text);
 }
 
 .checker-split-stat {

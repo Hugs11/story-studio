@@ -348,6 +348,12 @@ function buildProblemGroups(report) {
   }).filter((group) => group.count > 0);
 }
 
+function saturatedFileCount(groups) {
+  return groups
+    .filter((group) => group.id === 'quality')
+    .reduce((sum, group) => sum + group.count, 0);
+}
+
 function summarizeGroups(groups, report) {
   const listenCount = groups
     .filter((group) => group.bucket === 'listen')
@@ -355,6 +361,7 @@ function summarizeGroups(groups, report) {
   const fixCount = groups
     .filter((group) => group.bucket === 'fix')
     .reduce((sum, group) => sum + group.fixCount, 0);
+  const saturatedCount = saturatedFileCount(groups);
   const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
   ));
@@ -375,6 +382,21 @@ function summarizeGroups(groups, report) {
       Icon: TriangleAlert,
       title: 'Pack à vérifier avant export',
       subtitle: 'Certains points demandent une vérification manuelle.',
+      listenCount,
+      fixCount,
+    };
+  }
+  // Audio saturé : défaut de qualité que la correction ne résout pas → on ne
+  // promet jamais « corrigeable en un clic », on conseille de repartir d'une
+  // source propre.
+  if (saturatedCount > 0) {
+    return {
+      tone: 'quality',
+      Icon: TriangleAlert,
+      title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
+      subtitle: fixCount > 0
+        ? 'Le pack peut être corrigé, mais nous conseillons de le refaire depuis une source audio propre.'
+        : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
     };
@@ -434,7 +456,7 @@ function SplitStat({ ok, needsFix }) {
   );
 }
 
-function SummaryTiles({ report }) {
+function SummaryTiles({ report, saturatedCount = 0 }) {
   const audio = categoryStats(report.audioSummary);
   const images = categoryStats(report.imageSummary);
   const title = categoryStats(report.titleSummary);
@@ -467,6 +489,14 @@ function SummaryTiles({ report }) {
           <span>{nightMode ? 'Détecté dans le pack' : 'Non bloquant'}</span>
         </div>
       </SummaryTile>
+      {saturatedCount > 0 ? (
+        <SummaryTile title="Qualité audio" Icon={TriangleAlert} tone="danger">
+          <div className="checker-single-stat">
+            <strong>Saturé</strong>
+            <span>{saturatedCount} fichier{saturatedCount > 1 ? 's' : ''} · source à revoir</span>
+          </div>
+        </SummaryTile>
+      ) : null}
     </div>
   );
 }
@@ -595,6 +625,7 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
 function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
+  const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
   const [expanded, setExpanded] = useState(groups[0]?.id || null);
   const [metadataOpen, setMetadataOpen] = useState(false);
   if (!report) return null;
@@ -619,7 +650,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </div>
       </div>
 
-      <SummaryTiles report={report} />
+      <SummaryTiles report={report} saturatedCount={saturatedCount} />
 
       {groups.length === 0 ? (
         <div className="checker-empty checker-empty--success">
