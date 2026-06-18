@@ -2,6 +2,12 @@ pub(crate) const TARGET_LUFS: f64 = -14.0;
 pub(crate) const LIMITER_SAMPLE_PEAK_DBFS: f64 = -2.0;
 pub(crate) const LIMITER_SAMPLE_PEAK_LINEAR: f64 = 0.794_328;
 pub(crate) const EXPECTED_FINAL_TRUE_PEAK_DBTP: f64 = -0.5;
+/// Crête vraie maximale tolérée par le checker avant de signaler un risque
+/// d'écrêtage. Le générateur vise un sample peak ≤ −2 dBFS ; après ré-encodage
+/// MP3 un fichier conforme remonte au plus à ≈ +0,8 dBTP. Ce seuil garde une marge
+/// au-dessus de cet overshoot normal tout en attrapant les sources réellement
+/// saturées (SPG ≈ +2,4/+2,8 dBTP, packs écrêtés bien au-delà).
+pub(crate) const MAX_ACCEPTABLE_TRUE_PEAK_DBTP: f64 = 1.5;
 pub(crate) const MAX_LIMITING_DB: f64 = 6.0;
 pub(crate) const VALIDATION_WINDOW_LUFS: (f64, f64) = (-20.0, -10.0);
 pub(crate) const DEADBAND_LUFS: (f64, f64) = (-15.5, -12.5);
