@@ -1,4 +1,4 @@
-import { KEYS, read, write, remove } from './persistentSettings';
+import { KEYS, read, write, remove } from './persistentSettings.js';
 
 // Liste des scopes connus + libellés pour l'UI.
 // L'ordre détermine la priorité de dispatch et l'ordre d'affichage dans la modale.
@@ -180,12 +180,38 @@ export function getShortcutLabelMap(shortcuts) {
 export function loadKeyboardShortcuts() {
   const parsed = read(KEYS.KEYBOARD_SHORTCUTS, { parse: JSON.parse });
   if (!parsed) return DEFAULT_SHORTCUTS;
+  const { shortcuts: migrated, changed } = migrateLegacyTabShortcuts(parsed);
+  if (changed) saveKeyboardShortcuts(migrated);
   return Object.fromEntries(
     EDITABLE_DEFINITIONS.map((definition) => [
       definition.id,
-      normalizeShortcut(parsed?.[definition.id] ?? definition.defaultShortcut),
+      normalizeShortcut(migrated?.[definition.id] ?? definition.defaultShortcut),
     ]),
   );
+}
+
+function migrateLegacyTabShortcuts(shortcuts) {
+  const legacyTabEdit = { ctrl: true, key: '1', code: 'Digit1' };
+  const legacyTabDiagram = { ctrl: true, key: '3', code: 'Digit3' };
+  const legacyTabOptions = { ctrl: true, key: '4', code: 'Digit4' };
+
+  const isLegacySimulatorGap = shortcutEquals(shortcuts?.tabEdit, legacyTabEdit)
+    && shortcutEquals(shortcuts?.tabDiagram, legacyTabDiagram)
+    && shortcutEquals(shortcuts?.tabOptions, legacyTabOptions);
+
+  if (!isLegacySimulatorGap) {
+    return { shortcuts, changed: false };
+  }
+
+  return {
+    shortcuts: {
+      ...shortcuts,
+      tabEdit: normalizeShortcut({ ctrl: true, key: '1', code: 'Digit1' }),
+      tabDiagram: normalizeShortcut({ ctrl: true, key: '2', code: 'Digit2' }),
+      tabOptions: normalizeShortcut({ ctrl: true, key: '3', code: 'Digit3' }),
+    },
+    changed: true,
+  };
 }
 
 export function saveKeyboardShortcuts(shortcuts) {
