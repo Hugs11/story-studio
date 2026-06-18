@@ -26,6 +26,20 @@ import './CommunityPackChecker.css';
 
 const PROBLEM_SECTIONS = [
   {
+    id: 'quality',
+    title: 'Audio de mauvaise qualité (source saturée)',
+    badge: 'Source',
+    bucket: 'listen',
+    Icon: TriangleAlert,
+    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Refaites le pack depuis une meilleure source.",
+    action: 'Refaites le pack depuis une meilleure source.',
+    match: (issue) => (
+      issue.category === 'audio'
+      && !issue.autoFixAvailable
+      && (issue.message || '').toLowerCase().includes('satur')
+    ),
+  },
+  {
     id: 'listen',
     title: 'À écouter',
     badge: 'Manuel',
@@ -190,6 +204,10 @@ function silenceSummaryParts(issues, item) {
 function recordProblemSummary(record) {
   const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : [record.issue];
   if (record.kind === 'audio') {
+    if (scopedIssues.some((issue) => (issue.message || '').toLowerCase().includes('satur'))) {
+      const peak = record.item?.truePeakDb;
+      return typeof peak === 'number' ? `Saturé · crête ${formatPeak(peak)}` : 'Saturé (source)';
+    }
     const silenceIssues = scopedIssues.filter((issue) => (issue.message || '').toLowerCase().includes('silence'));
     if (silenceIssues.length > 0) {
       const parts = silenceSummaryParts(silenceIssues, record.item);
@@ -534,7 +552,7 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
   return (
-    <div className={`checker-group checker-group--${group.bucket} ${expanded ? 'is-expanded' : ''}`}>
+    <div className={`checker-group checker-group--${group.bucket} checker-group--${group.id} ${expanded ? 'is-expanded' : ''}`}>
       <button type="button" className="checker-group-head" onClick={onToggle}>
         <span className="checker-group-icon"><IconFrame Icon={Icon} /></span>
         <span className="checker-group-copy">
