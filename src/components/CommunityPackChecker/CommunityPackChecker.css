@@ -523,6 +523,14 @@
   margin-top: 8px;
 }
 
+.checker-split-stat--cols-1 {
+  grid-template-columns: 1fr;
+}
+
+.checker-split-stat--cols-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .checker-split-stat span,
 .checker-single-stat {
   min-width: 0;
@@ -548,6 +556,10 @@
 
 .checker-split-stat-fix strong {
   color: var(--warning-text);
+}
+
+.checker-split-stat-blocked strong {
+  color: var(--danger-text);
 }
 
 .checker-single-stat {
