@@ -33,7 +33,8 @@ pub fn trim_audio(
 
     // Édition en place réservée aux fichiers gérés dont le format ne change pas.
     // Une conversion (entrée lossy -> FLAC) produit un nouveau fichier de travail.
-    let in_place = copy_stream && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
+    let in_place =
+        copy_stream && is_in_trim_dir(input_path, workspace_dir, save_path).unwrap_or(false);
 
     if in_place {
         let parent = input.parent().unwrap_or(Path::new("."));
@@ -359,14 +360,14 @@ pub fn commit_audio_preview(
             .extension()
             .and_then(|value| value.to_str())
             .unwrap_or(&input_ext);
-        let original_path = audio_edit_original_path(&final_path, source_ext)?;
-        if let Some(parent) = original_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("Impossible de créer le dossier original audio : {}", e))?;
-        }
-        fs::copy(&input, &original_path)
-            .map_err(|e| format!("Impossible de sauvegarder l'audio original : {}", e))?;
-        original_path
+        audio_edit_original_for_final(
+            &final_path,
+            &input,
+            source_ext,
+            path_changed,
+            workspace_dir,
+            save_path,
+        )?
     };
 
     run_ffmpeg_transcode(
@@ -464,14 +465,14 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
             .extension()
             .and_then(|value| value.to_str())
             .unwrap_or(&input_ext);
-        let original_path = audio_edit_original_path(&final_path, source_ext)?;
-        if let Some(parent) = original_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("Impossible de créer le dossier original audio : {}", e))?;
-        }
-        fs::copy(&source, &original_path)
-            .map_err(|e| format!("Impossible de sauvegarder l'audio original : {}", e))?;
-        original_path
+        audio_edit_original_for_final(
+            &final_path,
+            &source,
+            source_ext,
+            path_changed,
+            request.workspace_dir,
+            request.save_path,
+        )?
     };
 
     run_ffmpeg_audio_edit(FfmpegAudioEditRequest {

@@ -28,9 +28,17 @@ pub fn delete_file(path: String, save_path: Option<String>) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn delete_workspace_media_file(path: String, workspace_dir: String) -> Result<(), String> {
+pub fn delete_workspace_media_file(
+    path: String,
+    workspace_dir: String,
+    preserve_paths: Option<Vec<String>>,
+) -> Result<(), String> {
     log::info!(target: "files", "delete_workspace_media_file: '{}'", path);
-    project_files::delete_workspace_media_file(&path, &workspace_dir)
+    project_files::delete_workspace_media_file(
+        &path,
+        &workspace_dir,
+        preserve_paths.as_deref().unwrap_or(&[]),
+    )
         .inspect_err(|err| log::error!(target: "files", "delete_workspace_media_file failed for '{}': {}", path, err))
 }
 

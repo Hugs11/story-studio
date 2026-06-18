@@ -433,9 +433,14 @@ export function AudioField({
             filePath={file}
             savePath={savePath}
             workspaceDir={workspaceDir}
-            onConfirm={(outputPath) => {
+            onConfirm={(result) => {
               stopPlayback(true);
               setShowAudioEditor(false);
+              const outputPath = typeof result === 'string' ? result : result?.output_path;
+              const originalPath = typeof result === 'object' ? result?.original_path : null;
+              if (originalPath && (!outputPath || pathKey(originalPath) !== pathKey(outputPath))) {
+                onMediaCreated?.(originalPath);
+              }
               if (outputPath && outputPath !== file) {
                 if (onPick) void onPick(outputPath);
                 onMediaCreated?.(outputPath);

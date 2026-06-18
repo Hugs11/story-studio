@@ -903,7 +903,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             fadeOutSec: stagedEdit.fadeOutSec,
             cutFadeSec: stagedEdit.cutFadeSec,
           });
-      onConfirm(result.output_path);
+      onConfirm(result);
     } catch (err) {
       setError(String(err));
       setApplyMode(null);
