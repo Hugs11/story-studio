@@ -161,6 +161,7 @@ export function Toolbar({
               onOpenChange={onPackOptionsOpenChange}
               onUpdateOption={onUpdateGlobalOption}
               onOpenPreferences={onOpenPreferences}
+              onOpenPackMetadata={onOpenPackMetadata}
               preferencesShortcut={shortcutLabels.tabOptions}
               trigger={(
                 <ToolbarButton
