@@ -22,7 +22,7 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
     cancelValue: 'cancel',
     actions: [
       { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: 'Ne pas sauvegarder' },
+      { value: 'discard', label: 'Ne pas sauvegarder', kind: 'danger-outline' },
       { value: 'save', label: 'Sauvegarder', kind: 'primary' },
     ],
   });

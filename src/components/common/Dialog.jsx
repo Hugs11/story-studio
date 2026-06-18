@@ -1,10 +1,19 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Button } from './Button';
 import { TriangleAlert } from '../icons/LucideLocal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import './Dialog.css';
 
 const ErrorDialogContext = createContext(null);
+
+function actionVariant(kind) {
+  if (kind === 'primary') return 'primary';
+  if (kind === 'danger') return 'danger';
+  if (kind === 'danger-outline') return 'danger-outline';
+  if (kind === 'ghost') return 'ghost';
+  return 'secondary';
+}
 
 function Dialog({ dialog, onClose, onConfirm, onAction }) {
   const closeButtonRef = useRef(null);
@@ -35,29 +44,29 @@ function Dialog({ dialog, onClose, onConfirm, onAction }) {
         <div className="dialog-message">{dialog.message}</div>
         <div className="dialog-actions">
           {actions ? actions.map((action) => (
-            <button
+            <Button
               key={String(action.value)}
-              type="button"
-              className={action.kind === 'primary' ? 'primary-btn' : 'secondary-btn'}
+              variant={actionVariant(action.kind)}
               onClick={() => onAction(action.value)}
               autoFocus={!!action.autoFocus}
             >
               {action.label}
-            </button>
+            </Button>
           )) : hasConfirm && (
-            <button ref={closeButtonRef} type="button" className="secondary-btn" onClick={onClose} autoFocus>
+            <Button ref={closeButtonRef} onClick={onClose} autoFocus>
               {dialog.cancelLabel || 'Annuler'}
-            </button>
+            </Button>
           )}
-          <button
-            ref={hasConfirm ? null : closeButtonRef}
-            type="button"
-            className="primary-btn"
-            onClick={hasConfirm ? onConfirm : onClose}
-            autoFocus={!hasConfirm}
-          >
-            {closeLabel}
-          </button>
+          {!actions ? (
+            <Button
+              ref={hasConfirm ? null : closeButtonRef}
+              variant={actionVariant(dialog.okKind || 'primary')}
+              onClick={hasConfirm ? onConfirm : onClose}
+              autoFocus={!hasConfirm}
+            >
+              {closeLabel}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>,
@@ -112,6 +121,7 @@ export function ErrorDialogProvider({ children }) {
       message: String(nextDialog?.message ?? ''),
       variant: nextDialog?.variant || 'error',
       okLabel: nextDialog?.okLabel,
+      okKind: nextDialog?.okKind,
       onClose: nextDialog?.onClose,
     });
   }, [rememberFocus]);
@@ -123,6 +133,7 @@ export function ErrorDialogProvider({ children }) {
       message: String(nextDialog?.message ?? ''),
       variant: nextDialog?.variant || 'warning',
       okLabel: nextDialog?.okLabel || 'OK',
+      okKind: nextDialog?.okKind,
       cancelLabel: nextDialog?.cancelLabel || 'Annuler',
       onConfirm: () => resolve(true),
       onClose: () => resolve(false),

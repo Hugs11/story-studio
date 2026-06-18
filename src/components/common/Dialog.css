@@ -67,33 +67,8 @@
   border-top: 1px solid var(--border);
 }
 
-.dialog-actions .primary-btn,
-.dialog-actions .secondary-btn {
+.dialog-actions .btn {
   min-width: 88px;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--text-control);
-  font-weight: var(--weight-semibold);
-  border: 1px solid var(--control-border);
-  cursor: pointer;
-}
-
-.dialog-actions .primary-btn {
-  border-color: color-mix(in srgb, var(--accent) 82%, black);
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.dialog-actions .secondary-btn {
-  background: var(--control-bg);
-  color: var(--text);
-}
-
-.dialog-actions .primary-btn:hover,
-.dialog-actions .secondary-btn:hover {
-  border-color: var(--control-border-hover);
 }
 
 @media (max-width: 520px) {
