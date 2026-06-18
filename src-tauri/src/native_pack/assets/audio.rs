@@ -607,4 +607,45 @@ mod tests {
             "Normalize cale les bords : {normalize}"
         );
     }
+
+    /// Harnais manuel : ré-encode des fichiers source via le vrai pipeline
+    /// (mesure → plan_loudness_fix → chaîne de filtres → MP3), en mode Normalize +
+    /// harmonisation. No-op sauf si les variables d'env sont posées :
+    ///   SS_REENCODE_INPUTS = chemins source séparés par `|`
+    ///   SS_REENCODE_OUTDIR = dossier de sortie (new_<i>.mp3)
+    ///   SS_FFMPEG          = chemin de ffmpeg.exe
+    #[test]
+    fn reencode_sample_from_env() {
+        let Ok(inputs) = std::env::var("SS_REENCODE_INPUTS") else {
+            return;
+        };
+        let outdir = std::env::var("SS_REENCODE_OUTDIR").expect("SS_REENCODE_OUTDIR");
+        let ffmpeg = std::env::var("SS_FFMPEG").expect("SS_FFMPEG");
+        let ffmpeg = PathBuf::from(ffmpeg);
+        let outdir = PathBuf::from(outdir);
+        let processed = outdir.join("_processed");
+        fs::create_dir_all(&processed).unwrap();
+        let options = CanonicalOptions {
+            silence_mode: SilenceMode::Normalize,
+            harmonize_loudness: true,
+            ..Default::default()
+        };
+        for (i, path) in inputs.split('|').enumerate() {
+            let path = path.trim();
+            if path.is_empty() {
+                continue;
+            }
+            let role = format!("sample{i}");
+            let prep =
+                prepare_audio_asset(path, &ffmpeg, &processed, &options, EDGE_SILENCE_SEC, false, &role)
+                    .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));
+            let dest = outdir.join(format!("new_{i}.mp3"));
+            let src = match prep {
+                AudioPreparation::Encoded { output } => output,
+                AudioPreparation::Verbatim { source } => source,
+            };
+            fs::copy(&src, &dest).unwrap();
+            eprintln!("OK {path} -> {}", dest.display());
+        }
+    }
 }

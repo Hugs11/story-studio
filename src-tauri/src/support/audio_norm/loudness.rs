@@ -88,55 +88,50 @@ pub(crate) fn plan_loudness_fix(integrated_lufs: f64, true_peak_db: f64) -> Loud
             reason: "audio presque muet".to_string(),
         };
     }
-    if in_range(integrated_lufs, DEADBAND_LUFS) {
-        let limiting_db = true_peak_db - LIMITER_SAMPLE_PEAK_DBFS;
-        if limiting_db <= 0.0 {
-            return LoudnessAction::None;
+    // 1) Gain (niveau) — découplé du contrôle de crête. Dans la bande morte on ne
+    //    touche pas au volume ; sinon on vise -14 LUFS en **plafonnant le gain
+    //    montant** pour ne jamais avoir à limiter plus de MAX_LIMITING_DB de signal
+    //    *amplifié* (sinon on pomperait une source réellement faible et dynamique).
+    //    Un gain montant n'est jamais transformé en atténuation.
+    let gain_db = if in_range(integrated_lufs, DEADBAND_LUFS) {
+        0.0
+    } else {
+        let ideal_gain = TARGET_LUFS - integrated_lufs;
+        if ideal_gain <= 0.0 {
+            ideal_gain
+        } else {
+            let max_boost = (LIMITER_SAMPLE_PEAK_DBFS + MAX_LIMITING_DB - true_peak_db).max(0.0);
+            let capped = ideal_gain.min(max_boost);
+            // Trop faible pour être remontée : même le gain plafonné n'atteint pas
+            // le plancher de la fenêtre de validation.
+            if capped < ideal_gain
+                && integrated_lufs + capped < VALIDATION_WINDOW_LUFS.0 + VALIDATION_FLOOR_SAFETY_LU
+            {
+                return LoudnessAction::Uncorrectable {
+                    reason: "audio trop dynamique/faible pour monter sans écraser".to_string(),
+                };
+            }
+            capped
         }
-        if limiting_db > MAX_LIMITING_DB {
-            return LoudnessAction::None;
-        }
-        return LoudnessAction::GainLimit {
-            gain_db: 0.0,
-            expected_limiting_db: limiting_db,
-        };
-    }
+    };
 
-    let ideal_gain = TARGET_LUFS - integrated_lufs;
-    let projected_peak = true_peak_db + ideal_gain;
+    // 2) Plafond de crête — **toujours** enforcé quand la crête (après gain) dépasse
+    //    le plafond. `alimiter` est un brickwall : il ne rabote que les crêtes
+    //    au-dessus du plafond, donc il ne touche pas un fichier propre et mate
+    //    n'importe quelle source chaude/écrêtée, quelle que soit l'ampleur (pas de
+    //    budget maximal de limitation : une source à +10 dBFS exige >12 dB et doit
+    //    quand même être ramenée sous le plafond, sinon elle écrête sur la boîte).
+    let projected_peak = true_peak_db + gain_db;
     if projected_peak <= LIMITER_SAMPLE_PEAK_DBFS {
-        return LoudnessAction::Gain {
-            gain_db: ideal_gain,
+        return if in_range(integrated_lufs, DEADBAND_LUFS) {
+            LoudnessAction::None
+        } else {
+            LoudnessAction::Gain { gain_db }
         };
     }
-
-    let ideal_limiting = projected_peak - LIMITER_SAMPLE_PEAK_DBFS;
-    if ideal_limiting <= MAX_LIMITING_DB {
-        return LoudnessAction::GainLimit {
-            gain_db: ideal_gain,
-            expected_limiting_db: ideal_limiting,
-        };
-    }
-
-    let capped_gain = LIMITER_SAMPLE_PEAK_DBFS + MAX_LIMITING_DB - true_peak_db;
-    if ideal_gain > 0.0 && capped_gain <= 0.0 {
-        if loudness_in_validation_window(integrated_lufs) {
-            return LoudnessAction::None;
-        }
-        return LoudnessAction::Uncorrectable {
-            reason: "audio trop dynamique/faible pour monter sans écraser".to_string(),
-        };
-    }
-    let capped_lufs = integrated_lufs + capped_gain;
-    if capped_lufs >= VALIDATION_WINDOW_LUFS.0 + VALIDATION_FLOOR_SAFETY_LU {
-        return LoudnessAction::GainLimit {
-            gain_db: capped_gain,
-            expected_limiting_db: MAX_LIMITING_DB,
-        };
-    }
-
-    LoudnessAction::Uncorrectable {
-        reason: "audio trop dynamique/faible pour monter sans écraser".to_string(),
+    LoudnessAction::GainLimit {
+        gain_db,
+        expected_limiting_db: projected_peak - LIMITER_SAMPLE_PEAK_DBFS,
     }
 }
 
@@ -234,8 +229,28 @@ mod tests {
     }
 
     #[test]
-    fn does_not_overlimit_inside_deadband() {
-        assert_eq!(plan_loudness_fix(-14.3, 6.6), LoudnessAction::None);
+    fn limits_hot_clipped_source_inside_deadband() {
+        // Niveau déjà dans la bande morte mais source écrêtée (crête +10 dBFS) :
+        // on enforce le plafond, peu importe l'ampleur du rabotage requis.
+        assert_eq!(
+            plan_loudness_fix(-14.0, 10.0),
+            LoudnessAction::GainLimit {
+                gain_db: 0.0,
+                expected_limiting_db: 12.0,
+            }
+        );
+    }
+
+    #[test]
+    fn enforces_ceiling_on_extremely_hot_peak() {
+        // Aucun budget maximal : une crête absurde est quand même ramenée au plafond.
+        assert_eq!(
+            plan_loudness_fix(-13.5, 14.0),
+            LoudnessAction::GainLimit {
+                gain_db: 0.0,
+                expected_limiting_db: 16.0,
+            }
+        );
     }
 
     #[test]
@@ -269,8 +284,17 @@ mod tests {
     }
 
     #[test]
-    fn does_not_lower_valid_audio_to_fit_limiting_budget() {
-        assert_eq!(plan_loudness_fix(-16.0, 6.6), LoudnessAction::None);
+    fn limits_valid_but_clipped_audio_without_changing_level() {
+        // Niveau valide hors bande morte (-16) mais source écrêtée (+8 dBFS) : on ne
+        // remonte pas (le gain montant est plafonné à 0 par la crête) mais on enforce
+        // le plafond — on ne laisse jamais passer l'écrêtage.
+        assert_eq!(
+            plan_loudness_fix(-16.0, 8.0),
+            LoudnessAction::GainLimit {
+                gain_db: 0.0,
+                expected_limiting_db: 10.0,
+            }
+        );
     }
 
     #[test]
