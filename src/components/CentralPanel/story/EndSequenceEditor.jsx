@@ -56,6 +56,7 @@ export function EndSequenceEditor({
       title: 'Confirmer la suppression',
       message: `Supprimer l'étape "${step.name || `Étape ${index + 1}`}" ?`,
       okLabel: 'Supprimer',
+      okKind: 'danger',
     });
     if (!confirmed) return;
     updateSequence(steps.filter((_, i) => i !== index));

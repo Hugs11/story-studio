@@ -135,7 +135,7 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
     cancelValue: 'cancel',
     actions: [
       { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: 'Ne pas sauvegarder' },
+      { value: 'discard', label: 'Ne pas sauvegarder', kind: 'danger-outline' },
       { value: 'save', label: 'Sauvegarder', kind: 'primary' },
     ],
   });
@@ -795,6 +795,7 @@ function AppContent() {
           + "Les histoires ne joueront plus de message commun à leur conclusion. Le mode nuit sera aussi désactivé.",
         variant: 'warning',
         okLabel: 'Supprimer',
+        okKind: 'danger',
         cancelLabel: 'Annuler',
       });
       if (!confirmed) return false;

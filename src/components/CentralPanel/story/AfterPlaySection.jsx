@@ -198,6 +198,7 @@ export function AfterPlaySection({
         title: 'Confirmer la suppression',
         message: 'Supprimer le message de fin de cette histoire ?',
         okLabel: 'Supprimer',
+        okKind: 'danger',
       });
       if (!confirmed) return;
     }

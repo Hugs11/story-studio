@@ -33,7 +33,7 @@ export function MediaDeleteDialog({
         </div>
         <div className="gen-footer">
           <Button type="button" onClick={onCancel}>Annuler</Button>
-          <Button type="button" onClick={onConfirm} style={{ background: 'oklch(0.50 0.18 20)', color: '#fff', border: 'none' }}>Supprimer</Button>
+          <Button type="button" variant="danger" onClick={onConfirm}>Supprimer</Button>
         </div>
       </div>
     </div>
