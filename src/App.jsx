@@ -1073,6 +1073,7 @@ function AppContent() {
               allMenus={allMenus}
               projectIndex={projectIndex}
               treeSearchFocusTrigger={treeSearchFocusTrigger}
+              onFocusTreeSearch={() => setTreeSearchFocusTrigger((n) => n + 1)}
               showCentralDiagram={showCentralDiagram}
             />,
           )}

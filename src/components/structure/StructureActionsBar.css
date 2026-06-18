@@ -73,6 +73,7 @@
 .structure-actions-trailing {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   margin-left: 3px;
   padding-left: 6px;
   border-left: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
