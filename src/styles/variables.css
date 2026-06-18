@@ -84,14 +84,14 @@
   --dur-base: 0.15s;
 
   /* Surfaces */
-  --bg0: #F5F6F8;
+  --bg0: #EBEEF3;
   --bg1: #FFFFFF;
-  --bg2: #EEF0F4;
-  --bg3: #E1E5EB;
-  --border: #D5DAE3;
-  --borderLt: #C2C9D4;
-  --text: #171923;
-  --muted: #667085;
+  --bg2: #F4F6FA;
+  --bg3: #E1E6EE;
+  --border: rgba(17, 24, 39, 0.07);
+  --borderLt: rgba(17, 24, 39, 0.10);
+  --text: #14161F;
+  --muted: #707A8A;
 
   /* Orange: pack identity, story content, structure and final pack actions */
   --accent: oklch(0.74 0.115 50);
@@ -114,12 +114,12 @@
   --warning-border-hover: color-mix(in srgb, oklch(0.82 0.15 92) 72%, var(--borderLt));
 
   /* Violet: studio tools, AI, diagnostics and application configuration */
-  --accent-2: oklch(0.52 0.13 285);
-  --accent-2-text: oklch(0.45 0.14 285);
-  --accent-2-dim: oklch(0.52 0.13 285 / 0.14);
-  --accent-2-border: oklch(0.52 0.13 285 / 0.42);
+  --accent-2: oklch(0.50 0.15 285);
+  --accent-2-text: oklch(0.40 0.15 285);
+  --accent-2-dim: oklch(0.50 0.15 285 / 0.18);
+  --accent-2-border: oklch(0.50 0.15 285 / 0.48);
   --accent-2-contrast: #fff;
-  --accent-2-hover: color-mix(in srgb, var(--accent-2) 88%, white);
+  --accent-2-hover: color-mix(in srgb, var(--accent-2) 90%, white);
 
   /* Green: ready, complete and available */
   --success: #2FA05C;
@@ -157,13 +157,13 @@
 
   /* Controls */
   --control-bg: #FFFFFF;
-  --control-bg-subtle: #F5F6F8;
+  --control-bg-subtle: #F4F6FA;
   --control-bg-hover: #EEF3F8;
-  --control-bg-active: #E4ECF5;
-  --control-border: #C8D0DA;
+  --control-bg-active: #E5EAF2;
+  --control-border: rgba(17, 24, 39, 0.10);
   --control-border-hover: color-mix(in srgb, var(--text) 18%, var(--control-border));
-  --control-text: #171923;
-  --control-text-muted: #667085;
+  --control-text: #14161F;
+  --control-text-muted: #4D5666;
 
   --control-disabled-bg: #F1F3F6;
   --control-disabled-border: #D9DEE7;
@@ -179,7 +179,7 @@
   --ring: 0 0 0 4px var(--focus-ring-soft);
 
   /* Texte secondaire (entre --text et --muted) */
-  --text-secondary: color-mix(in srgb, var(--text) 62%, transparent);
+  --text-secondary: #4D5666;
 
   /* Scrollbars */
   --scrollbar-track: #F0F2F5;
