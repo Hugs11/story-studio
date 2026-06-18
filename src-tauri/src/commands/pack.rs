@@ -47,9 +47,7 @@ pub async fn unpack_zip_to_entries(
 pub async fn analyze_community_pack(
     app: AppHandle,
     zip_path: String,
-    harmonize_loudness: Option<bool>,
 ) -> Result<community_pack_checker::PackValidationReport, String> {
-    let harmonize_loudness = harmonize_loudness.unwrap_or(false);
     log::info!(target: "pack_checker", "analyze_community_pack: '{}'", zip_path);
     let zip_path_for_log = zip_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -67,7 +65,6 @@ pub async fn analyze_community_pack(
         };
         Ok(community_pack_checker::analyze_pack_with_log(
             &safe_zip,
-            harmonize_loudness,
             &emit,
         ))
     })
@@ -83,9 +80,7 @@ pub async fn create_fixed_community_pack(
     app: AppHandle,
     zip_path: String,
     metadata_patch: Option<community_pack_checker::PackMetadataPatch>,
-    harmonize_loudness: Option<bool>,
 ) -> Result<community_pack_checker::FixedPackResult, String> {
-    let harmonize_loudness = harmonize_loudness.unwrap_or(false);
     log::info!(target: "pack_checker", "create_fixed_community_pack: '{}'", zip_path);
     let zip_path_for_log = zip_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -104,7 +99,6 @@ pub async fn create_fixed_community_pack(
         community_pack_checker::create_fixed_pack_with_log(
             &safe_zip,
             metadata_patch,
-            harmonize_loudness,
             &emit,
         )
     })

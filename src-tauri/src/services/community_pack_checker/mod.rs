@@ -30,12 +30,11 @@ use zip_doc::{read_pack_doc, read_zip_entry_bytes, update_story_asset_refs, Load
 #[cfg(test)]
 #[cfg(test)]
 pub fn analyze_pack(zip_path: &Path) -> ReportModel {
-    analyze_pack_with_log(zip_path, false, &|_| {})
+    analyze_pack_with_log(zip_path, &|_| {})
 }
 
 pub fn analyze_pack_with_log(
     zip_path: &Path,
-    harmonize_loudness: bool,
     emit: &dyn Fn(&str),
 ) -> ReportModel {
     let pack_name = pack_name_from_path(zip_path);
@@ -62,7 +61,7 @@ pub fn analyze_pack_with_log(
         return finalize_report_with_log(report, true, emit);
     }
 
-    let result = analyze_pack_inner(zip_path, &temp_dir, harmonize_loudness, report, emit);
+    let result = analyze_pack_inner(zip_path, &temp_dir, report, emit);
     let _ = fs::remove_dir_all(&temp_dir);
     result
 }
@@ -72,17 +71,16 @@ pub fn create_fixed_pack(
     zip_path: &Path,
     metadata_patch: Option<PackMetadataPatchModel>,
 ) -> Result<FixedPackResultModel, String> {
-    create_fixed_pack_with_log(zip_path, metadata_patch, false, &|_| {})
+    create_fixed_pack_with_log(zip_path, metadata_patch, &|_| {})
 }
 
 pub fn create_fixed_pack_with_log(
     zip_path: &Path,
     metadata_patch: Option<PackMetadataPatchModel>,
-    harmonize_loudness: bool,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
     emit("Analyse préparatoire du pack source...");
-    let report = analyze_pack_with_log(zip_path, harmonize_loudness, emit);
+    let report = analyze_pack_with_log(zip_path, emit);
     let audio_items: Vec<AudioValidationItem> = report
         .audio_items
         .iter()
@@ -137,7 +135,6 @@ pub fn create_fixed_pack_with_log(
             &audio_items,
             &image_items,
             ffmpeg.as_deref(),
-            harmonize_loudness,
             emit,
         )?;
 
@@ -223,7 +220,6 @@ fn prepare_fixed_assets_parallel(
     audio_items: &[AudioValidationItem],
     image_items: &[ImageValidationItem],
     ffmpeg: Option<&Path>,
-    harmonize_loudness: bool,
     emit: &dyn Fn(&str),
 ) -> Result<Vec<PreparedFixedAsset>, String> {
     let audio_workers = audio_items.len();
@@ -247,7 +243,6 @@ fn prepare_fixed_assets_parallel(
                         zip_path,
                         temp_dir,
                         ffmpeg,
-                        harmonize_loudness,
                         index,
                         item,
                         &tx,
@@ -276,7 +271,6 @@ fn prepare_one_fixed_audio(
     zip_path: &Path,
     temp_dir: &Path,
     ffmpeg: Option<&Path>,
-    harmonize_loudness: bool,
     index: usize,
     item: &AudioValidationItem,
     progress_tx: &mpsc::Sender<String>,
@@ -301,7 +295,6 @@ fn prepare_one_fixed_audio(
         &input_path,
         &output_path,
         item,
-        harmonize_loudness,
     )?;
     let fixed_bytes =
         fs::read(&output_path).map_err(|e| format!("Lecture audio corrigé impossible : {}", e))?;
@@ -337,7 +330,6 @@ fn prepare_one_fixed_image(
 fn analyze_pack_inner(
     zip_path: &Path,
     temp_dir: &Path,
-    harmonize_loudness: bool,
     mut report: ReportModel,
     emit: &dyn Fn(&str),
 ) -> ReportModel {
@@ -388,7 +380,7 @@ fn analyze_pack_inner(
     validate_title(&doc, zip_path, &mut report);
     emit("Vérification de la structure et des références...");
     validate_structure(&doc, zip_path, temp_dir, &mut report);
-    analyze_audio(&doc, zip_path, temp_dir, harmonize_loudness, &mut report, emit);
+    analyze_audio(&doc, zip_path, temp_dir, &mut report, emit);
     analyze_images(&doc, zip_path, &mut report, emit);
     finalize_report_with_log(report, false, emit)
 }
@@ -744,7 +736,6 @@ fn analyze_audio(
     doc: &LoadedPackDoc,
     zip_path: &Path,
     temp_dir: &Path,
-    harmonize_loudness: bool,
     report: &mut ReportModel,
     emit: &dyn Fn(&str),
 ) {
@@ -787,7 +778,6 @@ fn analyze_audio(
                         zip_path,
                         temp_dir,
                         ffmpeg_ref,
-                        harmonize_loudness,
                         index,
                         asset_ref,
                     )
@@ -817,7 +807,6 @@ fn analyze_one_audio(
     zip_path: &Path,
     temp_dir: &Path,
     ffmpeg: &Path,
-    harmonize_loudness: bool,
     index: usize,
     asset_ref: &zip_doc::StageAssetRef,
 ) -> (Option<AudioValidationItem>, Vec<PackValidationIssue>) {
@@ -848,7 +837,6 @@ fn analyze_one_audio(
                 &asset_ref.asset_name,
                 &asset_ref.stage_name,
                 &asset_ref.item_type,
-                harmonize_loudness,
             );
             let _ = fs::remove_file(&input_path);
             (Some(item), issues)
