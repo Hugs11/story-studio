@@ -527,8 +527,20 @@
   grid-template-columns: 1fr;
 }
 
+/* 3 états : pas la place de tenir en 3 colonnes → on empile, en plus compact,
+   chaque état sur une ligne pleine largeur. */
 .checker-split-stat--cols-3 {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.checker-split-stat--cols-3 span {
+  padding: 4px 8px;
+  font-size: 9px;
+}
+
+.checker-split-stat--cols-3 strong {
+  font-size: 12px;
 }
 
 .checker-split-stat span,
@@ -540,6 +552,10 @@
   color: var(--text-secondary);
   font-size: 10px;
   line-height: 1.2;
+}
+
+.checker-split-stat span {
+  overflow-wrap: break-word;
 }
 
 .checker-split-stat strong,
