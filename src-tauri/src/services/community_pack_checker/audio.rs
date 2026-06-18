@@ -4,9 +4,22 @@ use std::process::{Command, Stdio};
 use crate::support::audio_norm::{
     build_edge_silence_filters, build_loudness_filters, loudness_in_deadband,
     loudness_in_validation_window, measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix,
-    EdgeMeasure, LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP,
-    MAX_ACCEPTABLE_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS, TARGET_LUFS, VALIDATION_WINDOW_LUFS,
+    EdgeMeasure, LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS,
+    TARGET_LUFS, VALIDATION_WINDOW_LUFS,
 };
+
+/// Détection d'écrêtage **côté lecture** : on décode en 16 bits entier (ce que
+/// fait la Lunii), ce qui sature les dépassements de plein-échelle en plateaux,
+/// puis on compte le ratio d'échantillons rabotés au pic. C'est la mesure la plus
+/// fiable — un MP3 écrêté peut afficher un flat factor nul en décodage flottant
+/// alors qu'il sature franchement en 16 bits. Un fichier propre en compte ~0
+/// (≤ quelques échantillons isolés) ; un fichier écrêté en compte des milliers
+/// (ratio mesuré 0,09–0,19 %, soit > 400× le bruit de fond d'un fichier sain).
+const CLIP_SAMPLE_RATIO_WARN: f64 = 0.0002; // 0,02 %
+/// Plancher absolu : sous ce nombre d'échantillons rabotés, on n'alerte jamais —
+/// évite tout faux positif sur les fichiers très courts (invites) qui peuvent
+/// toucher le pic sur 1 ou 2 échantillons isolés.
+const CLIP_SAMPLE_MIN_COUNT: u64 = 32;
 use crate::support::ffmpeg::apply_no_window;
 
 use super::models::{
@@ -25,6 +38,8 @@ struct AudioProbe {
     audio_is_silent: bool,
     integrated_lufs: Option<f64>,
     true_peak_db: Option<f64>,
+    clipped_samples: Option<u64>,
+    total_samples: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -279,30 +294,35 @@ pub(crate) fn analyze_audio_file(
         }
     }
 
-    // Crête vraie trop élevée → risque d'écrêtage sur la boîte, **indépendamment**
-    // du niveau moyen. La mesure de niveau ci-dessus ne regarde que le volume : un
-    // fichier déjà saturé (SPG, ou rework antérieur au correctif limiteur) mais par
-    // ailleurs au bon volume passait inaperçu. Auto-fixable : le ré-encodage
-    // applique le limiteur −2 dBFS.
+    // Écrêtage côté lecture (mesuré en 16 bits, comme la boîte) → audio saturé,
+    // dont la qualité est dégradée **dans la source elle-même**. Indépendant du
+    // niveau moyen : un fichier au bon volume peut être franchement écrêté.
+    // Purement **informatif** : on ne tente pas de réparer un signal déjà saturé
+    // (le ré-encodage limiterait la crête mais ne restaure rien), on conseille à
+    // l'utilisateur de vérifier sa source.
     if !probe.audio_is_silent {
-        if let Some(peak) = probe.true_peak_db {
-            if true_peak_indicates_clipping(peak) {
+        if let (Some(clipped), Some(total)) = (probe.clipped_samples, probe.total_samples) {
+            if audio_is_clipped(clipped, total) {
+                let pct = 100.0 * clipped as f64 / total as f64;
+                let peak = probe
+                    .true_peak_db
+                    .map(|p| format!(" (crête vraie {:.1} dBTP)", p))
+                    .unwrap_or_default();
                 push_audio_issue(
                     &mut issues,
                     PackValidationSeverity::Warning,
                     target,
-                    "Cet audio sature (crête trop élevée).",
+                    "Cet audio est saturé : qualité dégradée par la source.",
                     Some(format!(
-                        "Crête vraie mesurée : {:.1} dBTP (seuil : {:.1} dBTP). Au-delà, le signal écrête à la lecture sur la boîte. Correction : limiter la crête, crête MP3 attendue ≈ {:.1} dBTP.",
-                        peak, MAX_ACCEPTABLE_TRUE_PEAK_DBTP, EXPECTED_FINAL_TRUE_PEAK_DBTP
+                        "Écrêtage détecté sur {:.2} % des échantillons{}. La saturation est déjà présente dans le fichier d'origine ; aucune régénération ne la restaure. Conseil : vérifiez la source et, si possible, remplacez-la par un enregistrement de meilleure qualité.",
+                        pct, peak
                     )),
-                    true,
-                    Some("Limiter la crête pour supprimer l'écrêtage.".to_string()),
+                    false,
+                    None,
                 );
                 if status != PackValidationSeverity::Error {
                     status = PackValidationSeverity::Warning;
                 }
-                fix_parts.push("limiter la crête");
             }
         }
     }
@@ -390,20 +410,13 @@ pub(crate) fn fix_audio_file(
     let mut filters = pre_filters;
     // On corrige le niveau quand il est hors fenêtre, ou — si l'harmonisation
     // opt-in est demandée — quand il est dans la fenêtre mais hors bande morte.
-    // On le corrige **aussi** quand la crête sature (écrêtage), même si le volume
-    // moyen est conforme : c'est le ré-encodage qui applique le limiteur.
-    let is_clipping = item
-        .true_peak_db
-        .map(true_peak_indicates_clipping)
+    let should_fix_loudness = item
+        .integrated_lufs
+        .map(|value| {
+            !loudness_in_validation_window(value)
+                || (harmonize_loudness && !loudness_in_deadband(value))
+        })
         .unwrap_or(false);
-    let should_fix_loudness = is_clipping
-        || item
-            .integrated_lufs
-            .map(|value| {
-                !loudness_in_validation_window(value)
-                    || (harmonize_loudness && !loudness_in_deadband(value))
-            })
-            .unwrap_or(false);
     if should_fix_loudness {
         let measure = measure_loudness_ebur128(ffmpeg, input, &filters).map_err(|e| {
             format!(
@@ -500,7 +513,60 @@ fn probe_audio(ffmpeg: &Path, input: &Path) -> Result<AudioProbe, String> {
         probe.true_peak_db = Some(measure.true_peak_db);
     }
 
+    if let Some((clipped, total)) = measure_clip_stats(ffmpeg, input) {
+        probe.clipped_samples = Some(clipped);
+        probe.total_samples = Some(total);
+    }
+
     Ok(probe)
+}
+
+/// Compte les échantillons écrêtés **en décodant comme la boîte** : `aformat=s16`
+/// sature les dépassements de plein-échelle (que le décodage flottant laisserait
+/// passer en sur-1.0), puis `astats` reporte le nombre d'échantillons au pic et le
+/// total. Renvoie `(écrêtés, total)`.
+fn measure_clip_stats(ffmpeg: &Path, input: &Path) -> Option<(u64, u64)> {
+    let filter = "aformat=sample_fmts=s16:channel_layouts=mono,\
+astats=metadata=0:measure_perchannel=none:measure_overall=Peak_count+Number_of_samples";
+    let stderr = run_ffmpeg(
+        ffmpeg,
+        input,
+        &[
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            "__INPUT__",
+            "-map",
+            "0:a:0",
+            "-af",
+            filter,
+            "-f",
+            "null",
+            "-",
+        ],
+    )
+    .ok()?;
+    let clipped = parse_count_field(&stderr, "Peak count:")?;
+    let total = parse_count_field(&stderr, "Number of samples:")?;
+    Some((clipped, total))
+}
+
+/// `astats` imprime ses compteurs en flottant (`Peak count: 24374.000000`) ;
+/// on lit donc un `f64` avant de convertir.
+fn parse_count_field(stderr: &str, label: &str) -> Option<u64> {
+    let pos = stderr.find(label)? + label.len();
+    let token = stderr[pos..].split_whitespace().next()?.trim();
+    let value = token.parse::<f64>().ok()?;
+    (value.is_finite() && value >= 0.0).then_some(value as u64)
+}
+
+/// Écrêtage avéré : assez d'échantillons rabotés (au-dessus du plancher absolu)
+/// **et** un ratio significatif — pour ne déclencher ni sur un fichier court ni
+/// sur de rares touchers de pic isolés d'un fichier propre.
+fn audio_is_clipped(clipped_samples: u64, total_samples: u64) -> bool {
+    total_samples > 0
+        && clipped_samples >= CLIP_SAMPLE_MIN_COUNT
+        && (clipped_samples as f64) / (total_samples as f64) >= CLIP_SAMPLE_RATIO_WARN
 }
 
 fn edge_trim_filters(
@@ -760,28 +826,40 @@ fn loudness_action_reason(action: &LoudnessAction) -> &str {
     }
 }
 
-/// Une crête vraie au-dessus du seuil indique un risque d'écrêtage : le
-/// générateur (limiteur −2 dBFS) produirait plus propre. Insensible au niveau
-/// moyen — un fichier au bon volume peut quand même saturer.
-fn true_peak_indicates_clipping(true_peak_db: f64) -> bool {
-    true_peak_db.is_finite() && true_peak_db > MAX_ACCEPTABLE_TRUE_PEAK_DBTP
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn flags_clipping_only_above_threshold() {
-        // Overshoot MP3 normal d'un fichier conforme : pas d'alerte.
-        assert!(!true_peak_indicates_clipping(0.8));
-        assert!(!true_peak_indicates_clipping(MAX_ACCEPTABLE_TRUE_PEAK_DBTP));
-        // SPG et packs écrêtés : signalés.
-        assert!(true_peak_indicates_clipping(2.4));
-        assert!(true_peak_indicates_clipping(14.5));
-        // Mesure invalide : jamais d'alerte (évite un faux positif sur NaN/inf).
-        assert!(!true_peak_indicates_clipping(f64::NAN));
-        assert!(!true_peak_indicates_clipping(f64::INFINITY));
+    fn flags_clipping_only_on_sustained_full_scale_runs() {
+        // Témoins propres (mesurés) : 2–4 échantillons au pic sur des fichiers de
+        // plusieurs minutes → jamais d'alerte.
+        let five_min = 5 * 60 * 44_100;
+        assert!(!audio_is_clipped(2, five_min));
+        assert!(!audio_is_clipped(4, five_min));
+        // Fichier court (invite) touchant le pic sur quelques échantillons : le
+        // plancher absolu évite le faux positif malgré un ratio non négligeable.
+        assert!(!audio_is_clipped(5, 3 * 44_100));
+        // Fichiers V6 réellement écrêtés (mesurés : 8 000–24 000 échantillons,
+        // 0,09–0,19 %) → signalés.
+        assert!(audio_is_clipped(8_214, five_min));
+        assert!(audio_is_clipped(24_374, 294 * 44_100));
+        // Garde-fous : total nul ou en dessous du plancher → pas d'alerte.
+        assert!(!audio_is_clipped(0, 0));
+        assert!(!audio_is_clipped(20, five_min));
+        // Long fichier propre touchant le pic plus de 32 fois mais à un ratio
+        // infime : le garde-fou de ratio évite le faux positif.
+        assert!(!audio_is_clipped(100, 100_000_000));
+    }
+
+    #[test]
+    fn parses_astats_count_fields() {
+        // astats imprime Peak count en flottant, Number of samples en entier.
+        let stderr = "[Parsed_astats_1 @ x] Peak count: 24374.000000\n\
+                      [Parsed_astats_1 @ x] Number of samples: 12946554\n";
+        assert_eq!(parse_count_field(stderr, "Peak count:"), Some(24_374));
+        assert_eq!(parse_count_field(stderr, "Number of samples:"), Some(12_946_554));
+        assert_eq!(parse_count_field(stderr, "Absent:"), None);
     }
 
     /// Harnais manuel : passe le vrai `analyze_audio_file` sur des assets réels et
