@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
-import { SlidersHorizontal, Wrench } from '../icons/LucideLocal';
+import { ChevronRight, Settings, Wrench } from '../icons/LucideLocal';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
@@ -20,6 +20,7 @@ export function PackOptionsPopover({
   globalOptions = {},
   onOpenChange,
   onUpdateOption,
+  onOpenPackMetadata,
   onOpenPreferences,
   preferencesShortcut = '',
 }) {
@@ -69,6 +70,11 @@ export function PackOptionsPopover({
     onOpenPreferences?.();
   }
 
+  function handleOpenPackMetadata() {
+    onOpenChange?.(false);
+    onOpenPackMetadata?.();
+  }
+
   return (
     <div
       className={`pack-options-wrap ${open ? 'is-open' : ''}`}
@@ -85,31 +91,47 @@ export function PackOptionsPopover({
         <>
           <div className="pack-options-hover-bridge" aria-hidden="true" />
           <div className="pack-options-popover" role="dialog" aria-label="Options du pack">
-            <div className="pack-options-head">
-              <span className="pack-options-eyebrow">Ce pack</span>
-              <div className="pack-options-heading">
-                <span className="pack-options-heading-icon"><SlidersHorizontal strokeWidth={2} absoluteStrokeWidth /></span>
-                <div>
-                  <span className="pack-options-title">Réglages du pack</span>
-                  <span className="pack-options-subtitle">Options propres au projet ouvert.</span>
-                </div>
-              </div>
-            </div>
+            {onOpenPackMetadata ? (
+              <button
+                type="button"
+                className="pack-options-gateway"
+                onClick={handleOpenPackMetadata}
+              >
+                <span className="pack-options-gateway-icon pack-options-gateway-icon--pack">
+                  <Settings strokeWidth={2} absoluteStrokeWidth />
+                </span>
+                <span className="pack-options-gateway-copy">
+                  <span className="pack-options-gateway-title">Réglages du pack</span>
+                  <span className="pack-options-gateway-subtitle">Nom, âge, langue, image de couverture, ordre du menu.</span>
+                </span>
+                <span className="pack-options-gateway-end" aria-hidden="true">
+                  <ChevronRight strokeWidth={2} absoluteStrokeWidth />
+                </span>
+              </button>
+            ) : null}
 
-            <div className="pack-options-section">
-              <div className="pack-options-section-title">Traitement audio du pack</div>
+            <div className="pack-options-rule" />
+
+            <div className="pack-options-well">
+              <div className="pack-options-well-title">Traitement audio du pack</div>
               <Tooltip text={HARMONIZE_LOUDNESS_HELP} wrap className="pack-options-row-tip">
-                <div className="pack-options-row">
-                  <span className="pack-options-label">Harmoniser le volume</span>
-                  <Toggle
-                    on={globalOptions.harmonizeLoudness !== false}
-                    onChange={(value) => updateOption('harmonizeLoudness', value)}
-                    ariaLabel="Harmoniser le volume des audios vers -14 LUFS à la génération."
-                  />
+                <div className="pack-options-control-row">
+                  <span className="pack-options-control-copy">
+                    <span className="pack-options-control-title">Harmoniser le volume</span>
+                  </span>
+                  <span className="pack-options-control-end">
+                    <Toggle
+                      on={globalOptions.harmonizeLoudness !== false}
+                      onChange={(value) => updateOption('harmonizeLoudness', value)}
+                      ariaLabel="Harmoniser le volume des audios vers -14 LUFS à la génération."
+                    />
+                  </span>
                 </div>
               </Tooltip>
-              <div className="pack-options-row pack-options-row-stack">
-                <span className="pack-options-label">Silence début / fin</span>
+              <div className="pack-options-control-row pack-options-control-row--stack">
+                <span className="pack-options-control-copy">
+                  <span className="pack-options-control-title">Silence début / fin</span>
+                </span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
                   {SILENCE_MODE_OPTIONS.map(([mode, label, help]) => (
                     <Tooltip key={mode} text={help} wrap>
@@ -125,45 +147,52 @@ export function PackOptionsPopover({
                   ))}
                 </div>
               </div>
-            </div>
 
-            <div className="pack-options-section">
-              <div className="pack-options-section-title">Comportement de lecture global</div>
+              <div className="pack-options-well-sep" />
+
+              <div className="pack-options-well-title">Lecture <span>· global</span></div>
               <Tooltip
                 text="Enchaîne automatiquement les histoires et ignore les messages, scénarios et retours de fin tant que l'option est active."
                 wrap
                 className="pack-options-row-tip"
               >
-                <div className={`pack-options-row ${isSimpleProject ? 'is-disabled' : ''}`}>
-                  <span className="pack-options-label">Auto-next</span>
-                  <Toggle
-                    on={!!globalOptions.autoNext}
-                    onChange={(value) => updateOption('autoNext', value)}
-                    disabled={isSimpleProject}
-                    ariaLabel="Auto-next. Enchaîne automatiquement les histoires et ignore les fins configurées."
-                  />
+                <div className={`pack-options-control-row ${isSimpleProject ? 'is-disabled' : ''}`}>
+                  <span className="pack-options-control-copy">
+                    <span className="pack-options-control-title">Auto-next</span>
+                    <span className="pack-options-control-hint">Enchaîne la lecture des nœuds</span>
+                  </span>
+                  <span className="pack-options-control-end">
+                    <Toggle
+                      on={!!globalOptions.autoNext}
+                      onChange={(value) => updateOption('autoNext', value)}
+                      disabled={isSimpleProject}
+                      ariaLabel="Auto-next. Enchaîne automatiquement les histoires et ignore les fins configurées."
+                    />
+                  </span>
                 </div>
               </Tooltip>
             </div>
 
             {onOpenPreferences ? (
-              <div className="pack-options-section pack-options-section--app">
-                <div className="pack-options-section-title">Application Story Studio</div>
+              <>
+                <div className="pack-options-rule" />
                 <button
                   type="button"
-                  className="pack-options-preferences-btn"
+                  className="pack-options-gateway pack-options-gateway--app"
                   onClick={handleOpenPreferences}
                 >
-                  <span className="pack-options-preferences-icon"><Wrench strokeWidth={2} absoluteStrokeWidth /></span>
-                  <span className="pack-options-preferences-copy">
-                    <span className="pack-options-preferences-title">
-                      Préférences de l’application
-                      {preferencesShortcut ? <span className="pack-options-shortcut">{preferencesShortcut}</span> : null}
-                    </span>
-                    <span className="pack-options-preferences-subtitle">Thème, dossiers de travail, audio, raccourcis.</span>
+                  <span className="pack-options-gateway-icon pack-options-gateway-icon--app">
+                    <Wrench strokeWidth={2} absoluteStrokeWidth />
+                  </span>
+                  <span className="pack-options-gateway-copy">
+                    <span className="pack-options-gateway-title">Préférences de l’application</span>
+                    <span className="pack-options-gateway-subtitle">Thème, dossiers de travail, audio, raccourcis.</span>
+                  </span>
+                  <span className="pack-options-gateway-end">
+                    {preferencesShortcut ? <span className="pack-options-shortcut">{preferencesShortcut}</span> : null}
                   </span>
                 </button>
-              </div>
+              </>
             ) : null}
           </div>
         </>
