@@ -253,20 +253,6 @@
   flex: 0 0 auto;
 }
 
-.checker-harmonize-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary, #6b7280);
-  cursor: pointer;
-  user-select: none;
-}
-
-.checker-harmonize-toggle input {
-  cursor: pointer;
-}
-
 .checker-fixed {
   display: flex;
   align-items: center;
@@ -512,10 +498,6 @@
   color: var(--danger-text);
 }
 
-.checker-summary-tile--danger .checker-single-stat strong {
-  color: var(--danger-text);
-}
-
 .checker-split-stat {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -523,25 +505,6 @@
   margin-top: 8px;
 }
 
-.checker-split-stat--cols-1 {
-  grid-template-columns: 1fr;
-}
-
-/* 3 états : pas la place de tenir en 3 colonnes → on empile, en plus compact,
-   chaque état sur une ligne pleine largeur. */
-.checker-split-stat--cols-3 {
-  grid-template-columns: 1fr;
-  gap: 4px;
-}
-
-.checker-split-stat--cols-3 span {
-  padding: 4px 8px;
-  font-size: 9px;
-}
-
-.checker-split-stat--cols-3 strong {
-  font-size: 12px;
-}
 
 .checker-split-stat span,
 .checker-single-stat {
@@ -572,10 +535,6 @@
 
 .checker-split-stat-fix strong {
   color: var(--warning-text);
-}
-
-.checker-split-stat-blocked strong {
-  color: var(--danger-text);
 }
 
 .checker-single-stat {

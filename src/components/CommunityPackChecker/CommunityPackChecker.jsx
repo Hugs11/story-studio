@@ -456,29 +456,8 @@ function SplitStat({ ok, needsFix }) {
   );
 }
 
-// Stat audio à 3 états « selon les cas » : OK toujours ; « à corriger » et
-// « non corrigeable » uniquement quand > 0. Le nombre de colonnes s'adapte.
-function AudioSplitStat({ ok, toFix, blocked }) {
-  const cells = [
-    <span key="ok" className="checker-split-stat-ok"><strong>{ok}</strong> OK</span>,
-  ];
-  if (toFix > 0) {
-    cells.push(<span key="fix" className="checker-split-stat-fix"><strong>{toFix}</strong> à corriger</span>);
-  }
-  if (blocked > 0) {
-    cells.push(<span key="blocked" className="checker-split-stat-blocked"><strong>{blocked}</strong> non corrigeable</span>);
-  }
-  return <div className={`checker-split-stat checker-split-stat--cols-${cells.length}`}>{cells}</div>;
-}
-
 function SummaryTiles({ report, saturatedCount = 0 }) {
-  const audioItems = report.audioItems || [];
-  const audioOk = audioItems.filter((item) => item.status === 'ok').length;
-  // « Non corrigeable » : fichier en défaut que l'app ne sait pas réparer
-  // automatiquement (audio saturé, trop court, muet) — par opposition à
-  // « à corriger » (silence, format… auto-fixables).
-  const audioBlocked = audioItems.filter((item) => item.status !== 'ok' && !item.autoFixAvailable).length;
-  const audioToFix = audioItems.filter((item) => item.status !== 'ok' && item.autoFixAvailable).length;
+  const audio = categoryStats(report.audioSummary);
   const images = categoryStats(report.imageSummary);
   const title = categoryStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
@@ -486,8 +465,8 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
   const nightMode = Boolean(report.nightMode?.detected);
   return (
     <div className="checker-summary-tiles" aria-label="Résumé du pack">
-      <SummaryTile title="Audio" Icon={Music} tone={(audioToFix + audioBlocked) > 0 ? 'fix' : 'ok'}>
-        <AudioSplitStat ok={audioOk} toFix={audioToFix} blocked={audioBlocked} />
+      <SummaryTile title="Audio" Icon={Music} tone={saturatedCount > 0 ? 'danger' : (audio.needsFix > 0 ? 'fix' : 'ok')}>
+        <SplitStat ok={audio.ok} needsFix={audio.needsFix} />
       </SummaryTile>
       <SummaryTile title="Images" Icon={Image} tone={images.needsFix ? 'fix' : 'ok'}>
         <SplitStat ok={images.ok} needsFix={images.needsFix} />
@@ -510,14 +489,6 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
           <span>{nightMode ? 'Détecté dans le pack' : 'Non bloquant'}</span>
         </div>
       </SummaryTile>
-      {saturatedCount > 0 ? (
-        <SummaryTile title="Qualité audio" Icon={TriangleAlert} tone="danger">
-          <div className="checker-single-stat">
-            <strong>Saturé</strong>
-            <span>{saturatedCount} fichier{saturatedCount > 1 ? 's' : ''} · source à revoir</span>
-          </div>
-        </SummaryTile>
-      ) : null}
     </div>
   );
 }
@@ -827,18 +798,6 @@ function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
             <Button onClick={() => checker.analyzePath(checker.zipPath)} disabled={busy || !checker.zipPath}>
               {checker.status === 'analyzing' ? 'Analyse...' : 'Relancer'}
             </Button>
-            <label
-              className="checker-harmonize-toggle"
-              title="Propose (sans avertir) de ramener à -14 LUFS les fichiers déjà valides mais inégaux. N'affecte pas le verdict."
-            >
-              <input
-                type="checkbox"
-                checked={checker.harmonizeLoudness}
-                onChange={(event) => checker.setHarmonizeLoudness(event.target.checked)}
-                disabled={busy}
-              />
-              <span>Harmoniser le volume à -14 LUFS</span>
-            </label>
           </div>
         </div>
 

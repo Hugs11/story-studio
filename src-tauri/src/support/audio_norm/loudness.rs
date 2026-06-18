@@ -139,13 +139,6 @@ pub(crate) fn loudness_in_validation_window(integrated_lufs: f64) -> bool {
     in_range(integrated_lufs, VALIDATION_WINDOW_LUFS)
 }
 
-/// Bande morte de correction : aucune retouche de niveau dans `[-15.5, -12.5]`.
-/// Sert au checker pour distinguer un fichier déjà au niveau cible (rien à
-/// faire) d'un fichier dans la fenêtre mais harmonisable vers ‑14.
-pub(crate) fn loudness_in_deadband(integrated_lufs: f64) -> bool {
-    in_range(integrated_lufs, DEADBAND_LUFS)
-}
-
 fn in_range(value: f64, (min, max): (f64, f64)) -> bool {
     (min..=max).contains(&value)
 }
@@ -205,16 +198,6 @@ mod tests {
     #[test]
     fn plans_noop_inside_deadband() {
         assert_eq!(plan_loudness_fix(-14.2, -3.0), LoudnessAction::None);
-    }
-
-    #[test]
-    fn deadband_membership_matches_spec_window() {
-        assert!(loudness_in_deadband(-14.0));
-        assert!(loudness_in_deadband(-15.5));
-        assert!(loudness_in_deadband(-12.5));
-        // Hors bande morte mais dans la fenêtre : candidat à l'harmonisation.
-        assert!(!loudness_in_deadband(-16.0));
-        assert!(!loudness_in_deadband(-11.0));
     }
 
     #[test]

@@ -41,11 +41,6 @@ export function useCommunityPackChecker() {
   const [error, setError] = useState('');
   const [exportNotice, setExportNotice] = useState('');
   const [liveLog, setLiveLog] = useState([]);
-  // Harmonisation opt-in du volume à -14 LUFS pour les fichiers dans la fenêtre
-  // mais hors bande morte. Désactivée par défaut : on ne re-masterise pas un pack
-  // communautaire déjà valide sans demande explicite.
-  const [harmonizeLoudness, setHarmonizeLoudnessState] = useState(false);
-  const harmonizeRef = useRef(false);
   const statusRef = useRef(status);
 
   const appendLiveLog = useCallback((line) => {
@@ -91,7 +86,6 @@ export function useCommunityPackChecker() {
     try {
       const nextReport = await invoke('analyze_community_pack', {
         zipPath: nextPath,
-        harmonizeLoudness: harmonizeRef.current,
       });
       setReport(nextReport);
       const finalLines = (nextReport?.technicalLog || []).slice(-3);
@@ -133,7 +127,6 @@ export function useCommunityPackChecker() {
       const result = await invoke('create_fixed_community_pack', {
         zipPath,
         metadataPatch,
-        harmonizeLoudness: harmonizeRef.current,
       });
       appendLiveLog(`ZIP corrigé créé : ${result.fixedZipPath}`);
       appendLiveLog('Réanalyse automatique du ZIP corrigé...');
@@ -153,22 +146,6 @@ export function useCommunityPackChecker() {
       setStatus('idle');
     }
   }, [analyzePath, appendLiveLog, zipPath]);
-
-  const setHarmonizeLoudness = useCallback((value) => {
-    const next = !!value;
-    harmonizeRef.current = next;
-    setHarmonizeLoudnessState(next);
-    // Réanalyse à chaud du pack courant pour refléter (ou retirer) les
-    // suggestions d'harmonisation, sans changer le verdict.
-    if (zipPath) {
-      void analyzePath(zipPath, {
-        appendLog: true,
-        label: next
-          ? 'Réanalyse avec harmonisation du volume…'
-          : 'Réanalyse sans harmonisation du volume…',
-      });
-    }
-  }, [analyzePath, zipPath]);
 
   const exportReport = useCallback(async (kind) => {
     if (!report || !EXPORTS[kind]) return;
@@ -214,8 +191,6 @@ export function useCommunityPackChecker() {
     error,
     exportNotice,
     liveLog,
-    harmonizeLoudness,
-    setHarmonizeLoudness,
     analyzePath,
     pickPack,
     fixPack,
