@@ -5,7 +5,7 @@ import RegionsPlugin from 'wavesurfer.js/plugins/regions';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
+import { Play, Pause, Square, SkipBack, SkipForward, RotateCcw } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { basename } from '../../utils/fileUtils';
 import {
@@ -49,6 +49,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const skipNextZoomEffectRef = useRef(false);
   const actionBasePathRef = useRef(filePath);
   const pendingViewportRef = useRef(null);
+  const auditionEndRef = useRef(null);
 
   const [editInfo, setEditInfo] = useState(null);
   const [stagedEdit, setStagedEdit] = useState(null);
@@ -86,7 +87,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const filename = basename(filePath);
   const trimDuration = Math.max(0, trimEnd - trimStart);
   const canOperate = !isLoading && !isApplying && trimEnd > trimStart + 0.01;
-  const canCut = canOperate && trimDuration < duration - 0.01;
   const fadeMax = Math.max(0, Math.min(10, trimDuration / 2));
   const outputFadeMax = isPreviewingEdit ? Math.max(0, Math.min(10, duration / 2)) : fadeMax;
   const cutFadeAnchor = stagedEdit?.mode === 'cut' ? stagedEdit.startSec : trimStart;
@@ -315,9 +315,30 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     });
 
     ws.on('play', () => { if (mounted) setIsPlaying(true); });
-    ws.on('pause', () => { if (mounted) setIsPlaying(false); });
-    ws.on('finish', () => { if (mounted) setIsPlaying(false); });
-    ws.on('timeupdate', (t) => { if (mounted) setCurrentTime(t); });
+    ws.on('pause', () => {
+      if (!mounted) return;
+      setIsPlaying(false);
+      if (auditionEndRef.current !== null) {
+        auditionEndRef.current = null;
+      }
+    });
+    ws.on('finish', () => {
+      if (!mounted) return;
+      setIsPlaying(false);
+      auditionEndRef.current = null;
+    });
+    ws.on('timeupdate', (t) => {
+      if (!mounted) return;
+      const auditionEnd = auditionEndRef.current;
+      if (auditionEnd !== null && t >= auditionEnd - 0.01) {
+        auditionEndRef.current = null;
+        ws.pause();
+        ws.setTime(Math.min(auditionEnd, durationRef.current || auditionEnd));
+        setCurrentTime(Math.min(auditionEnd, durationRef.current || auditionEnd));
+        return;
+      }
+      setCurrentTime(t);
+    });
 
     wsRegions.on('region-updated', (region) => {
       if (!mounted || isClampingRef.current) return;
@@ -373,6 +394,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
 
     return () => {
       mounted = false;
+      auditionEndRef.current = null;
       stopShuttle();
       containerRef.current?.removeEventListener('wheel', handleWheel);
       ws.destroy();
@@ -392,7 +414,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   useAudioEditorShortcuts({
     isLoading,
     canOperate,
-    canCut,
+    canCut: false,
     stagedEdit,
     previewPath,
     actions: {
@@ -401,8 +423,8 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       zoomOut: () => zoomAtCurrentCursor(-KEYBOARD_ZOOM_STEP),
       clearStart: clearStartPoint,
       clearEnd: clearEndPoint,
-      trimSelection: () => { void handleStageAction('trim'); },
-      cutSelection: () => { void handleStageAction('cut'); },
+      trimSelection: previewCurrentSelection,
+      cutSelection: () => {},
       playPause: handlePlayPause,
       nudgeBack: () => nudgeWithScrub(-NUDGE_STEP),
       nudgeForward: () => nudgeWithScrub(NUDGE_STEP),
@@ -427,9 +449,25 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   }
 
   function stopPlayback() {
+    auditionEndRef.current = null;
     stopShuttle();
     wsRef.current?.stop();
     setCurrentTime(0);
+  }
+
+  function previewSelectionRange(start, end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+    const dur = durationRef.current || duration;
+    const safeStart = Math.max(0, Math.min(start, dur));
+    const safeEnd = Math.max(safeStart, Math.min(end, dur));
+    stopShuttle();
+    auditionEndRef.current = safeEnd;
+    setWaveTime(safeStart);
+    void wsRef.current?.play();
+  }
+
+  function previewCurrentSelection() {
+    previewSelectionRange(trimStartRef.current, trimEndRef.current);
   }
 
   function markStartHere() {
@@ -877,12 +915,16 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       <div className="modal-box audio-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Éditer l'audio — {filename}</span>
-          {shuttleStatus && <span className="audio-editor-shuttle-status">{shuttleStatus}</span>}
-          <span className="audio-editor-cursor-time">{formatTime(currentTime)}</span>
           <Button variant="icon" className="modal-close" onClick={onCancel} disabled={isApplying}>×</Button>
         </div>
 
         <div className="audio-editor-body">
+          <div className="audio-editor-time-row">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+            {shuttleStatus && <span className="audio-editor-shuttle-status">{shuttleStatus}</span>}
+          </div>
+
           {/* Waveform */}
           <div
             className="audio-editor-waveform-wrap"
@@ -898,88 +940,65 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           </div>
 
           {/* Barre d'outils transport */}
-          <div className="audio-tb-row">
-            <div className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('in', e)}>
-              Entrée&nbsp;{formatTime(trimStart)}
-              <Tooltip text="Ajouter ou modifier le fondu en entrée">
-                <button
-                  className={`audio-editor-fade-chip${fadeInSec > 0 ? ' is-active' : ''}`}
+          <div className="audio-tb-row audio-editor-controls-row">
+            <div className="audio-editor-fade-slot is-left">
+              <Tooltip text={fadeInSec > 0 ? `Fondu entrée ${formatTime(Math.min(fadeInSec, fadeMax))}` : 'Ajouter un fondu en entrée'}>
+                <Button
+                  variant="icon"
+                  className={`audio-tb-btn audio-editor-fade-chip${fadeInSec > 0 ? ' is-active' : ''}`}
                   onClick={(e) => openFadePopover('in', e)}
                   onContextMenu={(e) => openFadePopover('in', e)}
                   disabled={isApplying}
                 >
-                  ↗{fadeInSec > 0 ? ` ${formatTime(Math.min(fadeInSec, fadeMax))}` : ''}
-                </button>
+                  ↗
+                </Button>
               </Tooltip>
             </div>
-          <div className="audio-tb">
-            <Tooltip text="Marquer le point d'entrée à la position du curseur (i)">
-              <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</Button>
-            </Tooltip>
-            <Tooltip text="Marquer le point de sortie à la position du curseur (o)">
-              <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markEndHere} disabled={isLoading}>{`}`}</Button>
-            </Tooltip>
+            <div className="audio-tb">
+              <Tooltip text="Marquer le point d'entrée à la position du curseur (i)">
+                <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</Button>
+              </Tooltip>
+              <Tooltip text="Marquer le point de sortie à la position du curseur (o)">
+                <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markEndHere} disabled={isLoading}>{`}`}</Button>
+              </Tooltip>
 
-            <div className="audio-tb-sep" />
+              <div className="audio-tb-sep" />
 
-            <Tooltip text={isPlaying ? 'Pause (Espace)' : 'Play / Pause (Espace)'}>
-              <Button variant="icon" className={`audio-tb-btn${isPlaying ? ' is-active' : ''}`} onClick={handlePlayPause} disabled={isLoading}>
-                {isPlaying ? <Pause /> : <Play />}
-              </Button>
-            </Tooltip>
-            <Tooltip text="Stop">
-              <Button variant="icon" className="audio-tb-btn" onClick={stopPlayback} disabled={isLoading}><Square /></Button>
-            </Tooltip>
-            <Tooltip text="Reculer de 5s">
-              <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }} disabled={isLoading}><SkipBack /></Button>
-            </Tooltip>
-            <Tooltip text="Avancer de 5s">
-              <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }} disabled={isLoading}><SkipForward /></Button>
-            </Tooltip>
+              <Tooltip text={isPlaying ? 'Pause (Espace)' : 'Play / Pause (Espace)'}>
+                <Button variant="icon" className={`audio-tb-btn${isPlaying ? ' is-active' : ''}`} onClick={handlePlayPause} disabled={isLoading}>
+                  {isPlaying ? <Pause /> : <Play />}
+                </Button>
+              </Tooltip>
+              <Tooltip text="Stop">
+                <Button variant="icon" className="audio-tb-btn" onClick={stopPlayback} disabled={isLoading}><Square /></Button>
+              </Tooltip>
+              <Tooltip text="Reculer de 5s">
+                <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }} disabled={isLoading}><SkipBack /></Button>
+              </Tooltip>
+              <Tooltip text="Avancer de 5s">
+                <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }} disabled={isLoading}><SkipForward /></Button>
+              </Tooltip>
 
-            <div className="audio-tb-sep" />
+              <div className="audio-tb-sep" />
 
-            <Tooltip text="Aller au point d'entrée (Shift+I)">
-              <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</Button>
-            </Tooltip>
-            <Tooltip text="Aller au point de sortie (Shift+O)">
-              <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</Button>
-            </Tooltip>
-
-            <div className="audio-tb-sep" />
-
-            <Tooltip text="Garder la sélection (Ctrl+K)">
-              <Button
-                variant="icon"
-                className="audio-tb-btn"
-                onClick={() => handleStageAction('trim')}
-                disabled={!canOperate}
-              >
-                <Crop />
-              </Button>
-            </Tooltip>
-            <Tooltip text="Supprimer la sélection (Ctrl+X)">
-              <Button
-                variant="icon"
-                className="audio-tb-btn audio-tb-btn-danger"
-                onClick={() => handleStageAction('cut')}
-                disabled={!canCut}
-              >
-                <Scissors />
-              </Button>
-            </Tooltip>
-          </div>
-            <div className="audio-editor-trim-stat" onContextMenu={(e) => openFadePopover('out', e)}>
-              Sortie&nbsp;{formatTime(trimEnd)}
-              <Tooltip text="Ajouter ou modifier le fondu en sortie">
-                <button
-                  className={`audio-editor-fade-chip${fadeOutSec > 0 ? ' is-active' : ''}`}
+              <Tooltip text="Aller au point d'entrée (Shift+I)">
+                <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</Button>
+              </Tooltip>
+              <Tooltip text="Aller au point de sortie (Shift+O)">
+                <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</Button>
+              </Tooltip>
+            </div>
+            <div className="audio-editor-fade-slot is-right">
+              <Tooltip text={fadeOutSec > 0 ? `Fondu sortie ${formatTime(Math.min(fadeOutSec, fadeMax))}` : 'Ajouter un fondu en sortie'}>
+                <Button
+                  variant="icon"
+                  className={`audio-tb-btn audio-editor-fade-chip${fadeOutSec > 0 ? ' is-active' : ''}`}
                   onClick={(e) => openFadePopover('out', e)}
                   onContextMenu={(e) => openFadePopover('out', e)}
                   disabled={isApplying}
                 >
-                  ↘{fadeOutSec > 0 ? ` ${formatTime(Math.min(fadeOutSec, fadeMax))}` : ''}
-                </button>
+                  ↘
+                </Button>
               </Tooltip>
             </div>
           </div>
@@ -1000,6 +1019,21 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             <span className="audio-editor-zoom-val">×{(zoom / 20).toFixed(1)}</span>
             <span className="audio-editor-hint">Ctrl+molette / +/- · ← → 50ms · Début/Fin</span>
           </div>
+
+          <section className="audio-editor-selection">
+            <div className="audio-editor-selection-stats">
+              <span>Entrée <strong>{formatTime(trimStart)}</strong></span>
+              <span>Sortie <strong>{formatTime(trimEnd)}</strong></span>
+              <span>Durée <strong>{formatTime(trimDuration)}</strong></span>
+            </div>
+            <Button
+              className="audio-editor-preview-btn"
+              onClick={previewCurrentSelection}
+              disabled={!canOperate || applyMode === 'preview'}
+            >
+              Prévisualiser l'extrait
+            </Button>
+          </section>
 
           {editInfo?.original_available && (
             <div className="audio-editor-restore-row">
