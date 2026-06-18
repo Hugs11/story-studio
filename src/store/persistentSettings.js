@@ -44,6 +44,7 @@ export const KEYS = Object.freeze({
   BOTTOM_PANEL_HEIGHT: 'bottomPanelHeight',
   MEDIA_EXPLORER_COL_WIDTHS: 'me-col-widths-v2',
   MEDIA_EXPLORER_VISIBLE_COLS: 'me-visible-cols-v2',
+  AI_QUEUE_COL_WIDTHS: 'aiq-col-widths-v1',
 });
 
 function storage() {
