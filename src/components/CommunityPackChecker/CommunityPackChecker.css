@@ -612,6 +612,18 @@
   border-color: var(--warning-border);
 }
 
+/* Source saturée : ton « danger », distinct du violet (Manuel) et de l'ambre (Auto). */
+.checker-group--quality .checker-group-icon,
+.checker-group--quality .checker-group-badge {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+.checker-group--quality.is-expanded {
+  border-color: var(--danger-border);
+}
+
 .checker-group-copy {
   display: flex;
   flex: 1 1 auto;
