@@ -299,7 +299,6 @@ export function AfterPlaySection({
                 className="sequence-summary-icon-btn"
                 onClick={() => setShowSequenceEditor((v) => !v)}
                 aria-label={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}
-                title={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}
               >
                 {showSequenceEditor
                   ? <ChevronUp className="sequence-icon" />
@@ -312,7 +311,6 @@ export function AfterPlaySection({
                 className="story-prompt-trash"
                 onClick={clearEndAfterPlayback}
                 aria-label="Retirer le scénario de fin"
-                title="Retirer le scénario de fin"
               >
                 <Trash2 className="card-danger-icon" />
               </button>
@@ -345,7 +343,6 @@ export function AfterPlaySection({
               className="story-prompt-trash"
               onClick={clearEndAfterPlayback}
               aria-label="Retirer le message audio de fin"
-              title="Retirer le message audio de fin"
             >
               <Trash2 className="card-danger-icon" />
             </button>

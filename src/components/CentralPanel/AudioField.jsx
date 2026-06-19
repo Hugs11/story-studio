@@ -274,13 +274,13 @@ export function AudioField({
               <span className="audio-empty-plus">+</span>
               <div className="audio-bar-actions" aria-label="Actions audio">
                 <Tooltip text="Enregistrer l'audio">
-                  <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio" title="Enregistrer l'audio">
+                  <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio">
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                   </Button>
                 </Tooltip>
                 {xttsSettings?.enabled && (
                   <Tooltip text="Générer une voix depuis un texte">
-                    <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte" title="Générer une voix depuis un texte">
+                    <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte">
                       <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                     </Button>
                   </Tooltip>
@@ -297,7 +297,6 @@ export function AudioField({
                       onClear();
                     }}
                     aria-label="Retirer le lien cassé"
-                    title="Retirer le lien cassé"
                   >×</button>
                 </Tooltip>
               )}
@@ -311,7 +310,6 @@ export function AudioField({
                 className="play-btn"
                 onClick={handlePlay}
                 aria-label={isPlaying ? 'Mettre en pause' : 'Lire'}
-                title={isPlaying ? 'Pause' : 'Lire'}
               >
                 {isPlaying
                   ? <span className="audio-pause-icon"><span className="audio-pause-bar" /><span className="audio-pause-bar" /></span>
@@ -326,19 +324,20 @@ export function AudioField({
               </Tooltip>
             </div>
 
-            <button
-              type="button"
-              className="wave"
-              onPointerDown={handleWaveScrub}
-              aria-label="Se déplacer dans l'audio"
-              title="Se déplacer dans l'audio"
-              style={{ '--audio-progress': `${progressRatio * 100}%` }}
-            >
-              {FILLED_WAVE_HEIGHTS.map((h, i) => (
-                <span key={i} className={`wbar${i < playedBars ? ' is-played' : ''}`} style={{ height: h }} />
-              ))}
-              <span className="wave-playhead" aria-hidden="true" />
-            </button>
+            <Tooltip text="Se déplacer dans l'audio" className="audio-wave-tip">
+              <button
+                type="button"
+                className="wave"
+                onPointerDown={handleWaveScrub}
+                aria-label="Se déplacer dans l'audio"
+                style={{ '--audio-progress': `${progressRatio * 100}%` }}
+              >
+                {FILLED_WAVE_HEIGHTS.map((h, i) => (
+                  <span key={i} className={`wbar${i < playedBars ? ' is-played' : ''}`} style={{ height: h }} />
+                ))}
+                <span className="wave-playhead" aria-hidden="true" />
+              </button>
+            </Tooltip>
 
             <span className="audio-duration" aria-label="Temps de lecture">
               {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
@@ -354,25 +353,24 @@ export function AudioField({
                     setShowDeleteDialog(true);
                   }}
                   aria-label="Retirer l'audio"
-                  title="Retirer l'audio"
                 >×</button>
               </Tooltip>
             )}
             <div className="audio-bar-actions" aria-label="Actions audio">
               <Tooltip text="Remplacer par un enregistrement">
-                <Button variant="icon" size="sm" onClick={handleMic} aria-label="Remplacer par un enregistrement" title="Remplacer par un enregistrement">
+                <Button variant="icon" size="sm" onClick={handleMic} aria-label="Remplacer par un enregistrement">
                   <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                 </Button>
               </Tooltip>
               {xttsSettings?.enabled && (
                 <Tooltip text="Générer une nouvelle voix depuis un texte">
-                  <Button variant="icon" size="sm" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte" title="Générer une nouvelle voix depuis un texte">
+                  <Button variant="icon" size="sm" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte">
                     <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                   </Button>
                 </Tooltip>
               )}
               <Tooltip text="Éditer l'audio">
-                <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio" title="Éditer l'audio">
+                <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio">
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                 </Button>
               </Tooltip>

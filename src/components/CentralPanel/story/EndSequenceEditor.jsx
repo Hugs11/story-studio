@@ -263,7 +263,6 @@ export function EndSequenceEditor({
               className="story-prompt-trash"
               onClick={() => onUpdate({ afterPlaybackHomeStep: null })}
               aria-label="Retirer la réaction Accueil"
-              title="Retirer la réaction Accueil"
             >
               <Trash2 className="card-danger-icon" />
             </button>
