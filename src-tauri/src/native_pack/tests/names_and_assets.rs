@@ -1,4 +1,6 @@
 use super::*;
+use image::{DynamicImage, ImageFormat, Rgb, RgbImage};
+use std::io::{Cursor, Read};
 
 #[test]
 fn sanitizes_project_name_for_export_zip() {
@@ -69,6 +71,69 @@ fn export_zip_path_adds_numeric_suffix_on_collision() {
         second.file_name().and_then(|value| value.to_str()),
         Some("Nom_de_l_histoire-2.zip")
     );
+
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
+    let base =
+        std::env::temp_dir().join(format!("story_studio_thumbnail_png_test_{}", now_millis()));
+    fs::create_dir_all(&base).expect("create test dir");
+
+    let thumbnail_source = base.join("source-thumbnail.jpg");
+    let image = DynamicImage::ImageRgb8(RgbImage::from_pixel(4, 4, Rgb([12, 34, 56])));
+    let mut jpeg_bytes = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut jpeg_bytes), ImageFormat::Jpeg)
+        .expect("encode jpeg thumbnail");
+    fs::write(&thumbnail_source, jpeg_bytes).expect("write thumbnail source");
+
+    let report = report_for(
+        CanonicalProject {
+            name: "Thumbnail Test".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: None,
+            root_image: None,
+            thumbnail_image: Some(thumbnail_source.to_string_lossy().to_string()),
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions {
+                silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
+                auto_next: false,
+                select_next: false,
+                night_mode: false,
+            },
+            entries: Vec::new(),
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    let document = StoryDocument {
+        title: "Thumbnail Test".to_string(),
+        version: 1,
+        description: String::new(),
+        format: "v1".to_string(),
+        night_mode_available: false,
+        action_nodes: Vec::new(),
+        stage_nodes: Vec::new(),
+    };
+
+    let zip_path = write_native_pack_zip(&report, &document, &base.join("out")).expect("write zip");
+    let file = fs::File::open(&zip_path).expect("open generated zip");
+    let mut archive = zip::ZipArchive::new(file).expect("read generated zip");
+    assert!(archive.by_name("thumbnail.jpg").is_err());
+    let mut thumbnail = archive.by_name("thumbnail.png").expect("thumbnail.png");
+    let mut png_bytes = Vec::new();
+    thumbnail
+        .read_to_end(&mut png_bytes)
+        .expect("read thumbnail.png");
+    assert!(png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
 
     let _ = fs::remove_dir_all(base);
 }

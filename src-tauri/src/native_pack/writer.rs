@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs;
-use std::io::Write;
+use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 
 use super::{
@@ -9,7 +9,6 @@ use super::{
 };
 use crate::domain::project::Project;
 use crate::services::project_files::validate_existing_file_path;
-use crate::support::ffmpeg::file_ext;
 
 pub(crate) fn generate_native_pack_v1_with_cancel(
     project: &Project,
@@ -86,12 +85,9 @@ pub(crate) fn write_native_pack_zip(
 
     if let Some(thumbnail_source) = thumbnail_source_path(&asset_report.project) {
         let thumbnail = validate_existing_file_path(&thumbnail_source, "Thumbnail source")?;
-        let ext = file_ext(thumbnail.to_string_lossy().as_ref()).to_ascii_lowercase();
-        let thumbnail_name = format!("thumbnail.{}", ext);
-        let bytes =
-            fs::read(&thumbnail).map_err(|e| format!("Lecture thumbnail impossible : {}", e))?;
+        let bytes = encode_thumbnail_png(&thumbnail)?;
         out_zip
-            .start_file(&thumbnail_name, opts)
+            .start_file("thumbnail.png", opts)
             .map_err(|e| e.to_string())?;
         out_zip.write_all(&bytes).map_err(|e| e.to_string())?;
     }
@@ -105,6 +101,17 @@ fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {
         .thumbnail_image
         .clone()
         .or_else(|| project.root_image.clone())
+}
+
+fn encode_thumbnail_png(thumbnail: &Path) -> Result<Vec<u8>, String> {
+    let bytes = fs::read(thumbnail).map_err(|e| format!("Lecture thumbnail impossible : {}", e))?;
+    let image = image::load_from_memory(&bytes)
+        .map_err(|e| format!("Image thumbnail illisible : {}", e))?;
+    let mut output = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut output), image::ImageFormat::Png)
+        .map_err(|e| format!("Encodage thumbnail PNG impossible : {}", e))?;
+    Ok(output)
 }
 
 pub(crate) fn sanitized_project_name(name: &str) -> String {

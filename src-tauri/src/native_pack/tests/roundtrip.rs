@@ -63,7 +63,7 @@ fn generated_zip_import(
 fn generated_basic_pack_roundtrips_to_project_entries() {
     let base = temp_roundtrip_dir("basic");
     let root_image_source = base.join("source-cover.png");
-    write_asset(&root_image_source, b"cover");
+    write_test_png(&root_image_source);
 
     let imported = generated_zip_import(
         &base,
@@ -112,7 +112,7 @@ fn generated_basic_pack_roundtrips_to_project_entries() {
 fn generated_night_mode_pack_roundtrips_end_node_metadata() {
     let base = temp_roundtrip_dir("nightmode");
     let root_image_source = base.join("source-cover.png");
-    write_asset(&root_image_source, b"cover");
+    write_test_png(&root_image_source);
 
     let mut options = canonical_options();
     options.night_mode = true;
