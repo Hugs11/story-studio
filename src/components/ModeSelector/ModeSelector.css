@@ -30,7 +30,7 @@
   border-right: 1px solid var(--border);
   background:
     linear-gradient(to bottom, transparent 72%, var(--bg1) 100%),
-    radial-gradient(ellipse at 0 100%, rgba(255, 135, 64, 0.08) 0%, rgba(255, 135, 64, 0.045) 28%, rgba(255, 135, 64, 0) 68%),
+    radial-gradient(ellipse at 0 78%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 8%, transparent) 30%, transparent 68%),
     var(--bg1);
 }
 
@@ -100,13 +100,23 @@
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  box-shadow: none;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s;
 }
 
-.mode-action-card:hover,
-.mode-secondary-button:hover {
+.mode-action-card:hover {
   transform: translateY(-1px);
-  border-color: var(--accent);
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
+  box-shadow: 0 10px 22px -16px rgba(16, 24, 40, 0.32);
+}
+
+.mode-action-card:focus-visible,
+.mode-secondary-button:focus-visible,
+.mode-recent-item:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .mode-recent-item:hover {
@@ -150,7 +160,7 @@
   justify-self: end;
   font-size: 36px;
   line-height: 1;
-  color: currentColor;
+  color: var(--accent);
 }
 
 .mode-section-heading {
@@ -206,11 +216,11 @@
   justify-self: center;
 }
 
-.mode-recent-dot.tone-0 { background: #2FA05C; }
-.mode-recent-dot.tone-1 { background: #1889C9; }
-.mode-recent-dot.tone-2 { background: #A35AB5; }
-.mode-recent-dot.tone-3 { background: #D1761B; }
-.mode-recent-dot.tone-4 { background: #18A5A1; }
+.mode-recent-dot.tone-0 { background: var(--accent); }
+.mode-recent-dot.tone-1 { background: var(--accent-2); }
+.mode-recent-dot.tone-2 { background: color-mix(in srgb, var(--accent) 78%, var(--bg1)); }
+.mode-recent-dot.tone-3 { background: color-mix(in srgb, var(--accent-2) 82%, var(--bg1)); }
+.mode-recent-dot.tone-4 { background: color-mix(in srgb, var(--accent) 58%, var(--accent-2)); }
 
 .mode-recent-thumb {
   width: 42px;
@@ -287,13 +297,38 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+
+.mode-secondary-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
 }
 
 .mode-secondary-button .mode-action-icon-svg {
   width: 20px;
   height: 20px;
-  color: var(--accent);
+  color: var(--muted);
+}
+
+.mode-secondary-button--open,
+.mode-secondary-button--tool {
+  color: var(--accent-2-text);
+  border-color: var(--accent-2-border);
+  background: color-mix(in srgb, var(--accent-2-dim) 70%, var(--bg2));
+}
+
+.mode-secondary-button--open:hover,
+.mode-secondary-button--tool:hover {
+  border-color: color-mix(in srgb, var(--accent-2-border) 72%, var(--accent-2));
+  background: color-mix(in srgb, var(--accent-2-dim) 78%, var(--control-bg-hover));
+  color: var(--accent-2-text);
+}
+
+.mode-secondary-button--open .mode-action-icon-svg,
+.mode-secondary-button--tool .mode-action-icon-svg {
+  color: var(--accent-2-text);
 }
 
 .mode-doc-overlay {
