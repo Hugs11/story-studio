@@ -7,6 +7,7 @@ import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimul
 import { StructureActionsBar } from '../components/structure/StructureActionsBar';
 import { Tooltip } from '../components/common/Tooltip';
 import { Search } from '../components/icons/LucideLocal';
+import { LuniiIcon } from '../components/icons/LuniiIcon';
 import { KEYS } from '../store/persistentSettings';
 import { usePersistentState } from '../hooks/usePersistentState';
 
@@ -77,6 +78,10 @@ export function EditorTab({
     setSimulatorZipPath(null);
     setSimulatorAnchorId(nodeId);
   }, []);
+
+  const handleSimulateRoot = useCallback(() => {
+    handleSimulateNode('root');
+  }, [handleSimulateNode]);
 
   const handleSimulateZip = useCallback((zipPath) => {
     setSimulatorAnchorId(null);
@@ -157,6 +162,16 @@ export function EditorTab({
                         }}
                       >
                         <Search className="tree-display-trigger-icon" strokeWidth={2.15} absoluteStrokeWidth />
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Lancer le simulateur" placement="below">
+                      <button
+                        type="button"
+                        className="tree-display-trigger"
+                        aria-label="Lancer le simulateur"
+                        onClick={handleSimulateRoot}
+                      >
+                        <LuniiIcon className="tree-display-trigger-icon tree-display-trigger-icon--lunii" />
                       </button>
                     </Tooltip>
                     <TreeDisplayPopover
