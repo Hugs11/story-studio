@@ -537,6 +537,11 @@
   color: var(--warning-text);
 }
 
+/* Rien a corriger : on bascule la valeur en vert (coherent avec la tuile OK). */
+.checker-split-stat-fix.is-clean strong {
+  color: var(--success-text);
+}
+
 .checker-single-stat {
   display: flex;
   align-items: baseline;
@@ -942,6 +947,49 @@
 
 .checker-empty--success {
   color: var(--success-text);
+}
+
+/* Section « Ce qui est conforme » : cartes vertes en miroir des problemes. */
+.checker-conform {
+  flex: 0 0 auto;
+}
+
+.checker-conform-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 18px 0;
+  color: var(--success-text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.checker-conform-head .checker-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.checker-group--ok.is-expanded {
+  border-color: var(--success-border);
+}
+
+.checker-group--ok .checker-group-icon,
+.checker-group--ok .checker-group-badge {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.checker-group--ok .checker-group-count strong {
+  color: var(--success-text);
+}
+
+.checker-mini-severity--ok {
+  color: var(--success-text);
+}
+
+.checker-tech-detail--facts {
+  grid-template-columns: 1fr;
 }
 
 .checker-fix-sheet {

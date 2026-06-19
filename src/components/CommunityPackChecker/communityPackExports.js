@@ -1,3 +1,12 @@
+import {
+  audioMeasureRows,
+  cleanLabel,
+  imageMeasureRows,
+  isConforming,
+  structureConforming,
+  titleConforming,
+} from './packCheckerFormat';
+
 function severityLabel(severity) {
   switch (severity) {
     case 'error':
@@ -78,6 +87,49 @@ export function formatReadableReport(report) {
       if (issue.autoFixDescription) lines.push(`  Correction : ${issue.autoFixDescription}`);
     }
   }
+  lines.push('');
+  lines.push(`## Ce qui est conforme`);
+  lines.push('');
+  const conformingAudio = (report.audioItems || []).filter((item) => isConforming(item.status));
+  if (conformingAudio.length) {
+    lines.push(`### Audio conforme (${conformingAudio.length})`);
+    for (const item of conformingAudio) {
+      const measures = audioMeasureRows(item).map((row) => `${row.label} : ${row.value}`).join(' · ');
+      lines.push(`- ${cleanLabel(item.label)} — ${measures}`);
+    }
+    lines.push('');
+  }
+  const conformingImages = (report.imageItems || []).filter((item) => isConforming(item.status));
+  if (conformingImages.length) {
+    lines.push(`### Images conformes (${conformingImages.length})`);
+    for (const item of conformingImages) {
+      const measures = imageMeasureRows(item).map((row) => `${row.label} : ${row.value}`).join(' · ');
+      lines.push(`- ${cleanLabel(item.label)} — ${measures}`);
+    }
+    lines.push('');
+  }
+  if (titleConforming(report)) {
+    lines.push(`### Nom du pack`);
+    lines.push(`- Nom : ${report.packName || '—'}`);
+    lines.push(`- Titre : ${report.packTitle || '—'}`);
+    lines.push(`- Version : ${report.packVersion ?? '—'}`);
+    lines.push('');
+  }
+  if (structureConforming(report)) {
+    const structure = report.structureSummary || {};
+    lines.push(`### Structure`);
+    lines.push(`- Compatible Lunii : ${structure.luniiCompatible ? 'oui' : 'non'}`);
+    lines.push(`- Éditable Story Studio : ${structure.storyStudioEditable ? 'oui' : 'non'}`);
+    lines.push(`- Histoires : ${structure.storyCount ?? 0}`);
+    lines.push(`- Étapes : ${structure.stageCount ?? 0}`);
+    lines.push(`- Actions : ${structure.actionCount ?? 0}`);
+    lines.push(`- Audios référencés : ${structure.referencedAudioCount ?? 0}`);
+    lines.push(`- Images référencées : ${structure.referencedImageCount ?? 0}`);
+    lines.push('');
+  }
+  lines.push(`### Mode nuit`);
+  lines.push(`- Mode nuit : ${report.nightMode?.detected ? 'disponible' : 'absent'}`);
+  lines.push(`- Bloquant : non`);
   lines.push('');
   lines.push(`## Journal technique`);
   lines.push('');

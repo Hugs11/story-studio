@@ -22,6 +22,17 @@ import {
   X,
 } from '../icons/LucideLocal';
 import { useCommunityPackChecker } from './useCommunityPackChecker';
+import {
+  Measure,
+  audioMeasureRows,
+  cleanLabel,
+  expectedImageOk,
+  formatLufs,
+  formatPeak,
+  formatSeconds,
+  imageMeasureRows,
+} from './packCheckerMeasures';
+import { ConformingSection } from './CommunityPackConforming';
 import './CommunityPackChecker.css';
 
 const PROBLEM_SECTIONS = [
@@ -135,25 +146,6 @@ function severityLabel(severity) {
   }
 }
 
-function formatNumber(value, digits = 1) {
-  return typeof value === 'number' ? value.toFixed(digits).replace('.', ',') : null;
-}
-
-function formatSeconds(value) {
-  const formatted = formatNumber(value, 2);
-  return formatted ? `${formatted} s` : 'Non mesuré';
-}
-
-function formatLufs(value) {
-  const formatted = formatNumber(value, 1);
-  return formatted ? `${formatted} LUFS` : 'Non mesuré';
-}
-
-function formatPeak(value) {
-  const formatted = formatNumber(value, 1);
-  return formatted ? `${formatted} dBTP` : 'Non mesuré';
-}
-
 function measuredIssueSummary(issue, item, kind) {
   const message = issue.message || '';
   const lower = message.toLowerCase();
@@ -262,17 +254,6 @@ function hasMeasureIssue(record, key) {
     default:
       return false;
   }
-}
-
-function expectedImageOk(item) {
-  return item?.width === 320 && item?.height === 240;
-}
-
-function cleanLabel(label) {
-  return (label || 'Fichier')
-    .replace(/\.mp3 (item|Stage node)$/i, '')
-    .replace(/\.png$/i, '')
-    .replace(/ node$/i, '');
 }
 
 function roleLabel(record) {
@@ -451,7 +432,9 @@ function SplitStat({ ok, needsFix }) {
   return (
     <div className="checker-split-stat">
       <span className="checker-split-stat-ok"><strong>{ok}</strong> OK</span>
-      <span className="checker-split-stat-fix"><strong>{needsFix}</strong> à corriger</span>
+      <span className={`checker-split-stat-fix ${needsFix === 0 ? 'is-clean' : ''}`}>
+        <strong>{needsFix}</strong> à corriger
+      </span>
     </div>
   );
 }
@@ -500,18 +483,24 @@ function TechnicalDetail({ record }) {
       <div>
         <div className="checker-tech-title">Mesures</div>
         {record.kind === 'audio' ? (
-          <>
-            <Measure label="Format" value={`${item?.codec || 'Inconnu'} · ${item?.channels || 'canaux ?'}`} status={hasMeasureIssue(record, 'format') ? 'bad' : 'ok'} />
-            <Measure label="Échantillonnage" value={item?.sampleRate ? `${formatNumber(item.sampleRate / 1000, 1)} kHz` : 'Non mesuré'} status={hasMeasureIssue(record, 'sampleRate') ? 'bad' : 'ok'} />
-            <Measure label="Silence début" value={formatSeconds(item?.leadingSilenceSecs)} status={hasMeasureIssue(record, 'silenceStart') ? 'bad' : 'ok'} />
-            <Measure label="Silence fin" value={formatSeconds(item?.trailingSilenceSecs)} status={hasMeasureIssue(record, 'silenceEnd') ? 'bad' : 'ok'} />
-            <Measure label="Volume" value={formatLufs(item?.integratedLufs)} status={hasMeasureIssue(record, 'volume') ? 'bad' : 'ok'} />
-            <Measure label="Crête vraie" value={formatPeak(item?.truePeakDb)} status={hasMeasureIssue(record, 'peak') ? 'bad' : 'ok'} />
-          </>
+          audioMeasureRows(item).map((row) => (
+            <Measure
+              key={row.key}
+              label={row.label}
+              value={row.value}
+              status={hasMeasureIssue(record, row.key) ? 'bad' : 'ok'}
+            />
+          ))
         ) : record.kind === 'image' ? (
           <>
-            <Measure label="Dimensions" value={item?.width && item?.height ? `${item.width}×${item.height}` : 'Non mesuré'} status={hasMeasureIssue(record, 'dimensions') ? 'bad' : 'ok'} />
-            <Measure label="Format" value={item?.format || 'Non mesuré'} status={hasMeasureIssue(record, 'imageFormat') ? 'bad' : 'ok'} />
+            {imageMeasureRows(item).map((row) => (
+              <Measure
+                key={row.key}
+                label={row.label}
+                value={row.value}
+                status={hasMeasureIssue(record, row.key) ? 'bad' : 'ok'}
+              />
+            ))}
             <Measure label="Attendu" value="320×240" status={expectedImageOk(item) ? 'ok' : 'bad'} />
           </>
         ) : (
@@ -530,19 +519,6 @@ function TechnicalDetail({ record }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function Measure({ label, value, status = 'ok' }) {
-  const StatusIcon = status === 'bad' ? X : CircleCheck;
-  return (
-    <div className={`checker-measure checker-measure--${status}`}>
-      <span>
-        <StatusIcon className="checker-measure-icon" aria-hidden="true" />
-        {label}
-      </span>
-      <strong>{value}</strong>
     </div>
   );
 }
@@ -662,6 +638,8 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </div>
       )}
 
+      <ConformingSection report={report} />
+
       <div className="checker-report-footer">
         <span><strong>{summary.fixCount}</strong> corrections prêtes.</span>
         <Button size="sm" onClick={() => onExportReport('report')}>
@@ -670,7 +648,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </Button>
         <button
           type="button"
-          className="chrome-toolbar-cta chrome-toolbar-cta--violet checker-correction-cta"
+          className="chrome-toolbar-cta checker-correction-cta"
           onClick={startFixFlow}
           disabled={!canFix || busy}
         >
