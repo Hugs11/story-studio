@@ -42,6 +42,11 @@
   height: 16px;
 }
 
+.tree-display-trigger-icon--lunii {
+  display: block;
+  object-fit: contain;
+}
+
 .tree-display-popover {
   position: absolute;
   z-index: 260;

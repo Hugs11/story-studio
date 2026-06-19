@@ -5,6 +5,7 @@ import {
   Mic,
   Rss,
 } from '../icons/LucideLocal';
+import { LuniiIcon } from '../icons/LuniiIcon';
 import { Tooltip } from '../common/Tooltip';
 import './StructureActionsBar.css';
 
@@ -36,11 +37,13 @@ export function StructureActionsBar({
   onImportFolder,
   onImportPodcast,
   onRecord,
+  onLaunchSimulator,
   canAddStory = true,
   canAddFolder = true,
   canImportFolder = true,
   canImportPodcast = true,
   canRecord = true,
+  canLaunchSimulator = true,
   showLabel = false,
   trailing = null,
 }) {
@@ -82,6 +85,15 @@ export function StructureActionsBar({
       >
         <ActionIcon Icon={Mic} />
       </StructureActionButton>
+      {onLaunchSimulator ? (
+        <StructureActionButton
+          title="Lancer le simulateur"
+          disabled={!canLaunchSimulator}
+          onClick={onLaunchSimulator}
+        >
+          <LuniiIcon className="structure-actions-icon structure-actions-icon--lunii" />
+        </StructureActionButton>
+      ) : null}
       {trailing ? <span className="structure-actions-trailing">{trailing}</span> : null}
     </div>
   );

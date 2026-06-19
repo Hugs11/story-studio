@@ -420,6 +420,10 @@ export function FlowDiagram({
     setPreviewNodeId(nodeId);
   }, []);
 
+  const handlePreviewRoot = useCallback(() => {
+    handlePreviewNode('root');
+  }, [handlePreviewNode]);
+
   const handleSimulateZip = useCallback((zipPath) => {
     setPreviewNodeId(null);
     setPreviewZipPath(zipPath);
@@ -473,6 +477,7 @@ export function FlowDiagram({
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}
         onSimulateZip={handleSimulateZip}
+        onSimulateRoot={handlePreviewRoot}
         onSetMenuAsRoot={onSetMenuAsRoot}
         onDeleteMenu={onDeleteMenu}
         onDeleteItem={onDeleteItem}

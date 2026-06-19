@@ -56,6 +56,7 @@ export function CompleteDiagramTree({
   onAddStory,
   onUnpackZip,
   onSimulateZip,
+  onSimulateRoot,
   onSetMenuAsRoot,
   onDeleteMenu,
   onDeleteItem,
@@ -941,6 +942,7 @@ export function CompleteDiagramTree({
             onImportFolder={onImportFolder}
             onImportPodcast={onImportPodcast}
             onRecord={onRecord}
+            onLaunchSimulator={onSimulateRoot}
             showLabel
           />
           <div className="fd-complete-viewbar" aria-label="Modes du diagramme">
