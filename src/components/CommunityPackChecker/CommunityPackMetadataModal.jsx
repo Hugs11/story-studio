@@ -209,7 +209,7 @@ export function CommunityPackMetadataModal({
 
         <footer className="checker-meta-footer">
           <Button onClick={onCancel} disabled={busy}>Annuler</Button>
-          <button type="button" className="chrome-toolbar-cta chrome-toolbar-cta--violet checker-correction-cta" onClick={submit} disabled={!canSubmit}>
+          <button type="button" className="chrome-toolbar-cta checker-correction-cta" onClick={submit} disabled={!canSubmit}>
             {busy ? 'Correction...' : 'Corriger le pack'}
           </button>
         </footer>
