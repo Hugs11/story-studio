@@ -713,6 +713,35 @@
   pointer-events: stroke;
 }
 
+/* Pendant un pan/zoom, on allege le rendu : retours, labels, ombres et filtres
+   sont masques le temps du geste, puis reaffiches nets a l'arret. */
+.fd-complete-stage.is-viewport-moving .fd-complete-navigation-edge,
+.fd-complete-stage.is-viewport-moving .fd-complete-edge-label {
+  display: none;
+}
+
+/* Les vignettes ne coutent qu'au zoom (re-echantillonnage a chaque echelle) :
+   on les masque pendant le zoom seulement, pas pendant le pan (translation).
+   Fond noir sous la vignette masquee (proche du fond des images du projet,
+   moins genant qu'un flash blanc). */
+.fd-complete-stage.is-viewport-zooming .fd-complete-node-thumb img {
+  visibility: hidden;
+}
+
+.fd-complete-stage.is-viewport-zooming .fd-complete-node-thumb:has(img) {
+  background: #000;
+}
+
+.fd-complete-stage.is-viewport-moving .fd-complete-node {
+  box-shadow: none;
+}
+
+.fd-complete-stage.is-viewport-moving .fd-complete-line,
+.fd-complete-stage.is-viewport-moving .fd-complete-line--end-continuation {
+  filter: none;
+  animation: none;
+}
+
 .fd-complete-line {
   fill: none;
   stroke: #43435a;
@@ -806,6 +835,20 @@
   animation: fd-active-flow 0.8s linear infinite;
 }
 
+:root:not([data-theme="dark"]) .fd-complete-line--return.is-related {
+  stroke: #0a66b7;
+  stroke-width: 1.8;
+  opacity: 0.98;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-navigation-edge.is-active .fd-complete-line--return,
+:root:not([data-theme="dark"]) .fd-complete-line--end-continuation {
+  stroke: #0057b8;
+  stroke-width: 3.1;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(0, 87, 184, 0.32));
+}
+
 .fd-complete-line--end-continuation {
   stroke: color-mix(in srgb, #9fd0ff 92%, white 8%);
   stroke-width: 2.6;
@@ -837,6 +880,19 @@
   animation: fd-active-flow 0.8s linear infinite;
 }
 
+:root:not([data-theme="dark"]) .fd-complete-line--home.is-related {
+  stroke: #6b3fc7;
+  stroke-width: 1.75;
+  opacity: 0.98;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-navigation-edge.is-active .fd-complete-line--home {
+  stroke: #5a28b8;
+  stroke-width: 3;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(90, 40, 184, 0.28));
+}
+
 .fd-complete-line--sequence {
   stroke: var(--warning);
   stroke-width: 1.15;
@@ -857,6 +913,19 @@
   opacity: 1;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--warning) 64%, transparent));
   animation: fd-active-flow 0.8s linear infinite;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-line--sequence.is-related {
+  stroke: #a15a00;
+  stroke-width: 1.75;
+  opacity: 0.98;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-navigation-edge.is-active .fd-complete-line--sequence {
+  stroke: #9b4f00;
+  stroke-width: 3;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(155, 79, 0, 0.28));
 }
 
 @keyframes fd-active-flow {
@@ -882,6 +951,12 @@
 .fd-complete-edge-label.is-active {
   fill: var(--text);
   font-size: 10px;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-edge-label.is-active {
+  fill: #062f62;
+  stroke: rgba(247, 250, 255, 0.96);
+  stroke-width: 4px;
 }
 
 .fd-complete-edge-label--sequence {

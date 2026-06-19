@@ -1,6 +1,7 @@
 // Noeud unitaire du diagramme complet (story, menu, zip, root, end-node).
 // Extrait de FullDiagramTree.jsx pour reduire la surface de l'orchestrateur.
 
+import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
 import { Tooltip } from '../common/Tooltip';
@@ -18,6 +19,36 @@ function DiagramNodeTypeIcon({ entry }) {
   return null;
 }
 
+function useNearDiagramViewport(rootRef, enabled) {
+  const nodeRef = useRef(null);
+  const [isNear, setIsNear] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || isNear) return undefined;
+    const target = nodeRef.current;
+    if (!target || typeof IntersectionObserver === 'undefined') {
+      setIsNear(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting || entry.intersectionRatio > 0)) {
+        setIsNear(true);
+        observer.disconnect();
+      }
+    }, {
+      root: rootRef?.current ?? null,
+      rootMargin: '200px',
+      threshold: 0,
+    });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [enabled, isNear, rootRef]);
+
+  return [nodeRef, enabled && isNear];
+}
+
 export function FullDiagramNode({
   entry,
   compactMode = 'full',
@@ -33,18 +64,22 @@ export function FullDiagramNode({
   onInspect,
   onDragPointerDown,
   onToggleCollapse,
+  viewportRootRef,
   isRoot = false,
   rootImage,
   isCollapsed = false,
   childSummary = null,
 }) {
+  const compact = compactMode !== 'full';
+  const showThumbnail = !compact || entry.type === 'story' || entry.type === 'root';
   const imagePath = entry?.type === 'zip' ? null : getEntryThumbnailPath(entry, { rootImage, isRoot });
   const zipCoverImage = entry.type === 'zip' ? entry.coverImage ?? null : null;
   const zipPath = entry.type === 'zip' ? entry.zipPath ?? null : null;
-  const localUrl = useLocalFile(imagePath);
-  const zipUrl = useZipCover(zipPath, zipCoverImage);
-  const compact = compactMode !== 'full';
-  const showThumbnail = !compact || entry.type === 'story' || entry.type === 'root';
+  const shouldObserveMedia = showThumbnail && !!(imagePath || (zipPath && zipCoverImage));
+  const [nodeRef, isNearViewport] = useNearDiagramViewport(viewportRootRef, shouldObserveMedia);
+  const shouldLoadMedia = shouldObserveMedia && isNearViewport;
+  const localUrl = useLocalFile(shouldLoadMedia ? imagePath : null);
+  const zipUrl = useZipCover(shouldLoadMedia ? zipPath : null, shouldLoadMedia ? zipCoverImage : null);
   const url = showThumbnail ? (entry.type === 'zip' ? zipUrl : localUrl) : null;
   const sequenceCount = entry.type === 'story' ? (entry.afterPlaybackSequence?.length ?? 0) : 0;
   const containerId = isRoot ? null : entry.type === 'menu' ? entry.id : undefined;
@@ -82,6 +117,7 @@ export function FullDiagramNode({
 
   return (
     <div
+      ref={nodeRef}
       role="button"
       tabIndex={0}
       className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''}`}
@@ -148,7 +184,7 @@ export function FullDiagramNode({
       </div>
       <div className="fd-complete-node-thumb">
         {url
-          ? <img src={url} alt="" />
+          ? <img src={url} alt="" loading="lazy" decoding="async" />
           : (
             <span className={`fd-complete-node-placeholder ${entry.type === 'menu' ? 'fd-complete-node-placeholder--menu' : ''}`}>
               {entry.type === 'menu' ? null : <DiagramNodeTypeIcon entry={entry} />}

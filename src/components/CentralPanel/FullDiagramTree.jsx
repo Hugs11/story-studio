@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import { findParentMenuId, findEntryById, deepCloneEntry } from '../../store/projectModel';
 import { KEYS, read, write } from '../../store/persistentSettings';
+import { logger } from '../../utils/logger';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
@@ -29,6 +30,13 @@ import {
 } from './fullDiagramFocus.js';
 import { FullDiagramNode } from './FullDiagramNode.jsx';
 import { StructureActionsBar } from '../structure/StructureActionsBar.jsx';
+
+const DIAGRAM_PERF_KEY = 'storyStudio.diagramPerf';
+
+function isDiagramPerfEnabled() {
+  return read(DIAGRAM_PERF_KEY, { defaultValue: 'false' }) === 'true'
+    || globalThis.__STORY_STUDIO_DIAGRAM_PERF__ === true;
+}
 
 export function CompleteDiagramTree({
   project,
@@ -63,14 +71,19 @@ export function CompleteDiagramTree({
 }) {
   const { dropOnNode } = useMediaTransfer();
   const containerRef = useRef(null);
+  const canvasRef = useRef(null);
+  const zoomValueRef = useRef(null);
+  const viewportFrameRef = useRef(null);
+  const viewportIdleTimerRef = useRef(null);
+  const perfEnabledRef = useRef(isDiagramPerfEnabled());
+  const viewportPerfRef = useRef({ wheelEvents: 0, transformFrames: 0, maxWheelDelay: 0, lastWheelAt: 0, lastLogAt: 0 });
+  const layoutStatsRef = useRef({ nodes: 0, structureEdges: 0, navigationEdges: 0, groups: 0, width: 0, height: 0 });
   const panStateRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0, cameraX: 0, cameraY: 0 });
   const didInitialCenterRef = useRef(false);
   const zoomRef = useRef(1);
   const cameraRef = useRef({ x: 0, y: 0 });
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
-  const [zoom, setZoom] = useState(1);
-  const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverContainerId, setDragOverContainerId] = useState(undefined);
@@ -112,6 +125,74 @@ export function CompleteDiagramTree({
     setShowReturns(checked);
     write(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, checked ? 'true' : 'false');
   }, []);
+
+  const markViewportMoving = useCallback((kind) => {
+    const stage = containerRef.current;
+    if (!stage) return;
+    stage.classList.add('is-viewport-moving');
+    // Le masquage des vignettes ne sert qu'au zoom (re-echantillonnage a chaque
+    // echelle) ; au pan (translation) elles restent visibles.
+    stage.classList.toggle('is-viewport-zooming', kind === 'zoom');
+    if (viewportIdleTimerRef.current != null) {
+      window.clearTimeout(viewportIdleTimerRef.current);
+    }
+    viewportIdleTimerRef.current = window.setTimeout(() => {
+      viewportIdleTimerRef.current = null;
+      const node = containerRef.current;
+      node?.classList.remove('is-viewport-moving');
+      node?.classList.remove('is-viewport-zooming');
+    }, 140);
+  }, []);
+
+  const writeViewportTransform = useCallback(() => {
+    viewportFrameRef.current = null;
+    const canvas = canvasRef.current;
+    const { x, y } = cameraRef.current;
+    const currentZoom = zoomRef.current;
+    if (canvas) {
+      canvas.style.transform = `translate(${x}px, ${y}px) scale(${currentZoom})`;
+    }
+    if (zoomValueRef.current) {
+      zoomValueRef.current.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+
+    if (perfEnabledRef.current) {
+      const now = performance.now();
+      const perf = viewportPerfRef.current;
+      perf.transformFrames += 1;
+      if (perf.lastWheelAt) {
+        perf.maxWheelDelay = Math.max(perf.maxWheelDelay, now - perf.lastWheelAt);
+      }
+      if (now - perf.lastLogAt > 1000) {
+        logger.warn('diagram:viewport-perf', {
+          wheelEvents: perf.wheelEvents,
+          transformFrames: perf.transformFrames,
+          maxWheelDelayMs: Math.round(perf.maxWheelDelay),
+          zoom: Number(currentZoom.toFixed(3)),
+          ...layoutStatsRef.current,
+        });
+        perf.wheelEvents = 0;
+        perf.transformFrames = 0;
+        perf.maxWheelDelay = 0;
+        perf.lastLogAt = now;
+      }
+    }
+  }, []);
+
+  const scheduleViewportTransform = useCallback((immediate = false, moveKind = null) => {
+    if (moveKind) markViewportMoving(moveKind);
+    if (immediate) {
+      if (viewportFrameRef.current != null) {
+        cancelAnimationFrame(viewportFrameRef.current);
+        viewportFrameRef.current = null;
+      }
+      writeViewportTransform();
+      return;
+    }
+    if (viewportFrameRef.current == null) {
+      viewportFrameRef.current = requestAnimationFrame(writeViewportTransform);
+    }
+  }, [markViewportMoving, writeViewportTransform]);
 
   projectRef.current = project;
   projectIndexRef.current = projectIndex;
@@ -185,9 +266,8 @@ export function CompleteDiagramTree({
     zoomRef.current = nextZoom;
     cameraRef.current = nextCamera;
     didInitialCenterRef.current = true;
-    setCamera(nextCamera);
-    setZoom(nextZoom);
-  }, []);
+    scheduleViewportTransform(false, 'zoom');
+  }, [scheduleViewportTransform]);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -197,6 +277,11 @@ export function CompleteDiagramTree({
       event.preventDefault();
       const rect = node.getBoundingClientRect();
       const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
+      if (perfEnabledRef.current) {
+        const perf = viewportPerfRef.current;
+        perf.wheelEvents += 1;
+        perf.lastWheelAt = performance.now();
+      }
       handleZoom(scaleFactor, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
 
@@ -228,6 +313,19 @@ export function CompleteDiagramTree({
     [visibleProject, compactMode, collapsedIds],
   );
   const allNavigationEdges = useMemo(() => getCompleteNavigationEdges(visibleProject, layout), [visibleProject, layout]);
+  useEffect(() => {
+    layoutStatsRef.current = {
+      nodes: layout.nodes.length,
+      structureEdges: layout.edges.length,
+      navigationEdges: allNavigationEdges.length,
+      groups: layout.groups?.length ?? 0,
+      width: Math.round(layout.width),
+      height: Math.round(layout.height),
+    };
+    if (perfEnabledRef.current) {
+      logger.warn('diagram:layout-stats', layoutStatsRef.current);
+    }
+  }, [allNavigationEdges.length, layout.edges.length, layout.groups?.length, layout.height, layout.nodes.length, layout.width]);
   const navigationEdges = useMemo(() => {
     if (!showReturns) return [];
     if (focusMode) {
@@ -377,14 +475,6 @@ export function CompleteDiagramTree({
   }, [edgeKey, hoveredNavigationEdgeId, navigationEdges, pinnedNavigationEdgeId]);
 
   useEffect(() => {
-    zoomRef.current = zoom;
-  }, [zoom]);
-
-  useEffect(() => {
-    cameraRef.current = camera;
-  }, [camera]);
-
-  useEffect(() => {
     draggingIdRef.current = draggingId;
   }, [draggingId]);
 
@@ -494,9 +584,20 @@ export function CompleteDiagramTree({
     const targetY = Math.round(Math.max(40, (containerHeight - (layout.height * currentZoom)) / 6));
     const nextCamera = { x: targetX, y: targetY };
     cameraRef.current = nextCamera;
-    setCamera(nextCamera);
+    scheduleViewportTransform(true);
     didInitialCenterRef.current = true;
-  }, [containerWidth, containerHeight, layout.height, layout.width]);
+  }, [containerWidth, containerHeight, layout.height, layout.width, scheduleViewportTransform]);
+
+  useEffect(() => () => {
+    if (viewportFrameRef.current != null) {
+      cancelAnimationFrame(viewportFrameRef.current);
+      viewportFrameRef.current = null;
+    }
+    if (viewportIdleTimerRef.current != null) {
+      window.clearTimeout(viewportIdleTimerRef.current);
+      viewportIdleTimerRef.current = null;
+    }
+  }, []);
 
   const stopPanning = useCallback((pointerId) => {
     const node = containerRef.current;
@@ -542,7 +643,7 @@ export function CompleteDiagramTree({
       y: panState.cameraY + deltaY,
     };
     cameraRef.current = nextCamera;
-    setCamera(nextCamera);
+    scheduleViewportTransform(false, 'pan');
     event.preventDefault();
   }
 
@@ -871,19 +972,20 @@ export function CompleteDiagramTree({
         </div>
         <div className="fd-complete-zoom">
           <button type="button" className="fd-complete-zoom-btn" onClick={() => handleZoom(BUTTON_ZOOM_FACTOR)}>+</button>
-          <div className="fd-complete-zoom-value">{Math.round(zoom * 100)}%</div>
+          <div ref={zoomValueRef} className="fd-complete-zoom-value">{Math.round(zoomRef.current * 100)}%</div>
           <button type="button" className="fd-complete-zoom-btn" onClick={() => handleZoom(1 / BUTTON_ZOOM_FACTOR)}>−</button>
         </div>
 
         <div className="fd-complete-viewport">
           <div
+            ref={canvasRef}
             className={`fd-complete-canvas fd-complete-canvas--${compactMode}`}
             style={{
               '--fd-node-width': `${layout.metrics.nodeWidth}px`,
               '--fd-node-root-width': `${layout.metrics.rootWidth}px`,
               width: layout.width,
               height: layout.height,
-              transform: `translate(${camera.x}px, ${camera.y}px) scale(${zoom})`,
+              transform: `translate(${cameraRef.current.x}px, ${cameraRef.current.y}px) scale(${zoomRef.current})`,
             }}
           >
             <svg className="fd-complete-lines" width={layout.width} height={layout.height} aria-hidden="true">
@@ -985,6 +1087,7 @@ export function CompleteDiagramTree({
                   onInspect={onInspect}
                   onDragPointerDown={handleDragPointerDown}
                   onToggleCollapse={toggleCollapse}
+                  viewportRootRef={containerRef}
                   isRoot={node.entry.id === 'root'}
                   rootImage={project.rootImage}
                   isCollapsed={collapsedIds.has(node.entry.id)}

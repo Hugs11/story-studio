@@ -1,13 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { readFile } from '@tauri-apps/plugin-fs';
+import { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
 import { MIME } from '../utils/mimeTypes';
-import { FILE_CHANGED_EVENT, FILE_REFRESH_THROTTLE_MS, didPathSnapshotChange, readPathSnapshot } from '../store/fileMetadataCache';
-
-function revokeObjectUrlSoon(url) {
-  if (!url) return;
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+import { FILE_CHANGED_EVENT, FILE_REFRESH_THROTTLE_MS, readPathSnapshot } from '../store/fileMetadataCache';
+import { acquireLocalFileUrl } from '../store/localFileUrlCache';
 
 function normalizeFsPath(path) {
   if (typeof path !== 'string') return '';
@@ -16,59 +11,66 @@ function normalizeFsPath(path) {
   return trimmed.startsWith('\\\\?\\') ? trimmed.slice(4) : trimmed;
 }
 
+function versionOf(snapshot) {
+  return `${snapshot.size ?? ''}:${snapshot.mtimeMs ?? ''}`;
+}
+
 export function useLocalFile(path) {
   const [url, setUrl] = useState(null);
-  const urlRef = useRef(null);
-  const snapshotRef = useRef(null);
 
   useEffect(() => {
     if (!path) {
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-      snapshotRef.current = null;
       setUrl(null);
       return undefined;
     }
 
     let cancelled = false;
+    let activeRelease = null;
+    let forceNonce = 0;
     const readablePath = normalizeFsPath(path);
+    const ext = readablePath.split('.').pop().toLowerCase();
+    const mime = MIME[ext] || 'application/octet-stream';
 
-    function clearCurrentUrl() {
-      revokeObjectUrlSoon(urlRef.current);
-      urlRef.current = null;
-      setUrl(null);
+    function releaseActive() {
+      if (activeRelease) {
+        activeRelease();
+        activeRelease = null;
+      }
     }
 
     async function loadCurrentPath({ allowThrottle = false, force = false } = {}) {
-      const ext = readablePath.split('.').pop().toLowerCase();
-      const mime = MIME[ext] || 'application/octet-stream';
-
       try {
-        const nextSnapshot = await readPathSnapshot(readablePath, {
+        const snapshot = await readPathSnapshot(readablePath, {
           maxAgeMs: allowThrottle ? FILE_REFRESH_THROTTLE_MS : 0,
+          force,
         });
         if (cancelled) return;
-
-        const previousSnapshot = snapshotRef.current;
-        snapshotRef.current = nextSnapshot;
-        if (!nextSnapshot.exists) {
-          clearCurrentUrl();
+        if (!snapshot.exists) {
+          releaseActive();
+          setUrl(null);
           return;
         }
 
-        const shouldReload = force || !urlRef.current || didPathSnapshotChange(previousSnapshot, nextSnapshot);
-        if (!shouldReload) return;
+        // Sur une relecture forcee (contenu change sans changer de chemin, ou
+        // `stat` indisponible), on casse le cache via un nonce pour garantir
+        // une vraie relecture plutot que de reutiliser une version stale.
+        const version = force ? `${versionOf(snapshot)}:f${++forceNonce}` : versionOf(snapshot);
+        const { promise, release } = acquireLocalFileUrl({ path: readablePath, mime, version });
 
-        const data = await readFile(readablePath);
+        // On garde l'URL precedente vivante jusqu'a ce que la nouvelle soit prete
+        // (evite un flash), puis on relache l'ancienne reference.
+        const previousRelease = activeRelease;
+        activeRelease = release;
+        if (previousRelease) previousRelease();
+
+        const nextUrl = await promise;
         if (cancelled) return;
-        const objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
-        revokeObjectUrlSoon(urlRef.current);
-        urlRef.current = objectUrl;
-        setUrl(objectUrl);
+        setUrl(nextUrl);
       } catch (err) {
         logger.error('local-file:read-error', path, err);
         if (cancelled) return;
-        clearCurrentUrl();
+        releaseActive();
+        setUrl(null);
       }
     }
 
@@ -78,13 +80,12 @@ export function useLocalFile(path) {
 
     function handleFileChanged(event) {
       if (normalizeFsPath(event?.detail?.path ?? '') !== readablePath) return;
-      // Le contenu a changé sans changer de chemin : on relit sans s'appuyer sur
-      // la détection mtime/taille (qui peut être indisponible).
+      // Le contenu a change sans changer de chemin : on relit en forcant.
       void loadCurrentPath({ force: true });
     }
 
-    // On force une vraie lecture au montage/changement de chemin pour éviter
-    // de réutiliser un cache stale juste après une extraction ou un remplacement.
+    // On force une vraie lecture au montage/changement de chemin pour eviter
+    // de reutiliser un cache stale juste apres une extraction ou un remplacement.
     void loadCurrentPath({ allowThrottle: false });
     window.addEventListener('focus', handleFocus);
     window.addEventListener(FILE_CHANGED_EVENT, handleFileChanged);
@@ -93,9 +94,7 @@ export function useLocalFile(path) {
       cancelled = true;
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener(FILE_CHANGED_EVENT, handleFileChanged);
-      revokeObjectUrlSoon(urlRef.current);
-      urlRef.current = null;
-      snapshotRef.current = null;
+      releaseActive();
     };
   }, [path]);
 
