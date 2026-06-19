@@ -202,7 +202,6 @@ export function PackNameModal({
           <div className="pack-meta-heading">
             <span className="pack-meta-eyebrow">Métadonnées du pack</span>
             <h2 title={exportName || undefined}>{exportName || 'Métadonnées du pack'}</h2>
-            <p>Ces informations s'affichent dans la liseuse et constituent le nom du fichier exporté.</p>
           </div>
           <Button variant="icon" className="modal-close pack-meta-close" onClick={onClose} aria-label="Fermer">×</Button>
         </header>
