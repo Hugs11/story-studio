@@ -26,11 +26,13 @@ function SdResultThumb({ path, onPick, onRemove }) {
           {url ? <img src={url} alt="" /> : <div className="image-sd-thumb-placeholder" />}
         </button>
       </Tooltip>
-      <button
-        className="image-sd-thumb-remove"
-        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        title="Supprimer"
-      >×</button>
+      <Tooltip text="Supprimer">
+        <button
+          className="image-sd-thumb-remove"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          aria-label="Supprimer"
+        >×</button>
+      </Tooltip>
     </div>
   );
 }

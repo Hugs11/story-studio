@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { Children, cloneElement, isValidElement, useLayoutEffect, useRef, useState } from 'react';
 import './Tooltip.css';
 
 export function Tooltip({ text, children, placement = 'below', wrap = false, className = '', style }) {
@@ -48,9 +48,16 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
     setPos((current) => (current ? { ...current, left: nextLeft, arrowX: nextArrowX, top: nextTop } : current));
   }, [pos]);
 
+  function renderChildrenWithoutNativeTitle() {
+    return Children.map(children, (child) => {
+      if (!isValidElement(child) || child.props?.title === undefined) return child;
+      return cloneElement(child, { title: undefined });
+    });
+  }
+
   return (
     <div className={`tooltip-wrap${className ? ` ${className}` : ''}`} style={style} ref={wrapRef} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      {children}
+      {renderChildrenWithoutNativeTitle()}
       {pos && (
         <div
           ref={bubbleRef}

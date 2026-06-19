@@ -274,10 +274,14 @@
   flex-shrink: 0;
 }
 
-.image-sd-thumb-remove {
+.image-sd-thumb-wrap > .tooltip-wrap {
   position: absolute;
   top: -5px;
   right: -5px;
+  z-index: 2;
+}
+
+.image-sd-thumb-remove {
   width: 16px;
   height: 16px;
   padding: 0;
@@ -291,7 +295,6 @@
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s;
-  z-index: 2;
 }
 
 .image-sd-thumb-wrap:hover .image-sd-thumb-remove {

@@ -604,6 +604,17 @@
   position: relative;
 }
 
+.audio-wave-tip {
+  flex: 1 1 96px;
+  min-width: 48px;
+  display: flex;
+}
+
+.audio-wave-tip .wave {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
 .wbar {
   width: 100%;
   min-width: 0;
@@ -2221,6 +2232,10 @@
   }
 
   .wave {
+    min-width: 36px;
+  }
+
+  .audio-wave-tip {
     min-width: 36px;
   }
 
