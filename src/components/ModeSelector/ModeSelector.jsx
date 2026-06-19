@@ -150,15 +150,15 @@ export function ModeSelector({
         </div>
 
         <div className="mode-secondary-actions">
-          <button className="mode-secondary-button" onClick={onOpen}>
+          <button className="mode-secondary-button mode-secondary-button--open" onClick={onOpen}>
             <ActionIcon Icon={FolderOpen} />
             <span>Ouvrir un projet</span>
           </button>
-          <button className="mode-secondary-button" onClick={onOpenPreferences}>
+          <button className="mode-secondary-button mode-secondary-button--tool" onClick={onOpenPreferences}>
             <ActionIcon Icon={SlidersHorizontal} />
             <span>Préférences</span>
           </button>
-          <button className="mode-secondary-button" onClick={() => setDocumentationOpen(true)}>
+          <button className="mode-secondary-button mode-secondary-button--tool" onClick={() => setDocumentationOpen(true)}>
             <ActionIcon Icon={ListTodo} />
             <span>Documentation</span>
           </button>
