@@ -736,7 +736,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
     let asset_path = assets_dir.join("shared.mp3");
     fs::write(&asset_path, b"shared-audio").expect("write staged asset");
     let cover_path = base.join("cover.png");
-    fs::write(&cover_path, b"cover").expect("write cover image");
+    write_test_png(&cover_path);
     let cover_asset_path = assets_dir.join("cover.png");
     fs::write(&cover_asset_path, b"cover-asset").expect("write staged cover asset");
 

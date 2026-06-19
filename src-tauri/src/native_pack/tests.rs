@@ -5,7 +5,8 @@ use crate::domain::project::{
 use crate::support::ffmpeg::now_millis;
 use std::collections::HashMap;
 use std::fs;
-use std::io::Write;
+use std::io::{Cursor, Write};
+use std::path::Path;
 
 fn simple_story_controls() -> ControlSettings {
     ControlSettings {
@@ -51,6 +52,19 @@ fn prepared_asset(role: &str, staged_asset_name: &str) -> PreparedAsset {
         transformed: false,
         deduplicated: false,
     }
+}
+
+fn write_test_png(path: &Path) {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("create png parent");
+    }
+    let image =
+        image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(4, 4, image::Rgb([32, 64, 96])));
+    let mut bytes = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png)
+        .expect("encode test png");
+    fs::write(path, bytes).expect("write test png");
 }
 
 fn imported_zip_bundle(
