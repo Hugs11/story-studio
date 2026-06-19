@@ -5,7 +5,7 @@ import RegionsPlugin from 'wavesurfer.js/plugins/regions';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Play, Pause, Square, SkipBack, SkipForward, RotateCcw } from '../icons/LucideLocal';
+import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { basename } from '../../utils/fileUtils';
 import {
@@ -87,6 +87,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const filename = basename(filePath);
   const trimDuration = Math.max(0, trimEnd - trimStart);
   const canOperate = !isLoading && !isApplying && trimEnd > trimStart + 0.01;
+  const canCut = canOperate && trimDuration < duration - 0.01;
   const fadeMax = Math.max(0, Math.min(10, trimDuration / 2));
   const outputFadeMax = isPreviewingEdit ? Math.max(0, Math.min(10, duration / 2)) : fadeMax;
   const cutFadeAnchor = stagedEdit?.mode === 'cut' ? stagedEdit.startSec : trimStart;
@@ -414,7 +415,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   useAudioEditorShortcuts({
     isLoading,
     canOperate,
-    canCut: false,
+    canCut,
     stagedEdit,
     previewPath,
     actions: {
@@ -423,8 +424,8 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       zoomOut: () => zoomAtCurrentCursor(-KEYBOARD_ZOOM_STEP),
       clearStart: clearStartPoint,
       clearEnd: clearEndPoint,
-      trimSelection: previewCurrentSelection,
-      cutSelection: () => {},
+      trimSelection: () => { void handleStageAction('trim'); },
+      cutSelection: () => { void handleStageAction('cut'); },
       playPause: handlePlayPause,
       nudgeBack: () => nudgeWithScrub(-NUDGE_STEP),
       nudgeForward: () => nudgeWithScrub(NUDGE_STEP),
@@ -986,6 +987,29 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
               </Tooltip>
               <Tooltip text="Aller au point de sortie (Shift+O)">
                 <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</Button>
+              </Tooltip>
+
+              <div className="audio-tb-sep" />
+
+              <Tooltip text="Garder la sélection (Ctrl+K)">
+                <Button
+                  variant="icon"
+                  className="audio-tb-btn"
+                  onClick={() => handleStageAction('trim')}
+                  disabled={!canOperate}
+                >
+                  <Crop />
+                </Button>
+              </Tooltip>
+              <Tooltip text="Supprimer la sélection (Ctrl+X)">
+                <Button
+                  variant="icon"
+                  className="audio-tb-btn audio-tb-btn-danger"
+                  onClick={() => handleStageAction('cut')}
+                  disabled={!canCut}
+                >
+                  <Scissors />
+                </Button>
               </Tooltip>
             </div>
             <div className="audio-editor-fade-slot is-right">
