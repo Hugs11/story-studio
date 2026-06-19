@@ -359,6 +359,54 @@ fn restore_audio_original_supports_legacy_hidden_backup() {
 }
 
 #[test]
+fn restore_audio_original_switches_back_to_managed_original_when_path_changed() {
+    let workspace = temp_workspace_with_dirs("restore_managed_original");
+    let imports = workspace.join("fichiers-importes");
+    let generated = workspace.join("voix-generees");
+    let original = generated.join("voice.wav");
+    let edited = imports.join("voice_edit.flac");
+    write_temp_file(&original, b"original");
+    write_temp_file(&edited, b"edited flac");
+    write_audio_edit_sidecar(
+        &edited,
+        &AudioEditSidecar {
+            original_path: original.to_string_lossy().to_string(),
+            mode: "trim".to_string(),
+            start_sec: 0.0,
+            end_sec: 1.0,
+            fade_in_sec: 0.0,
+            fade_out_sec: 0.0,
+            cut_fade_sec: 0.0,
+        },
+    )
+    .expect("write sidecar");
+    let sidecar = audio_edit_sidecar_path(&edited).expect("sidecar path");
+
+    let result = restore_audio_original(
+        edited.to_str().unwrap(),
+        None,
+        Some(workspace.to_str().unwrap()),
+    )
+    .expect("restore original");
+
+    assert_eq!(PathBuf::from(&result.output_path), original);
+    assert!(result.path_changed);
+    assert_eq!(
+        PathBuf::from(result.original_path.as_deref().expect("original path")),
+        original
+    );
+    assert_eq!(fs::read(&original).expect("read original"), b"original");
+    assert_eq!(
+        fs::read(&edited).expect("read edited"),
+        b"edited flac",
+        "the edited FLAC should not be overwritten with bytes from the original"
+    );
+    assert!(!sidecar.exists(), "sidecar should be removed");
+
+    fs::remove_dir_all(workspace).expect("cleanup");
+}
+
+#[test]
 fn restore_audio_original_does_not_delete_unexpected_external_original() {
     let workspace = temp_workspace_with_dirs("restore_external_guard");
     let imports = workspace.join("fichiers-importes");

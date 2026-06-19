@@ -806,28 +806,12 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setApplyMode('restore');
     setError(null);
     try {
-      await invoke('restore_audio_original', {
+      const result = await invoke('restore_audio_original', {
         inputPath: filePath,
         savePath: savePath ?? null,
         workspaceDir: workspaceDir ?? null,
       });
-      // Le chemin ne change pas (le fichier est ecrase par la copie de
-      // l'original) -- on reset l'etat d'edition et on force useLocalFile a
-      // relire (le mtime a change).
-      setPreviewPath(null);
-      setStagedEdit(null);
-      setEditInfo(null);
-      setHasChainedPreview(false);
-      setCutMarkers([]);
-      setFadeInSec(0);
-      setFadeOutSec(0);
-      setCutFadeSec(0);
-      actionBasePathRef.current = filePath;
-      preStagedSelectionRef.current = null;
-      preStagedCutMarkersRef.current = [];
-      initialEditRef.current = null;
-      window.dispatchEvent(new Event('focus'));
-      setApplyMode(null);
+      onConfirm(result);
     } catch (err) {
       setError(String(err));
       setApplyMode(null);
