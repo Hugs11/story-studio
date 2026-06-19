@@ -438,12 +438,14 @@ export function AudioField({
               setShowAudioEditor(false);
               const outputPath = typeof result === 'string' ? result : result?.output_path;
               const originalPath = typeof result === 'object' ? result?.original_path : null;
+              const pathChanged = typeof result === 'object' ? !!result?.path_changed : outputPath !== file;
               if (originalPath && (!outputPath || pathKey(originalPath) !== pathKey(outputPath))) {
                 onMediaCreated?.(originalPath);
               }
               if (outputPath && outputPath !== file) {
                 if (onPick) void onPick(outputPath);
                 onMediaCreated?.(outputPath);
+                if (pathChanged && file) onMediaCreated?.(file);
               } else if (outputPath) {
                 // Édition en place (format de travail FLAC/WAV) : même chemin,
                 // contenu modifié. useLocalFile est mémoïsé sur le chemin et ne se

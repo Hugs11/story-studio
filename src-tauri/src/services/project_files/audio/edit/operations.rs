@@ -263,8 +263,9 @@ pub fn restore_audio_original(
     // soit dans `.story-studio-audio-edits/` (legacy). Les deux cas sont gérés
     // par `validate_existing_file_path` qui canonicalise et vérifie l'existence.
     let original = validate_existing_file_path(&sidecar.original_path, "Audio original")?;
-    fs::copy(&original, &input)
-        .map_err(|e| format!("Impossible de restaurer l'audio original : {}", e))?;
+    let expected_backup = is_expected_audio_original_path(&input, &original);
+    let switch_to_managed_original =
+        !expected_backup && is_in_managed_media_dir(&original, workspace_dir, save_path);
     let sidecar_parent = audio_edit_sidecar_path(&input)
         .ok()
         .and_then(|sidecar_path| {
@@ -272,9 +273,21 @@ pub fn restore_audio_original(
             let _ = fs::remove_file(&sidecar_path);
             parent
         });
+    if switch_to_managed_original {
+        if let Some(parent) = sidecar_parent {
+            let _ = fs::remove_dir(parent); // best-effort si vide
+        }
+        return Ok(TrimAudioResult {
+            output_path: path_for_frontend(&original.to_string_lossy()),
+            path_changed: true,
+            original_path: Some(path_for_frontend(&original.to_string_lossy())),
+        });
+    }
+    fs::copy(&original, &input)
+        .map_err(|e| format!("Impossible de restaurer l'audio original : {}", e))?;
     // Nettoyage du fichier original désormais redondant (best-effort), uniquement
     // si le chemin correspond bien à une sauvegarde générée par Story Studio.
-    if is_expected_audio_original_path(&input, &original) {
+    if expected_backup {
         let _ = fs::remove_file(&original);
     }
     if let Some(parent) = sidecar_parent {
