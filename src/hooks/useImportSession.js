@@ -8,7 +8,8 @@ import {
   sanitizeImportedEntries,
   sanitizeImportedName,
 } from '../store/projectStore';
-import { replaceEntryWithEntries } from '../store/projectModel';
+import { findEntryById } from '../store/projectModel';
+import { buildProjectAfterZipUnpack } from '../store/unpackProject';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { markEntryAudioSkipSilence } from '../store/projectHelpers';
 import { formatPackAudioEdgeSilence } from '../config/audioProcessing';
@@ -16,7 +17,6 @@ import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './us
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
-import { parseConventionName } from '../utils/packConvention';
 
 export function useImportSession({
   store,
@@ -188,11 +188,17 @@ export function useImportSession({
     const menuId = projectIndex.parentMenuById.get(itemId) ?? null;
 
     let effectiveSavePath = store.savePath;
+    let baseProject = store.project;
+    let savedDuringUnpack = false;
     if (!effectiveSavePath) {
-      const path = await handleSaveProject();
-      if (!path) return;
-      effectiveSavePath = path;
+      const saveResult = await handleSaveProject({ returnResult: true });
+      if (!saveResult?.path) return;
+      effectiveSavePath = saveResult.path;
+      baseProject = saveResult.project ?? baseProject;
+      savedDuringUnpack = true;
     }
+    const currentZipItem = findEntryById(baseProject, itemId) ?? zipItem;
+    if (!currentZipItem?.zipPath) return;
 
     const skipSilenceForExtractedAudio = await ask(
       `Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout global de ${formatPackAudioEdgeSilence()} ?`,
@@ -204,13 +210,13 @@ export function useImportSession({
       }
     );
 
-    setUnpacking({ name: zipItem.name || 'ZIP en cours' });
+    setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
     try {
-      const extractedDirName = sanitizeImportedName(zipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
+      const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
       const wsDir = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }) || effectiveSavePath.replace(/[\\/][^\\/]+$/, '');
       const destDir = `${getExtractedZipsDir(wsDir)}/${extractedDirName}`;
       const result = await invoke('unpack_zip_to_entries', {
-        zipPath: zipItem.zipPath,
+        zipPath: currentZipItem.zipPath,
         destDir,
         workspaceDir: wsDir,
       });
@@ -227,59 +233,22 @@ export function useImportSession({
       const processedEntries = (skipSilenceForExtractedAudio
         ? entries.map(markEntryAudioSkipSilence)
         : entries);
-      const zipFilename = basename(zipItem.zipPath || '').replace(/\.(zip|7z)$/i, '');
-      const rawTitle = String(result?.title || '').trim();
-      const parsedZipFilename = parseConventionName(zipFilename);
-      const parsedPackName = parseConventionName(rawTitle) ?? parsedZipFilename;
-      const isZipConvention = /^\d+\+\]/.test(zipFilename);
-      const isTitleConvention = /^\d+\+\]/.test(rawTitle);
-      const packName = (rawTitle && (isTitleConvention || !isZipConvention))
-        ? sanitizeImportedName(rawTitle, zipItem.name || 'Pack importé')
-        : sanitizeImportedName(zipFilename || zipItem.name, 'Pack importé');
-      const packMetadata = parsedPackName
-        ? {
-            ...parsedPackName,
-            version: result?.packVersion ?? parsedPackName.version,
-            description: result?.packDescription ?? '',
-            namingMode: 'convention',
-          }
-        : {
-            title: packName,
-            author: '',
-            version: result?.packVersion ?? 1,
-            minAge: ((zipFilename || zipItem.name || '').match(/^(\d+)\+\]/)?.[1]) || '3',
-            producer: '',
-            bonus: '',
-            description: result?.packDescription ?? '',
-            namingMode: 'convention',
-            legacyExportName: '',
-            legacyName: '',
-          };
-      const isBlankProject = menuId == null
-        && (store.project.rootEntries ?? []).length <= 1
-        && !store.project.projectName?.trim()
-        && !store.project.packMetadata?.title
-        && !store.project.rootAudio
-        && !store.project.rootImage;
-      let nextProject = isBlankProject
-        ? {
-            ...store.project,
-            projectType: 'pack',
-            projectName: parsedZipFilename ? '' : sanitizeImportedName(zipFilename || packName, 'Pack importe'),
-            packMetadata,
-            rootAudio: result?.rootAudio ?? null,
-            rootImage: result?.rootImage ?? null,
-            thumbnailImage: result?.thumbnailImage ?? result?.rootImage ?? null,
-            sameImage: !!(result?.rootImage) && !result?.thumbnailImage,
-            nativeGraph: result?.nativeGraph ?? null,
-            rootEntries: processedEntries,
-          }
-        : replaceEntryWithEntries(store.project, menuId, itemId, processedEntries);
+      const unpackedProject = buildProjectAfterZipUnpack({
+        project: baseProject,
+        menuId,
+        itemId,
+        entries: processedEntries,
+        zipPath: currentZipItem.zipPath,
+        zipName: currentZipItem.name,
+        result,
+        savedDuringUnpack,
+      });
+      let nextProject = unpackedProject.project;
       const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
         ? result.unresolvedTransitions.map((warning) => ({
             ...warning,
             sourceRootId: result?.rootId ?? null,
-            sourceName: packName,
+            sourceName: unpackedProject.packName,
           }))
         : [];
       nextProject = {
