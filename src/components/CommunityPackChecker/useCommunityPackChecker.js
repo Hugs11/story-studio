@@ -6,6 +6,7 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   formatDiagnosticJson,
+  formatHtmlReport,
   formatReadableReport,
   formatTechnicalLog,
   reportBaseName,
@@ -14,6 +15,12 @@ import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 const EXPORTS = {
   report: {
+    extension: 'html',
+    label: 'Rapport HTML',
+    filter: { name: 'Rapport HTML', extensions: ['html'] },
+    content: formatHtmlReport,
+  },
+  markdown: {
     extension: 'md',
     label: 'Rapport Markdown',
     filter: { name: 'Rapport Markdown', extensions: ['md'] },
