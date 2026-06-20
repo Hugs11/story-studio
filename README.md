@@ -18,6 +18,12 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
+## Vous cherchez a creer des histoires pour Lunii ?
+
+Story Studio est un editeur Windows open source pour creer, importer,
+verifier et exporter des packs d'histoires compatibles Lunii. La documentation
+francaise est disponible ici : [README.fr.md](README.fr.md).
+
 Story Studio lets you create, import, organize, test and export
 Lunii-compatible story packs in a visual Windows desktop workspace. Everything
 stays local: images, audio, navigation, simulation and ZIP export.

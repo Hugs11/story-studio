@@ -2,10 +2,10 @@
   "name": "story-studio",
   "private": true,
   "version": "0.9.2",
-  "description": "Windows desktop editor for creating Lunii-compatible story packs",
+  "description": "Open-source Windows editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://github.com/hugs11/story-studio#readme",
+  "homepage": "https://hugs11.github.io/story-studio/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hugs11/story-studio.git"
@@ -14,8 +14,14 @@
     "url": "https://github.com/hugs11/story-studio/issues"
   },
   "keywords": [
+    "story-studio",
     "lunii",
+    "histoires-lunii",
+    "lunii-story-packs",
+    "story-pack-editor",
+    "interactive-stories",
     "story-packs",
+    "audio-editor",
     "tauri",
     "react",
     "windows"
