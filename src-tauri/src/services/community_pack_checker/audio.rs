@@ -799,7 +799,10 @@ mod tests {
         let stderr = "[Parsed_astats_1 @ x] Peak count: 24374.000000\n\
                       [Parsed_astats_1 @ x] Number of samples: 12946554\n";
         assert_eq!(parse_count_field(stderr, "Peak count:"), Some(24_374));
-        assert_eq!(parse_count_field(stderr, "Number of samples:"), Some(12_946_554));
+        assert_eq!(
+            parse_count_field(stderr, "Number of samples:"),
+            Some(12_946_554)
+        );
         assert_eq!(parse_count_field(stderr, "Absent:"), None);
     }
 

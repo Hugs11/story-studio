@@ -33,10 +33,7 @@ pub fn analyze_pack(zip_path: &Path) -> ReportModel {
     analyze_pack_with_log(zip_path, &|_| {})
 }
 
-pub fn analyze_pack_with_log(
-    zip_path: &Path,
-    emit: &dyn Fn(&str),
-) -> ReportModel {
+pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportModel {
     let pack_name = pack_name_from_path(zip_path);
     let zip_path_string = zip_path.to_string_lossy().to_string();
     let mut report = empty_report(&pack_name, &zip_path_string);
@@ -239,14 +236,7 @@ fn prepare_fixed_assets_parallel(
             run_in_correction_pool(|| {
                 let audio_results = audio_items.par_iter().enumerate().map(|(index, item)| {
                     let tx = worker_tx.clone();
-                    prepare_one_fixed_audio(
-                        zip_path,
-                        temp_dir,
-                        ffmpeg,
-                        index,
-                        item,
-                        &tx,
-                    )
+                    prepare_one_fixed_audio(zip_path, temp_dir, ffmpeg, index, item, &tx)
                 });
                 let image_results = image_items.par_iter().map(|item| {
                     let tx = worker_tx.clone();
@@ -773,14 +763,7 @@ fn analyze_audio(
                 .par_iter()
                 .enumerate()
                 .map(|(index, asset_ref)| {
-                    analyze_one_audio(
-                        doc,
-                        zip_path,
-                        temp_dir,
-                        ffmpeg_ref,
-                        index,
-                        asset_ref,
-                    )
+                    analyze_one_audio(doc, zip_path, temp_dir, ffmpeg_ref, index, asset_ref)
                 })
                 .collect()
         });

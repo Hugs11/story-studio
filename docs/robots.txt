@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hugs11.github.io/story-studio/sitemap.xml

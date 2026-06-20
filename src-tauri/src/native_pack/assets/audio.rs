@@ -636,9 +636,16 @@ mod tests {
                 continue;
             }
             let role = format!("sample{i}");
-            let prep =
-                prepare_audio_asset(path, &ffmpeg, &processed, &options, EDGE_SILENCE_SEC, false, &role)
-                    .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));
+            let prep = prepare_audio_asset(
+                path,
+                &ffmpeg,
+                &processed,
+                &options,
+                EDGE_SILENCE_SEC,
+                false,
+                &role,
+            )
+            .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));
             let dest = outdir.join(format!("new_{i}.mp3"));
             let src = match prep {
                 AudioPreparation::Encoded { output } => output,

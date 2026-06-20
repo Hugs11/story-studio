@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.2" src="https://img.shields.io/badge/version-0.9.2-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -38,12 +38,12 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.1 focuses on the large architecture cleanup, faster native
-asset preprocessing, clearer navigation diagrams, recent-project thumbnails and
-media, audio and image-editor fixes.
+Story Studio 0.9.2 adds a community pack checker/corrector, podcast import,
+pre-use audio splitting, a FLAC-based audio workflow and a complete UI redesign
+with clearer navigation rails and actions.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.1 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.1)
+- [Read the v0.9.2 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.2)
 - [See the full changelog](CHANGELOG.md)
 
 ## At a Glance
@@ -60,23 +60,31 @@ media, audio and image-editor fixes.
 
 ## Screenshots
 
-![Story Studio editor](docs/assets/screenshots/editor-features-dark.png)
+![Story Studio editor](docs/assets/screenshots/editor-dark.png)
 
-| Home screen | Tree editor |
+| Community pack checker | Tree navigation |
 |---|---|
-| ![Home screen](docs/assets/screenshots/home-dark.png) | ![Editor with story tree](docs/assets/screenshots/editor-dark.png) |
+| ![Community pack checker](docs/assets/screenshots/pack-checker-dark.png) | ![Tree navigation badges](docs/assets/screenshots/Tree-node-light.png) |
 
-| Story editor | Pack metadata |
+| Home screen | Pack metadata |
 |---|---|
-| ![Story editor controls](docs/assets/screenshots/pack-metadata-dark.png) | ![Pack metadata modal](docs/assets/screenshots/story-editor-dark.png) |
+| ![Home screen](docs/assets/screenshots/home-dark.png) | ![Pack metadata modal](docs/assets/screenshots/pack-metadata-dark.png) |
 
-| Diagram and simulator | Media explorer |
+| Pack options | Diagram and simulator |
 |---|---|
-| ![Diagram view with simulator](docs/assets/screenshots/diagram-simulator-dark.png) | ![Media explorer](docs/assets/screenshots/media-explorer-dark.png) |
+| ![Pack options popover](docs/assets/screenshots/Pack-settings.png) | ![Diagram view with simulator](docs/assets/screenshots/diagram-simulator-dark.png) |
 
-| Audio editor | Settings |
+| Audio editor | Audio splitter |
 |---|---|
-| ![Audio editor](docs/assets/screenshots/audio-editor-dark.png) | ![Settings in light mode](docs/assets/screenshots/settings-light.png) |
+| ![Audio editor](docs/assets/screenshots/audio-editor-dark.png) | ![Audio splitter](docs/assets/screenshots/Audio-decoupe-light.png) |
+
+| Audio assembly | Podcast import |
+|---|---|
+| ![Audio assembly](docs/assets/screenshots/Audio-assemble-light.png) | ![Podcast import](docs/assets/screenshots/Podcast-import.png) |
+
+| Preferences | Main editor |
+|---|---|
+| ![Preferences in light mode](docs/assets/screenshots/preferences-light.png) | ![Main editor](docs/assets/screenshots/editor-dark.png) |
 
 ## Features
 
