@@ -389,11 +389,17 @@ fn restore_audio_original_switches_back_to_managed_original_when_path_changed() 
     )
     .expect("restore original");
 
-    assert_eq!(PathBuf::from(&result.output_path), original);
+    assert_eq!(
+        fs::canonicalize(PathBuf::from(&result.output_path)).expect("canonical output path"),
+        fs::canonicalize(&original).expect("canonical original path")
+    );
     assert!(result.path_changed);
     assert_eq!(
-        PathBuf::from(result.original_path.as_deref().expect("original path")),
-        original
+        fs::canonicalize(PathBuf::from(
+            result.original_path.as_deref().expect("original path"),
+        ))
+        .expect("canonical result original path"),
+        fs::canonicalize(&original).expect("canonical original path")
     );
     assert_eq!(fs::read(&original).expect("read original"), b"original");
     assert_eq!(
