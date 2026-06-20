@@ -3,17 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Story Studio — Créez visuellement des histoires audio interactives pour Lunii</title>
+    <title>Story Studio — Éditeur open source de packs d'histoires Lunii</title>
     <meta
       name="description"
-      content="Logiciel open source pour créer visuellement des histoires audio interactives compatibles Lunii. Importez vos médias, organisez votre récit, exportez en ZIP — tout reste local."
+      content="Story Studio est un éditeur Windows open source pour créer, importer, corriger et exporter des packs d'histoires compatibles Lunii. Interface visuelle, audio, images, navigation et ZIP."
     />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0c1227" />
+    <link rel="canonical" href="https://hugs11.github.io/story-studio/" />
 
     <meta property="og:title" content="Story Studio" />
     <meta
       property="og:description"
-      content="Créez visuellement des histoires audio interactives compatibles Lunii."
+      content="Éditeur Windows open source pour créer, importer, corriger et exporter des packs d'histoires compatibles Lunii."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -27,9 +29,36 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Story Studio" />
-    <meta name="twitter:description" content="Créez visuellement des histoires audio interactives compatibles Lunii." />
+    <meta name="twitter:description" content="Éditeur Windows open source pour créer, importer, corriger et exporter des packs d'histoires compatibles Lunii." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour Lunii" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Story Studio",
+        "alternateName": "Studio Story",
+        "description": "Éditeur Windows open source pour créer, importer, corriger et exporter des packs d'histoires compatibles Lunii.",
+        "url": "https://hugs11.github.io/story-studio/",
+        "downloadUrl": "https://github.com/Hugs11/story-studio/releases/latest",
+        "codeRepository": "https://github.com/Hugs11/story-studio",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Windows",
+        "softwareVersion": "0.9.2",
+        "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
+        "author": {
+          "@type": "Person",
+          "name": "Hugs11",
+          "url": "https://github.com/Hugs11"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        }
+      }
+    </script>
 
     <link rel="icon" type="image/svg+xml" href="logostory.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -463,12 +492,18 @@
     <main>
       <section class="hero">
         <div class="container">
-          <h1>Créez vos histoires audio pour votre Lunii</h1>
+          <h1>Story Studio, l'éditeur de packs d'histoires pour Lunii</h1>
           <p class="tagline">
             Story Studio est un éditeur Windows open source pour créer,
-            importer, organiser, tester et exporter des packs d'histoires
-            compatibles Lunii. Tout se fait dans une interface visuelle, avec
-            vos images, vos sons, vos menus et vos chemins de navigation.
+            importer, corriger, organiser, tester et exporter des packs
+            d'histoires compatibles Lunii. Tout se fait dans une interface
+            visuelle, avec vos images, vos sons, vos menus et vos chemins de
+            navigation.
+          </p>
+          <p class="tagline">
+            Que vous cherchiez Story Studio, Studio Story ou un outil pour
+            créer des histoires Lunii, le projet reste local, gratuit et pensé
+            pour les packs audio interactifs.
           </p>
 
           <div class="cta-group">
@@ -495,19 +530,19 @@
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.1</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.2</h2>
             <ul>
-              <li>Architecture interne largement réorganisée pour faciliter la maintenance.</li>
-              <li>Génération plus rapide grâce au prétraitement parallèle des médias.</li>
-              <li>Diagramme, retours et badges de navigation plus lisibles.</li>
-              <li>Vignettes des projets récents sur l'écran d'accueil.</li>
-              <li>Corrections autour des médias, de l'audio, des filtres et du vignetage de l'éditeur image.</li>
+              <li>Vérificateur/correcteur de packs communautaires avec analyse audio, image, métadonnées et navigation.</li>
+              <li>Workflow audio plus propre : FLAC jusqu'à l'export, volume cible, limiteur de crête et silences mesurés.</li>
+              <li>Découpage audio avant utilisation et import direct depuis des podcasts RSS.</li>
+              <li>Refonte complète de l'interface pour mieux comprendre les actions, les états et les rails de navigation.</li>
+              <li>Améliorations de l'arbre, du diagramme, du relink des médias manquants et de l'éditeur image.</li>
             </ul>
           </div>
         </div>
         <div class="hero-shot">
           <img
-            src="assets/screenshots/editor-features-dark.png"
+            src="assets/screenshots/editor-dark.png"
             alt="Aperçu de l'éditeur Story Studio"
             width="1080"
           />
@@ -544,8 +579,33 @@
             <div class="row reverse">
               <div class="row-media">
                 <img
-                  src="assets/screenshots/editor-dark.png"
-                  alt="Éditeur visuel avec arbre du projet"
+                  src="assets/screenshots/pack-checker-dark.png"
+                  alt="Vérificateur de packs communautaires"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 12l2 2 4-4" />
+                    <path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 1 0-2.948 8.001" />
+                    <path d="M21 16v-4h-4" />
+                  </svg>
+                </span>
+                <h3>Vérifiez les packs communautaires</h3>
+                <p>
+                  Analysez un ZIP avant de le partager ou de le corriger :
+                  métadonnées, images, audio, silences, saturation et navigation
+                  sont résumés dans un rapport lisible.
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/Tree-node-light.png"
+                  alt="Badges de navigation dans l'arbre du projet"
                   loading="lazy"
                 />
               </div>
@@ -555,11 +615,11 @@
                     <path d="M3 7h18M3 12h18M3 17h12" />
                   </svg>
                 </span>
-                <h3>Éditeur visuel intuitif</h3>
+                <h3>Repères de navigation lisibles</h3>
                 <p>
-                  Organisez menus, sous-menus et histoires dans un arbre clair.
-                  Glissez-déposez vos éléments, copiez-collez, renommez — sans
-                  jamais toucher au code.
+                  Les badges et états de l'arbre rendent les retours, l'accueil
+                  et les chemins particuliers plus visibles pendant l'édition.
+                  Vous gardez le parcours final sous les yeux.
                 </p>
               </div>
             </div>
@@ -568,7 +628,7 @@
               <div class="row-media">
                 <img
                   src="assets/screenshots/pack-metadata-dark.png"
-                  alt="Réglages détaillés d'une histoire"
+                  alt="Fenêtre de métadonnées du pack"
                   loading="lazy"
                 />
               </div>
@@ -579,11 +639,11 @@
                     <path d="M12 6v6l4 2" />
                   </svg>
                 </span>
-                <h3>Des réglages d'histoire lisibles</h3>
+                <h3>Métadonnées du pack</h3>
                 <p>
-                  Séparez clairement ce qui se passe pendant la lecture, après
-                  l'histoire, et dans les réglages avancés. Les destinations par
-                  défaut restent visibles pour comprendre le parcours final.
+                  Préparez le nom exporté, la couverture, l'âge conseillé,
+                  l'auteur, la version et la description dans une fenêtre dédiée
+                  avant de générer votre pack.
                 </p>
               </div>
             </div>
@@ -591,8 +651,8 @@
             <div class="row reverse">
               <div class="row-media">
                 <img
-                  src="assets/screenshots/story-editor-dark.png"
-                  alt="Fenêtre de métadonnées du pack"
+                  src="assets/screenshots/Pack-settings.png"
+                  alt="Options du pack"
                   loading="lazy"
                 />
               </div>
@@ -604,11 +664,11 @@
                     <path d="M12 22V12" />
                   </svg>
                 </span>
-                <h3>Gestion facile du nommage</h3>
+                <h3>Options du pack au bon endroit</h3>
                 <p>
-                  Préparez le nom exporté, la couverture, l'âge conseillé,
-                  l'auteur, la version et la description dans une fenêtre dédiée
-                  avant de générer votre pack.
+                  Les réglages de génération sont regroupés dans un popover
+                  clair, accessible depuis la barre d'outils, sans encombrer
+                  l'éditeur principal.
                 </p>
               </div>
             </div>
@@ -616,8 +676,8 @@
             <div class="row">
               <div class="row-media">
                 <img
-                  src="assets/screenshots/media-explorer-dark.png"
-                  alt="Explorateur de médias avec filtres et tags"
+                  src="assets/screenshots/Podcast-import.png"
+                  alt="Import de podcast RSS"
                   loading="lazy"
                 />
               </div>
@@ -630,11 +690,10 @@
                     <rect x="3" y="14" width="7" height="7" />
                   </svg>
                 </span>
-                <h3>Toute votre bibliothèque sous la main</h3>
+                <h3>Importez depuis un podcast</h3>
                 <p>
-                  Audios, images, ZIP : un explorateur unifié avec filtres, tags,
-                  aperçus rapides et compteurs d'utilisation. Vous savez toujours
-                  où chaque fichier est utilisé.
+                  Récupérez des épisodes depuis un flux RSS et transformez-les
+                  plus vite en contenus prêts à organiser dans votre pack.
                 </p>
               </div>
             </div>
@@ -658,8 +717,58 @@
                 <h3>Audio sans complication</h3>
                 <p>
                   Enregistrez votre voix au micro, coupez, ajoutez des fondus,
-                  assemblez plusieurs fichiers en un seul MP3 — directement dans
+                  assemblez plusieurs fichiers en une seule piste — directement dans
                   l'app.
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/Audio-decoupe-light.png"
+                  alt="Découpe d'un fichier audio avant utilisation"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 14.5 3 3" />
+                    <path d="M21 3 8.5 15.5" />
+                    <circle cx="5.5" cy="17.5" r="2.5" />
+                    <circle cx="5.5" cy="6.5" r="2.5" />
+                  </svg>
+                </span>
+                <h3>Découpez avant d'utiliser</h3>
+                <p>
+                  Séparez une longue piste en plusieurs segments avant de
+                  l'associer à une histoire, un menu ou un assemblage audio.
+                </p>
+              </div>
+            </div>
+
+            <div class="row reverse">
+              <div class="row-media">
+                <img
+                  src="assets/screenshots/Audio-assemble-light.png"
+                  alt="Assemblage de plusieurs fichiers audio"
+                  loading="lazy"
+                />
+              </div>
+              <div class="row-text">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12h6" />
+                    <path d="M14 12h6" />
+                    <path d="M10 7v10" />
+                    <path d="M14 7v10" />
+                  </svg>
+                </span>
+                <h3>Assemblez vos pistes</h3>
+                <p>
+                  Combinez plusieurs fichiers audio en une seule narration, en
+                  gardant un flux de travail clair avant l'export final.
                 </p>
               </div>
             </div>
@@ -691,7 +800,7 @@
             <div class="row reverse">
               <div class="row-media">
                 <img
-                  src="assets/screenshots/settings-light.png"
+                  src="assets/screenshots/preferences-light.png"
                   alt="Préférences de Story Studio"
                   loading="lazy"
                 />

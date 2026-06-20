@@ -103,16 +103,12 @@ fn preprocess_request(
                 request.skip_silence,
                 &request.role,
             )? {
-                AudioPreparation::Encoded { output } => {
-                    PreprocessedAsset::AudioProcessed {
-                        prepared_source: output,
-                    }
-                }
-                AudioPreparation::Verbatim { source } => {
-                    PreprocessedAsset::AudioPassthrough {
-                        prepared_source: source,
-                    }
-                }
+                AudioPreparation::Encoded { output } => PreprocessedAsset::AudioProcessed {
+                    prepared_source: output,
+                },
+                AudioPreparation::Verbatim { source } => PreprocessedAsset::AudioPassthrough {
+                    prepared_source: source,
+                },
             }
         }
     };

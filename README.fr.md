@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.2" src="https://img.shields.io/badge/version-0.9.2-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -39,13 +39,13 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.1 se concentre sur la grande réorganisation de l'architecture,
-le prétraitement plus rapide des médias, des diagrammes de navigation plus
-lisibles, les vignettes des projets récents et des corrections autour des
-médias, de l'audio et de l'éditeur image.
+Story Studio 0.9.2 ajoute un vérificateur/correcteur de packs communautaires,
+l'import de podcasts, le découpage audio avant utilisation, un workflow audio
+basé sur le FLAC et une refonte complète de l'interface avec des rails de
+navigation et des actions plus lisibles.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.1](https://github.com/Hugs11/story-studio/releases/tag/v0.9.1)
+- [Lire les notes de version 0.9.2](https://github.com/Hugs11/story-studio/releases/tag/v0.9.2)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## En un coup d'œil
@@ -62,23 +62,31 @@ médias, de l'audio et de l'éditeur image.
 
 ## Captures d'écran
 
-![Éditeur Story Studio](docs/assets/screenshots/editor-features-dark.png)
+![Éditeur Story Studio](docs/assets/screenshots/editor-dark.png)
 
-| Écran d'accueil | Éditeur arborescent |
+| Vérificateur de packs | Navigation dans l'arbre |
 |---|---|
-| ![Écran d'accueil](docs/assets/screenshots/home-dark.png) | ![Éditeur avec arbre de projet](docs/assets/screenshots/editor-dark.png) |
+| ![Vérificateur de packs communautaires](docs/assets/screenshots/pack-checker-dark.png) | ![Badges de navigation dans l'arbre](docs/assets/screenshots/Tree-node-light.png) |
 
-| Éditeur d'histoire | Métadonnées du pack |
+| Écran d'accueil | Métadonnées du pack |
 |---|---|
-| ![Réglages d'une histoire](docs/assets/screenshots/pack-metadata-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/story-editor-dark.png) |
+| ![Écran d'accueil](docs/assets/screenshots/home-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/pack-metadata-dark.png) |
 
-| Diagramme et simulateur | Explorateur de médias |
+| Options du pack | Diagramme et simulateur |
 |---|---|
-| ![Vue diagramme avec simulateur](docs/assets/screenshots/diagram-simulator-dark.png) | ![Explorateur de médias](docs/assets/screenshots/media-explorer-dark.png) |
+| ![Options du pack](docs/assets/screenshots/Pack-settings.png) | ![Vue diagramme avec simulateur](docs/assets/screenshots/diagram-simulator-dark.png) |
 
-| Éditeur audio | Préférences |
+| Éditeur audio | Découpe audio |
 |---|---|
-| ![Éditeur audio](docs/assets/screenshots/audio-editor-dark.png) | ![Préférences en mode clair](docs/assets/screenshots/settings-light.png) |
+| ![Éditeur audio](docs/assets/screenshots/audio-editor-dark.png) | ![Découpe audio](docs/assets/screenshots/Audio-decoupe-light.png) |
+
+| Assemblage audio | Import podcast |
+|---|---|
+| ![Assemblage audio](docs/assets/screenshots/Audio-assemble-light.png) | ![Import podcast](docs/assets/screenshots/Podcast-import.png) |
+
+| Préférences | Éditeur principal |
+|---|---|
+| ![Préférences en mode clair](docs/assets/screenshots/preferences-light.png) | ![Éditeur principal](docs/assets/screenshots/editor-dark.png) |
 
 ## Fonctionnalités
 

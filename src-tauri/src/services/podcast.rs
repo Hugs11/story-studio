@@ -210,10 +210,15 @@ fn child_text(parent: &roxmltree::Node, local: &str) -> Option<String> {
 
 /// Image d'un nœud channel/item : `itunes:image href` en priorité, sinon `<image><url>`.
 fn node_image(node: &roxmltree::Node) -> Option<String> {
-    if let Some(img) = node.children().find(|c| {
-        c.is_element() && c.tag_name().name() == "image" && c.has_attribute("href")
-    }) {
-        if let Some(href) = img.attribute("href").map(str::trim).filter(|s| !s.is_empty()) {
+    if let Some(img) = node
+        .children()
+        .find(|c| c.is_element() && c.tag_name().name() == "image" && c.has_attribute("href"))
+    {
+        if let Some(href) = img
+            .attribute("href")
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
             return Some(href.to_string());
         }
     }
@@ -329,7 +334,10 @@ mod tests {
     fn parses_channel_and_episodes() {
         let feed = parse_feed(SAMPLE).expect("parse");
         assert_eq!(feed.title, "Mon Podcast");
-        assert_eq!(feed.image_url.as_deref(), Some("https://example.com/cover.jpg"));
+        assert_eq!(
+            feed.image_url.as_deref(),
+            Some("https://example.com/cover.jpg")
+        );
         // L'item sans enclosure est ignoré.
         assert_eq!(feed.episodes.len(), 2);
 
@@ -339,7 +347,10 @@ mod tests {
         assert_eq!(ep1.mime_type.as_deref(), Some("audio/mpeg"));
         assert_eq!(ep1.duration.as_deref(), Some("00:12:34"));
         assert_eq!(ep1.size_bytes, Some(123456));
-        assert_eq!(ep1.image_url.as_deref(), Some("https://example.com/ep1.jpg"));
+        assert_eq!(
+            ep1.image_url.as_deref(),
+            Some("https://example.com/ep1.jpg")
+        );
         assert_eq!(ep1.description.as_deref(), Some("Premier episode"));
 
         // ep2 hérite de l'image du flux.
@@ -367,7 +378,10 @@ mod tests {
         assert_eq!(extension_for(Some("image/jpeg"), &url), "jpg");
         // Type inconnu -> extension de l'URL.
         let url_mp3 = reqwest::Url::parse("https://example.com/a/b.mp3?x=1").unwrap();
-        assert_eq!(extension_for(Some("application/octet-stream"), &url_mp3), "mp3");
+        assert_eq!(
+            extension_for(Some("application/octet-stream"), &url_mp3),
+            "mp3"
+        );
     }
 
     #[test]

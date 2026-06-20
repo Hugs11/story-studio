@@ -12,6 +12,67 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.2] - 2026-06-18
+
+Story Studio v0.9.2 focuses on making pack preparation easier to understand:
+community pack checking, a cleaner audio pipeline, podcast import, audio
+splitting and a complete UI redesign around clearer navigation and actions.
+
+### Added
+
+- Added a community pack checker/corrector for ZIP packs, with analysis for
+  structure, navigation, metadata, images, audio loudness, edge silences and
+  saturated sources.
+- Added an HTML export for community pack checker reports.
+- Added dedicated checker states for audio that is already saturated at the
+  source, with a clear "not correctable" warning instead of pretending the
+  distortion can be repaired automatically.
+- Added podcast RSS import so episodes can be brought into a project more
+  directly.
+- Added an audio splitter to cut an audio file before using it in a story,
+  menu, assembly or generated pack.
+- Added launcher buttons to open project and ZIP simulation more directly.
+- Added navigation rails and clearer diagram path highlighting so users can
+  better understand where they are and how stories return or chain together.
+- Added image level controls and conversion for Lunii-unsupported image
+  formats.
+
+### Changed
+
+- Redesigned the application UI for better comprehension, including the app
+  chrome, toolbar, project/generation/options popovers, buttons, dialog actions,
+  light theme, validation states and editor layouts.
+- Reworked audio preparation around a `-14 LUFS` target, static gain,
+  peak limiting at `-2 dBFS`, and shared rules between the checker and native
+  generator. `loudnorm` is no longer used as the final correction path.
+- Kept working audio in FLAC until final export to avoid repeated lossy MP3
+  compression during edits and replacements.
+- Normalized leading and trailing silence by measuring each file first, then
+  setting clean edge silence to about `0.5 s` instead of blindly adding silence.
+- Made pack loudness correction and silence correction independent, so fixing
+  one no longer unexpectedly changes the other.
+- Improved the tree workflow with toolbar search, steadier folder drag/drop,
+  multi-selection expand/collapse and clearer display options.
+- Improved missing-media relinking, audio replacement in place, edited audio
+  preview refresh and reuse of original audio sources after editing.
+- Refined the AI queue, home screen actions and audio trim controls.
+- Removed obsolete global selection options and simplified pack metadata copy.
+
+### Fixed
+
+- Fixed legacy workspace media path handling.
+- Fixed project naming when unpacking ZIP packs.
+- Fixed thumbnail export so generated thumbnails are forced to PNG.
+- Fixed end-node deletion and confirmation edge cases.
+- Fixed duplicate native tooltips and the audio original restore workflow.
+- Fixed autoplay preview behavior to match generated packs more closely.
+- Fixed compact layouts for audio controls, root menus, dialogs, popovers and
+  central editor panels.
+- Fixed several navigation, validation, keyboard shortcut, media explorer and
+  generated pack edge cases discovered during the 0.9.2 redesign.
+
+---
+
 ## [0.9.1] - 2026-06-01
 
 Story Studio v0.9.1 is a maintenance and architecture release focused on
