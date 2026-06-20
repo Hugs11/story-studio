@@ -19,7 +19,6 @@ fn makes_root_menu_selectable_when_pack_has_multiple_root_entries() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![
@@ -130,7 +129,6 @@ fn keeps_single_cover_stage_when_pack_has_multiple_root_entries() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![
@@ -289,7 +287,6 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![
@@ -474,7 +471,6 @@ fn omits_menu_image_when_auto_black_image_is_enabled() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -629,7 +625,6 @@ fn builds_regular_imported_zip_under_root() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Zip(CanonicalZip {
@@ -856,7 +851,6 @@ fn builds_collection_import_without_extra_square_one() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Zip(CanonicalZip {

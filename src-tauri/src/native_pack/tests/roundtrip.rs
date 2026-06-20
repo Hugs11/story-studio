@@ -7,7 +7,6 @@ fn canonical_options() -> CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Off,
         harmonize_loudness: true,
         auto_next: false,
-        select_next: false,
         night_mode: false,
     }
 }

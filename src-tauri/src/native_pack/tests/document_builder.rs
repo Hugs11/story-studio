@@ -59,7 +59,6 @@ fn builds_story_title_without_item_audio() {
             silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
             auto_next: false,
-            select_next: false,
             night_mode: false,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
@@ -135,7 +134,6 @@ fn generates_imported_prompt_controls_and_home_null() {
             silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
             auto_next: false,
-            select_next: false,
             night_mode: false,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
@@ -220,7 +218,6 @@ fn exports_after_playback_sequence_before_story_return() {
             silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
             auto_next: false,
-            select_next: false,
             night_mode: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -399,7 +396,6 @@ fn auto_next_overrides_end_steps_and_story_returns() {
             silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
             auto_next: true,
-            select_next: false,
             night_mode: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -649,7 +645,6 @@ fn collects_asset_requests_for_pack() {
             silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
             auto_next: false,
-            select_next: false,
             night_mode: true,
         },
         entries: vec![
@@ -767,7 +762,6 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
             harmonize_loudness: true,
             add_silence_duration_sec: 1.0,
             auto_next: false,
-            select_next: false,
             night_mode: false,
         },
         pack_version: 1,
@@ -876,7 +870,6 @@ fn builds_simple_story_pack() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Story(CanonicalStory {
@@ -948,7 +941,6 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -1083,7 +1075,6 @@ fn builds_recursive_menu_story_tree() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -1228,7 +1219,6 @@ fn preserves_explicit_menu_home_transition() {
                     silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
                     auto_next: false,
-                    select_next: false,
                     night_mode: false,
                 },
                 entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -1339,7 +1329,6 @@ fn preserves_imported_story_title_home_transition() {
                     silence_mode: crate::domain::project::SilenceMode::Off,
             harmonize_loudness: true,
                     auto_next: false,
-                    select_next: false,
                     night_mode: false,
                 },
                 entries: vec![CanonicalEntry::Menu(CanonicalMenu {

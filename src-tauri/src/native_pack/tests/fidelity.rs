@@ -102,7 +102,6 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
             harmonize_loudness: true,
             add_silence_duration_sec: 1.0,
             auto_next: false,
-            select_next: false,
             night_mode,
         },
         pack_version: 1,

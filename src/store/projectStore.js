@@ -67,7 +67,6 @@ const DEFAULT_PROJECT = normalizeProjectData({
     silenceMode: 'normalize',
     harmonizeLoudness: true,
     autoNext: false,
-    selectNext: false,
     nightMode: false,
     aiImageGen: false,
   },
