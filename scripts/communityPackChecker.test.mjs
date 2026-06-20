@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   formatDiagnosticJson,
+  formatHtmlReport,
   formatReadableReport,
   formatTechnicalLog,
   reportBaseName,
@@ -47,4 +48,13 @@ test('formatTechnicalLog keeps one log line per line', () => {
 
 test('formatDiagnosticJson serializes the structured report', () => {
   assert.equal(JSON.parse(formatDiagnosticJson(report)).packName, 'Le voyage de Milo.zip');
+});
+
+test('formatHtmlReport builds a standalone browser document', () => {
+  const text = formatHtmlReport(report);
+  assert.match(text, /<!doctype html>/i);
+  assert.match(text, /<style>/);
+  assert.match(text, /Vérifier un pack/);
+  assert.match(text, /Le voyage de Milo\.zip/);
+  assert.match(text, /Imprimer \/ PDF/);
 });
