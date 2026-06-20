@@ -19,7 +19,6 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -169,7 +168,6 @@ fn night_stage_preserves_story_specific_return_after_play() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -305,7 +303,6 @@ fn night_mode_return_next_story_creates_story_specific_night_stages() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
@@ -439,7 +436,6 @@ fn night_mode_return_global_menu_reuses_single_night_stage() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: true,
             },
             entries: vec![
@@ -589,7 +585,6 @@ fn night_mode_return_story_target_routes_to_story_title() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {

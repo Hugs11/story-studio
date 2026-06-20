@@ -55,7 +55,6 @@ function normalizeOptions(options) {
     silenceMode,
     harmonizeLoudness: options?.harmonizeLoudness ?? true,
     autoNext: options?.autoNext ?? false,
-    selectNext: options?.selectNext ?? false,
     nightMode: options?.nightMode ?? false,
     aiImageGen: options?.aiImageGen ?? false,
     endNode: options?.endNode ?? false,

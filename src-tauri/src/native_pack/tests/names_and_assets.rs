@@ -106,7 +106,6 @@ fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
                 silence_mode: crate::domain::project::SilenceMode::Off,
                 harmonize_loudness: true,
                 auto_next: false,
-                select_next: false,
                 night_mode: false,
             },
             entries: Vec::new(),
@@ -174,14 +173,12 @@ fn builds_audio_filters_with_shared_normalizer() {
         silence_mode: crate::domain::project::SilenceMode::Off,
         harmonize_loudness: true,
         auto_next: false,
-        select_next: false,
         night_mode: false,
     };
     let with_silence = CanonicalOptions {
         silence_mode: crate::domain::project::SilenceMode::Add,
         harmonize_loudness: true,
         auto_next: false,
-        select_next: false,
         night_mode: false,
     };
 
@@ -205,7 +202,6 @@ fn builds_audio_filters_with_gain_limiter_before_silence() {
         silence_mode: crate::domain::project::SilenceMode::Add,
         harmonize_loudness: true,
         auto_next: false,
-        select_next: false,
         night_mode: false,
     };
 
@@ -229,7 +225,6 @@ fn builds_audio_filters_with_configured_silence_duration() {
         silence_mode: crate::domain::project::SilenceMode::Add,
         harmonize_loudness: true,
         auto_next: false,
-        select_next: false,
         night_mode: false,
     };
 

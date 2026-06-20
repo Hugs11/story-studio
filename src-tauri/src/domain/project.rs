@@ -23,8 +23,6 @@ pub(crate) struct GlobalOptions {
     pub(crate) add_silence_duration_sec: f64,
     #[serde(rename = "autoNext")]
     pub(crate) auto_next: bool,
-    #[serde(rename = "selectNext")]
-    pub(crate) select_next: bool,
     #[serde(rename = "nightMode")]
     pub(crate) night_mode: bool,
     // Harmonisation du volume (-14 LUFS) à la génération. Absent des anciens
