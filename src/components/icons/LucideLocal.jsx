@@ -198,6 +198,10 @@ const chevronRightNode = [
   ['path', { d: 'm9 18 6-6-6-6' }],
 ];
 
+const chevronLeftNode = [
+  ['path', { d: 'm15 18-6-6 6-6' }],
+];
+
 const chevronDownNode = [
   ['path', { d: 'm6 9 6 6 6-6' }],
 ];
@@ -380,6 +384,7 @@ export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
 export const ChevronRight = createLocalLucideIcon(chevronRightNode);
+export const ChevronLeft = createLocalLucideIcon(chevronLeftNode);
 export const ChevronDown = createLocalLucideIcon(chevronDownNode);
 export const ChevronUp = createLocalLucideIcon(chevronUpNode);
 export const MoveUp = createLocalLucideIcon(moveUpNode);
