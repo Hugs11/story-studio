@@ -58,13 +58,18 @@ async function getDefaultWorkspaceDir() {
 export async function getWorkspaceDir() {
   const saved = readSetting(KEYS.WORKSPACE_DIR);
   if (saved?.trim()) return saved;
-  const fallback = await getDefaultWorkspaceDir();
-  writeSetting(KEYS.WORKSPACE_DIR, fallback);
-  return fallback;
+  return getDefaultWorkspaceDir();
 }
 
 function setWorkspaceDir(path) {
   if (path?.trim()) writeSetting(KEYS.WORKSPACE_DIR, path);
+}
+
+export async function ensureWorkspaceDir() {
+  const dir = await getWorkspaceDir();
+  setWorkspaceDir(dir);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }
 
 export async function pickWorkspaceDir() {
@@ -500,7 +505,9 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     backupLimit: options.backupLimit ?? 0,
     backupDirOverride: options.backupDirOverride ?? workspaceBackupDir,
   });
-  saveProjectDir(PROJECT_SAVE_KEYS[0], path);
+  if (!options.autosave) {
+    saveProjectDir(PROJECT_SAVE_KEYS[0], path);
+  }
   onProgress?.('Projet enregistré');
   // Return the project with absolute paths for in-memory use
   return { path, project: projectWithImages };
@@ -525,7 +532,9 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 
   onProgress?.('Enregistrement du projet...');
 
-  const resolvedWs = options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
+  const resolvedWs = options?.useProjectDirAsWorkspace
+    ? newProjectDir
+    : (options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null);
   onProgress?.('Décollage vers la lune...');
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
   const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
@@ -674,6 +683,19 @@ export async function autoSaveNewProject(project, workspaceDir, options = {}) {
     mediaTags: options.mediaTags ?? {},
     mediaLibraryPaths: options.mediaLibraryPaths ?? [],
     totalMediaCount: options.totalMediaCount ?? 0,
+  });
+}
+
+export async function autoSaveEphemeralProject(project, sessionWorkspaceDir, snapshotPath, options = {}) {
+  if (!sessionWorkspaceDir || !snapshotPath) return null;
+  return saveProject(project, snapshotPath, null, {
+    autosave: true,
+    backupLimit: 0,
+    backupDirOverride: null,
+    mediaTags: options.mediaTags ?? {},
+    mediaLibraryPaths: options.mediaLibraryPaths ?? [],
+    totalMediaCount: options.totalMediaCount ?? 0,
+    workspaceDir: sessionWorkspaceDir,
   });
 }
 

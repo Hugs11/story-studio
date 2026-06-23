@@ -66,6 +66,38 @@ test('decideAutosaveAction creates a new autosave when no savePath but workspace
   assert.equal(action.workspaceDir, 'D:/ws');
 });
 
+test('decideAutosaveAction routes an ephemeral project to the session recovery snapshot', () => {
+  const action = decideAutosaveAction({
+    isSaving: false,
+    currentSnapshot: '{"a":1}',
+    savedSnapshot: null,
+    isDirty: true,
+    savePath: null,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: 'D:/temp/story_studio_session_1_2/.session-recovery.mbah',
+    autoSavePath: null,
+  });
+  assert.equal(action.kind, AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL);
+  assert.equal(action.workspaceDir, 'D:/temp/story_studio_session_1_2');
+  assert.equal(action.path, 'D:/temp/story_studio_session_1_2/.session-recovery.mbah');
+});
+
+test('decideAutosaveAction skips an unchanged ephemeral snapshot without marking the project saved', () => {
+  const action = decideAutosaveAction({
+    isSaving: false,
+    currentSnapshot: '{"a":1}',
+    savedSnapshot: null,
+    isDirty: true,
+    savePath: null,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: 'D:/temp/story_studio_session_1_2/.session-recovery.mbah',
+    lastEphemeralSnapshot: '{"a":1}',
+  });
+  assert.equal(action.kind, AUTOSAVE_ACTIONS.SKIP_UNCHANGED);
+});
+
 test('decideAutosaveAction reuses the existing autosave file when one is already known', () => {
   const action = decideAutosaveAction({
     isSaving: false,

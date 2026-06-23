@@ -130,7 +130,12 @@ export function useMediaTransferHandlers({
   }, []);
 
   const maybeOfferTransferIntoProject = useCallback(async (project, savePath, options = {}) => {
-    const { forcePrompt = false, copyEnabled = copyImportedFilesEnabled } = options;
+    const {
+      forcePrompt = false,
+      copyEnabled = copyImportedFilesEnabled,
+      skipPrompt = false,
+      targetWorkspaceDir = null,
+    } = options;
     if (!copyEnabled || !savePath) return { project, changed: false };
 
     const candidates = collectTransferableProjectFiles(project, savePath, pathAudit);
@@ -146,15 +151,15 @@ export function useMediaTransferHandlers({
 
     const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
     const suffix = candidates.length > 5 ? `\n• …et ${candidates.length - 5} autre(s)` : '';
-    const confirmed = await ask(
-      `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nVoulez-vous les copier dans fichiers-importes/ et mettre à jour le projet ?`,
-      {
-        title: 'Transférer les fichiers existants ?',
-        kind: 'warning',
-        okLabel: 'Transférer',
-        cancelLabel: 'Plus tard',
-      }
-    );
+    const confirmed = skipPrompt || (await ask(
+        `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nVoulez-vous les copier dans fichiers-importes/ et mettre à jour le projet ?`,
+        {
+          title: 'Transférer les fichiers existants ?',
+          kind: 'warning',
+          okLabel: 'Transférer',
+          cancelLabel: 'Plus tard',
+        }
+      ));
 
     if (!confirmed) {
       dismissedTransferPromptRef.current = signature;
@@ -165,8 +170,8 @@ export function useMediaTransferHandlers({
       project,
       savePath,
       async (sourcePath) => {
-        const targetWorkspace = workspaceDir || await getWorkspaceDir();
-        if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
+        const targetWorkspace = targetWorkspaceDir || workspaceDir || await getWorkspaceDir();
+        if (!targetWorkspaceDir && !workspaceDir) setWorkspaceDirState(targetWorkspace);
         return copyMediaToWorkspace(sourcePath, targetWorkspace, FICHIERS_IMPORTES, getProjectFilePrefix(store.project, savePathRef.current));
       },
       pathAudit,
@@ -188,6 +193,7 @@ export function useMediaTransferHandlers({
     return {
       project: transferResult.project,
       changed: transferResult.copiedCount > 0,
+      errors: transferResult.errors,
     };
   }, [
     copyImportedFilesEnabled,

@@ -36,6 +36,7 @@ fn cleanup_temp_images() {
     ] {
         cleanup_temp_image_dir(dir_name);
     }
+    support::temp::cleanup_orphan_session_workspaces(std::time::Duration::from_secs(24 * 3600));
 }
 
 fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
@@ -123,6 +124,9 @@ pub fn run() {
             commands::media_probe::probe_media_files,
             commands::podcast::fetch_podcast_feed,
             commands::podcast::download_podcast_media,
+            commands::session::create_session_workspace,
+            commands::session::cleanup_session_workspace,
+            commands::session::list_session_recoveries,
             commands::diagnostics::set_log_level,
             commands::diagnostics::get_current_log_file
         ])

@@ -6,8 +6,10 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
   getRecentProjects,
+  loadProjectFromPath,
   rememberRecentProject,
   ensureExportsDir,
+  ensureWorkspaceDir,
   pickWorkspaceDir,
   getWorkspaceDir,
   consolidateProject,
@@ -108,6 +110,14 @@ const INT_CODEC = {
   },
   encode: (value) => String(value),
 };
+const SESSION_RECOVERY_FILE = '.session-recovery.mbah';
+
+function joinLocalPath(dir, fileName) {
+  if (!dir) return '';
+  const trimmed = String(dir).replace(/[\\/]+$/, '');
+  const sep = String(dir).includes('\\') ? '\\' : '/';
+  return `${trimmed}${sep}${fileName}`;
+}
 
 function isImportedPackPath(filePath) {
   return /\.(zip|7z)$/i.test(filePath || '');
@@ -129,14 +139,14 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
     : JSON.stringify(project) === savedSnapshot;
   if (unchanged) return true;
   const choice = await showChoiceDialog({
-    title: 'Projet non sauvegardé',
-    message: 'Voulez-vous sauvegarder le projet avant de continuer ?',
+    title: 'Projet non enregistré',
+    message: "Votre travail n'est pas enregistré et sera définitivement perdu.",
     variant: 'warning',
     cancelValue: 'cancel',
     actions: [
       { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: 'Ne pas sauvegarder', kind: 'danger-outline' },
-      { value: 'save', label: 'Sauvegarder', kind: 'primary' },
+      { value: 'discard', label: 'Quitter sans enregistrer', kind: 'danger-outline' },
+      { value: 'save', label: 'Enregistrer comme projet', kind: 'primary' },
     ],
   });
   if (choice === 'save') {
@@ -161,6 +171,7 @@ function AppContent() {
   const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => loadKeyboardShortcuts());
   const [themePreference, setThemePreference] = useState(() => loadThemePreference());
   const [recentProjects, setRecentProjects] = useState(() => getRecentProjects());
+  const [sessionRecoveries, setSessionRecoveries] = useState([]);
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
@@ -174,7 +185,11 @@ function AppContent() {
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
+  const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
+  const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
+  const [sessionMode, setSessionMode] = useState(null); // null | 'ephemeral' | 'project'
+  const [sessionWorkspaceDir, setSessionWorkspaceDir] = useState('');
   const [importNotice, setImportNotice] = useState(null); // string | null
   const [activeDropZone, setActiveDropZone] = useState(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, false, BOOL_CODEC);
@@ -189,6 +204,9 @@ function AppContent() {
   const projectRef = useRef(store.project);
   const savePathRef = useRef(store.savePath);
   const workspaceDirRef = useRef(readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
+  const sessionModeRef = useRef(null);
+  const ephemeralSnapshotPathRef = useRef(null);
+  const ephemeralSavedSnapshotRef = useRef(null);
   const mediaTagsRef = useRef(store.mediaTags);
   const mediaLibraryCountRef = useRef(0);
   const saveHandlerRef = useRef(null);
@@ -196,6 +214,7 @@ function AppContent() {
   const isSavingRef = useRef(false);
   const persistProjectSnapshotRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
+  const generatedSaveNudgeJobIdsRef = useRef(new Set());
   const shortcutActionsRef = useRef({});
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
@@ -225,11 +244,52 @@ function AppContent() {
 
   useEffect(() => {
     let cancelled = false;
-    getWorkspaceDir().then((dir) => {
-      if (!cancelled) setWorkspaceDirState(dir);
+    ensureWorkspaceDir().then((dir) => {
+      if (cancelled) return;
+      setConfiguredWorkspaceDir(dir);
+      if (sessionModeRef.current !== 'ephemeral') {
+        setWorkspaceDirState(dir);
+      }
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRecoveries() {
+      try {
+        const recoveries = await invoke('list_session_recoveries');
+        if (!Array.isArray(recoveries) || recoveries.length === 0) {
+          if (!cancelled) setSessionRecoveries([]);
+          return;
+        }
+        const enriched = await Promise.all(recoveries.map(async (recovery) => {
+          try {
+            const result = await loadProjectFromPath(recovery.snapshotPath);
+            return {
+              ...recovery,
+              projectName: result.data?.projectName || 'Projet récupérable',
+              projectType: result.data?.projectType || 'pack',
+              thumbnailImage: result.data?.thumbnailImage || result.data?.rootImage || null,
+            };
+          } catch {
+            return {
+              ...recovery,
+              projectName: 'Projet récupérable',
+              projectType: 'pack',
+              thumbnailImage: null,
+            };
+          }
+        }));
+        if (!cancelled) setSessionRecoveries(enriched);
+      } catch {
+        if (!cancelled) setSessionRecoveries([]);
+      }
+    }
+    loadRecoveries();
+    return () => { cancelled = true; };
+  }, []);
+
   projectRef.current = store.project;
   savePathRef.current = store.savePath;
   mediaTagsRef.current = store.mediaTags;
@@ -237,6 +297,16 @@ function AppContent() {
   useEffect(() => {
     workspaceDirRef.current = workspaceDir;
   }, [workspaceDir]);
+
+  useEffect(() => {
+    sessionModeRef.current = sessionMode;
+    ephemeralSnapshotPathRef.current = sessionMode === 'ephemeral' && sessionWorkspaceDir
+      ? joinLocalPath(sessionWorkspaceDir, SESSION_RECOVERY_FILE)
+      : null;
+    if (sessionMode !== 'ephemeral') {
+      ephemeralSavedSnapshotRef.current = null;
+    }
+  }, [sessionMode, sessionWorkspaceDir]);
 
   useEffect(() => {
     keyboardShortcutsRef.current = keyboardShortcuts;
@@ -251,8 +321,15 @@ function AppContent() {
   }, [themePreference]);
 
   const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
-    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog)
-  ), [showChoiceDialog]);
+    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog).then((canLeave) => {
+      if (canLeave && sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir) {
+        invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
+          logger.warn('session:cleanup-error', error);
+        });
+      }
+      return canLeave;
+    })
+  ), [sessionWorkspaceDir, showChoiceDialog]);
 
   useWindowCloseGuard({
     askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
@@ -292,13 +369,16 @@ function AppContent() {
   } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
 
   useAutosave({
-    enabled: autoSaveEnabled,
+    enabled: autoSaveEnabled || sessionMode === 'ephemeral',
     backupLimit: autoSaveBackupLimit,
     projectRef,
     savedSnapshotRef,
     savePathRef,
     workspaceDirRef,
     autoSavePathRef,
+    ephemeralSnapshotPathRef,
+    ephemeralSavedSnapshotRef,
+    sessionModeRef,
     isSavingRef,
     mediaTagsRef,
     mediaLibraryPathsRef,
@@ -392,15 +472,95 @@ function AppContent() {
   }
 
   async function handleNewProject() {
-    const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSaveProject);
+    const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
     if (!canContinue) return;
+    if (sessionMode === 'ephemeral' && sessionWorkspaceDir) {
+      invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
+        logger.warn('session:cleanup-error', error);
+      });
+    }
     store.resetProject();
     setMediaLibraryPaths([]);
     savedSnapshotRef.current = null;
     autoSavePathRef.current = null;
+    ephemeralSavedSnapshotRef.current = null;
     setAutoSavedPath(null);
+    setSessionMode(null);
+    setSessionWorkspaceDir('');
+    setWorkspaceDirState(configuredWorkspaceDir);
     sdStore.clearDone();
     xttsStore.clearDone();
+  }
+
+  async function handleSelectProjectType(type) {
+    try {
+      if (useWorkspaceForNewProjects) {
+        const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
+        if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
+        setSessionMode('project');
+        setSessionWorkspaceDir('');
+        setWorkspaceDirState(realWorkspace);
+        workspaceDirRef.current = realWorkspace;
+      } else {
+        const sessionDir = await invoke('create_session_workspace');
+        setSessionMode('ephemeral');
+        setSessionWorkspaceDir(sessionDir);
+        setWorkspaceDirState(sessionDir);
+        workspaceDirRef.current = sessionDir;
+      }
+      autoSavePathRef.current = null;
+      ephemeralSavedSnapshotRef.current = null;
+      setAutoSavedPath(null);
+      store.setSavePath(null);
+      store.setProjectType(type);
+      logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
+    } catch (error) {
+      logger.error('session:start-error', error);
+      showErrorDialog({
+        title: 'Nouveau projet',
+        message: `Impossible de préparer le dossier de travail : ${error}`,
+      });
+    }
+  }
+
+  async function handleRecoverSession(recovery) {
+    if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
+    try {
+      const result = await loadProjectFromPath(recovery.snapshotPath);
+      store.loadProject(result.data);
+      store.setMediaTags(result.mediaTags ?? {});
+      store.setSavePath(null);
+      setMediaLibraryPaths(result.mediaLibraryPaths ?? []);
+      savedSnapshotRef.current = null;
+      autoSavePathRef.current = null;
+      setAutoSavedPath(null);
+      sessionModeRef.current = 'ephemeral';
+      setSessionMode('ephemeral');
+      setSessionWorkspaceDir(recovery.sessionDir);
+      setWorkspaceDirState(recovery.sessionDir);
+      workspaceDirRef.current = recovery.sessionDir;
+      ephemeralSavedSnapshotRef.current = JSON.stringify(result.data);
+      sdStore.clearDone();
+      xttsStore.clearDone();
+      setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
+      logger.info(`session:recovered path='${recovery.snapshotPath}'`);
+    } catch (error) {
+      logger.error('session:recover-error', error);
+      showErrorDialog({
+        title: 'Reprise impossible',
+        message: `Impossible de reprendre cette session : ${error}`,
+      });
+    }
+  }
+
+  async function handleIgnoreSessionRecovery(recovery) {
+    if (!recovery?.sessionDir) return;
+    try {
+      await invoke('cleanup_session_workspace', { path: recovery.sessionDir });
+    } catch (error) {
+      logger.warn('session:ignore-cleanup-error', error);
+    }
+    setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
   }
 
   async function resolveDefaultExportDir() {
@@ -488,13 +648,9 @@ function AppContent() {
       setPackMetadataOpen(false);
       return;
     }
-    const result = await handleSaveProject({
-      projectOverride: projectForAction,
-      returnResult: true,
-    });
-    if (!result?.project) return;
+    store.setProject(projectForAction);
     setPackMetadataOpen(false);
-    if (generate) await handleGenerate(result.project);
+    if (generate) await handleGenerate(projectForAction);
   }
 
   const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
@@ -589,7 +745,10 @@ function AppContent() {
     const chosen = await pickWorkspaceDir();
     if (chosen) {
       logger.info(`workspace:switched path='${chosen}'`);
-      setWorkspaceDirState(chosen);
+      setConfiguredWorkspaceDir(chosen);
+      if (sessionMode !== 'ephemeral') {
+        setWorkspaceDirState(chosen);
+      }
     }
   }
 
@@ -690,10 +849,25 @@ function AppContent() {
     autoSaveEnabled,
     autoSaveBackupLimit,
     savedSnapshotRef,
+    sessionModeRef,
     isSavingRef,
     setSaveToast,
     setRecentProjects,
     maybeOfferTransferIntoProject,
+    onProjectSaved: async (_result, options = {}) => {
+      if (sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir && options.cleanupSession !== false) {
+        invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
+          logger.warn('session:cleanup-error', error);
+        });
+      }
+      sessionModeRef.current = 'project';
+      setSessionMode('project');
+      setSessionWorkspaceDir('');
+      if (options.workspaceDir) {
+        setConfiguredWorkspaceDir(options.workspaceDir);
+        setWorkspaceDirState(options.workspaceDir);
+      }
+    },
   });
   useSyncedRef(persistProjectSnapshotRef, persistProjectSnapshot);
 
@@ -706,11 +880,56 @@ function AppContent() {
     savedSnapshotRef,
     autoSavePathRef,
     setAutoSavedPath,
-    handleSaveProject,
+    handleSave,
     showErrorDialog,
     isProjectDirty,
     showChoiceDialog,
+    onProjectLoaded: async () => {
+      const realWorkspace = configuredWorkspaceDir || await getWorkspaceDir();
+      setSessionMode('project');
+      setSessionWorkspaceDir('');
+      setWorkspaceDirState(realWorkspace);
+    },
+    onBeforeProjectReplaced: async () => {
+      if (sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir) {
+        await invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
+          logger.warn('session:cleanup-error', error);
+        });
+      }
+    },
   });
+
+  useEffect(() => {
+    const job = renderQueue.jobs.find((candidate) => (
+      candidate.status === 'done'
+      && !candidate.savePath
+      && !generatedSaveNudgeJobIdsRef.current.has(candidate.id)
+    ));
+    if (!job || store.savePath || sessionModeRef.current !== 'ephemeral') return;
+    generatedSaveNudgeJobIdsRef.current.add(job.id);
+
+    let cancelled = false;
+    (async () => {
+      const choice = await showChoiceDialog({
+        title: 'Enregistrer comme projet ?',
+        message: 'Le pack a été généré. Voulez-vous aussi enregistrer le projet source pour le reprendre plus tard ?',
+        variant: 'info',
+        cancelValue: 'cancel',
+        actions: [
+          { value: 'cancel', label: 'Annuler', autoFocus: true },
+          { value: 'discard', label: 'Ne pas enregistrer', kind: 'ghost' },
+          { value: 'save', label: 'Enregistrer comme projet', kind: 'primary' },
+        ],
+      });
+      if (!cancelled && choice === 'save') {
+        await handleSaveProjectAs();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleSaveProjectAs, renderQueue.jobs, showChoiceDialog, store.savePath]);
 
   const handleApplyMissingMediaRelinks = useCallback(async (replacements, { saveAfter = false } = {}) => {
     const nextProject = relinkProjectMedia(store.project, replacements);
@@ -774,7 +993,7 @@ function AppContent() {
     getImportDisplayName,
   });
 
-  useSyncedRef(saveHandlerRef, handleSaveProject);
+  useSyncedRef(saveHandlerRef, handleSave);
   useSyncedRef(saveAsHandlerRef, handleSaveProjectAs);
 
   async function handleUpdateGlobalOption(key, value) {
@@ -917,7 +1136,10 @@ function AppContent() {
     copyFilesEnabled: copyImportedFilesEnabled,
     onCopyFilesChange: handleCopyImportedFilesChange,
     workspaceDir,
+    configuredWorkspaceDir,
     onPickWorkspaceDir: handlePickWorkspaceDir,
+    useWorkspaceForNewProjects,
+    onUseWorkspaceForNewProjectsChange: setUseWorkspaceForNewProjects,
     onConsolidateProject: handleConsolidateProject,
     autoSaveEnabled,
     onAutoSaveChange: setAutoSaveEnabled,
@@ -979,7 +1201,7 @@ function AppContent() {
             : null}
         packCoverImage={projectType !== null ? (store.project.thumbnailImage || store.project.rootImage) : null}
         isDirty={projectDirty}
-        hasSavePath={!!(store.savePath || autoSavedPath)}
+        hasSavePath={!!store.savePath}
         saveState={saveToast}
         showProjectMeta={projectType !== null}
         onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
@@ -1040,11 +1262,14 @@ function AppContent() {
               onUpdateRoot={handleUpdateRoot}
               onUpdateMedia={store.updateRootMedia}
               onUpdateStoryAudio={store.updateStoryAudio}
-              onSetProjectType={store.setProjectType}
+              onSetProjectType={handleSelectProjectType}
               onOpenProject={handleLoad}
               onOpenPreferences={() => setPrefsModalOpen(true)}
               recentProjects={recentProjects}
               onOpenRecentProject={handleLoadRecent}
+              sessionRecoveries={sessionRecoveries}
+              onRecoverSession={handleRecoverSession}
+              onIgnoreSessionRecovery={handleIgnoreSessionRecovery}
               savePath={store.savePath}
               onUpdateMenu={handleUpdateMenu}
               onDeleteMenu={handleDeleteMenu}

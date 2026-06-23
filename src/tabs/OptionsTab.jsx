@@ -56,7 +56,10 @@ export function OptionsTab({
   copyFilesEnabled,
   onCopyFilesChange,
   workspaceDir,
+  configuredWorkspaceDir = '',
   onPickWorkspaceDir,
+  useWorkspaceForNewProjects = false,
+  onUseWorkspaceForNewProjectsChange = null,
   onConsolidateProject,
   autoSaveEnabled,
   onAutoSaveChange,
@@ -104,6 +107,7 @@ export function OptionsTab({
   const highlightTimerRef = useRef(null);
   const highlightFrameRef = useRef(null);
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
+  const displayedWorkspaceDir = configuredWorkspaceDir || workspaceDir || '';
 
   useEffect(() => {
     let cancelled = false;
@@ -415,12 +419,21 @@ export function OptionsTab({
           <div className="opts-card-title">Gestion des projets et médias</div>
           <div className="opts-row">
             <div className="opts-row-info">
+              <div className="opts-row-label">Utiliser un workspace pour les nouveaux projets</div>
+              <div className="opts-row-sub">
+                Désactivé par défaut : les nouveaux projets commencent dans une session temporaire, sans emplacement imposé.
+              </div>
+            </div>
+            <Toggle on={!!useWorkspaceForNewProjects} onChange={onUseWorkspaceForNewProjectsChange} />
+          </div>
+          <div className="opts-row">
+            <div className="opts-row-info">
               <div className="opts-row-label">Emplacement de travail</div>
               <div className="opts-row-sub">
-                Les médias importés, enregistrés ou générés sont regroupés ici par défaut.
+                Emplacement de référence pour les projets enregistrés et les médias gérés.
               </div>
-              <div className="opts-path-value" title={workspaceDir || ''}>
-                {workspaceDir || 'Initialisation...'}
+              <div className="opts-path-value" title={displayedWorkspaceDir || ''}>
+                {displayedWorkspaceDir || 'Workspace en cours de résolution...'}
               </div>
             </div>
             <Button onClick={onPickWorkspaceDir}>

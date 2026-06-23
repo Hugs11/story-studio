@@ -39,6 +39,7 @@ export function EditorTab({
   onReorder, onMoveToMenu, onAddMenu, onAddStory,
   onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
+  sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
   onAddStoryToMenu, onImportFolder, onUnpackZip,
@@ -128,6 +129,9 @@ export function EditorTab({
             onOpenPreferences={onOpenPreferences}
             recentProjects={recentProjects}
             onOpenRecent={onOpenRecentProject}
+            sessionRecoveries={sessionRecoveries}
+            onRecoverSession={onRecoverSession}
+            onIgnoreSessionRecovery={onIgnoreSessionRecovery}
           />
         </div>
       </div>
