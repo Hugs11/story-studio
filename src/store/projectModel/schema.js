@@ -81,18 +81,6 @@ function normalizeControlSettings(entry, defaults) {
   };
 }
 
-function normalizeAudioProcessing(value, fields) {
-  if (!value || typeof value !== 'object') return {};
-  const result = {};
-  for (const field of ['__allAudio', ...fields]) {
-    const processing = value[field];
-    if (processing?.skipSilence === true) {
-      result[field] = { skipSilence: true };
-    }
-  }
-  return result;
-}
-
 function normalizeImportWarnings(value) {
   if (!Array.isArray(value)) return [];
   return value
@@ -269,7 +257,6 @@ export function normalizeStoryEntry(entry = {}) {
           { autoplay: false, wheel: true, pause: false, ok: true, home: true },
         )
       : null,
-    audioProcessing: normalizeAudioProcessing(entry.audioProcessing, ['audio', 'itemAudio', 'afterPlaybackPromptAudio']),
   };
 }
 
@@ -313,7 +300,6 @@ export function normalizeMenuEntry(entry = {}) {
     returnOnHome: normalizeNavigationTarget(entry.returnOnHome),
     nativeGraph: entry.nativeGraph ?? null,
     importedContinuation,
-    audioProcessing: normalizeAudioProcessing(entry.audioProcessing, ['audio']),
     children: children.map(normalizeEntry),
   };
 }
@@ -586,7 +572,6 @@ export function normalizeBaseProject(project = {}) {
     nightModeReturn: project.nightModeReturn ?? null,
     nightModeHomeReturn: project.nightModeHomeReturn ?? null,
     nativeGraph,
-    audioProcessing: normalizeAudioProcessing(project.audioProcessing, ['rootAudio', 'nightModeAudio']),
     globalOptions: normalizeOptions(project.globalOptions),
     importWarnings: nativeGraph ? [] : importWarnings,
     rootEntries,

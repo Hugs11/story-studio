@@ -73,16 +73,6 @@ function clearNativeGraphMedia(graph, path) {
   };
 }
 
-function clearAudioProcessingField(entry, field) {
-  if (!entry.audioProcessing?.[field]) return entry;
-  const audioProcessing = { ...entry.audioProcessing };
-  delete audioProcessing[field];
-  return {
-    ...entry,
-    audioProcessing: Object.keys(audioProcessing).length > 0 ? audioProcessing : {},
-  };
-}
-
 function clearEntryMediaReferences(entry, path) {
   if (!entry || typeof entry !== 'object') return entry;
   let next = { ...entry };
@@ -90,9 +80,6 @@ function clearEntryMediaReferences(entry, path) {
   function clearField(field) {
     if (!isSameMediaPath(next[field], path)) return;
     next = { ...next, [field]: null };
-    if (field === 'audio' || field === 'itemAudio' || field === 'afterPlaybackPromptAudio') {
-      next = clearAudioProcessingField(next, field);
-    }
   }
 
   if (next.type === 'menu') {
@@ -238,18 +225,9 @@ export function cutPasteEntries(project, sourceIds, targetMenuId) {
 }
 
 export function updateEntry(project, entryId, fields) {
-  const audioFields = ['audio', 'itemAudio', 'afterPlaybackPromptAudio'];
   let nativeStageId = null;
   const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) => {
       const next = { ...entry, ...fields };
-      if (!Object.prototype.hasOwnProperty.call(fields, 'audioProcessing')) {
-        for (const field of audioFields) {
-          if (Object.prototype.hasOwnProperty.call(fields, field) && next.audioProcessing?.[field]) {
-            next.audioProcessing = { ...next.audioProcessing };
-            delete next.audioProcessing[field];
-          }
-        }
-      }
       const normalized = normalizeEntry(next);
       nativeStageId = normalized.nativeStageId ?? null;
       return normalized;
@@ -270,10 +248,6 @@ export function clearMediaReferences(project, path) {
   for (const field of ['rootAudio', 'rootImage', 'thumbnailImage', 'nightModeAudio']) {
     if (isSameMediaPath(next[field], path)) {
       next[field] = null;
-      if ((field === 'rootAudio' || field === 'nightModeAudio') && next.audioProcessing?.[field]) {
-        next.audioProcessing = { ...next.audioProcessing };
-        delete next.audioProcessing[field];
-      }
     }
   }
   next.nativeGraph = clearNativeGraphMedia(next.nativeGraph, path);

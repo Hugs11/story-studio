@@ -556,14 +556,11 @@ function AppContent() {
   async function handleLandEditablePack({ zipPath, packLabel }) {
     const workspaceDir = await prepareNewWorkSession('pack');
     try {
-      // Audio d'un pack extrait : silences de bord déjà présents → on exclut de
-      // l'ajout global (défaut sensé, sans prompt, pour rester « un clic »).
       const transformed = await unpackZipIntoBlankProject({
         zipPath,
         zipName: packLabel,
         workspaceDir,
         baseProject: store.project,
-        skipSilence: true,
       });
       if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
       // D34 : suggérer une version incrémentée (_V2 si aucune) et forcer la modal

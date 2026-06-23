@@ -182,17 +182,10 @@ fn builds_audio_filters_with_shared_normalizer() {
         night_mode: false,
     };
 
+    assert_eq!(audio_filters(&no_silence), "aformat=channel_layouts=mono");
     assert_eq!(
-        audio_filters(&no_silence, false),
-        "aformat=channel_layouts=mono"
-    );
-    assert_eq!(
-        audio_filters(&with_silence, false),
+        audio_filters(&with_silence),
         "aformat=channel_layouts=mono,adelay=500,apad=pad_dur=0.5"
-    );
-    assert_eq!(
-        audio_filters(&with_silence, true),
-        "aformat=channel_layouts=mono"
     );
 }
 
@@ -208,7 +201,6 @@ fn builds_audio_filters_with_gain_limiter_before_silence() {
     assert_eq!(
         audio_filters_with_action(
             &with_silence,
-            false,
             0.5,
             &crate::support::audio_norm::LoudnessAction::GainLimit {
                 gain_db: 4.0,
@@ -229,7 +221,7 @@ fn builds_audio_filters_with_configured_silence_duration() {
     };
 
     assert_eq!(
-        audio_filters_with_duration(&with_silence, false, 1.0),
+        audio_filters_with_duration(&with_silence, 1.0),
         "aformat=channel_layouts=mono,adelay=1000,apad=pad_dur=1"
     );
 }

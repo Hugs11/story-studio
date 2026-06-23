@@ -1,9 +1,8 @@
 use serde::Serialize;
-use std::collections::HashMap;
 
 use crate::domain::project::{
-    AfterPlaybackSequenceStep, AudioFieldProcessing, EntryControlSettings, GlobalOptions, Project,
-    ProjectEntry, SilenceMode,
+    AfterPlaybackSequenceStep, EntryControlSettings, GlobalOptions, Project, ProjectEntry,
+    SilenceMode,
 };
 use crate::domain::validation::project_root_entries;
 
@@ -55,7 +54,6 @@ pub(crate) struct CanonicalMenu {
     pub(crate) pause: bool,
     pub(crate) return_after_play: Option<String>,
     pub(crate) return_on_home: Option<String>,
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     pub(crate) children: Vec<CanonicalEntry>,
 }
 
@@ -74,7 +72,6 @@ impl Default for CanonicalMenu {
             pause: false,
             return_after_play: None,
             return_on_home: None,
-            audio_processing: HashMap::new(),
             children: Vec::new(),
         }
     }
@@ -105,7 +102,6 @@ pub(crate) struct CanonicalStory {
     pub(crate) title_return_on_home: Option<String>,
     pub(crate) title_return_on_home_none: bool,
     pub(crate) title_control_settings: Option<EntryControlSettings>,
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -148,7 +144,6 @@ impl Default for CanonicalStory {
             title_return_on_home: None,
             title_return_on_home_none: false,
             title_control_settings: None,
-            audio_processing: HashMap::new(),
         }
     }
 }
@@ -320,7 +315,6 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
                 .unwrap_or(false),
             return_after_play: entry.return_after_play.clone(),
             return_on_home: entry.return_on_home.clone(),
-            audio_processing: entry.audio_processing.clone(),
             children: entry
                 .children
                 .iter()
@@ -385,7 +379,6 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
             title_return_on_home: entry.title_return_on_home.clone(),
             title_return_on_home_none: entry.title_return_on_home_none,
             title_control_settings: entry.title_control_settings.clone(),
-            audio_processing: entry.audio_processing.clone(),
         }),
     }
 }

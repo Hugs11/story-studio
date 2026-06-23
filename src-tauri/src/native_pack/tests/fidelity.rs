@@ -3,18 +3,6 @@ use super::*;
 // Optional external-pack fidelity harness. It is driven only by LUNII_FIDELITY_* env vars.
 // ── Fidelity tests (structure navigation) ─────────────────────────────────
 
-fn apply_skip_silence_entry(entry: &mut ProjectEntry) {
-    for key in &["audio", "itemAudio", "afterPlaybackPromptAudio"] {
-        entry.audio_processing.insert(
-            (*key).to_string(),
-            AudioFieldProcessing { skip_silence: true },
-        );
-    }
-    for child in &mut entry.children {
-        apply_skip_silence_entry(child);
-    }
-}
-
 fn rewrite_fidelity_nav(target: Option<String>, promoted_id: &str) -> Option<String> {
     let t = target?;
     if t.is_empty() {
@@ -59,22 +47,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
     let mut entries: Vec<ProjectEntry> =
         serde_json::from_value(extracted["entries"].clone()).expect("parse extracted entries");
     for entry in &mut entries {
-        apply_skip_silence_entry(entry);
         rewrite_fidelity_entry(entry, &wrapper_id);
-    }
-
-    let mut ap: HashMap<String, AudioFieldProcessing> = HashMap::new();
-    if root_audio.is_some() {
-        ap.insert(
-            "rootAudio".to_string(),
-            AudioFieldProcessing { skip_silence: true },
-        );
-    }
-    if night_mode_audio.is_some() {
-        ap.insert(
-            "nightModeAudio".to_string(),
-            AudioFieldProcessing { skip_silence: true },
-        );
     }
 
     Project {
@@ -94,7 +67,6 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
             .get("nativeGraph")
             .filter(|value| !value.is_null())
             .cloned(),
-        audio_processing: ap,
         root_entries: entries,
         global_options: GlobalOptions {
             add_silence: false,
@@ -109,11 +81,8 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
     }
 }
 
-fn fidelity_fake_assets(
-    canonical: &CanonicalProject,
-    ap: &HashMap<String, AudioFieldProcessing>,
-) -> Vec<PreparedAsset> {
-    collect_asset_requests(canonical, ap, 1.0)
+fn fidelity_fake_assets(canonical: &CanonicalProject) -> Vec<PreparedAsset> {
+    collect_asset_requests(canonical, 1.0)
         .into_iter()
         .enumerate()
         .map(|(i, req)| {
@@ -423,7 +392,7 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
         );
     }
     let canonical = canonicalize_project(&project);
-    let assets = fidelity_fake_assets(&canonical, &project.audio_processing);
+    let assets = fidelity_fake_assets(&canonical);
     let report = report_for(canonical, assets, vec![]);
 
     let gen = build_story_document(&report)
@@ -537,7 +506,7 @@ fn assert_fidelity_structural(zip_path: Option<String>, pack_id: &str) {
     };
     let project = fidelity_project(&extracted, &pack_title);
     let canonical = canonicalize_project(&project);
-    let assets = fidelity_fake_assets(&canonical, &project.audio_processing);
+    let assets = fidelity_fake_assets(&canonical);
     let report = report_for(canonical, assets, vec![]);
 
     let gen = build_story_document(&report)

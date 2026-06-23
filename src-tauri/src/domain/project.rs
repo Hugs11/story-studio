@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -58,12 +57,6 @@ pub(crate) struct EntryControlSettings {
     pub(crate) pause: Option<bool>,
     pub(crate) ok: Option<bool>,
     pub(crate) home: Option<bool>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub(crate) struct AudioFieldProcessing {
-    #[serde(rename = "skipSilence", default)]
-    pub(crate) skip_silence: bool,
 }
 
 #[derive(Deserialize, Clone, Default)]
@@ -134,8 +127,6 @@ pub(crate) struct ProjectEntry {
     pub(crate) after_playback_sequence: Vec<AfterPlaybackSequenceStep>,
     #[serde(rename = "afterPlaybackHomeStep", default)]
     pub(crate) after_playback_home_step: Option<AfterPlaybackSequenceStep>,
-    #[serde(rename = "audioProcessing", default)]
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     #[serde(default)]
     pub(crate) children: Vec<ProjectEntry>,
 }
@@ -158,8 +149,6 @@ pub(crate) struct Project {
     pub(crate) night_mode_return: Option<String>,
     #[serde(rename = "nightModeHomeReturn")]
     pub(crate) night_mode_home_return: Option<String>,
-    #[serde(rename = "audioProcessing", default)]
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     #[serde(rename = "nativeGraph", default)]
     pub(crate) native_graph: Option<serde_json::Value>,
     #[serde(rename = "packVersion", default = "default_pack_version")]

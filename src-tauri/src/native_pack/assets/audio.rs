@@ -83,18 +83,10 @@ pub(crate) fn prepare_audio_asset(
     processed_audio_dir: &Path,
     options: &CanonicalOptions,
     silence_duration_sec: f64,
-    skip_silence: bool,
     role: &str,
 ) -> Result<AudioPreparation, String> {
     let source = validate_existing_file_path(source_path, role)?;
-    let edge_plan = edge_plan_for_generation(
-        ffmpeg,
-        &source,
-        options,
-        silence_duration_sec,
-        skip_silence,
-        role,
-    )?;
+    let edge_plan = edge_plan_for_generation(ffmpeg, &source, options, silence_duration_sec, role)?;
     let mut measure_filters = edge_plan.measure_pre_filters.clone();
     measure_filters.push("aformat=channel_layouts=mono".to_string());
 
@@ -106,13 +98,7 @@ pub(crate) fn prepare_audio_asset(
         role,
     )?;
 
-    if audio_can_copy_verbatim(
-        &source,
-        &action,
-        edge_plan.measured_edges,
-        options,
-        skip_silence,
-    )? {
+    if audio_can_copy_verbatim(&source, &action, edge_plan.measured_edges, options)? {
         return Ok(AudioPreparation::Verbatim { source });
     }
 
@@ -122,7 +108,6 @@ pub(crate) fn prepare_audio_asset(
         processed_audio_dir,
         options,
         silence_duration_sec,
-        skip_silence,
         &action,
         edge_plan.output_filters.as_ref(),
         role,
@@ -138,12 +123,11 @@ fn audio_can_copy_verbatim(
     action: &LoudnessAction,
     measured_edges: Option<(f64, f64)>,
     options: &CanonicalOptions,
-    skip_silence: bool,
 ) -> Result<bool, String> {
     if !matches!(action, LoudnessAction::None) {
         return Ok(false);
     }
-    if !silence_is_already_conform(measured_edges, options.silence_mode, skip_silence) {
+    if !silence_is_already_conform(measured_edges, options.silence_mode) {
         return Ok(false);
     }
     let bytes = read_leading_bytes(source, MP3_HEADER_SCAN_BYTES)
@@ -161,17 +145,13 @@ fn read_leading_bytes(path: &Path, max: u64) -> std::io::Result<Vec<u8>> {
 }
 
 /// Silences conformes au mode demandé, sans aucune opération de silence requise :
-/// - `skip_silence` ou `Off` → rien à poser, conforme ;
+/// - `Off` → rien à poser, conforme ;
 /// - `Add` → on ajoute toujours du silence, donc jamais verbatim ;
 /// - `Normalize` → conforme uniquement si les bords mesurés sont déjà ≈ 0.5 s.
 fn silence_is_already_conform(
     measured_edges: Option<(f64, f64)>,
     silence_mode: SilenceMode,
-    skip_silence: bool,
 ) -> bool {
-    if skip_silence {
-        return true;
-    }
     match silence_mode {
         SilenceMode::Off => true,
         SilenceMode::Add => false,
@@ -194,20 +174,13 @@ fn encode_audio_asset(
     processed_audio_dir: &Path,
     options: &CanonicalOptions,
     silence_duration_sec: f64,
-    skip_silence: bool,
     action: &LoudnessAction,
     output_filters: Option<&EdgeSilenceFilters>,
     role: &str,
 ) -> Result<PathBuf, String> {
     let output_name = processed_audio_output_name(role);
     let output = processed_audio_dir.join(output_name);
-    let filters = audio_filter_chain(
-        options,
-        skip_silence,
-        silence_duration_sec,
-        action,
-        output_filters,
-    );
+    let filters = audio_filter_chain(options, silence_duration_sec, action, output_filters);
 
     let mut cmd = Command::new(ffmpeg);
     cmd.args([
@@ -254,45 +227,37 @@ fn encode_audio_asset(
 }
 
 #[cfg(test)]
-pub(crate) fn audio_filters(options: &CanonicalOptions, skip_silence: bool) -> String {
-    audio_filters_with_duration(options, skip_silence, EDGE_SILENCE_SEC)
+pub(crate) fn audio_filters(options: &CanonicalOptions) -> String {
+    audio_filters_with_duration(options, EDGE_SILENCE_SEC)
 }
 
 #[cfg(test)]
 pub(crate) fn audio_filters_with_duration(
     options: &CanonicalOptions,
-    skip_silence: bool,
     silence_duration_sec: f64,
 ) -> String {
-    audio_filters_with_action(
-        options,
-        skip_silence,
-        silence_duration_sec,
-        &LoudnessAction::None,
-    )
+    audio_filters_with_action(options, silence_duration_sec, &LoudnessAction::None)
 }
 
 #[cfg(test)]
 pub(crate) fn audio_filters_with_action(
     options: &CanonicalOptions,
-    skip_silence: bool,
     silence_duration_sec: f64,
     action: &LoudnessAction,
 ) -> String {
-    audio_filter_chain(options, skip_silence, silence_duration_sec, action, None)
+    audio_filter_chain(options, silence_duration_sec, action, None)
 }
 
 /// Construit la chaîne de filtres audio natifs : mono, correction de niveau
-/// planifiée par `audio_norm`, puis silence final si l'option le demande.
+/// planifiée par `audio_norm`, puis silence final selon le mode demandé.
 fn audio_filter_chain(
     options: &CanonicalOptions,
-    skip_silence: bool,
     silence_duration_sec: f64,
     action: &LoudnessAction,
     edge_filters: Option<&EdgeSilenceFilters>,
 ) -> String {
     let mut filters = Vec::new();
-    if matches!(options.silence_mode, SilenceMode::Normalize) && !skip_silence {
+    if matches!(options.silence_mode, SilenceMode::Normalize) {
         if let Some(edge_filters) = edge_filters {
             filters.extend(edge_filters.pre_filters.clone());
         }
@@ -301,7 +266,7 @@ fn audio_filter_chain(
     filters.extend(build_loudness_filters(action));
     match options.silence_mode {
         SilenceMode::Off => {}
-        SilenceMode::Add if !skip_silence => {
+        SilenceMode::Add => {
             let silence_duration_sec = normalized_silence_duration_sec(silence_duration_sec);
             filters.push(format!(
                 "adelay={}",
@@ -312,7 +277,7 @@ fn audio_filter_chain(
                 format_ffmpeg_seconds(silence_duration_sec)
             ));
         }
-        SilenceMode::Normalize if !skip_silence => {
+        SilenceMode::Normalize => {
             if let Some(edge_filters) = edge_filters {
                 filters.extend(edge_filters.post_filters.clone());
             } else {
@@ -321,7 +286,6 @@ fn audio_filter_chain(
                 );
             }
         }
-        _ => {}
     }
     filters.join(",")
 }
@@ -331,7 +295,6 @@ fn edge_plan_for_generation(
     source: &Path,
     options: &CanonicalOptions,
     silence_duration_sec: f64,
-    skip_silence: bool,
     role: &str,
 ) -> Result<GenerationEdgePlan, String> {
     let measured_edges = match measure_edge_silence(ffmpeg, source)
@@ -353,8 +316,7 @@ fn edge_plan_for_generation(
         })
         .unwrap_or_default();
 
-    let output_filters = if matches!(options.silence_mode, SilenceMode::Normalize) && !skip_silence
-    {
+    let output_filters = if matches!(options.silence_mode, SilenceMode::Normalize) {
         let (leading, trailing) = measured_edges.unwrap_or((0.0, 0.0));
         Some(build_edge_silence_filters(
             leading,
@@ -455,53 +417,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verbatim_silence_conform_when_no_silence_work_needed() {
-        // skip_silence : aucune opération de silence, quel que soit le mode.
-        assert!(silence_is_already_conform(
-            Some((1.0, 1.0)),
-            SilenceMode::Normalize,
-            true,
-        ));
-        // Off : on ne touche pas aux silences -> conforme.
-        assert!(silence_is_already_conform(None, SilenceMode::Off, false));
+    fn verbatim_silence_conform_in_off_mode() {
+        // Off : on ne touche pas aux silences -> conforme, quels que soient les bords.
+        assert!(silence_is_already_conform(None, SilenceMode::Off));
+        assert!(silence_is_already_conform(Some((1.0, 1.0)), SilenceMode::Off));
     }
 
     #[test]
     fn verbatim_silence_never_conform_in_add_mode() {
         // Add ajoute toujours du silence -> jamais de copie verbatim.
-        assert!(!silence_is_already_conform(
-            Some((0.5, 0.5)),
-            SilenceMode::Add,
-            false,
-        ));
+        assert!(!silence_is_already_conform(Some((0.5, 0.5)), SilenceMode::Add));
     }
 
     #[test]
     fn verbatim_silence_conform_in_normalize_only_when_edges_are_half_second() {
         // Bords déjà ≈ 0.5 s (dans la tolérance) -> conforme.
-        assert!(silence_is_already_conform(
-            Some((0.5, 0.48)),
-            SilenceMode::Normalize,
-            false,
-        ));
+        assert!(silence_is_already_conform(Some((0.5, 0.48)), SilenceMode::Normalize));
         // Bords trop longs -> traitement requis.
-        assert!(!silence_is_already_conform(
-            Some((1.0, 0.5)),
-            SilenceMode::Normalize,
-            false,
-        ));
+        assert!(!silence_is_already_conform(Some((1.0, 0.5)), SilenceMode::Normalize));
         // Bords absents (pas de silence du tout) -> traitement requis.
-        assert!(!silence_is_already_conform(
-            Some((0.0, 0.0)),
-            SilenceMode::Normalize,
-            false,
-        ));
+        assert!(!silence_is_already_conform(Some((0.0, 0.0)), SilenceMode::Normalize));
         // Mesure illisible -> on traite par sécurité.
-        assert!(!silence_is_already_conform(
-            None,
-            SilenceMode::Normalize,
-            false,
-        ));
+        assert!(!silence_is_already_conform(None, SilenceMode::Normalize));
     }
 
     fn options_with_silence(mode: SilenceMode) -> CanonicalOptions {
@@ -530,8 +467,7 @@ mod tests {
     fn filter_chain_applies_volume_only_for_a_gain_action() {
         let options = options_with_silence(SilenceMode::Off);
         // Volume conforme / harmonisation off -> action None -> pas de filtre volume.
-        let none =
-            audio_filters_with_action(&options, false, EDGE_SILENCE_SEC, &LoudnessAction::None);
+        let none = audio_filters_with_action(&options, EDGE_SILENCE_SEC, &LoudnessAction::None);
         assert!(
             !none.contains("volume="),
             "pas de filtre volume attendu : {none}"
@@ -539,7 +475,6 @@ mod tests {
         // Volume à corriger -> filtre volume présent.
         let gain = audio_filters_with_action(
             &options,
-            false,
             EDGE_SILENCE_SEC,
             &LoudnessAction::Gain { gain_db: 4.0 },
         );
@@ -559,11 +494,9 @@ mod tests {
         };
         for mode in [SilenceMode::Off, SilenceMode::Add, SilenceMode::Normalize] {
             let options = options_with_silence(mode);
-            let none =
-                audio_filters_with_action(&options, false, EDGE_SILENCE_SEC, &LoudnessAction::None);
+            let none = audio_filters_with_action(&options, EDGE_SILENCE_SEC, &LoudnessAction::None);
             let gain = audio_filters_with_action(
                 &options,
-                false,
                 EDGE_SILENCE_SEC,
                 &LoudnessAction::Gain { gain_db: 3.0 },
             );
@@ -576,7 +509,6 @@ mod tests {
         let none = &LoudnessAction::None;
         let off = audio_filters_with_action(
             &options_with_silence(SilenceMode::Off),
-            false,
             EDGE_SILENCE_SEC,
             none,
         );
@@ -587,7 +519,6 @@ mod tests {
 
         let add = audio_filters_with_action(
             &options_with_silence(SilenceMode::Add),
-            false,
             EDGE_SILENCE_SEC,
             none,
         );
@@ -598,7 +529,6 @@ mod tests {
 
         let normalize = audio_filters_with_action(
             &options_with_silence(SilenceMode::Normalize),
-            false,
             EDGE_SILENCE_SEC,
             none,
         );
@@ -642,7 +572,6 @@ mod tests {
                 &processed,
                 &options,
                 EDGE_SILENCE_SEC,
-                false,
                 &role,
             )
             .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));

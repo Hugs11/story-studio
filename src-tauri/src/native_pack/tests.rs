@@ -1,7 +1,5 @@
 use super::*;
-use crate::domain::project::{
-    AudioFieldProcessing, EntryControlSettings, GlobalOptions, Project, ProjectEntry,
-};
+use crate::domain::project::{EntryControlSettings, GlobalOptions, Project, ProjectEntry};
 use crate::support::ffmpeg::now_millis;
 use std::collections::HashMap;
 use std::fs;
