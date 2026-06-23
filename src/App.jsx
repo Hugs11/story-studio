@@ -57,6 +57,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
+import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
@@ -185,6 +186,7 @@ function AppContent() {
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
+  const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
@@ -1071,6 +1073,50 @@ function AppContent() {
     isImportedPackPath,
   });
 
+  async function handlePodcastFunnelImport(episodes, feed) {
+    const workspaceDir = await prepareNewWorkSession('pack');
+    try {
+      const feedTitle = String(feed?.title || '').trim();
+      let feedCover = null;
+      if (feed?.imageUrl) {
+        try {
+          const tmpImage = await invoke('download_podcast_media', {
+            url: feed.imageUrl,
+            fileName: `${feedTitle || 'podcast'}-couverture`,
+          });
+          feedCover = await copyGeneratedMediaToProject(tmpImage);
+        } catch (coverError) {
+          logger.warn(`podcast-funnel:cover-error title='${feedTitle || 'Podcast'}' error=${coverError}`);
+        }
+      }
+      if (feedTitle || feedCover) {
+        store.setProject((project) => ({
+          ...project,
+          ...(feedTitle ? { projectName: feedTitle, rootName: feedTitle } : {}),
+          ...(feedCover ? { rootImage: feedCover, thumbnailImage: feedCover } : {}),
+          packMetadata: {
+            ...(project.packMetadata ?? {}),
+            ...(feedTitle ? { title: feedTitle } : {}),
+          },
+        }));
+      }
+      store.setSelectedId('root');
+      await handleImportPodcastEpisodes(episodes, feed);
+      logger.info(`podcast-funnel:landed count=${episodes.length}`);
+    } catch (error) {
+      logger.error('podcast-funnel:import-error', error);
+      if (!useWorkspaceForNewProjects && workspaceDir) {
+        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
+      }
+      store.resetProject();
+      setSessionMode(null);
+      setSessionWorkspaceDir('');
+      setWorkspaceDirState(configuredWorkspaceDir);
+      workspaceDirRef.current = configuredWorkspaceDir;
+      throw error;
+    }
+  }
+
   useOsFileDrop({
     dispatchFiles,
     maybeCopyToProject,
@@ -1353,6 +1399,7 @@ function AppContent() {
               onUpdateStoryAudio={store.updateStoryAudio}
               onSetProjectType={handleSelectProjectType}
               onEditPack={handleEditExistingPack}
+              onPodcastFunnel={() => setPodcastFunnelOpen(true)}
               pendingSimulateZipPath={pendingSimulateZip}
               onSimulateConsumed={() => setPendingSimulateZip(null)}
               onOpenProject={handleLoad}
@@ -1502,6 +1549,13 @@ function AppContent() {
           onClose={() => setEditPackOpen(false)}
           onLand={handleLandEditablePack}
           onSimulate={handleSimulatePackReady}
+        />
+      )}
+
+      {podcastFunnelOpen && (
+        <PodcastImportFunnel
+          onClose={() => setPodcastFunnelOpen(false)}
+          onImport={handlePodcastFunnelImport}
         />
       )}
 
