@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, RotateCcw, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { FunnelChassisDemo } from '../funnels/FunnelChassisDemo';
@@ -44,6 +44,7 @@ function RecentProjectThumb({ project, index, loadedThumbnail = null }) {
 
 export function ModeSelector({
   onSelect,
+  onEditPack,
   onOpen,
   onOpenPreferences,
   recentProjects = [],
@@ -121,6 +122,17 @@ export function ModeSelector({
             </span>
             <span className="mode-action-arrow">›</span>
           </button>
+
+          {onEditPack && (
+            <button className="mode-action-card" onClick={onEditPack}>
+              <span className="mode-action-icon"><ActionIcon Icon={Package} /></span>
+              <span className="mode-action-copy">
+                <span className="mode-action-name">Modifier un pack</span>
+                <span className="mode-action-desc">Ouvre un .zip ou un dossier Lunii et édite-le tout de suite, sans projet</span>
+              </span>
+              <span className="mode-action-arrow">›</span>
+            </button>
+          )}
         </div>
       </section>
 

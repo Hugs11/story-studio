@@ -108,6 +108,12 @@ const downloadNode = [
   ['path', { d: 'm7 10 5 5 5-5' }],
 ];
 
+const uploadNode = [
+  ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }],
+  ['polyline', { points: '17 8 12 3 7 8' }],
+  ['line', { x1: '12', y1: '3', x2: '12', y2: '15' }],
+];
+
 const folderPlusNode = [
   ['path', { d: 'M12 10v6' }],
   ['path', { d: 'M9 13h6' }],
@@ -369,6 +375,7 @@ export const FilePlus = createLocalLucideIcon(filePlusNode);
 export const FolderOpen = createLocalLucideIcon(folderOpenNode);
 export const Save = createLocalLucideIcon(saveNode);
 export const Download = createLocalLucideIcon(downloadNode);
+export const Upload = createLocalLucideIcon(uploadNode);
 export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);

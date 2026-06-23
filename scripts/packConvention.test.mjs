@@ -1,7 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { generateConventionName, getExportPackName, parseConventionName } from '../src/utils/packConvention.js';
+import { bumpPackVersion, generateConventionName, getExportPackName, parseConventionName } from '../src/utils/packConvention.js';
+
+test('bumpPackVersion suggests the next version (and V2 when none)', () => {
+  assert.equal(bumpPackVersion(undefined), 2);
+  assert.equal(bumpPackVersion(null), 2);
+  assert.equal(bumpPackVersion(''), 2);
+  assert.equal(bumpPackVersion(1), 2);
+  assert.equal(bumpPackVersion('v1'), 2);
+  assert.equal(bumpPackVersion(3), 4);
+  // La version bumpée donne bien un suffixe de convention.
+  assert.equal(
+    generateConventionName({ title: 'Mon pack', minAge: '5', version: bumpPackVersion(1) }),
+    '5+]Mon_pack_V2',
+  );
+});
 
 test('parses a valid community convention name', () => {
   const parsed = parseConventionName('3+]Les_histoires_de_Mini-loup_(8_chapitres)[by_funkyfoenky_V2');

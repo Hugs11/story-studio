@@ -11,7 +11,9 @@ mod story_entry;
 mod transitions;
 mod validation;
 
-pub use extraction::{get_pack_asset, load_pack_zip, unpack_zip_to_entries};
+pub use extraction::{
+    check_pack_editability, get_pack_asset, load_pack_zip, unpack_zip_to_entries,
+};
 
 #[cfg(test)]
 mod tests;

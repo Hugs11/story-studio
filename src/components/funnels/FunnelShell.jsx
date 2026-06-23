@@ -19,6 +19,8 @@ import './funnels.css';
  * @param {string}      [props.subtitle]
  * @param {Function}    props.onClose
  * @param {boolean}     [props.showChrome=true]  Affiche stepper + footer.
+ * @param {boolean}     [props.fitContent=false] Modale a hauteur du contenu (pour
+ *   un funnel mono-ecran) au lieu de la hauteur fixe du chassis.
  * @param {React.ReactNode} [props.stepper]
  * @param {React.ReactNode} [props.footer]
  * @param {string}      [props.ariaLabel]
@@ -29,6 +31,7 @@ export function FunnelShell({
   subtitle,
   onClose,
   showChrome = true,
+  fitContent = false,
   stepper,
   footer,
   ariaLabel,
@@ -39,7 +42,7 @@ export function FunnelShell({
   return (
     <AppModalPortal>
       <div
-        className="funnel-modal"
+        className={`funnel-modal${fitContent ? ' funnel-modal--fit' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel || title}

@@ -37,8 +37,9 @@ export function EditorTab({
   node,
   project, selectedId, onSelect,
   onReorder, onMoveToMenu, onAddMenu, onAddStory,
-  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onOpenProject,
+  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
+  pendingSimulateZipPath = null, onSimulateConsumed,
   sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
@@ -94,6 +95,14 @@ export function EditorTab({
     setSimulatorZipPath(null);
   }, []);
 
+  // « Modifier un pack » non éditable (plan 04) : ouvre le simulateur ZIP dès que
+  // l'éditeur est monté avec le pack demandé.
+  useEffect(() => {
+    if (!pendingSimulateZipPath || projectType == null) return;
+    handleSimulateZip(pendingSimulateZipPath);
+    onSimulateConsumed?.();
+  }, [pendingSimulateZipPath, projectType, handleSimulateZip, onSimulateConsumed]);
+
   const handleSelectionChange = useCallback((ids) => {
     skipIdSyncRef.current = true;
     setSelectedIds(ids);
@@ -125,6 +134,7 @@ export function EditorTab({
         <div className="workspace" style={{ justifyContent: 'center' }}>
           <ModeSelector
             onSelect={onSetProjectType}
+            onEditPack={onEditPack}
             onOpen={onOpenProject}
             onOpenPreferences={onOpenPreferences}
             recentProjects={recentProjects}
