@@ -10,6 +10,7 @@ export { FunnelStepper } from './FunnelStepper.jsx';
 export { FunnelFooter } from './FunnelFooter.jsx';
 export { FunnelSectionHeader } from './FunnelSectionHeader.jsx';
 export { FunnelToolButton } from './FunnelToolButton.jsx';
+export { FunnelDropZone } from './FunnelDropZone.jsx';
 export { FunnelGenerationState } from './FunnelGenerationState.jsx';
 export { FunnelDoneState } from './FunnelDoneState.jsx';
 export { useFunnel } from './useFunnel.js';

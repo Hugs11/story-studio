@@ -120,6 +120,15 @@ export function generateConventionName(metadata = {}) {
   return `${prefix}${titlePart}[by_${author}${versionSuffix}`;
 }
 
+/**
+ * Version suivante suggérée pour un pack (D34, « Modifier un pack ») : incrémente
+ * la version courante d'une unité. Sans version (ou version invalide), suggère 2
+ * → suffixe `_V2`. L'utilisateur reste libre de la changer.
+ */
+export function bumpPackVersion(version) {
+  return toIntVersion(version) + 1;
+}
+
 export function getExportPackName(metadata = {}) {
   const legacy = String(metadata.legacyExportName || '').trim();
   if (metadata.namingMode === 'legacy' && legacy) return legacy;

@@ -18,6 +18,89 @@ import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
 
+/**
+ * Construit le projet résultant d'une extraction de ZIP à partir du résultat
+ * Rust (`unpack_zip_to_entries`). Pur (aucune I/O, aucun store) : applique la
+ * promotion en pack, les avertissements de transitions, autoNext, night-mode et
+ * le skip-silence. Réutilisé par l'extraction manuelle (`handleUnpackZip`) et
+ * par l'entrée « Modifier un pack » (session éphémère). Retourne `null` si le
+ * pack ne contient aucune entrée.
+ */
+export function projectFromUnpackResult({
+  baseProject,
+  menuId = null,
+  itemId = null,
+  zipPath = '',
+  zipName = '',
+  result = {},
+  skipSilence = false,
+  savedDuringUnpack = false,
+}) {
+  const entries = sanitizeImportedEntries(result?.entries ?? []);
+  if (!entries.length) return null;
+
+  const processedEntries = skipSilence ? entries.map(markEntryAudioSkipSilence) : entries;
+  const unpacked = buildProjectAfterZipUnpack({
+    project: baseProject,
+    menuId,
+    itemId,
+    entries: processedEntries,
+    zipPath,
+    zipName,
+    result,
+    savedDuringUnpack,
+  });
+  let nextProject = unpacked.project;
+  const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
+    ? result.unresolvedTransitions.map((warning) => ({
+        ...warning,
+        sourceRootId: result?.rootId ?? null,
+        sourceName: unpacked.packName,
+      }))
+    : [];
+  nextProject = {
+    ...nextProject,
+    importWarnings: [
+      ...(nextProject.importWarnings ?? []).filter((warning) => warning?.sourceRootId !== result?.rootId),
+      ...unresolvedTransitions,
+    ],
+  };
+  if (result?.autoNext) {
+    nextProject = {
+      ...nextProject,
+      globalOptions: { ...nextProject.globalOptions, autoNext: true, nightMode: false },
+    };
+  }
+  if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
+    nextProject = {
+      ...nextProject,
+      nightModeAudio: result.nightModeAudio,
+      nightModeReturn: result.nightModeReturn ?? null,
+      nightModeHomeReturn: result.nightModeHomeReturn ?? null,
+      audioProcessing: skipSilence
+        ? { ...(nextProject.audioProcessing ?? {}), nightModeAudio: { skipSilence: true } }
+        : nextProject.audioProcessing,
+      globalOptions: { ...nextProject.globalOptions, nightMode: true },
+    };
+  }
+  if (skipSilence) {
+    nextProject = {
+      ...nextProject,
+      audioProcessing: {
+        ...(nextProject.audioProcessing ?? {}),
+        ...(nextProject.rootAudio ? { rootAudio: { skipSilence: true } } : {}),
+        ...(nextProject.nightModeAudio ? { nightModeAudio: { skipSilence: true } } : {}),
+      },
+    };
+  }
+  return {
+    project: nextProject,
+    packName: unpacked.packName,
+    unresolvedTransitions,
+    advancedTransitionsDetected: !!result?.advancedTransitionsDetected,
+  };
+}
+
 export function useImportSession({
   store,
   projectIndex,
@@ -220,8 +303,17 @@ export function useImportSession({
         destDir,
         workspaceDir: wsDir,
       });
-      const entries = sanitizeImportedEntries(result?.entries ?? []);
-      if (!entries.length) {
+      const transformed = projectFromUnpackResult({
+        baseProject,
+        menuId,
+        itemId,
+        zipPath: currentZipItem.zipPath,
+        zipName: currentZipItem.name,
+        result,
+        skipSilence: skipSilenceForExtractedAudio,
+        savedDuringUnpack,
+      });
+      if (!transformed) {
         showErrorDialog({
           title: 'Extraction du pack',
           message: 'Aucune entrée trouvée dans ce ZIP.',
@@ -229,78 +321,11 @@ export function useImportSession({
         });
         return;
       }
-
-      const processedEntries = (skipSilenceForExtractedAudio
-        ? entries.map(markEntryAudioSkipSilence)
-        : entries);
-      const unpackedProject = buildProjectAfterZipUnpack({
-        project: baseProject,
-        menuId,
-        itemId,
-        entries: processedEntries,
-        zipPath: currentZipItem.zipPath,
-        zipName: currentZipItem.name,
-        result,
-        savedDuringUnpack,
-      });
-      let nextProject = unpackedProject.project;
-      const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
-        ? result.unresolvedTransitions.map((warning) => ({
-            ...warning,
-            sourceRootId: result?.rootId ?? null,
-            sourceName: unpackedProject.packName,
-          }))
-        : [];
-      nextProject = {
-        ...nextProject,
-        importWarnings: [
-          ...(nextProject.importWarnings ?? []).filter((warning) => warning?.sourceRootId !== result?.rootId),
-          ...unresolvedTransitions,
-        ],
-      };
-      if (result?.autoNext) {
-        nextProject = {
-          ...nextProject,
-          globalOptions: {
-            ...nextProject.globalOptions,
-            autoNext: true,
-            nightMode: false,
-          },
-        };
-      }
-      if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
-        nextProject = {
-          ...nextProject,
-          nightModeAudio: result.nightModeAudio,
-          nightModeReturn: result.nightModeReturn ?? null,
-          nightModeHomeReturn: result.nightModeHomeReturn ?? null,
-          audioProcessing: skipSilenceForExtractedAudio
-            ? {
-                ...(nextProject.audioProcessing ?? {}),
-                nightModeAudio: { skipSilence: true },
-              }
-            : nextProject.audioProcessing,
-          globalOptions: {
-            ...nextProject.globalOptions,
-            nightMode: true,
-          },
-        };
-      }
-      if (skipSilenceForExtractedAudio) {
-        nextProject = {
-          ...nextProject,
-          audioProcessing: {
-            ...(nextProject.audioProcessing ?? {}),
-            ...(nextProject.rootAudio ? { rootAudio: { skipSilence: true } } : {}),
-            ...(nextProject.nightModeAudio ? { nightModeAudio: { skipSilence: true } } : {}),
-          },
-        };
-      }
-      store.setProject(nextProject);
+      store.setProject(transformed.project);
       store.setSelectedId('root');
-      await persistProjectSnapshot(nextProject, effectiveSavePath);
-      if (result?.advancedTransitionsDetected) {
-        const firstWarning = unresolvedTransitions[0]?.message;
+      await persistProjectSnapshot(transformed.project, effectiveSavePath);
+      if (transformed.advancedTransitionsDetected) {
+        const firstWarning = transformed.unresolvedTransitions[0]?.message;
         setImportNotice(
           "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
           + "Story Studio a conservé la structure reconnue, mais vérifiez les retours concernés avant export."
@@ -315,6 +340,26 @@ export function useImportSession({
     } finally {
       setUnpacking(null);
     }
+  }
+
+  // Extrait un pack dans un projet de session vierge (« Modifier un pack »,
+  // plan 04) : aucune sauvegarde forcée, l'écriture va dans le dossier de
+  // session. Retourne le projet promu (ou `null` si aucune entrée). Le caller
+  // (App.jsx) gère le store et la persistance éphémère.
+  async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject, skipSilence = false }) {
+    const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
+    const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
+    const result = await invoke('unpack_zip_to_entries', { zipPath, destDir, workspaceDir });
+    return projectFromUnpackResult({
+      baseProject,
+      menuId: null,
+      itemId: null,
+      zipPath,
+      zipName,
+      result,
+      skipSilence,
+      savedDuringUnpack: false,
+    });
   }
 
   async function handleImportMediaLibrary() {
@@ -430,6 +475,7 @@ export function useImportSession({
     handleAddStoryToMenu,
     handleImportFolder,
     handleUnpackZip,
+    unpackZipIntoBlankProject,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
     handleImportPodcastEpisodes,

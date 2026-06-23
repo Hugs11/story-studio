@@ -56,6 +56,7 @@ import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
+import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
@@ -74,7 +75,7 @@ import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
-import { getExportPackName } from './utils/packConvention';
+import { bumpPackVersion, getExportPackName } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import { basename } from './utils/fileUtils';
 import './styles/variables.css';
@@ -190,6 +191,12 @@ function AppContent() {
   const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
   const [sessionMode, setSessionMode] = useState(null); // null | 'ephemeral' | 'project'
   const [sessionWorkspaceDir, setSessionWorkspaceDir] = useState('');
+  // « Modifier un pack » (plan 04) : ouverture du funnel + ZIP à simuler une fois l'éditeur monté.
+  const [editPackOpen, setEditPackOpen] = useState(false);
+  const [pendingSimulateZip, setPendingSimulateZip] = useState(null);
+  // D34 : force la modal de métadonnées (version suggérée) à la 1re génération d'un
+  // pack importé. Ref (pas state) : lu/écrit synchronement dans le flux de génération.
+  const importedPackPendingMetaRef = useRef(false);
   const [importNotice, setImportNotice] = useState(null); // string | null
   const [activeDropZone, setActiveDropZone] = useState(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, false, BOOL_CODEC);
@@ -492,28 +499,40 @@ function AppContent() {
     xttsStore.clearDone();
   }
 
+  // Prépare une session de travail (éphémère par défaut, ou workspace réel si
+  // l'opt-in D25 est actif), fixe le type de projet et renvoie le dossier cible
+  // d'écriture. Partagé par « Nouveau projet » et « Modifier un pack ».
+  async function prepareNewWorkSession(type) {
+    let workspaceDir;
+    if (useWorkspaceForNewProjects) {
+      const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
+      if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
+      setSessionMode('project');
+      setSessionWorkspaceDir('');
+      setWorkspaceDirState(realWorkspace);
+      workspaceDirRef.current = realWorkspace;
+      workspaceDir = realWorkspace;
+    } else {
+      const sessionDir = await invoke('create_session_workspace');
+      setSessionMode('ephemeral');
+      setSessionWorkspaceDir(sessionDir);
+      setWorkspaceDirState(sessionDir);
+      workspaceDirRef.current = sessionDir;
+      workspaceDir = sessionDir;
+    }
+    autoSavePathRef.current = null;
+    ephemeralSavedSnapshotRef.current = null;
+    setAutoSavedPath(null);
+    importedPackPendingMetaRef.current = false;
+    store.setSavePath(null);
+    store.setProjectType(type);
+    logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
+    return workspaceDir;
+  }
+
   async function handleSelectProjectType(type) {
     try {
-      if (useWorkspaceForNewProjects) {
-        const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
-        if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
-        setSessionMode('project');
-        setSessionWorkspaceDir('');
-        setWorkspaceDirState(realWorkspace);
-        workspaceDirRef.current = realWorkspace;
-      } else {
-        const sessionDir = await invoke('create_session_workspace');
-        setSessionMode('ephemeral');
-        setSessionWorkspaceDir(sessionDir);
-        setWorkspaceDirState(sessionDir);
-        workspaceDirRef.current = sessionDir;
-      }
-      autoSavePathRef.current = null;
-      ephemeralSavedSnapshotRef.current = null;
-      setAutoSavedPath(null);
-      store.setSavePath(null);
-      store.setProjectType(type);
-      logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
+      await prepareNewWorkSession(type);
     } catch (error) {
       logger.error('session:start-error', error);
       showErrorDialog({
@@ -521,6 +540,76 @@ function AppContent() {
         message: `Impossible de préparer le dossier de travail : ${error}`,
       });
     }
+  }
+
+  // Entrée accueil « Modifier un pack » (plan 04) : ouvre le funnel dédié
+  // (zone de dépôt fichier/dossier, vérification d'éditabilité D31 et
+  // décompression affichées dans le funnel).
+  function handleEditExistingPack() {
+    setEditPackOpen(true);
+  }
+
+  // Pack éditable confirmé par le funnel : crée la session éphémère, extrait le
+  // pack (décompression affichée DANS le funnel) puis atterrit dans l'éditeur.
+  // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
+  // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
+  async function handleLandEditablePack({ zipPath, packLabel }) {
+    const workspaceDir = await prepareNewWorkSession('pack');
+    try {
+      // Audio d'un pack extrait : silences de bord déjà présents → on exclut de
+      // l'ajout global (défaut sensé, sans prompt, pour rester « un clic »).
+      const transformed = await unpackZipIntoBlankProject({
+        zipPath,
+        zipName: packLabel,
+        workspaceDir,
+        baseProject: store.project,
+        skipSilence: true,
+      });
+      if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
+      // D34 : suggérer une version incrémentée (_V2 si aucune) et forcer la modal
+      // de métadonnées pré-remplie à la première génération du pack importé.
+      const landedProject = transformed.project.packMetadata
+        ? {
+            ...transformed.project,
+            packMetadata: {
+              ...transformed.project.packMetadata,
+              version: bumpPackVersion(transformed.project.packMetadata.version),
+            },
+          }
+        : transformed.project;
+      store.setProject(landedProject);
+      store.setSelectedId('root');
+      importedPackPendingMetaRef.current = true;
+      if (transformed.advancedTransitionsDetected) {
+        const firstWarning = transformed.unresolvedTransitions[0]?.message;
+        setImportNotice(
+          "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
+          + "Story Studio a conservé la structure reconnue, mais vérifiez les retours concernés avant export."
+          + (firstWarning ? ` Exemple : ${firstWarning}` : '')
+        );
+      }
+      logger.info(`edit-pack:landed zip='${zipPath}'`);
+    } catch (error) {
+      logger.error('edit-pack:land-error', error);
+      // Échec d'extraction : nettoyer la session et revenir à l'accueil.
+      if (!useWorkspaceForNewProjects && workspaceDir) {
+        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
+      }
+      store.resetProject();
+      setSessionMode(null);
+      setSessionWorkspaceDir('');
+      setWorkspaceDirState(configuredWorkspaceDir);
+      workspaceDirRef.current = configuredWorkspaceDir;
+      throw error;
+    }
+  }
+
+  // Pack non éditable : le funnel propose la simulation. Session éphémère
+  // minimale + pack en entrée ZIP + ouverture du simulateur (lecture seule).
+  async function handleSimulatePackReady({ zipPath, packLabel }) {
+    await prepareNewWorkSession('pack');
+    store.addZip(null, zipPath, packLabel, null, null);
+    setPendingSimulateZip(zipPath);
   }
 
   async function handleRecoverSession(recovery) {
@@ -580,7 +669,7 @@ function AppContent() {
       ? projectOverride
       : store.project;
     if ((projectForGeneration.projectType === 'pack' || projectForGeneration.projectType === 'simple')
-      && !hasExplicitExportPackName(projectForGeneration)) {
+      && (!hasExplicitExportPackName(projectForGeneration) || importedPackPendingMetaRef.current)) {
       setPackMetadataOpen(true);
       return;
     }
@@ -650,6 +739,8 @@ function AppContent() {
     }
     store.setProject(projectForAction);
     setPackMetadataOpen(false);
+    // L'utilisateur a confirmé les métadonnées : ne plus reforcer la modal (D34).
+    importedPackPendingMetaRef.current = false;
     if (generate) await handleGenerate(projectForAction);
   }
 
@@ -961,6 +1052,7 @@ function AppContent() {
     handleAddStoryToMenu,
     handleImportFolder,
     handleUnpackZip,
+    unpackZipIntoBlankProject,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
     handleImportPodcastEpisodes,
@@ -1263,6 +1355,9 @@ function AppContent() {
               onUpdateMedia={store.updateRootMedia}
               onUpdateStoryAudio={store.updateStoryAudio}
               onSetProjectType={handleSelectProjectType}
+              onEditPack={handleEditExistingPack}
+              pendingSimulateZipPath={pendingSimulateZip}
+              onSimulateConsumed={() => setPendingSimulateZip(null)}
               onOpenProject={handleLoad}
               onOpenPreferences={() => setPrefsModalOpen(true)}
               recentProjects={recentProjects}
@@ -1403,6 +1498,14 @@ function AppContent() {
           onImport={(episodes, feed) => handleImportPodcastEpisodes(episodes, feed)}
           onClose={() => setPodcastImportOpen(false)}
         />,
+      )}
+
+      {editPackOpen && (
+        <EditPackFunnel
+          onClose={() => setEditPackOpen(false)}
+          onLand={handleLandEditablePack}
+          onSimulate={handleSimulatePackReady}
+        />
       )}
 
       {packMetadataOpen && renderDeferred(

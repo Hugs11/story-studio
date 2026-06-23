@@ -100,6 +100,21 @@ pub(crate) fn validate_existing_file_path(path: &str, label: &str) -> Result<Pat
     Ok(canonical)
 }
 
+pub(crate) fn validate_existing_dir_path(path: &str, label: &str) -> Result<PathBuf, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err(format!("{} vide.", label));
+    }
+    let canonical = fs::canonicalize(trimmed)
+        .map_err(|e| format!("{} introuvable ou inaccessible : {}", label, e))?;
+    let metadata =
+        fs::metadata(&canonical).map_err(|e| format!("{} inaccessible : {}", label, e))?;
+    if !metadata.is_dir() {
+        return Err(format!("{} invalide : {}", label, canonical.display()));
+    }
+    Ok(canonical)
+}
+
 pub(crate) fn validate_existing_pack_path(path: &str) -> Result<PathBuf, String> {
     validate_supported_pack_path(path)
 }
