@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
-import { FunnelChassisDemo } from '../funnels/FunnelChassisDemo';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
 
@@ -45,6 +44,7 @@ function RecentProjectThumb({ project, index, loadedThumbnail = null }) {
 export function ModeSelector({
   onSelect,
   onEditPack,
+  onPodcastFunnel,
   onOpen,
   onOpenPreferences,
   recentProjects = [],
@@ -54,9 +54,6 @@ export function ModeSelector({
   onIgnoreSessionRecovery,
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
-  // TEMPORAIRE (plan 03) : banc d'essai visuel du châssis de funnel. À retirer
-  // quand un vrai funnel (plan 04) le consommera.
-  const [chassisDemoOpen, setChassisDemoOpen] = useState(false);
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
   const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
@@ -129,6 +126,17 @@ export function ModeSelector({
               <span className="mode-action-copy">
                 <span className="mode-action-name">Modifier un pack</span>
                 <span className="mode-action-desc">Ouvre un .zip ou un dossier Lunii et édite-le tout de suite, sans projet</span>
+              </span>
+              <span className="mode-action-arrow">›</span>
+            </button>
+          )}
+
+          {onPodcastFunnel && (
+            <button className="mode-action-card" onClick={onPodcastFunnel}>
+              <span className="mode-action-icon"><ActionIcon Icon={Rss} /></span>
+              <span className="mode-action-copy">
+                <span className="mode-action-name">Pack depuis un podcast</span>
+                <span className="mode-action-desc">Choisis un flux RSS et importe les épisodes comme histoires</span>
               </span>
               <span className="mode-action-arrow">›</span>
             </button>
@@ -219,15 +227,8 @@ export function ModeSelector({
             <ActionIcon Icon={ListTodo} />
             <span>Documentation</span>
           </button>
-          {/* TEMPORAIRE (plan 03) — à retirer une fois le châssis consommé par un vrai funnel. */}
-          <button className="mode-secondary-button mode-secondary-button--tool" onClick={() => setChassisDemoOpen(true)}>
-            <ActionIcon Icon={Wrench} />
-            <span>Tester le châssis</span>
-          </button>
         </div>
       </section>
-
-      {chassisDemoOpen && <FunnelChassisDemo onClose={() => setChassisDemoOpen(false)} />}
 
       {documentationOpen && (
         <div className="mode-doc-overlay" onMouseDown={() => setDocumentationOpen(false)}>

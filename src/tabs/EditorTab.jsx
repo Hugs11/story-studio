@@ -37,7 +37,7 @@ export function EditorTab({
   node,
   project, selectedId, onSelect,
   onReorder, onMoveToMenu, onAddMenu, onAddStory,
-  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onOpenProject,
+  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onPodcastFunnel, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
   pendingSimulateZipPath = null, onSimulateConsumed,
   sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
@@ -135,6 +135,7 @@ export function EditorTab({
           <ModeSelector
             onSelect={onSetProjectType}
             onEditPack={onEditPack}
+            onPodcastFunnel={onPodcastFunnel}
             onOpen={onOpenProject}
             onOpenPreferences={onOpenPreferences}
             recentProjects={recentProjects}
