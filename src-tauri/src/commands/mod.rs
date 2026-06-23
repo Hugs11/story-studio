@@ -5,4 +5,5 @@ pub mod generation;
 pub mod media_probe;
 pub mod pack;
 pub mod podcast;
+pub mod session;
 pub mod xtts;

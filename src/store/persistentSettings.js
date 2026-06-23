@@ -3,6 +3,7 @@ export const KEYS = Object.freeze({
   AUTOSAVE_ENABLED: 'autoSaveEnabled',
   AUTOSAVE_BACKUP_LIMIT: 'autoSaveBackupLimit',
   WORKSPACE_DIR: 'storyStudioWorkspaceDir',
+  USE_WORKSPACE_FOR_NEW_PROJECTS: 'storyStudio.useWorkspaceForNewProjects',
   SHOW_CENTRAL_DIAGRAM: 'showCentralDiagram',
   BOTTOM_PANEL_OPEN: 'bottomPanelOpen',
   BOTTOM_PANEL_TAB: 'bottomPanelTab',

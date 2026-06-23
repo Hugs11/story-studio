@@ -59,7 +59,7 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
   const currentWindow = useMemo(() => (isTauriRuntime() ? getCurrentWindow() : null), []);
   const [isMaximizing, setIsMaximizing] = useState(false);
   const packCoverUrl = useLocalFile(packCoverImage);
-  const displayProjectName = projectName || 'Nouveau projet';
+  const displayProjectName = hasSavePath ? (projectName || 'Nouveau projet') : 'Projet non enregistré';
   const packStoryName = packMetadata?.title || '';
   const packDisplayName = packStoryName || 'Métadonnées du pack';
   const packMetaLine = `${packMetadata?.minAge || '3'}+ · v${packMetadata?.version || 1}`;
@@ -71,7 +71,9 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
   const saveIndicatorClass = (isDirty && saveState !== 'ok')
     ? 'chrome-titlebar-status is-dirty'
     : 'chrome-titlebar-status is-saved';
-  const saveIndicatorTitle = (isDirty && saveState !== 'ok') ? 'Modifications non enregistrées' : 'Projet sauvegardé';
+  const saveIndicatorTitle = !hasSavePath
+    ? 'Projet pas encore enregistré'
+    : (isDirty && saveState !== 'ok') ? 'Modifications non enregistrées' : 'Projet sauvegardé';
 
   async function handleToggleMaximize() {
     if (!currentWindow || isMaximizing) return;

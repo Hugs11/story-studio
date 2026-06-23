@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, SlidersHorizontal, SwatchBook } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, RotateCcw, SlidersHorizontal, SwatchBook, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { useLocalFile } from '../../hooks/useLocalFile';
@@ -47,10 +47,14 @@ export function ModeSelector({
   onOpenPreferences,
   recentProjects = [],
   onOpenRecent,
+  sessionRecoveries = [],
+  onRecoverSession,
+  onIgnoreSessionRecovery,
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
+  const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +121,43 @@ export function ModeSelector({
       </section>
 
       <section className="mode-home-panel mode-home-right">
+        {visibleRecoveries.length > 0 && (
+          <div className="mode-recovery-block">
+            <div className="mode-section-heading">
+              <div className="mode-section-title">Reprise de session</div>
+            </div>
+            <div className="mode-recovery-list">
+              {visibleRecoveries.map((recovery, index) => (
+                <div className="mode-recovery-item" key={recovery.sessionDir || recovery.snapshotPath}>
+                  <RecentProjectThumb project={recovery} index={index} />
+                  <span className="mode-recent-copy">
+                    <span className="mode-recent-name">{recovery.projectName || 'Projet récupérable'}</span>
+                    <span className="mode-recent-type">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="mode-recovery-action"
+                    onClick={() => onRecoverSession?.(recovery)}
+                  >
+                    <RotateCcw className="mode-action-icon-svg" strokeWidth={2} />
+                    <span>Reprendre</span>
+                  </button>
+                  <Tooltip text="Ignorer cette reprise" placement="above">
+                    <button
+                      type="button"
+                      className="mode-recovery-dismiss"
+                      aria-label="Ignorer cette reprise"
+                      onClick={() => onIgnoreSessionRecovery?.(recovery)}
+                    >
+                      <X className="mode-action-icon-svg" strokeWidth={2} />
+                    </button>
+                  </Tooltip>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mode-section-heading">
           <div className="mode-section-title">Projets récents</div>
         </div>

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  ensureWorkspaceDir,
   rememberRecentProject,
   saveProject,
   saveProjectAs,
@@ -13,10 +14,12 @@ export function useSaveProgress({
   autoSaveEnabled,
   autoSaveBackupLimit,
   savedSnapshotRef,
+  sessionModeRef = null,
   isSavingRef,
   setSaveToast,
   setRecentProjects,
   maybeOfferTransferIntoProject,
+  onProjectSaved = null,
 }) {
   const [saveProgress, setSaveProgress] = useState(null); // null | { lines: string[], complete: boolean }
   const [saveAsProgress, setSaveAsProgress] = useState(null);
@@ -84,6 +87,7 @@ export function useSaveProgress({
         store.setSavePath(result.path);
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
+        await onProjectSaved?.(result);
         if (!silent) {
           setSaveProgress(prev => prev ? { ...prev, complete: true } : null);
           setTimeout(() => setSaveProgress(null), 1500);
@@ -115,6 +119,7 @@ export function useSaveProgress({
     setSaveToast,
     store,
     workspaceDirRef,
+    onProjectSaved,
   ]);
 
   const handleSaveProjectAs = useCallback(async () => {
@@ -128,16 +133,38 @@ export function useSaveProgress({
       }
     }
     try {
-      const result = await saveProjectAs(store.project, store.savePath, onProgress, store.mediaTags, { workspaceDir: workspaceDirRef.current }, mediaLibraryPathsRef.current);
+      const isEphemeralSession = sessionModeRef?.current === 'ephemeral';
+      const targetWorkspaceDir = isEphemeralSession
+        ? await ensureWorkspaceDir()
+        : workspaceDirRef.current;
+      let result = await saveProjectAs(store.project, store.savePath, onProgress, store.mediaTags, {
+        workspaceDir: targetWorkspaceDir,
+      }, mediaLibraryPathsRef.current);
       if (!result) {
         setSaveAsProgress(null);
         return null;
       }
       if (result?.path) {
+        const transferResult = await maybeOfferTransferIntoProject(result.project, result.path, {
+          copyEnabled: true,
+          skipPrompt: isEphemeralSession,
+          targetWorkspaceDir,
+        });
+        if (transferResult.changed) {
+          result = await saveProject(transferResult.project, result.path, onProgress, {
+            mediaTags: store.mediaTags,
+            mediaLibraryPaths: mediaLibraryPathsRef.current,
+            workspaceDir: targetWorkspaceDir,
+          });
+        }
         store.syncProjectWithoutHistory(result.project);
         store.setSavePath(result.path);
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
+        await onProjectSaved?.(result, {
+          workspaceDir: targetWorkspaceDir,
+          cleanupSession: !transferResult.errors?.length,
+        });
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);
         setSaveAsProgress(prev => prev ? { ...prev, complete: true } : null);
@@ -155,14 +182,19 @@ export function useSaveProgress({
     }
   }, [
     mediaLibraryPathsRef,
+    maybeOfferTransferIntoProject,
+    onProjectSaved,
     savedSnapshotRef,
     setRecentProjects,
     setSaveToast,
+    sessionModeRef,
     store,
     workspaceDirRef,
   ]);
 
-  const handleSave = useCallback(() => handleSaveProject(), [handleSaveProject]);
+  const handleSave = useCallback(() => (
+    store.savePath ? handleSaveProject() : handleSaveProjectAs()
+  ), [handleSaveProject, handleSaveProjectAs, store.savePath]);
 
   return {
     saveProgress,

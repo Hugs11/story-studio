@@ -8,6 +8,7 @@ export const AUTOSAVE_ACTIONS = Object.freeze({
   SKIP_EMPTY: 'skip-empty',
   SKIP_NO_TARGET: 'skip-no-target',
   SAVE_EXPLICIT: 'save-explicit',
+  AUTOSAVE_EPHEMERAL: 'autosave-ephemeral',
   AUTOSAVE_EXISTING: 'autosave-existing',
   AUTOSAVE_NEW: 'autosave-new',
 });
@@ -20,11 +21,21 @@ export function decideAutosaveAction({
   savePath = null,
   workspaceDir = null,
   autoSavePath = null,
+  sessionMode = 'project',
+  ephemeralSnapshotPath = null,
+  lastEphemeralSnapshot = null,
 } = {}) {
   if (isSaving) return { kind: AUTOSAVE_ACTIONS.SKIP_BUSY };
   if (currentSnapshot === savedSnapshot) return { kind: AUTOSAVE_ACTIONS.SKIP_UNCHANGED };
+  if (sessionMode === 'ephemeral' && currentSnapshot === lastEphemeralSnapshot) {
+    return { kind: AUTOSAVE_ACTIONS.SKIP_UNCHANGED };
+  }
   if (!isDirty) return { kind: AUTOSAVE_ACTIONS.SKIP_EMPTY };
   if (savePath) return { kind: AUTOSAVE_ACTIONS.SAVE_EXPLICIT, path: savePath };
+  if (sessionMode === 'ephemeral') {
+    if (!workspaceDir || !ephemeralSnapshotPath) return { kind: AUTOSAVE_ACTIONS.SKIP_NO_TARGET };
+    return { kind: AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL, path: ephemeralSnapshotPath, workspaceDir };
+  }
   if (!workspaceDir) return { kind: AUTOSAVE_ACTIONS.SKIP_NO_TARGET };
   if (autoSavePath) return { kind: AUTOSAVE_ACTIONS.AUTOSAVE_EXISTING, path: autoSavePath };
   return { kind: AUTOSAVE_ACTIONS.AUTOSAVE_NEW, workspaceDir };
