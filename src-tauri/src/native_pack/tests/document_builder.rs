@@ -85,7 +85,6 @@ fn builds_story_title_without_item_audio() {
             title_return_on_home: None,
             title_return_on_home_none: false,
             title_control_settings: None,
-            audio_processing: HashMap::new(),
         })],
     };
     let report = report_for(
@@ -166,7 +165,6 @@ fn generates_imported_prompt_controls_and_home_null() {
             title_return_on_home: None,
             title_return_on_home_none: false,
             title_control_settings: None,
-            audio_processing: HashMap::new(),
         })],
     };
     let report = report_for(
@@ -535,7 +533,6 @@ fn canonicalizes_pack_structure() {
         night_mode_return: None,
         night_mode_home_return: None,
         native_graph: None,
-        audio_processing: HashMap::new(),
         root_entries: vec![
             story("Racine"),
             ProjectEntry {
@@ -576,7 +573,6 @@ fn canonicalizes_recursive_root_entries_structure() {
         night_mode_return: None,
         night_mode_home_return: None,
         native_graph: None,
-        audio_processing: HashMap::new(),
         root_entries: vec![ProjectEntry {
             entry_type: "menu".to_string(),
             name: "Choose a character".to_string(),
@@ -670,7 +666,7 @@ fn collects_asset_requests_for_pack() {
         ],
     };
 
-    let requests = collect_asset_requests(&project, &HashMap::new(), 1.0);
+    let requests = collect_asset_requests(&project, 1.0);
     assert_eq!(requests.len(), 10);
     assert!(requests
         .iter()
@@ -745,7 +741,6 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         night_mode_return: None,
         night_mode_home_return: None,
         native_graph: None,
-        audio_processing: HashMap::new(),
         root_entries: vec![ProjectEntry {
             id: "story".to_string(),
             entry_type: "story".to_string(),

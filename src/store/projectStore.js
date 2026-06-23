@@ -38,7 +38,6 @@ export function isTextEditingTarget(target) {
 
 const MAX_HISTORY_SIZE = 50;
 
-const ROOT_AUDIO_FIELDS = new Set(['rootAudio', 'nightModeAudio']);
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
   'returnOnHome',
@@ -295,10 +294,6 @@ export function useProjectStore() {
   const updateRootMedia = useCallback((field, value) => {
     setProject(p => {
       const next = { ...p, [field]: value };
-      if (ROOT_AUDIO_FIELDS.has(field) && next.audioProcessing?.[field]) {
-        next.audioProcessing = { ...next.audioProcessing };
-        delete next.audioProcessing[field];
-      }
       return next;
     });
   }, [setProject]);
@@ -347,14 +342,6 @@ export function useProjectStore() {
         nightModeHomeReturn: rewritePromotedRootTarget(p.nightModeHomeReturn, menu.id),
         nativeGraph: menu.nativeGraph ?? p.nativeGraph ?? null,
       };
-      if (menu.audio) {
-        next.audioProcessing = { ...(p.audioProcessing ?? {}) };
-        if (menu.audioProcessing?.audio?.skipSilence === true || menu.audioProcessing?.__allAudio?.skipSilence === true) {
-          next.audioProcessing.rootAudio = { skipSilence: true };
-        } else {
-          delete next.audioProcessing.rootAudio;
-        }
-      }
       return updateProjectRootEntries(
         next,
         promoted

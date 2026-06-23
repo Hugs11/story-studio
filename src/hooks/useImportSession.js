@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ask } from '@tauri-apps/plugin-dialog';
 import {
   getExtractedZipsDir,
 } from '../store/projectIO';
@@ -11,8 +10,6 @@ import {
 import { findEntryById } from '../store/projectModel';
 import { buildProjectAfterZipUnpack } from '../store/unpackProject';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
-import { markEntryAudioSkipSilence } from '../store/projectHelpers';
-import { formatPackAudioEdgeSilence } from '../config/audioProcessing';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
@@ -21,10 +18,10 @@ import { logger } from '../utils/logger';
 /**
  * Construit le projet résultant d'une extraction de ZIP à partir du résultat
  * Rust (`unpack_zip_to_entries`). Pur (aucune I/O, aucun store) : applique la
- * promotion en pack, les avertissements de transitions, autoNext, night-mode et
- * le skip-silence. Réutilisé par l'extraction manuelle (`handleUnpackZip`) et
- * par l'entrée « Modifier un pack » (session éphémère). Retourne `null` si le
- * pack ne contient aucune entrée.
+ * promotion en pack, les avertissements de transitions, autoNext et night-mode.
+ * Réutilisé par l'extraction manuelle (`handleUnpackZip`) et par l'entrée
+ * « Modifier un pack » (session éphémère). Retourne `null` si le pack ne
+ * contient aucune entrée.
  */
 export function projectFromUnpackResult({
   baseProject,
@@ -33,18 +30,16 @@ export function projectFromUnpackResult({
   zipPath = '',
   zipName = '',
   result = {},
-  skipSilence = false,
   savedDuringUnpack = false,
 }) {
   const entries = sanitizeImportedEntries(result?.entries ?? []);
   if (!entries.length) return null;
 
-  const processedEntries = skipSilence ? entries.map(markEntryAudioSkipSilence) : entries;
   const unpacked = buildProjectAfterZipUnpack({
     project: baseProject,
     menuId,
     itemId,
-    entries: processedEntries,
+    entries,
     zipPath,
     zipName,
     result,
@@ -77,20 +72,7 @@ export function projectFromUnpackResult({
       nightModeAudio: result.nightModeAudio,
       nightModeReturn: result.nightModeReturn ?? null,
       nightModeHomeReturn: result.nightModeHomeReturn ?? null,
-      audioProcessing: skipSilence
-        ? { ...(nextProject.audioProcessing ?? {}), nightModeAudio: { skipSilence: true } }
-        : nextProject.audioProcessing,
       globalOptions: { ...nextProject.globalOptions, nightMode: true },
-    };
-  }
-  if (skipSilence) {
-    nextProject = {
-      ...nextProject,
-      audioProcessing: {
-        ...(nextProject.audioProcessing ?? {}),
-        ...(nextProject.rootAudio ? { rootAudio: { skipSilence: true } } : {}),
-        ...(nextProject.nightModeAudio ? { nightModeAudio: { skipSilence: true } } : {}),
-      },
     };
   }
   return {
@@ -283,16 +265,6 @@ export function useImportSession({
     const currentZipItem = findEntryById(baseProject, itemId) ?? zipItem;
     if (!currentZipItem?.zipPath) return;
 
-    const skipSilenceForExtractedAudio = await ask(
-      `Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout global de ${formatPackAudioEdgeSilence()} ?`,
-      {
-        title: 'Extraction du pack',
-        kind: 'info',
-        okLabel: 'Exclure du silence',
-        cancelLabel: 'Garder le traitement global',
-      }
-    );
-
     setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
     try {
       const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
@@ -310,7 +282,6 @@ export function useImportSession({
         zipPath: currentZipItem.zipPath,
         zipName: currentZipItem.name,
         result,
-        skipSilence: skipSilenceForExtractedAudio,
         savedDuringUnpack,
       });
       if (!transformed) {
@@ -346,7 +317,7 @@ export function useImportSession({
   // plan 04) : aucune sauvegarde forcée, l'écriture va dans le dossier de
   // session. Retourne le projet promu (ou `null` si aucune entrée). Le caller
   // (App.jsx) gère le store et la persistance éphémère.
-  async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject, skipSilence = false }) {
+  async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject }) {
     const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
     const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
     const result = await invoke('unpack_zip_to_entries', { zipPath, destDir, workspaceDir });
@@ -357,7 +328,6 @@ export function useImportSession({
       zipPath,
       zipName,
       result,
-      skipSilence,
       savedDuringUnpack: false,
     });
   }

@@ -557,7 +557,6 @@ mod tests {
             night_mode_audio: None,
             night_mode_return: None,
             night_mode_home_return: None,
-            audio_processing: HashMap::new(),
             native_graph: None,
             pack_version: 1,
             pack_description: String::new(),
