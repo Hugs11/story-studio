@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, RotateCcw, SlidersHorizontal, SwatchBook, X } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, RotateCcw, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
+import { FunnelChassisDemo } from '../funnels/FunnelChassisDemo';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
 
@@ -52,6 +53,9 @@ export function ModeSelector({
   onIgnoreSessionRecovery,
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
+  // TEMPORAIRE (plan 03) : banc d'essai visuel du châssis de funnel. À retirer
+  // quand un vrai funnel (plan 04) le consommera.
+  const [chassisDemoOpen, setChassisDemoOpen] = useState(false);
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
   const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
@@ -203,8 +207,15 @@ export function ModeSelector({
             <ActionIcon Icon={ListTodo} />
             <span>Documentation</span>
           </button>
+          {/* TEMPORAIRE (plan 03) — à retirer une fois le châssis consommé par un vrai funnel. */}
+          <button className="mode-secondary-button mode-secondary-button--tool" onClick={() => setChassisDemoOpen(true)}>
+            <ActionIcon Icon={Wrench} />
+            <span>Tester le châssis</span>
+          </button>
         </div>
       </section>
+
+      {chassisDemoOpen && <FunnelChassisDemo onClose={() => setChassisDemoOpen(false)} />}
 
       {documentationOpen && (
         <div className="mode-doc-overlay" onMouseDown={() => setDocumentationOpen(false)}>
