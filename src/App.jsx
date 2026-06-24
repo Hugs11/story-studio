@@ -1073,10 +1073,11 @@ function AppContent() {
     isImportedPackPath,
   });
 
-  async function handlePodcastFunnelImport(episodes, feed) {
+  async function handlePodcastFunnelImport(episodes, feed, onProgress) {
     const workspaceDir = await prepareNewWorkSession('pack');
     try {
       const feedTitle = String(feed?.title || '').trim();
+      onProgress?.({ name: feedTitle || 'Podcast', index: 0, total: episodes.length, phase: 'Préparation de la session…' });
       let feedCover = null;
       if (feed?.imageUrl) {
         try {
@@ -1101,8 +1102,18 @@ function AppContent() {
         }));
       }
       store.setSelectedId('root');
-      await handleImportPodcastEpisodes(episodes, feed);
-      logger.info(`podcast-funnel:landed count=${episodes.length}`);
+      const result = await handleImportPodcastEpisodes(episodes, feed, {
+        targetMenuId: null,
+        onProgress,
+        suppressDialog: true,
+      });
+      if (result.total > 0 && result.failures >= result.total) {
+        throw new Error("Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.");
+      }
+      if (result.failures > 0) {
+        setImportNotice(`${result.failures} épisode(s) sur ${result.total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`);
+      }
+      logger.info(`podcast-funnel:landed count=${result.imported}`);
     } catch (error) {
       logger.error('podcast-funnel:import-error', error);
       if (!useWorkspaceForNewProjects && workspaceDir) {

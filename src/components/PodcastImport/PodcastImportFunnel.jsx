@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
+  FunnelDoneState,
   FunnelFooter,
   FunnelGenerationState,
   FunnelSectionHeader,
   FunnelShell,
   FunnelStepper,
 } from '../funnels';
-import { Check, Loader2, Rss, Search } from '../icons/LucideLocal';
+import { Check, Loader2, Rss, Search, TriangleAlert } from '../icons/LucideLocal';
 import './PodcastImportFunnel.css';
 
 const STEPS = [
@@ -45,11 +46,16 @@ export function PodcastImportFunnel({ onClose, onImport }) {
   const [step, setStep] = useState(0);
   const [url, setUrl] = useState('');
   const [loadingFeed, setLoadingFeed] = useState(false);
-  const [importing, setImporting] = useState(false);
+  // collect (saisie) | importing (téléchargement) | error (échec total → accueil)
+  const [importPhase, setImportPhase] = useState('collect');
+  const [progress, setProgress] = useState(null);
+  const [importError, setImportError] = useState('');
   const [error, setError] = useState('');
   const [feed, setFeed] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   const [query, setQuery] = useState('');
+
+  const importing = importPhase === 'importing';
 
   const episodes = feed?.episodes ?? [];
   const normalizedQuery = query.trim().toLowerCase();
@@ -103,15 +109,18 @@ export function PodcastImportFunnel({ onClose, onImport }) {
   async function handleImport() {
     if (selected.size === 0 || importing) return;
     const chosen = episodes.filter((ep) => selected.has(ep.id));
-    setImporting(true);
     setError('');
+    setImportError('');
+    setProgress({ name: feed?.title || 'Podcast', index: 0, total: chosen.length, phase: "Préparation de l'import…" });
+    setImportPhase('importing');
     try {
-      await onImport(chosen, feed);
+      // onImport route la progression dans cet écran (et non dans la modale
+      // globale d'import) ; il lève en cas d'échec total → écran d'erreur.
+      await onImport(chosen, feed, setProgress);
       onClose();
     } catch (err) {
-      setError(`Le podcast n'a pas pu être importé : ${err?.message ?? err}`);
-      setImporting(false);
-      setStep(1);
+      setImportError(String(err?.message ?? err));
+      setImportPhase('error');
     }
   }
 
@@ -132,7 +141,7 @@ export function PodcastImportFunnel({ onClose, onImport }) {
       title="Pack depuis un podcast"
       subtitle="Choisis un flux RSS, puis les épisodes à transformer en histoires."
       onClose={importing ? () => {} : onClose}
-      showChrome={!importing}
+      showChrome={importPhase === 'collect'}
       ariaLabel="Créer un pack depuis un podcast"
       stepper={(
         <FunnelStepper
@@ -157,16 +166,25 @@ export function PodcastImportFunnel({ onClose, onImport }) {
         />
       )}
     >
-      {importing ? (
+      {importPhase === 'importing' ? (
         <FunnelGenerationState
-          title="Téléchargement des épisodes…"
-          hint="Les histoires arrivent dans l'éditeur."
-          phases={[
-            { label: 'Session de travail prête', status: 'done' },
-            { label: 'Téléchargement des médias', status: 'active' },
-            { label: 'Création des histoires', status: 'todo' },
-          ]}
+          title="Import du podcast…"
+          hint={progress?.phase
+            ? (progress.name ? `${progress.name} — ${progress.phase}` : progress.phase)
+            : "Les histoires arrivent dans l'éditeur."}
+          progress={progress && progress.total ? progress.index / progress.total : null}
         />
+      ) : importPhase === 'error' ? (
+        <FunnelDoneState
+          tone="error"
+          icon={<TriangleAlert />}
+          title="L'import a échoué"
+          meta={importError}
+        >
+          <button type="button" className="funnel-btn funnel-btn-primary" onClick={onClose}>
+            Retour à l'accueil
+          </button>
+        </FunnelDoneState>
       ) : step === 0 ? (
         <div className="funnel-step-content podcast-funnel-step">
           <FunnelSectionHeader
