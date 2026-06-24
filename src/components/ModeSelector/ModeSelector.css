@@ -20,7 +20,7 @@
 .mode-home-panel {
   min-width: 0;
   min-height: 0;
-  padding: clamp(32px, 6vh, 72px) clamp(34px, 4vw, 56px);
+  padding: clamp(26px, 4vh, 56px) clamp(34px, 4vw, 56px);
 }
 
 .mode-home-left {
@@ -39,7 +39,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 42px;
+  margin-bottom: 30px;
 }
 
 .mode-brand-block .tooltip-wrap {
@@ -82,8 +82,8 @@
 .mode-action-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 16px;
   width: min(520px, 100%);
 }
 
@@ -92,8 +92,8 @@
   grid-template-columns: 54px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 16px;
-  min-height: 96px;
-  padding: 14px 20px 14px 18px;
+  min-height: 84px;
+  padding: 12px 18px 12px 16px;
   border: 1px solid var(--borderLt);
   border-radius: var(--border-radius-lg);
   background: var(--bg2);
@@ -145,13 +145,13 @@
 }
 
 .mode-action-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: currentColor;
 }
 
 .mode-action-desc {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--muted);
 }

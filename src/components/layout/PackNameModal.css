@@ -16,6 +16,18 @@
   font-family: var(--font-sans);
 }
 
+.pack-meta-modal--embedded {
+  width: 100%;
+  max-height: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.pack-meta-modal--embedded .pack-meta-header {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
 .pack-meta-header {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) 28px;

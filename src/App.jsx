@@ -56,6 +56,7 @@ import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
+import { AggregatePacksFunnel } from './components/AggregatePacks/AggregatePacksFunnel';
 import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
@@ -187,6 +188,7 @@ function AppContent() {
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
+  const [aggregatePacksOpen, setAggregatePacksOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
@@ -1411,6 +1413,7 @@ function AppContent() {
               onSetProjectType={handleSelectProjectType}
               onEditPack={handleEditExistingPack}
               onPodcastFunnel={() => setPodcastFunnelOpen(true)}
+              onAggregatePacks={() => setAggregatePacksOpen(true)}
               pendingSimulateZipPath={pendingSimulateZip}
               onSimulateConsumed={() => setPendingSimulateZip(null)}
               onOpenProject={handleLoad}
@@ -1567,6 +1570,12 @@ function AppContent() {
         <PodcastImportFunnel
           onClose={() => setPodcastFunnelOpen(false)}
           onImport={handlePodcastFunnelImport}
+        />
+      )}
+
+      {aggregatePacksOpen && (
+        <AggregatePacksFunnel
+          onClose={() => setAggregatePacksOpen(false)}
         />
       )}
 

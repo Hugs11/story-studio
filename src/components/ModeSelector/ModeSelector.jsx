@@ -45,6 +45,7 @@ export function ModeSelector({
   onSelect,
   onEditPack,
   onPodcastFunnel,
+  onAggregatePacks,
   onOpen,
   onOpenPreferences,
   recentProjects = [],
@@ -137,6 +138,17 @@ export function ModeSelector({
               <span className="mode-action-copy">
                 <span className="mode-action-name">Pack depuis un podcast</span>
                 <span className="mode-action-desc">Choisis un flux RSS et importe les épisodes comme histoires</span>
+              </span>
+              <span className="mode-action-arrow">›</span>
+            </button>
+          )}
+
+          {onAggregatePacks && (
+            <button className="mode-action-card" onClick={onAggregatePacks}>
+              <span className="mode-action-icon"><ActionIcon Icon={Package} /></span>
+              <span className="mode-action-copy">
+                <span className="mode-action-name">Agréger des packs</span>
+                <span className="mode-action-desc">Fusionne plusieurs .zip ou .7z dans un nouveau pack généré directement</span>
               </span>
               <span className="mode-action-arrow">›</span>
             </button>
