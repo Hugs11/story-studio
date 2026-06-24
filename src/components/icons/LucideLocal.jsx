@@ -147,6 +147,19 @@ const listTodoNode = [
   ['rect', { x: '3', y: '4', width: '6', height: '6', rx: '1' }],
 ];
 
+const listCheckNode = [
+  ['path', { d: 'M16 5H3' }],
+  ['path', { d: 'M16 12H3' }],
+  ['path', { d: 'M11 19H3' }],
+  ['path', { d: 'm15 18 2 2 4-4' }],
+];
+
+const fileStackNode = [
+  ['path', { d: 'M11 21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1' }],
+  ['path', { d: 'M16 16a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1' }],
+  ['path', { d: 'M21 6a2 2 0 0 0-.586-1.414l-2-2A2 2 0 0 0 17 2h-3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1z' }],
+];
+
 const swatchBookNode = [
   ['path', { d: 'M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z' }],
   ['path', { d: 'M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7' }],
@@ -385,6 +398,8 @@ export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);
 export const ListTodo = createLocalLucideIcon(listTodoNode);
+export const ListCheck = createLocalLucideIcon(listCheckNode);
+export const FileStack = createLocalLucideIcon(fileStackNode);
 export const SwatchBook = createLocalLucideIcon(swatchBookNode);
 export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
