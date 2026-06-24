@@ -621,6 +621,12 @@
   margin-bottom: 18px;
 }
 
+.funnel-done-badge--error {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
 .funnel-done-badge svg { width: 28px; height: 28px; }
 
 .funnel-done-title {

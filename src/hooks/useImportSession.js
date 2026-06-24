@@ -377,20 +377,39 @@ export function useImportSession({
     }
   }
 
-  async function handleImportPodcastEpisodes(episodes, feed) {
-    if (!Array.isArray(episodes) || episodes.length === 0) return;
+  // Importe une liste d'épisodes podcast en histoires. Réutilisé par la modale
+  // historique (depuis l'éditeur) et par le funnel accueil (plan 06).
+  // `options` :
+  //   - `targetMenuId` : menu cible explicite (`null` = racine). Si absent, on
+  //     déduit la cible de la sélection courante (comportement éditeur).
+  //   - `onProgress` : reçoit la progression à la place de la modale globale
+  //     `setImporting` (le funnel l'affiche dans son propre écran).
+  //   - `suppressDialog` : laisse le caller signaler l'échec lui-même.
+  // Retourne `{ total, failures, imported }`.
+  async function handleImportPodcastEpisodes(episodes, feed, options = {}) {
+    if (!Array.isArray(episodes) || episodes.length === 0) {
+      return { total: 0, failures: 0, imported: 0 };
+    }
 
-    const selectedId = store.selectedId;
-    const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
-    const targetMenuId = selectedNode?.type === 'menu'
-      ? selectedNode.id
-      : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+    const { targetMenuId: explicitTargetMenuId, onProgress = null, suppressDialog = false } = options;
+    const report = onProgress ?? setImporting;
+
+    let targetMenuId;
+    if (explicitTargetMenuId !== undefined) {
+      targetMenuId = explicitTargetMenuId;
+    } else {
+      const selectedId = store.selectedId;
+      const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
+      targetMenuId = selectedNode?.type === 'menu'
+        ? selectedNode.id
+        : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+    }
 
     const total = episodes.length;
     const feedTitle = feed?.title || 'Podcast';
     const feedImage = feed?.imageUrl || null;
     logger.info(`import-podcast:start count=${total} target=${targetMenuId ?? 'root'}`);
-    setImporting({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
+    report({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
 
     let failures = 0;
     try {
@@ -398,14 +417,14 @@ export function useImportSession({
         const episode = episodes[index];
         const displayName = episode.title || `Épisode ${index + 1}`;
         try {
-          setImporting({ name: displayName, index: index + 1, total, phase: "Téléchargement de l'épisode..." });
+          report({ name: displayName, index: index + 1, total, phase: "Téléchargement de l'épisode..." });
           const tmpAudio = await invoke('download_podcast_media', { url: episode.audioUrl, fileName: displayName });
           const audio = await copyGeneratedMediaToProject(tmpAudio);
 
           let itemImage = null;
           const imageUrl = episode.imageUrl || feedImage;
           if (imageUrl) {
-            setImporting({ name: displayName, index: index + 1, total, phase: 'Récupération de la jaquette...' });
+            report({ name: displayName, index: index + 1, total, phase: 'Récupération de la jaquette...' });
             try {
               const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-jaquette` });
               itemImage = await copyGeneratedMediaToProject(tmpImage);
@@ -425,10 +444,11 @@ export function useImportSession({
         }
       }
     } finally {
-      setImporting(null);
+      // Ne nettoie que la modale globale ; le funnel gère lui-même son écran.
+      if (!onProgress) setImporting(null);
     }
 
-    if (failures > 0) {
+    if (failures > 0 && !suppressDialog) {
       showErrorDialog({
         title: 'Import du podcast',
         message: failures === total
@@ -437,6 +457,8 @@ export function useImportSession({
         variant: failures === total ? 'warning' : 'info',
       });
     }
+
+    return { total, failures, imported: total - failures };
   }
 
   return {

@@ -11,15 +11,16 @@ import { Check } from '../icons/LucideLocal';
  *
  * @param {Object}   props
  * @param {React.ReactNode} [props.icon]   Défaut : coche succès.
+ * @param {'success'|'error'} [props.tone='success']  Couleur de la pastille.
  * @param {string}   [props.title='Terminé']
  * @param {string}   [props.fileName]
  * @param {string}   [props.meta]
  * @param {React.ReactNode} props.children  Boutons d'action.
  */
-export function FunnelDoneState({ icon, title = 'Terminé', fileName, meta, children }) {
+export function FunnelDoneState({ icon, tone = 'success', title = 'Terminé', fileName, meta, children }) {
   return (
     <div className="funnel-done">
-      <div className="funnel-done-badge" aria-hidden="true">
+      <div className={`funnel-done-badge${tone === 'error' ? ' funnel-done-badge--error' : ''}`} aria-hidden="true">
         {icon ?? <Check strokeWidth={2.6} />}
       </div>
       <div className="funnel-done-title">{title}</div>
