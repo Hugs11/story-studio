@@ -68,11 +68,12 @@ pub fn create_fixed_pack(
     zip_path: &Path,
     metadata_patch: Option<PackMetadataPatchModel>,
 ) -> Result<FixedPackResultModel, String> {
-    create_fixed_pack_with_log(zip_path, metadata_patch, &|_| {})
+    create_fixed_pack_with_log(zip_path, None, metadata_patch, &|_| {})
 }
 
 pub fn create_fixed_pack_with_log(
     zip_path: &Path,
+    output_dir: Option<&Path>,
     metadata_patch: Option<PackMetadataPatchModel>,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
@@ -169,7 +170,7 @@ pub fn create_fixed_pack_with_log(
             emit("Application des métadonnées au story.json...");
             apply_metadata_patch(&mut doc.story, patch);
         }
-        let fixed_zip_path = unique_fixed_zip_path(zip_path, metadata_patch.as_ref());
+        let fixed_zip_path = unique_fixed_zip_path(zip_path, output_dir, metadata_patch.as_ref());
         emit(&format!(
             "Écriture du ZIP corrigé : {}",
             fixed_zip_path.display()
@@ -1203,9 +1204,12 @@ fn write_fixed_zip(
 
 fn unique_fixed_zip_path(
     source: &Path,
+    output_dir: Option<&Path>,
     metadata_patch: Option<&PackMetadataPatchModel>,
 ) -> PathBuf {
-    let parent = source.parent().unwrap_or_else(|| Path::new("."));
+    let parent = output_dir
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or_else(|| source.parent().unwrap_or_else(|| Path::new(".")));
     let stem = metadata_patch
         .and_then(convention_zip_stem)
         .or_else(|| {

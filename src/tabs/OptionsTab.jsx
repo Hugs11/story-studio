@@ -3,7 +3,6 @@ import { Button } from '../components/common/Button';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
-import { CommunityPackChecker } from '../components/CommunityPackChecker/CommunityPackChecker';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
 import { KEYS, write } from '../store/persistentSettings';
@@ -46,7 +45,6 @@ const OPTION_GROUPS = [
   {
     label: 'Avancé',
     items: [
-      { id: 'community-pack', label: 'Vérifier un pack' },
       { id: 'diagnostic', label: 'Diagnostic' },
     ],
   },
@@ -837,14 +835,6 @@ export function OptionsTab({
           )}
         </section>
 
-        <section
-          id="community-pack"
-          className={sectionClass('community-pack')}
-          ref={(node) => { sectionRefs.current['community-pack'] = node; }}
-        >
-          <div className="opts-card-title">Vérifier un pack</div>
-          <CommunityPackChecker />
-        </section>
 
         <section
           id="diagnostic"

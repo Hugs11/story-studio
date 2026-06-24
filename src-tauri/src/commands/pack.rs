@@ -104,6 +104,7 @@ pub async fn analyze_community_pack(
 pub async fn create_fixed_community_pack(
     app: AppHandle,
     zip_path: String,
+    output_dir: Option<String>,
     metadata_patch: Option<community_pack_checker::PackMetadataPatch>,
 ) -> Result<community_pack_checker::FixedPackResult, String> {
     log::info!(target: "pack_checker", "create_fixed_community_pack: '{}'", zip_path);
@@ -118,11 +119,16 @@ pub async fn create_fixed_community_pack(
         {
             return Err("La correction communautaire V1 accepte uniquement les fichiers ZIP.".to_string());
         }
+        let safe_output_dir = output_dir
+            .as_deref()
+            .map(|path| crate::services::project_files::validate_existing_dir_path(path, "Dossier de sortie"))
+            .transpose()?;
         let emit = |msg: &str| {
             let _ = app.emit("community-pack-checker-log", msg.to_string());
         };
         community_pack_checker::create_fixed_pack_with_log(
             &safe_zip,
+            safe_output_dir.as_deref(),
             metadata_patch,
             &emit,
         )
