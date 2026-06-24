@@ -15,6 +15,7 @@ export const ProjectContext = createContext({
   onSave: null,
   onOpenSDGenerate: null,
   onRemoveSdResult: null,
+  onUpdateXttsSettings: null,
   onQueueXttsGenerate: async () => null,
   onMediaCreated: null,
 });

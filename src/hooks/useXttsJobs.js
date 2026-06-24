@@ -9,7 +9,10 @@ export function useXttsJobs(xttsStore, onAudioGenerated, workspaceDir = null, on
     const next = xttsStore.jobs.find(j => j.status === 'pending');
     if (!next) return;
     xttsStore.updateJob(next.id, { status: 'running', errorMessage: null, progress: null, progressLabel: null });
-    invoke('xtts_generate_audio', {
+    // Routage backend (D47) : Piper (défaut zéro-config) ou XTTS (opt-in). La file
+    // de jobs reste commune ; seule la commande Rust invoquée diffère.
+    const command = next.settings?.backend === 'piper' ? 'piper_generate_audio' : 'xtts_generate_audio';
+    invoke(command, {
       settings: next.settings,
       request: { ...next.request, workspaceDir },
     })
