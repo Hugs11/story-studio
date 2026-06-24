@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, Wrench, X, Youtube } from '../icons/LucideLocal';
+import { FilePen, FileStack, FolderOpen, ListCheck, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
-import { Button } from '../common/Button';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
 
@@ -56,7 +55,6 @@ export function ModeSelector({
   onRecoverSession,
   onIgnoreSessionRecovery,
 }) {
-  const [documentationOpen, setDocumentationOpen] = useState(false);
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
   const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
@@ -108,7 +106,7 @@ export function ModeSelector({
           <button className="mode-action-card" onClick={() => onSelect('pack')}>
             <span className="mode-action-icon"><ActionIcon Icon={SwatchBook} /></span>
             <span className="mode-action-copy">
-              <span className="mode-action-name">Créer un pack d'histoires</span>
+              <span className="mode-action-name">Éditeur libre</span>
               <span className="mode-action-desc">Menus multiples, agrégation de ZIP et navigation personnalisée</span>
             </span>
             <span className="mode-action-arrow">›</span>
@@ -117,7 +115,7 @@ export function ModeSelector({
           <button className="mode-action-card" onClick={() => onSelect('simple')}>
             <span className="mode-action-icon"><ActionIcon Icon={FilePen} /></span>
             <span className="mode-action-copy">
-              <span className="mode-action-name">Créer une histoire simple</span>
+              <span className="mode-action-name">Éditeur simplifié</span>
               <span className="mode-action-desc">Un menu, une histoire</span>
             </span>
             <span className="mode-action-arrow">›</span>
@@ -127,7 +125,7 @@ export function ModeSelector({
             <button className="mode-action-card" onClick={onEditPack}>
               <span className="mode-action-icon"><ActionIcon Icon={Package} /></span>
               <span className="mode-action-copy">
-                <span className="mode-action-name">Modifier un pack</span>
+                <span className="mode-action-name">Modifier un pack existant</span>
                 <span className="mode-action-desc">Ouvre un .zip ou un dossier Lunii et édite-le tout de suite, sans projet</span>
               </span>
               <span className="mode-action-arrow">›</span>
@@ -138,7 +136,7 @@ export function ModeSelector({
             <button className="mode-action-card" onClick={onPodcastFunnel}>
               <span className="mode-action-icon"><ActionIcon Icon={Rss} /></span>
               <span className="mode-action-copy">
-                <span className="mode-action-name">Pack depuis un podcast</span>
+                <span className="mode-action-name">Créer un pack depuis un podcast</span>
                 <span className="mode-action-desc">Choisis un flux RSS et importe les épisodes comme histoires</span>
               </span>
               <span className="mode-action-arrow">›</span>
@@ -149,7 +147,7 @@ export function ModeSelector({
             <button className="mode-action-card" onClick={onYoutubeFunnel}>
               <span className="mode-action-icon"><ActionIcon Icon={Youtube} /></span>
               <span className="mode-action-copy">
-                <span className="mode-action-name">Pack depuis YouTube</span>
+                <span className="mode-action-name">Créer un pack depuis YouTube</span>
                 <span className="mode-action-desc">Colle une URL (vidéo, playlist ou chaîne) et importe l'audio comme histoires</span>
               </span>
               <span className="mode-action-arrow">›</span>
@@ -158,7 +156,7 @@ export function ModeSelector({
 
           {onAggregatePacks && (
             <button className="mode-action-card" onClick={onAggregatePacks}>
-              <span className="mode-action-icon"><ActionIcon Icon={Package} /></span>
+              <span className="mode-action-icon"><ActionIcon Icon={FileStack} /></span>
               <span className="mode-action-copy">
                 <span className="mode-action-name">Agréger des packs</span>
                 <span className="mode-action-desc">Fusionne plusieurs .zip ou .7z dans un nouveau pack généré directement</span>
@@ -246,7 +244,7 @@ export function ModeSelector({
           </button>
           {onCheckPack && (
             <button className="mode-secondary-button mode-secondary-button--tool" onClick={onCheckPack}>
-              <ActionIcon Icon={Wrench} />
+              <ActionIcon Icon={ListCheck} />
               <span>Vérifier un pack</span>
             </button>
           )}
@@ -254,25 +252,8 @@ export function ModeSelector({
             <ActionIcon Icon={SlidersHorizontal} />
             <span>Préférences</span>
           </button>
-          <button className="mode-secondary-button mode-secondary-button--tool" onClick={() => setDocumentationOpen(true)}>
-            <ActionIcon Icon={ListTodo} />
-            <span>Documentation</span>
-          </button>
         </div>
       </section>
-
-      {documentationOpen && (
-        <div className="mode-doc-overlay" onMouseDown={() => setDocumentationOpen(false)}>
-          <div className="mode-doc-modal" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="mode-doc-title">Documentation</div>
-            <div className="mode-doc-text">
-              Je n'ai pas encore eu le temps de m'en occuper. Si tu es volontaire, une contribution sera la bienvenue.
-            </div>
-            <div className="mode-doc-link">Lien GitHub à ajouter plus tard.</div>
-            <Button onClick={() => setDocumentationOpen(false)}>Fermer</Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
