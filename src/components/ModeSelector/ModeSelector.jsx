@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, X } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { useLocalFile } from '../../hooks/useLocalFile';
@@ -46,6 +46,7 @@ export function ModeSelector({
   onEditPack,
   onPodcastFunnel,
   onAggregatePacks,
+  onCheckPack,
   onOpen,
   onOpenPreferences,
   recentProjects = [],
@@ -231,6 +232,12 @@ export function ModeSelector({
             <ActionIcon Icon={FolderOpen} />
             <span>Ouvrir un projet</span>
           </button>
+          {onCheckPack && (
+            <button className="mode-secondary-button mode-secondary-button--tool" onClick={onCheckPack}>
+              <ActionIcon Icon={Wrench} />
+              <span>Vérifier un pack</span>
+            </button>
+          )}
           <button className="mode-secondary-button mode-secondary-button--tool" onClick={onOpenPreferences}>
             <ActionIcon Icon={SlidersHorizontal} />
             <span>Préférences</span>

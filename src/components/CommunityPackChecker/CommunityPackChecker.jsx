@@ -412,7 +412,7 @@ function categoryStats(summary) {
   };
 }
 
-function titleNeedsCorrection(report) {
+export function titleNeedsCorrection(report) {
   return (report?.titleSummary?.warnings || 0) > 0 || (report?.titleSummary?.errors || 0) > 0;
 }
 
@@ -590,7 +590,7 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
   );
 }
 
-function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
+export function ReportView({ report, busy, canFix, onExportReport, onFixPack, onStartFix }) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
@@ -600,6 +600,10 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   const SummaryIcon = summary.Icon;
 
   function startFixFlow() {
+    if (onStartFix) {
+      onStartFix();
+      return;
+    }
     setMetadataOpen(true);
   }
 
@@ -656,7 +660,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
         </button>
       </div>
 
-      {metadataOpen ? (
+      {metadataOpen && !onStartFix ? (
         <CommunityPackMetadataModal
           report={report}
           busy={busy}
@@ -671,7 +675,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   );
 }
 
-function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
+export function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
   if (!report) return null;
   return (
     <details className="checker-log">
@@ -686,7 +690,7 @@ function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
   );
 }
 
-function ProcessLog({ status, lines }) {
+export function ProcessLog({ status, lines }) {
   const linesRef = useRef(null);
   useEffect(() => {
     const node = linesRef.current;

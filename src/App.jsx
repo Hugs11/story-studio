@@ -57,6 +57,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { AggregatePacksFunnel } from './components/AggregatePacks/AggregatePacksFunnel';
+import { CommunityPackCheckerFunnel } from './components/CommunityPackChecker/CommunityPackCheckerFunnel';
 import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
@@ -189,6 +190,7 @@ function AppContent() {
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
   const [aggregatePacksOpen, setAggregatePacksOpen] = useState(false);
+  const [packCheckerOpen, setPackCheckerOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
@@ -1415,6 +1417,7 @@ function AppContent() {
               onEditPack={handleEditExistingPack}
               onPodcastFunnel={() => setPodcastFunnelOpen(true)}
               onAggregatePacks={() => setAggregatePacksOpen(true)}
+              onCheckPack={() => setPackCheckerOpen(true)}
               pendingSimulateZipPath={pendingSimulateZip}
               onSimulateConsumed={() => setPendingSimulateZip(null)}
               onOpenProject={handleLoad}
@@ -1577,6 +1580,12 @@ function AppContent() {
       {aggregatePacksOpen && (
         <AggregatePacksFunnel
           onClose={() => setAggregatePacksOpen(false)}
+        />
+      )}
+
+      {packCheckerOpen && (
+        <CommunityPackCheckerFunnel
+          onClose={() => setPackCheckerOpen(false)}
         />
       )}
 

@@ -1,0 +1,130 @@
+.pack-checker-funnel {
+  min-height: 100%;
+}
+
+.pack-checker-step {
+  gap: 14px;
+}
+
+.pack-checker-step--report {
+  padding-bottom: 18px;
+}
+
+.pack-checker-selected,
+.pack-checker-output,
+.pack-checker-fix-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+}
+
+.pack-checker-selected {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.pack-checker-selected svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--accent-2-text);
+}
+
+.pack-checker-selected span,
+.pack-checker-output-copy span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pack-checker-output-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--accent-2-border);
+  border-radius: var(--border-radius-md);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+}
+
+.pack-checker-output-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.pack-checker-output-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pack-checker-output-copy strong,
+.pack-checker-fix-card strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pack-checker-output-copy span,
+.pack-checker-fix-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.pack-checker-fix-card {
+  align-items: flex-start;
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+
+.pack-checker-fix-card .pack-checker-output-icon {
+  border-color: var(--warning-border);
+  background: color-mix(in srgb, var(--warning-bg) 78%, var(--bg1));
+  color: var(--warning-text);
+}
+
+.pack-checker-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pack-checker-funnel .checker-report {
+  overflow: visible;
+}
+
+.pack-checker-funnel .checker-log {
+  max-height: none;
+}
+
+.pack-checker-funnel .checker-log pre {
+  max-height: 180px;
+}
+
+.pack-checker-funnel .checker-report-footer {
+  position: sticky;
+  bottom: -18px;
+}
+
+@media (max-width: 720px) {
+  .pack-checker-output {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pack-checker-output .funnel-btn {
+    width: 100%;
+  }
+}
