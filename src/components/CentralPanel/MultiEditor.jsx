@@ -4,6 +4,7 @@ import { Tooltip } from '../common/Tooltip';
 import { findEntryById } from '../../store/projectModel';
 import { useProjectContext } from '../../store/ProjectContext';
 import { KEYS, read } from '../../store/persistentSettings';
+import { isTtsAvailable, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
 import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { CircleStop, Moon, Pause, Sparkles, Speech, Trash2 } from '../icons/LucideLocal';
@@ -171,6 +172,10 @@ export const MultiEditor = memo(function MultiEditor({
     : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
 
   function getSelectedVoice() {
+    if ((xttsSettings?.backend || 'piper') === 'piper') {
+      // Piper a toujours une voix par défaut : jamais vide, pas de pré-sélection requise.
+      return xttsSettings?.piperVoice || read(KEYS.PIPER_LAST_VOICE) || PIPER_DEFAULT_VOICE;
+    }
     const favoriteVoices = Array.isArray(xttsSettings?.favoriteVoices) ? xttsSettings.favoriteVoices : [];
     return (
       read(KEYS.XTTS_LAST_VOICE) ||
@@ -311,7 +316,7 @@ export const MultiEditor = memo(function MultiEditor({
                   {batchImageGenerating ? 'Images…' : 'Images texte'}
                 </button>
               ) : null}
-              {xttsSettings?.enabled && titleAudioNodes.length > 0 && (
+              {isTtsAvailable(xttsSettings) && titleAudioNodes.length > 0 && (
                 <button
                   type="button"
                   className="batch-generate-btn"

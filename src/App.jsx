@@ -1333,6 +1333,7 @@ function AppContent() {
       onSave: handleSaveProject,
       onOpenSDGenerate: handleOpenSDGenerate,
       onRemoveSdResult: sdStore.removeResult,
+      onUpdateXttsSettings: handleUpdateXttsSettings,
       onQueueXttsGenerate: handleQueueXttsGenerate,
       onMediaCreated: handleMediaCreated,
     }}>

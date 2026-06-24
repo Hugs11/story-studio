@@ -6,7 +6,9 @@ import { Toggle } from '../components/common/Toggle';
 import { CommunityPackChecker } from '../components/CommunityPackChecker/CommunityPackChecker';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
+import { KEYS, write } from '../store/persistentSettings';
 import { THEME_OPTIONS } from '../store/themePreference';
+import { PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import './OptionsTab.css';
 
@@ -97,6 +99,8 @@ export function OptionsTab({
   const [xttsVoices, setXttsVoices] = useState([]);
   const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
   const [xttsLogs, setXttsLogs] = useState([]);
+  const [piperVoices, setPiperVoices] = useState([]);
+  const [piperProvision, setPiperProvision] = useState({ state: 'idle', message: '' });
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
   const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
@@ -107,6 +111,11 @@ export function OptionsTab({
   const highlightTimerRef = useRef(null);
   const highlightFrameRef = useRef(null);
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
+  const ttsBackend = xttsSettings.backend || 'piper';
+  const piperVoice = xttsSettings.piperVoice || PIPER_DEFAULT_VOICE;
+  const piperSpeed = Number.isFinite(Number(xttsSettings.piperSpeed)) && Number(xttsSettings.piperSpeed) > 0
+    ? Number(xttsSettings.piperSpeed)
+    : 1.0;
   const displayedWorkspaceDir = configuredWorkspaceDir || workspaceDir || '';
 
   useEffect(() => {
@@ -152,6 +161,48 @@ export function OptionsTab({
       if (unlisten) unlisten();
     };
   }, []);
+
+  // Catalogue Piper (voix installées + à télécharger). Aucun réseau : lecture
+  // locale de l'état d'installation.
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    invoke('piper_list_voices')
+      .then((status) => setPiperVoices(status?.voices || []))
+      .catch(() => {});
+  }, []);
+
+  // Reflète les messages discrets du provisionnement Piper (téléchargement).
+  useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+    let cancelled = false;
+    let unlisten = null;
+    listen('piper-log', (event) => {
+      if (cancelled) return;
+      setPiperProvision((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    }).catch(() => {});
+    return () => { cancelled = true; if (unlisten) unlisten(); };
+  }, []);
+
+  function handleTtsBackendChange(backend) {
+    // Sélectionner XTTS l'active (le moteur remplace l'ancien toggle d'activation).
+    onUpdateXttsSettings(backend === 'xtts' ? { backend, enabled: true } : { backend });
+  }
+
+  async function handlePreparePiperVoice() {
+    setPiperProvision({ state: 'loading', message: 'Préparation de la voix…' });
+    try {
+      await invoke('piper_ensure_voice', { voice: piperVoice });
+      setPiperVoices((prev) => prev.map((voice) => (
+        voice.id === piperVoice ? { ...voice, installed: true } : voice
+      )));
+      setPiperProvision({ state: 'ok', message: 'Voix prête. Elle fonctionne désormais hors-ligne.' });
+    } catch (e) {
+      setPiperProvision({ state: 'error', message: `${e}` });
+    }
+  }
 
   async function handleTestSd() {
     const launching = sdSettings?.autoStart && sdSettings?.batPath;
@@ -473,18 +524,85 @@ export function OptionsTab({
           className={sectionClass('xtts')}
           ref={(node) => { sectionRefs.current.xtts = node; }}
         >
-          <div className="opts-card-title">Generation de voix locale — XTTS</div>
+          <div className="opts-card-title">Génération de voix locale</div>
           <div className="opts-row">
             <div className="opts-row-info">
-              <div className="opts-row-label">Activer la generation de voix</div>
+              <div className="opts-row-label">Moteur de voix</div>
               <div className="opts-row-sub">
-                Ajoute un bouton texte → audio dans tous les champs audio de Story Studio.
+                <strong>Piper</strong> fonctionne sans configuration (recommandé). <strong>XTTS</strong> est destiné
+                aux utilisateurs avancés (clonage de voix, serveur local).
               </div>
             </div>
-            <Toggle on={xttsSettings.enabled} onChange={(v) => onUpdateXttsSettings({ enabled: v })} />
+            <select
+              className="xtts-input opts-select"
+              value={ttsBackend}
+              onChange={(e) => handleTtsBackendChange(e.target.value)}
+            >
+              <option value="piper">Piper (défaut)</option>
+              <option value="xtts">XTTS (avancé)</option>
+            </select>
           </div>
 
-          {xttsSettings.enabled && (
+          {ttsBackend === 'piper' && (
+            <div className="xtts-settings">
+              <div className="opts-row-sub" style={{ marginBottom: 8 }}>
+                Piper ajoute un bouton texte → audio dans tous les champs audio. La voix est téléchargée
+                automatiquement au 1er usage, puis disponible hors-ligne.
+              </div>
+              <div className="xtts-grid">
+                <label className="xtts-label">
+                  Voix
+                  <select
+                    className="xtts-input"
+                    value={piperVoice}
+                    onChange={(e) => {
+                      write(KEYS.PIPER_LAST_VOICE, e.target.value);
+                      onUpdateXttsSettings({ piperVoice: e.target.value });
+                    }}
+                  >
+                    {(piperVoices.length > 0 ? piperVoices : [{ id: piperVoice, label: piperVoice, installed: false }]).map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.label}{voice.installed ? '' : ' — à télécharger'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="xtts-label">
+                  Vitesse ({piperSpeed.toFixed(2)}×)
+                  <input
+                    className="xtts-input"
+                    type="number"
+                    min="0.5"
+                    max="1.5"
+                    step="0.05"
+                    value={piperSpeed}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value)) onUpdateXttsSettings({ piperSpeed: Math.max(0.5, Math.min(1.5, value)) });
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="xtts-actions">
+                <Button onClick={handlePreparePiperVoice} disabled={piperProvision.state === 'loading'}>
+                  {piperProvision.state === 'loading' ? 'Téléchargement…' : 'Préparer la voix maintenant'}
+                </Button>
+                <span className="opts-row-sub">
+                  Optionnel : prépare la voix sélectionnée à l’avance pour éviter l’attente au 1er usage.
+                </span>
+              </div>
+
+              {piperProvision.state !== 'idle' && (
+                <div className={`info-box ${piperProvision.state === 'error' ? 'warn' : ''}`}>
+                  {piperProvision.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {ttsBackend === 'xtts' && (
             <div className="xtts-settings">
               <div className="xtts-grid">
                 <label className="xtts-label">
