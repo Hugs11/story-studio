@@ -51,6 +51,7 @@ export function CompleteDiagramTree({
   onImportStories,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
   onAddMenu,
   onAddStory,
@@ -941,6 +942,7 @@ export function CompleteDiagramTree({
             onAddFolder={onAddMenu}
             onImportFolder={onImportFolder}
             onImportPodcast={onImportPodcast}
+            onImportYoutube={onImportYoutube}
             onRecord={onRecord}
             onLaunchSimulator={onSimulateRoot}
             showLabel

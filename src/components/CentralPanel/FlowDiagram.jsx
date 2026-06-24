@@ -250,6 +250,7 @@ export function FlowDiagram({
   onImportStories,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
   onAddMenu,
   onAddStory,
@@ -472,6 +473,7 @@ export function FlowDiagram({
         onImportStories={onImportStories}
         onImportFolder={onImportFolder}
         onImportPodcast={onImportPodcast}
+        onImportYoutube={onImportYoutube}
         onRecord={onRecord}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}

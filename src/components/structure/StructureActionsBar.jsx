@@ -4,6 +4,7 @@ import {
   FolderPlus,
   Mic,
   Rss,
+  Youtube,
 } from '../icons/LucideLocal';
 import { LuniiIcon } from '../icons/LuniiIcon';
 import { Tooltip } from '../common/Tooltip';
@@ -36,12 +37,14 @@ export function StructureActionsBar({
   onAddFolder,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
   onLaunchSimulator,
   canAddStory = true,
   canAddFolder = true,
   canImportFolder = true,
   canImportPodcast = true,
+  canImportYoutube = true,
   canRecord = true,
   canLaunchSimulator = true,
   showLabel = false,
@@ -78,6 +81,15 @@ export function StructureActionsBar({
       >
         <ActionIcon Icon={Rss} />
       </StructureActionButton>
+      {onImportYoutube ? (
+        <StructureActionButton
+          title="Importer depuis YouTube"
+          disabled={!canImportYoutube}
+          onClick={onImportYoutube}
+        >
+          <ActionIcon Icon={Youtube} />
+        </StructureActionButton>
+      ) : null}
       <StructureActionButton
         title="Enregistrer une histoire avec le micro"
         disabled={!canRecord}

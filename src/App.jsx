@@ -60,6 +60,7 @@ import { AggregatePacksFunnel } from './components/AggregatePacks/AggregatePacks
 import { CommunityPackCheckerFunnel } from './components/CommunityPackChecker/CommunityPackCheckerFunnel';
 import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
+import { YoutubeImportFunnel } from './components/YoutubeImport/YoutubeImportFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
@@ -189,6 +190,9 @@ function AppContent() {
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
+  // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
+  // dans le projet courant (éditeur libre). Plan 09.
+  const [youtubeFunnelMode, setYoutubeFunnelMode] = useState(null);
   const [aggregatePacksOpen, setAggregatePacksOpen] = useState(false);
   const [packCheckerOpen, setPackCheckerOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
@@ -1058,7 +1062,7 @@ function AppContent() {
     unpackZipIntoBlankProject,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
-    handleImportPodcastEpisodes,
+    handleImportMediaEpisodes,
   } = useImportSession({
     store,
     projectIndex,
@@ -1106,7 +1110,8 @@ function AppContent() {
         }));
       }
       store.setSelectedId('root');
-      const result = await handleImportPodcastEpisodes(episodes, feed, {
+      const result = await handleImportMediaEpisodes(episodes, feed, {
+        source: 'podcast',
         targetMenuId: null,
         onProgress,
         suppressDialog: true,
@@ -1130,6 +1135,83 @@ function AppContent() {
       workspaceDirRef.current = configuredWorkspaceDir;
       throw error;
     }
+  }
+
+  // Funnel YouTube depuis l'accueil (plan 09) : jumeau de handlePodcastFunnelImport.
+  // Crée la session éphémère, pré-remplit titre + vignette depuis la source, puis
+  // importe les vidéos en histoires (source yt-dlp) avant l'atterrissage éditeur.
+  async function handleYoutubeFunnelImport(videos, list, onProgress) {
+    const workspaceDir = await prepareNewWorkSession('pack');
+    try {
+      const listTitle = String(list?.title || '').trim();
+      onProgress?.({ name: listTitle || 'YouTube', index: 0, total: videos.length, phase: 'Préparation de la session…' });
+      let listCover = null;
+      if (list?.imageUrl) {
+        try {
+          const tmpImage = await invoke('download_podcast_media', {
+            url: list.imageUrl,
+            fileName: `${listTitle || 'youtube'}-couverture`,
+          });
+          listCover = await copyGeneratedMediaToProject(tmpImage);
+        } catch (coverError) {
+          logger.warn(`youtube-funnel:cover-error title='${listTitle || 'YouTube'}' error=${coverError}`);
+        }
+      }
+      if (listTitle || listCover) {
+        store.setProject((project) => ({
+          ...project,
+          ...(listTitle ? { projectName: listTitle, rootName: listTitle } : {}),
+          ...(listCover ? { rootImage: listCover, thumbnailImage: listCover } : {}),
+          packMetadata: {
+            ...(project.packMetadata ?? {}),
+            ...(listTitle ? { title: listTitle } : {}),
+          },
+        }));
+      }
+      store.setSelectedId('root');
+      const result = await handleImportMediaEpisodes(videos, list, {
+        source: 'youtube',
+        targetMenuId: null,
+        onProgress,
+        suppressDialog: true,
+      });
+      if (result.total > 0 && result.failures >= result.total) {
+        throw new Error("Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.");
+      }
+      if (result.failures > 0) {
+        setImportNotice(`${result.failures} vidéo(s) sur ${result.total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`);
+      }
+      logger.info(`youtube-funnel:landed count=${result.imported}`);
+    } catch (error) {
+      logger.error('youtube-funnel:import-error', error);
+      if (!useWorkspaceForNewProjects && workspaceDir) {
+        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
+      }
+      store.resetProject();
+      setSessionMode(null);
+      setSessionWorkspaceDir('');
+      setWorkspaceDirState(configuredWorkspaceDir);
+      workspaceDirRef.current = configuredWorkspaceDir;
+      throw error;
+    }
+  }
+
+  // Import YouTube depuis l'éditeur libre (plan 09) : pas de nouvelle session, on
+  // insère dans le projet courant (cible déduite de la sélection comme les autres
+  // imports média). Lève en cas d'échec total → écran d'erreur du funnel.
+  async function handleYoutubeEditorImport(videos, list, onProgress) {
+    const result = await handleImportMediaEpisodes(videos, list, {
+      source: 'youtube',
+      onProgress,
+      suppressDialog: true,
+    });
+    if (result.total > 0 && result.failures >= result.total) {
+      throw new Error("Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.");
+    }
+    if (result.failures > 0) {
+      setImportNotice(`${result.failures} vidéo(s) sur ${result.total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`);
+    }
+    logger.info(`youtube-editor:imported count=${result.imported}`);
   }
 
   useOsFileDrop({
@@ -1416,6 +1498,7 @@ function AppContent() {
               onSetProjectType={handleSelectProjectType}
               onEditPack={handleEditExistingPack}
               onPodcastFunnel={() => setPodcastFunnelOpen(true)}
+              onYoutubeFunnel={() => setYoutubeFunnelMode('home')}
               onAggregatePacks={() => setAggregatePacksOpen(true)}
               onCheckPack={() => setPackCheckerOpen(true)}
               pendingSimulateZipPath={pendingSimulateZip}
@@ -1439,6 +1522,7 @@ function AppContent() {
               onAddStoryToMenu={handleAddStoryToMenu}
               onImportFolder={handleImportFolder}
               onImportPodcast={() => setPodcastImportOpen(true)}
+              onImportYoutube={() => setYoutubeFunnelMode('editor')}
               onRecord={handleToolbarRecord}
               canRecord={canRecord}
               onUnpackZip={handleUnpackZip}
@@ -1474,6 +1558,7 @@ function AppContent() {
               onImportStories={() => handleAddStory()}
               onImportFolder={handleImportFolder}
               onImportPodcast={() => setPodcastImportOpen(true)}
+              onImportYoutube={() => setYoutubeFunnelMode('editor')}
               onRecord={handleToolbarRecord}
               onUpdateRoot={handleUpdateRoot}
               onUpdateMedia={store.updateRootMedia}
@@ -1557,7 +1642,7 @@ function AppContent() {
 
       {podcastImportOpen && renderDeferred(
         <PodcastImportModal
-          onImport={(episodes, feed) => handleImportPodcastEpisodes(episodes, feed)}
+          onImport={(episodes, feed) => handleImportMediaEpisodes(episodes, feed)}
           onClose={() => setPodcastImportOpen(false)}
         />,
       )}
@@ -1574,6 +1659,14 @@ function AppContent() {
         <PodcastImportFunnel
           onClose={() => setPodcastFunnelOpen(false)}
           onImport={handlePodcastFunnelImport}
+        />
+      )}
+
+      {youtubeFunnelMode && (
+        <YoutubeImportFunnel
+          mode={youtubeFunnelMode}
+          onClose={() => setYoutubeFunnelMode(null)}
+          onImport={youtubeFunnelMode === 'editor' ? handleYoutubeEditorImport : handleYoutubeFunnelImport}
         />
       )}
 

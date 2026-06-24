@@ -121,9 +121,68 @@ are under **BSD-style** licenses; and some parts may carry the **unRAR**
 license restriction as documented by 7-Zip. Do **not** describe 7-Zip as
 covered by Story Studio's MIT license.
 
+## Runtime-downloaded tools (not bundled)
+
+The tools below are **not** included in this repository or its installers. Story
+Studio downloads them on first use from their official sources, over HTTPS from
+an allowlist of official hosts, into a writable app-data folder
+(`{app_data}/yt-dlp/`, `{app_data}/piper/`). They run on the end user's machine;
+Story Studio does **not** redistribute them. Their upstream licenses still apply
+to the downloaded copies, which is why they are disclosed here.
+
+### yt-dlp
+
+- **Used by:** the "Pack depuis YouTube" funnel (plan 09), to list videos and
+  extract their audio. Provisioned by `src-tauri/src/services/youtube/`.
+- **Downloaded from:**
+  <https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe>
+  (always the latest release; integrity verified against that release's
+  `SHA2-256SUMS` before use).
+- **Upstream project:** <https://github.com/yt-dlp/yt-dlp>
+- **License:** **The Unlicense** (public-domain dedication)
+- **License text:** <https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE>
+
+The latest version is always fetched because YouTube blocks outdated releases.
+yt-dlp uses the bundled `ffmpeg.exe` (see above) to extract audio.
+
+### Piper (text-to-speech)
+
+- **Used by:** the default zero-config TTS backend (plan 08). Provisioned by
+  `src-tauri/src/services/piper/`.
+- **Downloaded from:**
+  - binary archive:
+    <https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip>
+  - voice models: <https://huggingface.co/rhasspy/piper-voices> (tag `v1.0.0`)
+- **Upstream projects:** <https://github.com/rhasspy/piper> and
+  <https://github.com/rhasspy/piper-voices>
+- **Licenses:**
+  - Piper itself: **MIT License** —
+    <https://github.com/rhasspy/piper/blob/master/LICENSE.md>
+  - The Windows archive also contains **eSpeak NG** (phonemizer data + library),
+    licensed under the **GNU GPL v3** —
+    <https://github.com/espeak-ng/espeak-ng/blob/master/COPYING> — and
+    **ONNX Runtime**, licensed under the **MIT License** —
+    <https://github.com/microsoft/onnxruntime/blob/main/LICENSE>.
+  - Each voice model carries **its own license**, documented in that voice's
+    `MODEL_CARD` in the `piper-voices` repository. The French voices used by
+    default (`fr_FR-siwis-medium`, `fr_FR-tom-medium`, `fr_FR-gilles-low`) are
+    based on openly licensed datasets (e.g. CC BY / CC0); check each MODEL_CARD
+    for the exact terms.
+
+Because the Piper Windows archive includes eSpeak NG (GPL v3), treat the
+downloaded Piper toolchain as **GPL v3** for any redistribution. Story Studio
+does not redistribute it — it is fetched at runtime from the official sources
+above — but anyone who chooses to bundle it must honor those terms.
+
 ## Distribution notes
 
 The current release strategy keeps `ffmpeg.exe` and `7z.exe` in
 `src-tauri/tools/` and bundles them with the Tauri installer. Do not replace
 `ffmpeg.exe` without checking that the tracked file remains below GitHub's
 hard **100 MiB per-file** limit (the current binary is close to that limit).
+
+yt-dlp and Piper are **not** bundled: they are downloaded at runtime (see
+"Runtime-downloaded tools" above). If a future release decides to bundle either
+of them in the installer, move its entry up and document the exact file, version,
+SHA-256 and the resulting license obligations (notably Piper's GPL v3 eSpeak NG
+component).

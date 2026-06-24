@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, Wrench, X } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, ListTodo, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, Wrench, X, Youtube } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { useLocalFile } from '../../hooks/useLocalFile';
@@ -45,6 +45,7 @@ export function ModeSelector({
   onSelect,
   onEditPack,
   onPodcastFunnel,
+  onYoutubeFunnel,
   onAggregatePacks,
   onCheckPack,
   onOpen,
@@ -139,6 +140,17 @@ export function ModeSelector({
               <span className="mode-action-copy">
                 <span className="mode-action-name">Pack depuis un podcast</span>
                 <span className="mode-action-desc">Choisis un flux RSS et importe les épisodes comme histoires</span>
+              </span>
+              <span className="mode-action-arrow">›</span>
+            </button>
+          )}
+
+          {onYoutubeFunnel && (
+            <button className="mode-action-card" onClick={onYoutubeFunnel}>
+              <span className="mode-action-icon"><ActionIcon Icon={Youtube} /></span>
+              <span className="mode-action-copy">
+                <span className="mode-action-name">Pack depuis YouTube</span>
+                <span className="mode-action-desc">Colle une URL (vidéo, playlist ou chaîne) et importe l'audio comme histoires</span>
               </span>
               <span className="mode-action-arrow">›</span>
             </button>

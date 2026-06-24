@@ -8,3 +8,4 @@ pub mod piper;
 pub mod podcast;
 pub mod session;
 pub mod xtts;
+pub mod youtube;

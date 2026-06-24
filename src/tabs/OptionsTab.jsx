@@ -5,7 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
-import { KEYS, write } from '../store/persistentSettings';
+import { KEYS, read as readSetting, write } from '../store/persistentSettings';
 import { THEME_OPTIONS } from '../store/themePreference';
 import { PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
 import { isTauriRuntime } from '../utils/tauriRuntime';
@@ -45,6 +45,7 @@ const OPTION_GROUPS = [
   {
     label: 'Avancé',
     items: [
+      { id: 'youtube', label: 'YouTube (yt-dlp)' },
       { id: 'diagnostic', label: 'Diagnostic' },
     ],
   },
@@ -99,6 +100,8 @@ export function OptionsTab({
   const [xttsLogs, setXttsLogs] = useState([]);
   const [piperVoices, setPiperVoices] = useState([]);
   const [piperProvision, setPiperProvision] = useState({ state: 'idle', message: '' });
+  const [ytDlpPath, setYtDlpPath] = useState(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }));
+  const [ytDlpUpdate, setYtDlpUpdate] = useState({ state: 'idle', message: '' });
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
   const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
@@ -183,6 +186,36 @@ export function OptionsTab({
     }).catch(() => {});
     return () => { cancelled = true; if (unlisten) unlisten(); };
   }, []);
+
+  // Reflète la progression de mise à jour de yt-dlp (téléchargement).
+  useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+    let cancelled = false;
+    let unlisten = null;
+    listen('youtube-log', (event) => {
+      if (cancelled) return;
+      setYtDlpUpdate((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    }).catch(() => {});
+    return () => { cancelled = true; if (unlisten) unlisten(); };
+  }, []);
+
+  function handleYtDlpPathChange(value) {
+    setYtDlpPath(value);
+    write(KEYS.YTDLP_CUSTOM_PATH, value);
+  }
+
+  async function handleUpdateYtDlp() {
+    setYtDlpUpdate({ state: 'loading', message: 'Mise à jour de yt-dlp…' });
+    try {
+      await invoke('update_ytdlp');
+      setYtDlpUpdate({ state: 'ok', message: 'yt-dlp est à jour.' });
+    } catch (e) {
+      setYtDlpUpdate({ state: 'error', message: `${e}` });
+    }
+  }
 
   function handleTtsBackendChange(backend) {
     // Sélectionner XTTS l'active (le moteur remplace l'ancien toggle d'activation).
@@ -835,6 +868,52 @@ export function OptionsTab({
           )}
         </section>
 
+        <section
+          id="youtube"
+          className={sectionClass('youtube')}
+          ref={(node) => { sectionRefs.current.youtube = node; }}
+        >
+          <div className="opts-card-title">YouTube (yt-dlp)</div>
+          <div className="opts-help">
+            Le funnel « Pack depuis YouTube » télécharge automatiquement yt-dlp au premier usage et le
+            garde à jour. YouTube bloquant les versions périmées, ces réglages ne servent qu'en cas de souci.
+          </div>
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Mettre à jour yt-dlp maintenant</div>
+              <div className="opts-row-sub">
+                Force le téléchargement de la dernière version. Utile si un import échoue avec un message
+                de version obsolète.
+              </div>
+            </div>
+            <Button onClick={handleUpdateYtDlp} disabled={ytDlpUpdate.state === 'loading'} style={{ flexShrink: 0 }}>
+              {ytDlpUpdate.state === 'loading' ? 'Mise à jour…' : 'Mettre à jour'}
+            </Button>
+          </div>
+          {ytDlpUpdate.state !== 'idle' && (
+            <div className={`info-box ${ytDlpUpdate.state === 'error' ? 'warn' : ''}`}>
+              {ytDlpUpdate.message}
+            </div>
+          )}
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Chemin yt-dlp personnalisé</div>
+              <div className="opts-row-sub">
+                Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet
+                d'un <code>yt-dlp.exe</code> pour l'utiliser à la place (le téléchargement auto est alors ignoré).
+              </div>
+            </div>
+            <input
+              className="xtts-input"
+              type="text"
+              spellCheck={false}
+              placeholder="C:\\chemin\\vers\\yt-dlp.exe"
+              value={ytDlpPath}
+              onChange={(event) => handleYtDlpPathChange(event.target.value)}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </div>
+        </section>
 
         <section
           id="diagnostic"
