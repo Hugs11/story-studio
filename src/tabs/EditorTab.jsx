@@ -37,14 +37,14 @@ export function EditorTab({
   node,
   project, selectedId, onSelect,
   onReorder, onMoveToMenu, onAddMenu, onAddStory,
-  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onPodcastFunnel, onAggregatePacks, onCheckPack, onOpenProject,
+  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onPodcastFunnel, onYoutubeFunnel, onAggregatePacks, onCheckPack, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
   pendingSimulateZipPath = null, onSimulateConsumed,
   sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
   onAddStoryToMenu, onImportFolder, onUnpackZip,
-  onImportPodcast, onRecord, canRecord = true,
+  onImportPodcast, onImportYoutube, onRecord, canRecord = true,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
   onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
@@ -136,6 +136,7 @@ export function EditorTab({
             onSelect={onSetProjectType}
             onEditPack={onEditPack}
             onPodcastFunnel={onPodcastFunnel}
+            onYoutubeFunnel={onYoutubeFunnel}
             onAggregatePacks={onAggregatePacks}
             onCheckPack={onCheckPack}
             onOpen={onOpenProject}
@@ -164,6 +165,7 @@ export function EditorTab({
                 onAddFolder={onAddMenu}
                 onImportFolder={onImportFolder}
                 onImportPodcast={onImportPodcast}
+                onImportYoutube={onImportYoutube}
                 onRecord={onRecord}
                 canRecord={canRecord}
                 trailing={(

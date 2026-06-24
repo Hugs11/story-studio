@@ -5,3 +5,4 @@ pub mod piper;
 pub mod podcast;
 pub mod project_files;
 pub mod xtts;
+pub mod youtube;

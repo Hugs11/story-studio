@@ -42,6 +42,8 @@ export const KEYS = Object.freeze({
   XTTS_LAST_VOICE: 'xtts_last_voice',
   XTTS_LAST_SPEAKER: 'xtts_last_speaker',
   PIPER_LAST_VOICE: 'piper_last_voice',
+  YOUTUBE_CGU_ACCEPTED: 'storyStudio.youtubeCguAccepted',
+  YTDLP_CUSTOM_PATH: 'storyStudio.ytDlpCustomPath',
   SIMPLE_MODE_INFO_DISMISS: 'storyStudio.simpleModeInfoDismissed',
   BOTTOM_PANEL_HEIGHT: 'bottomPanelHeight',
   MEDIA_EXPLORER_COL_WIDTHS: 'me-col-widths-v2',

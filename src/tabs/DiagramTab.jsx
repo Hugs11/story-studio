@@ -21,6 +21,7 @@ export function DiagramTab({
   onImportStories,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
   onAddMenu,
   onAddStory,
@@ -78,6 +79,7 @@ export function DiagramTab({
         onImportStories={onImportStories}
         onImportFolder={onImportFolder}
         onImportPodcast={onImportPodcast}
+        onImportYoutube={onImportYoutube}
         onRecord={onRecord}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}

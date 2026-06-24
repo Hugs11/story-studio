@@ -377,22 +377,48 @@ export function useImportSession({
     }
   }
 
-  // Importe une liste d'épisodes podcast en histoires. Réutilisé par la modale
-  // historique (depuis l'éditeur) et par le funnel accueil (plan 06).
+  // Télécharge l'audio d'une entrée selon sa source et renvoie un chemin temp.
+  // Podcast : flux direct (`download_podcast_media`). YouTube : via yt-dlp
+  // (`download_youtube_audio`, qui extrait le MP3 avec le ffmpeg embarqué).
+  async function downloadEntryAudio(source, entry, displayName) {
+    if (source === 'youtube') {
+      const ytdlpPath = readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' });
+      return invoke('download_youtube_audio', {
+        videoUrl: entry.audioUrl,
+        fileName: displayName,
+        ytdlpPath,
+      });
+    }
+    return invoke('download_podcast_media', { url: entry.audioUrl, fileName: displayName });
+  }
+
+  // Importe une liste d'entrées média (podcast ou YouTube) en histoires.
+  // Source-agnostique : le funnel podcast (plan 06), la modale podcast historique
+  // et le funnel YouTube (plan 09) partagent ce handler. Les entrées exposent un
+  // shape commun (`title`, `audioUrl`, `imageUrl`) ; seul le téléchargement audio
+  // diffère (`options.source`).
   // `options` :
+  //   - `source` : 'podcast' (défaut) | 'youtube'.
   //   - `targetMenuId` : menu cible explicite (`null` = racine). Si absent, on
   //     déduit la cible de la sélection courante (comportement éditeur).
   //   - `onProgress` : reçoit la progression à la place de la modale globale
   //     `setImporting` (le funnel l'affiche dans son propre écran).
   //   - `suppressDialog` : laisse le caller signaler l'échec lui-même.
   // Retourne `{ total, failures, imported }`.
-  async function handleImportPodcastEpisodes(episodes, feed, options = {}) {
+  async function handleImportMediaEpisodes(episodes, feed, options = {}) {
     if (!Array.isArray(episodes) || episodes.length === 0) {
       return { total: 0, failures: 0, imported: 0 };
     }
 
-    const { targetMenuId: explicitTargetMenuId, onProgress = null, suppressDialog = false } = options;
+    const {
+      source = 'podcast',
+      targetMenuId: explicitTargetMenuId,
+      onProgress = null,
+      suppressDialog = false,
+    } = options;
     const report = onProgress ?? setImporting;
+    const isYoutube = source === 'youtube';
+    const itemLabel = isYoutube ? 'vidéo' : 'épisode';
 
     let targetMenuId;
     if (explicitTargetMenuId !== undefined) {
@@ -406,30 +432,32 @@ export function useImportSession({
     }
 
     const total = episodes.length;
-    const feedTitle = feed?.title || 'Podcast';
+    const feedTitle = feed?.title || (isYoutube ? 'YouTube' : 'Podcast');
     const feedImage = feed?.imageUrl || null;
-    logger.info(`import-podcast:start count=${total} target=${targetMenuId ?? 'root'}`);
+    logger.info(`import-media:start source=${source} count=${total} target=${targetMenuId ?? 'root'}`);
     report({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
 
     let failures = 0;
     try {
       for (let index = 0; index < episodes.length; index += 1) {
         const episode = episodes[index];
-        const displayName = episode.title || `Épisode ${index + 1}`;
+        const displayName = episode.title || `${isYoutube ? 'Vidéo' : 'Épisode'} ${index + 1}`;
         try {
-          report({ name: displayName, index: index + 1, total, phase: "Téléchargement de l'épisode..." });
-          const tmpAudio = await invoke('download_podcast_media', { url: episode.audioUrl, fileName: displayName });
+          report({ name: displayName, index: index + 1, total, phase: `Téléchargement de la ${itemLabel}...` });
+          const tmpAudio = await downloadEntryAudio(source, episode, displayName);
           const audio = await copyGeneratedMediaToProject(tmpAudio);
 
           let itemImage = null;
           const imageUrl = episode.imageUrl || feedImage;
           if (imageUrl) {
-            report({ name: displayName, index: index + 1, total, phase: 'Récupération de la jaquette...' });
+            report({ name: displayName, index: index + 1, total, phase: 'Récupération de la vignette...' });
             try {
-              const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-jaquette` });
+              // download_podcast_media est un téléchargeur HTTP générique : il sert
+              // aussi à récupérer les miniatures YouTube.
+              const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-vignette` });
               itemImage = await copyGeneratedMediaToProject(tmpImage);
             } catch (imageError) {
-              logger.warn(`import-podcast:cover-error name='${displayName}' error=${imageError}`);
+              logger.warn(`import-media:cover-error source=${source} name='${displayName}' error=${imageError}`);
             }
           }
           if (!itemImage) {
@@ -440,7 +468,7 @@ export function useImportSession({
           if (itemImage) store.updateItem(storyId, { itemImage });
         } catch (episodeError) {
           failures += 1;
-          logger.error(`import-podcast:episode-error name='${displayName}' error=${episodeError}`);
+          logger.error(`import-media:item-error source=${source} name='${displayName}' error=${episodeError}`);
         }
       }
     } finally {
@@ -450,10 +478,10 @@ export function useImportSession({
 
     if (failures > 0 && !suppressDialog) {
       showErrorDialog({
-        title: 'Import du podcast',
+        title: isYoutube ? 'Import YouTube' : 'Import du podcast',
         message: failures === total
-          ? "Aucun épisode n'a pu être importé. Vérifiez votre connexion ou l'adresse du flux."
-          : `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+          ? `Aucune ${itemLabel} n'a pu être importée. Vérifiez votre connexion ou l'adresse ${isYoutube ? 'YouTube' : 'du flux'}.`
+          : `${failures} ${itemLabel}(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
         variant: failures === total ? 'warning' : 'info',
       });
     }
@@ -470,6 +498,6 @@ export function useImportSession({
     unpackZipIntoBlankProject,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
-    handleImportPodcastEpisodes,
+    handleImportMediaEpisodes,
   };
 }
