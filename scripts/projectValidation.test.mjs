@@ -288,3 +288,37 @@ test('a story with controlSettings.autoplay = true still requires selection audi
     `aucun warning image attendu quand l'image est presente, reçu: ${JSON.stringify(aboutStory)}`,
   );
 });
+
+function buildProjectWithRef(refOverride) {
+  return buildProject({
+    rootEntries: [
+      {
+        id: 'story-1',
+        type: 'story',
+        name: 'Histoire 1',
+        audio: 'D:/projet/story1.mp3',
+        itemAudio: 'D:/projet/story1-title.mp3',
+        itemImage: 'D:/projet/story1-title.png',
+      },
+      { id: 'ref-1', type: 'ref', ...refOverride },
+    ],
+  });
+}
+
+test('a ref to an existing story raises no ref issue and is not "unsupported"', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:story-1' }));
+  const refIssues = issues.filter((i) => i.id === 'ref-1');
+  assert.equal(refIssues.length, 0, `aucune issue ref attendue, reçu: ${JSON.stringify(refIssues)}`);
+});
+
+test('a ref to a missing target is flagged as an error', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:does-not-exist' }));
+  const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error');
+  assert.ok(err, `une erreur de cible introuvable est attendue, reçu: ${JSON.stringify(issues)}`);
+});
+
+test('a ref without a target is flagged as an error', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({}));
+  const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error' && /Référence sans cible/.test(i.text));
+  assert.ok(err, `une erreur "référence sans cible" est attendue, reçu: ${JSON.stringify(issues)}`);
+});
