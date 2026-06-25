@@ -276,11 +276,14 @@ export function normalizeZipEntry(entry = {}) {
 // Pointeur pur vers une autre entree (menu/story/etape). Permet de representer
 // convergence, boucle et fin partagee sans dupliquer le noeud cible : l'arbre
 // porte chaque noeud une fois, et les aretes restantes deviennent des `ref`.
+// `target` reutilise l'encodage navigation existant (menu:/story:/story_play:/
+// story_home_step:) plutot qu'un id nu, pour viser n'importe quel noeud avec un
+// seul resolveur. Un id nu sans prefixe est interprete comme `menu:<id>`.
 export function normalizeRefEntry(entry = {}) {
   return {
     id: entry.id || makeId(),
     type: 'ref',
-    targetId: typeof entry.targetId === 'string' ? entry.targetId : '',
+    target: normalizeNavigationTarget(entry.target ?? entry.targetId),
     refKind: entry.refKind === 'return' ? 'return' : 'continue',
     label: typeof entry.label === 'string' ? entry.label : '',
     treeColor: normalizeTreeColor(entry.treeColor),
