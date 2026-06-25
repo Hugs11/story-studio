@@ -78,7 +78,7 @@ export function ModeSelector({
       key: 'edit',
       Icon: Package,
       name: 'Modifier un pack existant',
-      desc: 'Ouvre un .zip ou un dossier Lunii, sans projet',
+      desc: 'Modifie un .zip / .7z ou un dossier d’histoire',
       onClick: onEditPack,
     },
     onPodcastFunnel && {
@@ -106,7 +106,7 @@ export function ModeSelector({
       key: 'check',
       Icon: ShieldCheck,
       name: 'Vérifier un pack',
-      desc: 'Repère les erreurs avant l’envoi',
+      desc: 'Repère et corrige les erreurs d’un pack existant.',
       onClick: onCheckPack,
     },
     {
