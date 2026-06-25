@@ -561,7 +561,7 @@ export async function loadProject() {
   return loadProjectFromPath(path);
 }
 
-function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
+export function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
   if (!project) return false;
   // Check media presence before projectType so imported folders/AI media trigger autosave
   if (mediaLibraryPaths.length > 0) return true;
