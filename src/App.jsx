@@ -14,6 +14,8 @@ import {
   getWorkspaceDir,
   consolidateProject,
   projectToRustExport,
+  autoSaveEphemeralProject,
+  isProjectWorthAutosaving,
 } from './store/projectIO';
 import { getLastExportDir, saveLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
@@ -224,6 +226,8 @@ function AppContent() {
   const sessionModeRef = useRef(null);
   const ephemeralSnapshotPathRef = useRef(null);
   const ephemeralSavedSnapshotRef = useRef(null);
+  // One-shot : a-t-on déjà écrit le snapshot anti-crash pour cette session ?
+  const ephemeralSnapshotSeededRef = useRef(false);
   const mediaTagsRef = useRef(store.mediaTags);
   const mediaLibraryCountRef = useRef(0);
   const saveHandlerRef = useRef(null);
@@ -405,6 +409,32 @@ function AppContent() {
     saveHandlerRef,
   });
 
+  // Filet anti-crash : écrit le snapshot éphémère dès le premier contenu de la
+  // session (atterrissage d'un pack importé, podcast/YouTube, ou 1er édit d'un
+  // nouveau projet), sans attendre la tick d'autosave (5 min). Une seule fois
+  // par session ; le périodique prend le relais ensuite.
+  useEffect(() => {
+    if (sessionMode !== 'ephemeral') return;
+    if (ephemeralSnapshotSeededRef.current) return;
+    if (!ephemeralSnapshotPathRef.current) return;
+    // Même critère que saveProject(autosave) : n'écrire que si le projet a un
+    // contenu réel (sinon saveProject jette « projet vide »). Évite de griller
+    // le one-shot sur l'état vierge avant l'atterrissage du contenu.
+    if (!isProjectWorthAutosaving(store.project, mediaLibraryPathsRef.current, mediaLibraryCountRef.current)) return;
+    const seeded = JSON.stringify(store.project);
+    autoSaveEphemeralProject(store.project, sessionWorkspaceDir, ephemeralSnapshotPathRef.current, {
+      mediaTags: mediaTagsRef.current,
+      mediaLibraryPaths: mediaLibraryPathsRef.current,
+      totalMediaCount: mediaLibraryCountRef.current,
+    })
+      .then(() => {
+        // One-shot marqué seulement après écriture réussie.
+        ephemeralSnapshotSeededRef.current = true;
+        ephemeralSavedSnapshotRef.current = seeded;
+      })
+      .catch((error) => { logger.error('session:seed-snapshot-error', error); });
+  }, [sessionMode, sessionWorkspaceDir, store.project]);
+
   useEscapeKey(creditsOpen, () => setCreditsOpen(false));
 
   useSDJobs(sdStore, workspaceDir, handleMediaCreated);
@@ -532,6 +562,7 @@ function AppContent() {
     }
     autoSavePathRef.current = null;
     ephemeralSavedSnapshotRef.current = null;
+    ephemeralSnapshotSeededRef.current = false;
     setAutoSavedPath(null);
     importedPackPendingMetaRef.current = false;
     store.setSavePath(null);
@@ -636,6 +667,8 @@ function AppContent() {
       setWorkspaceDirState(recovery.sessionDir);
       workspaceDirRef.current = recovery.sessionDir;
       ephemeralSavedSnapshotRef.current = JSON.stringify(result.data);
+      // Snapshot déjà sur disque : ne pas le réécrire immédiatement (le périodique suffit).
+      ephemeralSnapshotSeededRef.current = true;
       sdStore.clearDone();
       xttsStore.clearDone();
       setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
