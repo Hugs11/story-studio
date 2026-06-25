@@ -54,12 +54,6 @@ const filePenNode = [
   ['path', { d: 'M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z' }],
 ];
 
-const kanbanNode = [
-  ['path', { d: 'M5 3v14' }],
-  ['path', { d: 'M12 3v8' }],
-  ['path', { d: 'M19 3v18' }],
-];
-
 const panelLeftNode = [
   ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
   ['path', { d: 'M9 3v18' }],
@@ -145,19 +139,6 @@ const listTodoNode = [
   ['path', { d: 'M13 19h8' }],
   ['path', { d: 'm3 17 2 2 4-4' }],
   ['rect', { x: '3', y: '4', width: '6', height: '6', rx: '1' }],
-];
-
-const listCheckNode = [
-  ['path', { d: 'M16 5H3' }],
-  ['path', { d: 'M16 12H3' }],
-  ['path', { d: 'M11 19H3' }],
-  ['path', { d: 'm15 18 2 2 4-4' }],
-];
-
-const fileStackNode = [
-  ['path', { d: 'M11 21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1' }],
-  ['path', { d: 'M16 16a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1' }],
-  ['path', { d: 'M21 6a2 2 0 0 0-.586-1.414l-2-2A2 2 0 0 0 17 2h-3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1z' }],
 ];
 
 const swatchBookNode = [
@@ -383,8 +364,18 @@ const youtubeNode = [
   ['path', { d: 'm10 15 5-3-5-3z' }],
 ];
 
+const shieldCheckNode = [
+  ['path', { d: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z' }],
+  ['path', { d: 'm9 12 2 2 4-4' }],
+];
+
+const layersNode = [
+  ['path', { d: 'M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z' }],
+  ['path', { d: 'M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12' }],
+  ['path', { d: 'M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
-export const Kanban = createLocalLucideIcon(kanbanNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const Network = createLocalLucideIcon(networkNode);
@@ -398,8 +389,6 @@ export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);
 export const ListTodo = createLocalLucideIcon(listTodoNode);
-export const ListCheck = createLocalLucideIcon(listCheckNode);
-export const FileStack = createLocalLucideIcon(fileStackNode);
 export const SwatchBook = createLocalLucideIcon(swatchBookNode);
 export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
@@ -441,3 +430,5 @@ export const Info = createLocalLucideIcon(infoNode);
 export const Search = createLocalLucideIcon(searchNode);
 export const Rss = createLocalLucideIcon(rssNode);
 export const Youtube = createLocalLucideIcon(youtubeNode);
+export const ShieldCheck = createLocalLucideIcon(shieldCheckNode);
+export const Layers = createLocalLucideIcon(layersNode);
