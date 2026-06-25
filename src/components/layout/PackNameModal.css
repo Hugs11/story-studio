@@ -289,6 +289,13 @@
   color: var(--accent);
 }
 
+/* Âge « Autre » sélectionné : même entourage de couleur qu'un chip prédéfini actif. */
+.pack-meta-age-custom.is-active .pack-meta-age-other {
+  border-color: var(--accentBorder);
+  background: var(--accentDim);
+  color: var(--accent);
+}
+
 .pack-meta-age-other {
   flex: 0 0 44px !important;
   width: 44px;

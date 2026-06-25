@@ -671,12 +671,20 @@ function AppContent() {
     return defaultPath;
   }
 
-  async function handleGenerate(projectOverride = null) {
+  async function handleGenerate(projectOverride = null, { skipMetadata = false } = {}) {
     const projectForGeneration = projectOverride && !projectOverride?.preventDefault
       ? projectOverride
       : store.project;
-    if ((projectForGeneration.projectType === 'pack' || projectForGeneration.projectType === 'simple')
-      && (!hasExplicitExportPackName(projectForGeneration) || importedPackPendingMetaRef.current)) {
+    // Étape « métadonnées » avant de générer : on nomme/confirme le pack avant.
+    // Éditeur libre (pack) : toujours. Mode simple : seulement si le nom d'export
+    // n'est pas encore défini (comportement existant conservé pour ce premier tour).
+    const isPack = projectForGeneration.projectType === 'pack';
+    const isSimple = projectForGeneration.projectType === 'simple';
+    const needsMetadataStep = !skipMetadata && (
+      isPack
+      || (isSimple && (!hasExplicitExportPackName(projectForGeneration) || importedPackPendingMetaRef.current))
+    );
+    if (needsMetadataStep) {
       setPackMetadataOpen(true);
       return;
     }
@@ -748,7 +756,8 @@ function AppContent() {
     setPackMetadataOpen(false);
     // L'utilisateur a confirmé les métadonnées : ne plus reforcer la modal (D34).
     importedPackPendingMetaRef.current = false;
-    if (generate) await handleGenerate(projectForAction);
+    // skipMetadata : on revient de la modale, on génère sans la rouvrir (évite la boucle).
+    if (generate) await handleGenerate(projectForAction, { skipMetadata: true });
   }
 
   const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
