@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FileStack, FolderOpen, ListCheck, Package, RotateCcw, Rss, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
@@ -21,23 +21,19 @@ function projectTypeLabel(type) {
   return type === 'simple' ? 'Histoire' : 'Pack';
 }
 
-function ActionIcon({ Icon }) {
-  return <Icon className="mode-action-icon-svg" strokeWidth={1.9} />;
-}
-
-function RecentProjectThumb({ project, index, loadedThumbnail = null }) {
+function ProjectThumb({ project, index, loadedThumbnail = null }) {
   const thumbnailPath = project.thumbnailImage || loadedThumbnail || null;
   const thumbnailUrl = useLocalFile(thumbnailPath);
 
   if (thumbnailUrl) {
     return (
-      <span className="mode-recent-thumb">
+      <span className="mode-proj-thumb">
         <img src={thumbnailUrl} alt="" />
       </span>
     );
   }
 
-  return <span className={`mode-recent-dot tone-${index % 5}`} />;
+  return <span className={`mode-proj-dot mode-proj-dot--tone-${index % 5}`} />;
 }
 
 export function ModeSelector({
@@ -56,8 +52,71 @@ export function ModeSelector({
   onIgnoreSessionRecovery,
 }) {
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
-  const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 5), [recentProjects]);
+  const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 6), [recentProjects]);
   const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
+  const hasProjects = visibleRecentProjects.length > 0 || visibleRecoveries.length > 0;
+
+  const editors = [
+    {
+      key: 'pack',
+      Icon: SwatchBook,
+      name: 'Éditeur libre',
+      desc: 'Menus multiples, agrégation de ZIP et navigation personnalisée',
+      onClick: () => onSelect('pack'),
+    },
+    {
+      key: 'simple',
+      Icon: FilePen,
+      name: 'Éditeur simplifié',
+      desc: 'Un menu, une histoire',
+      onClick: () => onSelect('simple'),
+    },
+  ];
+
+  const actions = [
+    onEditPack && {
+      key: 'edit',
+      Icon: Package,
+      name: 'Modifier un pack existant',
+      desc: 'Ouvre un .zip ou un dossier Lunii, sans projet',
+      onClick: onEditPack,
+    },
+    onPodcastFunnel && {
+      key: 'podcast',
+      Icon: Rss,
+      name: 'Créer un pack depuis un podcast',
+      desc: 'Importe les épisodes d’un flux RSS',
+      onClick: onPodcastFunnel,
+    },
+    onYoutubeFunnel && {
+      key: 'youtube',
+      Icon: Youtube,
+      name: 'Créer un pack depuis YouTube',
+      desc: 'Importe l’audio d’une URL, playlist ou chaîne',
+      onClick: onYoutubeFunnel,
+    },
+    onAggregatePacks && {
+      key: 'aggregate',
+      Icon: Layers,
+      name: 'Agréger des packs',
+      desc: 'Fusionne plusieurs .zip ou .7z',
+      onClick: onAggregatePacks,
+    },
+    onCheckPack && {
+      key: 'check',
+      Icon: ShieldCheck,
+      name: 'Vérifier un pack',
+      desc: 'Repère les erreurs avant l’envoi',
+      onClick: onCheckPack,
+    },
+    {
+      key: 'open',
+      Icon: FolderOpen,
+      name: 'Ouvrir un projet',
+      desc: 'Reprends un projet enregistré',
+      onClick: onOpen,
+    },
+  ].filter(Boolean);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,173 +146,126 @@ export function ModeSelector({
 
   return (
     <div className="mode-selector">
-      <section className="mode-home-panel mode-home-left">
-        <div className="mode-brand-block">
-          <Tooltip text="Créé pour Armand, pour que les histoires prennent vie." placement="above">
-            <img
-              src="/logostory.svg"
-              alt="Story Studio"
-              className="mode-selector-logo"
-            />
+      <div className="mode-home">
+        <header className="mode-home-header">
+          <Tooltip text="Créé pour Armand, pour que les histoires prennent vie." placement="below">
+            <span className="mode-home-mark" role="img" aria-label="Story Studio" />
           </Tooltip>
-          <div className="mode-selector-intro">
-            Crée, organise et génère des histoires audio pour ta Boîte à Histoires Lunii.
-          </div>
-        </div>
-
-        <div className="mode-section-title">Nouveau projet</div>
-        <div className="mode-action-list">
-          <button className="mode-action-card" onClick={() => onSelect('pack')}>
-            <span className="mode-action-icon"><ActionIcon Icon={SwatchBook} /></span>
-            <span className="mode-action-copy">
-              <span className="mode-action-name">Éditeur libre</span>
-              <span className="mode-action-desc">Menus multiples, agrégation de ZIP et navigation personnalisée</span>
-            </span>
-            <span className="mode-action-arrow">›</span>
-          </button>
-
-          <button className="mode-action-card" onClick={() => onSelect('simple')}>
-            <span className="mode-action-icon"><ActionIcon Icon={FilePen} /></span>
-            <span className="mode-action-copy">
-              <span className="mode-action-name">Éditeur simplifié</span>
-              <span className="mode-action-desc">Un menu, une histoire</span>
-            </span>
-            <span className="mode-action-arrow">›</span>
-          </button>
-
-          {onEditPack && (
-            <button className="mode-action-card" onClick={onEditPack}>
-              <span className="mode-action-icon"><ActionIcon Icon={Package} /></span>
-              <span className="mode-action-copy">
-                <span className="mode-action-name">Modifier un pack existant</span>
-                <span className="mode-action-desc">Ouvre un .zip ou un dossier Lunii et édite-le tout de suite, sans projet</span>
-              </span>
-              <span className="mode-action-arrow">›</span>
-            </button>
-          )}
-
-          {onPodcastFunnel && (
-            <button className="mode-action-card" onClick={onPodcastFunnel}>
-              <span className="mode-action-icon"><ActionIcon Icon={Rss} /></span>
-              <span className="mode-action-copy">
-                <span className="mode-action-name">Créer un pack depuis un podcast</span>
-                <span className="mode-action-desc">Choisis un flux RSS et importe les épisodes comme histoires</span>
-              </span>
-              <span className="mode-action-arrow">›</span>
-            </button>
-          )}
-
-          {onYoutubeFunnel && (
-            <button className="mode-action-card" onClick={onYoutubeFunnel}>
-              <span className="mode-action-icon"><ActionIcon Icon={Youtube} /></span>
-              <span className="mode-action-copy">
-                <span className="mode-action-name">Créer un pack depuis YouTube</span>
-                <span className="mode-action-desc">Colle une URL (vidéo, playlist ou chaîne) et importe l'audio comme histoires</span>
-              </span>
-              <span className="mode-action-arrow">›</span>
-            </button>
-          )}
-
-          {onAggregatePacks && (
-            <button className="mode-action-card" onClick={onAggregatePacks}>
-              <span className="mode-action-icon"><ActionIcon Icon={FileStack} /></span>
-              <span className="mode-action-copy">
-                <span className="mode-action-name">Agréger des packs</span>
-                <span className="mode-action-desc">Fusionne plusieurs .zip ou .7z dans un nouveau pack généré directement</span>
-              </span>
-              <span className="mode-action-arrow">›</span>
-            </button>
-          )}
-        </div>
-      </section>
-
-      <section className="mode-home-panel mode-home-right">
-        {visibleRecoveries.length > 0 && (
-          <div className="mode-recovery-block">
-            <div className="mode-section-heading">
-              <div className="mode-section-title">Reprise de session</div>
+          <div className="mode-home-brand">
+            <div className="mode-home-wordmark">Story Studio</div>
+            <div className="mode-home-tagline">
+              Crée, organise et génère des histoires audio pour ta Boîte à Histoires Lunii.
             </div>
-            <div className="mode-recovery-list">
-              {visibleRecoveries.map((recovery, index) => (
-                <div className="mode-recovery-item" key={recovery.sessionDir || recovery.snapshotPath}>
-                  <RecentProjectThumb project={recovery} index={index} />
-                  <span className="mode-recent-copy">
-                    <span className="mode-recent-name">{recovery.projectName || 'Projet récupérable'}</span>
-                    <span className="mode-recent-type">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="mode-recovery-action"
-                    onClick={() => onRecoverSession?.(recovery)}
-                  >
-                    <RotateCcw className="mode-action-icon-svg" strokeWidth={2} />
-                    <span>Reprendre</span>
-                  </button>
-                  <Tooltip text="Ignorer cette reprise" placement="above">
-                    <button
-                      type="button"
-                      className="mode-recovery-dismiss"
-                      aria-label="Ignorer cette reprise"
-                      onClick={() => onIgnoreSessionRecovery?.(recovery)}
-                    >
-                      <X className="mode-action-icon-svg" strokeWidth={2} />
-                    </button>
-                  </Tooltip>
-                </div>
+          </div>
+        </header>
+
+        <div className="mode-home-body">
+          <div className="mode-home-create">
+            <div className="mode-editor-grid">
+              {editors.map((tile) => (
+                <button
+                  key={tile.key}
+                  type="button"
+                  className="mode-tile mode-tile--editor"
+                  onClick={tile.onClick}
+                >
+                  <span className="mode-tile-icon"><tile.Icon className="mode-tile-icon-svg" strokeWidth={1.9} /></span>
+                  <span className="mode-tile-name">{tile.name}</span>
+                  <span className="mode-tile-desc">{tile.desc}</span>
+                </button>
               ))}
             </div>
-          </div>
-        )}
 
-        <div className="mode-section-heading">
-          <div className="mode-section-title">Projets récents</div>
-        </div>
+            <div className="mode-home-separator" />
 
-        <div className="mode-recent-list">
-          {visibleRecentProjects.length === 0 ? (
-            <div className="mode-recent-empty">
-              Aucun projet récent pour le moment.
+            <div className="mode-action-grid">
+              {actions.map((tile) => (
+                <button
+                  key={tile.key}
+                  type="button"
+                  className="mode-tile"
+                  onClick={tile.onClick}
+                >
+                  <span className="mode-tile-icon"><tile.Icon className="mode-tile-icon-svg" strokeWidth={1.9} /></span>
+                  <span className="mode-tile-name">{tile.name}</span>
+                  <span className="mode-tile-desc">{tile.desc}</span>
+                </button>
+              ))}
             </div>
-          ) : (
-            visibleRecentProjects.map((project, index) => (
-              <Tooltip key={project.path} text={project.path} placement="above" multiline>
-              <button
-                className="mode-recent-item"
-                onClick={() => onOpenRecent?.(project.path)}
-              >
-                <RecentProjectThumb
-                  project={project}
-                  index={index}
-                  loadedThumbnail={loadedThumbnails[project.path] ?? null}
-                />
-                <span className="mode-recent-copy">
-                  <span className="mode-recent-name">{project.projectName || project.name}</span>
-                  <span className="mode-recent-type">{projectTypeLabel(project.projectType)}</span>
-                </span>
-                <span className="mode-recent-date">{formatRecentDate(project.updatedAt)}</span>
-              </button>
-              </Tooltip>
-            ))
-          )}
-        </div>
 
-        <div className="mode-secondary-actions">
-          <button className="mode-secondary-button mode-secondary-button--open" onClick={onOpen}>
-            <ActionIcon Icon={FolderOpen} />
-            <span>Ouvrir un projet</span>
-          </button>
-          {onCheckPack && (
-            <button className="mode-secondary-button mode-secondary-button--tool" onClick={onCheckPack}>
-              <ActionIcon Icon={ListCheck} />
-              <span>Vérifier un pack</span>
-            </button>
+            <div className="mode-home-prefs">
+              <button type="button" className="mode-ghost-button" onClick={onOpenPreferences}>
+                <SlidersHorizontal className="mode-ghost-icon" strokeWidth={1.9} />
+                <span>Préférences</span>
+              </button>
+            </div>
+          </div>
+
+          {hasProjects && (
+            <aside className="mode-projects-pane">
+              <div className="mode-projects-eyebrow">Projets récents</div>
+              <div className="mode-projects-list">
+                {visibleRecoveries.map((recovery, index) => (
+                  <button
+                    type="button"
+                    className="mode-proj-row"
+                    key={recovery.sessionDir || recovery.snapshotPath}
+                    onClick={() => onRecoverSession?.(recovery)}
+                  >
+                    <ProjectThumb
+                      project={recovery}
+                      index={index}
+                    />
+                    <span className="mode-proj-copy">
+                      <span className="mode-proj-name">{recovery.projectName || 'Projet récupérable'}</span>
+                      <span className="mode-proj-sub">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
+                    </span>
+                    <Tooltip text="Ignorer cette reprise" placement="above">
+                      <span
+                        className="mode-proj-dismiss"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Ignorer cette reprise"
+                        onClick={(e) => { e.stopPropagation(); onIgnoreSessionRecovery?.(recovery); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onIgnoreSessionRecovery?.(recovery);
+                          }
+                        }}
+                      >
+                        <X className="mode-proj-dismiss-icon" strokeWidth={2} />
+                      </span>
+                    </Tooltip>
+                  </button>
+                ))}
+
+                {visibleRecentProjects.map((project, index) => (
+                  <Tooltip key={project.path} text={project.path} placement="above" multiline>
+                    <button
+                      type="button"
+                      className="mode-proj-row"
+                      onClick={() => onOpenRecent?.(project.path)}
+                    >
+                      <ProjectThumb
+                        project={project}
+                        index={visibleRecoveries.length + index}
+                        loadedThumbnail={loadedThumbnails[project.path] ?? null}
+                      />
+                      <span className="mode-proj-copy">
+                        <span className="mode-proj-name">{project.projectName || project.name}</span>
+                        <span className="mode-proj-sub">{projectTypeLabel(project.projectType)}</span>
+                      </span>
+                      <span className="mode-proj-date">{formatRecentDate(project.updatedAt)}</span>
+                    </button>
+                  </Tooltip>
+                ))}
+              </div>
+            </aside>
           )}
-          <button className="mode-secondary-button mode-secondary-button--tool" onClick={onOpenPreferences}>
-            <ActionIcon Icon={SlidersHorizontal} />
-            <span>Préférences</span>
-          </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
