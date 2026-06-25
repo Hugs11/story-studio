@@ -200,6 +200,24 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     } else if (entryId === 'root') {
       pushError(issues, entryId, VALIDATION_MESSAGES.reservedIdInvalid(pathLabel));
     }
+    if (entry?.type === 'ref') {
+      // Une reference est un pointeur pur : sa seule contrainte est de resoudre
+      // vers une cible existante. On reutilise le resolveur de navigation.
+      if (!hasPath(entry?.target)) {
+        pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.refTargetMissing(pathLabel));
+      } else {
+        validateNavigationTarget(
+          issues,
+          entry?.id ?? null,
+          `${entryLabel} — référence`,
+          entry?.target,
+          projectIndex,
+          menuIds,
+        );
+      }
+      return;
+    }
+
     if (entry?.type !== 'menu' && entry?.type !== 'story' && entry?.type !== 'zip') {
       pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.unsupportedEntryType(pathLabel));
       return;
