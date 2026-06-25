@@ -63,6 +63,7 @@ function normalizeOptions(options) {
 
 function inferEntryType(entry) {
   if (!entry || typeof entry !== 'object') return 'story';
+  if (entry.type === 'ref') return 'ref';
   if (entry.type === 'menu' || Array.isArray(entry.children) || (!entry.type && Array.isArray(entry.items))) {
     return 'menu';
   }
@@ -272,6 +273,21 @@ export function normalizeZipEntry(entry = {}) {
   };
 }
 
+// Pointeur pur vers une autre entree (menu/story/etape). Permet de representer
+// convergence, boucle et fin partagee sans dupliquer le noeud cible : l'arbre
+// porte chaque noeud une fois, et les aretes restantes deviennent des `ref`.
+export function normalizeRefEntry(entry = {}) {
+  return {
+    id: entry.id || makeId(),
+    type: 'ref',
+    targetId: typeof entry.targetId === 'string' ? entry.targetId : '',
+    refKind: entry.refKind === 'return' ? 'return' : 'continue',
+    label: typeof entry.label === 'string' ? entry.label : '',
+    treeColor: normalizeTreeColor(entry.treeColor),
+    nativeStageId: typeof entry.nativeStageId === 'string' ? entry.nativeStageId : null,
+  };
+}
+
 export function normalizeMenuEntry(entry = {}) {
   const id = entry.id || makeId();
   const importedContinuation = normalizeImportedContinuation(entry.importedContinuation ?? entry._importedContinuation);
@@ -310,6 +326,8 @@ export function normalizeEntry(entry = {}) {
       return normalizeMenuEntry(entry);
     case 'zip':
       return normalizeZipEntry(entry);
+    case 'ref':
+      return normalizeRefEntry(entry);
     default:
       return normalizeStoryEntry(entry);
   }
