@@ -1,5 +1,6 @@
 mod after_playback;
 mod chaining;
+mod edge_class;
 mod extraction;
 mod native_graph;
 mod navigation_targets;
