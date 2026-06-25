@@ -4,6 +4,7 @@ mod assets;
 mod builder;
 mod canonical;
 mod document;
+mod preallocate;
 mod stats;
 mod writer;
 

@@ -89,6 +89,8 @@ pub(crate) struct ProjectEntry {
     pub(crate) entry_type: String,
     #[serde(default)]
     pub(crate) name: String,
+    #[serde(rename = "nativeStageId", default)]
+    pub(crate) native_stage_id: Option<String>,
     pub(crate) audio: Option<String>,
     pub(crate) image: Option<String>,
     #[serde(rename = "itemAudio")]
