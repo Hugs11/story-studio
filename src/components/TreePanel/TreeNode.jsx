@@ -108,6 +108,8 @@ function TreeNodeInner({
     resolvedIcon = <IconHouse />;
   } else if (type === 'story') {
     resolvedIcon = <IconStory />;
+  } else if (type === 'ref') {
+    resolvedIcon = <IconArrowRight />;
   } else if (type === 'zip') {
     resolvedIcon = <IconArchive />;
   } else {

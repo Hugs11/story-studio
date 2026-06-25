@@ -43,6 +43,7 @@ import {
   resolveDropTargetForNode,
 } from '../tree/treeOperations';
 import { computeBadgesData, formatBadgeTitle } from '../tree/treeNavigationBadges';
+import { buildRefDisplay } from '../tree/refDisplay';
 import {
   getGeneratedEndNodeHomeNavigation,
   getGeneratedEndNodeReturnNavigation,
@@ -677,7 +678,7 @@ export function TreePanel({
             <TreeNode
               id={entry.id}
               type={entry.type}
-              label={entry.name}
+              label={entry.type === 'ref' ? buildRefDisplay(entry, projectIndex.entryById).label : entry.name}
               level={level}
               selected={selectedIds.has(entry.id)}
               cut={cutIds.has(entry.id)}
