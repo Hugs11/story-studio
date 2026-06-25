@@ -1595,6 +1595,13 @@
 }
 
 @container (max-width: 560px) {
+  /* Parcours empilé en vertical : titre centré au-dessus du parcours. */
+  .after-play-route-head {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
   .after-play-route-list {
     flex-direction: column;
     align-items: center;
@@ -2150,6 +2157,15 @@
   .media-split-left {
     min-width: 0;
     align-items: center;
+  }
+
+  /* Audio empilé sous l'image : l'image garde sa pleine taille 320x240.
+     align-items:center mettrait le champ en shrink-to-fit (largeur < 320),
+     donc on pinne explicitement la largeur (max-width:100% = filet anti-débordement). */
+  .media-split-left .image-field {
+    --image-field-width: 320px;
+    width: 320px;
+    max-width: 100%;
   }
 
   .media-split-divider {

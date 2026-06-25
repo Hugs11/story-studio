@@ -1,4 +1,5 @@
 import { Children, cloneElement, isValidElement, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './Tooltip.css';
 
 export function Tooltip({ text, children, placement = 'below', wrap = false, className = '', style }) {
@@ -58,14 +59,15 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
   return (
     <div className={`tooltip-wrap${className ? ` ${className}` : ''}`} style={style} ref={wrapRef} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {renderChildrenWithoutNativeTitle()}
-      {pos && (
+      {pos && createPortal(
         <div
           ref={bubbleRef}
           className={`tooltip-bubble${pos.placement === 'above' ? ' is-above' : ''}${wrap ? ' is-wrap' : ''}`}
           style={{ left: pos.left, top: pos.top, '--tooltip-arrow-left': `${pos.arrowX}px` }}
         >
           {text}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
