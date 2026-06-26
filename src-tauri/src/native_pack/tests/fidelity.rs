@@ -598,6 +598,154 @@ fn fidelity_external_packs_from_env() {
     }
 }
 
+// ── Étape 2 (plan 12) : classement des packs réels par le juge de fidélité ───
+//
+// Passe chaque pack au juge canonique et CONSIGNE qui passe / qui échoue + pourquoi.
+// Piloté par env (`STORY_STUDIO_BASELINE_DIR`), aucun nom de pack en dur : on scanne
+// les sous-dossiers `<pack>/story.json` (la disposition réelle des packs d'audit).
+// `#[ignore]` : packs hors repo. Lancer explicitement :
+//   $env:STORY_STUDIO_BASELINE_DIR="C:\chemin\packs"; cargo test --manifest-path \
+//   src-tauri/Cargo.toml classify_external_packs_with_judge -- --ignored --nocapture
+
+/// Sous-dossiers `<dir>/<pack>/story.json` trouvés sous `STORY_STUDIO_BASELINE_DIR`.
+fn baseline_story_packs_from_env() -> Vec<(String, std::path::PathBuf)> {
+    let Some(dir) = std::env::var_os("STORY_STUDIO_BASELINE_DIR") else {
+        return Vec::new();
+    };
+    let dir = std::path::PathBuf::from(dir);
+    let Ok(read) = std::fs::read_dir(&dir) else {
+        eprintln!("[CLASSEMENT] SKIP - dossier illisible : {}", dir.display());
+        return Vec::new();
+    };
+    let mut subdirs: Vec<std::path::PathBuf> = read
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir())
+        .collect();
+    subdirs.sort();
+    subdirs
+        .into_iter()
+        .filter_map(|sub| {
+            let story = sub.join("story.json");
+            story.is_file().then(|| {
+                let id = sub
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("PACK")
+                    .to_string();
+                (id, story)
+            })
+        })
+        .collect()
+}
+
+/// Tous les noms d'assets (audio/image) référencés par les stages du document.
+fn referenced_asset_names(doc: &serde_json::Value) -> Vec<String> {
+    let mut names = std::collections::BTreeSet::new();
+    if let Some(stages) = doc.get("stageNodes").and_then(|v| v.as_array()) {
+        for stage in stages {
+            for key in ["audio", "image"] {
+                if let Some(name) = stage.get(key).and_then(|v| v.as_str()) {
+                    if !name.trim().is_empty() {
+                        names.insert(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    names.into_iter().collect()
+}
+
+/// Importe un `story.json` nu (présence-fidèle), reconstruit le projet, force l'oracle
+/// au story.json d'ORIGINE, puis imprime le verdict du juge + les écarts.
+fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
+    let Ok(raw) = std::fs::read_to_string(story_path) else {
+        eprintln!("[{pack_id}] SKIP - lecture impossible");
+        return;
+    };
+    let Ok(doc) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        eprintln!("[{pack_id}] SKIP - story.json invalide");
+        return;
+    };
+
+    // Import présence-fidèle : un zip story.json + 1 octet par asset référencé. La
+    // résolution d'assets (has_audio/has_image) doit refléter l'original, sinon tout
+    // pack paraîtrait infidèle. Le juge, lui, génère avec des assets fictifs.
+    let base = std::env::temp_dir().join(format!("classify_{pack_id}_{}", now_millis()));
+    let names = referenced_asset_names(&doc);
+    let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    let zip_path = write_synthetic_pack(&base, &doc, &name_refs);
+    let imported = match crate::services::pack_reader::unpack_zip_to_entries(
+        &zip_path,
+        base.join("imported").to_str().expect("import dir utf8"),
+    ) {
+        Ok(imported) => imported,
+        Err(error) => {
+            eprintln!("[{pack_id}] ÉCHEC import : {error}");
+            let _ = std::fs::remove_dir_all(&base);
+            return;
+        }
+    };
+
+    let title = doc
+        .get("title")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("Pack importé")
+        .to_string();
+    let mut project = fidelity_project(&imported, &title);
+    // Oracle = le story.json ORIGINAL (vérité terrain), que l'import ait gardé un
+    // nativeGraph (Lapin) ou non (Dersouzala/Bestioles importent « propre »).
+    project.native_graph = Some(serde_json::json!({
+        "preserveForRoundTrip": true,
+        "document": doc,
+    }));
+    let canonical = canonicalize_project(&project);
+
+    match crate::native_pack::fidelity_judge::canonical_roundtrip_is_faithful(&canonical) {
+        Ok(report) => {
+            eprintln!(
+                "[{pack_id}] faithful={} | stages généré={} oracle={} | écarts={}",
+                report.faithful,
+                report.generated_stage_count,
+                report.oracle_stage_count,
+                report.gaps.len(),
+            );
+            for gap in report.gaps.iter().take(20) {
+                eprintln!("    - {gap}");
+            }
+            if report.gaps.len() > 20 {
+                eprintln!("    … (+{} autres écarts)", report.gaps.len() - 20);
+            }
+        }
+        Err(error) => eprintln!("[{pack_id}] le juge n'a pas tourné : {error}"),
+    }
+
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[test]
+#[ignore]
+fn classify_external_packs_with_judge() {
+    let packs = baseline_story_packs_from_env();
+    if packs.is_empty() {
+        eprintln!(
+            "[CLASSEMENT] SKIP - definir STORY_STUDIO_BASELINE_DIR (dossier de <pack>/story.json)"
+        );
+        return;
+    }
+    eprintln!("=== CLASSEMENT JUGE DE FIDÉLITÉ ({} packs) ===", packs.len());
+    for (pack_id, story_path) in packs {
+        // Un pack qui panique (modèle inattendu) ne doit pas masquer les autres verdicts.
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            classify_story_json(&story_path, &pack_id)
+        }));
+        if outcome.is_err() {
+            eprintln!("[{pack_id}] PANIC pendant le classement (voir trace ci-dessus)");
+        }
+    }
+}
+
 /// Écrit un `story.json` synthétique + ses assets dans un zip temporaire (round-trips de motifs).
 fn write_synthetic_pack(dir: &std::path::Path, story: &serde_json::Value, assets: &[&str]) -> String {
     use std::io::Write;
