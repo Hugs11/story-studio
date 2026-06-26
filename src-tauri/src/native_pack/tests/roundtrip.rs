@@ -294,6 +294,118 @@ fn imported_branching_graph_preserves_native_graph_for_roundtrip() {
     let _ = fs::remove_dir_all(base);
 }
 
+/// Garde directe sur le VRAI projecteur (`GraphProjector`, pas le classifieur de design) :
+/// un stage atteignable UNIQUEMENT par une arête Home/global ne doit jamais entrer dans
+/// l'arbre couvrant (qui ne suit que les arêtes OK). Type d'architecture.
+#[test]
+fn graph_projection_excludes_home_only_global_stage_from_tree() {
+    let base = temp_roundtrip_dir("home_only_global");
+    let zip_path = base.join("home-only-global.zip");
+    let story_json = serde_json::json!({
+        "title": "Home Only Global",
+        "version": 1,
+        "description": "",
+        "format": "v1",
+        "nightModeAvailable": true,
+        "stageNodes": [
+            {
+                "uuid": "root-stage", "name": "Depart", "type": "stage", "squareOne": true,
+                "audio": "root.mp3", "image": "cover.png",
+                "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": false },
+                "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                "homeTransition": null, "position": { "x": 0, "y": 0 }
+            },
+            {
+                "uuid": "play-stage", "name": "Lecture", "type": "stage", "squareOne": false,
+                "audio": "play.mp3", "image": "play.png",
+                "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                "okTransition": { "actionNode": "choice-action", "optionIndex": 0 },
+                "homeTransition": { "actionNode": "global-action", "optionIndex": 0 },
+                "position": { "x": 120, "y": 0 }
+            },
+            {
+                "uuid": "choice-a", "name": "Choix A", "type": "stage", "squareOne": false,
+                "audio": "a.mp3", "image": "a.png",
+                "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                "okTransition": null,
+                "homeTransition": { "actionNode": "global-action", "optionIndex": 0 },
+                "position": { "x": 240, "y": -80 }
+            },
+            {
+                "uuid": "choice-b", "name": "Choix B", "type": "stage", "squareOne": false,
+                "audio": "b.mp3", "image": "b.png",
+                "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                "okTransition": null,
+                "homeTransition": { "actionNode": "ghost-action", "optionIndex": 0 },
+                "position": { "x": 240, "y": 80 }
+            },
+            {
+                "uuid": "global-night", "name": "Nuit globale", "type": "stage", "squareOne": false,
+                "audio": "night.mp3", "image": null,
+                "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": false, "autoplay": true },
+                "okTransition": null, "homeTransition": null,
+                "position": { "x": 360, "y": 0 }
+            }
+        ],
+        "actionNodes": [
+            { "id": "root-action", "name": "Root", "options": ["play-stage"], "position": { "x": 80, "y": 0 } },
+            { "id": "choice-action", "name": "Choices", "options": ["choice-a", "choice-b"], "position": { "x": 180, "y": 0 } },
+            // Cible Home/global : atteinte UNIQUEMENT par homeTransition, jamais par OK.
+            { "id": "global-action", "name": "Global", "options": ["global-night"], "position": { "x": 300, "y": 0 } },
+            // Transition non résolue → déclenche la projection GraphProjector.
+            { "id": "ghost-action", "name": "Unresolved", "options": ["ghost-stage"], "position": { "x": 320, "y": 80 } }
+        ]
+    });
+
+    let file = fs::File::create(&zip_path).expect("create zip");
+    let mut zip = zip::ZipWriter::new(file);
+    let opts = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    zip.start_file("story.json", opts).expect("start story");
+    zip.write_all(story_json.to_string().as_bytes()).expect("write story");
+    for asset in ["root.mp3", "cover.png", "play.mp3", "play.png", "a.mp3", "a.png", "b.mp3", "b.png", "night.mp3"] {
+        zip.start_file(format!("assets/{asset}"), opts).expect("start asset");
+        zip.write_all(asset.as_bytes()).expect("write asset");
+    }
+    zip.finish().expect("finish zip");
+
+    let imported = unpack_zip_to_entries(
+        zip_path.to_str().expect("zip path utf8"),
+        base.join("imported").to_str().expect("import dir utf8"),
+    )
+    .expect("unpack zip");
+
+    // Aplatit l'arbre projeté et vérifie qu'aucun nœud ne correspond au stage Home/global.
+    fn collect_ids(entries: &serde_json::Value, out: &mut Vec<String>) {
+        if let Some(array) = entries.as_array() {
+            for entry in array {
+                if let Some(id) = entry.get("id").and_then(|v| v.as_str()) {
+                    out.push(id.to_string());
+                }
+                if let Some(native) = entry.get("nativeStageId").and_then(|v| v.as_str()) {
+                    out.push(native.to_string());
+                }
+                if let Some(children) = entry.get("children") {
+                    collect_ids(children, out);
+                }
+            }
+        }
+    }
+    let mut ids = Vec::new();
+    collect_ids(&imported["entries"], &mut ids);
+    assert!(
+        !ids.iter().any(|id| id == "global-night"),
+        "un stage atteignable seulement par Home/global ne doit pas entrer dans l'arbre : {ids:?}",
+    );
+    // L'arbre couvrant (arêtes OK) contient bien les deux choix.
+    assert!(
+        ids.iter().any(|id| id == "choice-a") && ids.iter().any(|id| id == "choice-b"),
+        "les choix atteints par OK doivent être présents : {ids:?}",
+    );
+
+    let _ = fs::remove_dir_all(base);
+}
+
 #[test]
 fn modeled_branching_graph_does_not_trigger_native_graph() {
     let base = temp_roundtrip_dir("modeled_branching_graph");
