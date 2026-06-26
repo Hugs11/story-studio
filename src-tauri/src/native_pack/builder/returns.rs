@@ -86,6 +86,24 @@ impl<'a> StoryBuilder<'a> {
         }
     }
 
+    /// Résolveur unifié cible typée → stage natif, partagé par les nœuds `ref` et la
+    /// convergence de fin (`okChoiceTargets`) — c'est le « sucre au-dessus de `ref` » de
+    /// l'Étape 7. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
+    /// résolution via transition (cibles déjà construites). Le `fallback` paramètre la
+    /// sémantique : transition de repli (convergence indulgente) ou sentinelle non résolue
+    /// (`option_index < 0`) pour exiger une cible réelle (refs).
+    pub(in crate::native_pack::builder) fn resolve_target_stage(
+        &self,
+        target: &str,
+        fallback: Transition,
+    ) -> Option<String> {
+        if let Some(stage_id) = self.preallocated_target_stage(target) {
+            return Some(stage_id);
+        }
+        let transition = self.resolve_story_return_transition(Some(target), fallback);
+        self.transition_target_stage_id(&transition)
+    }
+
     pub(in crate::native_pack::builder) fn transition_target_stage_id(
         &self,
         transition: &Transition,
