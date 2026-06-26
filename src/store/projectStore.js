@@ -14,8 +14,8 @@ import {
   moveEntryNextTo,
   moveEntryToContainer,
   normalizeProjectData,
-  removeEntry,
-  removeEntries,
+  removeEntryCascadingRefs,
+  removeEntriesCascadingRefs,
   reorderMenuVisibleChildren,
   reorderRootVisibleEntries,
   reorderTopLevelMenus,
@@ -316,7 +316,7 @@ export function useProjectStore() {
   }, [setProject]);
 
   const deleteMenu = useCallback((menuId) => {
-    setProject(p => removeEntry(p, menuId));
+    setProject(p => removeEntryCascadingRefs(p, menuId));
     setSelectedId('root');
   }, [setProject]);
 
