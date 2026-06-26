@@ -597,3 +597,25 @@ fn fidelity_external_packs_from_env() {
         }
     }
 }
+
+/// Résout un zip de pack depuis `STORY_STUDIO_BASELINE_DIR` (défaut : dossier d'audit
+/// temporaire), ou `None` si absent — pour les round-trips locaux de packs hors repo.
+fn baseline_pack_zip(file: &str) -> Option<String> {
+    let dir = std::env::var("STORY_STUDIO_BASELINE_DIR")
+        .unwrap_or_else(|_| "C:\\Users\\hugs\\AppData\\Local\\Temp\\lunii_audit".to_string());
+    let path = std::path::Path::new(&dir).join(file);
+    path.exists().then(|| path.to_string_lossy().to_string())
+}
+
+/// Round-trip du pack officiel "Suzanne et Gaston prêt pour les jeux !".
+/// Ce pack commence par un "dossier intro" piégeux (chaîne autoplay devant le menu) et a
+/// historiquement demandé du travail pour un round-trip fidèle (44 stages, 21 wheel, 23 autoplay).
+/// Garde de non-régression du chemin canonique import → génération.
+///
+/// `#[ignore]` (pack hors repo) : placer `suzanne.zip` dans `STORY_STUDIO_BASELINE_DIR`, puis
+/// `cargo test --manifest-path src-tauri/Cargo.toml roundtrip_suzanne -- --ignored --nocapture`.
+#[test]
+#[ignore]
+fn roundtrip_suzanne_intro_folder() {
+    assert_fidelity(baseline_pack_zip("suzanne.zip"), "suzanne");
+}
