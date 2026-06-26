@@ -598,24 +598,114 @@ fn fidelity_external_packs_from_env() {
     }
 }
 
-/// Résout un zip de pack depuis `STORY_STUDIO_BASELINE_DIR` (défaut : dossier d'audit
-/// temporaire), ou `None` si absent — pour les round-trips locaux de packs hors repo.
-fn baseline_pack_zip(file: &str) -> Option<String> {
-    let dir = std::env::var("STORY_STUDIO_BASELINE_DIR")
-        .unwrap_or_else(|_| "C:\\Users\\hugs\\AppData\\Local\\Temp\\lunii_audit".to_string());
-    let path = std::path::Path::new(&dir).join(file);
-    path.exists().then(|| path.to_string_lossy().to_string())
+/// Écrit un `story.json` synthétique + ses assets dans un zip temporaire (round-trips de motifs).
+fn write_synthetic_pack(dir: &std::path::Path, story: &serde_json::Value, assets: &[&str]) -> String {
+    use std::io::Write;
+    std::fs::create_dir_all(dir).expect("create pack dir");
+    let zip_path = dir.join("pack.zip");
+    let file = std::fs::File::create(&zip_path).expect("create zip");
+    let mut zip = zip::ZipWriter::new(file);
+    let opts = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    zip.start_file("story.json", opts).expect("start story");
+    zip.write_all(story.to_string().as_bytes())
+        .expect("write story");
+    for asset in assets {
+        zip.start_file(format!("assets/{asset}"), opts)
+            .expect("start asset");
+        zip.write_all(asset.as_bytes()).expect("write asset");
+    }
+    zip.finish().expect("finish zip");
+    zip_path.to_string_lossy().to_string()
 }
 
-/// Round-trip du pack officiel "Suzanne et Gaston prêt pour les jeux !".
-/// Ce pack commence par un "dossier intro" piégeux (chaîne autoplay devant le menu) et a
-/// historiquement demandé du travail pour un round-trip fidèle (44 stages, 21 wheel, 23 autoplay).
-/// Garde de non-régression du chemin canonique import → génération.
-///
-/// `#[ignore]` (pack hors repo) : placer `suzanne.zip` dans `STORY_STUDIO_BASELINE_DIR`, puis
-/// `cargo test --manifest-path src-tauri/Cargo.toml roundtrip_suzanne -- --ignored --nocapture`.
+/// Type d'architecture : un **"dossier intro" piégeux** — une chaîne autoplay jouée
+/// automatiquement AVANT le menu de contenu (squareOne → intro autoplay → menu → histoires).
+/// Ce motif est historiquement fragile à extraire et à round-tripper. Test synthétique
+/// (aucun pack réel, aucun nom de pack) : import → génération doit conserver le compte ET la
+/// nature des stages — l'intro reste autoplay, le menu reste wheel.
 #[test]
-#[ignore]
-fn roundtrip_suzanne_intro_folder() {
-    assert_fidelity(baseline_pack_zip("suzanne.zip"), "suzanne");
+fn autoplay_intro_chain_before_menu_roundtrips() {
+    let base = std::env::temp_dir().join(format!("fidelity_intro_{}", now_millis()));
+    let cs = |wheel: bool, ok: bool, home: bool, autoplay: bool| {
+        serde_json::json!({ "wheel": wheel, "ok": ok, "home": home, "pause": false, "autoplay": autoplay })
+    };
+    let story = serde_json::json!({
+        "title": "Intro Folder Pattern",
+        "version": 1, "description": "", "format": "v1", "nightModeAvailable": false,
+        "stageNodes": [
+            { "uuid": "cover", "name": "Depart", "type": "stage", "squareOne": true, "audio": "root.mp3", "image": "cover.png",
+              "controlSettings": cs(true, true, false, false),
+              "okTransition": {"actionNode":"root-action","optionIndex":0}, "homeTransition": null },
+            { "uuid": "intro", "name": "Intro", "type": "stage", "squareOne": false, "audio": "intro.mp3", "image": null,
+              "controlSettings": cs(false, false, true, true),
+              "okTransition": {"actionNode":"intro-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} },
+            { "uuid": "menu", "name": "Menu", "type": "stage", "squareOne": false, "audio": "menu.mp3", "image": "menu.png",
+              "controlSettings": cs(true, true, true, false),
+              "okTransition": {"actionNode":"menu-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} },
+            { "uuid": "title-a", "name": "Histoire A", "type": "stage", "squareOne": false, "audio": "ta.mp3", "image": "ta.png",
+              "controlSettings": cs(true, true, true, false),
+              "okTransition": {"actionNode":"play-a-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} },
+            { "uuid": "play-a", "name": "Histoire A", "type": "stage", "squareOne": false, "audio": "pa.mp3", "image": null,
+              "controlSettings": cs(false, false, true, true),
+              "okTransition": {"actionNode":"return-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} },
+            { "uuid": "title-b", "name": "Histoire B", "type": "stage", "squareOne": false, "audio": "tb.mp3", "image": "tb.png",
+              "controlSettings": cs(true, true, true, false),
+              "okTransition": {"actionNode":"play-b-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} },
+            { "uuid": "play-b", "name": "Histoire B", "type": "stage", "squareOne": false, "audio": "pb.mp3", "image": null,
+              "controlSettings": cs(false, false, true, true),
+              "okTransition": {"actionNode":"return-action","optionIndex":0}, "homeTransition": {"actionNode":"home-action","optionIndex":0} }
+        ],
+        "actionNodes": [
+            { "id": "root-action", "name": "", "options": ["intro"] },
+            { "id": "intro-action", "name": "", "options": ["menu"] },
+            { "id": "menu-action", "name": "", "options": ["title-a", "title-b"] },
+            { "id": "play-a-action", "name": "", "options": ["play-a"] },
+            { "id": "play-b-action", "name": "", "options": ["play-b"] },
+            { "id": "return-action", "name": "", "options": ["menu"] },
+            { "id": "home-action", "name": "", "options": ["cover"] }
+        ]
+    });
+    let zip_path = write_synthetic_pack(
+        &base,
+        &story,
+        &[
+            "root.mp3", "cover.png", "intro.mp3", "menu.mp3", "menu.png", "ta.mp3", "ta.png",
+            "pa.mp3", "tb.mp3", "tb.png", "pb.mp3",
+        ],
+    );
+
+    // Round-trip : import → génération. La fidélité visée est le COMPTE et la NATURE des
+    // stages (le générateur réécrit légitimement certaines cibles Home, hors périmètre ici).
+    let extracted = crate::services::pack_reader::unpack_zip_to_entries(
+        &zip_path,
+        base.join("imported").to_str().expect("import dir utf8"),
+    )
+    .expect("import");
+    let project = fidelity_project(&extracted, "Intro Folder Pattern");
+    let canonical = canonicalize_project(&project);
+    let assets = fidelity_fake_assets(&canonical);
+    let report = report_for(canonical, assets, vec![]);
+    let gen = build_story_document(&report).expect("generate");
+
+    let wheel = gen
+        .stage_nodes
+        .iter()
+        .filter(|s| s.control_settings.wheel)
+        .count();
+    let autoplay = gen
+        .stage_nodes
+        .iter()
+        .filter(|s| s.control_settings.autoplay)
+        .count();
+    assert!(
+        gen.stage_nodes.iter().any(|s| s.square_one),
+        "squareOne présent après round-trip",
+    );
+    assert_eq!(gen.stage_nodes.len(), 7, "round-trip : nombre de stages");
+    assert_eq!(wheel, 4, "round-trip : le cover, le menu et les 2 titres restent wheel");
+    assert_eq!(autoplay, 3, "round-trip : l'intro et les 2 lectures restent autoplay");
+    validate_document_for_studio_compat(&gen).expect("document STUdio valide");
+
+    let _ = std::fs::remove_dir_all(&base);
 }
