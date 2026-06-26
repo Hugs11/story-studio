@@ -99,8 +99,12 @@ fn build_native_graph_story_document(
     if !report.project.name.trim().is_empty() {
         document.title = report.project.name.clone();
     }
+    // Round-trip : préserver le `nightModeAvailable` du document d'origine (le parachute
+    // rejoue verbatim). `options.night_mode` est dérivé de la DÉTECTION à l'import, pas de
+    // l'intention : l'utiliser ici effaçait le drapeau d'un pack night-capable dont le pont
+    // n'a pas été détecté (régression de fidélité). `auto_next` reste incompatible.
     document.night_mode_available =
-        report.project.options.night_mode && !report.project.options.auto_next;
+        document.night_mode_available && !report.project.options.auto_next;
 
     for stage in &mut document.stage_nodes {
         if stage.audio.is_some() {

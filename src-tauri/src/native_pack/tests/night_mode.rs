@@ -653,3 +653,80 @@ fn night_mode_return_story_target_routes_to_story_title() {
     let target = resolve_night_return_stage(&document, source_play);
     assert_eq!(target.name, "Titre - Cible");
 }
+
+/// Type d'architecture : un pack night-capable (document `nightModeAvailable: true`) rejoué
+/// par le parachute alors que la DÉTECTION du pont nuit a échoué à l'import
+/// (`options.night_mode == false`). Round-trip : le drapeau doit être PRÉSERVÉ, pas effacé
+/// par l'option dérivée de la détection.
+#[test]
+fn parachute_preserves_declared_night_mode_available_when_bridge_not_detected() {
+    let native_graph = serde_json::json!({
+        "preserveForRoundTrip": true,
+        "projectionStatus": "lossy",
+        "document": {
+            "title": "Night Capable",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": true,
+            "stageNodes": [
+                {
+                    "uuid": "cover", "name": "Cover", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "a0", "optionIndex": 0 },
+                    "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "story", "name": "Story", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": "story.png",
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": null,
+                    "homeTransition": null,
+                    "position": { "x": 120, "y": 0 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "a0", "name": "Root", "options": ["story"], "position": { "x": 60, "y": 0 } }
+            ]
+        }
+    });
+
+    let project = CanonicalProject {
+        name: "Night Capable".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("cover.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: Some(native_graph),
+        // La détection a échoué : l'option vaut false bien que le pack soit night-capable.
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![],
+    };
+
+    let assets = vec![
+        prepared_asset("rootAudio", "root.mp3"),
+        prepared_asset("rootImage", "cover.png"),
+        prepared_asset("nativeGraph/story/audio", "story.mp3"),
+        prepared_asset("nativeGraph/story/image", "story.png"),
+    ];
+
+    let document =
+        build_story_document(&report_for(project, assets, Vec::new())).expect("parachute build");
+
+    assert!(
+        document.night_mode_available,
+        "le drapeau nightModeAvailable du document d'origine doit survivre au round-trip parachute",
+    );
+}
