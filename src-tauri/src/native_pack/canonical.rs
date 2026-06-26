@@ -234,7 +234,15 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
             entries.push(canonicalize_project_entry(story));
         }
     } else {
-        entries.extend(root_entries.iter().map(canonicalize_project_entry));
+        // Les `ref` ne génèrent pas de stage propre : on les écarte de la génération
+        // (résolution complète à l'Étape 6). Sans ce filtre, une `ref` tomberait dans
+        // `_ => Story` (cf. `canonicalize_project_entry`) et produirait une histoire fantôme.
+        entries.extend(
+            root_entries
+                .iter()
+                .filter(|entry| entry.entry_type != "ref")
+                .map(canonicalize_project_entry),
+        );
     }
 
     CanonicalProject {
@@ -318,6 +326,7 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
             children: entry
                 .children
                 .iter()
+                .filter(|child| child.entry_type != "ref")
                 .map(canonicalize_project_entry)
                 .collect(),
         }),
@@ -380,5 +389,39 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
             title_return_on_home_none: entry.title_return_on_home_none,
             title_control_settings: entry.title_control_settings.clone(),
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::project::ProjectEntry;
+
+    fn entry(id: &str, entry_type: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: entry_type.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn ref_children_are_dropped_not_storified() {
+        let menu = ProjectEntry {
+            id: "m".to_string(),
+            entry_type: "menu".to_string(),
+            name: "Menu".to_string(),
+            children: vec![entry("s", "story"), entry("r", "ref")],
+            ..Default::default()
+        };
+        let CanonicalEntry::Menu(canonical) = canonicalize_project_entry(&menu) else {
+            panic!("expected a menu");
+        };
+        assert_eq!(
+            canonical.children.len(),
+            1,
+            "la ref doit etre ecartee, pas transformee en story fantome",
+        );
+        assert!(matches!(canonical.children[0], CanonicalEntry::Story(_)));
     }
 }
