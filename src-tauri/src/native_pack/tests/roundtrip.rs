@@ -505,3 +505,156 @@ fn menu_reference_option_resolves_to_existing_target_stage_without_ghost() {
 
     let _ = fs::remove_dir_all(base);
 }
+
+/// Type d'architecture (aucun nom de pack réel) : le motif « séquence de fin + choix de
+/// convergence » (l'histoire se termine par une séquence dont la dernière étape propose un
+/// CHOIX entre plusieurs destinations existantes — le cas qui avait coûté cher sur un pack à
+/// queues de fin). Garde : la séquence et le choix de convergence se génèrent, restent STUdio-
+/// valides, et le pack round-trip génération→zip→ré-import.
+#[test]
+fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
+    let base = temp_roundtrip_dir("end_sequence_choice");
+    let root_image_source = base.join("source-cover.png");
+    write_test_png(&root_image_source);
+
+    let menu_label = scoped_label_id("root", "carrefour", "Carrefour");
+    let a_label = scoped_label_id(&menu_label, "story-a", "Histoire A");
+    let b_label = scoped_label_id(&menu_label, "story-b", "Histoire B");
+    let c_label = scoped_label_id(&menu_label, "story-c", "Histoire C");
+
+    let prompt_step = |id: &str, name: &str, autoplay: bool, ok: bool, wheel: bool| {
+        CanonicalAfterPlaybackStep {
+            id: id.to_string(),
+            name: name.to_string(),
+            audio: Some(format!("{id}.mp3")),
+            image: None,
+            control_settings: Some(crate::domain::project::EntryControlSettings {
+                autoplay: Some(autoplay),
+                wheel: Some(wheel),
+                pause: Some(false),
+                ok: Some(ok),
+                home: Some(false),
+            }),
+            ok_target: None,
+            ok_choice_targets: Vec::new(),
+            home_target: None,
+            home_follows_ok: false,
+            home_none: true,
+        }
+    };
+
+    let make_project = |with_choice: bool| {
+        // Dernière étape : un CHOIX entre deux destinations existantes (convergence), ou
+        // une cible unique (variante de contrôle pour isoler l'action node de choix).
+        // Les cibles visent des histoires construites AVANT (B, C) : l'action de choix est
+        // résolue en ligne contre des stages déjà bâtis (refs arrière).
+        let mut last = prompt_step("ensuite", "Et ensuite ?", false, true, true);
+        if with_choice {
+            last.ok_choice_targets =
+                vec!["story_play:story-b".to_string(), "story_play:story-c".to_string()];
+        } else {
+            last.ok_target = Some("story_play:story-b".to_string());
+        }
+        let story = |id: &str, name: &str, audio: &str| {
+            CanonicalEntry::Story(CanonicalStory {
+                id: id.to_string(),
+                name: name.to_string(),
+                audio: Some(audio.to_string()),
+                ..Default::default()
+            })
+        };
+        CanonicalProject {
+            name: "Carrefour Sequence".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some(root_image_source.to_string_lossy().to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: canonical_options(),
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                id: "carrefour".to_string(),
+                name: "Carrefour".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                image: Some("menu.png".to_string()),
+                children: vec![
+                    story("story-b", "Histoire B", "b.mp3"),
+                    story("story-c", "Histoire C", "c.mp3"),
+                    // L'histoire à séquence de fin vient EN DERNIER : son choix converge
+                    // vers B et C, déjà construits.
+                    CanonicalEntry::Story(CanonicalStory {
+                        id: "story-a".to_string(),
+                        name: "Histoire A".to_string(),
+                        audio: Some("a.mp3".to_string()),
+                        after_playback_sequence: vec![
+                            prompt_step("cloche", "Cloche", true, false, false),
+                            last.clone(),
+                        ],
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+        }
+    };
+
+    let assets = || {
+        vec![
+            temp_prepared_asset(&base, "rootAudio", "root.mp3"),
+            temp_prepared_asset(&base, "rootImage", "cover.png"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuAudio"), "menu.mp3"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuImage"), "menu.png"),
+            temp_prepared_asset(&base, &format!("{b_label}/storyAudio"), "b.mp3"),
+            temp_prepared_asset(&base, &format!("{c_label}/storyAudio"), "c.mp3"),
+            temp_prepared_asset(&base, &format!("{a_label}/storyAudio"), "a.mp3"),
+            temp_prepared_asset(
+                &base,
+                &format!("{a_label}/afterPlaybackSequence/0/audio"),
+                "cloche.mp3",
+            ),
+            temp_prepared_asset(
+                &base,
+                &format!("{a_label}/afterPlaybackSequence/1/audio"),
+                "ensuite.mp3",
+            ),
+        ]
+    };
+
+    // build_story_document valide déjà le document pour STUdio (sinon il échoue ici).
+    let document = build_story_document(&report_for(make_project(true), assets(), Vec::new()))
+        .expect("build with convergence choice");
+
+    // Les deux étapes de séquence ont bien généré leurs stages.
+    for step_name in ["Cloche", "Et ensuite ?"] {
+        assert!(
+            document.stage_nodes.iter().any(|stage| stage.name == step_name),
+            "étape de séquence « {step_name} » absente du document généré",
+        );
+    }
+
+    // Le choix de convergence ajoute exactement un action node (vs la variante cible unique).
+    let multi_option_actions =
+        |doc: &StoryDocument| doc.action_nodes.iter().filter(|a| a.options.len() >= 2).count();
+    let document_single =
+        build_story_document(&report_for(make_project(false), assets(), Vec::new()))
+            .expect("build with single target");
+    assert_eq!(
+        multi_option_actions(&document),
+        multi_option_actions(&document_single) + 1,
+        "la dernière étape à choix doit générer un action node de convergence supplémentaire",
+    );
+
+    // Round-trip complet : génération → zip → ré-import sans erreur.
+    let imported = generated_zip_import(&base, make_project(true), assets());
+    assert_eq!(imported["title"], "Carrefour Sequence");
+    assert!(
+        imported["entries"].as_array().is_some_and(|entries| !entries.is_empty()),
+        "le pack ré-importé doit exposer des entrées",
+    );
+
+    let _ = fs::remove_dir_all(base);
+}
