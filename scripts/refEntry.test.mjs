@@ -8,7 +8,21 @@ import {
   createRefEntry,
   findIncomingRefs,
   appendEntry,
+  removeEntryCascadingRefs,
+  removeEntriesCascadingRefs,
 } from '../src/store/projectModel.js';
+
+function allRefIds(project) {
+  const ids = [];
+  const walk = (entries) => {
+    for (const entry of entries ?? []) {
+      if (entry.type === 'ref') ids.push(entry.id);
+      if (entry.children) walk(entry.children);
+    }
+  };
+  walk(project.rootEntries);
+  return ids.sort();
+}
 
 test('normalizeRefEntry keeps a typed navigation target', () => {
   const ref = normalizeRefEntry({ id: 'r1', type: 'ref', target: 'story:story-9' });
@@ -156,4 +170,52 @@ test('findIncomingRefs flags refs into a deleted subtree but ignores refs living
 
   // Aucune ref n'entre dans menu-1.
   assert.deepEqual(findIncomingRefs(project, 'menu-1'), []);
+});
+
+test('removeEntryCascadingRefs drops refs that would dangle on the deleted target', () => {
+  let project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [{
+      id: 'menu-1',
+      type: 'menu',
+      name: 'Choix',
+      children: [
+        { id: 'story-a', type: 'story', name: 'A' },
+        { id: 'story-b', type: 'story', name: 'B' },
+        { id: 'ref-to-a', type: 'ref', target: 'story:story-a' },
+      ],
+    }],
+  });
+
+  project = removeEntryCascadingRefs(project, 'story-a');
+  const menu = project.rootEntries[0];
+  assert.equal(menu.children.find((c) => c.id === 'story-a'), undefined, 'la cible est supprimée');
+  assert.equal(menu.children.find((c) => c.id === 'ref-to-a'), undefined, 'la ref pendante part aussi');
+  assert.equal(menu.children.find((c) => c.id === 'story-b')?.id, 'story-b', 'le reste est intact');
+  assert.deepEqual(allRefIds(project), [], 'aucune cible pendante ne subsiste');
+});
+
+test('removeEntriesCascadingRefs keeps refs still valid and drops only the dangling ones', () => {
+  let project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [
+      {
+        id: 'menu-1',
+        type: 'menu',
+        name: 'Un',
+        children: [
+          { id: 'story-a', type: 'story', name: 'A' },
+          { id: 'ref-to-b', type: 'ref', target: 'story:story-b' },
+        ],
+      },
+      { id: 'menu-2', type: 'menu', name: 'Deux', children: [{ id: 'story-b', type: 'story', name: 'B' }] },
+      { id: 'ref-to-a', type: 'ref', target: 'story:story-a' },
+    ],
+  });
+
+  // Supprimer story-b → ref-to-b devient pendante (retirée) ; ref-to-a reste valide.
+  project = removeEntriesCascadingRefs(project, ['story-b']);
+  assert.deepEqual(allRefIds(project), ['ref-to-a']);
 });

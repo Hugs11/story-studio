@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { decodeNavigationStoryId, isStoryNavigationTarget, isStoryPlayNavigationTarget } from '../../store/navigationTargets';
+import { decodeNavigationStoryId, isStoryNavigationTarget, isStoryPlayNavigationTarget, refTargetEntryId } from '../../store/navigationTargets';
 import { getEffectiveEndBehavior, getGeneratedStoryNavigation } from '../../store/generatedNavigation';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { getExportPackName } from '../../utils/packConvention';
@@ -565,6 +565,9 @@ export function ProjectSimulator({
         setEntryIdx(0);
       } else if (currentEntry?.type === 'zip') {
         if (currentEntry.zipPath) onOpenZip(currentEntry.zipPath);
+      } else if (currentEntry?.type === 'ref') {
+        // Un nœud de référence saute vers la cible existante (comme à l'export).
+        navigateToTarget(currentEntry.target);
       } else if (currentEntry?.type === 'story') {
         setState('playing');
       }
@@ -613,7 +616,10 @@ export function ProjectSimulator({
     ) :
     state === 'sequence' ? (activeSequenceStep?.name || activeStory?.name || 'Fin de lecture') :
     isSimple ? (simpleStory?.name || '—') :
-    (currentEntry?.name || '—');
+    currentEntry?.type === 'ref'
+      ? (currentEntry.label?.trim()
+        || `→ ${findEntryLocation(rootEntries, refTargetEntryId(currentEntry.target))?.entry?.name || 'lien'}`)
+    : (currentEntry?.name || '—');
 
   const displaySub =
     state === 'cover' ? 'Appuie sur OK' :

@@ -6,7 +6,7 @@ import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
 import { Tooltip } from '../common/Tooltip';
 import { Eye, Settings } from '../icons/LucideLocal';
-import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
+import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID } from './flowDiagramLayout';
 import { useZipCover } from './useZipCover.js';
 
@@ -15,6 +15,7 @@ function DiagramNodeTypeIcon({ entry }) {
   if (entry.type === 'menu') return <IconFolderOpen />;
   if (entry.type === 'story') return <IconStory />;
   if (entry.type === 'zip') return <IconArchive />;
+  if (entry.type === 'ref') return <IconArrowRight />;
   if (entry.type === 'end-node') return entry.icon === 'moon' ? <IconMoon /> : <IconStop />;
   return null;
 }
@@ -196,7 +197,7 @@ export function FullDiagramNode({
       <div className="fd-complete-node-label">
         <span className="fd-complete-node-icon"><DiagramNodeTypeIcon entry={entry} /></span>
         <div className="fd-complete-node-texts">
-          <span className="fd-complete-node-name">{entry.name || '(sans nom)'}</span>
+          <span className="fd-complete-node-name">{entry.type === 'ref' ? (entry.label?.trim() || 'Lien') : (entry.name || '(sans nom)')}</span>
           {!compact && isCollapsed && childSummary ? (
             <span className="fd-complete-node-kind">
               {`${childSummary.descendants} element${childSummary.descendants > 1 ? 's' : ''} masques`}

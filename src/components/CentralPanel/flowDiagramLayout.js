@@ -1,4 +1,4 @@
-import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from '../../store/navigationTargets';
+import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from '../../store/navigationTargets';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
   getGeneratedEndNodeReturnNavigation,
@@ -7,7 +7,7 @@ import {
 } from '../../store/generatedNavigation';
 import { canMoveEntryToContainer } from '../tree/treeOperations';
 
-export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', 'end-node': 'Message de fin' };
+export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', ref: 'Lien', 'end-node': 'Message de fin' };
 // Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
 export { MIME } from '../../utils/mimeTypes';
 export const ZOOM_MIN = 0.08;
@@ -417,6 +417,15 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         : null;
       if (homeTarget && homeTarget !== effectiveReturnTarget) {
         transitions.push({ from: entry.id, to: homeTarget, kind: 'home', source: 'configured' });
+      }
+      continue;
+    }
+
+    if (entry.type === 'ref') {
+      // Un nœud `ref` est une arête vers un nœud existant : on relie la feuille ref à sa cible.
+      const to = refTargetEntryId(entry.target);
+      if (to) {
+        transitions.push({ from: entry.id, to, kind: 'reference', source: 'reference' });
       }
       continue;
     }

@@ -340,6 +340,7 @@ export function CompleteDiagramTree({
   const returnEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'return'), [navigationEdges]);
   const homeEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'home'), [navigationEdges]);
   const sequenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'sequence'), [navigationEdges]);
+  const referenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'reference'), [navigationEdges]);
   const nodeLabelById = useMemo(() => new Map(layout.nodes.map((node) => [
     node.entry.id,
     node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
@@ -361,7 +362,7 @@ export function CompleteDiagramTree({
   );
   const getNavigationEdgeForNode = useCallback((nodeId) => {
     if (!showReturns || !nodeId) return null;
-    const priority = { sequence: 0, return: 1, home: 2 };
+    const priority = { sequence: 0, return: 1, reference: 1, home: 2 };
     const byPriority = (a, b) => (priority[a.kind] ?? 9) - (priority[b.kind] ?? 9);
     const outgoing = navigationEdges
       .filter((edge) => edge.from === nodeId)
@@ -440,9 +441,12 @@ export function CompleteDiagramTree({
       ? 'Retour Home'
       : edge.kind === 'sequence'
         ? 'Séquence de fin'
-        : 'Retour';
+        : edge.kind === 'reference'
+          ? 'Lien'
+          : 'Retour';
     if (edge.kind === 'home') return `Bouton Home pendant « ${from} » → « ${to} »`;
     if (edge.kind === 'sequence') return `Séquence de fin de « ${from} » → « ${to} »`;
+    if (edge.kind === 'reference') return `Lien vers un nœud existant : « ${from} » → « ${to} »`;
     return edge.label ? `${edge.label} : ${from} → ${to}` : `${kindLabel} : « ${from} » → « ${to} »`;
   }
   function updateNavigationTooltip(event, edge) {
@@ -1122,6 +1126,12 @@ export function CompleteDiagramTree({
             <div className="fd-complete-legend-item">
               <span className="fd-complete-legend-line fd-complete-legend-line--sequence" />
               <span>Sequences de fin</span>
+            </div>
+          ) : null}
+          {referenceEdges.length > 0 ? (
+            <div className="fd-complete-legend-item">
+              <span className="fd-complete-legend-line fd-complete-legend-line--reference" />
+              <span>Liens</span>
             </div>
           ) : null}
         </div>
