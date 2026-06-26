@@ -43,18 +43,19 @@ impl<'a> StoryBuilder<'a> {
         // Deux temps pour éviter le conflit d'emprunt : résoudre (lecture) puis appliquer (écriture).
         let mut patches: Vec<(String, usize, String)> = Vec::with_capacity(pending.len());
         for option in &pending {
+            // Sentinelle non résolue : pas de repli → on EXIGE une cible réelle (sinon erreur).
             let unresolved = Transition {
                 action_node: String::new(),
                 option_index: -1,
             };
-            let transition =
-                self.resolve_story_return_transition(Some(&option.target), unresolved);
-            let stage_id = self.transition_target_stage_id(&transition).ok_or_else(|| {
-                format!(
-                    "Référence non résolue à l'export : cible « {} » introuvable.",
-                    option.target
-                )
-            })?;
+            let stage_id = self
+                .resolve_target_stage(&option.target, unresolved)
+                .ok_or_else(|| {
+                    format!(
+                        "Référence non résolue à l'export : cible « {} » introuvable.",
+                        option.target
+                    )
+                })?;
             patches.push((option.action_id.clone(), option.option_index, stage_id));
         }
         for (action_id, option_index, stage_id) in patches {
