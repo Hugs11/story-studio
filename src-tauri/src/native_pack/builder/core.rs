@@ -5,6 +5,7 @@ use super::super::{
     validate_document_for_studio_compat, ActionNode, ControlSettings, NativeAssetPreparationReport,
     StageNode, StoryDocument, Transition,
 };
+use super::refs::PendingRefOption;
 use super::{menu::*, story::*, transitions::*};
 
 pub(in crate::native_pack) struct StoryBuilder<'a> {
@@ -18,6 +19,7 @@ pub(in crate::native_pack) struct StoryBuilder<'a> {
         std::collections::HashMap<String, MenuPrealloc>,
     pub(in crate::native_pack::builder) story_prealloc:
         std::collections::HashMap<String, StoryPrealloc>,
+    pub(in crate::native_pack::builder) pending_ref_options: Vec<PendingRefOption>,
 }
 
 impl<'a> StoryBuilder<'a> {
@@ -30,6 +32,7 @@ impl<'a> StoryBuilder<'a> {
             night_bridge_cache: std::collections::HashMap::new(),
             menu_prealloc: std::collections::HashMap::new(),
             story_prealloc: std::collections::HashMap::new(),
+            pending_ref_options: Vec::new(),
         }
     }
 
@@ -93,6 +96,10 @@ impl<'a> StoryBuilder<'a> {
             }),
             position: zero_position(),
         });
+
+        // Tout l'arbre est construit : les nœuds `ref` peuvent maintenant pointer vers
+        // le vrai stage natif de leur cible (y compris les références « en avant »).
+        self.resolve_pending_ref_options()?;
 
         let mut document = StoryDocument {
             title: project_name,

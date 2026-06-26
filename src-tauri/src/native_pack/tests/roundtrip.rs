@@ -400,3 +400,108 @@ fn modeled_branching_graph_does_not_trigger_native_graph() {
 
     let _ = fs::remove_dir_all(base);
 }
+
+/// Type d'architecture (aucun nom de pack réel) : un menu-choix dont une option
+/// « revisite » une histoire déjà présente — une convergence orpheline modélisée par
+/// un nœud `ref`. Attendu Étape 6 : la ref génère une VRAIE transition native vers le
+/// stage existant de la cible, sans créer de stage fantôme et sans casser la validité STUdio.
+#[test]
+fn menu_reference_option_resolves_to_existing_target_stage_without_ghost() {
+    let base = temp_roundtrip_dir("ref_option");
+    let root_image_source = base.join("source-cover.png");
+    write_test_png(&root_image_source);
+
+    // Rôles d'assets calculés via le MÊME helper que le générateur (gère le suffixe #id).
+    let menu_label = scoped_label_id("root", "carrefour", "Carrefour");
+    let story_a_label = scoped_label_id(&menu_label, "story-a", "Chemin A");
+    let story_b_label = scoped_label_id(&menu_label, "story-b", "Chemin B");
+
+    let make_project = |with_ref: bool| {
+        let mut children = vec![
+            CanonicalEntry::Story(CanonicalStory {
+                id: "story-a".to_string(),
+                name: "Chemin A".to_string(),
+                audio: Some("a.mp3".to_string()),
+                ..Default::default()
+            }),
+            CanonicalEntry::Story(CanonicalStory {
+                id: "story-b".to_string(),
+                name: "Chemin B".to_string(),
+                audio: Some("b.mp3".to_string()),
+                ..Default::default()
+            }),
+        ];
+        if with_ref {
+            // La 3e option converge (orpheline) vers l'histoire A déjà présente.
+            children.push(CanonicalEntry::Ref(CanonicalRef {
+                id: "revisite-a".to_string(),
+                target: "story:story-a".to_string(),
+                ref_kind: Some("continue".to_string()),
+            }));
+        }
+        CanonicalProject {
+            name: "Ref Option".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some(root_image_source.to_string_lossy().to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: canonical_options(),
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                id: "carrefour".to_string(),
+                name: "Carrefour".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                image: Some("menu.png".to_string()),
+                children,
+                ..Default::default()
+            })],
+        }
+    };
+
+    let assets = || {
+        vec![
+            temp_prepared_asset(&base, "rootAudio", "root.mp3"),
+            temp_prepared_asset(&base, "rootImage", "cover.png"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuAudio"), "menu.mp3"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuImage"), "menu.png"),
+            temp_prepared_asset(&base, &format!("{story_a_label}/storyAudio"), "a.mp3"),
+            temp_prepared_asset(&base, &format!("{story_b_label}/storyAudio"), "b.mp3"),
+        ]
+    };
+
+    // build_story_document valide déjà le document pour STUdio (sinon il échoue ici).
+    let document = build_story_document(&report_for(make_project(true), assets(), Vec::new()))
+        .expect("build with ref");
+
+    // Le menu-choix a 3 options ; la 3e (ref) pointe EXACTEMENT le stage de A (1re option).
+    let menu_action = document
+        .action_nodes
+        .iter()
+        .find(|action| action.options.len() == 3)
+        .expect("action node du menu avec 3 options");
+    assert_eq!(
+        menu_action.options[2], menu_action.options[0],
+        "la ref doit pointer le stage existant de la cible, jamais un nouveau stage",
+    );
+
+    // Une ref hébergée n'ajoute AUCUN stage : même total avec et sans la ref.
+    let document_without =
+        build_story_document(&report_for(make_project(false), assets(), Vec::new()))
+            .expect("build without ref");
+    assert_eq!(
+        document.stage_nodes.len(),
+        document_without.stage_nodes.len(),
+        "une ref hébergée n'ajoute aucune ligne ni aucun stage à l'arbre",
+    );
+
+    // Round-trip complet : génération → zip → ré-import sans erreur (writer + reader).
+    let imported = generated_zip_import(&base, make_project(true), assets());
+    assert_eq!(imported["title"], "Ref Option");
+
+    let _ = fs::remove_dir_all(base);
+}

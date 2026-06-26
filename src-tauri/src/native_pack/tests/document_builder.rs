@@ -38,6 +38,8 @@ fn walk_entry(entry: &CanonicalEntry, depth: usize, stats: &mut NativePackStats)
         }
         CanonicalEntry::Story(_) => stats.story_count += 1,
         CanonicalEntry::Zip(_) => stats.zip_count += 1,
+        // Une référence n'ajoute aucun nœud propre à l'arbre (arête seulement).
+        CanonicalEntry::Ref(_) => {}
     }
 }
 

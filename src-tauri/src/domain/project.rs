@@ -91,6 +91,12 @@ pub(crate) struct ProjectEntry {
     pub(crate) name: String,
     #[serde(rename = "nativeStageId", default)]
     pub(crate) native_stage_id: Option<String>,
+    /// Cible typée d'un nœud `ref` (`menu:`/`story:`/`story_play:`/`story_home_step:`).
+    #[serde(default)]
+    pub(crate) target: Option<String>,
+    /// Présentation d'un `ref` : `continue` (avant) | `return` (arrière).
+    #[serde(rename = "refKind", default)]
+    pub(crate) ref_kind: Option<String>,
     pub(crate) audio: Option<String>,
     pub(crate) image: Option<String>,
     #[serde(rename = "itemAudio")]
