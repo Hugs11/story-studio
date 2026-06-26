@@ -70,6 +70,11 @@ export function decodeNavigationStoryId(target) {
   return null;
 }
 
+// Id d'entrée ciblé par une cible typée (menu:/story:/story_play:/story_home_step:), ou null.
+export function refTargetEntryId(target) {
+  return decodeNavigationStoryId(target) ?? decodeNavigationMenuId(target) ?? null;
+}
+
 export function isRootNavigationTarget(target) {
   return normalizeNavigationTarget(target) === NAV_TARGET_ROOT;
 }

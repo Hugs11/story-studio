@@ -1,4 +1,5 @@
-import { makeId, normalizeMenuEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { makeId, normalizeMenuEntry, normalizeRefEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { refTargetEntryId } from '../navigationTargets.js';
 
 function buildProjectIndexEntries(entries, ancestors, level, index) {
   let playableCount = 0;
@@ -97,6 +98,12 @@ export function createZipEntry(fields = {}) {
   return normalizeZipEntry(fields);
 }
 
+// Crée un nœud `ref` (« → nœud existant ») pointant vers une cible typée.
+// `target` réutilise l'encodage navigation (menu:/story:/story_play:/story_home_step:).
+export function createRefEntry({ target, refKind = 'continue', label = '' } = {}) {
+  return normalizeRefEntry({ target, refKind, label });
+}
+
 export function deepCloneEntry(entry) {
   if (!entry || typeof entry !== 'object') return entry;
   const cloned = { ...entry, id: makeId() };
@@ -171,6 +178,34 @@ export function visitProjectEntries(project, visitor, projectIndex = null) {
     return;
   }
   walkEntries(project.rootEntries ?? [], visitor);
+}
+
+// Ids de l'entrée + tout son sous-arbre (ce qui disparaît si on la supprime).
+export function collectEntrySubtreeIds(entry) {
+  const ids = new Set();
+  const walk = (node) => {
+    if (!node?.id) return;
+    ids.add(node.id);
+    (node.children ?? []).forEach(walk);
+  };
+  walk(entry);
+  return ids;
+}
+
+// Refs ENTRANTES qui deviendraient pendantes si on supprimait `entryId` (et son sous-arbre).
+// Garde-fou authoring : on ne laisse pas une `ref` viser une cible disparue (cf. validation).
+// Les refs situées DANS le sous-arbre supprimé ne comptent pas (elles partent avec lui).
+export function findIncomingRefs(project, entryId, projectIndex = null) {
+  const target = findEntryById(project, entryId, projectIndex);
+  if (!target) return [];
+  const removedIds = collectEntrySubtreeIds(target);
+  const incoming = [];
+  visitProjectEntries(project, (entry) => {
+    if (entry.type !== 'ref' || removedIds.has(entry.id)) return;
+    const targetId = refTargetEntryId(entry.target);
+    if (targetId && removedIds.has(targetId)) incoming.push(entry);
+  }, projectIndex);
+  return incoming;
 }
 
 export function collectAllMenus(project, projectIndex = null) {

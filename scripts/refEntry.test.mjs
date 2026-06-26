@@ -5,6 +5,9 @@ import {
   normalizeProjectData,
   projectToSerializable,
   normalizeRefEntry,
+  createRefEntry,
+  findIncomingRefs,
+  appendEntry,
 } from '../src/store/projectModel.js';
 
 test('normalizeRefEntry keeps a typed navigation target', () => {
@@ -82,4 +85,75 @@ test('a ref round-trips through serialization', () => {
   assert.equal(reopened.rootEntries[0].target, 'story_play:t');
   assert.equal(reopened.rootEntries[0].label, 'Revient à A');
   assert.equal(reopened.rootEntries[0].refKind, 'return');
+});
+
+test('createRefEntry builds a normalized ref pointing at an existing node', () => {
+  const ref = createRefEntry({ target: 'story:story-9', refKind: 'return', label: 'Revoir' });
+  assert.equal(ref.type, 'ref');
+  assert.equal(ref.target, 'story:story-9');
+  assert.equal(ref.refKind, 'return');
+  assert.equal(ref.label, 'Revoir');
+  assert.ok(ref.id, 'an id is generated');
+});
+
+test('createRefEntry appended into a menu is detected as an incoming ref of its target', () => {
+  let project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [{
+      id: 'menu-1',
+      type: 'menu',
+      name: 'Choix',
+      children: [{ id: 'story-a', type: 'story', name: 'A' }],
+    }],
+  });
+  project = appendEntry(project, 'menu-1', createRefEntry({ target: 'story:story-a' }));
+  const incoming = findIncomingRefs(project, 'story-a');
+  assert.equal(incoming.length, 1);
+  assert.equal(incoming[0].target, 'story:story-a');
+});
+
+test('findIncomingRefs flags refs into a deleted subtree but ignores refs living inside it', () => {
+  const project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [
+      {
+        id: 'menu-1',
+        type: 'menu',
+        name: 'Choix',
+        children: [
+          { id: 'story-a', type: 'story', name: 'A' },
+          { id: 'ref-to-a', type: 'ref', target: 'story:story-a' },
+        ],
+      },
+      {
+        id: 'menu-2',
+        type: 'menu',
+        name: 'Autre',
+        children: [
+          { id: 'story-b', type: 'story', name: 'B' },
+          // Cette ref vit DANS menu-2 : supprimée avec lui, donc pas « entrante ».
+          { id: 'ref-inside', type: 'ref', target: 'story:story-b' },
+        ],
+      },
+      // Ref racine qui vise menu-2 : doit être signalée si on supprime menu-2.
+      { id: 'ref-to-menu2', type: 'ref', target: 'menu:menu-2' },
+    ],
+  });
+
+  // Supprimer story-a → la ref-to-a (hors sous-arbre) deviendrait pendante.
+  assert.deepEqual(
+    findIncomingRefs(project, 'story-a').map((entry) => entry.id),
+    ['ref-to-a'],
+  );
+
+  // Supprimer menu-2 → seule la ref racine compte ; ref-inside part avec le sous-arbre.
+  assert.deepEqual(
+    findIncomingRefs(project, 'menu-2').map((entry) => entry.id),
+    ['ref-to-menu2'],
+  );
+
+  // Aucune ref n'entre dans menu-1.
+  assert.deepEqual(findIncomingRefs(project, 'menu-1'), []);
 });
