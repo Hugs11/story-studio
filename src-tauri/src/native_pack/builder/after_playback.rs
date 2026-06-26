@@ -100,11 +100,16 @@ impl<'a> StoryBuilder<'a> {
             if is_last && step.ok_choice_targets.len() > 1 {
                 let mut options = Vec::new();
                 for target in &step.ok_choice_targets {
-                    let resolved = self.resolve_story_return_transition(
-                        Some(target.as_str()),
-                        play_return_transition.clone(),
-                    );
-                    if let Some(stage_id) = self.transition_target_stage_id(&resolved) {
+                    // Cible préallouée d'abord (résout les convergences « en avant »),
+                    // sinon résolution en ligne (cibles déjà construites / arrière).
+                    let stage_id = self.preallocated_target_stage(target).or_else(|| {
+                        let resolved = self.resolve_story_return_transition(
+                            Some(target.as_str()),
+                            play_return_transition.clone(),
+                        );
+                        self.transition_target_stage_id(&resolved)
+                    });
+                    if let Some(stage_id) = stage_id {
                         options.push(stage_id);
                     }
                 }

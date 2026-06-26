@@ -658,3 +658,215 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
 
     let _ = fs::remove_dir_all(base);
 }
+
+/// Étape 7 : un choix de convergence en fin de séquence qui vise des histoires construites
+/// APRÈS (références « en avant »). La résolution inline ne voyait que les cibles arrière ;
+/// la résolution préallouée (`preallocated_target_stage`) lève la limite. Type d'architecture.
+#[test]
+fn end_sequence_convergence_choice_resolves_forward_references() {
+    let base = temp_roundtrip_dir("forward_choice");
+    let root_image_source = base.join("source-cover.png");
+    write_test_png(&root_image_source);
+
+    let menu_label = scoped_label_id("root", "carrefour", "Carrefour");
+    let a_label = scoped_label_id(&menu_label, "story-a", "Histoire A");
+    let b_label = scoped_label_id(&menu_label, "story-b", "Histoire B");
+    let c_label = scoped_label_id(&menu_label, "story-c", "Histoire C");
+
+    let make_project = |with_choice: bool| {
+        let last = CanonicalAfterPlaybackStep {
+            id: "ensuite".to_string(),
+            name: "Et ensuite ?".to_string(),
+            audio: Some("ensuite.mp3".to_string()),
+            image: None,
+            control_settings: Some(crate::domain::project::EntryControlSettings {
+                autoplay: Some(false),
+                wheel: Some(true),
+                pause: Some(false),
+                ok: Some(true),
+                home: Some(false),
+            }),
+            ok_target: if with_choice {
+                None
+            } else {
+                Some("story_play:story-b".to_string())
+            },
+            ok_choice_targets: if with_choice {
+                vec!["story_play:story-b".to_string(), "story_play:story-c".to_string()]
+            } else {
+                Vec::new()
+            },
+            home_target: None,
+            home_follows_ok: false,
+            home_none: true,
+        };
+        let story = |id: &str, name: &str, audio: &str| {
+            CanonicalEntry::Story(CanonicalStory {
+                id: id.to_string(),
+                name: name.to_string(),
+                audio: Some(audio.to_string()),
+                ..Default::default()
+            })
+        };
+        CanonicalProject {
+            name: "Carrefour Forward".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some(root_image_source.to_string_lossy().to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: canonical_options(),
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                id: "carrefour".to_string(),
+                name: "Carrefour".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                image: Some("menu.png".to_string()),
+                children: vec![
+                    // L'histoire à séquence vient EN PREMIER : ses cibles (B, C) sont bâties APRÈS.
+                    CanonicalEntry::Story(CanonicalStory {
+                        id: "story-a".to_string(),
+                        name: "Histoire A".to_string(),
+                        audio: Some("a.mp3".to_string()),
+                        after_playback_sequence: vec![last.clone()],
+                        ..Default::default()
+                    }),
+                    story("story-b", "Histoire B", "b.mp3"),
+                    story("story-c", "Histoire C", "c.mp3"),
+                ],
+                ..Default::default()
+            })],
+        }
+    };
+
+    let assets = || {
+        vec![
+            temp_prepared_asset(&base, "rootAudio", "root.mp3"),
+            temp_prepared_asset(&base, "rootImage", "cover.png"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuAudio"), "menu.mp3"),
+            temp_prepared_asset(&base, &format!("{menu_label}/menuImage"), "menu.png"),
+            temp_prepared_asset(&base, &format!("{a_label}/storyAudio"), "a.mp3"),
+            temp_prepared_asset(
+                &base,
+                &format!("{a_label}/afterPlaybackSequence/0/audio"),
+                "ensuite.mp3",
+            ),
+            temp_prepared_asset(&base, &format!("{b_label}/storyAudio"), "b.mp3"),
+            temp_prepared_asset(&base, &format!("{c_label}/storyAudio"), "c.mp3"),
+        ]
+    };
+
+    let multi = |doc: &StoryDocument| {
+        doc.action_nodes.iter().filter(|action| action.options.len() >= 2).count()
+    };
+    let with_choice = build_story_document(&report_for(make_project(true), assets(), Vec::new()))
+        .expect("forward choice builds");
+    let single = build_story_document(&report_for(make_project(false), assets(), Vec::new()))
+        .expect("single target builds");
+    assert_eq!(
+        multi(&with_choice),
+        multi(&single) + 1,
+        "le choix de convergence en avant doit générer son action node (résolution préallouée)",
+    );
+
+    let _ = fs::remove_dir_all(base);
+}
+
+/// Type d'architecture « Lapin » : un arbre de choix dont la convergence est HÉBERGÉE
+/// (returnAfterPlay = badge, pas de feuille `ref`). Regénéré par le chemin CANONIQUE
+/// (`native_graph: None`) → la convergence A→B survit sans parachute, et round-trip.
+#[test]
+fn hosted_convergence_choice_tree_roundtrips_via_canonical() {
+    let base = temp_roundtrip_dir("hosted_convergence");
+    let root_image_source = base.join("source-cover.png");
+    write_test_png(&root_image_source);
+
+    let menu_label = scoped_label_id("root", "carrefour", "Carrefour");
+    let a_label = scoped_label_id(&menu_label, "story-a", "Histoire A");
+    let b_label = scoped_label_id(&menu_label, "story-b", "Histoire B");
+
+    let project = CanonicalProject {
+        name: "Carrefour Hosted".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some(root_image_source.to_string_lossy().to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: canonical_options(),
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "carrefour".to_string(),
+            name: "Carrefour".to_string(),
+            audio: Some("menu.mp3".to_string()),
+            image: Some("menu.png".to_string()),
+            children: vec![
+                // A converge (badge) vers B après lecture : convergence hébergée, pas de feuille ref.
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "story-a".to_string(),
+                    name: "Histoire A".to_string(),
+                    audio: Some("a.mp3".to_string()),
+                    return_after_play: Some("story_play:story-b".to_string()),
+                    ..Default::default()
+                }),
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "story-b".to_string(),
+                    name: "Histoire B".to_string(),
+                    audio: Some("b.mp3".to_string()),
+                    ..Default::default()
+                }),
+            ],
+            ..Default::default()
+        })],
+    };
+
+    let assets = vec![
+        temp_prepared_asset(&base, "rootAudio", "root.mp3"),
+        temp_prepared_asset(&base, "rootImage", "cover.png"),
+        temp_prepared_asset(&base, &format!("{menu_label}/menuAudio"), "menu.mp3"),
+        temp_prepared_asset(&base, &format!("{menu_label}/menuImage"), "menu.png"),
+        temp_prepared_asset(&base, &format!("{a_label}/storyAudio"), "a.mp3"),
+        temp_prepared_asset(&base, &format!("{b_label}/storyAudio"), "b.mp3"),
+    ];
+
+    // Génération via le chemin canonique (pas de nativeGraph) : la convergence A→B doit
+    // être un vrai stage natif partagé (le play-stage de B), atteint depuis la fin de A.
+    let report = report_for(project, assets, Vec::new());
+    let document = build_story_document(&report).expect("canonical build");
+
+    let stage_by_uuid: HashMap<&str, &StageNode> = document
+        .stage_nodes
+        .iter()
+        .map(|stage| (stage.uuid.as_str(), stage))
+        .collect();
+    let action_by_id: HashMap<&str, &ActionNode> = document
+        .action_nodes
+        .iter()
+        .map(|action| (action.id.as_str(), action))
+        .collect();
+    let a_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name.contains("Histoire A") && !stage.name.contains("Titre"))
+        .expect("stage de lecture de A");
+    let a_ok = a_play.ok_transition.as_ref().expect("A a une transition de fin");
+    let target_uuid = action_by_id
+        .get(a_ok.action_node.as_str())
+        .and_then(|action| action.options.get(a_ok.option_index as usize))
+        .expect("cible de la convergence");
+    assert!(
+        stage_by_uuid
+            .get(target_uuid.as_str())
+            .is_some_and(|stage| stage.name.contains("Histoire B")),
+        "la fin de A doit converger vers le stage existant de B (sans parachute)",
+    );
+
+    let _ = fs::remove_dir_all(base);
+}
