@@ -35,7 +35,9 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
     let entryPlayableCount = 0;
     if (entry.type === 'menu') {
       entryPlayableCount = buildProjectIndexEntries(entry.children ?? [], path, level + 1, index);
-    } else if (entry.type === 'story' || entry.type === 'zip') {
+    } else if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'ref') {
+      // Une `ref` est un choix navigable (vers un nœud existant) → elle compte comme jouable
+      // (sinon un dossier de liens serait considéré « vide »). Cible pendante : signalée à part.
       entryPlayableCount = 1;
     }
 

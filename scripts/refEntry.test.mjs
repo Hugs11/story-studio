@@ -10,6 +10,8 @@ import {
   appendEntry,
   removeEntryCascadingRefs,
   removeEntriesCascadingRefs,
+  buildProjectIndex,
+  getPlayableDescendantCount,
 } from '../src/store/projectModel.js';
 
 function allRefIds(project) {
@@ -218,4 +220,26 @@ test('removeEntriesCascadingRefs keeps refs still valid and drops only the dangl
   // Supprimer story-b → ref-to-b devient pendante (retirée) ; ref-to-a reste valide.
   project = removeEntriesCascadingRefs(project, ['story-b']);
   assert.deepEqual(allRefIds(project), ['ref-to-a']);
+});
+
+test('a menu containing only a ref counts as having a playable descendant', () => {
+  const project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [
+      { id: 'story-a', type: 'story', name: 'A' },
+      {
+        id: 'menu-links',
+        type: 'menu',
+        name: 'Liens',
+        children: [{ id: 'ref-1', type: 'ref', target: 'story:story-a' }],
+      },
+    ],
+  });
+  const index = buildProjectIndex(project);
+  assert.equal(
+    getPlayableDescendantCount(index, 'menu-links'),
+    1,
+    'un dossier de liens ne doit pas être considéré vide',
+  );
 });

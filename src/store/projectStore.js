@@ -423,12 +423,12 @@ export function useProjectStore() {
   }, [setProject]);
 
   const bulkDeleteItems = useCallback((ids) => {
-    setProject(p => removeEntries(p, ids));
+    setProject(p => removeEntriesCascadingRefs(p, ids));
     setSelectedId('root');
   }, [setProject]);
 
   const deleteItem = useCallback((itemId) => {
-    setProject(p => removeEntry(p, itemId));
+    setProject(p => removeEntryCascadingRefs(p, itemId));
     setSelectedId('root');
   }, [setProject]);
 
