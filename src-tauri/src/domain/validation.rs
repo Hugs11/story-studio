@@ -86,6 +86,17 @@ fn decode_navigation_menu_target(target: &str) -> Option<&str> {
     Some(trimmed.strip_prefix("menu:").unwrap_or(trimmed))
 }
 
+/// Id d'entrée ciblé par une `ref` (menu:/story:/story_play:/story_home_step:), ou None.
+fn decode_ref_target_entry_id(target: &str) -> Option<&str> {
+    let trimmed = target.trim();
+    for prefix in ["story_home_step:", "story_play:", "story:", "menu:"] {
+        if let Some(id) = trimmed.strip_prefix(prefix) {
+            return (!id.trim().is_empty()).then(|| id.trim());
+        }
+    }
+    None
+}
+
 pub(crate) fn project_root_entries(project: &Project) -> Vec<ProjectEntry> {
     let mut entries = project.root_entries.clone();
     normalize_imported_continuation_clones(&mut entries);
@@ -189,7 +200,8 @@ fn count_content_entries(entries: &[ProjectEntry]) -> usize {
 
 fn count_playable_descendants(entry: &ProjectEntry) -> usize {
     match entry.entry_type.as_str() {
-        "story" | "zip" => 1,
+        // Une `ref` est un choix navigable (vers un nœud existant) → elle compte.
+        "story" | "zip" | "ref" => 1,
         "menu" => entry.children.iter().map(count_playable_descendants).sum(),
         _ => 0,
     }
@@ -197,7 +209,7 @@ fn count_playable_descendants(entry: &ProjectEntry) -> usize {
 
 fn has_playable_descendants(entry: &ProjectEntry) -> bool {
     match entry.entry_type.as_str() {
-        "story" | "zip" => true,
+        "story" | "zip" | "ref" => true,
         "menu" => entry.children.iter().any(has_playable_descendants),
         _ => false,
     }
@@ -316,6 +328,38 @@ fn validate_return_after_play_targets(
     }
 }
 
+/// Filet de sécurité Rust (miroir de la validation JS) : chaque `ref` doit viser un nœud
+/// existant. Sans ça, une cible pendante n'échouerait qu'au build (`resolve_pending_ref_options`).
+fn validate_ref_targets(
+    entries: &[ProjectEntry],
+    all_ids: &HashSet<&str>,
+    context: &str,
+    errors: &mut Vec<String>,
+) {
+    for entry in entries {
+        match entry.entry_type.as_str() {
+            "ref" => {
+                let entry_name = display_label(&entry.name, "Lien");
+                match entry.target.as_deref().and_then(decode_ref_target_entry_id) {
+                    Some(target_id) if all_ids.contains(target_id) => {}
+                    Some(_) => errors.push(format!(
+                        "{} / {} : la cible de la référence est introuvable.",
+                        context, entry_name
+                    )),
+                    // Cible vide/illisible : déjà signalée par la validation par entrée.
+                    None => {}
+                }
+            }
+            "menu" => {
+                let entry_context =
+                    format!("{} / {}", context, display_label(&entry.name, "Collection"));
+                validate_ref_targets(&entry.children, all_ids, &entry_context, errors);
+            }
+            _ => {}
+        }
+    }
+}
+
 fn validate_project_entry_for_generation(
     entry: &ProjectEntry,
     context: &str,
@@ -386,6 +430,19 @@ fn validate_project_entry_for_generation(
                 if let Err(err) = validate_existing_pack_path(zip_path) {
                     errors.push(format!("{} : {}", zip_label, err));
                 }
+            }
+        }
+        "ref" => {
+            // La résolution de la cible est validée globalement (`validate_ref_targets`) ;
+            // ici on exige seulement une cible non vide.
+            if entry
+                .target
+                .as_deref()
+                .map(str::trim)
+                .unwrap_or("")
+                .is_empty()
+            {
+                errors.push(format!("{} : référence sans cible.", context));
             }
         }
         _ => {
@@ -517,6 +574,8 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             "Racine",
             &mut errors,
         );
+        let all_ids: HashSet<&str> = id_counts.keys().map(String::as_str).collect();
+        validate_ref_targets(&root_entries, &all_ids, "Racine", &mut errors);
 
         for entry in &root_entries {
             let entry_name = display_label(&entry.name, "Element racine");
@@ -587,6 +646,85 @@ mod tests {
 
         assert!(root_entries_errors.contains("Audio racine manquant."));
         assert!(root_entries_errors.contains("Histoire principale : audio"));
+    }
+
+    fn ref_entry(id: &str, target: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: "ref".to_string(),
+            name: "Lien".to_string(),
+            target: Some(target.to_string()),
+            ..ProjectEntry::default()
+        }
+    }
+
+    fn menu_with(id: &str, name: &str, children: Vec<ProjectEntry>) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: "menu".to_string(),
+            name: name.to_string(),
+            audio: Some("valid/menu.mp3".to_string()),
+            image: Some("valid/menu.png".to_string()),
+            children,
+            ..ProjectEntry::default()
+        }
+    }
+
+    #[test]
+    fn ref_entry_with_valid_target_is_not_rejected() {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.root_entries = vec![menu_with(
+            "menu-1",
+            "Choix",
+            vec![
+                story_entry_with_paths("story-a", "Histoire A"),
+                ref_entry("ref-1", "story:story-a"),
+            ],
+        )];
+        let errors = validate_project_for_generation(&project).err().unwrap_or_default();
+        assert!(
+            !errors.contains("non pris en charge"),
+            "une ref ne doit plus etre rejetee : {errors}"
+        );
+        assert!(
+            !errors.contains("cible de la r\u{e9}f\u{e9}rence est introuvable"),
+            "la cible existe : {errors}"
+        );
+    }
+
+    #[test]
+    fn ref_entry_with_dangling_target_is_flagged() {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.root_entries = vec![
+            story_entry_with_paths("story-a", "Histoire A"),
+            ref_entry("ref-1", "story:does-not-exist"),
+        ];
+        let errors =
+            validate_project_for_generation(&project).expect_err("une ref pendante doit bloquer");
+        assert!(
+            errors.contains("cible de la r\u{e9}f\u{e9}rence est introuvable"),
+            "{errors}"
+        );
+    }
+
+    #[test]
+    fn menu_containing_only_refs_is_not_considered_empty() {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.root_entries = vec![
+            story_entry_with_paths("story-a", "Histoire A"),
+            menu_with("menu-links", "Liens", vec![ref_entry("ref-1", "story:story-a")]),
+        ];
+        let errors = validate_project_for_generation(&project).err().unwrap_or_default();
+        assert!(
+            !errors.contains("collection vide"),
+            "un dossier de liens valides n'est pas vide : {errors}"
+        );
     }
 
     // ---- Parite avec le test JS scripts/validationParity.test.mjs ----
