@@ -4,6 +4,7 @@ mod assets;
 mod builder;
 mod canonical;
 mod document;
+mod fidelity_judge;
 mod preallocate;
 mod stats;
 mod writer;
@@ -64,6 +65,16 @@ fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDo
     {
         return build_native_graph_story_document(report);
     }
+    build_canonical_story_document(report)
+}
+
+/// Génère le document **toujours** par le chemin canonique (`StoryBuilder`), en
+/// ignorant le parachute `nativeGraph` même s'il est présent. C'est la génération
+/// que le pack aura APRÈS la coupure du parachute ; le juge de fidélité s'en sert
+/// pour mesurer, sans rien changer au comportement courant de `build_story_document`.
+fn build_canonical_story_document(
+    report: &NativeAssetPreparationReport,
+) -> Result<StoryDocument, String> {
     let mut builder = StoryBuilder::new(report);
     builder.build()
 }
