@@ -548,7 +548,7 @@ export function TreePanel({
         });
       }
 
-      if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
+      if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip' || nodeType === 'ref') {
         actions.push('sep');
         const selectedForDelete = selectedIds.has(nodeId) && selectedIds.size > 1
           ? getTopLevelSelected()
