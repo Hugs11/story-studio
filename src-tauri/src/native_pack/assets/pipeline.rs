@@ -575,6 +575,8 @@ fn collect_entry_requests(
                 ));
             }
         }
+        // Une référence ne porte aucun asset propre : elle réutilise ceux de sa cible.
+        CanonicalEntry::Ref(_) => {}
     }
 }
 

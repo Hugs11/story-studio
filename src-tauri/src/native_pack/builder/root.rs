@@ -148,6 +148,12 @@ impl<'a> StoryBuilder<'a> {
                 transition(root_action_id, root_index as i32),
                 root_has_multiple_entries,
             ),
+            CanonicalEntry::Ref(reference) => {
+                // Référence racine : l'option racine pointera vers le stage natif de la cible.
+                // Placeholder éphémère, réécrit par `resolve_pending_ref_options` (ou erreur).
+                self.record_ref_option(root_action_id, root_index, &reference.target);
+                Ok(self.next_id())
+            }
         }
     }
 }

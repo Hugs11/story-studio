@@ -145,6 +145,13 @@ impl<'a> StoryBuilder<'a> {
                         false,
                     )?);
                 }
+                CanonicalEntry::Ref(reference) => {
+                    // Une référence ne construit aucun sous-arbre : l'option pointera vers le
+                    // stage natif existant de la cible. Placeholder valide (le stage du menu)
+                    // en attendant la passe de résolution finale.
+                    self.record_ref_option(&menu_action_id, child_index, &reference.target);
+                    option_stage_ids.push(menu_stage_id.clone());
+                }
             }
         }
 
