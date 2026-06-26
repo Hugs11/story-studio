@@ -400,7 +400,7 @@ pub(super) fn walk_story_doc_to_entries(
     if needs_native_graph_projection {
         let mut projected_entries =
             build_native_graph_projection_entries(sq, &stages, &actions, assets);
-        if projected_entries.len() <= 1 {
+        if projected_entries.is_empty() {
             projected_entries = build_native_graph_flat_stage_map_entry(&stages, assets);
         }
         if !projected_entries.is_empty() {
