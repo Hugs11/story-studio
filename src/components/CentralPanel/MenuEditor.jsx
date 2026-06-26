@@ -7,6 +7,7 @@ import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal
 import { Trash2 } from '../icons/LucideLocal';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
+import { createRefEntry } from '../../store/projectModel';
 import './CentralPanel.css';
 
 const MENU_BEHAVIOR_CONTROLS = [
@@ -226,6 +227,32 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
           </div>
           <div className="menu-destination-help">
             {destinationHelp}
+          </div>
+        </div>
+      )}
+
+      {(allStories.length > 0 || allMenus.length > 1) && (
+        <div className="card">
+          <div className="card-title">Lien vers un nœud existant</div>
+          <div className="card-copy card-copy--inline">
+            Ajoute dans ce dossier un choix qui renvoie vers une histoire ou un dossier déjà présent
+            (au lieu d'en créer un nouveau). Utile pour faire converger plusieurs chemins.
+          </div>
+          <div className="field-row">
+            <span className="field-label" style={{ flex: 1 }}>Pointer vers…</span>
+            <NavigationTargetSelect
+              value=""
+              onChange={(target) => {
+                if (!target) return;
+                onUpdate({ children: [...(node.children ?? []), createRefEntry({ target })] });
+              }}
+              allMenus={allMenus.filter((m) => m.id !== node.id)}
+              allStories={allStories}
+              currentStoryId={null}
+              includeNextStory={false}
+              emptyLabel="Choisir un nœud…"
+              style={{ minWidth: 240, maxWidth: 360 }}
+            />
           </div>
         </div>
       )}
