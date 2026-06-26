@@ -65,6 +65,27 @@ impl<'a> StoryBuilder<'a> {
         self.resolve_story_return_transition(target_menu_id, fallback_transition)
     }
 
+    /// Stage natif d'une cible déjà PRÉALLOUÉ (donc disponible avant sa construction).
+    /// Permet de résoudre une convergence « en avant » (vers un nœud bâti plus tard),
+    /// là où `transition_target_stage_id` échouerait faute d'action node déjà présent.
+    /// Limité aux cibles dont le stage est préalloué : `story_play:` / `story_home_step:`.
+    pub(in crate::native_pack::builder) fn preallocated_target_stage(
+        &self,
+        target: &str,
+    ) -> Option<String> {
+        match decode_navigation_target(Some(target))? {
+            NavigationTarget::StoryPlay(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .map(|prealloc| prealloc.play_stage_id.clone()),
+            NavigationTarget::StoryHomeStep(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .and_then(|prealloc| prealloc.home_step_stage_id.clone()),
+            _ => None,
+        }
+    }
+
     pub(in crate::native_pack::builder) fn transition_target_stage_id(
         &self,
         transition: &Transition,
