@@ -375,9 +375,11 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
     let orig: StoryDocument = serde_json::from_str(&orig_str)
         .unwrap_or_else(|e| panic!("[{pack_id}] parse orig story.json: {e}"));
 
-    let extracted =
-        crate::services::pack_reader::unpack_zip_to_entries(&zip_path, tmp.to_str().unwrap())
-            .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
+    let extracted = crate::services::pack_reader::unpack_zip_to_entries_unchecked(
+        &zip_path,
+        tmp.to_str().unwrap(),
+    )
+    .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
 
     let pack_title = if orig.title.trim().is_empty() {
         "Pack importé".to_string()
@@ -495,9 +497,11 @@ fn assert_fidelity_structural(zip_path: Option<String>, pack_id: &str) {
     let orig: StoryDocument = serde_json::from_str(&orig_str)
         .unwrap_or_else(|e| panic!("[{pack_id}] parse orig story.json: {e}"));
 
-    let extracted =
-        crate::services::pack_reader::unpack_zip_to_entries(&zip_path, tmp.to_str().unwrap())
-            .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
+    let extracted = crate::services::pack_reader::unpack_zip_to_entries_unchecked(
+        &zip_path,
+        tmp.to_str().unwrap(),
+    )
+    .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
 
     let pack_title = if orig.title.trim().is_empty() {
         "Pack importé".to_string()
@@ -675,7 +679,7 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
     let names = referenced_asset_names(&doc);
     let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
     let zip_path = write_synthetic_pack(&base, &doc, &name_refs);
-    let imported = match crate::services::pack_reader::unpack_zip_to_entries(
+    let imported = match crate::services::pack_reader::unpack_zip_to_entries_unchecked(
         &zip_path,
         base.join("imported").to_str().expect("import dir utf8"),
     ) {
@@ -825,7 +829,7 @@ fn autoplay_intro_chain_before_menu_roundtrips() {
 
     // Round-trip : import → génération. La fidélité visée est le COMPTE et la NATURE des
     // stages (le générateur réécrit légitimement certaines cibles Home, hors périmètre ici).
-    let extracted = crate::services::pack_reader::unpack_zip_to_entries(
+    let extracted = crate::services::pack_reader::unpack_zip_to_entries_unchecked(
         &zip_path,
         base.join("imported").to_str().expect("import dir utf8"),
     )

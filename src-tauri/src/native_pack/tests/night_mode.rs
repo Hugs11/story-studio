@@ -654,12 +654,11 @@ fn night_mode_return_story_target_routes_to_story_title() {
     assert_eq!(target.name, "Titre - Cible");
 }
 
-/// Type d'architecture : un pack night-capable (document `nightModeAvailable: true`) rejoué
-/// par le parachute alors que la DÉTECTION du pont nuit a échoué à l'import
-/// (`options.night_mode == false`). Round-trip : le drapeau doit être PRÉSERVÉ, pas effacé
-/// par l'option dérivée de la détection.
+/// Comportement historique conservé seulement en test : un pack night-capable
+/// rejoué par le parachute préserve le drapeau `nightModeAvailable`. La génération
+/// normale n'appelle plus ce chemin ; il reste comme oracle de comparaison.
 #[test]
-fn parachute_preserves_declared_night_mode_available_when_bridge_not_detected() {
+fn legacy_parachute_preserves_declared_night_mode_available_when_bridge_not_detected() {
     let native_graph = serde_json::json!({
         "preserveForRoundTrip": true,
         "projectionStatus": "lossy",
@@ -722,8 +721,8 @@ fn parachute_preserves_declared_night_mode_available_when_bridge_not_detected() 
         prepared_asset("nativeGraph/story/image", "story.png"),
     ];
 
-    let document =
-        build_story_document(&report_for(project, assets, Vec::new())).expect("parachute build");
+    let document = build_story_document_current_behavior(&report_for(project, assets, Vec::new()))
+        .expect("legacy parachute build");
 
     assert!(
         document.night_mode_available,

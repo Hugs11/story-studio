@@ -1,19 +1,15 @@
-//! Juge de fidélité (Étape 1, plan 12) — il MESURE, il ne change AUCUN comportement.
+//! Juge de fidélité canonique — garde-fou entre pack géré et lecture seule.
 //!
 //! Question binaire, par pack : « le chemin **canonique** (`StoryBuilder`, sans
-//! parachute) régénère-t-il fidèlement le pack importé ? ». La réponse pilotera
-//! l'éditabilité (Étape 4) puis la coupure du parachute (Étape 5). Ici, on se contente
-//! de répondre — rien n'est encore branché dessus.
+//! parachute) régénère-t-il fidèlement le pack importé ? ». Ce verdict pilote
+//! désormais l'éditabilité et bloque la génération quand un ancien `nativeGraph`
+//! actif ne peut pas être reproduit par le modèle Story Studio.
 //!
 //! Méthode : générer le document via le canonique en **ignorant** le `nativeGraph`,
 //! puis comparer STRUCTURELLEMENT (UUID-agnostique) au snapshot `nativeGraph.document`
 //! d'origine — l'oracle, vérité terrain du pack. Sans `nativeGraph`, le pack est déjà
 //! pleinement modélisé : l'arbre EST la source de vérité, donc fidèle dès qu'il génère
 //! un document STUdio-valide.
-//!
-//! Socle non encore consommé : branché à l'Étape 2 (classement) puis à l'Étape 4
-//! (éditabilité). D'où l'`allow(dead_code)` (même statut que `preallocate.rs`).
-#![allow(dead_code)]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -33,6 +29,10 @@ pub(crate) struct FidelityReport {
     pub(crate) faithful: bool,
     pub(crate) generated_stage_count: usize,
     pub(crate) oracle_stage_count: usize,
+    pub(crate) invalid_transition_count: usize,
+    pub(crate) asset_presence_gap_count: usize,
+    pub(crate) topology_gaps: Vec<String>,
+    pub(crate) asset_presence_gaps: Vec<String>,
     pub(crate) gaps: Vec<String>,
 }
 
@@ -42,6 +42,10 @@ impl FidelityReport {
             faithful: false,
             generated_stage_count: 0,
             oracle_stage_count: 0,
+            invalid_transition_count: 0,
+            asset_presence_gap_count: 0,
+            topology_gaps: vec![reason.clone()],
+            asset_presence_gaps: Vec::new(),
             gaps: vec![reason],
         }
     }
@@ -52,6 +56,10 @@ impl FidelityReport {
             faithful: true,
             generated_stage_count,
             oracle_stage_count: 0,
+            invalid_transition_count: 0,
+            asset_presence_gap_count: 0,
+            topology_gaps: Vec::new(),
+            asset_presence_gaps: Vec::new(),
             gaps: Vec::new(),
         }
     }
@@ -94,9 +102,7 @@ pub(crate) fn canonical_roundtrip_is_faithful(
 /// juge compare des structures de graphe, jamais des octets — donc ni ffmpeg ni vrais
 /// fichiers. Tous les rôles utiles sont couverts (`collect_asset_requests` est le
 /// sur-ensemble des rôles de l'arbre ; les rôles `nativeGraph` en trop sont inoffensifs).
-fn canonical_document_for_fidelity(
-    canonical: &CanonicalProject,
-) -> Result<StoryDocument, String> {
+fn canonical_document_for_fidelity(canonical: &CanonicalProject) -> Result<StoryDocument, String> {
     let assets = placeholder_assets(canonical);
     let report = fidelity_report_for(canonical.clone(), assets);
     build_canonical_story_document(&report)
@@ -153,36 +159,63 @@ fn compare_documents_structural(
     generated: &StoryDocument,
     oracle: &StoryDocument,
 ) -> FidelityReport {
-    let mut gaps = Vec::new();
+    let mut topology_gaps = Vec::new();
 
     if !generated.stage_nodes.iter().any(|stage| stage.square_one) {
-        gaps.push("stage squareOne manquant dans la génération canonique".to_string());
+        topology_gaps.push("stage squareOne manquant dans la génération canonique".to_string());
     }
     if generated.night_mode_available != oracle.night_mode_available {
-        gaps.push(format!(
+        topology_gaps.push(format!(
             "nightModeAvailable : généré={} oracle={}",
             generated.night_mode_available, oracle.night_mode_available
         ));
     }
 
-    let generated_shapes = stage_shapes(generated);
-    let oracle_shapes = stage_shapes(oracle);
-    let mut keys: BTreeSet<&StageShape> = generated_shapes.keys().collect();
-    keys.extend(oracle_shapes.keys());
-    for key in keys {
-        let in_generated = generated_shapes.get(key).copied().unwrap_or(0);
-        let in_oracle = oracle_shapes.get(key).copied().unwrap_or(0);
-        if in_generated != in_oracle {
-            gaps.push(format!(
-                "forme généré={in_generated} oracle={in_oracle} : {key:?}"
-            ));
-        }
-    }
+    topology_gaps.extend(compare_multiset(
+        "stage",
+        &node_shapes(generated),
+        &node_shapes(oracle),
+    ));
+
+    let generated_topology = topology_shapes(generated);
+    let oracle_topology = topology_shapes(oracle);
+    topology_gaps.extend(compare_multiset(
+        "transition",
+        &generated_topology.shapes,
+        &oracle_topology.shapes,
+    ));
+    topology_gaps.extend(
+        generated_topology
+            .invalid_transitions
+            .iter()
+            .map(|gap| format!("transition invalide générée : {gap}")),
+    );
+    topology_gaps.extend(
+        oracle_topology
+            .invalid_transitions
+            .iter()
+            .map(|gap| format!("transition invalide oracle : {gap}")),
+    );
+
+    let asset_presence_gaps = compare_asset_presence(generated, oracle);
+    let asset_presence_gap_count = count_multiset_delta(
+        &asset_presence_shapes(generated),
+        &asset_presence_shapes(oracle),
+    );
+    let invalid_transition_count =
+        generated_topology.invalid_transitions.len() + oracle_topology.invalid_transitions.len();
+
+    let mut gaps = topology_gaps.clone();
+    gaps.extend(asset_presence_gaps.clone());
 
     FidelityReport {
-        faithful: gaps.is_empty(),
+        faithful: gaps.is_empty() && invalid_transition_count == 0,
         generated_stage_count: generated.stage_nodes.len(),
         oracle_stage_count: oracle.stage_nodes.len(),
+        invalid_transition_count,
+        asset_presence_gap_count,
+        topology_gaps,
+        asset_presence_gaps,
         gaps,
     }
 }
@@ -199,13 +232,6 @@ struct ControlShape {
     autoplay: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct StageShape {
-    node: ControlShape,
-    ok_target: Option<ControlShape>,
-    home_target: Option<ControlShape>,
-}
-
 fn control_shape(stage: &StageNode) -> ControlShape {
     ControlShape {
         square_one: stage.square_one,
@@ -219,21 +245,181 @@ fn control_shape(stage: &StageNode) -> ControlShape {
     }
 }
 
-fn transition_target_shape(
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct AssetPresenceShape {
+    square_one: bool,
+    wheel: bool,
+    ok: bool,
+    home: bool,
+    pause: bool,
+    autoplay: bool,
+    has_audio: bool,
+    has_image: bool,
+}
+
+fn asset_presence_shape(stage: &StageNode) -> AssetPresenceShape {
+    AssetPresenceShape {
+        square_one: stage.square_one,
+        wheel: stage.control_settings.wheel,
+        ok: stage.control_settings.ok,
+        home: stage.control_settings.home,
+        pause: stage.control_settings.pause,
+        autoplay: stage.control_settings.autoplay,
+        has_audio: stage.audio.is_some(),
+        has_image: stage.image.is_some(),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum TransitionKind {
+    Ok,
+    Home,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum InvalidTransitionKind {
+    MissingAction,
+    NegativeOptionIndex,
+    OptionOutOfBounds,
+    MissingTargetStage,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum TransitionState {
+    Missing,
+    Selected {
+        option_index: i32,
+        option_count: usize,
+    },
+    OptionTarget {
+        target: ControlShape,
+        option_index: usize,
+        option_count: usize,
+    },
+    Invalid {
+        reason: InvalidTransitionKind,
+        option_index: i32,
+        option_count: Option<usize>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct TopologyShape {
+    source: ControlShape,
+    kind: TransitionKind,
+    state: TransitionState,
+}
+
+struct TopologySignature {
+    shapes: BTreeMap<TopologyShape, usize>,
+    invalid_transitions: Vec<String>,
+}
+
+fn transition_state(
+    stage_name: &str,
+    kind: &TransitionKind,
     transition: Option<&Transition>,
     actions: &HashMap<&str, &ActionNode>,
     stages: &HashMap<&str, &StageNode>,
-) -> Option<ControlShape> {
-    let transition = transition?;
+) -> Vec<(TransitionState, Option<String>)> {
+    let Some(transition) = transition else {
+        return vec![(TransitionState::Missing, None)];
+    };
+    let label = match kind {
+        TransitionKind::Ok => "OK",
+        TransitionKind::Home => "HOME",
+    };
     if transition.option_index < 0 {
-        return None;
+        return vec![(
+            TransitionState::Invalid {
+                reason: InvalidTransitionKind::NegativeOptionIndex,
+                option_index: transition.option_index,
+                option_count: None,
+            },
+            Some(format!(
+                "{stage_name} {label} optionIndex {} négatif",
+                transition.option_index
+            )),
+        )];
     }
-    let action = actions.get(transition.action_node.as_str())?;
-    let stage_id = action.options.get(transition.option_index as usize)?;
-    stages.get(stage_id.as_str()).copied().map(control_shape)
+    let Some(action) = actions.get(transition.action_node.as_str()) else {
+        return vec![(
+            TransitionState::Invalid {
+                reason: InvalidTransitionKind::MissingAction,
+                option_index: transition.option_index,
+                option_count: None,
+            },
+            Some(format!(
+                "{stage_name} {label} action introuvable '{}'",
+                transition.action_node
+            )),
+        )];
+    };
+    let option_count = action.options.len();
+    let mut states = vec![(
+        TransitionState::Selected {
+            option_index: transition.option_index,
+            option_count,
+        },
+        None,
+    )];
+    if transition.option_index as usize >= option_count {
+        states.push((
+            TransitionState::Invalid {
+                reason: InvalidTransitionKind::OptionOutOfBounds,
+                option_index: transition.option_index,
+                option_count: Some(option_count),
+            },
+            Some(format!(
+                "{stage_name} {label} optionIndex {} hors limites ({} option(s))",
+                transition.option_index, option_count
+            )),
+        ));
+    }
+    for (option_index, stage_id) in action.options.iter().enumerate() {
+        let Some(target) = stages.get(stage_id.as_str()) else {
+            states.push((
+                TransitionState::Invalid {
+                    reason: InvalidTransitionKind::MissingTargetStage,
+                    option_index: option_index as i32,
+                    option_count: Some(option_count),
+                },
+                Some(format!(
+                    "{stage_name} {label} option {option_index} cible stage introuvable '{}'",
+                    stage_id
+                )),
+            ));
+            continue;
+        };
+        states.push((
+            TransitionState::OptionTarget {
+                target: control_shape(target),
+                option_index,
+                option_count,
+            },
+            None,
+        ));
+    }
+    states
 }
 
-fn stage_shapes(document: &StoryDocument) -> BTreeMap<StageShape, usize> {
+fn node_shapes(document: &StoryDocument) -> BTreeMap<ControlShape, usize> {
+    let mut shapes = BTreeMap::new();
+    for stage in &document.stage_nodes {
+        *shapes.entry(control_shape(stage)).or_insert(0) += 1;
+    }
+    shapes
+}
+
+fn asset_presence_shapes(document: &StoryDocument) -> BTreeMap<AssetPresenceShape, usize> {
+    let mut shapes = BTreeMap::new();
+    for stage in &document.stage_nodes {
+        *shapes.entry(asset_presence_shape(stage)).or_insert(0) += 1;
+    }
+    shapes
+}
+
+fn topology_shapes(document: &StoryDocument) -> TopologySignature {
     let actions: HashMap<&str, &ActionNode> = document
         .action_nodes
         .iter()
@@ -246,15 +432,77 @@ fn stage_shapes(document: &StoryDocument) -> BTreeMap<StageShape, usize> {
         .collect();
 
     let mut shapes = BTreeMap::new();
+    let mut invalid_transitions = Vec::new();
     for stage in &document.stage_nodes {
-        let shape = StageShape {
-            node: control_shape(stage),
-            ok_target: transition_target_shape(stage.ok_transition.as_ref(), &actions, &stages),
-            home_target: transition_target_shape(stage.home_transition.as_ref(), &actions, &stages),
-        };
-        *shapes.entry(shape).or_insert(0) += 1;
+        for (kind, transition) in [
+            (TransitionKind::Ok, stage.ok_transition.as_ref()),
+            (TransitionKind::Home, stage.home_transition.as_ref()),
+        ] {
+            for (state, invalid) in
+                transition_state(&stage.name, &kind, transition, &actions, &stages)
+            {
+                if let Some(invalid) = invalid {
+                    invalid_transitions.push(invalid);
+                }
+                let shape = TopologyShape {
+                    source: control_shape(stage),
+                    kind: kind.clone(),
+                    state,
+                };
+                *shapes.entry(shape).or_insert(0) += 1;
+            }
+        }
     }
-    shapes
+    TopologySignature {
+        shapes,
+        invalid_transitions,
+    }
+}
+
+fn compare_multiset<T>(
+    label: &str,
+    generated: &BTreeMap<T, usize>,
+    oracle: &BTreeMap<T, usize>,
+) -> Vec<String>
+where
+    T: std::fmt::Debug + Ord,
+{
+    let mut gaps = Vec::new();
+    let mut keys: BTreeSet<&T> = generated.keys().collect();
+    keys.extend(oracle.keys());
+    for key in keys {
+        let in_generated = generated.get(key).copied().unwrap_or(0);
+        let in_oracle = oracle.get(key).copied().unwrap_or(0);
+        if in_generated != in_oracle {
+            gaps.push(format!(
+                "{label} généré={in_generated} oracle={in_oracle} : {key:?}"
+            ));
+        }
+    }
+    gaps
+}
+
+fn count_multiset_delta<T>(generated: &BTreeMap<T, usize>, oracle: &BTreeMap<T, usize>) -> usize
+where
+    T: Ord,
+{
+    let mut keys: BTreeSet<&T> = generated.keys().collect();
+    keys.extend(oracle.keys());
+    keys.into_iter()
+        .map(|key| {
+            let in_generated = generated.get(key).copied().unwrap_or(0);
+            let in_oracle = oracle.get(key).copied().unwrap_or(0);
+            in_generated.abs_diff(in_oracle)
+        })
+        .sum()
+}
+
+fn compare_asset_presence(generated: &StoryDocument, oracle: &StoryDocument) -> Vec<String> {
+    compare_multiset(
+        "présence asset",
+        &asset_presence_shapes(generated),
+        &asset_presence_shapes(oracle),
+    )
 }
 
 #[cfg(test)]
@@ -311,6 +559,28 @@ mod tests {
         })
     }
 
+    fn first_stage_with_ok(document: &mut StoryDocument) -> &mut StageNode {
+        document
+            .stage_nodes
+            .iter_mut()
+            .find(|stage| stage.ok_transition.is_some())
+            .expect("stage with ok transition")
+    }
+
+    fn first_stage_with_home(document: &mut StoryDocument) -> &mut StageNode {
+        document
+            .stage_nodes
+            .iter_mut()
+            .find(|stage| stage.home_transition.is_some())
+            .expect("stage with home transition")
+    }
+
+    fn judge_against_oracle(project: &CanonicalProject, oracle: StoryDocument) -> FidelityReport {
+        let mut with_oracle = project.clone();
+        with_oracle.native_graph = Some(wrap_oracle(&oracle));
+        canonical_roundtrip_is_faithful(&with_oracle).expect("judge runs")
+    }
+
     /// Fidèle : l'oracle EST la génération canonique du même arbre. Le juge régénère
     /// (UUIDs frais, donc différents de l'oracle) et compare : même structure → fidèle.
     /// Prouve du même coup que la comparaison est UUID-agnostique.
@@ -325,6 +595,8 @@ mod tests {
         assert!(report.faithful, "écarts inattendus : {:?}", report.gaps);
         assert!(report.gaps.is_empty());
         assert_eq!(report.generated_stage_count, report.oracle_stage_count);
+        assert_eq!(report.invalid_transition_count, 0);
+        assert_eq!(report.asset_presence_gap_count, 0);
     }
 
     /// Non fidèle : l'oracle porte une structure que l'arbre ne reproduit plus (édition
@@ -340,7 +612,10 @@ mod tests {
         with_oracle.native_graph = Some(wrap_oracle(&oracle));
 
         let report = canonical_roundtrip_is_faithful(&with_oracle).expect("judge runs");
-        assert!(!report.faithful, "le juge aurait dû détecter le nœud en trop");
+        assert!(
+            !report.faithful,
+            "le juge aurait dû détecter le nœud en trop"
+        );
         assert!(!report.gaps.is_empty());
         assert_eq!(
             report.oracle_stage_count,
@@ -403,6 +678,211 @@ mod tests {
                 .any(|gap| gap.contains("génération canonique")),
             "le verdict doit mentionner l'échec de génération : {:?}",
             report.gaps,
+        );
+    }
+
+    #[test]
+    fn judge_flags_missing_ok_transition() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        first_stage_with_ok(&mut oracle).ok_transition = None;
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(
+            report
+                .topology_gaps
+                .iter()
+                .any(|gap| gap.contains("transition")),
+            "écart de topologie attendu : {:?}",
+            report.topology_gaps,
+        );
+    }
+
+    #[test]
+    fn judge_flags_missing_home_transition() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        first_stage_with_home(&mut oracle).home_transition = None;
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(
+            report
+                .topology_gaps
+                .iter()
+                .any(|gap| gap.contains("HOME") || gap.contains("transition")),
+            "écart HOME attendu : {:?}",
+            report.topology_gaps,
+        );
+    }
+
+    #[test]
+    fn judge_flags_different_option_index() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        let stage = oracle
+            .stage_nodes
+            .iter_mut()
+            .find(|stage| {
+                stage.ok_transition.as_ref().is_some_and(|transition| {
+                    oracle
+                        .action_nodes
+                        .iter()
+                        .find(|action| action.id == transition.action_node)
+                        .map(|action| action.options.len() > 1)
+                        .unwrap_or(false)
+                })
+            })
+            .expect("stage with multi-option ok");
+        stage
+            .ok_transition
+            .as_mut()
+            .expect("ok transition")
+            .option_index = 1;
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(
+            report
+                .topology_gaps
+                .iter()
+                .any(|gap| gap.contains("option_index: 1")),
+            "écart optionIndex attendu : {:?}",
+            report.topology_gaps,
+        );
+    }
+
+    #[test]
+    fn judge_flags_non_current_choice_option_target_gap() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        let replacement_stage_id = oracle
+            .stage_nodes
+            .iter()
+            .find(|stage| stage.square_one)
+            .expect("squareOne stage")
+            .uuid
+            .clone();
+        let action_id = oracle
+            .stage_nodes
+            .iter()
+            .filter_map(|stage| stage.ok_transition.as_ref())
+            .find(|transition| {
+                oracle
+                    .action_nodes
+                    .iter()
+                    .find(|action| action.id == transition.action_node)
+                    .map(|action| action.options.len() > 1)
+                    .unwrap_or(false)
+            })
+            .expect("multi-option transition")
+            .action_node
+            .clone();
+        let action = oracle
+            .action_nodes
+            .iter_mut()
+            .find(|action| action.id == action_id)
+            .expect("multi-option action");
+        assert!(
+            action.options.len() > 1,
+            "le test doit modifier une option non courante"
+        );
+        action.options[1] = replacement_stage_id;
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(
+            report.topology_gaps.iter().any(|gap| {
+                gap.contains("OptionTarget")
+                    && gap.contains("option_index: 1")
+                    && gap.contains("square_one: true")
+            }),
+            "écart d'option non courante attendu : {:?}",
+            report.topology_gaps,
+        );
+    }
+
+    #[test]
+    fn judge_counts_missing_action_as_invalid_transition() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        let action_id = first_stage_with_ok(&mut oracle)
+            .ok_transition
+            .as_ref()
+            .expect("ok transition")
+            .action_node
+            .clone();
+        oracle.action_nodes.retain(|action| action.id != action_id);
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(report.invalid_transition_count > 0);
+        assert!(
+            report
+                .topology_gaps
+                .iter()
+                .any(|gap| gap.contains("action introuvable")),
+            "transition invalide attendue : {:?}",
+            report.topology_gaps,
+        );
+    }
+
+    #[test]
+    fn judge_flags_audio_image_presence_gaps() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        let stage = oracle
+            .stage_nodes
+            .iter_mut()
+            .find(|stage| stage.audio.is_some())
+            .expect("stage with audio");
+        stage.audio = None;
+
+        let report = judge_against_oracle(&project, oracle);
+
+        assert!(!report.faithful);
+        assert!(report.asset_presence_gap_count > 0);
+        assert!(
+            !report.asset_presence_gaps.is_empty(),
+            "écart de présence asset attendu",
+        );
+    }
+
+    #[test]
+    fn normal_generation_uses_canonical_when_native_graph_is_faithful() {
+        let project = sample_project();
+        let oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        let mut with_oracle = project.clone();
+        with_oracle.native_graph = Some(wrap_oracle(&oracle));
+        let report = fidelity_report_for(with_oracle.clone(), placeholder_assets(&with_oracle));
+
+        let generated = crate::native_pack::build_story_document(&report)
+            .expect("faithful nativeGraph should generate canonically");
+
+        assert_eq!(generated.stage_nodes.len(), oracle.stage_nodes.len());
+    }
+
+    #[test]
+    fn normal_generation_blocks_unfaithful_native_graph() {
+        let project = sample_project();
+        let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
+        oracle.stage_nodes.push(oracle.stage_nodes[0].clone());
+        let mut with_oracle = project.clone();
+        with_oracle.native_graph = Some(wrap_oracle(&oracle));
+        let report = fidelity_report_for(with_oracle.clone(), placeholder_assets(&with_oracle));
+
+        let error = crate::native_pack::build_story_document(&report)
+            .expect_err("unfaithful nativeGraph must be blocked");
+
+        assert!(
+            error.contains("Génération bloquée"),
+            "diagnostic inattendu : {error}",
         );
     }
 }

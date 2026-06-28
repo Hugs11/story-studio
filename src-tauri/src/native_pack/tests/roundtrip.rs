@@ -1,5 +1,5 @@
 use super::*;
-use crate::services::pack_reader::unpack_zip_to_entries;
+use crate::services::pack_reader::unpack_zip_to_entries_unchecked as unpack_zip_to_entries;
 use std::path::{Path, PathBuf};
 
 fn canonical_options() -> CanonicalOptions {
