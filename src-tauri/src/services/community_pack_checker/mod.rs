@@ -695,15 +695,37 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
     }
 }
 
-fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &mut ReportModel) {
-    let extraction_dir = temp_dir.join("editable-check");
+fn validate_story_studio_editability(zip_path: &Path, _temp_dir: &Path, report: &mut ReportModel) {
     let zip_string = zip_path.to_string_lossy().to_string();
-    match pack_reader::unpack_zip_to_entries(&zip_string, &extraction_dir.to_string_lossy()) {
-        Ok(_) => {
+    match pack_reader::classify_pack_editability(&zip_string) {
+        Ok(editability) if editability.editable => {
             report.structure_summary.story_studio_editable = true;
-            report
-                .technical_log
-                .push("[OK] Structure éditable dans Story Studio".to_string());
+            report.technical_log.push(format!(
+                "[OK] Structure éditable dans Story Studio : {} entrée(s), nativeGraph={}",
+                editability.projected_entry_count, editability.has_native_graph
+            ));
+        }
+        Ok(editability) => {
+            report.structure_summary.story_studio_editable = false;
+            let mut entry = issue(
+                PackValidationSeverity::Warning,
+                "structure",
+                "Édition Story Studio",
+                "Cette structure peut être valide pour la Lunii mais Story Studio ne sait pas encore la régénérer fidèlement.",
+            );
+            entry.technical_details = Some(editability.reason.clone());
+            report.issues.push(entry);
+            report.technical_log.push(format!(
+                "[WARN] Édition Story Studio refusée : {} ({} entrée(s), nativeGraph={}, écarts={})",
+                editability.reason,
+                editability.projected_entry_count,
+                editability.has_native_graph,
+                editability
+                    .fidelity
+                    .as_ref()
+                    .map(|fidelity| fidelity.gaps.len())
+                    .unwrap_or(0),
+            ));
         }
         Err(err) => {
             report.structure_summary.story_studio_editable = false;
@@ -715,10 +737,9 @@ fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &
             );
             entry.technical_details = Some(err.clone());
             report.issues.push(entry);
-            report.technical_log.push(format!(
-                "[WARN] Projection Story Studio impossible : {}",
-                err
-            ));
+            report
+                .technical_log
+                .push(format!("[WARN] Rapport d'éditabilité impossible : {}", err));
         }
     }
 }

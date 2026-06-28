@@ -4,7 +4,7 @@ mod assets;
 mod builder;
 mod canonical;
 mod document;
-mod fidelity_judge;
+pub(crate) mod fidelity_judge;
 mod preallocate;
 mod stats;
 mod writer;
@@ -60,11 +60,43 @@ pub(crate) struct ImportedZipBundle {
 }
 
 fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDocument, String> {
+    if active_native_graph(report.project.native_graph.as_ref()).is_some() {
+        let fidelity = fidelity_judge::canonical_roundtrip_is_faithful(&report.project)?;
+        if !fidelity.faithful {
+            let detail = fidelity
+                .gaps
+                .iter()
+                .take(3)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" | ");
+            return Err(if detail.is_empty() {
+                "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine.".to_string()
+            } else {
+                format!(
+                    "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine ({detail})."
+                )
+            });
+        }
+    }
+    build_story_document_canonical_only(report)
+}
+
+#[cfg(test)]
+fn build_story_document_current_behavior(
+    report: &NativeAssetPreparationReport,
+) -> Result<StoryDocument, String> {
     if !report.project.options.auto_next
         && active_native_graph(report.project.native_graph.as_ref()).is_some()
     {
         return build_native_graph_story_document(report);
     }
+    build_canonical_story_document(report)
+}
+
+fn build_story_document_canonical_only(
+    report: &NativeAssetPreparationReport,
+) -> Result<StoryDocument, String> {
     build_canonical_story_document(report)
 }
 
@@ -79,6 +111,7 @@ fn build_canonical_story_document(
     builder.build()
 }
 
+#[cfg(test)]
 fn prepared_asset_name_for_role(
     report: &NativeAssetPreparationReport,
     role: &str,
@@ -91,6 +124,7 @@ fn prepared_asset_name_for_role(
         .ok_or_else(|| format!("Asset natif introuvable pour {}", role))
 }
 
+#[cfg(test)]
 fn build_native_graph_story_document(
     report: &NativeAssetPreparationReport,
 ) -> Result<StoryDocument, String> {
