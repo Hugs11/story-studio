@@ -113,7 +113,8 @@ impl<'a> StoryBuilder<'a> {
                     Some(if auto_next_active && story.return_on_home.is_none() {
                         root_transition.clone()
                     } else {
-                        self.resolve_story_home_transition(
+                        self.resolve_play_home_transition_for_story(
+                            story,
                             story_home.as_deref(),
                             play_return_transition.clone(),
                         )
@@ -157,14 +158,63 @@ impl<'a> StoryBuilder<'a> {
         }
     }
 
+    pub(in crate::native_pack::builder) fn preallocate_shared_entry_approaches(
+        &mut self,
+        entries: &[CanonicalEntry],
+        approach_action_ids: &[String],
+    ) {
+        for (index, entry) in entries.iter().enumerate() {
+            let Some(action_id) = approach_action_ids.get(index) else {
+                continue;
+            };
+            let approach_transition = transition(action_id, 0);
+            match entry {
+                CanonicalEntry::Story(story) if !story.id.is_empty() => {
+                    if shared_story_returns_to_self(story) {
+                        continue;
+                    }
+                    if let Some(prealloc) = self.story_prealloc.get_mut(&story.id) {
+                        prealloc.approach_transition = Some(approach_transition);
+                    }
+                }
+                CanonicalEntry::Menu(menu) if !menu.id.is_empty() => {
+                    if let Some(prealloc) = self.menu_prealloc.get_mut(&menu.id) {
+                        prealloc.replay_transition = approach_transition;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
     pub(in crate::native_pack::builder) fn build_shared_entries(
         &mut self,
         entries: &[CanonicalEntry],
         shared_action_id: &str,
+        approach_action_ids: &[String],
     ) -> Result<Vec<String>, String> {
-        (0..entries.len())
-            .map(|index| self.build_shared_entry(&entries[index], index, entries, shared_action_id))
-            .collect()
+        let mut targets = Vec::with_capacity(entries.len());
+        for (index, entry) in entries.iter().enumerate() {
+            let approach_action_id = approach_action_ids
+                .get(index)
+                .ok_or_else(|| "Action d'approche partagee manquante.".to_string())?;
+            let approach_transition = transition(approach_action_id, 0);
+            let target = self.build_shared_entry(
+                entry,
+                index,
+                entries,
+                shared_action_id,
+                approach_transition.clone(),
+            )?;
+            self.action_nodes.push(ActionNode {
+                id: approach_action_id.clone(),
+                name: action_node_name(),
+                options: vec![target.clone()],
+                position: zero_position(),
+            });
+            targets.push(target);
+        }
+        Ok(targets)
     }
 
     pub(in crate::native_pack::builder) fn build_shared_entry(
@@ -173,8 +223,8 @@ impl<'a> StoryBuilder<'a> {
         shared_index: usize,
         siblings: &[CanonicalEntry],
         shared_action_id: &str,
+        approach_transition: Transition,
     ) -> Result<String, String> {
-        let approach_transition = transition(shared_action_id, shared_index as i32);
         match entry {
             CanonicalEntry::Story(story) => {
                 let auto_next_active = self.report.project.options.auto_next;
@@ -205,7 +255,8 @@ impl<'a> StoryBuilder<'a> {
                 let play_home_transition = if story.return_on_home_none {
                     None
                 } else {
-                    Some(self.resolve_story_home_transition(
+                    Some(self.resolve_play_home_transition_for_story(
+                        story,
                         story_home.as_deref(),
                         play_return_transition.clone(),
                     ))
@@ -249,8 +300,20 @@ impl<'a> StoryBuilder<'a> {
             }
             CanonicalEntry::Ref(reference) => {
                 self.record_ref_option(shared_action_id, shared_index, &reference.target);
+                self.record_ref_option(
+                    &approach_transition.action_node,
+                    approach_transition.option_index as usize,
+                    &reference.target,
+                );
                 Ok(self.next_id())
             }
         }
     }
+}
+
+fn shared_story_returns_to_self(story: &CanonicalStory) -> bool {
+    let Some(target) = story.return_after_play.as_deref().map(str::trim) else {
+        return false;
+    };
+    target == format!("story:{}", story.id)
 }

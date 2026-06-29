@@ -118,6 +118,7 @@ impl<'a> GraphProjector<'a> {
                 root_entries.push(entry);
             }
         }
+        self.preserve_unreachable_helper_stages();
 
         Ok(GraphImportOutput {
             root_entries,
@@ -184,7 +185,8 @@ impl<'a> GraphProjector<'a> {
 
     fn index_title_stage_by_play_stage(&mut self) {
         for (stage_id, stage) in &self.stages {
-            if stage.square_one || !stage.control_settings.wheel || stage.control_settings.autoplay {
+            if stage.square_one || !stage.control_settings.wheel || stage.control_settings.autoplay
+            {
                 continue;
             }
             let targets = self.ok_targets(stage_id);
@@ -311,7 +313,8 @@ impl<'a> GraphProjector<'a> {
         if !self.emitted_shared.insert(entry_stage_id) {
             return;
         }
-        if let Some(entry) = self.build_concrete_entry(entry_stage_id, active, emitted_tree, false) {
+        if let Some(entry) = self.build_concrete_entry(entry_stage_id, active, emitted_tree, false)
+        {
             self.shared_entries.push(entry);
         }
     }
@@ -453,6 +456,7 @@ impl<'a> GraphProjector<'a> {
                 auto_black_image: stage.image.is_none(),
                 control_settings: Some(stage_controls(stage)),
                 return_on_home: self.home_project_target(stage.uuid.as_str()),
+                return_on_home_none: stage.home_transition.is_none(),
                 ..Default::default()
             }),
             EntryShape::Story {
@@ -473,7 +477,9 @@ impl<'a> GraphProjector<'a> {
                     control_settings: Some(stage_controls(play_stage)),
                     title_control_settings: Some(stage_controls(title_stage)),
                     return_on_home: self.home_project_target(play_stage.uuid.as_str()),
+                    return_on_home_none: play_stage.home_transition.is_none(),
                     title_return_on_home: self.home_project_target(title_stage.uuid.as_str()),
+                    title_return_on_home_none: title_stage.home_transition.is_none(),
                     ..Default::default()
                 })
             }
@@ -491,9 +497,49 @@ impl<'a> GraphProjector<'a> {
                     image: self.resolve_asset(play_stage.image.as_deref()),
                     control_settings: Some(stage_controls(play_stage)),
                     return_on_home: self.home_project_target(play_stage.uuid.as_str()),
+                    return_on_home_none: play_stage.home_transition.is_none(),
                     ..Default::default()
                 })
             }
+        }
+    }
+
+    fn preserve_unreachable_helper_stages(&mut self) {
+        let mut stage_ids: Vec<&str> = self.stages.keys().copied().collect();
+        stage_ids.sort_unstable();
+        for stage_id in stage_ids {
+            if self.reachable.contains(stage_id) || self.emitted_shared.contains(stage_id) {
+                continue;
+            }
+            let Some(stage) = self.stages.get(stage_id).copied() else {
+                continue;
+            };
+            if !is_unreachable_helper_stage(stage) {
+                continue;
+            }
+            let targets = self.ok_targets(stage_id);
+            let Some(target_id) = targets.first().copied() else {
+                continue;
+            };
+            if !self.reachable.contains(target_id) {
+                continue;
+            }
+            let Some(target) = self.typed_target(target_id) else {
+                continue;
+            };
+            self.shared_entries.push(ProjectEntry {
+                id: stage.uuid.clone(),
+                entry_type: "menu".to_string(),
+                name: stage.name.clone(),
+                native_stage_id: Some(stage.uuid.clone()),
+                audio: self.resolve_asset(stage.audio.as_deref()),
+                image: self.resolve_asset(stage.image.as_deref()),
+                auto_black_image: stage.image.is_none(),
+                control_settings: Some(stage_controls(stage)),
+                children: vec![ref_entry(stage.uuid.as_str(), 0, &target, false)],
+                ..Default::default()
+            });
+            self.emitted_shared.insert(stage_id);
         }
     }
 
@@ -542,6 +588,25 @@ fn is_playback_stage(stage: &StageNode) -> bool {
             .audio
             .as_deref()
             .is_some_and(|audio| !audio.trim().is_empty())
+}
+
+fn is_unreachable_helper_stage(stage: &StageNode) -> bool {
+    !stage.square_one
+        && stage
+            .audio
+            .as_deref()
+            .is_none_or(|audio| audio.trim().is_empty())
+        && stage
+            .image
+            .as_deref()
+            .is_none_or(|image| image.trim().is_empty())
+        && !stage.control_settings.wheel
+        && stage.control_settings.ok
+        && stage.control_settings.home
+        && !stage.control_settings.pause
+        && stage.control_settings.autoplay
+        && stage.home_transition.is_none()
+        && stage.ok_transition.is_some()
 }
 
 fn stage_controls(stage: &StageNode) -> EntryControlSettings {
@@ -609,11 +674,23 @@ fn entry_to_json(entry: &ProjectEntry) -> serde_json::Value {
         entry.return_after_play.as_ref(),
     );
     insert_optional_string(&mut object, "returnOnHome", entry.return_on_home.as_ref());
+    if entry.return_on_home_none {
+        object.insert(
+            "returnOnHomeNone".to_string(),
+            serde_json::Value::Bool(true),
+        );
+    }
     insert_optional_string(
         &mut object,
         "titleReturnOnHome",
         entry.title_return_on_home.as_ref(),
     );
+    if entry.title_return_on_home_none {
+        object.insert(
+            "titleReturnOnHomeNone".to_string(),
+            serde_json::Value::Bool(true),
+        );
+    }
     if let Some(control_settings) = entry.control_settings.as_ref() {
         object.insert(
             "controlSettings".to_string(),
@@ -774,6 +851,58 @@ mod tests {
         assert_eq!(output.root_entries[0].children.len(), 2);
         assert_eq!(output.root_entries[0].children[0].id, "story-a");
         assert_eq!(output.root_entries[0].children[1].id, "story-b");
+    }
+
+    #[test]
+    fn direct_stage_without_home_transition_marks_return_on_home_none() {
+        let output = project_story_graph(&document(
+            vec![
+                stage("root", "Root", true, false, Some("root-action"), None, None),
+                stage("story", "Story", false, true, None, None, Some("story.mp3")),
+            ],
+            vec![action("root-action", &["story"])],
+        ))
+        .unwrap();
+
+        assert_eq!(output.root_entries.len(), 1);
+        assert_eq!(output.root_entries[0].id, "story");
+        assert!(output.root_entries[0].return_on_home_none);
+    }
+
+    #[test]
+    fn unreachable_autoplay_helper_stage_is_preserved_as_orphan_shared_entry() {
+        let output = project_story_graph(&document(
+            vec![
+                stage("root", "Root", true, false, Some("root-action"), None, None),
+                stage("story", "Story", false, true, None, None, Some("story.mp3")),
+                {
+                    let mut helper = stage(
+                        "helper",
+                        "Helper",
+                        false,
+                        true,
+                        Some("helper-action"),
+                        None,
+                        None,
+                    );
+                    helper.control_settings.home = true;
+                    helper
+                },
+            ],
+            vec![
+                action("root-action", &["story"]),
+                action("helper-action", &["story"]),
+            ],
+        ))
+        .unwrap();
+
+        assert_eq!(output.shared_entries.len(), 1);
+        let helper = &output.shared_entries[0];
+        assert_eq!(helper.id, "helper");
+        assert_eq!(helper.entry_type, "menu");
+        assert_eq!(helper.children.len(), 1);
+        assert_eq!(helper.children[0].entry_type, "ref");
+        assert_eq!(helper.children[0].target.as_deref(), Some("story:story"));
     }
 
     #[test]

@@ -65,6 +65,23 @@ impl<'a> StoryBuilder<'a> {
         self.resolve_story_return_transition(target_menu_id, fallback_transition)
     }
 
+    pub(in crate::native_pack::builder) fn resolve_play_home_transition_for_story(
+        &self,
+        story: &CanonicalStory,
+        target_menu_id: Option<&str>,
+        fallback_transition: Transition,
+    ) -> Transition {
+        let imported_native_story = story
+            .native_stage_id
+            .as_deref()
+            .is_some_and(|stage_id| !stage_id.trim().is_empty());
+        if imported_native_story {
+            self.resolve_story_return_transition(target_menu_id, fallback_transition)
+        } else {
+            self.resolve_story_home_transition(target_menu_id, fallback_transition)
+        }
+    }
+
     /// Stage natif d'une cible déjà PRÉALLOUÉ (donc disponible avant sa construction).
     /// Permet de résoudre une convergence « en avant » (vers un nœud bâti plus tard),
     /// là où `transition_target_stage_id` échouerait faute d'action node déjà présent.
@@ -132,7 +149,7 @@ impl<'a> StoryBuilder<'a> {
         if let Some(target) = story.title_return_on_home.as_deref() {
             let resolved = resolve_next_story_target(Some(target), siblings, story_index);
             return Some(
-                self.resolve_story_home_transition(resolved.as_deref(), fallback_transition),
+                self.resolve_story_return_transition(resolved.as_deref(), fallback_transition),
             );
         }
 

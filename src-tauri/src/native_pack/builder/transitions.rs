@@ -58,11 +58,21 @@ pub(crate) fn should_emit_combined_story_stage(
     story: &CanonicalStory,
     has_night_mode: bool,
 ) -> bool {
-    has_night_mode
-        && story.title_control_settings.is_none()
-        && story.item_audio == story.audio
-        && story.wheel
-        && story.autoplay
+    let imported_direct_stage = story
+        .native_stage_id
+        .as_deref()
+        .is_some_and(|stage_id| !stage_id.trim().is_empty())
+        && story.audio.is_some()
+        && story.item_audio.is_none()
+        && story.item_image.is_none()
+        && story.title_control_settings.is_none();
+
+    imported_direct_stage
+        || (has_night_mode
+            && story.title_control_settings.is_none()
+            && story.item_audio == story.audio
+            && story.wheel
+            && story.autoplay)
 }
 
 pub(crate) fn prompt_controls_from_settings(

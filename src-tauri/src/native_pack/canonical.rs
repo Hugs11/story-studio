@@ -92,6 +92,7 @@ impl Default for CanonicalMenu {
 pub(crate) struct CanonicalStory {
     pub(crate) id: String,
     pub(crate) name: String,
+    pub(crate) native_stage_id: Option<String>,
     pub(crate) audio: Option<String>,
     pub(crate) item_audio: Option<String>,
     pub(crate) item_image: Option<String>,
@@ -134,6 +135,7 @@ impl Default for CanonicalStory {
         Self {
             id: String::new(),
             name: String::new(),
+            native_stage_id: None,
             audio: None,
             item_audio: None,
             item_image: None,
@@ -354,6 +356,7 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
         _ => CanonicalEntry::Story(CanonicalStory {
             id: entry.id.clone(),
             name: entry.name.clone(),
+            native_stage_id: entry.native_stage_id.clone(),
             audio: entry.audio.clone(),
             item_audio: entry.item_audio.clone(),
             item_image: entry.item_image.clone(),
