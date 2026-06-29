@@ -49,6 +49,16 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
     for entry in &mut entries {
         rewrite_fidelity_entry(entry, &wrapper_id);
     }
+    let mut shared_entries: Vec<ProjectEntry> = serde_json::from_value(
+        extracted
+            .get("sharedEntries")
+            .cloned()
+            .unwrap_or_else(|| serde_json::Value::Array(Vec::new())),
+    )
+    .expect("parse extracted shared entries");
+    for entry in &mut shared_entries {
+        rewrite_fidelity_entry(entry, &wrapper_id);
+    }
 
     Project {
         name: title.to_string(),
@@ -78,7 +88,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         },
         pack_version: 1,
         pack_description: String::new(),
-        shared_entries: Vec::new(),
+        shared_entries,
     }
 }
 

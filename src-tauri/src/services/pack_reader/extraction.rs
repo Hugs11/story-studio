@@ -518,6 +518,28 @@ mod tests {
         );
     }
 
+    fn write_story_zip_with_assets(path: &Path, story: &serde_json::Value, assets: &[&str]) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("create zip parent");
+        }
+        let file = fs::File::create(path).expect("create zip");
+        let mut writer = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        let raw = serde_json::to_vec(story).expect("serialize story");
+        writer
+            .start_file("story.json", options)
+            .expect("start story");
+        writer.write_all(&raw).expect("write story");
+        for asset in assets {
+            writer
+                .start_file(format!("assets/{asset}"), options)
+                .expect("start asset");
+            writer.write_all(asset.as_bytes()).expect("write asset");
+        }
+        writer.finish().expect("finish zip");
+    }
+
     fn editable_story_json() -> serde_json::Value {
         serde_json::json!({
             "title": "Pack editable",
@@ -555,6 +577,93 @@ mod tests {
         })
     }
 
+    fn lapin_like_story_json() -> serde_json::Value {
+        serde_json::json!({
+            "title": "Lapin-like synthetic",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Depart", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "dispatcher", "name": "Dispatcher", "type": "stage", "squareOne": false,
+                    "audio": "dispatcher.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "dispatcher-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "branch-a", "name": "Choix A", "type": "stage", "squareOne": false,
+                    "audio": "branch-a.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "branch-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "branch-b", "name": "Choix B", "type": "stage", "squareOne": false,
+                    "audio": "branch-b.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "branch-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "branch-c", "name": "Choix C", "type": "stage", "squareOne": false,
+                    "audio": "branch-c.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "branch-c-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "hub-title", "name": "Titre partage", "type": "stage", "squareOne": false,
+                    "audio": "hub-title.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "hub-title-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "hub-play", "name": "Lecture partagee", "type": "stage", "squareOne": false,
+                    "audio": "hub-play.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "hub-play-return-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "cycle-a", "name": "Cycle A", "type": "stage", "squareOne": false,
+                    "audio": "cycle-a.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "cycle-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "cycle-b", "name": "Cycle B", "type": "stage", "squareOne": false,
+                    "audio": "cycle-b.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "cycle-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Root", "options": ["dispatcher"] },
+                { "id": "dispatcher-action", "name": "Dispatcher", "options": ["branch-a", "branch-b", "branch-c"] },
+                { "id": "branch-a-action", "name": "A", "options": ["hub-title"] },
+                { "id": "branch-b-action", "name": "B", "options": ["cycle-a"] },
+                { "id": "branch-c-action", "name": "C", "options": ["hub-title"] },
+                { "id": "hub-title-action", "name": "Hub", "options": ["hub-play"] },
+                { "id": "hub-play-return-action", "name": "Hub return", "options": ["hub-title", "cycle-a"] },
+                { "id": "cycle-a-action", "name": "Cycle A", "options": ["cycle-b"] },
+                { "id": "cycle-b-action", "name": "Cycle B", "options": ["cycle-a"] },
+                { "id": "home-action", "name": "Home", "options": ["dispatcher"] }
+            ]
+        })
+    }
+
     #[test]
     fn faithful_pack_is_editable() {
         let dir = temp_dir("editable");
@@ -565,6 +674,82 @@ mod tests {
         assert!(editable);
 
         fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn lapin_like_branching_graph_is_editable_with_shared_entries() {
+        let dir = temp_dir("lapin_like_graph");
+        let zip_path = dir.join("pack.zip");
+        let story = lapin_like_story_json();
+        write_story_zip_with_assets(
+            &zip_path,
+            &story,
+            &[
+                "root.mp3",
+                "cover.png",
+                "dispatcher.mp3",
+                "branch-a.mp3",
+                "branch-b.mp3",
+                "branch-c.mp3",
+                "hub-title.mp3",
+                "hub-play.mp3",
+                "cycle-a.mp3",
+                "cycle-b.mp3",
+            ],
+        );
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(report.editable, "diagnostic inattendu : {}", report.reason);
+        assert!(report
+            .fidelity
+            .as_ref()
+            .is_some_and(|fidelity| fidelity.faithful));
+        assert!(!report.has_native_graph);
+
+        let imported = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect("unpack editable graph");
+        assert!(imported["nativeGraph"].is_null());
+        let shared_entries = imported["sharedEntries"]
+            .as_array()
+            .expect("shared entries");
+        assert_eq!(shared_entries.len(), 2);
+        let shared_hub = shared_entries
+            .iter()
+            .find(|entry| entry["id"] == "hub-title")
+            .expect("shared convergence title");
+        assert_eq!(shared_hub["type"], "story");
+        assert!(shared_hub["itemAudio"]
+            .as_str()
+            .is_some_and(|value| value.ends_with("hub-title.mp3")));
+        assert!(shared_hub["audio"]
+            .as_str()
+            .is_some_and(|value| value.ends_with("hub-play.mp3")));
+        assert!(shared_entries.iter().any(|entry| entry["id"] == "cycle-a"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    #[ignore]
+    fn plan16_graph_pack_from_env_is_editable_without_native_graph() {
+        let Some(zip_path) = std::env::var_os("STORY_STUDIO_PLAN16_GRAPH_PACK") else {
+            eprintln!("[PLAN16] SKIP - definir STORY_STUDIO_PLAN16_GRAPH_PACK vers un ZIP graphe");
+            return;
+        };
+        let zip_path = PathBuf::from(zip_path);
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(report.editable, "diagnostic inattendu : {}", report.reason);
+        assert!(report
+            .fidelity
+            .as_ref()
+            .is_some_and(|fidelity| fidelity.faithful));
+        assert!(
+            !report.has_native_graph,
+            "le pack est encore passé par le parachute nativeGraph"
+        );
     }
 
     #[test]

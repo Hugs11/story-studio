@@ -55,6 +55,7 @@ struct GraphProjector<'a> {
     actions: HashMap<&'a str, &'a ActionNode>,
     assets: Option<&'a HashMap<String, PathBuf>>,
     ok_edges: HashMap<&'a str, Vec<&'a str>>,
+    title_stage_by_play_stage: HashMap<&'a str, &'a str>,
     reachable: HashSet<&'a str>,
     shared_ids: HashSet<&'a str>,
     emitted_shared: HashSet<&'a str>,
@@ -86,6 +87,7 @@ impl<'a> GraphProjector<'a> {
             actions,
             assets,
             ok_edges: HashMap::new(),
+            title_stage_by_play_stage: HashMap::new(),
             reachable: HashSet::new(),
             shared_ids: HashSet::new(),
             emitted_shared: HashSet::new(),
@@ -93,6 +95,7 @@ impl<'a> GraphProjector<'a> {
             diagnostics: Vec::new(),
         };
         projector.index_ok_edges(document);
+        projector.index_title_stage_by_play_stage();
         projector
     }
 
@@ -179,13 +182,42 @@ impl<'a> GraphProjector<'a> {
         }
     }
 
+    fn index_title_stage_by_play_stage(&mut self) {
+        for (stage_id, stage) in &self.stages {
+            if stage.square_one || !stage.control_settings.wheel || stage.control_settings.autoplay {
+                continue;
+            }
+            let targets = self.ok_targets(stage_id);
+            if targets.len() != 1 {
+                continue;
+            }
+            let play_stage_id = targets[0];
+            if self
+                .stages
+                .get(play_stage_id)
+                .is_some_and(|candidate| is_playback_stage(candidate))
+            {
+                self.title_stage_by_play_stage
+                    .insert(play_stage_id, stage_id);
+            }
+        }
+    }
+
     fn index_shared_ids(&mut self, square_one_id: &'a str) {
         let mut indegree: HashMap<&str, usize> = HashMap::new();
         for source_id in &self.reachable {
             for target_id in self.ok_targets(source_id) {
-                if self.reachable.contains(target_id) && target_id != square_one_id {
-                    *indegree.entry(target_id).or_insert(0) += 1;
+                if !self.reachable.contains(target_id) {
+                    continue;
                 }
+                let entry_stage_id = self.entry_stage_id(target_id);
+                if entry_stage_id == square_one_id {
+                    continue;
+                }
+                if entry_stage_id == *source_id && entry_stage_id != target_id {
+                    continue;
+                }
+                *indegree.entry(entry_stage_id).or_insert(0) += 1;
             }
         }
         for (target_id, count) in indegree {
@@ -259,9 +291,13 @@ impl<'a> GraphProjector<'a> {
         active: &[&'a str],
         emitted_tree: &HashSet<&'a str>,
     ) -> bool {
+        let entry_stage_id = self.entry_stage_id(target_id);
         self.shared_ids.contains(target_id)
+            || self.shared_ids.contains(entry_stage_id)
             || active.contains(&target_id)
+            || active.contains(&entry_stage_id)
             || emitted_tree.contains(target_id)
+            || emitted_tree.contains(entry_stage_id)
     }
 
     fn ensure_shared_entry(
@@ -270,13 +306,12 @@ impl<'a> GraphProjector<'a> {
         active: &mut Vec<&'a str>,
         emitted_tree: &mut HashSet<&'a str>,
     ) {
-        if !self.shared_ids.contains(stage_id) {
-            self.shared_ids.insert(stage_id);
-        }
-        if !self.emitted_shared.insert(stage_id) {
+        let entry_stage_id = self.entry_stage_id(stage_id);
+        self.shared_ids.insert(entry_stage_id);
+        if !self.emitted_shared.insert(entry_stage_id) {
             return;
         }
-        if let Some(entry) = self.build_concrete_entry(stage_id, active, emitted_tree, false) {
+        if let Some(entry) = self.build_concrete_entry(entry_stage_id, active, emitted_tree, false) {
             self.shared_entries.push(entry);
         }
     }
@@ -288,21 +323,22 @@ impl<'a> GraphProjector<'a> {
         emitted_tree: &mut HashSet<&'a str>,
         mark_tree: bool,
     ) -> Option<ProjectEntry> {
-        let stage = *self.stages.get(stage_id)?;
-        let shape = self.entry_shape(stage_id)?;
+        let entry_stage_id = self.entry_stage_id(stage_id);
+        let stage = *self.stages.get(entry_stage_id)?;
+        let shape = self.entry_shape(entry_stage_id)?;
         let targets = match shape {
-            EntryShape::Menu => self.ok_targets(stage_id),
+            EntryShape::Menu => self.ok_targets(entry_stage_id),
             EntryShape::Story { play_stage_id, .. } => self.ok_targets(play_stage_id),
         };
-        let mut entry = self.stage_entry(stage_id, shape)?;
+        let mut entry = self.stage_entry(entry_stage_id, shape)?;
 
         if mark_tree {
-            emitted_tree.insert(stage_id);
+            emitted_tree.insert(entry_stage_id);
             if let EntryShape::Story { play_stage_id, .. } = shape {
                 emitted_tree.insert(play_stage_id);
             }
         }
-        active.push(stage_id);
+        active.push(entry_stage_id);
         let pushed_play_stage = match shape {
             EntryShape::Story { play_stage_id, .. } if play_stage_id != stage_id => {
                 active.push(play_stage_id);
@@ -325,14 +361,19 @@ impl<'a> GraphProjector<'a> {
                     }
                 }
             }
-            EntryShape::Story { .. } => {
+            EntryShape::Story { title_stage_id, .. } => {
                 if let Some(target_id) = targets.first().copied() {
                     if let Some(target) = self.typed_target(target_id) {
                         self.ensure_shared_entry(target_id, active, emitted_tree);
                         entry.return_after_play = Some(target);
                     }
                 }
-                if targets.len() > 1 {
+                let self_return_target = title_stage_id.unwrap_or(stage_id);
+                let extra_targets_are_shared_return = targets.len() > 1
+                    && targets
+                        .first()
+                        .is_some_and(|target_id| *target_id == self_return_target);
+                if targets.len() > 1 && !extra_targets_are_shared_return {
                     self.diagnostics.push(format!(
                         "Stage '{}' a plusieurs sorties OK non modelisees en story",
                         stage.name
@@ -349,11 +390,28 @@ impl<'a> GraphProjector<'a> {
     }
 
     fn typed_target(&self, stage_id: &'a str) -> Option<String> {
-        let prefix = self.entry_shape(stage_id)?.entry_type();
-        Some(format!("{prefix}:{stage_id}"))
+        let entry_stage_id = self.entry_stage_id(stage_id);
+        if entry_stage_id != stage_id {
+            return Some(format!("story_play:{entry_stage_id}"));
+        }
+        let prefix = self.entry_shape(entry_stage_id)?.entry_type();
+        Some(format!("{prefix}:{entry_stage_id}"))
+    }
+
+    fn entry_stage_id(&self, stage_id: &'a str) -> &'a str {
+        self.title_stage_by_play_stage
+            .get(stage_id)
+            .copied()
+            .unwrap_or(stage_id)
     }
 
     fn entry_shape(&self, stage_id: &'a str) -> Option<EntryShape<'a>> {
+        if let Some(title_stage_id) = self.title_stage_by_play_stage.get(stage_id).copied() {
+            return Some(EntryShape::Story {
+                play_stage_id: stage_id,
+                title_stage_id: Some(title_stage_id),
+            });
+        }
         let stage = self.stages.get(stage_id)?;
         let targets = self.ok_targets(stage_id);
         if stage.control_settings.autoplay && targets.len() >= 2 {
@@ -362,11 +420,10 @@ impl<'a> GraphProjector<'a> {
         if stage.control_settings.wheel && !stage.control_settings.autoplay {
             if targets.len() == 1 {
                 let play_stage_id = targets[0];
-                if !self.shared_ids.contains(play_stage_id)
-                    && self
-                        .stages
-                        .get(play_stage_id)
-                        .is_some_and(|stage| is_playback_stage(stage))
+                if self
+                    .stages
+                    .get(play_stage_id)
+                    .is_some_and(|stage| is_playback_stage(stage))
                 {
                     return Some(EntryShape::Story {
                         play_stage_id,
@@ -393,7 +450,9 @@ impl<'a> GraphProjector<'a> {
                 native_stage_id: Some(stage.uuid.clone()),
                 audio: self.resolve_asset(stage.audio.as_deref()),
                 image: self.resolve_asset(stage.image.as_deref()),
+                auto_black_image: stage.image.is_none(),
                 control_settings: Some(stage_controls(stage)),
+                return_on_home: self.home_project_target(stage.uuid.as_str()),
                 ..Default::default()
             }),
             EntryShape::Story {
@@ -413,6 +472,8 @@ impl<'a> GraphProjector<'a> {
                     item_image: self.resolve_asset(title_stage.image.as_deref()),
                     control_settings: Some(stage_controls(play_stage)),
                     title_control_settings: Some(stage_controls(title_stage)),
+                    return_on_home: self.home_project_target(play_stage.uuid.as_str()),
+                    title_return_on_home: self.home_project_target(title_stage.uuid.as_str()),
                     ..Default::default()
                 })
             }
@@ -429,10 +490,35 @@ impl<'a> GraphProjector<'a> {
                     audio: self.resolve_asset(play_stage.audio.as_deref()),
                     image: self.resolve_asset(play_stage.image.as_deref()),
                     control_settings: Some(stage_controls(play_stage)),
+                    return_on_home: self.home_project_target(play_stage.uuid.as_str()),
                     ..Default::default()
                 })
             }
         }
+    }
+
+    fn home_target(&self, stage_id: &str) -> Option<&'a str> {
+        let stage = self.stages.get(stage_id)?;
+        let transition = stage.home_transition.as_ref()?;
+        let action = self.actions.get(transition.action_node.as_str())?;
+        let option_index = if transition.option_index < 0 {
+            0
+        } else {
+            transition.option_index as usize
+        };
+        action.options.get(option_index).map(String::as_str)
+    }
+
+    fn home_project_target(&self, stage_id: &str) -> Option<String> {
+        let target_id = self.home_target(stage_id)?;
+        if self
+            .stages
+            .get(target_id)
+            .is_some_and(|stage| stage.square_one)
+        {
+            return Some("root".to_string());
+        }
+        self.typed_target(target_id)
     }
 
     fn resolve_asset(&self, name: Option<&str>) -> Option<String> {
@@ -512,12 +598,21 @@ fn entry_to_json(entry: &ProjectEntry) -> serde_json::Value {
     insert_optional_string(&mut object, "refKind", entry.ref_kind.as_ref());
     insert_optional_string(&mut object, "audio", entry.audio.as_ref());
     insert_optional_string(&mut object, "image", entry.image.as_ref());
+    if entry.auto_black_image {
+        object.insert("autoBlackImage".to_string(), serde_json::Value::Bool(true));
+    }
     insert_optional_string(&mut object, "itemAudio", entry.item_audio.as_ref());
     insert_optional_string(&mut object, "itemImage", entry.item_image.as_ref());
     insert_optional_string(
         &mut object,
         "returnAfterPlay",
         entry.return_after_play.as_ref(),
+    );
+    insert_optional_string(&mut object, "returnOnHome", entry.return_on_home.as_ref());
+    insert_optional_string(
+        &mut object,
+        "titleReturnOnHome",
+        entry.title_return_on_home.as_ref(),
     );
     if let Some(control_settings) = entry.control_settings.as_ref() {
         object.insert(
@@ -874,6 +969,58 @@ mod tests {
                 .target
                 .as_deref(),
             Some("story:title")
+        );
+    }
+
+    #[test]
+    fn direct_target_to_shared_playback_uses_story_play_target() {
+        let output = project_story_graph(&document(
+            vec![
+                stage("root", "Root", true, false, Some("root-action"), None, None),
+                stage(
+                    "choice",
+                    "Choice",
+                    true,
+                    false,
+                    Some("choice-action"),
+                    None,
+                    None,
+                ),
+                stage(
+                    "title",
+                    "Title",
+                    true,
+                    false,
+                    Some("title-action"),
+                    None,
+                    Some("title.mp3"),
+                ),
+                stage(
+                    "play",
+                    "Playback",
+                    false,
+                    true,
+                    None,
+                    None,
+                    Some("play.mp3"),
+                ),
+            ],
+            vec![
+                action("root-action", &["choice"]),
+                action("choice-action", &["title", "play"]),
+                action("title-action", &["play"]),
+            ],
+        ))
+        .unwrap();
+
+        assert_eq!(output.shared_entries.len(), 1);
+        assert_eq!(output.shared_entries[0].id, "title");
+        assert_eq!(output.shared_entries[0].entry_type, "story");
+        let choice = &output.root_entries[0];
+        assert_eq!(choice.children[0].target.as_deref(), Some("story:title"));
+        assert_eq!(
+            choice.children[1].target.as_deref(),
+            Some("story_play:title")
         );
     }
 
