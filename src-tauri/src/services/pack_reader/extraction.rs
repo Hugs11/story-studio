@@ -8,6 +8,7 @@ use serde::Serialize;
 use super::projection::walk_story_doc_to_entries;
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
+use crate::domain::validation::validate_project_structure_for_generation;
 use crate::native_pack::canonicalize_project;
 use crate::native_pack::fidelity_judge::{canonical_roundtrip_is_faithful, FidelityReport};
 use crate::support::imported_pack::ensure_studio_pack_zip;
@@ -136,11 +137,18 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
 
     let canonical = canonicalize_project(&project);
     let fidelity = canonical_roundtrip_is_faithful(&canonical)?;
-    let editable = projected_entry_count > 0 && fidelity.faithful;
+    let structural_validation = validate_project_structure_for_generation(&project);
+    let editable = projected_entry_count > 0 && fidelity.faithful && structural_validation.is_ok();
     let reason = if editable {
         "Génération canonique fidèle au story.json d'origine.".to_string()
     } else if projected_entry_count == 0 {
         "Aucune entrée éditable projetée depuis le story.json.".to_string()
+    } else if let Err(error) = structural_validation {
+        error
+            .lines()
+            .next()
+            .unwrap_or("Projet importé non générable.")
+            .to_string()
     } else {
         fidelity.gaps.first().cloned().unwrap_or_else(|| {
             "Génération canonique non fidèle au story.json d'origine.".to_string()
@@ -365,6 +373,20 @@ fn rewrite_imported_root_targets(entry: &mut ProjectEntry, wrapper_id: &str) {
     );
     for step in &mut entry.after_playback_sequence {
         step.ok_target = rewrite_imported_navigation_target(step.ok_target.take(), wrapper_id);
+        step.ok_choice_targets = step
+            .ok_choice_targets
+            .drain(..)
+            .filter_map(|target| rewrite_imported_navigation_target(Some(target), wrapper_id))
+            .collect();
+        step.home_target = rewrite_imported_navigation_target(step.home_target.take(), wrapper_id);
+    }
+    if let Some(step) = &mut entry.after_playback_home_step {
+        step.ok_target = rewrite_imported_navigation_target(step.ok_target.take(), wrapper_id);
+        step.ok_choice_targets = step
+            .ok_choice_targets
+            .drain(..)
+            .filter_map(|target| rewrite_imported_navigation_target(Some(target), wrapper_id))
+            .collect();
         step.home_target = rewrite_imported_navigation_target(step.home_target.take(), wrapper_id);
     }
     for child in &mut entry.children {
@@ -728,6 +750,54 @@ mod tests {
             .as_str()
             .is_some_and(|value| value.ends_with("hub-play.mp3")));
         assert!(shared_entries.iter().any(|entry| entry["id"] == "cycle-a"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn branching_graph_with_unfaithful_orphan_native_helper_is_not_editable() {
+        let dir = temp_dir("orphan_helper_graph");
+        let zip_path = dir.join("pack.zip");
+        let mut story = lapin_like_story_json();
+        story["stageNodes"]
+            .as_array_mut()
+            .expect("stages")
+            .push(serde_json::json!({
+                "uuid": "orphan-helper", "name": "Helper orphelin", "type": "stage", "squareOne": false,
+                "audio": null, "image": null,
+                "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": true },
+                "okTransition": { "actionNode": "orphan-helper-action", "optionIndex": 0 },
+                "homeTransition": null
+            }));
+        story["actionNodes"]
+            .as_array_mut()
+            .expect("actions")
+            .push(serde_json::json!({
+                "id": "orphan-helper-action", "name": "Helper orphelin", "options": ["branch-a"]
+            }));
+        write_story_zip_with_assets(
+            &zip_path,
+            &story,
+            &[
+                "root.mp3",
+                "cover.png",
+                "dispatcher.mp3",
+                "branch-a.mp3",
+                "branch-b.mp3",
+                "branch-c.mp3",
+                "hub-title.mp3",
+                "hub-play.mp3",
+                "cycle-a.mp3",
+                "cycle-b.mp3",
+            ],
+        );
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+
+        assert!(
+            !report.editable,
+            "un helper orphelin non fidèle ne doit pas être annoncé éditable"
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

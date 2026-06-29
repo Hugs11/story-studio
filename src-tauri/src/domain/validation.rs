@@ -25,19 +25,43 @@ fn display_label(value: &str, fallback: &str) -> String {
     }
 }
 
+#[derive(Clone, Copy)]
+enum FileValidation {
+    CheckDisk,
+    StructureOnly,
+}
+
+impl FileValidation {
+    fn checks_disk(self) -> bool {
+        matches!(self, FileValidation::CheckDisk)
+    }
+}
+
+fn is_imported_native_story(entry: &ProjectEntry) -> bool {
+    entry.entry_type == "story"
+        && entry
+            .native_stage_id
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
+}
+
 fn validate_story_entry_for_generation(
     entry: &ProjectEntry,
     context: &str,
+    file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
+    let imported_native_story = is_imported_native_story(entry);
     match entry.entry_type.as_str() {
         "zip" => {
             let zip_label = format!("{} : ZIP", context);
             if let Some(zip_path) =
                 required_file_path(entry.zip_path.as_deref(), &zip_label, errors)
             {
-                if let Err(err) = validate_existing_pack_path(zip_path) {
-                    errors.push(err);
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_pack_path(zip_path) {
+                        errors.push(err);
+                    }
                 }
             }
         }
@@ -46,55 +70,178 @@ fn validate_story_entry_for_generation(
             if let Some(audio_path) =
                 required_file_path(entry.audio.as_deref(), &story_audio_label, errors)
             {
-                if let Err(err) = validate_existing_file_path(audio_path, &story_audio_label) {
-                    errors.push(err);
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_file_path(audio_path, &story_audio_label) {
+                        errors.push(err);
+                    }
                 }
             }
             let item_audio_label = format!("{} : audio titre", context);
-            if let Some(item_audio) =
-                required_file_path(entry.item_audio.as_deref(), &item_audio_label, errors)
+            if let Some(item_audio) = entry
+                .item_audio
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
             {
-                if let Err(err) = validate_existing_file_path(item_audio, &item_audio_label) {
-                    errors.push(err);
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_file_path(item_audio, &item_audio_label) {
+                        errors.push(err);
+                    }
                 }
+            } else if !imported_native_story {
+                errors.push(format!("{} manquant.", item_audio_label));
             }
 
             let item_image_label = format!("{} : image", context);
-            if let Some(item_image) =
-                required_file_path(entry.item_image.as_deref(), &item_image_label, errors)
+            if let Some(item_image) = entry
+                .item_image
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
             {
-                if let Err(err) = validate_existing_file_path(item_image, &item_image_label) {
-                    errors.push(err);
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_file_path(item_image, &item_image_label) {
+                        errors.push(err);
+                    }
                 }
+            } else if !imported_native_story {
+                errors.push(format!("{} manquant.", item_image_label));
             }
         }
     }
 }
 
-fn decode_navigation_menu_target(target: &str) -> Option<&str> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NavigationTarget<'a> {
+    Root,
+    CurrentMenu,
+    NextStory,
+    Menu(&'a str),
+    Story(&'a str),
+    StoryPlay(&'a str),
+    StoryHomeStep(&'a str),
+}
+
+struct NavigationValidationContext<'a> {
+    menu_ids: &'a HashSet<String>,
+    menu_playable_counts: &'a HashMap<String, usize>,
+    story_ids: &'a HashSet<String>,
+    story_home_step_ids: &'a HashSet<String>,
+}
+
+fn decode_navigation_target(target: &str) -> Option<NavigationTarget<'_>> {
     let trimmed = target.trim();
-    if trimmed.is_empty()
-        || trimmed == "current_menu"
-        || trimmed == "root"
-        || trimmed == "next_story"
-        || trimmed.starts_with("story:")
-        || trimmed.starts_with("story_play:")
-        || trimmed.starts_with("story_home_step:")
-    {
+    if trimmed.is_empty() {
         return None;
     }
-    Some(trimmed.strip_prefix("menu:").unwrap_or(trimmed))
+    if trimmed == "root" {
+        return Some(NavigationTarget::Root);
+    }
+    if trimmed == "current_menu" {
+        return Some(NavigationTarget::CurrentMenu);
+    }
+    if trimmed == "next_story" {
+        return Some(NavigationTarget::NextStory);
+    }
+    if let Some(id) = trimmed.strip_prefix("menu:") {
+        let id = id.trim();
+        return (!id.is_empty()).then_some(NavigationTarget::Menu(id));
+    }
+    if let Some(id) = trimmed.strip_prefix("story_home_step:") {
+        let id = id.trim();
+        return (!id.is_empty()).then_some(NavigationTarget::StoryHomeStep(id));
+    }
+    if let Some(id) = trimmed.strip_prefix("story_play:") {
+        let id = id.trim();
+        return (!id.is_empty()).then_some(NavigationTarget::StoryPlay(id));
+    }
+    if let Some(id) = trimmed.strip_prefix("story:") {
+        let id = id.trim();
+        return (!id.is_empty()).then_some(NavigationTarget::Story(id));
+    }
+    Some(NavigationTarget::Menu(trimmed))
+}
+
+fn validate_navigation_target(
+    target: Option<&str>,
+    entry_name: &str,
+    target_label: &str,
+    graph: &NavigationValidationContext<'_>,
+    errors: &mut Vec<String>,
+) {
+    let Some(decoded) = target.and_then(decode_navigation_target) else {
+        return;
+    };
+    match decoded {
+        NavigationTarget::Root | NavigationTarget::CurrentMenu | NavigationTarget::NextStory => {}
+        NavigationTarget::Menu(target_id) => {
+            if !graph.menu_ids.contains(target_id) {
+                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+            } else if graph
+                .menu_playable_counts
+                .get(target_id)
+                .copied()
+                .unwrap_or(0)
+                == 0
+            {
+                errors.push(format!(
+                    "{entry_name} : {target_label} est vide ou non jouable."
+                ));
+            }
+        }
+        NavigationTarget::Story(target_id) | NavigationTarget::StoryPlay(target_id) => {
+            if !graph.story_ids.contains(target_id) {
+                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+            }
+        }
+        NavigationTarget::StoryHomeStep(target_id) => {
+            if !graph.story_ids.contains(target_id) {
+                errors.push(format!("{entry_name} : {target_label} est introuvable."));
+            } else if !graph.story_home_step_ids.contains(target_id) {
+                errors.push(format!("{entry_name} : retour de fin introuvable."));
+            }
+        }
+    }
+}
+
+fn is_preserved_native_helper_shared_entry(entry: &ProjectEntry) -> bool {
+    let Some(controls) = entry.control_settings.as_ref() else {
+        return false;
+    };
+    entry.entry_type == "menu"
+        && entry
+            .native_stage_id
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
+        && entry
+            .audio
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        && entry
+            .image
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        && entry.auto_black_image
+        && controls.wheel == Some(false)
+        && controls.ok == Some(true)
+        && controls.home == Some(true)
+        && controls.pause == Some(false)
+        && controls.autoplay == Some(true)
+        && entry.children.len() == 1
+        && entry.children[0].entry_type == "ref"
 }
 
 /// Id d'entrée ciblé par une `ref` (menu:/story:/story_play:/story_home_step:), ou None.
 fn decode_ref_target_entry_id(target: &str) -> Option<&str> {
-    let trimmed = target.trim();
-    for prefix in ["story_home_step:", "story_play:", "story:", "menu:"] {
-        if let Some(id) = trimmed.strip_prefix(prefix) {
-            return (!id.trim().is_empty()).then(|| id.trim());
+    match decode_navigation_target(target)? {
+        NavigationTarget::Menu(id)
+        | NavigationTarget::Story(id)
+        | NavigationTarget::StoryPlay(id)
+        | NavigationTarget::StoryHomeStep(id) => Some(id),
+        NavigationTarget::Root | NavigationTarget::CurrentMenu | NavigationTarget::NextStory => {
+            None
         }
     }
-    None
 }
 
 pub(crate) fn project_root_entries(project: &Project) -> Vec<ProjectEntry> {
@@ -175,6 +322,14 @@ fn rewrite_prefixed_navigation_target(
     }
 }
 
+fn rewrite_prefixed_navigation_target_value(value: &mut String, id_map: &HashMap<String, String>) {
+    let mut rewritten = Some(std::mem::take(value));
+    rewrite_prefixed_navigation_target(&mut rewritten, id_map);
+    if let Some(next) = rewritten {
+        *value = next;
+    }
+}
+
 fn apply_continuation_id_map(entry: &mut ProjectEntry, id_map: &HashMap<String, String>) {
     if let Some(new_id) = id_map.get(entry.id.trim()) {
         entry.id = new_id.clone();
@@ -186,6 +341,16 @@ fn apply_continuation_id_map(entry: &mut ProjectEntry, id_map: &HashMap<String, 
     rewrite_prefixed_navigation_target(&mut entry.after_playback_prompt_home_target, id_map);
     for step in &mut entry.after_playback_sequence {
         rewrite_prefixed_navigation_target(&mut step.ok_target, id_map);
+        for target in &mut step.ok_choice_targets {
+            rewrite_prefixed_navigation_target_value(target, id_map);
+        }
+        rewrite_prefixed_navigation_target(&mut step.home_target, id_map);
+    }
+    if let Some(step) = &mut entry.after_playback_home_step {
+        rewrite_prefixed_navigation_target(&mut step.ok_target, id_map);
+        for target in &mut step.ok_choice_targets {
+            rewrite_prefixed_navigation_target_value(target, id_map);
+        }
         rewrite_prefixed_navigation_target(&mut step.home_target, id_map);
     }
     for child in &mut entry.children {
@@ -224,6 +389,8 @@ fn has_playable_descendants(entry: &ProjectEntry) -> bool {
 fn collect_entry_graph_stats(
     entries: &[ProjectEntry],
     menu_ids: &mut HashSet<String>,
+    story_ids: &mut HashSet<String>,
+    story_home_step_ids: &mut HashSet<String>,
     id_counts: &mut HashMap<String, usize>,
     menu_playable_counts: &mut HashMap<String, usize>,
 ) {
@@ -239,7 +406,19 @@ fn collect_entry_graph_stats(
                 menu_playable_counts
                     .insert(entry_id.to_string(), count_playable_descendants(entry));
             }
-            collect_entry_graph_stats(&entry.children, menu_ids, id_counts, menu_playable_counts);
+            collect_entry_graph_stats(
+                &entry.children,
+                menu_ids,
+                story_ids,
+                story_home_step_ids,
+                id_counts,
+                menu_playable_counts,
+            );
+        } else if entry.entry_type == "story" && !entry_id.is_empty() {
+            story_ids.insert(entry_id.to_string());
+            if entry.after_playback_home_step.is_some() {
+                story_home_step_ids.insert(entry_id.to_string());
+            }
         }
     }
 }
@@ -388,6 +567,9 @@ fn validate_shared_entries_reachable(
         );
         let entry_context = format!("{} / {}", context, entry_name);
         if !entry.id.trim().is_empty() && !reachable_ids.contains(entry.id.trim()) {
+            if is_preserved_native_helper_shared_entry(entry) {
+                continue;
+            }
             errors.push(format!("{} : élément partagé non utilisé.", entry_context));
         }
         if entry.entry_type == "menu" {
@@ -401,10 +583,9 @@ fn validate_shared_entries_reachable(
     }
 }
 
-fn validate_return_after_play_targets(
+fn validate_navigation_targets(
     entries: &[ProjectEntry],
-    menu_ids: &HashSet<String>,
-    menu_playable_counts: &HashMap<String, usize>,
+    graph: &NavigationValidationContext<'_>,
     context: &str,
     errors: &mut Vec<String>,
 ) {
@@ -417,108 +598,116 @@ fn validate_return_after_play_targets(
         let entry_name = display_label(&entry.name, fallback_name);
         let entry_context = format!("{} / {}", context, entry_name);
 
-        if let Some(target_id) = entry
-            .return_after_play
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .and_then(decode_navigation_menu_target)
-        {
-            if !menu_ids.contains(target_id) {
-                errors.push(format!(
-                    "{} : la destination de navigation après lecture est introuvable.",
-                    entry_name
-                ));
-            } else if menu_playable_counts.get(target_id).copied().unwrap_or(0) == 0 {
-                errors.push(format!(
-                    "{} : la destination de navigation après lecture est vide ou non jouable.",
-                    entry_name
-                ));
-            }
+        if entry.entry_type == "ref" {
+            validate_navigation_target(
+                entry.target.as_deref(),
+                &entry_context,
+                "la cible de la référence",
+                graph,
+                errors,
+            );
         }
 
-        if let Some(target_id) = entry
-            .return_on_home
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .and_then(decode_navigation_menu_target)
-        {
-            if !menu_ids.contains(target_id) {
-                errors.push(format!(
-                    "{} : la destination du bouton Accueil est introuvable.",
-                    entry_name
-                ));
-            } else if menu_playable_counts.get(target_id).copied().unwrap_or(0) == 0 {
-                errors.push(format!(
-                    "{} : la destination du bouton Accueil est vide ou non jouable.",
-                    entry_name
-                ));
-            }
+        validate_navigation_target(
+            entry.return_after_play.as_deref(),
+            &entry_name,
+            "la destination de navigation après lecture",
+            graph,
+            errors,
+        );
+        if !entry.return_on_home_none {
+            validate_navigation_target(
+                entry.return_on_home.as_deref(),
+                &entry_name,
+                "la destination du bouton Accueil",
+                graph,
+                errors,
+            );
         }
-
         if !entry.title_return_on_home_none {
-            if let Some(target_id) = entry
-                .title_return_on_home
-                .as_deref()
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .and_then(decode_navigation_menu_target)
-            {
-                if !menu_ids.contains(target_id) {
-                    errors.push(format!(
-                        "{} : la destination du bouton Accueil du titre est introuvable.",
-                        entry_name
-                    ));
-                } else if menu_playable_counts.get(target_id).copied().unwrap_or(0) == 0 {
-                    errors.push(format!(
-                        "{} : la destination du bouton Accueil du titre est vide ou non jouable.",
-                        entry_name
-                    ));
-                }
+            validate_navigation_target(
+                entry.title_return_on_home.as_deref(),
+                &entry_name,
+                "la destination du bouton Accueil du titre",
+                graph,
+                errors,
+            );
+        }
+        validate_navigation_target(
+            entry.after_playback_prompt_ok_target.as_deref(),
+            &entry_name,
+            "la destination OK du prompt final",
+            graph,
+            errors,
+        );
+        if !entry.after_playback_prompt_home_none {
+            validate_navigation_target(
+                entry.after_playback_prompt_home_target.as_deref(),
+                &entry_name,
+                "la destination Accueil du prompt final",
+                graph,
+                errors,
+            );
+        }
+        for (index, step) in entry.after_playback_sequence.iter().enumerate() {
+            let step_label = format!("la destination OK fin {}", index + 1);
+            validate_navigation_target(
+                step.ok_target.as_deref(),
+                &entry_name,
+                &step_label,
+                graph,
+                errors,
+            );
+            for target in &step.ok_choice_targets {
+                validate_navigation_target(
+                    Some(target.as_str()),
+                    &entry_name,
+                    &step_label,
+                    graph,
+                    errors,
+                );
+            }
+            if !step.home_follows_ok && !step.home_none {
+                let step_label = format!("la destination Accueil fin {}", index + 1);
+                validate_navigation_target(
+                    step.home_target.as_deref(),
+                    &entry_name,
+                    &step_label,
+                    graph,
+                    errors,
+                );
+            }
+        }
+        if let Some(step) = entry.after_playback_home_step.as_ref() {
+            validate_navigation_target(
+                step.ok_target.as_deref(),
+                &entry_name,
+                "la destination OK du retour Home de fin",
+                graph,
+                errors,
+            );
+            for target in &step.ok_choice_targets {
+                validate_navigation_target(
+                    Some(target.as_str()),
+                    &entry_name,
+                    "la destination OK du retour Home de fin",
+                    graph,
+                    errors,
+                );
+            }
+            if !step.home_follows_ok && !step.home_none {
+                validate_navigation_target(
+                    step.home_target.as_deref(),
+                    &entry_name,
+                    "la destination Accueil du retour Home de fin",
+                    graph,
+                    errors,
+                );
             }
         }
 
         if entry.entry_type == "menu" {
-            validate_return_after_play_targets(
-                &entry.children,
-                menu_ids,
-                menu_playable_counts,
-                &entry_context,
-                errors,
-            );
-        }
-    }
-}
-
-/// Filet de sécurité Rust (miroir de la validation JS) : chaque `ref` doit viser un nœud
-/// existant. Sans ça, une cible pendante n'échouerait qu'au build (`resolve_pending_ref_options`).
-fn validate_ref_targets(
-    entries: &[ProjectEntry],
-    all_ids: &HashSet<&str>,
-    context: &str,
-    errors: &mut Vec<String>,
-) {
-    for entry in entries {
-        match entry.entry_type.as_str() {
-            "ref" => {
-                let entry_name = display_label(&entry.name, "Lien");
-                match entry.target.as_deref().and_then(decode_ref_target_entry_id) {
-                    Some(target_id) if all_ids.contains(target_id) => {}
-                    Some(_) => errors.push(format!(
-                        "{} / {} : la cible de la référence est introuvable.",
-                        context, entry_name
-                    )),
-                    // Cible vide/illisible : déjà signalée par la validation par entrée.
-                    None => {}
-                }
-            }
-            "menu" => {
-                let entry_context =
-                    format!("{} / {}", context, display_label(&entry.name, "Collection"));
-                validate_ref_targets(&entry.children, all_ids, &entry_context, errors);
-            }
-            _ => {}
+            validate_navigation_targets(&entry.children, graph, &entry_context, errors);
         }
     }
 }
@@ -526,6 +715,7 @@ fn validate_ref_targets(
 fn validate_project_entry_for_generation(
     entry: &ProjectEntry,
     context: &str,
+    file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
     let trimmed_id = entry.id.trim();
@@ -544,18 +734,21 @@ fn validate_project_entry_for_generation(
                 errors.push(format!("{} : collection vide.", context));
             }
 
-            if is_imported_continuation_menu(entry)
+            if (is_imported_continuation_menu(entry)
+                || is_preserved_native_helper_shared_entry(entry))
                 && entry.audio.as_deref().unwrap_or("").trim().is_empty()
             {
-                // Continuation native issue d'une sequence de fin : stage de choix silencieux.
+                // Stage natif silencieux préservé depuis l'import.
             } else {
                 if let Some(menu_audio) = required_file_path(
                     entry.audio.as_deref(),
                     &format!("{} : audio menu", context),
                     errors,
                 ) {
-                    if let Err(err) = validate_existing_file_path(menu_audio, context) {
-                        errors.push(err);
+                    if file_validation.checks_disk() {
+                        if let Err(err) = validate_existing_file_path(menu_audio, context) {
+                            errors.push(err);
+                        }
                     }
                 }
             }
@@ -567,8 +760,10 @@ fn validate_project_entry_for_generation(
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
             {
-                if let Err(err) = validate_existing_file_path(menu_image, &menu_image_label) {
-                    errors.push(err);
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_file_path(menu_image, &menu_image_label) {
+                        errors.push(err);
+                    }
                 }
             } else if entry.auto_black_image {
                 // autoBlackImage : le générateur produit un écran noir, aucune image requise.
@@ -581,6 +776,7 @@ fn validate_project_entry_for_generation(
                 validate_project_entry_for_generation(
                     child,
                     &format!("{} / {}", context, child_name),
+                    file_validation,
                     errors,
                 );
             }
@@ -590,13 +786,15 @@ fn validate_project_entry_for_generation(
             if let Some(zip_path) =
                 required_file_path(entry.zip_path.as_deref(), &zip_label, errors)
             {
-                if let Err(err) = validate_existing_pack_path(zip_path) {
-                    errors.push(format!("{} : {}", zip_label, err));
+                if file_validation.checks_disk() {
+                    if let Err(err) = validate_existing_pack_path(zip_path) {
+                        errors.push(format!("{} : {}", zip_label, err));
+                    }
                 }
             }
         }
         "ref" => {
-            // La résolution de la cible est validée globalement (`validate_ref_targets`) ;
+            // La résolution de la cible est validée globalement avec les autres navigations ;
             // ici on exige seulement une cible non vide.
             if entry
                 .target
@@ -615,16 +813,18 @@ fn validate_project_entry_for_generation(
                     context, entry.entry_type
                 ));
             } else {
-                validate_story_entry_for_generation(entry, context, errors);
+                validate_story_entry_for_generation(entry, context, file_validation, errors);
                 if let Some(prompt_audio) = entry
                     .after_playback_prompt_audio
                     .as_deref()
                     .map(str::trim)
                     .filter(|value| !value.is_empty())
                 {
-                    let label = format!("{} : audio fin histoire", context);
-                    if let Err(err) = validate_existing_file_path(prompt_audio, &label) {
-                        errors.push(err);
+                    if file_validation.checks_disk() {
+                        let label = format!("{} : audio fin histoire", context);
+                        if let Err(err) = validate_existing_file_path(prompt_audio, &label) {
+                            errors.push(err);
+                        }
                     }
                 }
             }
@@ -632,7 +832,10 @@ fn validate_project_entry_for_generation(
     }
 }
 
-pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), String> {
+fn validate_project_for_generation_with_mode(
+    project: &Project,
+    file_validation: FileValidation,
+) -> Result<(), String> {
     let mut errors = Vec::new();
     let is_simple = project.project_type.as_deref() == Some("simple");
     let root_entries = project_root_entries(project);
@@ -645,8 +848,10 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
     if let Some(root_audio) =
         required_file_path(project.root_audio.as_deref(), "Audio racine", &mut errors)
     {
-        if let Err(err) = validate_existing_file_path(root_audio, "Audio racine") {
-            errors.push(err);
+        if file_validation.checks_disk() {
+            if let Err(err) = validate_existing_file_path(root_audio, "Audio racine") {
+                errors.push(err);
+            }
         }
     }
 
@@ -655,8 +860,10 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
         "Image de couverture",
         &mut errors,
     ) {
-        if let Err(err) = validate_existing_file_path(root_image, "Image de couverture") {
-            errors.push(err);
+        if file_validation.checks_disk() {
+            if let Err(err) = validate_existing_file_path(root_image, "Image de couverture") {
+                errors.push(err);
+            }
         }
     }
 
@@ -666,8 +873,10 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             "Image bibliotheque (STUdio/LuniiQt)",
             &mut errors,
         ) {
-            if let Err(err) = validate_existing_file_path(thumbnail, "Image bibliotheque") {
-                errors.push(err);
+            if file_validation.checks_disk() {
+                if let Err(err) = validate_existing_file_path(thumbnail, "Image bibliotheque") {
+                    errors.push(err);
+                }
             }
         }
     } else if let Some(thumbnail) = project
@@ -676,8 +885,10 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
         .map(str::trim)
         .filter(|v| !v.is_empty())
     {
-        if let Err(err) = validate_existing_file_path(thumbnail, "Thumbnail") {
-            errors.push(err);
+        if file_validation.checks_disk() {
+            if let Err(err) = validate_existing_file_path(thumbnail, "Thumbnail") {
+                errors.push(err);
+            }
         }
     }
 
@@ -687,8 +898,10 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             "Audio mode nuit",
             &mut errors,
         ) {
-            if let Err(err) = validate_existing_file_path(night_audio, "Audio mode nuit") {
-                errors.push(err);
+            if file_validation.checks_disk() {
+                if let Err(err) = validate_existing_file_path(night_audio, "Audio mode nuit") {
+                    errors.push(err);
+                }
             }
         }
     }
@@ -699,7 +912,12 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             .find(|entry| entry.entry_type != "menu" && entry.entry_type != "zip")
         {
             Some(story) => {
-                validate_story_entry_for_generation(story, "Histoire principale", &mut errors);
+                validate_story_entry_for_generation(
+                    story,
+                    "Histoire principale",
+                    file_validation,
+                    &mut errors,
+                );
             }
             None => errors.push("Histoire principale manquante.".to_string()),
         }
@@ -710,17 +928,23 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
         }
 
         let mut menu_ids = HashSet::new();
+        let mut story_ids = HashSet::new();
+        let mut story_home_step_ids = HashSet::new();
         let mut id_counts = HashMap::new();
         let mut menu_playable_counts = HashMap::new();
         collect_entry_graph_stats(
             &root_entries,
             &mut menu_ids,
+            &mut story_ids,
+            &mut story_home_step_ids,
             &mut id_counts,
             &mut menu_playable_counts,
         );
         collect_entry_graph_stats(
             &shared_entries,
             &mut menu_ids,
+            &mut story_ids,
+            &mut story_home_step_ids,
             &mut id_counts,
             &mut menu_playable_counts,
         );
@@ -737,23 +961,19 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
                 "Identifiant reserve utilise : aucun element ne doit porter l'id root.".to_string(),
             );
         }
-        validate_return_after_play_targets(
-            &root_entries,
-            &menu_ids,
-            &menu_playable_counts,
-            "Racine",
-            &mut errors,
-        );
-        validate_return_after_play_targets(
+        let navigation_graph = NavigationValidationContext {
+            menu_ids: &menu_ids,
+            menu_playable_counts: &menu_playable_counts,
+            story_ids: &story_ids,
+            story_home_step_ids: &story_home_step_ids,
+        };
+        validate_navigation_targets(&root_entries, &navigation_graph, "Racine", &mut errors);
+        validate_navigation_targets(
             &shared_entries,
-            &menu_ids,
-            &menu_playable_counts,
+            &navigation_graph,
             "Éléments partagés",
             &mut errors,
         );
-        let all_ids: HashSet<&str> = id_counts.keys().map(String::as_str).collect();
-        validate_ref_targets(&root_entries, &all_ids, "Racine", &mut errors);
-        validate_ref_targets(&shared_entries, &all_ids, "Éléments partagés", &mut errors);
         let reachable_shared_ids = reachable_shared_entry_ids(&root_entries, &shared_entries);
         validate_shared_entries_reachable(
             &shared_entries,
@@ -764,11 +984,11 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
 
         for entry in &root_entries {
             let entry_name = display_label(&entry.name, "Element racine");
-            validate_project_entry_for_generation(entry, &entry_name, &mut errors);
+            validate_project_entry_for_generation(entry, &entry_name, file_validation, &mut errors);
         }
         for entry in &shared_entries {
             let entry_name = display_label(&entry.name, "Element partage");
-            validate_project_entry_for_generation(entry, &entry_name, &mut errors);
+            validate_project_entry_for_generation(entry, &entry_name, file_validation, &mut errors);
         }
     }
 
@@ -779,10 +999,18 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
     }
 }
 
+pub(crate) fn validate_project_structure_for_generation(project: &Project) -> Result<(), String> {
+    validate_project_for_generation_with_mode(project, FileValidation::StructureOnly)
+}
+
+pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), String> {
+    validate_project_for_generation_with_mode(project, FileValidation::CheckDisk)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::project::GlobalOptions;
+    use crate::domain::project::{AfterPlaybackSequenceStep, EntryControlSettings, GlobalOptions};
 
     fn options() -> GlobalOptions {
         GlobalOptions {
@@ -974,6 +1202,92 @@ mod tests {
         }
     }
 
+    fn pack_project(entries: Vec<ProjectEntry>) -> Project {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = entries;
+        project
+    }
+
+    #[test]
+    fn story_play_missing_navigation_target_blocks_structure() {
+        let mut source = story_entry_with_paths("source", "Source");
+        source.return_after_play = Some("story_play:missing".to_string());
+        let project = pack_project(vec![source]);
+
+        let errors = validate_project_structure_for_generation(&project)
+            .expect_err("story_play:missing doit bloquer");
+
+        assert!(
+            errors.contains("destination de navigation après lecture est introuvable"),
+            "{errors}"
+        );
+    }
+
+    #[test]
+    fn story_missing_navigation_target_blocks_structure() {
+        let mut source = story_entry_with_paths("source", "Source");
+        source.return_on_home = Some("story:missing".to_string());
+        let project = pack_project(vec![source]);
+
+        let errors = validate_project_structure_for_generation(&project)
+            .expect_err("story:missing doit bloquer");
+
+        assert!(
+            errors.contains("destination du bouton Accueil est introuvable"),
+            "{errors}"
+        );
+    }
+
+    #[test]
+    fn story_home_step_target_without_home_step_blocks_structure() {
+        let mut source = story_entry_with_paths("source", "Source");
+        source.title_return_on_home = Some("story_home_step:target".to_string());
+        let target = story_entry_with_paths("target", "Target");
+        let project = pack_project(vec![source, target]);
+
+        let errors = validate_project_structure_for_generation(&project)
+            .expect_err("story_home_step vers une histoire sans home step doit bloquer");
+
+        assert!(errors.contains("retour de fin introuvable"), "{errors}");
+    }
+
+    #[test]
+    fn preserved_native_helper_shared_entry_is_structurally_generable() {
+        let mut project = pack_project(vec![story_entry_with_paths("story-a", "Histoire A")]);
+        project.shared_entries = vec![ProjectEntry {
+            id: "helper".to_string(),
+            entry_type: "menu".to_string(),
+            name: "Helper".to_string(),
+            native_stage_id: Some("helper".to_string()),
+            auto_black_image: true,
+            control_settings: Some(EntryControlSettings {
+                autoplay: Some(true),
+                wheel: Some(false),
+                pause: Some(false),
+                ok: Some(true),
+                home: Some(true),
+            }),
+            children: vec![ref_entry("helper-ref", "story:story-a")],
+            ..ProjectEntry::default()
+        }];
+
+        let errors = validate_project_structure_for_generation(&project)
+            .err()
+            .unwrap_or_default();
+
+        assert!(
+            !errors.contains("élément partagé non utilisé"),
+            "le helper natif préservé ne doit pas être traité comme une entrée partagée orpheline : {errors}"
+        );
+        assert!(
+            !errors.contains("audio menu"),
+            "le helper natif préservé est un stage silencieux valide : {errors}"
+        );
+    }
+
     #[test]
     fn parity_pack_valid_minimal_passes_validation() {
         // Equivalent JSON : pack_valid_minimal. JS = ok, Rust = Ok.
@@ -1081,6 +1395,17 @@ mod tests {
                 entry_type: "story".to_string(),
                 name: "Child".to_string(),
                 return_after_play: Some("story:child".to_string()),
+                after_playback_sequence: vec![AfterPlaybackSequenceStep {
+                    ok_choice_targets: vec!["story:child".to_string()],
+                    home_target: Some("story:child".to_string()),
+                    ..AfterPlaybackSequenceStep::default()
+                }],
+                after_playback_home_step: Some(AfterPlaybackSequenceStep {
+                    ok_target: Some("story:child".to_string()),
+                    ok_choice_targets: vec!["story:child".to_string()],
+                    home_target: Some("story:child".to_string()),
+                    ..AfterPlaybackSequenceStep::default()
+                }),
                 ..ProjectEntry::default()
             }],
             ..ProjectEntry::default()
@@ -1091,6 +1416,32 @@ mod tests {
         assert_eq!(entries[0].children[0].id, "import-sequence-choice-1-child");
         assert_eq!(
             entries[0].children[0].return_after_play.as_deref(),
+            Some("story:import-sequence-choice-1-child")
+        );
+        assert_eq!(
+            entries[0].children[0].after_playback_sequence[0].ok_choice_targets,
+            vec!["story:import-sequence-choice-1-child".to_string()]
+        );
+        assert_eq!(
+            entries[0].children[0].after_playback_sequence[0]
+                .home_target
+                .as_deref(),
+            Some("story:import-sequence-choice-1-child")
+        );
+        let home_step = entries[0].children[0]
+            .after_playback_home_step
+            .as_ref()
+            .expect("home step");
+        assert_eq!(
+            home_step.ok_target.as_deref(),
+            Some("story:import-sequence-choice-1-child")
+        );
+        assert_eq!(
+            home_step.ok_choice_targets,
+            vec!["story:import-sequence-choice-1-child".to_string()]
+        );
+        assert_eq!(
+            home_step.home_target.as_deref(),
             Some("story:import-sequence-choice-1-child")
         );
     }
