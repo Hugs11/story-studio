@@ -317,6 +317,7 @@ fn project_from_imported_entries(
             .unwrap_or("")
             .to_string(),
         root_entries: entries,
+        shared_entries: Vec::new(),
         global_options: GlobalOptions {
             add_silence: false,
             silence_mode: None,

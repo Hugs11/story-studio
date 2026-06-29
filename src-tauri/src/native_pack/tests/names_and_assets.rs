@@ -109,6 +109,8 @@ fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
                 night_mode: false,
             },
             entries: Vec::new(),
+
+            shared_entries: Vec::new(),
         },
         Vec::new(),
         Vec::new(),

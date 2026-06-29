@@ -43,20 +43,33 @@ impl<'a> StoryBuilder<'a> {
         let cover_image = self.asset_name("rootImage")?;
         let cover_stage_id = self.next_id();
         let root_action_id = self.next_id();
+        let shared_action_id = (!project.shared_entries.is_empty()).then(|| self.next_id());
         self.root_action_id = Some(root_action_id.clone());
         self.night_bridge_cache.clear();
 
         // Pré-alloue les action node IDs de tous les menus pour que returnAfterPlay
         // puisse référencer n'importe quel menu indépendamment de l'ordre de build.
         preallocate_menus(&project.entries, &root_action_id, &mut self.menu_prealloc);
+        if let Some(action_id) = shared_action_id.as_deref() {
+            preallocate_menus(&project.shared_entries, action_id, &mut self.menu_prealloc);
+        }
         // Pré-alloue les play stage IDs de toutes les histoires pour les transitions story→story.
         preallocate_story_play_stages(&project.entries, &mut self.story_prealloc);
+        preallocate_story_play_stages(&project.shared_entries, &mut self.story_prealloc);
         preallocate_story_approach_transitions(
             &project.entries,
             &root_action_id,
             &self.menu_prealloc,
             &mut self.story_prealloc,
         );
+        if let Some(action_id) = shared_action_id.as_deref() {
+            preallocate_story_approach_transitions(
+                &project.shared_entries,
+                action_id,
+                &self.menu_prealloc,
+                &mut self.story_prealloc,
+            );
+        }
 
         let root_targets = if project.project_type == "simple" {
             vec![self.build_simple_story(project, &root_action_id)?]
@@ -66,6 +79,16 @@ impl<'a> StoryBuilder<'a> {
 
         if root_targets.is_empty() {
             return Err("Aucune entree native construite pour le projet.".to_string());
+        }
+
+        if let Some(action_id) = shared_action_id.as_deref() {
+            let shared_targets = self.build_shared_entries(&project.shared_entries, action_id)?;
+            self.action_nodes.push(ActionNode {
+                id: action_id.to_string(),
+                name: action_node_name(),
+                options: shared_targets,
+                position: zero_position(),
+            });
         }
 
         self.action_nodes.push(ActionNode {

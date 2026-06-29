@@ -44,6 +44,8 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -197,6 +199,8 @@ fn night_stage_preserves_story_specific_return_after_play() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -339,6 +343,8 @@ fn night_mode_return_next_story_creates_story_specific_night_stages() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -482,6 +488,8 @@ fn night_mode_return_global_menu_reuses_single_night_stage() {
                     ..Default::default()
                 }),
             ],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -613,6 +621,8 @@ fn night_mode_return_story_target_routes_to_story_title() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -712,6 +722,8 @@ fn legacy_parachute_preserves_declared_night_mode_available_when_bridge_not_dete
             night_mode: false,
         },
         entries: vec![],
+
+        shared_entries: Vec::new(),
     };
 
     let assets = vec![

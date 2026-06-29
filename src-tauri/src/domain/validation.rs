@@ -103,6 +103,12 @@ pub(crate) fn project_root_entries(project: &Project) -> Vec<ProjectEntry> {
     entries
 }
 
+pub(crate) fn project_shared_entries(project: &Project) -> Vec<ProjectEntry> {
+    let mut entries = project.shared_entries.clone();
+    normalize_imported_continuation_clones(&mut entries);
+    entries
+}
+
 fn is_imported_continuation_menu(entry: &ProjectEntry) -> bool {
     entry.entry_type == "menu"
         && entry.id.contains("-sequence-choice-")
@@ -234,6 +240,163 @@ fn collect_entry_graph_stats(
                     .insert(entry_id.to_string(), count_playable_descendants(entry));
             }
             collect_entry_graph_stats(&entry.children, menu_ids, id_counts, menu_playable_counts);
+        }
+    }
+}
+
+fn collect_entry_ids<'a>(entries: &'a [ProjectEntry], ids: &mut HashSet<&'a str>) {
+    for entry in entries {
+        let entry_id = entry.id.trim();
+        if !entry_id.is_empty() {
+            ids.insert(entry_id);
+        }
+        if entry.entry_type == "menu" {
+            collect_entry_ids(&entry.children, ids);
+        }
+    }
+}
+
+fn push_navigation_target_id<'a>(target: Option<&'a String>, ids: &mut Vec<&'a str>) {
+    if let Some(target_id) = target
+        .map(String::as_str)
+        .and_then(decode_ref_target_entry_id)
+    {
+        ids.push(target_id);
+    }
+}
+
+fn collect_navigation_target_ids<'a>(entry: &'a ProjectEntry, ids: &mut Vec<&'a str>) {
+    if entry.entry_type == "ref" {
+        push_navigation_target_id(entry.target.as_ref(), ids);
+    }
+    push_navigation_target_id(entry.return_after_play.as_ref(), ids);
+    push_navigation_target_id(entry.return_on_home.as_ref(), ids);
+    if !entry.title_return_on_home_none {
+        push_navigation_target_id(entry.title_return_on_home.as_ref(), ids);
+    }
+    push_navigation_target_id(entry.after_playback_prompt_ok_target.as_ref(), ids);
+    if !entry.after_playback_prompt_home_none {
+        push_navigation_target_id(entry.after_playback_prompt_home_target.as_ref(), ids);
+    }
+    for step in &entry.after_playback_sequence {
+        push_navigation_target_id(step.ok_target.as_ref(), ids);
+        for target in &step.ok_choice_targets {
+            if let Some(target_id) = decode_ref_target_entry_id(target) {
+                ids.push(target_id);
+            }
+        }
+        if !step.home_follows_ok && !step.home_none {
+            push_navigation_target_id(step.home_target.as_ref(), ids);
+        }
+    }
+    if let Some(step) = &entry.after_playback_home_step {
+        push_navigation_target_id(step.ok_target.as_ref(), ids);
+        for target in &step.ok_choice_targets {
+            if let Some(target_id) = decode_ref_target_entry_id(target) {
+                ids.push(target_id);
+            }
+        }
+        if !step.home_follows_ok && !step.home_none {
+            push_navigation_target_id(step.home_target.as_ref(), ids);
+        }
+    }
+}
+
+fn find_entry_by_id<'a>(entries: &'a [ProjectEntry], entry_id: &str) -> Option<&'a ProjectEntry> {
+    for entry in entries {
+        if entry.id.trim() == entry_id {
+            return Some(entry);
+        }
+        if entry.entry_type == "menu" {
+            if let Some(found) = find_entry_by_id(&entry.children, entry_id) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+fn mark_entry_reachable(
+    entry: &ProjectEntry,
+    shared_ids: &HashSet<&str>,
+    reachable_shared_ids: &mut HashSet<String>,
+    queue: &mut Vec<ProjectEntry>,
+) {
+    let entry_id = entry.id.trim();
+    if !entry_id.is_empty() && shared_ids.contains(entry_id) {
+        reachable_shared_ids.insert(entry_id.to_string());
+    }
+    queue.push(entry.clone());
+    if entry.entry_type == "menu" {
+        for child in &entry.children {
+            mark_entry_reachable(child, shared_ids, reachable_shared_ids, queue);
+        }
+    }
+}
+
+fn reachable_shared_entry_ids(
+    root_entries: &[ProjectEntry],
+    shared_entries: &[ProjectEntry],
+) -> HashSet<String> {
+    let mut shared_ids = HashSet::new();
+    collect_entry_ids(shared_entries, &mut shared_ids);
+    if shared_ids.is_empty() {
+        return HashSet::new();
+    }
+
+    let mut reachable = HashSet::new();
+    let mut processed = HashSet::new();
+    let mut queue = Vec::new();
+    for entry in root_entries {
+        mark_entry_reachable(entry, &shared_ids, &mut reachable, &mut queue);
+    }
+
+    while let Some(entry) = queue.pop() {
+        let entry_id = entry.id.trim().to_string();
+        if !entry_id.is_empty() && !processed.insert(entry_id) {
+            continue;
+        }
+        let mut target_ids = Vec::new();
+        collect_navigation_target_ids(&entry, &mut target_ids);
+        for target_id in target_ids {
+            if !shared_ids.contains(target_id) {
+                continue;
+            }
+            if let Some(target) = find_entry_by_id(shared_entries, target_id) {
+                mark_entry_reachable(target, &shared_ids, &mut reachable, &mut queue);
+            }
+        }
+    }
+
+    reachable
+}
+
+fn validate_shared_entries_reachable(
+    entries: &[ProjectEntry],
+    reachable_ids: &HashSet<String>,
+    context: &str,
+    errors: &mut Vec<String>,
+) {
+    for entry in entries {
+        let entry_name = display_label(
+            &entry.name,
+            if entry.entry_type == "menu" {
+                "Collection"
+            } else {
+                "Element"
+            },
+        );
+        let entry_context = format!("{} / {}", context, entry_name);
+        if !entry.id.trim().is_empty() && !reachable_ids.contains(entry.id.trim()) {
+            errors.push(format!("{} : élément partagé non utilisé.", entry_context));
+        }
+        if entry.entry_type == "menu" {
+            validate_shared_entries_reachable(
+                &entry.children,
+                reachable_ids,
+                &entry_context,
+                errors,
+            );
         }
     }
 }
@@ -473,6 +636,7 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
     let mut errors = Vec::new();
     let is_simple = project.project_type.as_deref() == Some("simple");
     let root_entries = project_root_entries(project);
+    let shared_entries = project_shared_entries(project);
 
     if project.project_type.is_none() {
         errors.push("Aucun type de projet selectionne.".to_string());
@@ -554,6 +718,12 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             &mut id_counts,
             &mut menu_playable_counts,
         );
+        collect_entry_graph_stats(
+            &shared_entries,
+            &mut menu_ids,
+            &mut id_counts,
+            &mut menu_playable_counts,
+        );
         for (entry_id, count) in id_counts.iter() {
             if *count > 1 {
                 errors.push(format!(
@@ -574,11 +744,30 @@ pub(crate) fn validate_project_for_generation(project: &Project) -> Result<(), S
             "Racine",
             &mut errors,
         );
+        validate_return_after_play_targets(
+            &shared_entries,
+            &menu_ids,
+            &menu_playable_counts,
+            "Éléments partagés",
+            &mut errors,
+        );
         let all_ids: HashSet<&str> = id_counts.keys().map(String::as_str).collect();
         validate_ref_targets(&root_entries, &all_ids, "Racine", &mut errors);
+        validate_ref_targets(&shared_entries, &all_ids, "Éléments partagés", &mut errors);
+        let reachable_shared_ids = reachable_shared_entry_ids(&root_entries, &shared_entries);
+        validate_shared_entries_reachable(
+            &shared_entries,
+            &reachable_shared_ids,
+            "Éléments partagés",
+            &mut errors,
+        );
 
         for entry in &root_entries {
             let entry_name = display_label(&entry.name, "Element racine");
+            validate_project_entry_for_generation(entry, &entry_name, &mut errors);
+        }
+        for entry in &shared_entries {
+            let entry_name = display_label(&entry.name, "Element partage");
             validate_project_entry_for_generation(entry, &entry_name, &mut errors);
         }
     }
@@ -620,6 +809,7 @@ mod tests {
             pack_version: 1,
             pack_description: String::new(),
             root_entries: Vec::new(),
+            shared_entries: Vec::new(),
             global_options: options(),
         }
     }
@@ -683,7 +873,9 @@ mod tests {
                 ref_entry("ref-1", "story:story-a"),
             ],
         )];
-        let errors = validate_project_for_generation(&project).err().unwrap_or_default();
+        let errors = validate_project_for_generation(&project)
+            .err()
+            .unwrap_or_default();
         assert!(
             !errors.contains("non pris en charge"),
             "une ref ne doit plus etre rejetee : {errors}"
@@ -718,13 +910,51 @@ mod tests {
         project.root_image = Some("valid/root.png".to_string());
         project.root_entries = vec![
             story_entry_with_paths("story-a", "Histoire A"),
-            menu_with("menu-links", "Liens", vec![ref_entry("ref-1", "story:story-a")]),
+            menu_with(
+                "menu-links",
+                "Liens",
+                vec![ref_entry("ref-1", "story:story-a")],
+            ),
         ];
-        let errors = validate_project_for_generation(&project).err().unwrap_or_default();
+        let errors = validate_project_for_generation(&project)
+            .err()
+            .unwrap_or_default();
         assert!(
             !errors.contains("collection vide"),
             "un dossier de liens valides n'est pas vide : {errors}"
         );
+    }
+
+    #[test]
+    fn shared_story_targeted_by_root_ref_is_not_reported_unused() {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = vec![ref_entry("ref-1", "story:shared-story")];
+        project.shared_entries = vec![story_entry_with_paths("shared-story", "Scene commune")];
+
+        let errors = validate_project_for_generation(&project)
+            .err()
+            .unwrap_or_default();
+        assert!(
+            !errors.contains("élément partagé non utilisé"),
+            "la cible partagee est raccordee : {errors}"
+        );
+    }
+
+    #[test]
+    fn unused_shared_story_blocks_generation() {
+        let mut project = base_project("pack");
+        project.root_audio = Some("valid/root.mp3".to_string());
+        project.root_image = Some("valid/root.png".to_string());
+        project.thumbnail_image = Some("valid/thumb.png".to_string());
+        project.root_entries = vec![story_entry_with_paths("story-a", "Histoire A")];
+        project.shared_entries = vec![story_entry_with_paths("shared-story", "Scene commune")];
+
+        let errors = validate_project_for_generation(&project)
+            .expect_err("un element partage non utilise doit bloquer");
+        assert!(errors.contains("élément partagé non utilisé"), "{errors}");
     }
 
     // ---- Parite avec le test JS scripts/validationParity.test.mjs ----

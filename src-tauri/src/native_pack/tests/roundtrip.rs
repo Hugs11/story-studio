@@ -86,6 +86,8 @@ fn generated_basic_pack_roundtrips_to_project_entries() {
                 item_image: Some("item.png".to_string()),
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             temp_prepared_asset(&base, "rootAudio", "root.mp3"),
@@ -144,6 +146,8 @@ fn generated_night_mode_pack_roundtrips_end_node_metadata() {
                 })],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             temp_prepared_asset(&base, "rootAudio", "root.mp3"),
@@ -362,9 +366,21 @@ fn graph_projection_excludes_home_only_global_stage_from_tree() {
     let opts = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
     zip.start_file("story.json", opts).expect("start story");
-    zip.write_all(story_json.to_string().as_bytes()).expect("write story");
-    for asset in ["root.mp3", "cover.png", "play.mp3", "play.png", "a.mp3", "a.png", "b.mp3", "b.png", "night.mp3"] {
-        zip.start_file(format!("assets/{asset}"), opts).expect("start asset");
+    zip.write_all(story_json.to_string().as_bytes())
+        .expect("write story");
+    for asset in [
+        "root.mp3",
+        "cover.png",
+        "play.mp3",
+        "play.png",
+        "a.mp3",
+        "a.png",
+        "b.mp3",
+        "b.png",
+        "night.mp3",
+    ] {
+        zip.start_file(format!("assets/{asset}"), opts)
+            .expect("start asset");
         zip.write_all(asset.as_bytes()).expect("write asset");
     }
     zip.finish().expect("finish zip");
@@ -572,6 +588,8 @@ fn menu_reference_option_resolves_to_existing_target_stage_without_ghost() {
                 children,
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         }
     };
 
@@ -634,8 +652,8 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
     let b_label = scoped_label_id(&menu_label, "story-b", "Histoire B");
     let c_label = scoped_label_id(&menu_label, "story-c", "Histoire C");
 
-    let prompt_step = |id: &str, name: &str, autoplay: bool, ok: bool, wheel: bool| {
-        CanonicalAfterPlaybackStep {
+    let prompt_step =
+        |id: &str, name: &str, autoplay: bool, ok: bool, wheel: bool| CanonicalAfterPlaybackStep {
             id: id.to_string(),
             name: name.to_string(),
             audio: Some(format!("{id}.mp3")),
@@ -652,8 +670,7 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
             home_target: None,
             home_follows_ok: false,
             home_none: true,
-        }
-    };
+        };
 
     let make_project = |with_choice: bool| {
         // Dernière étape : un CHOIX entre deux destinations existantes (convergence), ou
@@ -662,8 +679,10 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
         // résolue en ligne contre des stages déjà bâtis (refs arrière).
         let mut last = prompt_step("ensuite", "Et ensuite ?", false, true, true);
         if with_choice {
-            last.ok_choice_targets =
-                vec!["story_play:story-b".to_string(), "story_play:story-c".to_string()];
+            last.ok_choice_targets = vec![
+                "story_play:story-b".to_string(),
+                "story_play:story-c".to_string(),
+            ];
         } else {
             last.ok_target = Some("story_play:story-b".to_string());
         }
@@ -711,6 +730,8 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         }
     };
 
@@ -743,14 +764,21 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
     // Les deux étapes de séquence ont bien généré leurs stages.
     for step_name in ["Cloche", "Et ensuite ?"] {
         assert!(
-            document.stage_nodes.iter().any(|stage| stage.name == step_name),
+            document
+                .stage_nodes
+                .iter()
+                .any(|stage| stage.name == step_name),
             "étape de séquence « {step_name} » absente du document généré",
         );
     }
 
     // Le choix de convergence ajoute exactement un action node (vs la variante cible unique).
-    let multi_option_actions =
-        |doc: &StoryDocument| doc.action_nodes.iter().filter(|a| a.options.len() >= 2).count();
+    let multi_option_actions = |doc: &StoryDocument| {
+        doc.action_nodes
+            .iter()
+            .filter(|a| a.options.len() >= 2)
+            .count()
+    };
     let document_single =
         build_story_document(&report_for(make_project(false), assets(), Vec::new()))
             .expect("build with single target");
@@ -764,7 +792,9 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
     let imported = generated_zip_import(&base, make_project(true), assets());
     assert_eq!(imported["title"], "Carrefour Sequence");
     assert!(
-        imported["entries"].as_array().is_some_and(|entries| !entries.is_empty()),
+        imported["entries"]
+            .as_array()
+            .is_some_and(|entries| !entries.is_empty()),
         "le pack ré-importé doit exposer des entrées",
     );
 
@@ -804,7 +834,10 @@ fn end_sequence_convergence_choice_resolves_forward_references() {
                 Some("story_play:story-b".to_string())
             },
             ok_choice_targets: if with_choice {
-                vec!["story_play:story-b".to_string(), "story_play:story-c".to_string()]
+                vec![
+                    "story_play:story-b".to_string(),
+                    "story_play:story-c".to_string(),
+                ]
             } else {
                 Vec::new()
             },
@@ -852,6 +885,8 @@ fn end_sequence_convergence_choice_resolves_forward_references() {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         }
     };
 
@@ -873,7 +908,10 @@ fn end_sequence_convergence_choice_resolves_forward_references() {
     };
 
     let multi = |doc: &StoryDocument| {
-        doc.action_nodes.iter().filter(|action| action.options.len() >= 2).count()
+        doc.action_nodes
+            .iter()
+            .filter(|action| action.options.len() >= 2)
+            .count()
     };
     let with_choice = build_story_document(&report_for(make_project(true), assets(), Vec::new()))
         .expect("forward choice builds");
@@ -937,6 +975,8 @@ fn hosted_convergence_choice_tree_roundtrips_via_canonical() {
             ],
             ..Default::default()
         })],
+
+        shared_entries: Vec::new(),
     };
 
     let assets = vec![
@@ -968,7 +1008,10 @@ fn hosted_convergence_choice_tree_roundtrips_via_canonical() {
         .iter()
         .find(|stage| stage.name.contains("Histoire A") && !stage.name.contains("Titre"))
         .expect("stage de lecture de A");
-    let a_ok = a_play.ok_transition.as_ref().expect("A a une transition de fin");
+    let a_ok = a_play
+        .ok_transition
+        .as_ref()
+        .expect("A a une transition de fin");
     let target_uuid = action_by_id
         .get(a_ok.action_node.as_str())
         .and_then(|action| action.options.get(a_ok.option_index as usize))

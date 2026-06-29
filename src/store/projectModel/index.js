@@ -1,7 +1,7 @@
 import { makeId, normalizeMenuEntry, normalizeRefEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
 import { refTargetEntryId } from '../navigationTargets.js';
 
-function buildProjectIndexEntries(entries, ancestors, level, index) {
+function buildProjectIndexEntries(entries, ancestors, level, index, scope = 'root') {
   let playableCount = 0;
 
   for (const entry of entries ?? []) {
@@ -16,6 +16,8 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
       type: entry.type,
       level,
       entry,
+      path,
+      scope,
     });
 
     if (entryId) {
@@ -34,7 +36,7 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
 
     let entryPlayableCount = 0;
     if (entry.type === 'menu') {
-      entryPlayableCount = buildProjectIndexEntries(entry.children ?? [], path, level + 1, index);
+      entryPlayableCount = buildProjectIndexEntries(entry.children ?? [], path, level + 1, index, scope);
     } else if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'ref') {
       // Une `ref` est un choix navigable (vers un nœud existant) → elle compte comme jouable
       // (sinon un dossier de liens serait considéré « vide »). Cible pendante : signalée à part.
@@ -62,9 +64,11 @@ export function buildProjectIndex(project) {
     menuEntries: [],
     firstSimpleStory: null,
     rootPlayableCount: 0,
+    sharedPlayableCount: 0,
   };
 
-  index.rootPlayableCount = buildProjectIndexEntries(project?.rootEntries ?? [], [], 1, index);
+  index.rootPlayableCount = buildProjectIndexEntries(project?.rootEntries ?? [], [], 1, index, 'root');
+  index.sharedPlayableCount = buildProjectIndexEntries(project?.sharedEntries ?? [], [], 1, index, 'shared');
   return index;
 }
 
@@ -118,19 +122,43 @@ export function deepCloneEntry(entry) {
 export function findEntryById(project, entryId, projectIndex = null) {
   if (entryId === 'root') return null;
   if (projectIndex) return projectIndex.entryById.get(entryId) ?? null;
-  return extractEntry(project.rootEntries ?? [], entryId);
+  return extractEntry(project.rootEntries ?? [], entryId)
+    ?? extractEntry(project.sharedEntries ?? [], entryId);
 }
 
 export function findParentMenuId(project, entryId, projectIndex = null) {
   if (projectIndex) return projectIndex.parentMenuById.get(entryId) ?? null;
   let parentId = null;
-  walkEntries(project.rootEntries ?? [], (entry, ancestors) => {
+  for (const entries of [project.rootEntries ?? [], project.sharedEntries ?? []]) {
+    walkEntries(entries, (entry, ancestors) => {
+      if (entry.id === entryId) {
+        const directParent = ancestors[ancestors.length - 1] ?? null;
+        parentId = directParent?.type === 'menu' ? directParent.id : null;
+      }
+    });
+    if (parentId) return parentId;
+  }
+  return parentId;
+}
+
+export function findEntryScope(project, entryId, projectIndex = null) {
+  if (!entryId || entryId === 'root') return null;
+  if (projectIndex) {
+    return projectIndex.flatEntries.find((flat) => flat.id === entryId)?.scope ?? null;
+  }
+  let scope = null;
+  walkEntries(project.rootEntries ?? [], (entry) => {
     if (entry.id === entryId) {
-      const directParent = ancestors[ancestors.length - 1] ?? null;
-      parentId = directParent?.type === 'menu' ? directParent.id : null;
+      scope = 'root';
     }
   });
-  return parentId;
+  if (scope) return scope;
+  walkEntries(project.sharedEntries ?? [], (entry) => {
+    if (entry.id === entryId) {
+      scope = 'shared';
+    }
+  });
+  return scope;
 }
 
 export function findEntryPath(project, entryId, projectIndex = null) {
@@ -149,7 +177,7 @@ export function findEntryPath(project, entryId, projectIndex = null) {
     return null;
   }
 
-  return visit(project.rootEntries ?? []);
+  return visit(project.rootEntries ?? []) ?? visit(project.sharedEntries ?? []);
 }
 
 export function buildSelectedNode(project, selectedId, projectIndex = null) {
@@ -174,12 +202,13 @@ export function buildSelectedNode(project, selectedId, projectIndex = null) {
 export function visitProjectEntries(project, visitor, projectIndex = null) {
   if (projectIndex) {
     for (const flatEntry of projectIndex.flatEntries) {
-      const path = projectIndex.pathById.get(flatEntry.id) ?? [flatEntry.entry];
+      const path = flatEntry.path ?? projectIndex.pathById.get(flatEntry.id) ?? [flatEntry.entry];
       visitor(flatEntry.entry, path.slice(0, -1));
     }
     return;
   }
   walkEntries(project.rootEntries ?? [], visitor);
+  walkEntries(project.sharedEntries ?? [], visitor);
 }
 
 // Ids de l'entrée + tout son sous-arbre (ce qui disparaît si on la supprime).
@@ -219,7 +248,7 @@ export function collectAllMenus(project, projectIndex = null) {
     }));
   }
   const menus = [];
-  walkEntries(project.rootEntries ?? [], (entry) => {
+  visitProjectEntries(project, (entry) => {
     if (entry.type === 'menu') {
       menus.push({
         id: entry.id,
@@ -245,7 +274,7 @@ export function collectAllStories(project, projectIndex = null) {
     }
     return stories;
   }
-  walkEntries(project.rootEntries ?? [], (entry) => {
+  visitProjectEntries(project, (entry) => {
     if (entry.type === 'story') {
       stories.push({
         id: entry.id,
@@ -310,6 +339,7 @@ export function* walkProjectMediaReferences(project) {
   yield* walkRootReferences(project);
   yield* walkNativeGraphReferences(project.nativeGraph, 'graphe natif (racine)');
   yield* walkEntriesMedia(project.rootEntries ?? []);
+  yield* walkEntriesMedia(project.sharedEntries ?? []);
 }
 
 function* walkEntriesMedia(entries) {
