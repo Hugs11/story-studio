@@ -393,8 +393,16 @@ pub(super) fn walk_story_doc_to_entries(
     }
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
-    let needs_native_graph_projection = unresolved_transitions_detected && has_branching_graph;
-    let graph_import_projection = if has_branching_graph && !unresolved_transitions_detected {
+    let graph_import_safe_unresolved =
+        unresolved_transitions_are_square_one_home_only(&unresolved_transitions, sq_id);
+    let graph_import_existing_unresolved =
+        unresolved_transition_targets_exist(&unresolved_transitions, &stages);
+    let graph_import_can_model = !unresolved_transitions_detected
+        || graph_import_safe_unresolved
+        || graph_import_existing_unresolved;
+    let needs_native_graph_projection =
+        unresolved_transitions_detected && has_branching_graph && !graph_import_can_model;
+    let graph_import_projection = if has_branching_graph && graph_import_can_model {
         serde_json::from_value::<StoryDocument>(doc.clone())
             .ok()
             .and_then(|document| project_story_graph_values(&document, assets).ok())
@@ -427,11 +435,12 @@ pub(super) fn walk_story_doc_to_entries(
     let auto_next_detected = !uses_graph_import_projection
         && !needs_native_graph_projection
         && extract_auto_next_return_overrides(&mut entries);
-    let reported_unresolved_transitions = if needs_native_graph_projection {
-        Vec::new()
-    } else {
-        unresolved_transitions
-    };
+    let reported_unresolved_transitions =
+        if needs_native_graph_projection || uses_graph_import_projection {
+            Vec::new()
+        } else {
+            unresolved_transitions
+        };
     let reported_unresolved_transitions_detected = !reported_unresolved_transitions.is_empty();
 
     let pack_version = doc.get("version").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
@@ -461,6 +470,36 @@ pub(super) fn walk_story_doc_to_entries(
         "sharedEntries": shared_entries,
         "entries": entries
     }))
+}
+
+fn unresolved_transitions_are_square_one_home_only(
+    unresolved_transitions: &[serde_json::Value],
+    square_one_id: &str,
+) -> bool {
+    !unresolved_transitions.is_empty()
+        && unresolved_transitions.iter().all(|transition| {
+            transition
+                .get("field")
+                .and_then(|value| value.as_str())
+                .is_some_and(|field| field.contains("Home"))
+                && transition
+                    .get("targetStageId")
+                    .and_then(|value| value.as_str())
+                    == Some(square_one_id)
+        })
+}
+
+fn unresolved_transition_targets_exist(
+    unresolved_transitions: &[serde_json::Value],
+    stages: &HashMap<&str, &serde_json::Value>,
+) -> bool {
+    !unresolved_transitions.is_empty()
+        && unresolved_transitions.iter().all(|transition| {
+            transition
+                .get("targetStageId")
+                .and_then(|value| value.as_str())
+                .is_some_and(|stage_id| stages.contains_key(stage_id))
+        })
 }
 
 #[allow(clippy::too_many_arguments)]

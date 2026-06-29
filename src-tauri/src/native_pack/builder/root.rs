@@ -215,10 +215,21 @@ impl<'a> StoryBuilder<'a> {
                     shared_index,
                     play_return_transition.clone(),
                 );
+                let title_home_transition =
+                    if story.title_return_on_home.is_some() || story.title_return_on_home_none {
+                        self.resolve_title_home_transition(
+                            story,
+                            siblings,
+                            shared_index,
+                            approach_transition.clone(),
+                        )
+                    } else {
+                        None
+                    };
                 self.build_story_branch(
                     story,
                     &scoped_label_id("shared", &story.id, &story.name),
-                    None,
+                    title_home_transition,
                     play_home_transition,
                     play_return_transition,
                     night_bridge_return,

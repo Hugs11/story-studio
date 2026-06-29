@@ -4,11 +4,15 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct StoryDocument {
+    #[serde(default)]
     pub(crate) title: String,
+    #[serde(default)]
     pub(crate) version: i32,
+    #[serde(default)]
     pub(crate) description: String,
+    #[serde(default = "default_format")]
     pub(crate) format: String,
-    #[serde(rename = "nightModeAvailable")]
+    #[serde(rename = "nightModeAvailable", default)]
     pub(crate) night_mode_available: bool,
     #[serde(rename = "actionNodes")]
     pub(crate) action_nodes: Vec<ActionNode>,
@@ -19,6 +23,7 @@ pub(crate) struct StoryDocument {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ActionNode {
     pub(crate) id: String,
+    #[serde(default = "action_node_name")]
     pub(crate) name: String,
     pub(crate) options: Vec<String>,
     #[serde(default = "zero_position")]
@@ -28,8 +33,9 @@ pub(crate) struct ActionNode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct StageNode {
     pub(crate) uuid: String,
+    #[serde(default)]
     pub(crate) name: String,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", default = "default_stage_type")]
     pub(crate) stage_type: String,
     #[serde(rename = "squareOne", default)]
     pub(crate) square_one: bool,
@@ -66,6 +72,18 @@ pub(crate) struct Transition {
 pub(crate) struct Position {
     pub(crate) x: Number,
     pub(crate) y: Number,
+}
+
+fn default_format() -> String {
+    "v1".to_string()
+}
+
+fn default_stage_type() -> String {
+    "stage".to_string()
+}
+
+fn action_node_name() -> String {
+    "Action node".to_string()
 }
 
 pub(crate) struct AfterPlaybackSequenceTransitions {
