@@ -66,6 +66,7 @@ fn builds_story_title_without_item_audio() {
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "story-id".to_string(),
             name: "Story Without Item Audio".to_string(),
+            native_stage_id: None,
             audio: Some("story.mp3".to_string()),
             item_audio: None,
             item_image: Some("item.png".to_string()),
@@ -190,6 +191,416 @@ fn root_ref_can_target_shared_story() {
 }
 
 #[test]
+fn imported_direct_story_stage_stays_combined() {
+    let project = CanonicalProject {
+        name: "Direct native story".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Story(CanonicalStory {
+            id: "direct".to_string(),
+            name: "Direct".to_string(),
+            native_stage_id: Some("native-direct".to_string()),
+            audio: Some("direct.mp3".to_string()),
+            autoplay: true,
+            return_on_home_none: true,
+            ..Default::default()
+        })],
+        shared_entries: Vec::new(),
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Direct#direct/storyAudio", "direct.mp3"),
+        ],
+        Vec::new(),
+    ))
+    .expect("direct native story document");
+
+    assert!(document
+        .stage_nodes
+        .iter()
+        .any(|stage| stage.name == "Direct"));
+    assert!(!document
+        .stage_nodes
+        .iter()
+        .any(|stage| stage.name == "Titre - Direct"));
+    assert!(!document
+        .stage_nodes
+        .iter()
+        .any(|stage| stage.name == "Histoire - Direct"));
+}
+
+#[test]
+fn imported_title_home_story_play_targets_playback_stage() {
+    let project = CanonicalProject {
+        name: "Title home to play".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "menu".to_string(),
+            name: "Menu".to_string(),
+            audio: Some("menu.mp3".to_string()),
+            auto_black_image: true,
+            children: vec![
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "source".to_string(),
+                    name: "Source".to_string(),
+                    audio: Some("source.mp3".to_string()),
+                    item_audio: Some("source-title.mp3".to_string()),
+                    item_image: Some("source.png".to_string()),
+                    title_return_on_home: Some("story_play:target".to_string()),
+                    ..Default::default()
+                }),
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "target".to_string(),
+                    name: "Target".to_string(),
+                    audio: Some("target.mp3".to_string()),
+                    item_audio: Some("target-title.mp3".to_string()),
+                    item_image: Some("target.png".to_string()),
+                    ..Default::default()
+                }),
+            ],
+            ..Default::default()
+        })],
+        shared_entries: Vec::new(),
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Menu#menu/menuAudio", "menu.mp3"),
+            prepared_asset("root/Menu#menu/Source#source/itemAudio", "source-title.mp3"),
+            prepared_asset("root/Menu#menu/Source#source/itemImage", "source.png"),
+            prepared_asset("root/Menu#menu/Source#source/storyAudio", "source.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemAudio", "target-title.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemImage", "target.png"),
+            prepared_asset("root/Menu#menu/Target#target/storyAudio", "target.mp3"),
+        ],
+        Vec::new(),
+    ))
+    .expect("title home direct playback document");
+
+    let source_title = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Titre - Source")
+        .expect("source title");
+    let target_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Target")
+        .expect("target playback");
+    let home_action = document
+        .action_nodes
+        .iter()
+        .find(|action| {
+            Some(action.id.as_str())
+                == source_title
+                    .home_transition
+                    .as_ref()
+                    .map(|transition| transition.action_node.as_str())
+        })
+        .expect("source title home action");
+
+    assert_eq!(
+        home_action
+            .options
+            .get(source_title.home_transition.as_ref().unwrap().option_index as usize)
+            .map(String::as_str),
+        Some(target_play.uuid.as_str())
+    );
+}
+
+#[test]
+fn imported_menu_home_story_play_targets_playback_stage() {
+    let project = CanonicalProject {
+        name: "Menu home to play".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "menu".to_string(),
+            name: "Menu".to_string(),
+            audio: Some("menu.mp3".to_string()),
+            auto_black_image: true,
+            return_on_home: Some("story_play:target".to_string()),
+            children: vec![CanonicalEntry::Story(CanonicalStory {
+                id: "target".to_string(),
+                name: "Target".to_string(),
+                audio: Some("target.mp3".to_string()),
+                item_audio: Some("target-title.mp3".to_string()),
+                item_image: Some("target.png".to_string()),
+                ..Default::default()
+            })],
+            ..Default::default()
+        })],
+        shared_entries: Vec::new(),
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Menu#menu/menuAudio", "menu.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemAudio", "target-title.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemImage", "target.png"),
+            prepared_asset("root/Menu#menu/Target#target/storyAudio", "target.mp3"),
+        ],
+        Vec::new(),
+    ))
+    .expect("menu home direct playback document");
+
+    let menu_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Menu")
+        .expect("menu stage");
+    let target_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Target")
+        .expect("target playback");
+    let home_action = document
+        .action_nodes
+        .iter()
+        .find(|action| {
+            Some(action.id.as_str())
+                == menu_stage
+                    .home_transition
+                    .as_ref()
+                    .map(|transition| transition.action_node.as_str())
+        })
+        .expect("menu home action");
+
+    assert_eq!(
+        home_action
+            .options
+            .get(menu_stage.home_transition.as_ref().unwrap().option_index as usize)
+            .map(String::as_str),
+        Some(target_play.uuid.as_str())
+    );
+}
+
+#[test]
+fn imported_story_home_story_play_targets_playback_stage() {
+    let project = CanonicalProject {
+        name: "Story home to play".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "menu".to_string(),
+            name: "Menu".to_string(),
+            audio: Some("menu.mp3".to_string()),
+            auto_black_image: true,
+            children: vec![
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "source".to_string(),
+                    name: "Source".to_string(),
+                    native_stage_id: Some("native-source-title".to_string()),
+                    audio: Some("source.mp3".to_string()),
+                    item_audio: Some("source-title.mp3".to_string()),
+                    item_image: Some("source.png".to_string()),
+                    return_on_home: Some("story_play:target".to_string()),
+                    ..Default::default()
+                }),
+                CanonicalEntry::Story(CanonicalStory {
+                    id: "target".to_string(),
+                    name: "Target".to_string(),
+                    audio: Some("target.mp3".to_string()),
+                    item_audio: Some("target-title.mp3".to_string()),
+                    item_image: Some("target.png".to_string()),
+                    ..Default::default()
+                }),
+            ],
+            ..Default::default()
+        })],
+        shared_entries: Vec::new(),
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Menu#menu/menuAudio", "menu.mp3"),
+            prepared_asset("root/Menu#menu/Source#source/itemAudio", "source-title.mp3"),
+            prepared_asset("root/Menu#menu/Source#source/itemImage", "source.png"),
+            prepared_asset("root/Menu#menu/Source#source/storyAudio", "source.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemAudio", "target-title.mp3"),
+            prepared_asset("root/Menu#menu/Target#target/itemImage", "target.png"),
+            prepared_asset("root/Menu#menu/Target#target/storyAudio", "target.mp3"),
+        ],
+        Vec::new(),
+    ))
+    .expect("story home direct playback document");
+
+    let source_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Source")
+        .expect("source playback");
+    let target_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Target")
+        .expect("target playback");
+    let home_action = document
+        .action_nodes
+        .iter()
+        .find(|action| {
+            Some(action.id.as_str())
+                == source_play
+                    .home_transition
+                    .as_ref()
+                    .map(|transition| transition.action_node.as_str())
+        })
+        .expect("source playback home action");
+
+    assert_eq!(
+        home_action
+            .options
+            .get(source_play.home_transition.as_ref().unwrap().option_index as usize)
+            .map(String::as_str),
+        Some(target_play.uuid.as_str())
+    );
+}
+
+#[test]
+fn root_story_return_to_shared_story_uses_single_option_action() {
+    let project = CanonicalProject {
+        name: "Return to shared".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Story(CanonicalStory {
+            id: "source".to_string(),
+            name: "Source".to_string(),
+            audio: Some("source.mp3".to_string()),
+            item_audio: Some("source-title.mp3".to_string()),
+            item_image: Some("source.png".to_string()),
+            return_after_play: Some("story:target".to_string()),
+            ..Default::default()
+        })],
+        shared_entries: vec![CanonicalEntry::Story(CanonicalStory {
+            id: "target".to_string(),
+            name: "Target".to_string(),
+            audio: Some("target.mp3".to_string()),
+            item_audio: Some("target-title.mp3".to_string()),
+            item_image: Some("target.png".to_string()),
+            ..Default::default()
+        })],
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset("root/Source#source/itemAudio", "source-title.mp3"),
+            prepared_asset("root/Source#source/itemImage", "source.png"),
+            prepared_asset("root/Source#source/storyAudio", "source.mp3"),
+            prepared_asset("shared/Target#target/itemAudio", "target-title.mp3"),
+            prepared_asset("shared/Target#target/itemImage", "target.png"),
+            prepared_asset("shared/Target#target/storyAudio", "target.mp3"),
+        ],
+        Vec::new(),
+    ))
+    .expect("shared return document");
+
+    let source_play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Histoire - Source")
+        .expect("source playback");
+    let target_title = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Titre - Target")
+        .expect("target title");
+    let ok_transition = source_play.ok_transition.as_ref().expect("source ok");
+    let ok_action = document
+        .action_nodes
+        .iter()
+        .find(|action| action.id == ok_transition.action_node)
+        .expect("source ok action");
+
+    assert_eq!(ok_action.options.len(), 1);
+    assert_eq!(
+        ok_action.options.get(ok_transition.option_index as usize),
+        Some(&target_title.uuid)
+    );
+}
+
+#[test]
 fn generates_imported_prompt_controls_and_home_null() {
     let project = CanonicalProject {
         name: "Prompt navigation".to_string(),
@@ -212,6 +623,7 @@ fn generates_imported_prompt_controls_and_home_null() {
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "story-id".to_string(),
             name: "Prompt Story".to_string(),
+            native_stage_id: None,
             audio: Some("story.mp3".to_string()),
             item_audio: Some("item.mp3".to_string()),
             item_image: Some("item.png".to_string()),

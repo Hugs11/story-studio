@@ -44,6 +44,11 @@ impl<'a> StoryBuilder<'a> {
         let cover_stage_id = self.next_id();
         let root_action_id = self.next_id();
         let shared_action_id = (!project.shared_entries.is_empty()).then(|| self.next_id());
+        let shared_approach_action_ids: Vec<String> = project
+            .shared_entries
+            .iter()
+            .map(|_| self.next_id())
+            .collect();
         self.root_action_id = Some(root_action_id.clone());
         self.night_bridge_cache.clear();
 
@@ -70,6 +75,10 @@ impl<'a> StoryBuilder<'a> {
                 &mut self.story_prealloc,
             );
         }
+        self.preallocate_shared_entry_approaches(
+            &project.shared_entries,
+            &shared_approach_action_ids,
+        );
 
         let root_targets = if project.project_type == "simple" {
             vec![self.build_simple_story(project, &root_action_id)?]
@@ -82,7 +91,11 @@ impl<'a> StoryBuilder<'a> {
         }
 
         if let Some(action_id) = shared_action_id.as_deref() {
-            let shared_targets = self.build_shared_entries(&project.shared_entries, action_id)?;
+            let shared_targets = self.build_shared_entries(
+                &project.shared_entries,
+                action_id,
+                &shared_approach_action_ids,
+            )?;
             self.action_nodes.push(ActionNode {
                 id: action_id.to_string(),
                 name: action_node_name(),

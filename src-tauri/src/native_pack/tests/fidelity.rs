@@ -716,6 +716,48 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
         "document": doc,
     }));
     let canonical = canonicalize_project(&project);
+    if std::env::var_os("LUNII_FIDELITY_REPORT").is_some()
+        || std::env::var_os("LUNII_FIDELITY_DUMP_DOCS").is_some()
+        || std::env::var_os("LUNII_FIDELITY_DUMP_PROJECT").is_some()
+    {
+        let assets = fidelity_fake_assets(&canonical);
+        let native_report = report_for(canonical.clone(), assets, vec![]);
+        match build_canonical_story_document(&native_report) {
+            Ok(generated) => {
+                if let Ok(original) = serde_json::from_value::<StoryDocument>(doc.clone()) {
+                    if std::env::var_os("LUNII_FIDELITY_REPORT").is_some() {
+                        report_fidelity_diagnostics(pack_id, &original, &generated, &project);
+                    }
+                    if let Some(dump_dir) = std::env::var_os("LUNII_FIDELITY_DUMP_DOCS") {
+                        let dump_dir = std::path::PathBuf::from(dump_dir);
+                        std::fs::create_dir_all(&dump_dir).expect("create fidelity dump dir");
+                        std::fs::write(
+                            dump_dir.join(format!("{pack_id}.original.story.json")),
+                            serde_json::to_string_pretty(&original).unwrap_or_default(),
+                        )
+                        .expect("write original story dump");
+                        std::fs::write(
+                            dump_dir.join(format!("{pack_id}.generated.story.json")),
+                            serde_json::to_string_pretty(&generated).unwrap_or_default(),
+                        )
+                        .expect("write generated story dump");
+                        std::fs::write(
+                            dump_dir.join(format!("{pack_id}.project.json")),
+                            serde_json::to_string_pretty(&imported).unwrap_or_default(),
+                        )
+                        .expect("write project dump");
+                    }
+                }
+                if std::env::var_os("LUNII_FIDELITY_DUMP_PROJECT").is_some() {
+                    eprintln!(
+                        "[{pack_id}] extracted project:\n{}",
+                        serde_json::to_string_pretty(&imported).unwrap_or_default()
+                    );
+                }
+            }
+            Err(error) => eprintln!("[{pack_id}] build dump impossible : {error}"),
+        }
+    }
 
     match crate::native_pack::fidelity_judge::canonical_roundtrip_is_faithful(&canonical) {
         Ok(report) => {

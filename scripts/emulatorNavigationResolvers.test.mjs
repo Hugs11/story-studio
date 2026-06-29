@@ -29,3 +29,14 @@ test('story return can use direct playback while story Home opens the story titl
   assert.equal(resolveStoryReturnTarget(story, null, null), 'story_play:target');
   assert.equal(resolveStoryHomeTarget(story, null, null), 'story:target');
 });
+
+test('imported story Home preserves direct playback targets', () => {
+  const story = {
+    id: 'source',
+    type: 'story',
+    nativeStageId: 'native-source',
+    returnOnHome: 'story_play:target',
+  };
+
+  assert.equal(resolveStoryHomeTarget(story, null, null), 'story_play:target');
+});
