@@ -549,6 +549,7 @@ mod tests {
                 ],
                 ..Default::default()
             })],
+            shared_entries: Vec::new(),
         }
     }
 
@@ -667,6 +668,8 @@ mod tests {
                 ],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         };
 
         let report = canonical_roundtrip_is_faithful(&project).expect("judge runs");

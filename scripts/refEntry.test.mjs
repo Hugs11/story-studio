@@ -23,6 +23,7 @@ function allRefIds(project) {
     }
   };
   walk(project.rootEntries);
+  walk(project.sharedEntries);
   return ids.sort();
 }
 
@@ -242,4 +243,24 @@ test('a menu containing only a ref counts as having a playable descendant', () =
     1,
     'un dossier de liens ne doit pas être considéré vide',
   );
+});
+
+test('removeEntryCascadingRefs drops refs pointing at shared entries', () => {
+  let project = normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: {},
+    rootEntries: [
+      { id: 'ref-to-shared', type: 'ref', target: 'story:shared-story' },
+      { id: 'story-root', type: 'story', name: 'Root' },
+    ],
+    sharedEntries: [
+      { id: 'shared-story', type: 'story', name: 'Shared' },
+    ],
+  });
+
+  project = removeEntryCascadingRefs(project, 'shared-story');
+
+  assert.equal(project.sharedEntries.length, 0, 'la cible partagee est supprimée');
+  assert.deepEqual(allRefIds(project), [], 'la ref racine pendante part aussi');
+  assert.equal(project.rootEntries.find((entry) => entry.id === 'story-root')?.id, 'story-root');
 });

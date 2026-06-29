@@ -101,3 +101,31 @@ test('projectToRustExport keeps pack mode unaffected when title is empty', () =>
 
   assert.equal(rustExport.name, 'Story Studio');
 });
+
+test('projectToSerializable and projectToRustExport preserve sharedEntries', () => {
+  const project = normalizeProjectData({
+    projectName: 'Partages',
+    packMetadata: { title: 'Partages', minAge: '3', version: 1 },
+    projectType: 'pack',
+    globalOptions: {},
+    rootEntries: [{ id: 'ref-1', type: 'ref', target: 'story:shared-story' }],
+    sharedEntries: [
+      {
+        id: 'shared-story',
+        type: 'story',
+        name: 'Scene commune',
+        audio: 'shared.mp3',
+        itemAudio: 'shared-title.mp3',
+        itemImage: 'shared.png',
+      },
+    ],
+  });
+
+  const serializable = projectToSerializable(project);
+  const rustExport = projectToRustExport(project);
+
+  assert.equal(serializable.sharedEntries.length, 1);
+  assert.equal(serializable.sharedEntries[0].id, 'shared-story');
+  assert.equal(rustExport.sharedEntries.length, 1);
+  assert.equal(rustExport.sharedEntries[0].type, 'story');
+});

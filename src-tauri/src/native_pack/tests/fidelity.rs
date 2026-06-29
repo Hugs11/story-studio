@@ -78,6 +78,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         },
         pack_version: 1,
         pack_description: String::new(),
+        shared_entries: Vec::new(),
     }
 }
 
@@ -738,7 +739,10 @@ fn classify_external_packs_with_judge() {
         );
         return;
     }
-    eprintln!("=== CLASSEMENT JUGE DE FIDÉLITÉ ({} packs) ===", packs.len());
+    eprintln!(
+        "=== CLASSEMENT JUGE DE FIDÉLITÉ ({} packs) ===",
+        packs.len()
+    );
     for (pack_id, story_path) in packs {
         // Un pack qui panique (modèle inattendu) ne doit pas masquer les autres verdicts.
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -751,7 +755,11 @@ fn classify_external_packs_with_judge() {
 }
 
 /// Écrit un `story.json` synthétique + ses assets dans un zip temporaire (round-trips de motifs).
-fn write_synthetic_pack(dir: &std::path::Path, story: &serde_json::Value, assets: &[&str]) -> String {
+fn write_synthetic_pack(
+    dir: &std::path::Path,
+    story: &serde_json::Value,
+    assets: &[&str],
+) -> String {
     use std::io::Write;
     std::fs::create_dir_all(dir).expect("create pack dir");
     let zip_path = dir.join("pack.zip");
@@ -779,9 +787,7 @@ fn write_synthetic_pack(dir: &std::path::Path, story: &serde_json::Value, assets
 #[test]
 fn autoplay_intro_chain_before_menu_roundtrips() {
     let base = std::env::temp_dir().join(format!("fidelity_intro_{}", now_millis()));
-    let cs = |wheel: bool, ok: bool, home: bool, autoplay: bool| {
-        serde_json::json!({ "wheel": wheel, "ok": ok, "home": home, "pause": false, "autoplay": autoplay })
-    };
+    let cs = |wheel: bool, ok: bool, home: bool, autoplay: bool| serde_json::json!({ "wheel": wheel, "ok": ok, "home": home, "pause": false, "autoplay": autoplay });
     let story = serde_json::json!({
         "title": "Intro Folder Pattern",
         "version": 1, "description": "", "format": "v1", "nightModeAvailable": false,
@@ -822,8 +828,17 @@ fn autoplay_intro_chain_before_menu_roundtrips() {
         &base,
         &story,
         &[
-            "root.mp3", "cover.png", "intro.mp3", "menu.mp3", "menu.png", "ta.mp3", "ta.png",
-            "pa.mp3", "tb.mp3", "tb.png", "pb.mp3",
+            "root.mp3",
+            "cover.png",
+            "intro.mp3",
+            "menu.mp3",
+            "menu.png",
+            "ta.mp3",
+            "ta.png",
+            "pa.mp3",
+            "tb.mp3",
+            "tb.png",
+            "pb.mp3",
         ],
     );
 
@@ -855,8 +870,14 @@ fn autoplay_intro_chain_before_menu_roundtrips() {
         "squareOne présent après round-trip",
     );
     assert_eq!(gen.stage_nodes.len(), 7, "round-trip : nombre de stages");
-    assert_eq!(wheel, 4, "round-trip : le cover, le menu et les 2 titres restent wheel");
-    assert_eq!(autoplay, 3, "round-trip : l'intro et les 2 lectures restent autoplay");
+    assert_eq!(
+        wheel, 4,
+        "round-trip : le cover, le menu et les 2 titres restent wheel"
+    );
+    assert_eq!(
+        autoplay, 3,
+        "round-trip : l'intro et les 2 lectures restent autoplay"
+    );
     validate_document_for_studio_compat(&gen).expect("document STUdio valide");
 
     let _ = std::fs::remove_dir_all(&base);

@@ -155,8 +155,24 @@ export function updateProjectRootEntries(project, nextRootEntries) {
   return normalizeBaseProject({ ...project, rootEntries: nextRootEntries });
 }
 
+export function updateProjectSharedEntries(project, nextSharedEntries) {
+  return normalizeBaseProject({ ...project, sharedEntries: nextSharedEntries });
+}
+
+function updateProjectEntryForests(project, nextRootEntries, nextSharedEntries) {
+  return normalizeBaseProject({
+    ...project,
+    rootEntries: nextRootEntries,
+    sharedEntries: nextSharedEntries,
+  });
+}
+
 export function appendEntry(project, containerId, entry) {
   return updateProjectRootEntries(project, appendEntryToTree(project.rootEntries ?? [], containerId, entry));
+}
+
+export function appendSharedEntry(project, entry) {
+  return updateProjectSharedEntries(project, [...(project.sharedEntries ?? []), normalizeEntry(entry)]);
 }
 
 export function shallowCloneEntry(entry) {
@@ -232,7 +248,13 @@ export function updateEntry(project, entryId, fields) {
       nativeStageId = normalized.nativeStageId ?? null;
       return normalized;
     });
-  let nextProject = updateProjectRootEntries(project, nextRootEntries);
+  const nextSharedEntries = replaceEntryTree(project.sharedEntries ?? [], entryId, (entry) => {
+      const next = { ...entry, ...fields };
+      const normalized = normalizeEntry(next);
+      nativeStageId = normalized.nativeStageId ?? null;
+      return normalized;
+    });
+  let nextProject = updateProjectEntryForests(project, nextRootEntries, nextSharedEntries);
   if (nativeStageId && nextProject.nativeGraph?.preserveForRoundTrip === true) {
     nextProject = normalizeBaseProject({
       ...nextProject,
@@ -252,17 +274,26 @@ export function clearMediaReferences(project, path) {
   }
   next.nativeGraph = clearNativeGraphMedia(next.nativeGraph, path);
   next.rootEntries = (next.rootEntries ?? []).map((entry) => clearEntryMediaReferences(entry, path));
+  next.sharedEntries = (next.sharedEntries ?? []).map((entry) => clearEntryMediaReferences(entry, path));
   return normalizeBaseProject(next);
 }
 
 export function removeEntry(project, entryId) {
-  return updateProjectRootEntries(project, removeEntryTree(project.rootEntries ?? [], entryId));
+  return updateProjectEntryForests(
+    project,
+    removeEntryTree(project.rootEntries ?? [], entryId),
+    removeEntryTree(project.sharedEntries ?? [], entryId),
+  );
 }
 
 export function removeEntries(project, entryIds) {
   const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
   if (ids.size === 0) return project;
-  return updateProjectRootEntries(project, removeEntriesTree(project.rootEntries ?? [], ids));
+  return updateProjectEntryForests(
+    project,
+    removeEntriesTree(project.rootEntries ?? [], ids),
+    removeEntriesTree(project.sharedEntries ?? [], ids),
+  );
 }
 
 // Supprime une entrée ET les refs qui pointeraient désormais dans le vide (garde-fou :

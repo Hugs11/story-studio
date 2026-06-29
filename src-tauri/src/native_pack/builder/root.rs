@@ -156,4 +156,90 @@ impl<'a> StoryBuilder<'a> {
             }
         }
     }
+
+    pub(in crate::native_pack::builder) fn build_shared_entries(
+        &mut self,
+        entries: &[CanonicalEntry],
+        shared_action_id: &str,
+    ) -> Result<Vec<String>, String> {
+        (0..entries.len())
+            .map(|index| self.build_shared_entry(&entries[index], index, entries, shared_action_id))
+            .collect()
+    }
+
+    pub(in crate::native_pack::builder) fn build_shared_entry(
+        &mut self,
+        entry: &CanonicalEntry,
+        shared_index: usize,
+        siblings: &[CanonicalEntry],
+        shared_action_id: &str,
+    ) -> Result<String, String> {
+        let approach_transition = transition(shared_action_id, shared_index as i32);
+        match entry {
+            CanonicalEntry::Story(story) => {
+                let auto_next_active = self.report.project.options.auto_next;
+                let play_return_transition = if auto_next_active {
+                    find_next_story_id(siblings, shared_index)
+                        .and_then(|next_id| {
+                            self.story_prealloc
+                                .get(next_id)
+                                .map(|prealloc| transition(&prealloc.play_action_id, 0))
+                        })
+                        .unwrap_or_else(|| approach_transition.clone())
+                } else {
+                    let story_return = resolve_next_story_target(
+                        story.return_after_play.as_deref(),
+                        siblings,
+                        shared_index,
+                    );
+                    self.resolve_story_return_transition(
+                        story_return.as_deref(),
+                        approach_transition.clone(),
+                    )
+                };
+                let story_home = resolve_next_story_target(
+                    story.return_on_home.as_deref(),
+                    siblings,
+                    shared_index,
+                );
+                let play_home_transition = if story.return_on_home_none {
+                    None
+                } else {
+                    Some(self.resolve_story_home_transition(
+                        story_home.as_deref(),
+                        play_return_transition.clone(),
+                    ))
+                };
+                let (night_bridge_return, night_bridge_home) = self.compute_night_bridge_targets(
+                    siblings,
+                    shared_index,
+                    play_return_transition.clone(),
+                );
+                self.build_story_branch(
+                    story,
+                    &scoped_label_id("shared", &story.id, &story.name),
+                    None,
+                    play_home_transition,
+                    play_return_transition,
+                    night_bridge_return,
+                    night_bridge_home,
+                    true,
+                )
+            }
+            CanonicalEntry::Menu(menu) => self.build_menu_branch(
+                menu,
+                &scoped_label_id("shared", &menu.id, &menu.name),
+                approach_transition,
+                None,
+                true,
+            ),
+            CanonicalEntry::Zip(_) => {
+                Err("Les elements partages de type ZIP ne sont pas pris en charge.".to_string())
+            }
+            CanonicalEntry::Ref(reference) => {
+                self.record_ref_option(shared_action_id, shared_index, &reference.target);
+                Ok(self.next_id())
+            }
+        }
+    }
 }

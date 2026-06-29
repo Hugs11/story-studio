@@ -165,6 +165,8 @@ pub(crate) struct Project {
     pub(crate) pack_description: String,
     #[serde(rename = "rootEntries", default)]
     pub(crate) root_entries: Vec<ProjectEntry>,
+    #[serde(rename = "sharedEntries", default)]
+    pub(crate) shared_entries: Vec<ProjectEntry>,
     #[serde(rename = "globalOptions")]
     pub(crate) global_options: GlobalOptions,
 }

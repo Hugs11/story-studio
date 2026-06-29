@@ -145,10 +145,8 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     should_cancel: &(dyn Fn() -> bool + Sync),
 ) -> Result<NativeAssetPreparationReport, String> {
     let canonical = canonicalize_project(project);
-    let requests = collect_asset_requests(
-        &canonical,
-        project.global_options.add_silence_duration_sec,
-    );
+    let requests =
+        collect_asset_requests(&canonical, project.global_options.add_silence_duration_sec);
     // ffmpeg est requis dès qu'il y a de l'audio : la mesure (niveau + silences)
     // sert à décider entre copie verbatim et ré-encodage.
     let has_audio = requests
@@ -412,6 +410,15 @@ pub(crate) fn collect_asset_requests(
         collect_entry_requests(
             entry,
             "root",
+            &mut requests,
+            project.options.auto_next,
+            silence_duration_sec,
+        );
+    }
+    for entry in &project.shared_entries {
+        collect_entry_requests(
+            entry,
+            "shared",
             &mut requests,
             project.options.auto_next,
             silence_duration_sec,

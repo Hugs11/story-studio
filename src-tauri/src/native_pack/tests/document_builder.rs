@@ -88,6 +88,8 @@ fn builds_story_title_without_item_audio() {
             title_return_on_home_none: false,
             title_control_settings: None,
         })],
+
+        shared_entries: Vec::new(),
     };
     let report = report_for(
         project,
@@ -115,6 +117,76 @@ fn builds_story_title_without_item_audio() {
 
     assert_eq!(title_stage.audio, None);
     assert_eq!(title_stage.image.as_deref(), Some("item.png"));
+}
+
+#[test]
+fn root_ref_can_target_shared_story() {
+    let shared_label = scoped_label_id("shared", "shared-story", "Shared Story");
+    let project = CanonicalProject {
+        name: "Shared story".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+        },
+        entries: vec![CanonicalEntry::Ref(CanonicalRef {
+            id: "ref-shared".to_string(),
+            target: "story:shared-story".to_string(),
+            ref_kind: Some("continue".to_string()),
+        })],
+        shared_entries: vec![CanonicalEntry::Story(CanonicalStory {
+            id: "shared-story".to_string(),
+            name: "Shared Story".to_string(),
+            audio: Some("shared.mp3".to_string()),
+            item_audio: Some("shared-title.mp3".to_string()),
+            item_image: Some("shared.png".to_string()),
+            ..Default::default()
+        })],
+    };
+    let document = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+            prepared_asset(&format!("{shared_label}/storyAudio"), "shared.mp3"),
+            prepared_asset(&format!("{shared_label}/itemAudio"), "shared-title.mp3"),
+            prepared_asset(&format!("{shared_label}/itemImage"), "shared.png"),
+        ],
+        Vec::new(),
+    ))
+    .expect("shared ref document");
+
+    let cover = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.square_one)
+        .expect("cover stage");
+    let root_action = document
+        .action_nodes
+        .iter()
+        .find(|action| {
+            Some(action.id.as_str()) == cover.ok_transition.as_ref().map(|t| t.action_node.as_str())
+        })
+        .expect("root action");
+    let target_stage_id = root_action.options.first().expect("root ref option");
+    let target_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| &stage.uuid == target_stage_id)
+        .expect("shared title stage");
+
+    assert_eq!(target_stage.name, "Titre - Shared Story");
 }
 
 #[test]
@@ -168,6 +240,8 @@ fn generates_imported_prompt_controls_and_home_null() {
             title_return_on_home_none: false,
             title_control_settings: None,
         })],
+
+        shared_entries: Vec::new(),
     };
     let report = report_for(
         project,
@@ -285,6 +359,8 @@ fn exports_after_playback_sequence_before_story_return() {
             ],
             ..Default::default()
         })],
+
+        shared_entries: Vec::new(),
     };
     let report = report_for(
         project,
@@ -438,6 +514,8 @@ fn auto_next_overrides_end_steps_and_story_returns() {
             ],
             ..Default::default()
         })],
+
+        shared_entries: Vec::new(),
     };
     let report = report_for(
         project,
@@ -550,6 +628,8 @@ fn canonicalizes_pack_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+
+        shared_entries: Vec::new(),
     };
 
     let canonical = canonicalize_project(&project);
@@ -612,6 +692,8 @@ fn canonicalizes_recursive_root_entries_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+
+        shared_entries: Vec::new(),
     };
 
     let canonical = canonicalize_project(&project);
@@ -666,6 +748,8 @@ fn collects_asset_requests_for_pack() {
                 ..Default::default()
             }),
         ],
+
+        shared_entries: Vec::new(),
     };
 
     let requests = collect_asset_requests(&project, 1.0);
@@ -763,6 +847,8 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         },
         pack_version: 1,
         pack_description: String::new(),
+
+        shared_entries: Vec::new(),
     };
 
     let report = NativeAssetPreparationReport {
@@ -876,6 +962,8 @@ fn builds_simple_story_pack() {
                 item_image: Some("item.png".to_string()),
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -955,6 +1043,8 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
                 })],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -1095,6 +1185,8 @@ fn builds_recursive_menu_story_tree() {
                 })],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -1243,6 +1335,8 @@ fn preserves_explicit_menu_home_transition() {
                     })],
                     ..Default::default()
                 })],
+
+                shared_entries: Vec::new(),
             },
             vec![
                 prepared_asset("rootAudio", "cover.mp3"),
@@ -1364,6 +1458,8 @@ fn preserves_imported_story_title_home_transition() {
                     })],
                     ..Default::default()
                 })],
+
+                shared_entries: Vec::new(),
             },
             vec![
                 prepared_asset("rootAudio", "cover.mp3"),

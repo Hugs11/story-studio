@@ -4,7 +4,8 @@ import { getExportPackName, parseConventionName } from '../../utils/packConventi
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
 
 // Canonical project shape:
-// - `rootEntries` is the only saved/runtime tree for project content.
+// - `rootEntries` is the main saved/runtime tree for project content.
+// - `sharedEntries` is the advanced pool for reusable nodes targeted by refs.
 // - Menu children live in `children`.
 // - Imported pack projections can expose `entries`; normalization maps them to
 //   `rootEntries` or `children`.
@@ -351,9 +352,9 @@ function legacyRootEntries(project) {
   ];
 }
 
-function inferProjectType(project, rootEntries) {
+function inferProjectType(project, rootEntries, sharedEntries = []) {
   if (project?.projectType) return project.projectType;
-  return rootEntries.length > 0 ? 'pack' : null;
+  return rootEntries.length > 0 || sharedEntries.length > 0 ? 'pack' : null;
 }
 
 function hasLegacyRootEntries(project) {
@@ -559,7 +560,12 @@ export function normalizeBaseProject(project = {}) {
   let rootEntries = shouldUseRootEntries
     ? project.rootEntries.map(normalizeEntry)
     : legacyRootEntries(project);
-  const projectType = inferProjectType(project, rootEntries);
+  const sharedEntries = Array.isArray(project.sharedEntries)
+    ? project.sharedEntries
+        .map(normalizeEntry)
+        .filter((entry) => entry.type === 'menu' || entry.type === 'story' || entry.type === 'ref')
+    : [];
+  const projectType = inferProjectType(project, rootEntries, sharedEntries);
   const importWarnings = normalizeImportWarnings(project.importWarnings);
   const nativeGraph = normalizeNativeGraph(project.nativeGraph, rootEntries, importWarnings);
   if (nativeGraph && countPlayableEntries(rootEntries) <= 1) {
@@ -575,7 +581,7 @@ export function normalizeBaseProject(project = {}) {
 
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
-    version: Math.max(project.version ?? 1, rootEntries.length > 0 ? 2 : 1),
+    version: Math.max(project.version ?? 1, (rootEntries.length > 0 || sharedEntries.length > 0) ? 2 : 1),
     projectName,
     packMetadata: packMetadata.title
       ? packMetadata
@@ -596,6 +602,7 @@ export function normalizeBaseProject(project = {}) {
     globalOptions: normalizeOptions(project.globalOptions),
     importWarnings: nativeGraph ? [] : importWarnings,
     rootEntries,
+    sharedEntries,
   };
 }
 

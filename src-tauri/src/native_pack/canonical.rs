@@ -4,7 +4,7 @@ use crate::domain::project::{
     AfterPlaybackSequenceStep, EntryControlSettings, GlobalOptions, Project, ProjectEntry,
     SilenceMode,
 };
-use crate::domain::validation::project_root_entries;
+use crate::domain::validation::{project_root_entries, project_shared_entries};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CanonicalProject {
@@ -21,6 +21,7 @@ pub(crate) struct CanonicalProject {
     pub(crate) native_graph: Option<serde_json::Value>,
     pub(crate) options: CanonicalOptions,
     pub(crate) entries: Vec<CanonicalEntry>,
+    pub(crate) shared_entries: Vec<CanonicalEntry>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -236,6 +237,11 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
     let mut entries = Vec::new();
 
     let root_entries = project_root_entries(project);
+    let shared_entries: Vec<CanonicalEntry> = project_shared_entries(project)
+        .iter()
+        .filter(|entry| matches!(entry.entry_type.as_str(), "menu" | "story" | "ref"))
+        .map(canonicalize_project_entry)
+        .collect();
     if project_type == "simple" {
         if let Some(story) = root_entries
             .iter()
@@ -264,6 +270,7 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
         native_graph: project.native_graph.clone(),
         options: canonicalize_options(&project.global_options),
         entries,
+        shared_entries,
     }
 }
 
