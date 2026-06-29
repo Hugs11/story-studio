@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
+use super::graph_import::project_story_graph_values;
 use super::native_graph::{
     build_native_graph_flat_stage_map_entry, build_native_graph_projection_entries,
     has_interactive_branching_graph, native_graph_with_resolved_assets,
@@ -22,6 +23,7 @@ use super::story_entry::{
     resolve_after_playback_step_assets,
 };
 use super::transitions::{has_transition_target, transition_target_stage_id};
+use crate::native_pack::StoryDocument;
 
 /// Convertit le document story.json en `{ rootAudio, rootImage, entries }`.
 /// rootAudio/rootImage = assets du squareOne (cover du pack).
@@ -392,12 +394,27 @@ pub(super) fn walk_story_doc_to_entries(
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
     let needs_native_graph_projection = unresolved_transitions_detected && has_branching_graph;
-    let native_graph = if needs_native_graph_projection {
+    let graph_import_projection = if has_branching_graph && !unresolved_transitions_detected {
+        serde_json::from_value::<StoryDocument>(doc.clone())
+            .ok()
+            .and_then(|document| project_story_graph_values(&document, assets).ok())
+            .filter(|projection| {
+                projection.diagnostics.is_empty() && !projection.root_entries.is_empty()
+            })
+    } else {
+        None
+    };
+    let uses_graph_import_projection = graph_import_projection.is_some();
+    let mut shared_entries = Vec::new();
+    let native_graph = if needs_native_graph_projection && !uses_graph_import_projection {
         Some(native_graph_with_resolved_assets(doc, assets))
     } else {
         None
     };
-    if needs_native_graph_projection {
+    if let Some(graph_projection) = graph_import_projection {
+        entries = graph_projection.root_entries;
+        shared_entries = graph_projection.shared_entries;
+    } else if needs_native_graph_projection {
         let mut projected_entries =
             build_native_graph_projection_entries(sq, &stages, &actions, assets);
         if projected_entries.is_empty() {
@@ -407,8 +424,9 @@ pub(super) fn walk_story_doc_to_entries(
             entries = projected_entries;
         }
     }
-    let auto_next_detected =
-        !needs_native_graph_projection && extract_auto_next_return_overrides(&mut entries);
+    let auto_next_detected = !uses_graph_import_projection
+        && !needs_native_graph_projection
+        && extract_auto_next_return_overrides(&mut entries);
     let reported_unresolved_transitions = if needs_native_graph_projection {
         Vec::new()
     } else {
@@ -440,6 +458,7 @@ pub(super) fn walk_story_doc_to_entries(
         "nativeGraph": native_graph,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
+        "sharedEntries": shared_entries,
         "entries": entries
     }))
 }

@@ -123,7 +123,8 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         .filter(|value| !value.trim().is_empty())
         .unwrap_or("Pack importé");
     let mut project = project_from_imported_entries(&imported, title)?;
-    let projected_entry_count = count_project_entries(&project.root_entries);
+    let projected_entry_count = count_project_entries(&project.root_entries)
+        + count_project_entries(&project.shared_entries);
     let has_native_graph = imported
         .get("nativeGraph")
         .filter(|value| !value.is_null())
@@ -288,6 +289,12 @@ fn project_from_imported_entries(
     for entry in &mut entries {
         rewrite_imported_root_targets(entry, &wrapper_id);
     }
+    let mut shared_entries: Vec<ProjectEntry> =
+        serde_json::from_value(imported.get("sharedEntries").cloned().unwrap_or_default())
+            .map_err(|error| format!("Entrées partagées importées invalides : {error}"))?;
+    for entry in &mut shared_entries {
+        rewrite_imported_root_targets(entry, &wrapper_id);
+    }
 
     Ok(Project {
         name: title.to_string(),
@@ -317,7 +324,7 @@ fn project_from_imported_entries(
             .unwrap_or("")
             .to_string(),
         root_entries: entries,
-        shared_entries: Vec::new(),
+        shared_entries,
         global_options: GlobalOptions {
             add_silence: false,
             silence_mode: None,

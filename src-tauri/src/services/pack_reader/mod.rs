@@ -2,6 +2,8 @@ mod after_playback;
 mod chaining;
 mod edge_class;
 mod extraction;
+#[allow(dead_code)]
+mod graph_import;
 mod native_graph;
 mod navigation_targets;
 mod night_mode;
