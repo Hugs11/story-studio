@@ -12,14 +12,12 @@
 //   - Story : itemImage + itemAudio obligatoires.
 //   - Zip : zipPath obligatoire et fichier accessible.
 //   - Pack non-vide : au moins une histoire jouable.
+//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences).
 //
 // Regles UX uniquement (cote JS, signalees a l'utilisateur en temps reel) :
 //   - "duplicateId" : doublons d'ID dans rootEntries. Rust ne controle pas
 //     (la generation cree des ids assainis distincts).
 //   - "rootReservedId" : ID 'root' reserve. Rust applique implicitement.
-//   - Cibles de navigation cassees (returnAfterPlay, etc.) : warning JS,
-//     Rust accepte mais l'execution peut etre incoherente (cas couvert par
-//     le test round-trip native_pack/tests/roundtrip.rs).
 //   - emptyMenu / emptyPack : warnings JS, Rust refuse via "aucune histoire".
 //
 // Si une regle est ajoutee : l'implementer des deux cotes, etendre
