@@ -180,6 +180,163 @@ fn linear_story_play_returns_are_imported_as_auto_next() {
 }
 
 #[test]
+fn branching_graph_projection_uses_shared_entries_without_native_graph() {
+    let doc = serde_json::json!({
+        "title": "Graph import",
+        "version": 1,
+        "description": "",
+        "format": "v1",
+        "nightModeAvailable": false,
+        "actionNodes": [
+            { "id": "root-action", "name": "Root", "options": ["dispatcher"] },
+            { "id": "dispatcher-action", "name": "Dispatcher", "options": ["branch-a", "branch-b"] },
+            { "id": "branch-a-action", "name": "Branch A", "options": ["hub-title"] },
+            { "id": "branch-b-action", "name": "Branch B", "options": ["hub-title"] },
+            { "id": "hub-title-action", "name": "Hub", "options": ["hub-play"] }
+        ],
+        "stageNodes": [
+            {
+                "uuid": "root",
+                "name": "Root",
+                "type": "stage",
+                "squareOne": true,
+                "audio": "root.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": false, "wheel": true, "pause": false, "ok": true, "home": false },
+                "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                "homeTransition": null
+            },
+            {
+                "uuid": "dispatcher",
+                "name": "Dispatcher",
+                "type": "stage",
+                "squareOne": false,
+                "audio": "dispatcher.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": true, "wheel": false, "pause": false, "ok": true, "home": false },
+                "okTransition": { "actionNode": "dispatcher-action", "optionIndex": 0 },
+                "homeTransition": null
+            },
+            {
+                "uuid": "branch-a",
+                "name": "Branch A",
+                "type": "stage",
+                "squareOne": false,
+                "audio": "branch-a.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": false, "wheel": true, "pause": false, "ok": true, "home": false },
+                "okTransition": { "actionNode": "branch-a-action", "optionIndex": 0 },
+                "homeTransition": null
+            },
+            {
+                "uuid": "branch-b",
+                "name": "Branch B",
+                "type": "stage",
+                "squareOne": false,
+                "audio": "branch-b.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": false, "wheel": true, "pause": false, "ok": true, "home": false },
+                "okTransition": { "actionNode": "branch-b-action", "optionIndex": 0 },
+                "homeTransition": null
+            },
+            {
+                "uuid": "hub-title",
+                "name": "Hub",
+                "type": "stage",
+                "squareOne": false,
+                "audio": "hub-title.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": false, "wheel": true, "pause": false, "ok": true, "home": false },
+                "okTransition": { "actionNode": "hub-title-action", "optionIndex": 0 },
+                "homeTransition": null
+            },
+            {
+                "uuid": "hub-play",
+                "name": "Hub playback",
+                "type": "stage",
+                "squareOne": false,
+                "audio": "hub-play.mp3",
+                "image": null,
+                "controlSettings": { "autoplay": true, "wheel": false, "pause": true, "ok": false, "home": false },
+                "okTransition": null,
+                "homeTransition": null
+            }
+        ]
+    });
+    let assets = HashMap::from([
+        ("root.mp3".to_string(), PathBuf::from("root.mp3")),
+        (
+            "dispatcher.mp3".to_string(),
+            PathBuf::from("dispatcher.mp3"),
+        ),
+        ("branch-a.mp3".to_string(), PathBuf::from("branch-a.mp3")),
+        ("branch-b.mp3".to_string(), PathBuf::from("branch-b.mp3")),
+        ("hub-title.mp3".to_string(), PathBuf::from("hub-title.mp3")),
+        ("hub-play.mp3".to_string(), PathBuf::from("hub-play.mp3")),
+    ]);
+
+    let result = walk_story_doc_to_entries(&doc, &assets).expect("imported entries");
+
+    assert!(match result.get("nativeGraph") {
+        None => true,
+        Some(value) => value.is_null(),
+    });
+    assert_eq!(
+        result
+            .get("advancedTransitionsDetected")
+            .and_then(|value| value.as_bool()),
+        Some(false)
+    );
+    let shared_entries = result
+        .get("sharedEntries")
+        .and_then(|value| value.as_array())
+        .expect("shared entries");
+    assert_eq!(shared_entries.len(), 1);
+    assert_eq!(
+        shared_entries[0].get("id").and_then(|value| value.as_str()),
+        Some("hub-title")
+    );
+    assert_eq!(
+        shared_entries[0]
+            .get("type")
+            .and_then(|value| value.as_str()),
+        Some("story")
+    );
+    assert_eq!(
+        shared_entries[0]
+            .get("itemAudio")
+            .and_then(|value| value.as_str()),
+        Some("hub-title.mp3")
+    );
+    assert_eq!(
+        shared_entries[0]
+            .get("audio")
+            .and_then(|value| value.as_str()),
+        Some("hub-play.mp3")
+    );
+
+    let entries = result
+        .get("entries")
+        .and_then(|value| value.as_array())
+        .expect("entries");
+    let branches = entries[0]
+        .get("children")
+        .and_then(|value| value.as_array())
+        .expect("branches");
+    assert_eq!(branches.len(), 2);
+    for branch in branches {
+        let children = branch
+            .get("children")
+            .and_then(|value| value.as_array())
+            .expect("branch children");
+        assert_eq!(
+            children[0].get("target").and_then(|value| value.as_str()),
+            Some("story:hub-title")
+        );
+    }
+}
+
+#[test]
 fn autoplay_choice_options_are_imported_as_story_leaves() {
     let doc = serde_json::json!({
         "title": "Autoplay choices",

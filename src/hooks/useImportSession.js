@@ -34,12 +34,14 @@ export function projectFromUnpackResult({
 }) {
   const entries = sanitizeImportedEntries(result?.entries ?? []);
   if (!entries.length) return null;
+  const sharedEntries = sanitizeImportedEntries(result?.sharedEntries ?? []);
 
   const unpacked = buildProjectAfterZipUnpack({
     project: baseProject,
     menuId,
     itemId,
     entries,
+    sharedEntries,
     zipPath,
     zipName,
     result,
