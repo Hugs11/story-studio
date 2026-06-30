@@ -514,7 +514,9 @@ export function normalizeBaseProject(project = {}) {
   const importWarnings = normalizeImportWarnings(project.importWarnings);
   const nativeGraph = normalizeNativeGraph(project.nativeGraph, rootEntries, importWarnings);
   const rootImage = normalizeLocalFilePath(project.rootImage);
-  const thumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
+  const rawThumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
+  const sameImage = !!project.sameImage || (!!nativeGraph && !!rootImage && rawThumbnailImage === rootImage);
+  const thumbnailImage = sameImage ? rootImage : rawThumbnailImage;
   const nativeTitle = nativeGraph?.document?.title;
   const endNodeName = String(project.endNodeName ?? '').trim() === 'Nœud de fin'
     ? 'Message de fin'
@@ -534,7 +536,7 @@ export function normalizeBaseProject(project = {}) {
     rootImage,
     treeColor: normalizeTreeColor(project.treeColor),
     thumbnailImage,
-    sameImage: !!project.sameImage || (!!nativeGraph && !!rootImage && thumbnailImage === rootImage),
+    sameImage,
     autoGenerateRootImage: !!project.autoGenerateRootImage,
     nightModeAudio: normalizeLocalFilePath(project.nightModeAudio),
     nightModeReturn: project.nightModeReturn ?? null,

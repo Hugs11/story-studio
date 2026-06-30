@@ -95,6 +95,30 @@ test('pack project missing thumbnailImage hints at the « même image » checkbo
   assert.equal(thumb.status, 'warning');
 });
 
+test('pack project with sameImage validates only the root image', () => {
+  const project = buildProject({ sameImage: true, thumbnailImage: '' });
+
+  const issues = getProjectValidationIssues(project);
+  assert.equal(
+    find(issues, (i) => /Image bibliothèque/.test(i.text)),
+    null,
+    `aucun warning vignette attendu avec même image, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
+  );
+  assert.equal(project.thumbnailImage, project.rootImage);
+});
+
+test('pack project with sameImage and missing root image does not duplicate thumbnail warning', () => {
+  const project = buildProject({ sameImage: true, rootImage: '', thumbnailImage: '' });
+
+  const issues = getProjectValidationIssues(project);
+  assert.ok(find(issues, (i) => /Image de couverture à ajouter/.test(i.text)));
+  assert.equal(
+    find(issues, (i) => /Image bibliothèque/.test(i.text)),
+    null,
+    `aucun warning vignette attendu quand même image dépend de la couverture, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
+  );
+});
+
 test('warns "Histoire à ajouter" when a story has no audio', () => {
   const project = buildProject({
     rootEntries: [

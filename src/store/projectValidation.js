@@ -7,7 +7,7 @@
 //
 // Regles partagees JS <-> Rust (toute divergence est un bug a corriger):
 //   - Audio racine obligatoire (rootAudio).
-//   - Image racine / vignette obligatoires sur pack.
+//   - Image racine obligatoire, vignette obligatoire sur pack sauf si `sameImage`.
 //   - Story : audio obligatoire, accessibilite disque verifiee.
 //   - Story : itemImage obligatoire, itemAudio obligatoire sauf titre explicite silencieux.
 //   - Zip : zipPath obligatoire et fichier accessible.
@@ -156,17 +156,18 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'audio intro'));
   if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField('Menu racine', 'image de couverture', { feminine: true }));
   else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'image de couverture'));
+  const rootImageAsThumbnail = !!project?.sameImage;
   if (projectType === 'pack') {
-    if (!hasPath(project?.thumbnailImage)) {
+    if (!rootImageAsThumbnail && !hasPath(project?.thumbnailImage)) {
       pushWarning(
         issues,
         'root',
         `${missingField('Menu racine', 'image bibliothèque', { feminine: true })} (cocher « même image » ou en choisir une)`,
       );
-    } else if (isBrokenPath(project?.thumbnailImage, fileAudit)) {
+    } else if (!rootImageAsThumbnail && isBrokenPath(project?.thumbnailImage, fileAudit)) {
       pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
     }
-  } else if (hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
+  } else if (!rootImageAsThumbnail && hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
     pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
