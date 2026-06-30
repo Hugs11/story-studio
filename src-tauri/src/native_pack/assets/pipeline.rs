@@ -376,6 +376,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     stage_guard.disarm();
     Ok(NativeAssetPreparationReport {
         project: canonical,
+        pack_uuid: project.pack_uuid.trim().to_string(),
         stage_dir: stage_dir.to_string_lossy().to_string(),
         assets_dir: assets_dir.to_string_lossy().to_string(),
         assets: prepared_assets,

@@ -9,6 +9,7 @@ use super::{
 };
 use crate::domain::project::Project;
 use crate::services::project_files::validate_existing_file_path;
+use uuid::Uuid;
 
 pub(crate) fn generate_native_pack_v1_with_cancel(
     project: &Project,
@@ -47,8 +48,7 @@ pub(crate) fn write_native_pack_zip(
     story: &StoryDocument,
     output_dir: &Path,
 ) -> Result<PathBuf, String> {
-    let story_json = serde_json::to_string_pretty(story)
-        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
+    let story_json = serialize_story_with_pack_uuid(story, &asset_report.pack_uuid)?;
 
     fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
     let zip_path = export_zip_path(output_dir, &asset_report.project.name);
@@ -94,6 +94,21 @@ pub(crate) fn write_native_pack_zip(
 
     out_zip.finish().map_err(|e| e.to_string())?;
     Ok(zip_path)
+}
+
+fn serialize_story_with_pack_uuid(story: &StoryDocument, pack_uuid: &str) -> Result<String, String> {
+    let mut story_value = serde_json::to_value(story)
+        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
+    let uuid = if pack_uuid.trim().is_empty() {
+        Uuid::new_v4().to_string()
+    } else {
+        pack_uuid.trim().to_string()
+    };
+    if let Some(object) = story_value.as_object_mut() {
+        object.insert("uuid".to_string(), serde_json::Value::String(uuid));
+    }
+    serde_json::to_string_pretty(&story_value)
+        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))
 }
 
 fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {

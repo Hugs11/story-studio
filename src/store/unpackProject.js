@@ -18,6 +18,8 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
         ...parsedPackName,
         version: result?.packVersion ?? parsedPackName.version,
         description: result?.packDescription ?? '',
+        uuid: result?.uuid ?? result?.packUuid ?? '',
+        originalUuid: result?.uuid ?? result?.packUuid ?? '',
         namingMode: 'convention',
       }
     : {
@@ -28,6 +30,8 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
         producer: '',
         bonus: '',
         description: result?.packDescription ?? '',
+        uuid: result?.uuid ?? result?.packUuid ?? '',
+        originalUuid: result?.uuid ?? result?.packUuid ?? '',
         namingMode: 'convention',
         legacyExportName: '',
         legacyName: '',

@@ -90,6 +90,7 @@ fn report_for(
 ) -> NativeAssetPreparationReport {
     NativeAssetPreparationReport {
         project,
+        pack_uuid: String::new(),
         stage_dir: "stage".to_string(),
         assets_dir: "stage/assets".to_string(),
         assets,

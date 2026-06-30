@@ -221,6 +221,31 @@
   font-size: 11px;
 }
 
+.pack-meta-uuid-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pack-meta-uuid-input {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.pack-meta-uuid-button {
+  width: 32px;
+  height: 32px;
+}
+
+.pack-meta-uuid-hint {
+  margin: -3px 0 0;
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .pack-meta-age-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
