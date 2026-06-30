@@ -43,10 +43,6 @@ function isBrokenPath(value, fileAudit = {}) {
   return hasPath(value) && fileAudit[value] === false;
 }
 
-function isAccessiblePath(value, fileAudit = {}) {
-  return hasPath(value) && fileAudit[value] !== false;
-}
-
 function labelOrFallback(value, fallback) {
   return (value || '').trim() || fallback;
 }
@@ -259,7 +255,6 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     const entryLabel = labelOrFallback(entry?.name, entry?.type === 'menu' ? 'Collection' : 'Element');
     const pathLabel = [...ancestors.map((parent) => labelOrFallback(parent?.name, 'Collection')), entryLabel]
       .join(' / ');
-    const parentMenu = ancestors.length > 0 ? ancestors[ancestors.length - 1] : null;
     const entryId = typeof entry?.id === 'string' ? entry.id.trim() : '';
     if (!entryId) {
       pushError(issues, null, VALIDATION_MESSAGES.missingInternalId(pathLabel));

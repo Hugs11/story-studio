@@ -50,33 +50,6 @@ function targetNameById(allMenus, allStories, targetId, fallback = 'destination 
   return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
 }
 
-function resolveReturnTarget(node, parentMenu) {
-  if (node?.returnAfterPlay) return resolveNavigationTargetId(node.returnAfterPlay, parentMenu?.id ?? null);
-  if (parentMenu?.returnAfterPlay) return resolveNavigationTargetId(parentMenu.returnAfterPlay, parentMenu?.id ?? null);
-  return parentMenu?.id ?? null;
-}
-
-function resolveHomeTarget(node, parentMenu) {
-  if (node?.returnOnHomeNone) return null;
-  if (node?.returnOnHome) return resolveNavigationTargetId(node.returnOnHome, parentMenu?.id ?? null);
-  return resolveReturnTarget(node, parentMenu);
-}
-
-function resolvePromptOkTarget(node, parentMenu) {
-  if (node?.afterPlaybackPromptOkTarget) {
-    return resolveNavigationTargetId(node.afterPlaybackPromptOkTarget, parentMenu?.id ?? null);
-  }
-  return resolveReturnTarget(node, parentMenu);
-}
-
-function resolvePromptHomeTarget(node, parentMenu) {
-  if (node?.afterPlaybackPromptHomeNone) return null;
-  if (node?.afterPlaybackPromptHomeTarget) {
-    return resolveNavigationTargetId(node.afterPlaybackPromptHomeTarget, parentMenu?.id ?? null);
-  }
-  return resolvePromptOkTarget(node, parentMenu);
-}
-
 function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEffective) {
   if (!parentMenu) return 'Destination actuelle de l’histoire';
   if (autoNextEffective) return 'Lecture de l’histoire suivante';
@@ -87,100 +60,6 @@ function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEff
   if (isRootNavigationTarget(inheritedTargetId)) return `Revient à ${NAV_ROOT_LABEL}`;
   const name = targetNameById(allMenus, allStories, resolveNavigationTargetId(inheritedTargetId, parentMenu.id));
   return `Revient à ${name}`;
-}
-
-function getNavigationState(node, parentMenu, allMenus, allStories, autoNextEffective, isLastInMenu) {
-  const inheritedTargetId = parentMenu
-    ? (parentMenu.returnAfterPlay
-      ? resolveNavigationTargetId(parentMenu.returnAfterPlay, parentMenu.id)
-      : parentMenu.id)
-    : null;
-  const effectiveReturnTargetId = resolveReturnTarget(node, parentMenu);
-  const effectiveHomeTargetId = resolveHomeTarget(node, parentMenu);
-  const inheritedTargetName = inheritedTargetId
-    ? targetNameById(allMenus, allStories, inheritedTargetId, 'une destination introuvable')
-    : 'le comportement courant';
-  const hasLocalReturnOverride = !!node?.returnAfterPlay;
-  const hasLocalHomeOverride = !!node?.returnOnHome || !!node?.returnOnHomeNone;
-
-  if (autoNextEffective) {
-    return isLastInMenu
-      ? { tone: 'muted', text: `Auto-next actif — dernière histoire, retour vers ${inheritedTargetName}.` }
-      : { tone: 'accent', text: "Auto-next actif — cette histoire enchaîne automatiquement sur l'histoire suivante." };
-  }
-  if (hasLocalReturnOverride) {
-    return {
-      tone: 'accent',
-      text: `Cette histoire revient vers ${targetNameById(allMenus, allStories, effectiveReturnTargetId, 'une destination introuvable')}.`,
-    };
-  }
-  if (hasLocalHomeOverride) {
-    return {
-      tone: 'muted',
-      text: node?.returnOnHomeNone
-        ? `Fin d'histoire vers ${inheritedTargetName} — bouton Accueil sans transition.`
-        : `Fin d'histoire vers ${inheritedTargetName} — bouton Accueil vers ${targetNameById(allMenus, allStories, effectiveHomeTargetId, 'une destination introuvable')}.`,
-    };
-  }
-  if (parentMenu) {
-    return {
-      tone: 'muted',
-      text: `À la fin de l'histoire, retour vers ${inheritedTargetName}.`,
-    };
-  }
-  return { tone: 'muted', text: 'Cette histoire utilise le comportement courant du pack.' };
-}
-
-function buildBehaviorSummary(node, parentMenu, allMenus, allStories, project, autoNextEffective, isLastInMenu) {
-  const okEnabled = node?.controlSettings?.ok === true;
-  const homeEnabled = node?.controlSettings?.home !== false;
-  const returnTargetId = resolveReturnTarget(node, parentMenu);
-  const homeTargetId = resolveHomeTarget(node, parentMenu);
-  const returnTargetName = returnTargetId
-    ? targetNameById(allMenus, allStories, returnTargetId, parentMenu?.name || 'ce dossier')
-    : null;
-  const homeTargetName = homeTargetId
-    ? targetNameById(allMenus, allStories, homeTargetId, parentMenu?.name || 'ce dossier')
-    : null;
-  const hasPrompt = !!node?.afterPlaybackPromptAudio && !autoNextEffective;
-  const sequence = node?.afterPlaybackSequence ?? [];
-  const hasSequence = sequence.length > 0 && !autoNextEffective;
-  const hasEndNode = !autoNextEffective && !hasPrompt && !hasSequence && !!project?.nightModeAudio;
-  const promptOkTargetId = resolvePromptOkTarget(node, parentMenu);
-  const promptHomeTargetId = resolvePromptHomeTarget(node, parentMenu);
-  const promptOkTargetName = promptOkTargetId
-    ? targetNameById(allMenus, allStories, promptOkTargetId, parentMenu?.name || 'ce dossier')
-    : null;
-  const promptHomeTargetName = promptHomeTargetId
-    ? targetNameById(allMenus, allStories, promptHomeTargetId, parentMenu?.name || 'ce dossier')
-    : null;
-
-  const lines = [
-    `Bouton OK pendant la lecture : ${okEnabled ? 'actif' : 'désactivé'}`,
-    `Bouton Accueil : ${homeEnabled ? (homeTargetName ? `retour vers ${homeTargetName}` : 'retour selon le contexte courant') : 'désactivé'}`,
-  ];
-
-  if (autoNextEffective && !isLastInMenu) {
-    lines.push("Fin d'histoire : enchaînement automatique sur l'histoire suivante");
-  } else if (autoNextEffective) {
-    lines.push(`Fin d'histoire : retour direct vers ${parentMenu?.name || NAV_ROOT_LABEL}`);
-  } else if (hasSequence) {
-    const lastStep = sequence[sequence.length - 1] ?? null;
-    const sequenceOkTargetId = resolveNavigationTargetId(lastStep?.okTarget, parentMenu?.id ?? null) ?? returnTargetId;
-    const sequenceOkTargetName = sequenceOkTargetId
-      ? targetNameById(allMenus, allStories, sequenceOkTargetId, parentMenu?.name || 'ce dossier')
-      : null;
-    lines.push(`Fin d'histoire : scénario de fin de ${sequence.length} étape${sequence.length > 1 ? 's' : ''}, puis OK vers ${sequenceOkTargetName || 'la destination configurée'}`);
-  } else if (hasPrompt) {
-    lines.push(`Fin d'histoire : message audio, puis OK vers ${promptOkTargetName || returnTargetName || 'la destination configurée'}`);
-    lines.push(`Accueil sur le message audio : ${node?.afterPlaybackPromptHomeNone ? 'aucune transition' : `Accueil vers ${promptHomeTargetName || promptOkTargetName || 'la destination configurée'}`}`);
-  } else if (hasEndNode) {
-    lines.push("Fin d'histoire : passage par le message de fin du pack");
-  } else {
-    lines.push(`Fin d'histoire : retour direct vers ${returnTargetName || 'la destination configurée'}`);
-  }
-
-  return lines;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -207,9 +86,6 @@ export const StoryEditor = memo(function StoryEditor({
 
   const inheritedReturnLabel = buildInheritedReturnLabel(
     parentMenu, allMenus, allStories, autoNextEffective && !isLastInMenu,
-  );
-  const navigationState = getNavigationState(
-    node, parentMenu, allMenus, allStories, autoNextEffective, isLastInMenu,
   );
   const [textImgModal, setTextImgModal] = useState(null);
 

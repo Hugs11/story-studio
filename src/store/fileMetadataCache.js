@@ -70,7 +70,7 @@ async function queryPathSnapshot(path) {
       }
       return buildSnapshot(path, null, true);
     }
-  } catch (error) {
+  } catch {
     return buildSnapshot(path, null, false);
   }
 }

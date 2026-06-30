@@ -11,12 +11,6 @@ import { PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import './OptionsTab.css';
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
-
 const LANGUAGE_OPTIONS = [
   { value: 'fr', label: 'Francais' },
   { value: 'en', label: 'English' },

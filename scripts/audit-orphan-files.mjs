@@ -16,9 +16,6 @@ const files = [];
   }
 })('src');
 
-// Concatene tout le code source pour chercher les references par basename
-const allSrc = files.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
-
 const orphans = [];
 for (const f of files) {
   const base = path.basename(f).replace(/\.(jsx?|mjs)$/, '');

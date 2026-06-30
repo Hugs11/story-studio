@@ -68,7 +68,7 @@ export function AudioSplitterModal({
   const [segments, setSegments] = useState([]);
   const [zoom, setZoom] = useState(80);
   const [loading, setLoading] = useState(true);
-  const [previewingKey, setPreviewingKey] = useState(null);
+  const [, setPreviewingKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
