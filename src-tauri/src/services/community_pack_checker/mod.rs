@@ -360,6 +360,13 @@ fn analyze_pack_inner(
         .unwrap_or("")
         .trim()
         .to_string();
+    report.pack_uuid = doc
+        .story
+        .get("uuid")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
     report.pack_version = doc
         .story
         .get("version")
@@ -1021,6 +1028,7 @@ fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
         pack_name: pack_name.to_string(),
         pack_title: String::new(),
         pack_description: String::new(),
+        pack_uuid: String::new(),
         pack_version: 1,
         zip_path: zip_path.to_string(),
         verdict: PackValidationVerdict::Invalid,
@@ -1050,6 +1058,7 @@ fn metadata_patch_has_changes(patch: &PackMetadataPatchModel) -> bool {
         || patch.author.is_some()
         || patch.producer.is_some()
         || patch.bonus.is_some()
+        || patch.uuid.is_some()
         || patch.naming_mode.is_some()
 }
 
@@ -1078,6 +1087,17 @@ fn apply_metadata_patch(story: &mut serde_json::Value, patch: &PackMetadataPatch
         object.insert(
             "version".to_string(),
             serde_json::Value::Number(serde_json::Number::from(version.max(1))),
+        );
+    }
+    if let Some(uuid) = patch
+        .uuid
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        object.insert(
+            "uuid".to_string(),
+            serde_json::Value::String(uuid.to_string()),
         );
     }
 

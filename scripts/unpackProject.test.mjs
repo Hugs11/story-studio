@@ -27,6 +27,7 @@ test('zip unpack promotion keeps the local mbah project name after first save', 
     result: {
       title: 'Dersouzala Petite histoire de la musique Classique by Dersouzala',
       packVersion: 1,
+      uuid: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
       rootAudio: 'C:/workspace/zips-extraits/root.mp3',
       rootImage: 'C:/workspace/zips-extraits/root.png',
     },
@@ -35,6 +36,7 @@ test('zip unpack promotion keeps the local mbah project name after first save', 
 
   assert.equal(nextProject.projectName, 'La petite histoire de la musique classique');
   assert.equal(nextProject.packMetadata.title, 'Dersouzala Petite histoire de la musique Classique by Dersouzala');
+  assert.equal(nextProject.packMetadata.uuid, 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
   assert.equal(nextProject.rootEntries.length, 1);
   assert.equal(nextProject.rootEntries[0].id, 'story-1');
   assert.equal(nextProject.rootAudio, 'C:/workspace/zips-extraits/root.mp3');

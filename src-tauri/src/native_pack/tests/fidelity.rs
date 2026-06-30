@@ -88,6 +88,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
         },
         pack_version: 1,
         pack_description: String::new(),
+        pack_uuid: String::new(),
         shared_entries,
     }
 }

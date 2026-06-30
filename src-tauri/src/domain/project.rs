@@ -163,6 +163,8 @@ pub(crate) struct Project {
     pub(crate) pack_version: i32,
     #[serde(rename = "packDescription", default)]
     pub(crate) pack_description: String,
+    #[serde(rename = "packUuid", default)]
+    pub(crate) pack_uuid: String,
     #[serde(rename = "rootEntries", default)]
     pub(crate) root_entries: Vec<ProjectEntry>,
     #[serde(rename = "sharedEntries", default)]

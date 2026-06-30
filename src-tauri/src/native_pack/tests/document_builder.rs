@@ -1040,6 +1040,7 @@ fn canonicalizes_pack_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+        pack_uuid: String::new(),
 
         shared_entries: Vec::new(),
     };
@@ -1104,6 +1105,7 @@ fn canonicalizes_recursive_root_entries_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
+        pack_uuid: String::new(),
 
         shared_entries: Vec::new(),
     };
@@ -1259,12 +1261,14 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         },
         pack_version: 1,
         pack_description: String::new(),
+        pack_uuid: String::new(),
 
         shared_entries: Vec::new(),
     };
 
     let report = NativeAssetPreparationReport {
         project: canonicalize_project(&project),
+        pack_uuid: String::new(),
         stage_dir: stage_dir.to_string_lossy().to_string(),
         assets_dir: assets_dir.to_string_lossy().to_string(),
         assets: vec![

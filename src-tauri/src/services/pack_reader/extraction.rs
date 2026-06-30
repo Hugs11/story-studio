@@ -69,6 +69,14 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
     let thumbnail_path = extract_zip_thumbnail(&zip_path, dest)?;
 
     let mut result = walk_story_doc_to_entries(&doc, &asset_map)?;
+    if let Some(uuid) = doc
+        .get("uuid")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        result["uuid"] = serde_json::Value::String(uuid.to_string());
+    }
     if let Some(thumb) = thumbnail_path {
         result["thumbnailImage"] = serde_json::Value::String(thumb.to_string_lossy().to_string());
     }
@@ -423,6 +431,12 @@ fn project_from_imported_entries(
             .get("packDescription")
             .and_then(|value| value.as_str())
             .unwrap_or("")
+            .to_string(),
+        pack_uuid: imported
+            .get("uuid")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .trim()
             .to_string(),
         root_entries: entries,
         shared_entries,

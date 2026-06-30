@@ -28,6 +28,7 @@ pub(crate) use writer::*;
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct NativeAssetPreparationReport {
     pub(crate) project: CanonicalProject,
+    pub(crate) pack_uuid: String,
     pub(crate) stage_dir: String,
     pub(crate) assets_dir: String,
     pub(crate) assets: Vec<PreparedAsset>,

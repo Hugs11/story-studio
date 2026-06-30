@@ -229,6 +229,7 @@ fn metadata_fix_uses_convention_name_for_output_zip() {
             author: None,
             producer: None,
             bonus: None,
+            uuid: Some("11111111-2222-4333-8444-555555555555".to_string()),
             naming_mode: Some("convention".to_string()),
         }),
     )
@@ -244,6 +245,7 @@ fn metadata_fix_uses_convention_name_for_output_zip() {
         .story;
     assert_eq!(fixed_json["title"], "Azuro");
     assert_eq!(fixed_json["version"], 2);
+    assert_eq!(fixed_json["uuid"], "11111111-2222-4333-8444-555555555555");
 
     fs::remove_dir_all(dir).expect("cleanup temp dir");
 }

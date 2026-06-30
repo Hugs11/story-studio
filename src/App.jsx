@@ -1740,6 +1740,7 @@ function AppContent() {
           coverImage={store.project.thumbnailImage || store.project.rootImage}
           exportFolder={modalExportFolder}
           generateDisabled={!canGenerate}
+          promptRegenerateUuid={importedPackPendingMetaRef.current}
           onSave={(draft) => handleSavePackMetadata(draft, { generate: false })}
           onSaveAndGenerate={(draft) => handleSavePackMetadata(draft, { generate: true })}
           onClose={() => setPackMetadataOpen(false)}

@@ -13,6 +13,7 @@ test('projectToRustExport injects pack export metadata', () => {
       version: 2,
       minAge: '3',
       description: 'Changelog',
+      uuid: '11111111-2222-4333-8444-555555555555',
     },
     projectType: 'pack',
     globalOptions: {},
@@ -24,6 +25,7 @@ test('projectToRustExport injects pack export metadata', () => {
   assert.equal(rustExport.name, '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2');
   assert.equal(rustExport.packVersion, 2);
   assert.equal(rustExport.packDescription, 'Changelog');
+  assert.equal(rustExport.packUuid, '11111111-2222-4333-8444-555555555555');
   assert.equal(rustExport.globalOptions.silenceMode, 'normalize');
   assert.equal(rustExport.globalOptions.addSilenceDurationSec, PACK_AUDIO_EDGE_SILENCE_SECONDS);
   assert.equal(Object.hasOwn(rustExport.globalOptions, 'convertFormat'), false);

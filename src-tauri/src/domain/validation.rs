@@ -1035,6 +1035,7 @@ mod tests {
             native_graph: None,
             pack_version: 1,
             pack_description: String::new(),
+            pack_uuid: String::new(),
             root_entries: Vec::new(),
             shared_entries: Vec::new(),
             global_options: options(),

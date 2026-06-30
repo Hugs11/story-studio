@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { exists } from '@tauri-apps/plugin-fs';
-import { CircleCheck, Image, Package, TriangleAlert } from '../icons/LucideLocal';
+import { CircleCheck, Image, Package, RotateCcw, TriangleAlert } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { generateConventionName, getExportPackName } from '../../utils/packConvention';
+import { generateUuid } from '../../utils/uuid';
 import './PackNameModal.css';
 
 const AGE_CHIPS = ['2', '3', '6', '9', '12'];
@@ -24,6 +25,8 @@ function defaultDraft(packMetadata = {}) {
     producer: '',
     bonus: '',
     description: '',
+    uuid: '',
+    originalUuid: '',
     namingMode: 'convention',
     legacyExportName: '',
     legacyName: '',
@@ -40,6 +43,8 @@ function normalizeDraft(draft) {
     producer: String(draft.producer || '').trim(),
     bonus: String(draft.bonus || '').trim(),
     description: String(draft.description || '').trim(),
+    uuid: String(draft.uuid || '').trim(),
+    originalUuid: String(draft.originalUuid || '').trim(),
     minAge: String(draft.minAge || '3').replace(/\D/g, '') || '3',
     version: normalizeVersion(draft.version),
     namingMode,
@@ -103,6 +108,7 @@ export function PackNameModal({
   exportFolder = null,
   generateDisabled = false,
   embedded = false,
+  promptRegenerateUuid = false,
   onSave,
   onSaveAndGenerate,
   onClose,
@@ -110,6 +116,7 @@ export function PackNameModal({
   const [draft, setDraft] = useState(() => defaultDraft(packMetadata));
   const [saving, setSaving] = useState(null);
   const [collision, setCollision] = useState('unknown');
+  const promptedUuidRef = useRef('');
   const coverUrl = useLocalFile(coverImage);
   useEscapeKey(open && !embedded, onClose);
 
@@ -119,6 +126,20 @@ export function PackNameModal({
       setSaving(null);
     }
   }, [open, packMetadata]);
+
+  useEffect(() => {
+    const currentUuid = String(packMetadata?.uuid || '').trim();
+    const originalUuid = String(packMetadata?.originalUuid || '').trim();
+    const isOriginalImportedUuid = !originalUuid || currentUuid === originalUuid;
+    if (!open || !promptRegenerateUuid || !currentUuid || !isOriginalImportedUuid || promptedUuidRef.current === currentUuid) return;
+    promptedUuidRef.current = currentUuid;
+    const wantsNewUuid = window.confirm(
+      "Ce pack importé a déjà un UUID. Comme tu modifies une nouvelle révision, veux-tu générer un nouvel UUID maintenant ?",
+    );
+    if (wantsNewUuid) {
+      setDraft((current) => ({ ...current, uuid: generateUuid() }));
+    }
+  }, [open, packMetadata?.uuid, promptRegenerateUuid]);
 
   const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
   const exportName = useMemo(() => {
@@ -160,8 +181,12 @@ export function PackNameModal({
     setDraft((current) => ({
       ...current,
       [field]: field === 'version' ? normalizeVersion(value) : value,
-      namingMode: 'convention',
+      namingMode: field === 'uuid' ? current.namingMode : 'convention',
     }));
+  }
+
+  function regenerateUuid() {
+    updateField('uuid', generateUuid());
   }
 
   function updateAge(value) {
@@ -282,6 +307,24 @@ export function PackNameModal({
             <label>Description <span>changelog</span></label>
             <textarea className="pack-meta-input pack-meta-textarea" value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder="Public visé, contenu, changements depuis la version précédente..." />
           </div>
+
+          <div className="pack-meta-field-row">
+            <label>UUID</label>
+            <div className="pack-meta-uuid-control">
+              <input className="pack-meta-input pack-meta-uuid-input" value={draft.uuid || ''} onChange={(event) => updateField('uuid', event.target.value)} placeholder="UUID du pack" />
+              <Tooltip text="Générer un nouvel UUID" wrap>
+                <Button variant="icon" className="pack-meta-uuid-button" onClick={regenerateUuid} aria-label="Générer un nouvel UUID">
+                  <RotateCcw className="chrome-icon" strokeWidth={2} absoluteStrokeWidth />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+          {promptRegenerateUuid && packMetadata?.uuid ? (
+            <div className="pack-meta-field-row">
+              <span />
+              <p className="pack-meta-uuid-hint">Pack importé : garde l’UUID originel seulement si tu veux remplacer la même révision.</p>
+            </div>
+          ) : null}
         </section>
       </div>
 

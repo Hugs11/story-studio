@@ -136,6 +136,7 @@ fn fidelity_report_for(
 ) -> NativeAssetPreparationReport {
     NativeAssetPreparationReport {
         project,
+        pack_uuid: String::new(),
         stage_dir: String::new(),
         assets_dir: String::new(),
         assets,
