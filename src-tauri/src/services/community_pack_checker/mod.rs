@@ -698,7 +698,7 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
 fn validate_story_studio_editability(zip_path: &Path, _temp_dir: &Path, report: &mut ReportModel) {
     let zip_string = zip_path.to_string_lossy().to_string();
     match pack_reader::classify_pack_editability(&zip_string) {
-        Ok(editability) if editability.editable => {
+        Ok(editability) if editability.authoring_editable => {
             report.structure_summary.story_studio_editable = true;
             report.technical_log.push(format!(
                 "[OK] Structure éditable dans Story Studio : {} entrée(s), nativeGraph={}",
@@ -711,14 +711,16 @@ fn validate_story_studio_editability(zip_path: &Path, _temp_dir: &Path, report: 
                 PackValidationSeverity::Warning,
                 "structure",
                 "Édition Story Studio",
-                "Cette structure peut être valide pour la Lunii mais Story Studio ne sait pas encore la régénérer fidèlement.",
+                "Cette structure peut être valide pour la Lunii mais Story Studio ne la classe pas authoring-editable.",
             );
             entry.technical_details = Some(editability.reason.clone());
             report.issues.push(entry);
             report.technical_log.push(format!(
-                "[WARN] Édition Story Studio refusée : {} ({} entrée(s), nativeGraph={}, écarts={})",
+                "[WARN] Édition Story Studio refusée : {} ({} entrée(s), roundTripFaithful={}, usesGraphProjection={}, nativeGraph={}, écarts={})",
                 editability.reason,
                 editability.projected_entry_count,
+                editability.round_trip_faithful,
+                editability.uses_graph_projection,
                 editability.has_native_graph,
                 editability
                     .fidelity

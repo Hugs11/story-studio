@@ -6,12 +6,16 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use super::projection::walk_story_doc_to_entries;
+use super::stage::{stage_action_options, stage_control_bool, stage_uuid};
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
 use crate::domain::validation::validate_project_structure_for_generation;
 use crate::native_pack::canonicalize_project;
 use crate::native_pack::fidelity_judge::{canonical_roundtrip_is_faithful, FidelityReport};
 use crate::support::imported_pack::ensure_studio_pack_zip;
+
+const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
+const SHARED_ENTRY_RATIO_LIMIT: f64 = 0.25;
 pub fn load_pack_zip(zip_path: &str) -> Result<String, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?;
     read_story_json_from_zip(&zip_path)
@@ -37,7 +41,7 @@ pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, Strin
 /// Les fichiers audio et image sont copiés dans `dest_dir`.
 pub fn unpack_zip_to_entries(zip_path: &str, dest_dir: &str) -> Result<serde_json::Value, String> {
     let editability = classify_pack_editability(zip_path)?;
-    if !editability.editable {
+    if !editability.authoring_editable {
         return Err(format!(
             "Pack non éditable dans Story Studio : {}",
             editability.reason
@@ -73,17 +77,49 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PackEditabilityReport {
-    pub editable: bool,
+    pub round_trip_faithful: bool,
+    pub authoring_editable: bool,
+    pub read_only_inspectable: bool,
     pub reason: String,
     pub fidelity: Option<FidelityReport>,
     pub projected_entry_count: usize,
+    pub root_entry_count: usize,
+    pub shared_entry_count: usize,
     pub has_native_graph: bool,
+    pub uses_graph_projection: bool,
+    pub root_ref_ratio: f64,
+    pub root_ref_only: bool,
+    pub shared_entry_ratio: f64,
+    pub has_unmodeled_wheel: bool,
+    pub uses_native_graph_parachute: bool,
 }
 
-/// Classe un pack selon la règle produit "éditable seulement si le canonique
-/// régénère fidèlement le story.json oracle" et si chaque asset référencé par
-/// les stages existe réellement dans le ZIP.
+impl PackEditabilityReport {
+    fn unsupported(reason: String) -> Self {
+        Self {
+            round_trip_faithful: false,
+            authoring_editable: false,
+            read_only_inspectable: false,
+            reason,
+            fidelity: None,
+            projected_entry_count: 0,
+            root_entry_count: 0,
+            shared_entry_count: 0,
+            has_native_graph: false,
+            uses_graph_projection: false,
+            root_ref_ratio: 0.0,
+            root_ref_only: false,
+            shared_entry_ratio: 0.0,
+            has_unmodeled_wheel: false,
+            uses_native_graph_parachute: false,
+        }
+    }
+}
+
+/// Classe un pack en séparant fidélité round-trip, éditabilité authoring et
+/// inspection read-only. La fidélité seule ne rend jamais un pack éditable.
 pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?;
     let story_json = read_story_json_from_zip(&zip_path)?;
@@ -96,25 +132,17 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
             .map(|name| format!("assets/{name}"))
             .collect::<Vec<_>>()
             .join(", ");
-        return Ok(PackEditabilityReport {
-            editable: false,
-            reason: format!("Asset(s) référencé(s) absent(s) du ZIP : {rendered}"),
-            fidelity: None,
-            projected_entry_count: 0,
-            has_native_graph: false,
-        });
+        return Ok(PackEditabilityReport::unsupported(format!(
+            "Asset(s) référencé(s) absent(s) du ZIP : {rendered}"
+        )));
     }
     let assets = presence_faithful_asset_map(&doc);
     let imported = match walk_story_doc_to_entries(&doc, &assets) {
         Ok(imported) => imported,
         Err(error) => {
-            return Ok(PackEditabilityReport {
-                editable: false,
-                reason: format!("Projection Story Studio impossible : {error}"),
-                fidelity: None,
-                projected_entry_count: 0,
-                has_native_graph: false,
-            })
+            return Ok(PackEditabilityReport::unsupported(format!(
+                "Projection Story Studio impossible : {error}"
+            )))
         }
     };
 
@@ -124,12 +152,38 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         .filter(|value| !value.trim().is_empty())
         .unwrap_or("Pack importé");
     let mut project = project_from_imported_entries(&imported, title)?;
-    let projected_entry_count = count_project_entries(&project.root_entries)
-        + count_project_entries(&project.shared_entries);
+    let root_entry_count = count_project_entries(&project.root_entries);
+    let shared_entry_count = count_project_entries(&project.shared_entries);
+    let projected_entry_count = root_entry_count + shared_entry_count;
+    let root_ref_count = project
+        .root_entries
+        .iter()
+        .filter(|entry| entry.entry_type == "ref")
+        .count();
+    let root_ref_ratio = ratio(root_ref_count, project.root_entries.len());
+    let root_ref_only =
+        !project.root_entries.is_empty() && root_ref_count == project.root_entries.len();
+    let shared_entry_ratio = ratio(shared_entry_count, projected_entry_count);
     let has_native_graph = imported
         .get("nativeGraph")
         .filter(|value| !value.is_null())
         .is_some();
+    let uses_graph_projection = imported
+        .get("usesGraphProjection")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
+    let uses_native_graph_parachute = has_native_graph;
+    let structural_validation = validate_project_structure_for_generation(&project);
+    let structural_validation_ok = structural_validation.is_ok();
+    let structural_error = structural_validation.err().and_then(|error| {
+        error
+            .lines()
+            .next()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+    });
     project.native_graph = Some(serde_json::json!({
         "preserveForRoundTrip": true,
         "document": doc,
@@ -137,39 +191,68 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
 
     let canonical = canonicalize_project(&project);
     let fidelity = canonical_roundtrip_is_faithful(&canonical)?;
-    let structural_validation = validate_project_structure_for_generation(&project);
-    let editable = projected_entry_count > 0 && fidelity.faithful && structural_validation.is_ok();
-    let reason = if editable {
-        "Génération canonique fidèle au story.json d'origine.".to_string()
+    let round_trip_faithful = fidelity.faithful;
+    let authoring_editable = projected_entry_count > 0
+        && round_trip_faithful
+        && structural_validation_ok
+        && !uses_native_graph_parachute
+        && !uses_graph_projection
+        && root_ref_ratio < ROOT_REF_RATIO_LIMIT
+        && shared_entry_ratio < SHARED_ENTRY_RATIO_LIMIT
+        && !has_unmodeled_wheel;
+    let read_only_inspectable = !authoring_editable && round_trip_faithful;
+    let reason = if authoring_editable {
+        "Pack authoring éditable : génération canonique fidèle au story.json d'origine.".to_string()
     } else if projected_entry_count == 0 {
         "Aucune entrée éditable projetée depuis le story.json.".to_string()
-    } else if let Err(error) = structural_validation {
-        error
-            .lines()
-            .next()
-            .unwrap_or("Projet importé non générable.")
-            .to_string()
-    } else {
+    } else if !round_trip_faithful {
         fidelity.gaps.first().cloned().unwrap_or_else(|| {
             "Génération canonique non fidèle au story.json d'origine.".to_string()
         })
+    } else if let Some(error) = structural_error {
+        error
+    } else if uses_native_graph_parachute {
+        "Lecture seule : la projection importée dépend d'un nativeGraph préservé.".to_string()
+    } else if uses_graph_projection {
+        "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
+            .to_string()
+    } else if root_ref_only {
+        "Lecture seule : la racine importée est uniquement composée de références.".to_string()
+    } else if root_ref_ratio >= ROOT_REF_RATIO_LIMIT {
+        "Lecture seule : trop de références à la racine du projet importé.".to_string()
+    } else if shared_entry_ratio >= SHARED_ENTRY_RATIO_LIMIT {
+        "Lecture seule : le pool d'éléments partagés domine le projet importé.".to_string()
+    } else if has_unmodeled_wheel {
+        "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
+    } else {
+        "Lecture seule : le pack est fidèle en round-trip mais hors critères authoring.".to_string()
     };
 
     Ok(PackEditabilityReport {
-        editable,
+        round_trip_faithful,
+        authoring_editable,
+        read_only_inspectable,
         reason,
         fidelity: Some(fidelity),
         projected_entry_count,
+        root_entry_count,
+        shared_entry_count,
         has_native_graph,
+        uses_graph_projection,
+        root_ref_ratio,
+        root_ref_only,
+        shared_entry_ratio,
+        has_unmodeled_wheel,
+        uses_native_graph_parachute,
     })
 }
 
 /// Teste « à sec » si un pack est éditable par Story Studio. Retourne :
-///  - `Ok(true)`  : pack fidèle → ouvrable en édition.
-///  - `Ok(false)` : pack valide mais non fidèle → simulable seulement (D31).
+///  - `Ok(true)`  : pack authoring-editable → ouvrable en édition.
+///  - `Ok(false)` : pack valide mais non authoring-editable → simulable seulement.
 ///  - `Err(_)`    : archive invalide / illisible (ni éditable ni simulable).
 pub fn check_pack_editability(zip_path: &str) -> Result<bool, String> {
-    classify_pack_editability(zip_path).map(|report| report.editable)
+    classify_pack_editability(zip_path).map(|report| report.authoring_editable)
 }
 
 fn presence_faithful_asset_map(doc: &serde_json::Value) -> HashMap<String, PathBuf> {
@@ -401,6 +484,100 @@ fn count_project_entries(entries: &[ProjectEntry]) -> usize {
         .sum()
 }
 
+fn ratio(part: usize, total: usize) -> f64 {
+    if total == 0 {
+        0.0
+    } else {
+        part as f64 / total as f64
+    }
+}
+
+fn story_doc_indexes<'a>(
+    doc: &'a serde_json::Value,
+) -> (
+    HashMap<&'a str, &'a serde_json::Value>,
+    HashMap<&'a str, &'a serde_json::Value>,
+) {
+    let stages = doc
+        .get("stageNodes")
+        .and_then(|value| value.as_array())
+        .map(|stages| {
+            stages
+                .iter()
+                .filter_map(|stage| stage_uuid(stage).map(|id| (id, stage)))
+                .collect()
+        })
+        .unwrap_or_default();
+    let actions = doc
+        .get("actionNodes")
+        .and_then(|value| value.as_array())
+        .map(|actions| {
+            actions
+                .iter()
+                .filter_map(|action| {
+                    action
+                        .get("id")
+                        .and_then(|value| value.as_str())
+                        .filter(|id| !id.trim().is_empty())
+                        .map(|id| (id, action))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    (stages, actions)
+}
+
+fn ok_path_reaches_stage(
+    current_id: &str,
+    target_id: &str,
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+    visited: &mut HashSet<String>,
+    depth: usize,
+) -> bool {
+    if depth > 32 || !visited.insert(current_id.to_string()) {
+        return false;
+    }
+    let Some(stage) = stages.get(current_id) else {
+        return false;
+    };
+    for next_id in stage_action_options(stage, actions) {
+        if next_id == target_id {
+            return true;
+        }
+        if ok_path_reaches_stage(next_id, target_id, stages, actions, visited, depth + 1) {
+            return true;
+        }
+    }
+    false
+}
+
+fn has_unmodeled_wheel(doc: &serde_json::Value) -> bool {
+    let (stages, actions) = story_doc_indexes(doc);
+    stages.iter().any(|(stage_id, stage)| {
+        if !stage_control_bool(stage, "wheel", false)
+            || !stage_control_bool(stage, "autoplay", false)
+        {
+            return false;
+        }
+        let targets = stage_action_options(stage, &actions);
+        if targets.len() < 2 {
+            return false;
+        }
+        targets.iter().any(|target_id| *target_id == *stage_id)
+            || targets.iter().any(|target_id| {
+                ok_path_reaches_stage(
+                    target_id,
+                    stage_id,
+                    &stages,
+                    &actions,
+                    &mut HashSet::new(),
+                    0,
+                )
+            })
+    })
+}
+
 fn read_story_json_from_zip(zip_path: &Path) -> Result<String, String> {
     let file =
         fs::File::open(zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
@@ -491,7 +668,10 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 
 #[cfg(test)]
 mod tests {
-    use super::{check_pack_editability, classify_pack_editability, unpack_zip_to_entries};
+    use super::{
+        check_pack_editability, classify_pack_editability, unpack_zip_to_entries,
+        unpack_zip_to_entries_unchecked,
+    };
     use std::fs;
     use std::io::Write;
     use std::path::{Path, PathBuf};
@@ -686,6 +866,99 @@ mod tests {
         })
     }
 
+    fn unmodeled_wheel_story_json() -> serde_json::Value {
+        serde_json::json!({
+            "title": "Wheel synthetic",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "carousel", "name": "Carousel", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "carousel-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "exit", "name": "Exit", "type": "stage", "squareOne": false,
+                    "audio": "extra.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": null,
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Root", "options": ["carousel"] },
+                { "id": "carousel-action", "name": "Carousel", "options": ["carousel", "exit"] }
+            ]
+        })
+    }
+
+    fn autoplay_multi_ok_without_wheel_story_json() -> serde_json::Value {
+        serde_json::json!({
+            "title": "Autoplay multi OK synthetic",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "prompt", "name": "Prompt", "type": "stage", "squareOne": false,
+                    "audio": "item.mp3", "image": "item.png",
+                    "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "prompt-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-a", "name": "A", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": null,
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-b", "name": "B", "type": "stage", "squareOne": false,
+                    "audio": "extra.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": null,
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Root", "options": ["prompt"] },
+                { "id": "prompt-action", "name": "Prompt", "options": ["story-a", "story-b"] }
+            ]
+        })
+    }
+
+    #[test]
+    fn wheel_autoplay_cycle_is_unmodeled() {
+        assert!(super::has_unmodeled_wheel(&unmodeled_wheel_story_json()));
+    }
+
+    #[test]
+    fn autoplay_multi_ok_without_wheel_is_not_unmodeled() {
+        assert!(!super::has_unmodeled_wheel(
+            &autoplay_multi_ok_without_wheel_story_json()
+        ));
+    }
+
     #[test]
     fn faithful_pack_is_editable() {
         let dir = temp_dir("editable");
@@ -694,12 +967,18 @@ mod tests {
 
         let editable = check_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
         assert!(editable);
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(report.round_trip_faithful);
+        assert!(report.authoring_editable);
+        assert!(!report.read_only_inspectable);
+        assert!(!report.uses_graph_projection);
+        assert!(!report.uses_native_graph_parachute);
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
 
     #[test]
-    fn lapin_like_branching_graph_is_editable_with_shared_entries() {
+    fn lapin_like_branching_graph_is_roundtrip_faithful_but_read_only() {
         let dir = temp_dir("lapin_like_graph");
         let zip_path = dir.join("pack.zip");
         let story = lapin_like_story_json();
@@ -721,19 +1000,31 @@ mod tests {
         );
 
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
-        assert!(report.editable, "diagnostic inattendu : {}", report.reason);
-        assert!(report
-            .fidelity
-            .as_ref()
-            .is_some_and(|fidelity| fidelity.faithful));
+        assert!(
+            report.round_trip_faithful,
+            "diagnostic inattendu : {}",
+            report.reason
+        );
+        assert!(!report.authoring_editable);
+        assert!(report.read_only_inspectable);
+        assert!(report.uses_graph_projection);
+        assert!(report.shared_entry_ratio > 0.0);
         assert!(!report.has_native_graph);
 
-        let imported = unpack_zip_to_entries(
+        let public_error = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            dir.join("public-out").to_str().expect("utf8"),
+        )
+        .expect_err("graph projection must not open as authoring");
+        assert!(public_error.contains("Pack non éditable"));
+
+        let imported = unpack_zip_to_entries_unchecked(
             zip_path.to_str().expect("utf8"),
             dir.join("out").to_str().expect("utf8"),
         )
-        .expect("unpack editable graph");
+        .expect("unpack graph for read-only inspection");
         assert!(imported["nativeGraph"].is_null());
+        assert_eq!(imported["usesGraphProjection"], true);
         let shared_entries = imported["sharedEntries"]
             .as_array()
             .expect("shared entries");
@@ -795,7 +1086,7 @@ mod tests {
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
 
         assert!(
-            !report.editable,
+            !report.authoring_editable,
             "un helper orphelin non fidèle ne doit pas être annoncé éditable"
         );
 
@@ -804,18 +1095,20 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn plan16_graph_pack_from_env_is_editable_without_native_graph() {
+    fn plan16_graph_pack_from_env_is_read_only_without_native_graph() {
         let Some(zip_path) = std::env::var_os("STORY_STUDIO_PLAN16_GRAPH_PACK") else {
             eprintln!("[PLAN16] SKIP - definir STORY_STUDIO_PLAN16_GRAPH_PACK vers un ZIP graphe");
             return;
         };
         let zip_path = PathBuf::from(zip_path);
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
-        assert!(report.editable, "diagnostic inattendu : {}", report.reason);
-        assert!(report
-            .fidelity
-            .as_ref()
-            .is_some_and(|fidelity| fidelity.faithful));
+        assert!(
+            report.round_trip_faithful,
+            "diagnostic inattendu : {}",
+            report.reason
+        );
+        assert!(!report.authoring_editable);
+        assert!(report.read_only_inspectable);
         assert!(
             !report.has_native_graph,
             "le pack est encore passé par le parachute nativeGraph"
@@ -840,7 +1133,7 @@ mod tests {
         write_story_zip(&zip_path, &story);
 
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
-        assert!(!report.editable);
+        assert!(!report.authoring_editable);
         assert!(report.fidelity.as_ref().is_some_and(|f| !f.faithful));
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -857,7 +1150,7 @@ mod tests {
         write_story_zip(&zip_path, &story);
 
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
-        assert!(!report.editable);
+        assert!(!report.authoring_editable);
         assert!(
             report.reason.contains("échec de génération canonique")
                 || report
@@ -889,7 +1182,7 @@ mod tests {
 
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
 
-        assert!(!report.editable);
+        assert!(!report.authoring_editable);
         assert!(
             report.reason.contains("assets/story.mp3"),
             "diagnostic inattendu : {}",
@@ -939,5 +1232,33 @@ mod tests {
         assert!(check_pack_editability(zip_path.to_str().expect("utf8")).is_err());
 
         fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    #[ignore]
+    fn suzanne_pack_from_env_stays_authoring_editable() {
+        let Some(zip_path) = std::env::var_os("STORY_STUDIO_SUZANNE_PACK") else {
+            eprintln!(
+                "[SUZANNE] SKIP - definir STORY_STUDIO_SUZANNE_PACK vers le ZIP Suzanne et Gaston"
+            );
+            return;
+        };
+        let zip_path = PathBuf::from(zip_path);
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(
+            report.round_trip_faithful,
+            "diagnostic inattendu : {}",
+            report.reason
+        );
+        assert!(
+            report.authoring_editable,
+            "diagnostic inattendu : {}",
+            report.reason
+        );
+        assert!(!report.read_only_inspectable);
+        assert!(!report.uses_graph_projection);
+        assert!(!report.root_ref_only);
+        assert_eq!(report.shared_entry_count, 0);
+        assert!(!report.has_unmodeled_wheel);
     }
 }

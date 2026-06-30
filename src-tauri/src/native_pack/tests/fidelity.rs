@@ -778,6 +778,68 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
         Err(error) => eprintln!("[{pack_id}] le juge n'a pas tourné : {error}"),
     }
 
+    match crate::services::pack_reader::classify_pack_editability(&zip_path) {
+        Ok(report) => {
+            eprintln!(
+                "[{pack_id}] roundTripFaithful={} | authoringEditable={} | readOnlyInspectable={} | usesGraphProjection={} | rootRefRatio={:.3} | sharedEntryRatio={:.3} | hasUnmodeledWheel={} | usesNativeGraphParachute={} | reason={}",
+                report.round_trip_faithful,
+                report.authoring_editable,
+                report.read_only_inspectable,
+                report.uses_graph_projection,
+                report.root_ref_ratio,
+                report.shared_entry_ratio,
+                report.has_unmodeled_wheel,
+                report.uses_native_graph_parachute,
+                report.reason,
+            );
+            let lower = pack_id.to_ascii_lowercase();
+            if lower.contains("best") || lower.contains("suzanne") {
+                assert!(
+                    report.authoring_editable,
+                    "[{pack_id}] doit rester authoringEditable=true : {}",
+                    report.reason
+                );
+                assert!(
+                    !report.uses_graph_projection,
+                    "[{pack_id}] ne doit pas etre detourne vers graph_import"
+                );
+            }
+            if lower.contains("lapin") {
+                assert!(
+                    report.round_trip_faithful,
+                    "[{pack_id}] doit rester faithful"
+                );
+                assert!(
+                    !report.authoring_editable,
+                    "[{pack_id}] ne doit pas etre authoring-editable"
+                );
+                assert!(
+                    report.read_only_inspectable,
+                    "[{pack_id}] doit rester inspectable en lecture seule"
+                );
+            }
+            if lower.contains("ders") {
+                assert!(
+                    report.round_trip_faithful,
+                    "[{pack_id}] doit rester faithful"
+                );
+                assert!(
+                    !report.authoring_editable,
+                    "[{pack_id}] ne doit pas etre authoring-editable"
+                );
+                assert!(
+                    report.read_only_inspectable,
+                    "[{pack_id}] doit rester inspectable en lecture seule"
+                );
+                assert!(
+                    report.has_unmodeled_wheel,
+                    "[{pack_id}] doit signaler la roue/carrousel non modelisee"
+                );
+            }
+        }
+        Err(error) => eprintln!("[{pack_id}] classification authoring impossible : {error}"),
+    }
+
     let _ = std::fs::remove_dir_all(&base);
 }
 

@@ -18,7 +18,7 @@ mod validation;
 pub(crate) use extraction::unpack_zip_to_entries_unchecked;
 pub use extraction::{
     check_pack_editability, classify_pack_editability, get_pack_asset, load_pack_zip,
-    unpack_zip_to_entries,
+    unpack_zip_to_entries, PackEditabilityReport,
 };
 
 #[cfg(test)]
