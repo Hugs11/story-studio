@@ -162,6 +162,7 @@ export function useSaveProgress({
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
         await onProjectSaved?.(result, {
+          promote: true,
           workspaceDir: targetWorkspaceDir,
           cleanupSession: !transferResult.errors?.length,
         });
