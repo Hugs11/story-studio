@@ -172,6 +172,10 @@ fn run_metrics(label: &str, path: &Path) {
         .get("nativeGraph")
         .map(|v| !v.is_null())
         .unwrap_or(false);
+    let uses_graph_projection = result
+        .get("usesGraphProjection")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
     let shared_entries = result
         .get("sharedEntries")
         .and_then(|v| v.as_array())
@@ -204,12 +208,13 @@ fn run_metrics(label: &str, path: &Path) {
         }
     }
     println!(
-        "import actuel : top={} menus={} stories={} refs={} nativeGraph={}",
+        "import actuel : top={} menus={} stories={} refs={} nativeGraph={} usesGraphProjection={}",
         entries.len(),
         imported.0,
         imported.1,
         imported.2,
-        native_graph
+        native_graph,
+        uses_graph_projection
     );
     if !shared_entries.is_empty() {
         let sample: Vec<String> = shared_entries
@@ -218,8 +223,14 @@ fn run_metrics(label: &str, path: &Path) {
             .map(|entry| {
                 format!(
                     "{}:{}",
-                    entry.get("type").and_then(|value| value.as_str()).unwrap_or("?"),
-                    entry.get("id").and_then(|value| value.as_str()).unwrap_or("?")
+                    entry
+                        .get("type")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or("?"),
+                    entry
+                        .get("id")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or("?")
                 )
             })
             .collect();

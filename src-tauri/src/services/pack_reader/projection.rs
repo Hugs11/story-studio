@@ -467,6 +467,7 @@ pub(super) fn walk_story_doc_to_entries(
         "nativeGraph": native_graph,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
+        "usesGraphProjection": uses_graph_import_projection,
         "sharedEntries": shared_entries,
         "entries": entries
     }))

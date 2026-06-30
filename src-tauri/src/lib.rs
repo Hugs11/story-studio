@@ -111,6 +111,7 @@ pub fn run() {
             commands::pack::unpack_zip_to_entries,
             commands::pack::convert_folder_pack_to_zip,
             commands::pack::check_pack_editability,
+            commands::pack::classify_pack_editability,
             commands::pack::analyze_community_pack,
             commands::pack::create_fixed_community_pack,
             commands::xtts::xtts_get_status,

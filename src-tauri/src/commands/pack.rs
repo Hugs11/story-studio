@@ -69,6 +69,20 @@ pub async fn check_pack_editability(zip_path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub async fn classify_pack_editability(
+    zip_path: String,
+) -> Result<pack_reader::PackEditabilityReport, String> {
+    log::info!(target: "pack", "classify_pack_editability: '{}'", zip_path);
+    let zip_path_for_log = zip_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        pack_reader::classify_pack_editability(&zip_path)
+            .inspect_err(|err| log::error!(target: "pack", "classify_pack_editability failed for '{}': {}", zip_path_for_log, err))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn analyze_community_pack(
     app: AppHandle,
     zip_path: String,
