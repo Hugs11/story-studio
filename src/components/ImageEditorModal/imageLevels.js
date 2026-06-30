@@ -6,8 +6,6 @@
 
 import { logger } from '../../utils/logger';
 
-export const LEVELS_BLACK_MIN = 0;
-export const LEVELS_WHITE_MAX = 255;
 export const LEVELS_GAMMA_MIN = 0.1;
 export const LEVELS_GAMMA_MAX = 9.99;
 

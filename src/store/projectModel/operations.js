@@ -136,10 +136,6 @@ export function updateProjectRootEntries(project, nextRootEntries) {
   return normalizeBaseProject({ ...project, rootEntries: nextRootEntries });
 }
 
-export function updateProjectSharedEntries(project, nextSharedEntries) {
-  return normalizeBaseProject({ ...project, sharedEntries: nextSharedEntries });
-}
-
 function updateProjectEntryForests(project, nextRootEntries, nextSharedEntries) {
   return normalizeBaseProject({
     ...project,
@@ -150,10 +146,6 @@ function updateProjectEntryForests(project, nextRootEntries, nextSharedEntries) 
 
 export function appendEntry(project, containerId, entry) {
   return updateProjectRootEntries(project, appendEntryToTree(project.rootEntries ?? [], containerId, entry));
-}
-
-export function appendSharedEntry(project, entry) {
-  return updateProjectSharedEntries(project, [...(project.sharedEntries ?? []), normalizeEntry(entry)]);
 }
 
 export function shallowCloneEntry(entry) {

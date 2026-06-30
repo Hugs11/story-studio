@@ -141,25 +141,6 @@ export function findParentMenuId(project, entryId, projectIndex = null) {
   return parentId;
 }
 
-export function findEntryScope(project, entryId, projectIndex = null) {
-  if (!entryId || entryId === 'root') return null;
-  if (projectIndex) {
-    return projectIndex.flatEntries.find((flat) => flat.id === entryId)?.scope ?? null;
-  }
-  let scope = null;
-  walkEntries(project.rootEntries ?? [], (entry) => {
-    if (entry.id === entryId) {
-      scope = 'root';
-    }
-  });
-  if (scope) return scope;
-  walkEntries(project.sharedEntries ?? [], (entry) => {
-    if (entry.id === entryId) {
-      scope = 'shared';
-    }
-  });
-  return scope;
-}
 
 export function findEntryPath(project, entryId, projectIndex = null) {
   if (entryId === 'root') return [];
@@ -291,24 +272,6 @@ export function getPlayableDescendantCount(projectIndex, entryId) {
   return projectIndex.playableDescendantCountById.get(entryId) ?? 0;
 }
 
-export function collectProjectAudioPaths(project) {
-  const audioPaths = [];
-  if (project.rootAudio) audioPaths.push(project.rootAudio);
-  if (project.nightModeAudio) audioPaths.push(project.nightModeAudio);
-  visitProjectEntries(project, (entry) => {
-    if (entry.type === 'menu' && entry.audio) audioPaths.push(entry.audio);
-    if (entry.type === 'story') {
-      if (entry.audio) audioPaths.push(entry.audio);
-      if (entry.itemAudio) audioPaths.push(entry.itemAudio);
-      if (entry.afterPlaybackPromptAudio) audioPaths.push(entry.afterPlaybackPromptAudio);
-      for (const step of entry.afterPlaybackSequence ?? []) {
-        if (step.audio) audioPaths.push(step.audio);
-      }
-      if (entry.afterPlaybackHomeStep?.audio) audioPaths.push(entry.afterPlaybackHomeStep.audio);
-    }
-  });
-  return audioPaths;
-}
 
 // Retourne le chemin de l'image associee a une entree (ou a la racine), avec
 // la regle qui couvre tous les types : root utilise `rootImage`, menu utilise
