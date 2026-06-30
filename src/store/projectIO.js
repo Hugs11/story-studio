@@ -167,10 +167,6 @@ function getProjectDir(savePath) {
   return dirname(savePath);
 }
 
-function getFileName(path) {
-  return basename(path);
-}
-
 function splitFileName(fileName) {
   const match = String(fileName || '').match(/^(.*?)(\.[^.]*)?$/);
   return {
@@ -197,17 +193,6 @@ function relativizeTagKeys(tags, mbahDir) {
   for (const [path, tagList] of Object.entries(tags)) {
     if (Array.isArray(tagList) && tagList.length > 0) {
       result[toProjectRelative(path, mbahDir)] = tagList;
-    }
-  }
-  return result;
-}
-
-function absolutizeTagKeys(tags, mbahDir) {
-  if (!tags || typeof tags !== 'object') return {};
-  const result = {};
-  for (const [path, tagList] of Object.entries(tags)) {
-    if (Array.isArray(tagList) && tagList.length > 0) {
-      result[fromProjectRelative(path, mbahDir)] = tagList;
     }
   }
   return result;

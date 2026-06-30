@@ -172,7 +172,7 @@ function AppContent() {
   const { showErrorDialog, showConfirmDialog, showChoiceDialog } = useErrorDialog();
   const renderQueue = useRenderQueueStore();
   const [saveToast, setSaveToast] = useState(null); // null | 'ok' | 'error'
-  const [autoSavedPath, setAutoSavedPath] = useState(null); // path of last autosave (display only)
+  const [, setAutoSavedPath] = useState(null); // path of last autosave (display only)
   const [appVersion, setAppVersion] = useState('');
   const [xttsSettings, setXttsSettings] = useState(() => loadXttsSettings());
   const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => loadKeyboardShortcuts());
