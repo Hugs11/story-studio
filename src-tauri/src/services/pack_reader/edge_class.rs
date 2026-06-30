@@ -6,9 +6,9 @@
 //!   B. `project_edge` — **décision de projection** (classe statique × état `placed`) :
 //!      Containment / Reference / OutOfTree.
 //!
-//! Ce module n'est PAS encore branché sur l'import : il sert d'ancrage testé et de socle
-//! pour la décomposition (Étape 3) et la baseline métriques (Étape 2d). D'où l'allow ci-dessous.
-#![allow(dead_code)]
+//! Ce module n'est PAS branché sur l'import de prod : il sert uniquement d'ancrage de
+//! mesure pour la baseline métriques (Étape 2d). D'où le gating `#[cfg(test)]` sur sa
+//! déclaration dans `mod.rs` — il n'est compilé que pour les tests.
 
 use std::collections::{HashMap, HashSet};
 

@@ -1,8 +1,8 @@
 mod after_playback;
 mod chaining;
+#[cfg(test)]
 mod edge_class;
 mod extraction;
-#[allow(dead_code)]
 mod graph_import;
 mod native_graph;
 mod navigation_targets;
