@@ -52,6 +52,7 @@ fn validate_story_entry_for_generation(
     errors: &mut Vec<String>,
 ) {
     let imported_native_story = is_imported_native_story(entry);
+    let explicit_title_stage = entry.title_control_settings.is_some();
     match entry.entry_type.as_str() {
         "zip" => {
             let zip_label = format!("{} : ZIP", context);
@@ -88,7 +89,7 @@ fn validate_story_entry_for_generation(
                         errors.push(err);
                     }
                 }
-            } else if !imported_native_story {
+            } else if !imported_native_story && !explicit_title_stage {
                 errors.push(format!("{} manquant.", item_audio_label));
             }
 
@@ -1209,6 +1210,23 @@ mod tests {
         project.thumbnail_image = Some("valid/thumb.png".to_string());
         project.root_entries = entries;
         project
+    }
+
+    #[test]
+    fn explicit_silent_title_stage_does_not_require_item_audio() {
+        let mut story = story_entry_with_paths("story-silent-title", "Titre silencieux");
+        story.item_audio = None;
+        story.title_control_settings = Some(EntryControlSettings {
+            wheel: Some(true),
+            ok: Some(true),
+            home: Some(true),
+            pause: Some(false),
+            autoplay: Some(false),
+        });
+        let project = pack_project(vec![story]);
+
+        validate_project_structure_for_generation(&project)
+            .expect("un titre explicite silencieux est generable");
     }
 
     #[test]

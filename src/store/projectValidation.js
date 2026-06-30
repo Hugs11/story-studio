@@ -9,7 +9,7 @@
 //   - Audio racine obligatoire (rootAudio).
 //   - Image racine / vignette obligatoires sur pack.
 //   - Story : audio obligatoire, accessibilite disque verifiee.
-//   - Story : itemImage + itemAudio obligatoires.
+//   - Story : itemImage obligatoire, itemAudio obligatoire sauf titre explicite silencieux.
 //   - Zip : zipPath obligatoire et fichier accessible.
 //   - Pack non-vide : au moins une histoire jouable.
 //   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences).
@@ -98,11 +98,12 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
 function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
   const itemId = item?.id ?? null;
+  const explicitTitleStage = !!item?.titleControlSettings;
   if (!hasPath(item?.audio)) pushWarning(issues, itemId, missingField(name, 'histoire', { feminine: true }));
   else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'histoire'));
   if (!hasPath(item?.itemImage)) pushWarning(issues, itemId, missingField(name, 'image', { feminine: true }));
   else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image'));
-  if (!hasPath(item?.itemAudio)) pushWarning(issues, itemId, missingField(name, 'audio titre'));
+  if (!hasPath(item?.itemAudio) && !explicitTitleStage) pushWarning(issues, itemId, missingField(name, 'audio titre'));
   else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio titre'));
   if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
     pushWarning(issues, itemId, brokenField(name, "audio de fin d'histoire"));

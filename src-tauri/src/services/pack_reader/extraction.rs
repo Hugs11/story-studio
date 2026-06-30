@@ -10,8 +10,8 @@ use super::stage::{stage_action_options, stage_control_bool, stage_uuid};
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
 use crate::domain::validation::validate_project_structure_for_generation;
-use crate::native_pack::canonicalize_project;
 use crate::native_pack::fidelity_judge::{canonical_roundtrip_is_faithful, FidelityReport};
+use crate::native_pack::{canonicalize_project, StoryDocument};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
 const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
@@ -173,7 +173,8 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         .and_then(|value| value.as_bool())
         .unwrap_or(false);
     let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
-    let uses_native_graph_parachute = has_native_graph;
+    let native_graph_roundtrip_available =
+        has_unmodeled_wheel && serde_json::from_value::<StoryDocument>(doc.clone()).is_ok();
     let structural_validation = validate_project_structure_for_generation(&project);
     let structural_validation_ok = structural_validation.is_ok();
     let structural_error = structural_validation.err().and_then(|error| {
@@ -191,7 +192,10 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
 
     let canonical = canonicalize_project(&project);
     let fidelity = canonical_roundtrip_is_faithful(&canonical)?;
-    let round_trip_faithful = fidelity.faithful;
+    let canonical_round_trip_faithful = fidelity.faithful;
+    let uses_native_graph_parachute =
+        !canonical_round_trip_faithful && native_graph_roundtrip_available;
+    let round_trip_faithful = canonical_round_trip_faithful || uses_native_graph_parachute;
     let authoring_editable = projected_entry_count > 0
         && round_trip_faithful
         && structural_validation_ok
@@ -209,10 +213,12 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         fidelity.gaps.first().cloned().unwrap_or_else(|| {
             "Génération canonique non fidèle au story.json d'origine.".to_string()
         })
+    } else if has_unmodeled_wheel {
+        "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
     } else if let Some(error) = structural_error {
         error
     } else if uses_native_graph_parachute {
-        "Lecture seule : la projection importée dépend d'un nativeGraph préservé.".to_string()
+        "Lecture seule : round-trip fidèle via graphe natif préservé.".to_string()
     } else if uses_graph_projection {
         "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
             .to_string()
@@ -222,8 +228,6 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         "Lecture seule : trop de références à la racine du projet importé.".to_string()
     } else if shared_entry_ratio >= SHARED_ENTRY_RATIO_LIMIT {
         "Lecture seule : le pool d'éléments partagés domine le projet importé.".to_string()
-    } else if has_unmodeled_wheel {
-        "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
     } else {
         "Lecture seule : le pack est fidèle en round-trip mais hors critères authoring.".to_string()
     };
