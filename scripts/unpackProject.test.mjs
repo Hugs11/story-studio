@@ -66,7 +66,7 @@ test('zip unpack inside an existing project only replaces the zip entry', () => 
   assert.deepEqual(nextProject.rootEntries.map((entry) => entry.id), ['story-existing', 'story-new']);
 });
 
-test('zip unpack promotion preserves graph shared entries', () => {
+test('zip unpack promotion ignores graph shared entries', () => {
   const project = normalizeProjectData({
     projectName: '',
     projectType: null,
@@ -86,6 +86,5 @@ test('zip unpack promotion preserves graph shared entries', () => {
   });
 
   assert.equal(nextProject.rootEntries[0].target, 'story:hub');
-  assert.equal(nextProject.sharedEntries.length, 1);
-  assert.equal(nextProject.sharedEntries[0].id, 'hub');
+  assert.equal(Object.hasOwn(nextProject, 'sharedEntries'), false);
 });

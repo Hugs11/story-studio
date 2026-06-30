@@ -95,7 +95,7 @@ test('buildProjectIndex tracks parent menus and playable descendant counts', () 
   assert.equal(getPlayableDescendantCount(index, 'zip-a'), 1);
 });
 
-test('buildProjectIndex includes shared entries without counting them as root content', () => {
+test('buildProjectIndex ignores stale sharedEntries outside the visible tree', () => {
   const sharedMenu = menu('shared-menu', [story('shared-story')]);
   const project = {
     schemaVersion: 3,
@@ -106,9 +106,9 @@ test('buildProjectIndex includes shared entries without counting them as root co
   const index = buildProjectIndex(project);
 
   assert.equal(index.rootPlayableCount, 1);
-  assert.equal(index.sharedPlayableCount, 1);
-  assert.equal(index.flatEntries.length, 3);
-  assert.equal(index.entryById.get('shared-story').id, 'shared-story');
-  assert.deepEqual(findEntryPath(project, 'shared-story', index), [sharedMenu, sharedMenu.children[0]]);
-  assert.equal(findParentMenuId(project, 'shared-story', index), 'shared-menu');
+  assert.equal(Object.hasOwn(index, 'sharedPlayableCount'), false);
+  assert.equal(index.flatEntries.length, 1);
+  assert.equal(index.entryById.get('shared-story'), undefined);
+  assert.equal(findEntryPath(project, 'shared-story', index), null);
+  assert.equal(findParentMenuId(project, 'shared-story', index), null);
 });

@@ -6,6 +6,7 @@ import { LuniiShell } from './LuniiShell';
 import { MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
+import { toPackAssetName } from '../../utils/zipAssetName';
 
 export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dragHandleProps = null }) {
   const [graph, setGraph] = useState(null);   // { stageNodes: Map, actionNodes: Map, squareOneId, title }
@@ -97,7 +98,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
     if (!assetHash || !zipPath) return;
     const seq = ++playSeqRef.current; // numéro de séquence pour détecter les charges tardives
     try {
-      const assetName = `assets/${assetHash}`;
+      const assetName = toPackAssetName(assetHash);
       const bytes = await invoke('get_pack_asset', { zipPath, assetName });
       // Ignorer si démontage ou si une autre lecture a démarré entre-temps
       if (!mountedRef.current || seq !== playSeqRef.current) return;
@@ -243,7 +244,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
 
   const cs = currentStage?.controlSettings ?? {};
   const isAtEntry = fromProject && (stageId === entryStageId || stageId === graph.squareOneId);
-  const imageAsset = currentStage?.image ? `assets/${currentStage.image}` : null;
+  const imageAsset = toPackAssetName(currentStage?.image);
 
   const siblings = context
     ? (graph.actionNodes.get(context.actionNodeId)?.options ?? [])

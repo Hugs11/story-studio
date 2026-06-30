@@ -23,7 +23,6 @@ function allRefIds(project) {
     }
   };
   walk(project.rootEntries);
-  walk(project.sharedEntries);
   return ids.sort();
 }
 
@@ -245,8 +244,8 @@ test('a menu containing only a ref counts as having a playable descendant', () =
   );
 });
 
-test('removeEntryCascadingRefs drops refs pointing at shared entries', () => {
-  let project = normalizeProjectData({
+test('normalizeProjectData drops stale sharedEntries instead of importing a hidden pool', () => {
+  const project = normalizeProjectData({
     projectType: 'pack',
     packMetadata: {},
     rootEntries: [
@@ -258,9 +257,7 @@ test('removeEntryCascadingRefs drops refs pointing at shared entries', () => {
     ],
   });
 
-  project = removeEntryCascadingRefs(project, 'shared-story');
-
-  assert.equal(project.sharedEntries.length, 0, 'la cible partagee est supprimée');
-  assert.deepEqual(allRefIds(project), [], 'la ref racine pendante part aussi');
+  assert.equal(Object.hasOwn(project, 'sharedEntries'), false);
+  assert.deepEqual(allRefIds(project), ['ref-to-shared']);
   assert.equal(project.rootEntries.find((entry) => entry.id === 'story-root')?.id, 'story-root');
 });

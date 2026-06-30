@@ -102,7 +102,7 @@ test('projectToRustExport keeps pack mode unaffected when title is empty', () =>
   assert.equal(rustExport.name, 'Story Studio');
 });
 
-test('projectToSerializable and projectToRustExport preserve sharedEntries', () => {
+test('projectToSerializable and projectToRustExport drop stale sharedEntries', () => {
   const project = normalizeProjectData({
     projectName: 'Partages',
     packMetadata: { title: 'Partages', minAge: '3', version: 1 },
@@ -124,8 +124,7 @@ test('projectToSerializable and projectToRustExport preserve sharedEntries', () 
   const serializable = projectToSerializable(project);
   const rustExport = projectToRustExport(project);
 
-  assert.equal(serializable.sharedEntries.length, 1);
-  assert.equal(serializable.sharedEntries[0].id, 'shared-story');
-  assert.equal(rustExport.sharedEntries.length, 1);
-  assert.equal(rustExport.sharedEntries[0].type, 'story');
+  assert.equal(Object.hasOwn(project, 'sharedEntries'), false);
+  assert.equal(Object.hasOwn(serializable, 'sharedEntries'), false);
+  assert.equal(Object.hasOwn(rustExport, 'sharedEntries'), false);
 });

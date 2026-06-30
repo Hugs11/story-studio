@@ -15,7 +15,6 @@ use crate::native_pack::{canonicalize_project, StoryDocument};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
 const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
-const SHARED_ENTRY_RATIO_LIMIT: f64 = 0.25;
 pub fn load_pack_zip(zip_path: &str) -> Result<String, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?;
     read_story_json_from_zip(&zip_path)
@@ -209,7 +208,7 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         && structural_validation_ok
         && !uses_graph_projection
         && root_ref_ratio < ROOT_REF_RATIO_LIMIT
-        && shared_entry_ratio < SHARED_ENTRY_RATIO_LIMIT
+        && shared_entry_count == 0
         && !has_unmodeled_wheel;
     let read_only_inspectable = !authoring_editable && story_document_is_simulable;
     let reason = if authoring_editable {
@@ -220,6 +219,9 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
     } else if let Some(error) = structural_error {
         error
+    } else if shared_entry_count > 0 {
+        "Lecture seule : projection hors arbre avec éléments partagés non prise en charge en authoring."
+            .to_string()
     } else if uses_graph_projection {
         "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
             .to_string()
@@ -227,8 +229,6 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         "Lecture seule : la racine importée est uniquement composée de références.".to_string()
     } else if root_ref_ratio >= ROOT_REF_RATIO_LIMIT {
         "Lecture seule : trop de références à la racine du projet importé.".to_string()
-    } else if shared_entry_ratio >= SHARED_ENTRY_RATIO_LIMIT {
-        "Lecture seule : le pool d'éléments partagés domine le projet importé.".to_string()
     } else if !round_trip_faithful {
         "Lecture seule : simulation native possible, génération canonique non fidèle au story.json d'origine."
             .to_string()
@@ -321,12 +321,15 @@ fn zip_asset_names(zip_path: &Path) -> Result<HashSet<String>, String> {
             .by_index(index)
             .map_err(|e| format!("Erreur lecture ZIP index {} : {}", index, e))?;
         let name = entry.name().replace('\\', "/");
-        let Some(short) = name.strip_prefix("assets/") else {
-            continue;
-        };
-        if short.is_empty() || short.ends_with('/') || short.contains('/') || short.contains("..") {
+        if name.ends_with('/') {
             continue;
         }
+        let Ok(asset_name) = validate_pack_asset_name(&name) else {
+            continue;
+        };
+        let short = asset_name
+            .strip_prefix("assets/")
+            .ok_or_else(|| format!("Nom d'asset hors dossier assets/ : {asset_name}"))?;
         names.insert(short.to_string());
     }
     Ok(names)
@@ -623,14 +626,16 @@ fn extract_all_zip_assets(
         let mut entry = archive
             .by_index(i)
             .map_err(|e| format!("Erreur lecture ZIP index {} : {}", i, e))?;
-        let name = entry.name().to_string();
-        if !name.starts_with("assets/") || name.ends_with('/') {
+        let name = entry.name().replace('\\', "/");
+        if name.ends_with('/') {
             continue;
         }
-        let short = &name["assets/".len()..];
-        if short.is_empty() || short.contains('/') || short.contains("..") {
+        let Ok(asset_name) = validate_pack_asset_name(&name) else {
             continue;
-        }
+        };
+        let short = asset_name
+            .strip_prefix("assets/")
+            .ok_or_else(|| format!("Nom d'asset hors dossier assets/ : {asset_name}"))?;
         ensure_zip_entry_size("Asset", &name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
         total_asset_bytes = total_asset_bytes
             .checked_add(entry.size())
@@ -638,6 +643,10 @@ fn extract_all_zip_assets(
         ensure_total_asset_size(total_asset_bytes)?;
         let out_path = dest.join(short);
         if !out_path.exists() {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Création dossier asset {} impossible : {}", short, e))?;
+            }
             let mut buf = Vec::new();
             entry
                 .read_to_end(&mut buf)
@@ -979,6 +988,63 @@ mod tests {
         assert!(report.authoring_editable);
         assert!(!report.read_only_inspectable);
         assert!(!report.uses_graph_projection);
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn nested_assets_are_classified_and_extracted() {
+        let dir = temp_dir("nested_assets");
+        let zip_path = dir.join("pack.zip");
+        let mut story = editable_story_json();
+        let stages = story
+            .get_mut("stageNodes")
+            .and_then(|value| value.as_array_mut())
+            .expect("stage nodes");
+        for stage in stages {
+            match stage.get("uuid").and_then(|value| value.as_str()) {
+                Some("cover") => {
+                    stage["audio"] = serde_json::Value::String("audio/root.mp3".to_string());
+                    stage["image"] = serde_json::Value::String("images/cover.png".to_string());
+                }
+                Some("title") => {
+                    stage["audio"] = serde_json::Value::String("audio/item.mp3".to_string());
+                    stage["image"] = serde_json::Value::String("images/item.png".to_string());
+                }
+                Some("play") => {
+                    stage["audio"] = serde_json::Value::String("audio/story.mp3".to_string());
+                }
+                _ => {}
+            }
+        }
+        write_story_zip_with_assets(
+            &zip_path,
+            &story,
+            &[
+                "audio/root.mp3",
+                "images/cover.png",
+                "audio/item.mp3",
+                "images/item.png",
+                "audio/story.mp3",
+            ],
+        );
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(report.authoring_editable, "{}", report.reason);
+
+        let out_dir = dir.join("out");
+        let imported = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            out_dir.to_str().expect("utf8"),
+        )
+        .expect("nested assets unpack");
+        assert!(out_dir.join("audio").join("root.mp3").exists());
+        assert!(out_dir.join("images").join("cover.png").exists());
+        assert!(imported["rootAudio"]
+            .as_str()
+            .unwrap_or_default()
+            .replace('\\', "/")
+            .ends_with("/audio/root.mp3"));
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

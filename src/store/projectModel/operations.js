@@ -136,14 +136,6 @@ export function updateProjectRootEntries(project, nextRootEntries) {
   return normalizeBaseProject({ ...project, rootEntries: nextRootEntries });
 }
 
-function updateProjectEntryForests(project, nextRootEntries, nextSharedEntries) {
-  return normalizeBaseProject({
-    ...project,
-    rootEntries: nextRootEntries,
-    sharedEntries: nextSharedEntries,
-  });
-}
-
 export function appendEntry(project, containerId, entry) {
   return updateProjectRootEntries(project, appendEntryToTree(project.rootEntries ?? [], containerId, entry));
 }
@@ -216,9 +208,7 @@ export function cutPasteEntries(project, sourceIds, targetMenuId) {
 export function updateEntry(project, entryId, fields) {
   const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) =>
     normalizeEntry({ ...entry, ...fields }));
-  const nextSharedEntries = replaceEntryTree(project.sharedEntries ?? [], entryId, (entry) =>
-    normalizeEntry({ ...entry, ...fields }));
-  return updateProjectEntryForests(project, nextRootEntries, nextSharedEntries);
+  return updateProjectRootEntries(project, nextRootEntries);
 }
 
 export function clearMediaReferences(project, path) {
@@ -231,26 +221,17 @@ export function clearMediaReferences(project, path) {
   }
   next.nativeGraph = clearNativeGraphMedia(next.nativeGraph, path);
   next.rootEntries = (next.rootEntries ?? []).map((entry) => clearEntryMediaReferences(entry, path));
-  next.sharedEntries = (next.sharedEntries ?? []).map((entry) => clearEntryMediaReferences(entry, path));
   return normalizeBaseProject(next);
 }
 
 export function removeEntry(project, entryId) {
-  return updateProjectEntryForests(
-    project,
-    removeEntryTree(project.rootEntries ?? [], entryId),
-    removeEntryTree(project.sharedEntries ?? [], entryId),
-  );
+  return updateProjectRootEntries(project, removeEntryTree(project.rootEntries ?? [], entryId));
 }
 
 export function removeEntries(project, entryIds) {
   const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
   if (ids.size === 0) return project;
-  return updateProjectEntryForests(
-    project,
-    removeEntriesTree(project.rootEntries ?? [], ids),
-    removeEntriesTree(project.sharedEntries ?? [], ids),
-  );
+  return updateProjectRootEntries(project, removeEntriesTree(project.rootEntries ?? [], ids));
 }
 
 // Supprime une entrée ET les refs qui pointeraient désormais dans le vide (garde-fou :
