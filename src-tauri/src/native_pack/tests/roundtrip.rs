@@ -181,8 +181,11 @@ fn generated_night_mode_pack_roundtrips_end_node_metadata() {
     let _ = fs::remove_dir_all(base);
 }
 
+/// Un graphe branchant avec une transition Home non modélisée s'importe comme arbre
+/// navigable, SANS produire de snapshot `nativeGraph` (plus de projecteur natif lossy :
+/// la simulation read-only lit le story.json brut, jamais un nativeGraph d'import).
 #[test]
-fn imported_branching_graph_preserves_native_graph_for_roundtrip() {
+fn imported_branching_graph_has_no_native_graph_snapshot() {
     let base = temp_roundtrip_dir("native_graph");
     let zip_path = base.join("native-graph-roundtrip.zip");
     let story_json = serde_json::json!({
@@ -290,8 +293,7 @@ fn imported_branching_graph_preserves_native_graph_for_roundtrip() {
     .expect("unpack graph zip");
 
     assert_eq!(imported["title"], "Roundtrip Graph");
-    assert_eq!(imported["nativeGraph"]["preserveForRoundTrip"], true);
-    assert_eq!(imported["nativeGraph"]["projectionStatus"], "lossy");
+    assert!(imported["nativeGraph"].is_null());
     assert_eq!(imported["entries"][0]["type"], "menu");
     assert_eq!(imported["entries"][0]["children"][0]["type"], "story");
 

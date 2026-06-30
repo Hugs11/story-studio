@@ -4,10 +4,6 @@ use std::path::PathBuf;
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
 use super::graph_import::project_story_graph_values;
-use super::native_graph::{
-    build_native_graph_flat_stage_map_entry, build_native_graph_projection_entries,
-    has_interactive_branching_graph, native_graph_with_resolved_assets,
-};
 use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
@@ -400,8 +396,10 @@ pub(super) fn walk_story_doc_to_entries(
     let graph_import_can_model = !unresolved_transitions_detected
         || graph_import_safe_unresolved
         || graph_import_existing_unresolved;
-    let needs_native_graph_projection =
-        unresolved_transitions_detected && has_branching_graph && !graph_import_can_model;
+    // Seul graph_import projette les graphes branchants. Les graphes que graph_import
+    // décline (diagnostics) ou ne peut pas modéliser (transitions pendantes) retombent
+    // sur l'arbre walk_entry et restent classés en lecture seule. Plus de projecteur
+    // « natif » lossy de repli : la simulation lit le story.json brut, pas un nativeGraph.
     let graph_import_projection = if has_branching_graph && graph_import_can_model {
         serde_json::from_value::<StoryDocument>(doc.clone())
             .ok()
@@ -414,33 +412,17 @@ pub(super) fn walk_story_doc_to_entries(
     };
     let uses_graph_import_projection = graph_import_projection.is_some();
     let mut shared_entries = Vec::new();
-    let native_graph = if needs_native_graph_projection && !uses_graph_import_projection {
-        Some(native_graph_with_resolved_assets(doc, assets))
-    } else {
-        None
-    };
     if let Some(graph_projection) = graph_import_projection {
         entries = graph_projection.root_entries;
         shared_entries = graph_projection.shared_entries;
-    } else if needs_native_graph_projection {
-        let mut projected_entries =
-            build_native_graph_projection_entries(sq, &stages, &actions, assets);
-        if projected_entries.is_empty() {
-            projected_entries = build_native_graph_flat_stage_map_entry(&stages, assets);
-        }
-        if !projected_entries.is_empty() {
-            entries = projected_entries;
-        }
     }
-    let auto_next_detected = !uses_graph_import_projection
-        && !needs_native_graph_projection
-        && extract_auto_next_return_overrides(&mut entries);
-    let reported_unresolved_transitions =
-        if needs_native_graph_projection || uses_graph_import_projection {
-            Vec::new()
-        } else {
-            unresolved_transitions
-        };
+    let auto_next_detected =
+        !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
+    let reported_unresolved_transitions = if uses_graph_import_projection {
+        Vec::new()
+    } else {
+        unresolved_transitions
+    };
     let reported_unresolved_transitions_detected = !reported_unresolved_transitions.is_empty();
 
     let pack_version = doc.get("version").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
@@ -464,7 +446,7 @@ pub(super) fn walk_story_doc_to_entries(
         "nightModeAudio": if auto_next_detected { None } else { night_mode_audio },
         "nightModeReturn": if auto_next_detected { None } else { night_mode_return },
         "nightModeHomeReturn": if auto_next_detected { None } else { night_mode_home_return },
-        "nativeGraph": native_graph,
+        "nativeGraph": serde_json::Value::Null,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
         "usesGraphProjection": uses_graph_import_projection,
@@ -501,6 +483,27 @@ fn unresolved_transition_targets_exist(
                 .and_then(|value| value.as_str())
                 .is_some_and(|stage_id| stages.contains_key(stage_id))
         })
+}
+
+/// Signature d'un graphe branchant interactif : au moins un stage autoplay « dispatcher »
+/// dont toutes les options OK pointent vers des stages roue non-autoplay. C'est le seul
+/// cas que `graph_import` tente de projeter ; sinon `walk_entry` traite l'arbre.
+fn has_interactive_branching_graph(
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+) -> bool {
+    stages.values().any(|stage| {
+        if !is_stage_autoplay(stage) {
+            return false;
+        }
+        let options = stage_action_options(stage, actions);
+        options.len() >= 2
+            && options.iter().all(|stage_id| {
+                stages.get(stage_id).is_some_and(|candidate| {
+                    stage_control_bool(candidate, "wheel", false) && !is_stage_autoplay(candidate)
+                })
+            })
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
