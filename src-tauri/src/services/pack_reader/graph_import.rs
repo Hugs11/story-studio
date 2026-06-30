@@ -16,6 +16,9 @@ pub(super) struct GraphImportProjection {
     pub(super) diagnostics: Vec<String>,
 }
 
+/// Variante sans assets, réservée aux tests du module (la prod passe par
+/// `project_story_graph_values`, qui résout les chemins d'assets).
+#[cfg(test)]
 pub(crate) fn project_story_graph(document: &StoryDocument) -> Result<GraphImportOutput, String> {
     GraphProjector::new(document).project()
 }
@@ -68,6 +71,7 @@ struct GraphProjector<'a> {
 const MAX_TREE_DEPTH: usize = 128;
 
 impl<'a> GraphProjector<'a> {
+    #[cfg(test)]
     fn new(document: &'a StoryDocument) -> Self {
         Self::new_with_assets(document, None)
     }
