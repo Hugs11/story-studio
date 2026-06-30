@@ -781,7 +781,7 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
     match crate::services::pack_reader::classify_pack_editability(&zip_path) {
         Ok(report) => {
             eprintln!(
-                "[{pack_id}] roundTripFaithful={} | authoringEditable={} | readOnlyInspectable={} | usesGraphProjection={} | rootRefRatio={:.3} | sharedEntryRatio={:.3} | hasUnmodeledWheel={} | usesNativeGraphParachute={} | reason={}",
+                "[{pack_id}] roundTripFaithful={} | authoringEditable={} | readOnlyInspectable={} | usesGraphProjection={} | rootRefRatio={:.3} | sharedEntryRatio={:.3} | hasUnmodeledWheel={} | reason={}",
                 report.round_trip_faithful,
                 report.authoring_editable,
                 report.read_only_inspectable,
@@ -789,7 +789,6 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
                 report.root_ref_ratio,
                 report.shared_entry_ratio,
                 report.has_unmodeled_wheel,
-                report.uses_native_graph_parachute,
                 report.reason,
             );
             let lower = pack_id.to_ascii_lowercase();
@@ -820,8 +819,8 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
             }
             if lower.contains("ders") {
                 assert!(
-                    report.round_trip_faithful,
-                    "[{pack_id}] doit rester faithful"
+                    !report.round_trip_faithful,
+                    "[{pack_id}] doit rester non faithful sans parachute"
                 );
                 assert!(
                     !report.authoring_editable,

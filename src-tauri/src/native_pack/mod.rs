@@ -79,100 +79,16 @@ fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDo
             });
         }
     }
-    build_story_document_canonical_only(report)
-}
-
-#[cfg(test)]
-fn build_story_document_current_behavior(
-    report: &NativeAssetPreparationReport,
-) -> Result<StoryDocument, String> {
-    if !report.project.options.auto_next
-        && active_native_graph(report.project.native_graph.as_ref()).is_some()
-    {
-        return build_native_graph_story_document(report);
-    }
     build_canonical_story_document(report)
 }
 
-fn build_story_document_canonical_only(
-    report: &NativeAssetPreparationReport,
-) -> Result<StoryDocument, String> {
-    build_canonical_story_document(report)
-}
-
-/// Génère le document **toujours** par le chemin canonique (`StoryBuilder`), en
-/// ignorant le parachute `nativeGraph` même s'il est présent. C'est la génération
-/// que le pack aura APRÈS la coupure du parachute ; le juge de fidélité s'en sert
-/// pour mesurer, sans rien changer au comportement courant de `build_story_document`.
+/// Génère le document par le chemin canonique (`StoryBuilder`). `nativeGraph`
+/// peut rester oracle du juge, mais n'est jamais rejoué comme génération.
 fn build_canonical_story_document(
     report: &NativeAssetPreparationReport,
 ) -> Result<StoryDocument, String> {
     let mut builder = StoryBuilder::new(report);
     builder.build()
-}
-
-#[cfg(test)]
-fn prepared_asset_name_for_role(
-    report: &NativeAssetPreparationReport,
-    role: &str,
-) -> Result<String, String> {
-    report
-        .assets
-        .iter()
-        .find(|asset| asset.role == role)
-        .map(|asset| asset.staged_asset_name.clone())
-        .ok_or_else(|| format!("Asset natif introuvable pour {}", role))
-}
-
-#[cfg(test)]
-fn build_native_graph_story_document(
-    report: &NativeAssetPreparationReport,
-) -> Result<StoryDocument, String> {
-    let graph = report
-        .project
-        .native_graph
-        .as_ref()
-        .and_then(|graph| active_native_graph(Some(graph)))
-        .ok_or_else(|| "Graphe natif absent.".to_string())?;
-    let document_value = graph
-        .get("document")
-        .cloned()
-        .ok_or_else(|| "Graphe natif sans document story.json.".to_string())?;
-    let mut document: StoryDocument = serde_json::from_value(document_value)
-        .map_err(|e| format!("Graphe natif invalide : {}", e))?;
-
-    if !report.project.name.trim().is_empty() {
-        document.title = report.project.name.clone();
-    }
-    // Round-trip : préserver le `nightModeAvailable` du document d'origine (le parachute
-    // rejoue verbatim). `options.night_mode` est dérivé de la DÉTECTION à l'import, pas de
-    // l'intention : l'utiliser ici effaçait le drapeau d'un pack night-capable dont le pont
-    // n'a pas été détecté (régression de fidélité). `auto_next` reste incompatible.
-    document.night_mode_available =
-        document.night_mode_available && !report.project.options.auto_next;
-
-    for stage in &mut document.stage_nodes {
-        if stage.audio.is_some() {
-            let role = if stage.square_one && report.project.root_audio.is_some() {
-                "rootAudio".to_string()
-            } else {
-                native_graph_asset_role(&stage.uuid, "audio")
-            };
-            stage.audio = Some(prepared_asset_name_for_role(report, &role)?);
-        }
-        if stage.image.is_some() {
-            let role = if stage.square_one && report.project.root_image.is_some() {
-                "rootImage".to_string()
-            } else {
-                native_graph_asset_role(&stage.uuid, "image")
-            };
-            stage.image = Some(prepared_asset_name_for_role(report, &role)?);
-        }
-    }
-
-    normalize_document_for_studio_compat(&mut document);
-    validate_document_for_studio_compat(&document)?;
-    Ok(document)
 }
 
 #[cfg(test)]

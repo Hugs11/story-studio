@@ -93,7 +93,6 @@ pub struct PackEditabilityReport {
     pub root_ref_only: bool,
     pub shared_entry_ratio: f64,
     pub has_unmodeled_wheel: bool,
-    pub uses_native_graph_parachute: bool,
 }
 
 impl PackEditabilityReport {
@@ -113,7 +112,14 @@ impl PackEditabilityReport {
             root_ref_only: false,
             shared_entry_ratio: 0.0,
             has_unmodeled_wheel: false,
-            uses_native_graph_parachute: false,
+        }
+    }
+
+    fn read_only_unprojected(reason: String) -> Self {
+        Self {
+            read_only_inspectable: true,
+            reason,
+            ..Self::unsupported(String::new())
         }
     }
 }
@@ -125,6 +131,12 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
     let story_json = read_story_json_from_zip(&zip_path)?;
     let doc: serde_json::Value =
         serde_json::from_str(&story_json).map_err(|e| format!("story.json invalide : {}", e))?;
+    let story_document_is_simulable = serde_json::from_value::<StoryDocument>(doc.clone()).is_ok();
+    if !story_document_is_simulable {
+        return Ok(PackEditabilityReport::unsupported(
+            "story.json non simulable par Story Studio.".to_string(),
+        ));
+    }
     let missing_assets = missing_referenced_assets(&zip_path, &doc)?;
     if !missing_assets.is_empty() {
         let rendered = missing_assets
@@ -140,8 +152,8 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
     let imported = match walk_story_doc_to_entries(&doc, &assets) {
         Ok(imported) => imported,
         Err(error) => {
-            return Ok(PackEditabilityReport::unsupported(format!(
-                "Projection Story Studio impossible : {error}"
+            return Ok(PackEditabilityReport::read_only_unprojected(format!(
+                "Lecture seule : simulation native possible, projection authoring impossible ({error})."
             )))
         }
     };
@@ -173,8 +185,6 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         .and_then(|value| value.as_bool())
         .unwrap_or(false);
     let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
-    let native_graph_roundtrip_available =
-        has_unmodeled_wheel && serde_json::from_value::<StoryDocument>(doc.clone()).is_ok();
     let structural_validation = validate_project_structure_for_generation(&project);
     let structural_validation_ok = structural_validation.is_ok();
     let structural_error = structural_validation.err().and_then(|error| {
@@ -193,32 +203,23 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
     let canonical = canonicalize_project(&project);
     let fidelity = canonical_roundtrip_is_faithful(&canonical)?;
     let canonical_round_trip_faithful = fidelity.faithful;
-    let uses_native_graph_parachute =
-        !canonical_round_trip_faithful && native_graph_roundtrip_available;
-    let round_trip_faithful = canonical_round_trip_faithful || uses_native_graph_parachute;
+    let round_trip_faithful = canonical_round_trip_faithful;
     let authoring_editable = projected_entry_count > 0
         && round_trip_faithful
         && structural_validation_ok
-        && !uses_native_graph_parachute
         && !uses_graph_projection
         && root_ref_ratio < ROOT_REF_RATIO_LIMIT
         && shared_entry_ratio < SHARED_ENTRY_RATIO_LIMIT
         && !has_unmodeled_wheel;
-    let read_only_inspectable = !authoring_editable && round_trip_faithful;
+    let read_only_inspectable = !authoring_editable && story_document_is_simulable;
     let reason = if authoring_editable {
         "Pack authoring éditable : génération canonique fidèle au story.json d'origine.".to_string()
     } else if projected_entry_count == 0 {
-        "Aucune entrée éditable projetée depuis le story.json.".to_string()
-    } else if !round_trip_faithful {
-        fidelity.gaps.first().cloned().unwrap_or_else(|| {
-            "Génération canonique non fidèle au story.json d'origine.".to_string()
-        })
+        "Lecture seule : aucune entrée authoring projetée depuis le story.json.".to_string()
     } else if has_unmodeled_wheel {
         "Lecture seule : roue/carrousel natif non modélisé en authoring.".to_string()
     } else if let Some(error) = structural_error {
         error
-    } else if uses_native_graph_parachute {
-        "Lecture seule : round-trip fidèle via graphe natif préservé.".to_string()
     } else if uses_graph_projection {
         "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
             .to_string()
@@ -228,6 +229,9 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         "Lecture seule : trop de références à la racine du projet importé.".to_string()
     } else if shared_entry_ratio >= SHARED_ENTRY_RATIO_LIMIT {
         "Lecture seule : le pool d'éléments partagés domine le projet importé.".to_string()
+    } else if !round_trip_faithful {
+        "Lecture seule : simulation native possible, génération canonique non fidèle au story.json d'origine."
+            .to_string()
     } else {
         "Lecture seule : le pack est fidèle en round-trip mais hors critères authoring.".to_string()
     };
@@ -247,7 +251,6 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         root_ref_only,
         shared_entry_ratio,
         has_unmodeled_wheel,
-        uses_native_graph_parachute,
     })
 }
 
@@ -976,7 +979,6 @@ mod tests {
         assert!(report.authoring_editable);
         assert!(!report.read_only_inspectable);
         assert!(!report.uses_graph_projection);
-        assert!(!report.uses_native_graph_parachute);
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
