@@ -5,9 +5,10 @@ import { ChevronRight, Settings, Wrench } from '../icons/LucideLocal';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
+const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 const SILENCE_MODE_OPTIONS = [
-  ['normalize', 'Calcul 0,5 s', `Mesure les silences de début/fin et les ramène à exactement ${formatPackAudioEdgeSilence()} (coupe si trop long, complète si trop court).`],
-  ['add', 'Ajoute 0,5 s', `Ajoute ${formatPackAudioEdgeSilence()} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
+  ['normalize', `Calcul ${EDGE_SILENCE_LABEL}`, `Mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
+  ['add', `Ajoute ${EDGE_SILENCE_LABEL}`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
   ['off', 'Off', 'Ne touche pas aux silences de début et de fin.'],
 ];
 

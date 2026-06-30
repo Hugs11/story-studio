@@ -187,7 +187,7 @@ fn builds_audio_filters_with_shared_normalizer() {
     assert_eq!(audio_filters(&no_silence), "aformat=channel_layouts=mono");
     assert_eq!(
         audio_filters(&with_silence),
-        "aformat=channel_layouts=mono,adelay=500,apad=pad_dur=0.5"
+        "aformat=channel_layouts=mono,adelay=400,apad=pad_dur=0.4"
     );
 }
 
@@ -203,13 +203,13 @@ fn builds_audio_filters_with_gain_limiter_before_silence() {
     assert_eq!(
         audio_filters_with_action(
             &with_silence,
-            0.5,
+            crate::support::audio_norm::EDGE_SILENCE_SEC,
             &crate::support::audio_norm::LoudnessAction::GainLimit {
                 gain_db: 4.0,
                 expected_limiting_db: 2.0,
             },
         ),
-        "aformat=channel_layouts=mono,volume=4dB,alimiter=limit=0.794328:level=disabled,adelay=500,apad=pad_dur=0.5"
+        "aformat=channel_layouts=mono,volume=4dB,alimiter=limit=0.794328:level=disabled,adelay=400,apad=pad_dur=0.4"
     );
 }
 

@@ -357,7 +357,7 @@ mod tests {
                     "areverse".to_string(),
                     "asetpts=PTS-STARTPTS".to_string(),
                 ],
-                post_filters: vec!["adelay=500".to_string(), "apad=pad_dur=0.5".to_string()],
+                post_filters: vec!["adelay=400".to_string(), "apad=pad_dur=0.4".to_string()],
             }
         );
     }
