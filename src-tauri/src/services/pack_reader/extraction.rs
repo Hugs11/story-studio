@@ -492,11 +492,11 @@ fn ratio(part: usize, total: usize) -> f64 {
     }
 }
 
-fn story_doc_indexes<'a>(
-    doc: &'a serde_json::Value,
+fn story_doc_indexes(
+    doc: &serde_json::Value,
 ) -> (
-    HashMap<&'a str, &'a serde_json::Value>,
-    HashMap<&'a str, &'a serde_json::Value>,
+    HashMap<&str, &serde_json::Value>,
+    HashMap<&str, &serde_json::Value>,
 ) {
     let stages = doc
         .get("stageNodes")
@@ -564,7 +564,7 @@ fn has_unmodeled_wheel(doc: &serde_json::Value) -> bool {
         if targets.len() < 2 {
             return false;
         }
-        targets.iter().any(|target_id| *target_id == *stage_id)
+        targets.contains(stage_id)
             || targets.iter().any(|target_id| {
                 ok_path_reaches_stage(
                     target_id,
