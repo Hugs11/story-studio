@@ -13,12 +13,9 @@ import {
   Moon,
   Music,
   Network,
-  Package,
   Scissors,
-  Square,
   TriangleAlert,
   Wrench,
-  X,
 } from '../icons/LucideLocal';
 import {
   Measure,
@@ -712,99 +709,6 @@ export function ProcessLog({ status, lines }) {
         {lines.map((line, index) => (
           <div key={`${index}-${line}`}>{line}</div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
-  const busy = checker.status === 'analyzing' || checker.status === 'fixing';
-  const canFix = (checker.report?.correctionsAvailable > 0 || titleNeedsCorrection(checker.report))
-    && checker.status !== 'fixing';
-
-  function handleDrop(event) {
-    event.preventDefault();
-    const file = event.dataTransfer?.files?.[0];
-    const path = file?.path || file?.webkitRelativePath;
-    if (path) checker.analyzePath(path);
-  }
-
-  return (
-    <div className={`checker-modal-shell ${maximized ? 'is-maximized' : ''}`} role="dialog" aria-modal="true" aria-label="Vérifier un pack">
-      <header className="checker-modal-header">
-        <div className="checker-modal-title">
-          <span className="checker-drop-icon"><IconFrame Icon={Package} /></span>
-          <div>
-            <strong>Vérifier un pack</strong>
-            <span title={checker.zipPath || undefined}>{checker.zipPath || 'Aucun ZIP sélectionné'}</span>
-          </div>
-        </div>
-        <div className="checker-modal-window-actions">
-          <button
-            type="button"
-            className="checker-modal-close checker-modal-maximize"
-            onClick={onMaximizeToggle}
-            aria-label={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
-            title={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
-          >
-            <Square className="checker-icon" aria-hidden="true" />
-          </button>
-          <button type="button" className="checker-modal-close" onClick={onClose} aria-label="Fermer">
-            <X className="checker-icon" aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      <div className="checker-modal-body">
-        <div
-          className="checker-drop checker-drop--modal"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={handleDrop}
-        >
-          <div className="checker-drop-main">
-            <div className="checker-drop-icon"><IconFrame Icon={Package} /></div>
-            <div>
-              <div className="checker-drop-title">Vérifier un pack communautaire</div>
-              <div className="checker-drop-sub">
-                Analyse un ZIP existant et classe les corrections par type.
-              </div>
-              {checker.zipPath ? <div className="checker-path" title={checker.zipPath}>{checker.zipPath}</div> : null}
-            </div>
-          </div>
-          <div className="checker-actions">
-            <Button onClick={checker.pickPack} disabled={busy}>
-              Choisir un ZIP
-            </Button>
-            <Button onClick={() => checker.analyzePath(checker.zipPath)} disabled={busy || !checker.zipPath}>
-              {checker.status === 'analyzing' ? 'Analyse...' : 'Relancer'}
-            </Button>
-          </div>
-        </div>
-
-        <ProcessLog status={checker.status} lines={checker.liveLog} />
-
-        {checker.error ? <div className="info-box warn">{checker.error}</div> : null}
-        {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}
-        {checker.fixedResult ? (
-          <div className="checker-fixed">
-            <span>ZIP corrigé créé : <strong>{checker.fixedResult.fixedZipPath}</strong></span>
-            <Button size="sm" onClick={checker.openFixedLocation}>Ouvrir</Button>
-          </div>
-        ) : null}
-
-        <ReportView
-          report={checker.report}
-          busy={busy}
-          canFix={canFix}
-          onExportReport={checker.exportReport}
-          onFixPack={checker.fixPack}
-        />
-        <TechnicalLog
-          report={checker.report}
-          onCopyLog={checker.copyLog}
-          onExportLog={checker.exportReport}
-          onExportJson={checker.exportReport}
-        />
       </div>
     </div>
   );
