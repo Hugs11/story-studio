@@ -5,7 +5,6 @@ mod builder;
 mod canonical;
 mod document;
 pub(crate) mod fidelity_judge;
-mod preallocate;
 mod stats;
 mod writer;
 
