@@ -63,6 +63,10 @@ struct GraphProjector<'a> {
     diagnostics: Vec<String>,
 }
 
+/// Max tree depth accepted by `graph_import`. Deeper inputs are treated as
+/// graph/catalog structures and declined so the dispatcher can fall back.
+const MAX_TREE_DEPTH: usize = 128;
+
 impl<'a> GraphProjector<'a> {
     fn new(document: &'a StoryDocument) -> Self {
         Self::new_with_assets(document, None)
@@ -243,6 +247,9 @@ impl<'a> GraphProjector<'a> {
         if !visited.insert(stage_id) {
             return;
         }
+        if active.len() > MAX_TREE_DEPTH {
+            return;
+        }
         active.insert(stage_id);
 
         for target_id in self.ok_targets(stage_id) {
@@ -328,6 +335,13 @@ impl<'a> GraphProjector<'a> {
     ) -> Option<ProjectEntry> {
         let entry_stage_id = self.entry_stage_id(stage_id);
         let stage = *self.stages.get(entry_stage_id)?;
+        if active.len() > MAX_TREE_DEPTH {
+            self.diagnostics.push(format!(
+                "Graphe trop profond pour une modelisation en arbre (profondeur > {MAX_TREE_DEPTH}), stage '{}'",
+                stage.name
+            ));
+            return None;
+        }
         let shape = self.entry_shape(entry_stage_id)?;
         let targets = match shape {
             EntryShape::Menu => self.ok_targets(entry_stage_id),
