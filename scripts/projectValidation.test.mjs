@@ -289,6 +289,30 @@ test('a story with controlSettings.autoplay = true still requires selection audi
   );
 });
 
+test('a story with an explicit silent title stage does not require selection audio', () => {
+  const project = buildProject({
+    rootEntries: [
+      {
+        id: 'story-silent-title',
+        type: 'story',
+        name: 'Titre silencieux',
+        audio: 's.mp3',
+        itemAudio: '',
+        itemImage: 'i.png',
+        titleControlSettings: { wheel: true, ok: true, home: true, pause: false, autoplay: false },
+      },
+    ],
+  });
+
+  const issues = getProjectValidationIssues(project);
+  const aboutStory = issues.filter((i) => i.id === 'story-silent-title');
+  assert.equal(
+    aboutStory.some((issue) => /Audio de sélection à ajouter/.test(issue.text)),
+    false,
+    `aucun warning audio titre attendu pour un titre explicite silencieux, reçu: ${JSON.stringify(aboutStory)}`,
+  );
+});
+
 function buildProjectWithRef(refOverride) {
   return buildProject({
     rootEntries: [
