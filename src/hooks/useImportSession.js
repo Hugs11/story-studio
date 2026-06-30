@@ -95,7 +95,6 @@ export function useImportSession({
   addPathsToMediaLibrary,
   persistProjectSnapshot,
   workspaceDirRef,
-  handleSaveProject,
   showErrorDialog,
   getImportDisplayName,
   isImportedPackPath,
@@ -252,23 +251,31 @@ export function useImportSession({
     if (!zipItem?.zipPath) return;
     const menuId = projectIndex.parentMenuById.get(itemId) ?? null;
 
-    let effectiveSavePath = store.savePath;
-    let baseProject = store.project;
-    let savedDuringUnpack = false;
-    if (!effectiveSavePath) {
-      const saveResult = await handleSaveProject({ returnResult: true });
-      if (!saveResult?.path) return;
-      effectiveSavePath = saveResult.path;
-      baseProject = saveResult.project ?? baseProject;
-      savedDuringUnpack = true;
-    }
+    // Persistance différée (plan 01) : extraire un ZIP n'impose JAMAIS d'enregistrer
+    // le projet. En session éphémère (savePath == null) on extrait dans le workspace
+    // de session et l'autosave écrit le snapshot de récupération. Forcer un save ici
+    // (ancien comportement) déclenchait la promotion via handleSaveProject, donc le
+    // cleanup du dossier de session — ce qui supprimait le ZIP source avant même son
+    // extraction (« Archive introuvable »).
+    const baseProject = store.project;
+    const savePath = store.savePath;
     const currentZipItem = findEntryById(baseProject, itemId) ?? zipItem;
     if (!currentZipItem?.zipPath) return;
+
+    const wsDir = workspaceDirRef.current
+      || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' })
+      || (savePath ? savePath.replace(/[\\/][^\\/]+$/, '') : '');
+    if (!wsDir) {
+      showErrorDialog({
+        title: 'Extraction du pack',
+        message: "Aucun espace de travail n'est disponible pour extraire ce pack.",
+      });
+      return;
+    }
 
     setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
     try {
       const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
-      const wsDir = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }) || effectiveSavePath.replace(/[\\/][^\\/]+$/, '');
       const destDir = `${getExtractedZipsDir(wsDir)}/${extractedDirName}`;
       const result = await invoke('unpack_zip_to_entries', {
         zipPath: currentZipItem.zipPath,
@@ -282,7 +289,7 @@ export function useImportSession({
         zipPath: currentZipItem.zipPath,
         zipName: currentZipItem.name,
         result,
-        savedDuringUnpack,
+        savedDuringUnpack: false,
       });
       if (!transformed) {
         showErrorDialog({
@@ -294,7 +301,11 @@ export function useImportSession({
       }
       store.setProject(transformed.project);
       store.setSelectedId('root');
-      await persistProjectSnapshot(transformed.project, effectiveSavePath);
+      // Projet déjà enregistré : autosave .mbah immédiat. Éphémère/non-enregistré :
+      // pas de save forcé, le snapshot de session suit via l'autosave.
+      if (savePath) {
+        await persistProjectSnapshot(transformed.project, savePath);
+      }
       if (transformed.advancedTransitionsDetected) {
         const firstWarning = transformed.unresolvedTransitions[0]?.message;
         setImportNotice(

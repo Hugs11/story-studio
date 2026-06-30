@@ -995,6 +995,10 @@ function AppContent() {
     setRecentProjects,
     maybeOfferTransferIntoProject,
     onProjectSaved: async (_result, options = {}) => {
+      // Seule la promotion « Enregistrer comme projet » (handleSaveProjectAs) nettoie
+      // le dossier de session et bascule en mode projet. Un enregistrement en place
+      // (handleSaveProject) ne doit JAMAIS supprimer la session éphémère en cours.
+      if (!options.promote) return;
       if (sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir && options.cleanupSession !== false) {
         invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
           logger.warn('session:cleanup-error', error);
@@ -1117,7 +1121,6 @@ function AppContent() {
     addPathsToMediaLibrary,
     persistProjectSnapshot,
     workspaceDirRef,
-    handleSaveProject,
     showErrorDialog,
     getImportDisplayName,
     isImportedPackPath,
