@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "index.html",
+    "scripts/*.test.mjs",
+    "scripts/analyze-bundle.mjs",
+    "scripts/audit-dead-exports.mjs",
+    "scripts/audit-dead-imports.mjs",
+    "scripts/audit-imports.mjs",
+    "scripts/audit-orphan-files.mjs",
+    "scripts/audit-rust-dead.mjs"
+  ],
+  "project": ["src/**/*.{js,jsx}", "scripts/**/*.mjs"]
+}
