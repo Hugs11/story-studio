@@ -43,9 +43,9 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       const zipPath = isFolder
         ? await invoke('convert_folder_pack_to_zip', { folderPath: path })
         : path;
-      const editable = await invoke('check_pack_editability', { zipPath });
-      if (!editable) {
-        setPending({ zipPath, packLabel });
+      const report = await invoke('classify_pack_editability', { zipPath });
+      if (!report?.authoringEditable) {
+        setPending({ zipPath, packLabel, report });
         setPhase('nonEditable');
         return;
       }
@@ -116,6 +116,9 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
             title="Pack non éditable"
             description="Ce pack n'est pas éditable avec Story Studio. Tu peux quand même le simuler (lecture seule)."
           />
+          {pending?.report?.reason && (
+            <div className="funnel-error" role="status">{pending.report.reason}</div>
+          )}
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
             <FunnelToolButton icon={<Eye />} accent="violet" variant="solid" onClick={handleSimulate}>
               Simuler le pack
