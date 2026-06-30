@@ -11,6 +11,7 @@ import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { toPackAssetName } from '../../utils/zipAssetName';
 
 export function ProjectSimulator({
   project,
@@ -277,7 +278,7 @@ export function ProjectSimulator({
     setPaused(false);
     if (!zipPath || !assetHash) return;
     try {
-      const assetName = `assets/${assetHash}`;
+      const assetName = toPackAssetName(assetHash);
       const bytes = await invoke('get_pack_asset', { zipPath, assetName });
       // Si le composant a été démonté pendant l'await, ne pas créer l'Audio
       if (!mountedRef.current) return;
@@ -669,7 +670,7 @@ export function ProjectSimulator({
     <LuniiShell
       image={
         zipItemForImage?.coverImage
-          ? <ZipImage zipPath={zipItemForImage.zipPath} assetName={`assets/${zipItemForImage.coverImage}`} />
+          ? <ZipImage zipPath={zipItemForImage.zipPath} assetName={toPackAssetName(zipItemForImage.coverImage)} />
           : <LocalImage file={imageFile} />
       }
       title={displayTitle}

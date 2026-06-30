@@ -58,7 +58,6 @@ export function buildProjectAfterZipUnpack({
   menuId,
   itemId,
   entries,
-  sharedEntries = [],
   zipPath = '',
   zipName = '',
   result = {},
@@ -78,15 +77,8 @@ export function buildProjectAfterZipUnpack({
         sameImage: !!(result?.rootImage) && !result?.thumbnailImage,
         nativeGraph: result?.nativeGraph ?? null,
         rootEntries: entries,
-        sharedEntries,
       }
-    : {
-        ...replaceEntryWithEntries(project, menuId, itemId, entries),
-        sharedEntries: [
-          ...(project?.sharedEntries ?? []),
-          ...sharedEntries,
-        ],
-      };
+    : replaceEntryWithEntries(project, menuId, itemId, entries);
 
   return {
     project: nextProject,

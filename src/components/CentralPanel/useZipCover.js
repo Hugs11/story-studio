@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { MIME } from './flowDiagramLayout';
+import { toPackAssetName } from '../../utils/zipAssetName';
 
 export function useZipCover(zipPath, coverImage) {
   const [url, setUrl] = useState(null);
@@ -18,7 +19,7 @@ export function useZipCover(zipPath, coverImage) {
 
     let cancelled = false;
     let objectUrl = null;
-    const assetName = `assets/${coverImage}`;
+    const assetName = toPackAssetName(coverImage);
 
     invoke('get_pack_asset', { zipPath, assetName })
       .then((bytes) => {

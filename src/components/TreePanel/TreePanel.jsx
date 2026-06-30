@@ -83,7 +83,6 @@ export function TreePanel({
   const [cutIds, setCutIds] = useState(new Set());
 
   const rootEntries = project.rootEntries ?? [];
-  const sharedEntries = project.sharedEntries ?? [];
   const validationIssues = validationIssuesProp ?? [];
   const issuesById = useMemo(() => {
     const map = new Map();
@@ -116,10 +115,6 @@ export function TreePanel({
   );
   const getEntry = useCallback((entryId) => projectIndex.entryById.get(entryId) ?? null, [projectIndex]);
   const getParentId = useCallback((entryId) => projectIndex.parentMenuById.get(entryId) ?? null, [projectIndex]);
-  const getEntryScope = useCallback((entryId) => (
-    projectIndex.flatEntries.find((entry) => entry.id === entryId)?.scope ?? 'root'
-  ), [projectIndex]);
-
   const {
     selectedIds,
     setSelectedIds,
@@ -461,7 +456,6 @@ export function TreePanel({
 
   function buildActions(nodeId, nodeType) {
     const isRootCtx = nodeType === 'root' || nodeType === 'root-bg';
-    const isSharedCtx = !isRootCtx && getEntryScope(nodeId) === 'shared';
     const parentMenuId = isRootCtx ? null : getParentId(nodeId);
     const targetMenuId = nodeType === 'menu' ? nodeId : parentMenuId;
     const actions = [];
@@ -472,58 +466,56 @@ export function TreePanel({
     }
 
     if (projectType === 'pack') {
-      if (!isSharedCtx) {
-        actions.push({ icon: <IconFolderPlus />, label: 'Créer un dossier', fn: () => onAddMenu(targetMenuId) });
-        actions.push({ icon: <IconStory />, label: 'Importer des histoires', fn: () => onAddStory(targetMenuId) });
-        if (onImportFolder) {
-          actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
-        }
+      actions.push({ icon: <IconFolderPlus />, label: 'Créer un dossier', fn: () => onAddMenu(targetMenuId) });
+      actions.push({ icon: <IconStory />, label: 'Importer des histoires', fn: () => onAddStory(targetMenuId) });
+      if (onImportFolder) {
+        actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
+      }
 
-        const hasEndNode = hasVisibleEndNode(project);
-        if (isRootCtx && !hasEndNode) {
+      const hasEndNode = hasVisibleEndNode(project);
+      if (isRootCtx && !hasEndNode) {
+        actions.push('sep');
+        actions.push({ icon: <IconMoon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
+      }
+
+      if (nodeType === 'root' && onDemoteRootToMenu && (project.rootEntries ?? []).length > 0) {
+        actions.push('sep');
+        actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir de la racine', fn: onDemoteRootToMenu });
+      }
+
+      if (nodeType === 'menu' && onSetMenuAsRoot && project.rootEntries?.[0]?.id === nodeId) {
+        actions.push('sep');
+        actions.push({ icon: <IconHouse />, label: 'Définir comme racine', fn: () => onSetMenuAsRoot(nodeId) });
+      }
+
+      if (nodeType === 'zip') {
+        const item = getEntry(nodeId);
+        if (item?.zipPath) {
           actions.push('sep');
-          actions.push({ icon: <IconMoon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
+          actions.push({ icon: <IconPlay />, label: 'Simuler ce pack…', fn: () => onSimulateZip(item.zipPath) });
+          actions.push({ icon: <IconPen />, label: "Extraire l'histoire", fn: () => onUnpackZip(nodeId) });
         }
+      }
 
-        if (nodeType === 'root' && onDemoteRootToMenu && (project.rootEntries ?? []).length > 0) {
-          actions.push('sep');
-          actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir de la racine', fn: onDemoteRootToMenu });
-        }
+      if (onSimulateNode && (nodeType === 'root' || nodeType === 'menu' || nodeType === 'story')) {
+        actions.push('sep');
+        actions.push({ icon: <IconPlay />, label: 'Simuler depuis ici', fn: () => onSimulateNode(nodeId) });
+      }
 
-        if (nodeType === 'menu' && onSetMenuAsRoot && project.rootEntries?.[0]?.id === nodeId) {
-          actions.push('sep');
-          actions.push({ icon: <IconHouse />, label: 'Définir comme racine', fn: () => onSetMenuAsRoot(nodeId) });
-        }
+      if ((nodeType === 'zip' || nodeType === 'story' || nodeType === 'menu') && parentMenuId != null) {
+        actions.push('sep');
+        actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir du dossier', fn: () => onMoveToMenu(nodeId, parentMenuId, null) });
+      }
 
-        if (nodeType === 'zip') {
-          const item = getEntry(nodeId);
-          if (item?.zipPath) {
-            actions.push('sep');
-            actions.push({ icon: <IconPlay />, label: 'Simuler ce pack…', fn: () => onSimulateZip(item.zipPath) });
-            actions.push({ icon: <IconPen />, label: "Extraire l'histoire", fn: () => onUnpackZip(nodeId) });
-          }
-        }
+      if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
+        actions.push('sep');
+        actions.push({ icon: <IconCopy />, label: 'Dupliquer', fn: () => onDuplicate(nodeId) });
+        actions.push({ icon: <IconClipboardPaste />, label: 'Copier', fn: () => handleCopy(nodeId) });
+        actions.push({ icon: <IconScissors />, label: 'Couper', fn: () => handleCut(nodeId) });
+      }
 
-        if (onSimulateNode && (nodeType === 'root' || nodeType === 'menu' || nodeType === 'story')) {
-          actions.push('sep');
-          actions.push({ icon: <IconPlay />, label: 'Simuler depuis ici', fn: () => onSimulateNode(nodeId) });
-        }
-
-        if ((nodeType === 'zip' || nodeType === 'story' || nodeType === 'menu') && parentMenuId != null) {
-          actions.push('sep');
-          actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir du dossier', fn: () => onMoveToMenu(nodeId, parentMenuId, null) });
-        }
-
-        if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
-          actions.push('sep');
-          actions.push({ icon: <IconCopy />, label: 'Dupliquer', fn: () => onDuplicate(nodeId) });
-          actions.push({ icon: <IconClipboardPaste />, label: 'Copier', fn: () => handleCopy(nodeId) });
-          actions.push({ icon: <IconScissors />, label: 'Couper', fn: () => handleCut(nodeId) });
-        }
-
-        if (clipboardRef.current?.entries?.length) {
-          actions.push({ icon: <IconClipboardPaste />, label: 'Coller ici', fn: () => handlePaste(nodeId) });
-        }
+      if (clipboardRef.current?.entries?.length) {
+        actions.push({ icon: <IconClipboardPaste />, label: 'Coller ici', fn: () => handlePaste(nodeId) });
       }
 
       if (nodeType === 'story') {
@@ -848,13 +840,6 @@ export function TreePanel({
             />
 
             {projectType === 'pack' ? renderEntries(rootEntries, 1, null) : null}
-
-            {projectType === 'pack' && sharedEntries.length > 0 ? (
-              <div className="tree-shared-section">
-                <div className="tree-section-label">Éléments partagés</div>
-                {renderEntries(sharedEntries, 1, null, { sortable: false })}
-              </div>
-            ) : null}
 
             {hasEndNode ? <div className="tree-end-node-sep" /> : null}
             {hasEndNode ? (

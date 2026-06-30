@@ -37,21 +37,12 @@ impl FileValidation {
     }
 }
 
-fn is_imported_native_story(entry: &ProjectEntry) -> bool {
-    entry.entry_type == "story"
-        && entry
-            .native_stage_id
-            .as_deref()
-            .is_some_and(|value| !value.trim().is_empty())
-}
-
 fn validate_story_entry_for_generation(
     entry: &ProjectEntry,
     context: &str,
     file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
-    let imported_native_story = is_imported_native_story(entry);
     let explicit_title_stage = entry.title_control_settings.is_some();
     match entry.entry_type.as_str() {
         "zip" => {
@@ -89,7 +80,7 @@ fn validate_story_entry_for_generation(
                         errors.push(err);
                     }
                 }
-            } else if !imported_native_story && !explicit_title_stage {
+            } else if !explicit_title_stage {
                 errors.push(format!("{} manquant.", item_audio_label));
             }
 
@@ -105,7 +96,7 @@ fn validate_story_entry_for_generation(
                         errors.push(err);
                     }
                 }
-            } else if !imported_native_story {
+            } else {
                 errors.push(format!("{} manquant.", item_image_label));
             }
         }
@@ -842,6 +833,13 @@ fn validate_project_for_generation_with_mode(
     let root_entries = project_root_entries(project);
     let shared_entries = project_shared_entries(project);
 
+    if !project.shared_entries.is_empty() {
+        errors.push(
+            "Les éléments partagés ne sont plus pris en charge en authoring Story Studio."
+                .to_string(),
+        );
+    }
+
     if project.project_type.is_none() {
         errors.push("Aucun type de projet selectionne.".to_string());
     }
@@ -1155,7 +1153,7 @@ mod tests {
     }
 
     #[test]
-    fn shared_story_targeted_by_root_ref_is_not_reported_unused() {
+    fn shared_story_targeted_by_root_ref_blocks_generation() {
         let mut project = base_project("pack");
         project.root_audio = Some("valid/root.mp3".to_string());
         project.root_image = Some("valid/root.png".to_string());
@@ -1164,11 +1162,10 @@ mod tests {
         project.shared_entries = vec![story_entry_with_paths("shared-story", "Scene commune")];
 
         let errors = validate_project_for_generation(&project)
-            .err()
-            .unwrap_or_default();
+            .expect_err("les elements partages ne sont plus authoring");
         assert!(
-            !errors.contains("élément partagé non utilisé"),
-            "la cible partagee est raccordee : {errors}"
+            errors.contains("éléments partagés ne sont plus pris en charge"),
+            "{errors}"
         );
     }
 
@@ -1182,8 +1179,11 @@ mod tests {
         project.shared_entries = vec![story_entry_with_paths("shared-story", "Scene commune")];
 
         let errors = validate_project_for_generation(&project)
-            .expect_err("un element partage non utilise doit bloquer");
-        assert!(errors.contains("élément partagé non utilisé"), "{errors}");
+            .expect_err("les elements partages ne sont plus authoring");
+        assert!(
+            errors.contains("éléments partagés ne sont plus pris en charge"),
+            "{errors}"
+        );
     }
 
     // ---- Parite avec le test JS scripts/validationParity.test.mjs ----
@@ -1230,6 +1230,21 @@ mod tests {
     }
 
     #[test]
+    fn native_stage_id_does_not_exempt_story_selection_media() {
+        let mut story = story_entry_with_paths("story-native", "Histoire native");
+        story.native_stage_id = Some("native-stage".to_string());
+        story.item_audio = None;
+        story.item_image = None;
+        let project = pack_project(vec![story]);
+
+        let errors = validate_project_structure_for_generation(&project)
+            .expect_err("nativeStageId ne doit pas masquer les medias manquants");
+
+        assert!(errors.contains("audio titre"), "{errors}");
+        assert!(errors.contains("image"), "{errors}");
+    }
+
+    #[test]
     fn story_play_missing_navigation_target_blocks_structure() {
         let mut source = story_entry_with_paths("source", "Source");
         source.return_after_play = Some("story_play:missing".to_string());
@@ -1273,7 +1288,7 @@ mod tests {
     }
 
     #[test]
-    fn preserved_native_helper_shared_entry_is_structurally_generable() {
+    fn preserved_native_helper_shared_entry_is_rejected_with_shared_entries() {
         let mut project = pack_project(vec![story_entry_with_paths("story-a", "Histoire A")]);
         project.shared_entries = vec![ProjectEntry {
             id: "helper".to_string(),
@@ -1293,16 +1308,11 @@ mod tests {
         }];
 
         let errors = validate_project_structure_for_generation(&project)
-            .err()
-            .unwrap_or_default();
+            .expect_err("les helpers partages natifs ne sont plus authoring");
 
         assert!(
-            !errors.contains("élément partagé non utilisé"),
-            "le helper natif préservé ne doit pas être traité comme une entrée partagée orpheline : {errors}"
-        );
-        assert!(
-            !errors.contains("audio menu"),
-            "le helper natif préservé est un stage silencieux valide : {errors}"
+            errors.contains("éléments partagés ne sont plus pris en charge"),
+            "{errors}"
         );
     }
 

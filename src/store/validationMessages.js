@@ -43,7 +43,6 @@ export const VALIDATION_MESSAGES = Object.freeze({
   missingInternalId: (label) => `${label}${SEPARATOR}Identifiant interne à corriger`,
   unsupportedEntryType: (label) => `${label}${SEPARATOR}Type d'élément non pris en charge`,
   refTargetMissing: (label) => `${label}${SEPARATOR}Référence sans cible`,
-  sharedEntryUnused: (label) => `${label}${SEPARATOR}élément partagé non utilisé`,
   reservedIdInvalid: (label) => `${label}${SEPARATOR}Identifiant réservé à corriger`,
   duplicateId: (count, entryId) => `Identifiant dupliqué${SEPARATOR}${count} éléments partagent l'id ${entryId}`,
   storyReturnLost: (label) => `${label}${SEPARATOR}Retour de fin introuvable`,

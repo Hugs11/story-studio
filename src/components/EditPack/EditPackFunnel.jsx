@@ -27,7 +27,7 @@ const ARCHIVE_RE = /\.(zip|7z)$/i;
  *   simulateur (lecture seule).
  */
 export function EditPackFunnel({ onClose, onLand, onSimulate }) {
-  const [phase, setPhase] = useState('collect'); // collect | busy | nonEditable
+  const [phase, setPhase] = useState('collect'); // collect | busy | readOnly | unsupported
   const [busy, setBusy] = useState({ title: '', hint: '' });
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null); // { zipPath, packLabel }
@@ -46,7 +46,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       const report = await invoke('classify_pack_editability', { zipPath });
       if (!report?.authoringEditable) {
         setPending({ zipPath, packLabel, report });
-        setPhase('nonEditable');
+        setPhase(report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
         return;
       }
       setBusy({ title: 'Décompression du pack…', hint: 'Ne ferme pas la fenêtre.' });
@@ -71,7 +71,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       onClose();
     } catch (e) {
       setError(`Le simulateur n'a pas pu s'ouvrir : ${e?.message ?? e}`);
-      setPhase('collect');
+      setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
     }
   }
 
@@ -109,7 +109,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
         </div>
       )}
 
-      {phase === 'nonEditable' && (
+      {phase === 'readOnly' && (
         <div className="funnel-step-content">
           <FunnelSectionHeader
             icon={<TriangleAlert />}
@@ -123,6 +123,28 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
             <FunnelToolButton icon={<Eye />} accent="violet" variant="solid" onClick={handleSimulate}>
               Simuler le pack
             </FunnelToolButton>
+            <FunnelToolButton
+              icon={<Undo2 />}
+              accent="neutral"
+              onClick={() => { setPending(null); setError(''); setPhase('collect'); }}
+            >
+              Choisir un autre pack
+            </FunnelToolButton>
+          </div>
+        </div>
+      )}
+
+      {phase === 'unsupported' && (
+        <div className="funnel-step-content">
+          <FunnelSectionHeader
+            icon={<TriangleAlert />}
+            title="Pack non supporté"
+            description="Ce pack ne peut pas être ouvert ni simulé par Story Studio."
+          />
+          {pending?.report?.reason && (
+            <div className="funnel-error" role="status">{pending.report.reason}</div>
+          )}
+          <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
             <FunnelToolButton
               icon={<Undo2 />}
               accent="neutral"

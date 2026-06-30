@@ -347,7 +347,7 @@ test('a ref without a target is flagged as an error', () => {
   assert.ok(err, `une erreur "référence sans cible" est attendue, reçu: ${JSON.stringify(issues)}`);
 });
 
-test('a shared story targeted by a root ref is valid', () => {
+test('a ref to a stale shared story is treated as a missing target', () => {
   const project = buildProject({
     rootEntries: [{ id: 'ref-1', type: 'ref', target: 'story:shared-story' }],
     sharedEntries: [
@@ -363,61 +363,6 @@ test('a shared story targeted by a root ref is valid', () => {
   });
 
   const issues = getProjectValidationIssues(project);
-  assert.equal(
-    find(issues, (i) => /élément partagé non utilisé/.test(i.text)),
-    null,
-    `aucune erreur d'usage partage attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
-  );
-});
-
-test('an unused shared entry is a blocking validation error', () => {
-  const project = buildProject({
-    sharedEntries: [
-      {
-        id: 'shared-story',
-        type: 'story',
-        name: 'Scene commune',
-        audio: 'shared.mp3',
-        itemAudio: 'shared-title.mp3',
-        itemImage: 'shared.png',
-      },
-    ],
-  });
-
-  const issues = getProjectValidationIssues(project);
-  const unused = find((issues), (i) => i.id === 'shared-story' && /élément partagé non utilisé/.test(i.text));
-  assert.ok(unused, `erreur d'usage partage attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
-  assert.equal(unused.status, 'error');
-});
-
-test('a ref to a shared menu marks its contained story reachable', () => {
-  const project = buildProject({
-    rootEntries: [{ id: 'ref-1', type: 'ref', target: 'menu:shared-menu' }],
-    sharedEntries: [
-      {
-        id: 'shared-menu',
-        type: 'menu',
-        name: 'Scenes communes',
-        audio: 'menu.mp3',
-        image: 'menu.png',
-        children: [
-          {
-            id: 'shared-story',
-            type: 'story',
-            name: 'Scene commune',
-            audio: 'shared.mp3',
-            itemAudio: 'shared-title.mp3',
-            itemImage: 'shared.png',
-          },
-        ],
-      },
-    ],
-  });
-
-  const issues = getProjectValidationIssues(project);
-  assert.equal(
-    find(issues, (i) => /élément partagé non utilisé/.test(i.text)),
-    null,
-    `le menu partage cible rend son contenu atteignable, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
-  );
+  const missing = find(issues, (i) => i.id === 'ref-1' && /destination histoire introuvable/.test(i.text));
+  assert.ok(missing, `erreur cible absente attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
 });

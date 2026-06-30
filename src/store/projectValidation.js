@@ -32,7 +32,7 @@
 // pas exposee comme deux categories dans l'UI parent.
 
 import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel.js';
-import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from './navigationTargets.js';
+import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
 import { VALIDATION_MESSAGES, brokenField, emptyTarget, missingField, missingTarget } from './validationMessages.js';
 
 function hasPath(value) {
@@ -117,73 +117,6 @@ function validateZipItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
   if (!hasPath(item?.zipPath)) pushWarning(issues, item?.id ?? null, missingField(name, 'zip'));
   else if (isBrokenPath(item?.zipPath, fileAudit)) pushWarning(issues, item?.id ?? null, brokenField(name, 'zip'));
-}
-
-function collectEntryAndDescendantIds(entry, result = new Set()) {
-  if (!entry?.id) return result;
-  result.add(entry.id);
-  for (const child of entry.children ?? []) collectEntryAndDescendantIds(child, result);
-  return result;
-}
-
-function collectNavigationTargetEntryIds(entry) {
-  const ids = [];
-  const pushTarget = (target) => {
-    const id = refTargetEntryId(target);
-    if (id) ids.push(id);
-  };
-
-  if (entry?.type === 'ref') pushTarget(entry.target);
-  pushTarget(entry?.returnAfterPlay);
-  pushTarget(entry?.returnOnHome);
-  if (!entry?.titleReturnOnHomeNone) pushTarget(entry?.titleReturnOnHome);
-  pushTarget(entry?.afterPlaybackPromptOkTarget);
-  if (!entry?.afterPlaybackPromptHomeNone) pushTarget(entry?.afterPlaybackPromptHomeTarget);
-  for (const step of entry?.afterPlaybackSequence ?? []) {
-    pushTarget(step?.okTarget);
-    for (const choiceTarget of step?.okChoiceTargets ?? []) pushTarget(choiceTarget);
-    if (!step?.homeFollowsOk && !step?.homeNone) pushTarget(step?.homeTarget);
-  }
-  const homeStep = entry?.afterPlaybackHomeStep;
-  if (homeStep) {
-    pushTarget(homeStep.okTarget);
-    for (const choiceTarget of homeStep.okChoiceTargets ?? []) pushTarget(choiceTarget);
-    if (!homeStep.homeFollowsOk && !homeStep.homeNone) pushTarget(homeStep.homeTarget);
-  }
-  return ids;
-}
-
-function computeReachableSharedEntryIds(project, projectIndex) {
-  const sharedIds = new Set();
-  const reachableSharedIds = new Set();
-  for (const entry of project?.sharedEntries ?? []) collectEntryAndDescendantIds(entry, sharedIds);
-  if (sharedIds.size === 0) return reachableSharedIds;
-
-  const queue = [];
-  const processed = new Set();
-  const enqueueEntry = (entry) => {
-    if (!entry?.id || processed.has(entry.id)) return;
-    queue.push(entry);
-  };
-  const markReachable = (entry) => {
-    if (!entry?.id || processed.has(entry.id)) return;
-    if (sharedIds.has(entry.id)) reachableSharedIds.add(entry.id);
-    enqueueEntry(entry);
-    for (const child of entry.children ?? []) markReachable(child);
-  };
-
-  for (const entry of project?.rootEntries ?? []) markReachable(entry);
-  while (queue.length > 0) {
-    const entry = queue.shift();
-    if (!entry?.id || processed.has(entry.id)) continue;
-    processed.add(entry.id);
-    for (const targetId of collectNavigationTargetEntryIds(entry)) {
-      if (!sharedIds.has(targetId)) continue;
-      const target = projectIndex.entryById.get(targetId);
-      if (target) markReachable(target);
-    }
-  }
-  return reachableSharedIds;
 }
 
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
@@ -398,20 +331,6 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       }
     }
   }, projectIndex);
-
-  const reachableSharedIds = computeReachableSharedEntryIds(project, projectIndex);
-  for (const flatEntry of projectIndex.flatEntries) {
-    if (flatEntry.scope !== 'shared') continue;
-    const entryId = typeof flatEntry.id === 'string' ? flatEntry.id.trim() : '';
-    if (!entryId || reachableSharedIds.has(entryId)) continue;
-    const labels = (flatEntry.path ?? [flatEntry.entry])
-      .map((item) => labelOrFallback(item?.name, item?.type === 'menu' ? 'Collection' : 'Element'));
-    pushError(
-      issues,
-      entryId,
-      VALIDATION_MESSAGES.sharedEntryUnused(`Éléments partagés / ${labels.join(' / ')}`),
-    );
-  }
 
   if (rootPlayableCount === 0) {
     pushWarning(issues, 'root', VALIDATION_MESSAGES.emptyPack);
