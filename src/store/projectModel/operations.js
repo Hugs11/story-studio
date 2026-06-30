@@ -28,25 +28,6 @@ function removeEntriesTree(entries, entryIds) {
       : entry);
 }
 
-function updateNativeGraphStage(graph, stageId, fields) {
-  if (!graph || !stageId || !fields || typeof fields !== 'object') return graph;
-  const stages = graph?.document?.stageNodes;
-  if (!Array.isArray(stages)) return graph;
-  const stageIndex = stages.findIndex((stage) => (stage?.uuid || stage?.id) === stageId);
-  if (stageIndex < 0) return graph;
-  const nextGraph = structuredClone(graph);
-  const stage = nextGraph.document.stageNodes[stageIndex];
-  if (Object.prototype.hasOwnProperty.call(fields, 'name')) stage.name = fields.name ?? '';
-  if (Object.prototype.hasOwnProperty.call(fields, 'audio')) stage.audio = fields.audio ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'itemAudio')) stage.audio = fields.itemAudio ?? stage.audio ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'image')) stage.image = fields.image ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'itemImage')) stage.image = fields.itemImage ?? stage.image ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'controlSettings')) {
-    stage.controlSettings = { ...(stage.controlSettings ?? {}), ...(fields.controlSettings ?? {}) };
-  }
-  return nextGraph;
-}
-
 function clearNativeGraphMedia(graph, path) {
   const stages = graph?.document?.stageNodes;
   if (!Array.isArray(stages)) return graph;
@@ -241,27 +222,11 @@ export function cutPasteEntries(project, sourceIds, targetMenuId) {
 }
 
 export function updateEntry(project, entryId, fields) {
-  let nativeStageId = null;
-  const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) => {
-      const next = { ...entry, ...fields };
-      const normalized = normalizeEntry(next);
-      nativeStageId = normalized.nativeStageId ?? null;
-      return normalized;
-    });
-  const nextSharedEntries = replaceEntryTree(project.sharedEntries ?? [], entryId, (entry) => {
-      const next = { ...entry, ...fields };
-      const normalized = normalizeEntry(next);
-      nativeStageId = normalized.nativeStageId ?? null;
-      return normalized;
-    });
-  let nextProject = updateProjectEntryForests(project, nextRootEntries, nextSharedEntries);
-  if (nativeStageId && nextProject.nativeGraph?.preserveForRoundTrip === true) {
-    nextProject = normalizeBaseProject({
-      ...nextProject,
-      nativeGraph: updateNativeGraphStage(nextProject.nativeGraph, nativeStageId, fields),
-    });
-  }
-  return nextProject;
+  const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) =>
+    normalizeEntry({ ...entry, ...fields }));
+  const nextSharedEntries = replaceEntryTree(project.sharedEntries ?? [], entryId, (entry) =>
+    normalizeEntry({ ...entry, ...fields }));
+  return updateProjectEntryForests(project, nextRootEntries, nextSharedEntries);
 }
 
 export function clearMediaReferences(project, path) {
