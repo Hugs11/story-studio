@@ -375,59 +375,6 @@ function nativeGraphStageCount(graph) {
   return graph?.stageCount ?? graph?.document?.stageNodes?.length ?? 0;
 }
 
-function nativeGraphStageId(stage) {
-  return stage?.uuid || stage?.id || '';
-}
-
-function nativeGraphStagePositionKey(stage) {
-  const x = Number(stage?.position?.x ?? 0);
-  const y = Number(stage?.position?.y ?? 0);
-  return [Number.isFinite(y) ? y : 0, Number.isFinite(x) ? x : 0];
-}
-
-function nativeGraphStageKind(stage) {
-  if (stage?.squareOne) return 'Depart';
-  if (stage?.controlSettings?.wheel && !stage?.controlSettings?.autoplay) return 'Choix';
-  if (stage?.controlSettings?.autoplay) return 'Lecture';
-  return 'Stage';
-}
-
-function nativeGraphProjectionLabel(stage, index) {
-  const name = typeof stage?.name === 'string' ? stage.name.trim() : '';
-  if (name && name !== 'Stage title') return name;
-  return `${nativeGraphStageKind(stage)} ${String(index + 1).padStart(2, '0')}`;
-}
-
-function buildNativeGraphFallbackEntries(graph) {
-  const stages = Array.isArray(graph?.document?.stageNodes) ? graph.document.stageNodes : [];
-  const ordered = stages
-    .filter((stage) => !stage?.squareOne && nativeGraphStageId(stage))
-    .map((stage) => ({ stage, key: nativeGraphStagePositionKey(stage) }))
-    .sort((a, b) => (a.key[0] - b.key[0]) || (a.key[1] - b.key[1]))
-    .map(({ stage }, index) => ({
-      id: nativeGraphStageId(stage),
-      type: 'story',
-      name: nativeGraphProjectionLabel(stage, index),
-      nativeStageId: nativeGraphStageId(stage),
-      audio: normalizeLocalFilePath(stage.audio),
-      itemAudio: normalizeLocalFilePath(stage.audio),
-      itemImage: normalizeLocalFilePath(stage.image),
-      controlSettings: normalizeControlSettings(
-        { controlSettings: stage.controlSettings },
-        { autoplay: !!stage.controlSettings?.autoplay, wheel: !!stage.controlSettings?.wheel, pause: false, ok: false, home: true },
-      ),
-    }));
-  if (ordered.length === 0) return [];
-  return [normalizeMenuEntry({
-    id: 'native-graph-stage-map',
-    name: 'Carte du graphe interactif',
-    audio: null,
-    image: null,
-    autoBlackImage: true,
-    children: ordered,
-  })];
-}
-
 function normalizeNativeGraph(graph, rootEntries, importWarnings) {
   if (!graph || typeof graph !== 'object') return null;
   const stageCount = nativeGraphStageCount(graph);
@@ -568,10 +515,6 @@ export function normalizeBaseProject(project = {}) {
   const projectType = inferProjectType(project, rootEntries, sharedEntries);
   const importWarnings = normalizeImportWarnings(project.importWarnings);
   const nativeGraph = normalizeNativeGraph(project.nativeGraph, rootEntries, importWarnings);
-  if (nativeGraph && countPlayableEntries(rootEntries) <= 1) {
-    const projectedEntries = buildNativeGraphFallbackEntries(nativeGraph);
-    if (projectedEntries.length > 0) rootEntries = projectedEntries;
-  }
   const rootImage = normalizeLocalFilePath(project.rootImage);
   const thumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
   const nativeTitle = nativeGraph?.document?.title;
