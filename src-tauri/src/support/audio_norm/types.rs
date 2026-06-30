@@ -6,7 +6,7 @@ pub(crate) const MAX_LIMITING_DB: f64 = 6.0;
 pub(crate) const VALIDATION_WINDOW_LUFS: (f64, f64) = (-20.0, -10.0);
 pub(crate) const DEADBAND_LUFS: (f64, f64) = (-15.5, -12.5);
 pub(crate) const NEAR_MUTE_LUFS: f64 = -45.0;
-pub(crate) const EDGE_SILENCE_SEC: f64 = 0.5;
+pub(crate) const EDGE_SILENCE_SEC: f64 = 0.4;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct LoudnessMeasure {

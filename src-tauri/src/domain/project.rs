@@ -40,10 +40,10 @@ impl GlobalOptions {
 }
 
 fn default_add_silence_duration_sec() -> f64 {
-    // Aligné sur la cible du vérificateur de pack (0.5 s) et sur le défaut
+    // Aligné sur la cible du vérificateur de pack (0.4 s) et sur le défaut
     // frontend PACK_AUDIO_EDGE_SILENCE_SECONDS. Repli pour les projets dont le
     // JSON ne porte pas encore le champ.
-    0.5
+    0.4
 }
 
 fn default_true() -> bool {

@@ -147,7 +147,7 @@ fn read_leading_bytes(path: &Path, max: u64) -> std::io::Result<Vec<u8>> {
 /// Silences conformes au mode demandé, sans aucune opération de silence requise :
 /// - `Off` → rien à poser, conforme ;
 /// - `Add` → on ajoute toujours du silence, donc jamais verbatim ;
-/// - `Normalize` → conforme uniquement si les bords mesurés sont déjà ≈ 0.5 s.
+/// - `Normalize` → conforme uniquement si les bords mesurés sont déjà ≈ `EDGE_SILENCE_SEC`.
 fn silence_is_already_conform(
     measured_edges: Option<(f64, f64)>,
     silence_mode: SilenceMode,
@@ -426,15 +426,24 @@ mod tests {
     #[test]
     fn verbatim_silence_never_conform_in_add_mode() {
         // Add ajoute toujours du silence -> jamais de copie verbatim.
-        assert!(!silence_is_already_conform(Some((0.5, 0.5)), SilenceMode::Add));
+        assert!(!silence_is_already_conform(
+            Some((EDGE_SILENCE_SEC, EDGE_SILENCE_SEC)),
+            SilenceMode::Add
+        ));
     }
 
     #[test]
-    fn verbatim_silence_conform_in_normalize_only_when_edges_are_half_second() {
-        // Bords déjà ≈ 0.5 s (dans la tolérance) -> conforme.
-        assert!(silence_is_already_conform(Some((0.5, 0.48)), SilenceMode::Normalize));
+    fn verbatim_silence_conform_in_normalize_only_when_edges_are_target_duration() {
+        // Bords déjà ≈ EDGE_SILENCE_SEC (dans la tolérance) -> conforme.
+        assert!(silence_is_already_conform(
+            Some((EDGE_SILENCE_SEC, EDGE_SILENCE_SEC - 0.02)),
+            SilenceMode::Normalize
+        ));
         // Bords trop longs -> traitement requis.
-        assert!(!silence_is_already_conform(Some((1.0, 0.5)), SilenceMode::Normalize));
+        assert!(!silence_is_already_conform(
+            Some((1.0, EDGE_SILENCE_SEC)),
+            SilenceMode::Normalize
+        ));
         // Bords absents (pas de silence du tout) -> traitement requis.
         assert!(!silence_is_already_conform(Some((0.0, 0.0)), SilenceMode::Normalize));
         // Mesure illisible -> on traite par sécurité.

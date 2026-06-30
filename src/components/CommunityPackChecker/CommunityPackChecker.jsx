@@ -28,7 +28,10 @@ import {
   imageMeasureRows,
 } from './packCheckerMeasures';
 import { ConformingSection } from './CommunityPackConforming';
+import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './CommunityPackChecker.css';
+
+const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 
 const PROBLEM_SECTIONS = [
   {
@@ -62,7 +65,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     Icon: Scissors,
     explanation: 'Le blanc avant ou après la voix sort de la fenêtre attendue.',
-    action: 'On ajuste le silence vers 0,50 s.',
+    action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
     match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('silence'),
   },
   {

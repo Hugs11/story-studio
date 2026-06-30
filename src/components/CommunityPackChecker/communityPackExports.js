@@ -10,6 +10,9 @@ import {
   structureConforming,
   titleConforming,
 } from './packCheckerFormat.js';
+import { formatPackAudioEdgeSilence } from '../../config/audioProcessing.js';
+
+const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 
 function severityLabel(severity) {
   switch (severity) {
@@ -163,7 +166,7 @@ const PROBLEM_SECTIONS = [
     badge: 'Auto',
     bucket: 'fix',
     icon: 'wrench',
-    action: 'On ajuste le silence vers 0,50 s.',
+    action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
     match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issueText(issue).includes('silence'),
   },
   {

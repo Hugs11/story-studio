@@ -426,7 +426,11 @@ pub(crate) fn collect_asset_requests(
         );
     }
     if !project.options.auto_next {
-        collect_native_graph_requests(project.native_graph.as_ref(), &mut requests);
+        collect_native_graph_requests(
+            project.native_graph.as_ref(),
+            &mut requests,
+            silence_duration_sec,
+        );
     }
 
     requests
@@ -465,6 +469,7 @@ pub(crate) fn active_native_graph(
 fn collect_native_graph_requests(
     native_graph: Option<&serde_json::Value>,
     requests: &mut Vec<AssetRequest>,
+    silence_duration_sec: f64,
 ) {
     let Some(stages) = active_native_graph(native_graph)
         .and_then(|graph| graph.get("document"))
@@ -480,7 +485,7 @@ fn collect_native_graph_requests(
             requests.push(audio_request(
                 &native_graph_asset_role(stage_id, "audio"),
                 path,
-                0.5,
+                silence_duration_sec,
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -615,6 +620,6 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Zip,
-        silence_duration_sec: 0.5,
+        silence_duration_sec: 0.0,
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.4;
+pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.35;
 pub(crate) const AUDIO_MAX_EDGE_SILENCE_SECONDS: f64 = 1.0;
 
 pub(crate) const IMAGE_TARGET_WIDTH: u32 = 320;
