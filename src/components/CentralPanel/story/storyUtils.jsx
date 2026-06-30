@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
-  decodeNavigationStoryId,
   encodeMenuNavigationTarget,
   encodeStoryHomeStepNavigationTarget,
   encodeStoryNavigationTarget,
@@ -10,9 +9,7 @@ import {
   isCurrentMenuNavigationTarget,
   isNextStoryNavigationTarget,
   isRootNavigationTarget,
-  isStoryHomeStepNavigationTarget,
   isStoryNavigationTarget,
-  isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from '../../../store/navigationTargets';
 import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal';
@@ -138,22 +135,6 @@ export function resolveNavigationTargetId(target, currentMenuId = null) {
   if (isNextStoryNavigationTarget(normalized)) return NAV_TARGET_NEXT_STORY;
   if (isStoryNavigationTarget(normalized)) return normalized;
   return decodeNavigationMenuId(normalized);
-}
-
-export function targetNameById(allMenus, allStories, targetId, fallback = 'destination introuvable') {
-  if (targetId === 'root') return NAV_ROOT_LABEL;
-  if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
-  if (!targetId) return fallback;
-  if (isStoryNavigationTarget(targetId)) {
-    const storyId = decodeNavigationStoryId(targetId);
-    const storyName = allStories.find((s) => s.id === storyId)?.name || fallback;
-    return isStoryHomeStepNavigationTarget(targetId)
-      ? `Retour de fin — ${storyName}`
-      : isStoryPlayNavigationTarget(targetId)
-      ? `Lecture directe — ${storyName}`
-      : `Titre — ${storyName}`;
-  }
-  return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
 }
 
 // Calcule le texte de destination effective pour les résumés de parcours.

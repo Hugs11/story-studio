@@ -300,5 +300,3 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     </FunnelShell>
   );
 }
-
-export default CommunityPackCheckerFunnel;

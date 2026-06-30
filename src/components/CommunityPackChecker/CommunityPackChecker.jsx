@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
-import { AppModalPortal } from '../common/AppModalPortal';
 import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
 import {
   Check,
@@ -21,7 +20,6 @@ import {
   Wrench,
   X,
 } from '../icons/LucideLocal';
-import { useCommunityPackChecker } from './useCommunityPackChecker';
 import {
   Measure,
   audioMeasureRows,
@@ -808,72 +806,6 @@ function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
           onExportJson={checker.exportReport}
         />
       </div>
-    </div>
-  );
-}
-
-export function CommunityPackChecker() {
-  const checker = useCommunityPackChecker();
-  const [open, setOpen] = useState(false);
-  const [maximized, setMaximized] = useState(false);
-  const busy = checker.status === 'analyzing' || checker.status === 'fixing';
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open]);
-
-  async function handlePickFromEntry() {
-    setOpen(true);
-    await checker.pickPack();
-  }
-
-  return (
-    <div className="checker-root">
-      <div className="checker-entry">
-        <div className="checker-entry-main">
-          <div className="checker-drop-icon"><IconFrame Icon={Package} /></div>
-          <div>
-            <div className="checker-drop-title">Vérifier un pack communautaire</div>
-            <div className="checker-drop-sub">
-              Ouvre une fenêtre dédiée pour analyser, corriger et exporter le rapport.
-            </div>
-            {checker.zipPath ? <div className="checker-path" title={checker.zipPath}>{checker.zipPath}</div> : null}
-          </div>
-        </div>
-        <div className="checker-actions">
-          <Button onClick={() => setOpen(true)} disabled={busy}>
-            Ouvrir
-          </Button>
-          <Button variant="primary-violet" onClick={handlePickFromEntry} disabled={busy}>
-            Choisir un ZIP
-          </Button>
-        </div>
-      </div>
-
-      {open ? (
-        <AppModalPortal
-          className="checker-modal-backdrop"
-        >
-          <div
-            className="checker-modal-click-layer"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setOpen(false);
-            }}
-          >
-            <CheckerWorkspace
-              checker={checker}
-              maximized={maximized}
-              onMaximizeToggle={() => setMaximized((value) => !value)}
-              onClose={() => setOpen(false)}
-            />
-          </div>
-        </AppModalPortal>
-      ) : null}
     </div>
   );
 }

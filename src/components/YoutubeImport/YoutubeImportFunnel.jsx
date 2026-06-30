@@ -323,5 +323,3 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
     </FunnelShell>
   );
 }
-
-export default YoutubeImportFunnel;
