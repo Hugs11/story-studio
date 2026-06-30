@@ -8,7 +8,7 @@ import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
-import { KEYS, read, write } from '../../store/persistentSettings';
+import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
