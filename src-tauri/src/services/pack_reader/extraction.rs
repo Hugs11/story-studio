@@ -1099,6 +1099,110 @@ mod tests {
         fs::remove_dir_all(dir).expect("cleanup");
     }
 
+    fn corrupt_branching_graph_story_json() -> serde_json::Value {
+        // Graphe branchant interactif (dispatcher autoplay -> deux roues) dont une histoire
+        // a une okTransition pendante vers un stage inexistant. C'est l'ancien declencheur
+        // de `needs_native_graph_projection` (transition non resolue, cible absente, que
+        // graph_import decline). Doit rester lisible en lecture seule, sans projecteur natif.
+        serde_json::json!({
+            "title": "Corrupt branching synthetic",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Depart", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "dispatcher", "name": "Dispatcher", "type": "stage", "squareOne": false,
+                    "audio": "dispatcher.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "dispatcher-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "branch-a", "name": "Choix A", "type": "stage", "squareOne": false,
+                    "audio": "branch-a.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "branch-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "branch-b", "name": "Choix B", "type": "stage", "squareOne": false,
+                    "audio": "branch-b.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "branch-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "play-a", "name": "Lecture A", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "play-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "play-b", "name": "Lecture B", "type": "stage", "squareOne": false,
+                    "audio": "extra.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": null,
+                    "homeTransition": { "actionNode": "home-action", "optionIndex": 0 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Root", "options": ["dispatcher"] },
+                { "id": "dispatcher-action", "name": "Dispatcher", "options": ["branch-a", "branch-b"] },
+                { "id": "branch-a-action", "name": "A", "options": ["play-a"] },
+                { "id": "branch-b-action", "name": "B", "options": ["play-b"] },
+                { "id": "play-a-action", "name": "Suite A", "options": ["missing-ghost"] },
+                { "id": "home-action", "name": "Home", "options": ["dispatcher"] }
+            ]
+        })
+    }
+
+    #[test]
+    fn corrupt_branching_graph_with_dangling_transition_is_read_only_without_native_graph() {
+        let dir = temp_dir("corrupt_branching_graph");
+        let zip_path = dir.join("pack.zip");
+        write_story_zip_with_assets(
+            &zip_path,
+            &corrupt_branching_graph_story_json(),
+            &[
+                "root.mp3",
+                "cover.png",
+                "dispatcher.mp3",
+                "branch-a.mp3",
+                "branch-b.mp3",
+                "story.mp3",
+                "extra.mp3",
+            ],
+        );
+
+        // Aucun panic malgre la transition pendante.
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        assert!(!report.authoring_editable);
+        assert!(report.read_only_inspectable);
+        assert!(
+            !report.has_native_graph,
+            "plus de projecteur natif lossy : nativeGraph doit rester absent"
+        );
+
+        let imported = unpack_zip_to_entries_unchecked(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect("unpack corrupt graph for read-only inspection");
+        assert!(imported["nativeGraph"].is_null());
+        assert!(!imported["entries"].as_array().expect("entries").is_empty());
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
     #[test]
     #[ignore]
     fn plan16_graph_pack_from_env_is_read_only_without_native_graph() {
