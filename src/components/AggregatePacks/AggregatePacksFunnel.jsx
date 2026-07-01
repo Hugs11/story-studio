@@ -15,7 +15,6 @@ import {
   FunnelToolButton,
 } from '../funnels';
 import {
-  Check,
   Crop,
   FolderOpen,
   House,
@@ -61,7 +60,6 @@ const STEPS = [
   { key: 'packs', label: 'Packs' },
   { key: 'audio', label: 'Audio' },
   { key: 'image', label: 'Image' },
-  { key: 'output', label: 'Sortie' },
   { key: 'metadata', label: 'Métadonnées' },
 ];
 
@@ -70,11 +68,6 @@ function formatBytes(bytes) {
   const mb = bytes / (1024 * 1024);
   if (mb >= 1) return `${mb.toFixed(mb >= 10 ? 0 : 1)} Mo`;
   return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
-}
-
-function joinPath(dir, fileName) {
-  if (!dir) return fileName || '';
-  return `${String(dir).replace(/[\\/]+$/, '')}\\${fileName}`;
 }
 
 function getSquareOne(data) {
@@ -101,7 +94,7 @@ function defaultMetadataForPacks(packs) {
   };
 }
 
-function buildAggregateProject({ packs, rootAudio, rootImage, metadata, harmonizeLoudness }) {
+function buildAggregateProject({ packs, rootAudio, rootImage, metadata }) {
   return normalizeProjectData({
     version: 1,
     projectName: metadata.title || 'Pack agrégé',
@@ -112,9 +105,13 @@ function buildAggregateProject({ packs, rootAudio, rootImage, metadata, harmoniz
     rootImage,
     thumbnailImage: rootImage,
     sameImage: true,
+    // L'audio racine (menu agrégé) est le seul asset natif : il est harmonisé en
+    // loudness et ses silences de bord normalisés. Les assets internes des ZIP
+    // agrégés sont recopiés verbatim depuis l'archive et ne passent pas par la
+    // pipeline audio — pas d'option exposée, ce traitement ne concerne que la racine.
     globalOptions: {
       silenceMode: 'normalize',
-      harmonizeLoudness,
+      harmonizeLoudness: true,
       autoNext: false,
       nightMode: false,
       aiImageGen: false,
@@ -136,7 +133,6 @@ export function AggregatePacksFunnel({ onClose }) {
   const [rootAudio, setRootAudio] = useState('');
   const [rootImage, setRootImage] = useState('');
   const [metadata, setMetadata] = useState(() => defaultMetadataForPacks([]));
-  const [harmonizeLoudness, setHarmonizeLoudness] = useState(true);
   const [outputDir, setOutputDir] = useState(() => getLastExportDir() || '');
   const [phase, setPhase] = useState('collect'); // collect | generating | done
   const [progress, setProgress] = useState(0);
@@ -285,19 +281,6 @@ export function AggregatePacksFunnel({ onClose }) {
     if (path) setRootImage(path);
   }
 
-  async function handlePickOutputDir() {
-    const selected = await openDialog({
-      directory: true,
-      multiple: false,
-      title: 'Dossier de sortie du pack',
-      defaultPath: outputDir || getLastExportDir() || undefined,
-    });
-    if (selected) {
-      setOutputDir(selected);
-      saveLastExportDir(selected);
-    }
-  }
-
   function movePack(index, delta) {
     setPacks((current) => {
       const next = [...current];
@@ -317,7 +300,6 @@ export function AggregatePacksFunnel({ onClose }) {
     if (index >= 1 && packs.length === 0) return false;
     if (index >= 2 && !rootAudio) return false;
     if (index >= 3 && !rootImage) return false;
-    if (index >= 4 && !outputDir) return false;
     return true;
   }
 
@@ -336,12 +318,23 @@ export function AggregatePacksFunnel({ onClose }) {
   async function saveMetadataAndGenerate(draft) {
     const nextMetadata = { ...metadata, ...draft };
     setMetadata(nextMetadata);
-    await generate(nextMetadata);
+    // Le dossier de sortie est choisi ici, au moment de générer (comme le flux
+    // normal), plutôt que dans une étape dédiée en amont.
+    const selected = await openDialog({
+      directory: true,
+      multiple: false,
+      title: 'Dossier de sortie du pack',
+      defaultPath: outputDir || getLastExportDir() || undefined,
+    });
+    if (!selected) return;
+    setOutputDir(selected);
+    saveLastExportDir(selected);
+    await generate(nextMetadata, selected);
   }
 
-  async function generate(metadataOverride = metadata) {
+  async function generate(metadataOverride = metadata, outputFolder = outputDir) {
     const activeMetadata = { ...metadata, ...metadataOverride };
-    if (!packs.length || !rootAudio || !rootImage || !activeMetadata.title?.trim() || !outputDir) return;
+    if (!packs.length || !rootAudio || !rootImage || !activeMetadata.title?.trim() || !outputFolder) return;
     setPhase('generating');
     setProgress(0.05);
     setError('');
@@ -366,7 +359,6 @@ export function AggregatePacksFunnel({ onClose }) {
         rootAudio: preparedAudio,
         rootImage: preparedImage,
         metadata: activeMetadata,
-        harmonizeLoudness,
       });
       const projectJson = JSON.stringify(projectToRustExport(project));
       unlisten = await listen('generate-log', () => {
@@ -375,8 +367,8 @@ export function AggregatePacksFunnel({ onClose }) {
       timer = window.setInterval(() => {
         setProgress((current) => Math.min(0.9, current + 0.012));
       }, 350);
-      logger.info(`aggregate-funnel:generate start count=${packs.length} output='${outputDir}' session='${sessionDir}'`);
-      const resultPath = await invoke('generate_pack', { projectJson, outputFolder: outputDir });
+      logger.info(`aggregate-funnel:generate start count=${packs.length} output='${outputFolder}' session='${sessionDir}'`);
+      const resultPath = await invoke('generate_pack', { projectJson, outputFolder });
       window.clearInterval(timer);
       timer = null;
       unlisten?.();
@@ -422,17 +414,13 @@ export function AggregatePacksFunnel({ onClose }) {
 
   const totalStories = packs.reduce((sum, pack) => sum + (pack.storyCount || 0), 0);
   const totalSize = packs.reduce((sum, pack) => sum + (pack.sizeBytes || 0), 0);
-  const exportName = generateConventionName(metadata);
-  const outputFileName = exportName ? `${exportName}.zip` : 'Titre requis';
   const ttsAvailable = isTtsAvailable(xttsSettings);
   const primaryDisabled = (
     (step === 0 && (packs.length === 0 || loadingPacks))
     || (step === 1 && !rootAudio)
     || (step === 2 && !rootImage)
-    || (step === 3 && !outputDir)
-    || (step === 4 && !metadata.title?.trim())
   );
-  const previewProject = buildAggregateProject({ packs, rootAudio, rootImage, metadata, harmonizeLoudness });
+  const previewProject = buildAggregateProject({ packs, rootAudio, rootImage, metadata });
   const generationPhases = [
     { label: 'Agrégation des packs', status: progress >= 0.28 ? 'done' : 'active' },
     { label: 'Harmonisation du volume', status: progress < 0.28 ? 'todo' : progress >= 0.55 ? 'done' : 'active' },
@@ -631,32 +619,6 @@ export function AggregatePacksFunnel({ onClose }) {
       )}
 
       {phase === 'collect' && step === 3 && (
-        <div className="funnel-step-content aggregate-step">
-          <FunnelSectionHeader
-            icon={<FolderOpen />}
-            title="Dossier de sortie"
-            description="Le ZIP généré sera écrit dans le dossier choisi."
-          />
-          <div className="aggregate-output-card">
-            <span className="aggregate-pack-icon"><FolderOpen /></span>
-            <span className="aggregate-pack-copy">
-              <span className="aggregate-output-path" title={outputDir}>{outputDir || 'Aucun dossier sélectionné'}</span>
-              <span className="aggregate-pack-meta">Dernière destination mémorisée</span>
-            </span>
-            <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handlePickOutputDir}>
-              Changer…
-            </FunnelToolButton>
-          </div>
-          <div className="aggregate-filename-well">
-            <Package />
-            <span title={joinPath(outputDir, outputFileName)}>{outputFileName}</span>
-            <small>{formatBytes(totalSize) || 'Taille estimée après génération'}</small>
-          </div>
-          {error && <div className="funnel-error" role="alert">{error}</div>}
-        </div>
-      )}
-
-      {phase === 'collect' && step === 4 && (
         <div className="funnel-step-content aggregate-step aggregate-metadata-step">
           <FunnelSectionHeader
             icon={<Package />}
@@ -664,22 +626,6 @@ export function AggregatePacksFunnel({ onClose }) {
             description="Panneau PackNameModal pré-rempli, cohérent avec Modifier un pack."
             trailing={<span className="funnel-badge">Pré-rempli</span>}
           />
-          <div className="aggregate-harmonize-row">
-            <span className="aggregate-harmonize-icon"><Check /></span>
-            <span className="aggregate-harmonize-copy">
-              <strong>Harmoniser le volume</strong>
-              <small>Normalise le niveau sonore entre tous les packs agrégés.</small>
-            </span>
-            <button
-              type="button"
-              className={`aggregate-switch${harmonizeLoudness ? ' is-on' : ''}`}
-              role="switch"
-              aria-checked={harmonizeLoudness}
-              onClick={() => setHarmonizeLoudness((value) => !value)}
-            >
-              <span />
-            </button>
-          </div>
           <Suspense fallback={null}>
             <PackNameModal
               open
@@ -687,11 +633,10 @@ export function AggregatePacksFunnel({ onClose }) {
               packMetadata={metadata}
               project={previewProject}
               coverImage={rootImage}
-              exportFolder={outputDir}
-              generateDisabled={!outputDir}
+              exportFolder={outputDir || null}
               onSave={saveMetadataDraft}
               onSaveAndGenerate={saveMetadataAndGenerate}
-              onClose={() => setStep(3)}
+              onClose={() => setStep(2)}
             />
           </Suspense>
           {error && <div className="funnel-error" role="alert">{error}</div>}
