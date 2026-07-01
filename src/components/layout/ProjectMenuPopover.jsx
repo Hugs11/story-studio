@@ -109,7 +109,7 @@ export function ProjectMenuPopover({
             <ProjectMenuItem onClick={() => handleAction(onSaveProject)}>
               <ToolbarIcon Icon={Save} />
               <span>
-                <strong>Sauvegarder</strong>
+                <strong>Enregistrer</strong>
                 <small>{shortcutLabels.saveProject}</small>
               </span>
             </ProjectMenuItem>

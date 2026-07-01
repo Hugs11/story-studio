@@ -142,10 +142,10 @@ export const StoryEditor = memo(function StoryEditor({
               extraActions={[
                 {
                   key: 'generate-text',
-                  label: 'Générer un texte',
+                  label: 'Générer une image-titre',
                   icon: '✦',
                   onClick: handleRegenerate,
-                  title: "Créer une image texte à partir du nom de l'histoire",
+                  title: "Créer une image-titre à partir du nom de l'histoire",
                 },
               ]}
               onPick={(f) => onUpdate({ itemImage: f, autoGenerateImage: false })}

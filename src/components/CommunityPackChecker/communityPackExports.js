@@ -372,7 +372,7 @@ function summarizeGroups(groups, report) {
       icon: 'warning',
       title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
       subtitle: fixCount > 0
-        ? "Le reste sera corrigé ; pour l'audio saturé, refaites le pack depuis une source propre."
+        ? "Le reste sera corrigé ; l'audio saturé doit être repris depuis une source propre."
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
@@ -382,7 +382,9 @@ function summarizeGroups(groups, report) {
     return {
       tone: 'listen',
       icon: 'info',
-      title: 'Pack corrigeable, avec quelques fichiers à écouter',
+      title: listenCount === 1
+        ? 'Pack corrigeable, avec un fichier à écouter'
+        : `Pack corrigeable, avec ${listenCount} fichiers à écouter`,
       subtitle: 'Le reste peut être corrigé automatiquement.',
       listenCount,
       fixCount,
@@ -1183,7 +1185,7 @@ export function formatHtmlReport(report) {
           title: 'Structure',
           iconName: 'network',
           tone: structureOk ? 'ok' : 'listen',
-          strong: structureOk ? 'Correcte' : 'À vérifier',
+          strong: structureOk ? 'Correcte' : 'Vérification manuelle',
           small: `${report.structureSummary?.stageCount ?? 0} étapes`,
         })}
         ${summaryTileHtml({

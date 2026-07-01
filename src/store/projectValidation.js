@@ -122,7 +122,7 @@ function validateZipItem(issues, item, fallbackName, fileAudit) {
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
   const issues = [];
   const projectType = project?.projectType;
-  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Nom de mon histoire');
+  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Pack sans nom');
   const autoNext = !!project?.globalOptions?.autoNext;
   const nightMode = !!project?.globalOptions?.nightMode;
   const hasEndNode = !autoNext && (nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode);

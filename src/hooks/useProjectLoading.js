@@ -17,7 +17,7 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
   if (unchanged) return true;
   const choice = await showChoiceDialog({
     title: 'Projet non enregistré',
-    message: "Votre travail n'est pas enregistré et sera définitivement perdu.",
+    message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
     variant: 'warning',
     cancelValue: 'cancel',
     actions: [

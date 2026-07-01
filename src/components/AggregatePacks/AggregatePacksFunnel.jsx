@@ -607,7 +607,7 @@ export function AggregatePacksFunnel({ onClose }) {
                 Choisir une image
               </FunnelToolButton>
               <FunnelToolButton icon={<Sparkles />} accent="violet" variant="solid" onClick={() => setTextImageOpen(true)}>
-                Générer un texte
+                Générer une image-titre
               </FunnelToolButton>
               <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={() => setImageEditorOpen(true)} disabled={!rootImage}>
                 Retouche image

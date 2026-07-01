@@ -25,7 +25,7 @@ const OPTION_GROUPS = [
   {
     label: 'Général',
     items: [
-      { id: 'save', label: 'Sauvegarde' },
+      { id: 'save', label: 'Enregistrement' },
       { id: 'interface', label: 'Interface' },
       { id: 'projects-media', label: 'Projets et médias' },
     ],
@@ -424,11 +424,11 @@ export function OptionsTab({
           className={sectionClass('save')}
           ref={(node) => { sectionRefs.current.save = node; }}
         >
-          <div className="opts-card-title">Sauvegarde</div>
+          <div className="opts-card-title">Enregistrement</div>
           <div className="opts-row">
             <div className="opts-row-info">
-              <div className="opts-row-label">Sauvegarde automatique</div>
-              <div className="opts-row-sub">Sauvegarde automatiquement toutes les 5 minutes si des modifications sont en attente (uniquement si déjà enregistré sur disque)</div>
+              <div className="opts-row-label">Enregistrement automatique</div>
+              <div className="opts-row-sub">Enregistre automatiquement toutes les 5 minutes si des modifications sont en attente (uniquement si déjà enregistré sur disque)</div>
             </div>
             <Toggle on={autoSaveEnabled} onChange={onAutoSaveChange} />
           </div>
@@ -436,7 +436,7 @@ export function OptionsTab({
             <div className="opts-row">
               <div className="opts-row-info">
                 <div className="opts-row-label">Versions de sécurité</div>
-                <div className="opts-row-sub">Nombre de copies `.mbah` conservées avant chaque sauvegarde automatique.</div>
+                <div className="opts-row-sub">Nombre de copies `.mbah` conservées avant chaque enregistrement automatique.</div>
               </div>
               <input
                 className="xtts-input opts-number"
@@ -449,7 +449,7 @@ export function OptionsTab({
             </div>
           )}
           <div className="opts-help">
-            Raccourcis : <strong>Ctrl+S</strong> pour sauvegarder, <strong>Ctrl+Maj+S</strong> pour sauvegarder sous
+            Raccourcis : <strong>Ctrl+S</strong> pour enregistrer, <strong>Ctrl+Maj+S</strong> pour enregistrer sous
           </div>
         </section>
 

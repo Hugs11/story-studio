@@ -124,10 +124,10 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
                 extraActions={[
                   {
                     key: 'generate-text',
-                    label: 'Générer un texte',
+                    label: 'Générer une image-titre',
                     icon: '✦',
                     onClick: handleRegenerate,
-                    title: 'Créer une image texte à partir du nom du dossier',
+                    title: 'Créer une image-titre à partir du nom du dossier',
                   },
                 ]}
                 onPick={(f) => onUpdate({ image: f, autoGenerateImage: false })}

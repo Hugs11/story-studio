@@ -166,7 +166,7 @@ function PiperVoiceModal({
       setError(`Le texte est trop long pour Piper (${text.trim().length} caractères, maximum ${PIPER_MAX_TEXT_CHARS}).`);
       return;
     }
-    if (!selectedVoice) { setError('Choisissez une voix.'); return; }
+    if (!selectedVoice) { setError('Choisis une voix.'); return; }
 
     setSubmitting(true);
     setError('');
@@ -335,7 +335,7 @@ function XttsVoiceModal({
 
   async function handleGenerate() {
     if (!text.trim()) { setError('Le texte a generer est vide.'); return; }
-    if (!selectedVoice) { setError('Choisissez une voix XTTS.'); return; }
+    if (!selectedVoice) { setError('Choisis une voix XTTS.'); return; }
 
     setSubmitting(true);
     setError('');

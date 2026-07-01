@@ -103,7 +103,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       const path = await invoke('save_recording', { savePath, workspaceDir, filename, data });
       onSaved(path);
     } catch (e) {
-      setError(`Erreur de sauvegarde : ${e}`);
+      setError(`Écriture du fichier impossible : ${e}`);
       setPhase('error');
     }
   }
@@ -162,7 +162,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
           )}
 
           {phase === 'saving' && (
-            <div className="record-hint">Sauvegarde en cours…</div>
+            <div className="record-hint">Écriture du fichier…</div>
           )}
 
           {phase === 'error' && (

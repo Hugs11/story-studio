@@ -58,6 +58,7 @@ with clearer navigation rails and actions.
 |---|---|
 | **Status** | Beta |
 | **Platform** | Windows desktop |
+| **Interface language** | French only for now |
 | **Project format** | `.mbah` |
 | **Export format** | Lunii-compatible ZIP packs |
 | **Main stack** | React 19, Vite, Tauri 2, Rust |
