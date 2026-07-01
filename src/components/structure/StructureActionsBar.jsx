@@ -54,7 +54,7 @@ export function StructureActionsBar({
     <div className={`structure-actions-bar structure-actions-bar--${variant}`} aria-label="Ajouter à la structure">
       {showLabel ? <span className="structure-actions-label">Ajouter</span> : null}
       <StructureActionButton
-        title="Importer une histoire (fichier audio / pack zip)"
+        title="Importer audio, ZIP ou 7z"
         disabled={!canAddStory}
         onClick={() => onAddStory?.(targetMenuId)}
       >

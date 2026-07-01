@@ -467,7 +467,7 @@ export function TreePanel({
 
     if (projectType === 'pack') {
       actions.push({ icon: <IconFolderPlus />, label: 'Créer un dossier', fn: () => onAddMenu(targetMenuId) });
-      actions.push({ icon: <IconStory />, label: 'Importer des histoires', fn: () => onAddStory(targetMenuId) });
+      actions.push({ icon: <IconStory />, label: 'Importer audio ou archive', fn: () => onAddStory(targetMenuId) });
       if (onImportFolder) {
         actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
       }
