@@ -447,6 +447,7 @@ export function AggregatePacksFunnel({ onClose }) {
       subtitle="Génère un nouveau pack à partir de plusieurs archives."
       onClose={handleClose}
       showChrome={phase === 'collect'}
+      size="wide"
       ariaLabel="Agréger des packs"
       stepper={(
         <FunnelStepper
