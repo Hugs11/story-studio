@@ -2,13 +2,15 @@ import { useEffect } from 'react';
 import { isTextEditingTarget } from '../store/projectStore';
 import { findShortcutAction } from '../store/keyboardShortcuts';
 
+// Toute surface modale ouverte suspend les raccourcis globaux : les trois
+// conventions d'overlay de l'app (portail commun, modales artisanales,
+// dialogues). Le plein écran du diagramme (`fd-fullscreen-overlay`) reste une
+// surface d'édition : il n'est volontairement pas listé.
+const MODAL_SURFACE_SELECTOR = '.app-modal-overlay, .modal-overlay, .dialog-overlay';
+
 export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef }) {
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.target?.closest?.('.keyboard-shortcuts-modal')) return;
-      if (document.querySelector('.audio-editor-modal')) return;
-      if (document.querySelector('.image-editor-box')) return;
-
       const shouldBlockNativeFind = e.ctrlKey
         && !e.shiftKey
         && !e.altKey
@@ -20,6 +22,8 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
         e.stopImmediatePropagation?.();
       };
       if (shouldBlockNativeFind) stopShortcut();
+
+      if (document.querySelector(MODAL_SURFACE_SELECTOR)) return;
 
       const actions = actionsRef.current;
       const actionId = findShortcutAction(e, keyboardShortcutsRef.current, 'general');
