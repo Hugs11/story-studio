@@ -111,7 +111,9 @@ export function CommunityPackCheckerFunnel({ onClose }) {
 
   function handlePrimary() {
     if (step === 0) {
-      void (checker.zipPath ? analyzePath(checker.zipPath) : pickPack());
+      // CTA actif seulement quand un pack est déjà choisi (zone de dépôt ou
+      // bouton « Choisir un pack ») : le footer ne duplique plus le picker.
+      if (checker.zipPath) void analyzePath(checker.zipPath);
       return;
     }
     if (step === 1) {
@@ -133,7 +135,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   }
 
   const primaryLabel = step === 0
-    ? (checker.zipPath ? 'Analyser' : 'Choisir un pack')
+    ? 'Analyser'
     : step === 1
       ? (canFix ? 'Choisir la sortie' : 'Terminer')
       : needsMetadata
@@ -163,7 +165,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
           stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
           onPrimary={handlePrimary}
           primaryLabel={primaryLabel}
-          primaryDisabled={busy || (step === 2 && !outputDir)}
+          primaryDisabled={busy || (step === 0 && !checker.zipPath) || (step === 2 && !outputDir)}
         />
       )}
     >

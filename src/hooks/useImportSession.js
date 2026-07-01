@@ -497,7 +497,7 @@ export function useImportSession({
       showErrorDialog({
         title: isYoutube ? 'Import YouTube' : 'Import du podcast',
         message: failures === total
-          ? `Aucune ${itemLabel} n'a pu être importée. Vérifiez votre connexion ou l'adresse ${isYoutube ? 'YouTube' : 'du flux'}.`
+          ? `Aucune ${itemLabel} n'a pu être importée. Vérifie ta connexion ou l'adresse ${isYoutube ? 'YouTube' : 'du flux'}.`
           : `${failures} ${itemLabel}(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
         variant: failures === total ? 'warning' : 'info',
       });

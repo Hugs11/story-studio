@@ -152,7 +152,7 @@ export function useMediaTransferHandlers({
     const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
     const suffix = candidates.length > 5 ? `\n• …et ${candidates.length - 5} autre(s)` : '';
     const confirmed = skipPrompt || (await ask(
-        `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nVoulez-vous les copier dans fichiers-importes/ et mettre à jour le projet ?`,
+        `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nLes copier dans fichiers-importes/ et mettre à jour le projet ?`,
         {
           title: 'Transférer les fichiers existants ?',
           kind: 'warning',

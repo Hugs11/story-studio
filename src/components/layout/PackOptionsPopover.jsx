@@ -7,12 +7,12 @@ import './PackOptionsPopover.css';
 
 const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 const SILENCE_MODE_OPTIONS = [
-  ['normalize', `Calcul ${EDGE_SILENCE_LABEL}`, `Mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
-  ['add', `Ajoute ${EDGE_SILENCE_LABEL}`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
-  ['off', 'Off', 'Ne touche pas aux silences de début et de fin.'],
+  ['normalize', 'Mesurer et ajuster', `Recommandé : mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
+  ['add', `Ajouter ${EDGE_SILENCE_LABEL}`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
+  ['off', 'Ne rien faire', 'Ne touche pas aux silences de début et de fin.'],
 ];
 
-const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si vos fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
+const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
 
 export function PackOptionsPopover({
   open,
@@ -27,6 +27,9 @@ export function PackOptionsPopover({
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
   const isSimpleProject = projectType === 'simple';
+  // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
+  const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
+  const activeSilenceHelp = (SILENCE_MODE_OPTIONS.find(([mode]) => mode === activeSilenceMode) ?? SILENCE_MODE_OPTIONS[0])[2];
 
   useEffect(() => () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -111,8 +114,8 @@ export function PackOptionsPopover({
                     <Tooltip key={mode} text={help} wrap>
                       <button
                         type="button"
-                        className={`pack-options-segment ${globalOptions.silenceMode === mode ? 'is-active' : ''}`}
-                        aria-pressed={globalOptions.silenceMode === mode}
+                        className={`pack-options-segment ${activeSilenceMode === mode ? 'is-active' : ''}`}
+                        aria-pressed={activeSilenceMode === mode}
                         onClick={() => updateOption('silenceMode', mode)}
                       >
                         {label}
@@ -120,6 +123,7 @@ export function PackOptionsPopover({
                     </Tooltip>
                   ))}
                 </div>
+                <span className="pack-options-control-hint pack-options-silence-hint">{activeSilenceHelp}</span>
               </div>
 
               <div className="pack-options-well-sep" />

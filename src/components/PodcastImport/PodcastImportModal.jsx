@@ -126,7 +126,7 @@ export function PodcastImportModal({ onImport, onClose }) {
                 </label>
               </form>
               <p className="podcast-hint">
-                Collez l'URL du flux RSS du podcast. Vous pourrez choisir les épisodes à télécharger
+                Colle l'URL du flux RSS du podcast. Tu pourras choisir les épisodes à télécharger
                 avant qu'ils ne deviennent des histoires.
               </p>
               {error && <div className="podcast-error" role="alert">{error}</div>}

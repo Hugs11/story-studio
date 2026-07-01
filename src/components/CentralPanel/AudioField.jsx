@@ -420,7 +420,7 @@ export function AudioField({
                 Annuler
               </Button>
               <Button variant="primary" onClick={handleSaveAndContinue} disabled={savingGeneratedAudio}>
-                {savingGeneratedAudio ? 'Sauvegarde…' : 'Sauvegarder le projet…'}
+                {savingGeneratedAudio ? 'Enregistrement…' : 'Enregistrer le projet…'}
               </Button>
             </div>
           </div>

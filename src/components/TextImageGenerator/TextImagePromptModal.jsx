@@ -52,7 +52,7 @@ export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
   return createPortal(
     <div style={OVERLAY_STYLE} onClick={onCancel}>
       <div className="text-img-box" onClick={e => e.stopPropagation()}>
-        <div className="text-img-header">Générer une image texte</div>
+        <div className="text-img-header">Générer une image-titre</div>
         <div className="text-img-body">
           <input
             ref={inputRef}

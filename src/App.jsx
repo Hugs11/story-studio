@@ -157,7 +157,7 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
   if (unchanged) return true;
   const choice = await showChoiceDialog({
     title: 'Projet non enregistré',
-    message: "Votre travail n'est pas enregistré et sera définitivement perdu.",
+    message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
     variant: 'warning',
     cancelValue: 'cancel',
     actions: [
@@ -1344,7 +1344,7 @@ function AppContent() {
   const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
   const totalIssues = errors + warnings;
 
-  const statusText = projectType === null ? 'Choisissez un type de projet' : '';
+  const statusText = projectType === null ? 'Choisis un type de projet' : '';
   const projectDirty = savedSnapshotRef.current === null
     ? isProjectDirty(store.project)
     : JSON.stringify(store.project) !== savedSnapshotRef.current;

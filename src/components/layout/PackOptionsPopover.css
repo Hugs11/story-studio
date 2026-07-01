@@ -236,6 +236,11 @@
   text-overflow: ellipsis;
 }
 
+/* Aide du mode de silence actif : texte long, doit pouvoir se replier. */
+.pack-options-silence-hint {
+  white-space: normal;
+}
+
 .pack-options-control-end {
   display: inline-flex;
   align-items: center;

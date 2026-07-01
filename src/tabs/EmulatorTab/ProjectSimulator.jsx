@@ -613,18 +613,22 @@ export function ProjectSimulator({
     state === 'cover' ? (
       project.packMetadata?.title
         ? getExportPackName(project.packMetadata)
-        : (project.projectName || 'Nom de mon histoire')
+        : (project.projectName || 'Pack sans nom')
     ) :
     state === 'sequence' ? (activeSequenceStep?.name || activeStory?.name || 'Fin de lecture') :
     isSimple ? (simpleStory?.name || '—') :
     currentEntry?.type === 'ref'
       ? (currentEntry.label?.trim()
         || `→ ${findEntryLocation(rootEntries, refTargetEntryId(currentEntry.target))?.entry?.name || 'lien'}`)
-    : (currentEntry?.name || '—');
+    : (currentEntry?.name || (state === 'browse' && currentEntries.length === 0 ? 'Dossier vide' : '—'));
 
   const displaySub =
     state === 'cover' ? 'Appuie sur OK' :
-    state === 'browse' ? `${Math.min(entryIdx + 1, Math.max(currentEntries.length, 1))} / ${Math.max(currentEntries.length, 1)}${currentMenu ? ` · ${currentMenu.name}` : ''}` :
+    state === 'browse' ? (
+      currentEntries.length === 0
+        ? `0 / 0${currentMenu ? ` · ${currentMenu.name}` : ''}`
+        : `${Math.min(entryIdx + 1, currentEntries.length)} / ${currentEntries.length}${currentMenu ? ` · ${currentMenu.name}` : ''}`
+    ) :
     state === 'sequence' ? `▶ Sequence de fin ${Math.min(sequenceIndex + 1, Math.max(activeSequence.length, 1))} / ${Math.max(activeSequence.length, 1)}` :
     state === 'postplay' ? '▶ Fin de lecture...' :
     state === 'endnode' ? '▶ Message de fin...' :

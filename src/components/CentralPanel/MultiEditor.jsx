@@ -168,7 +168,7 @@ export const MultiEditor = memo(function MultiEditor({
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
   const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : "Pendant l'histoire";
   const batchGenerationDescription = canGenerateTextImages
-    ? "Crée d'un coup une image texte pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
+    ? "Crée d'un coup une image-titre pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
     : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
 
   function getSelectedVoice() {
@@ -213,7 +213,7 @@ export const MultiEditor = memo(function MultiEditor({
             );
           }
         } catch {
-          errors.push(`${text} : image texte impossible à générer`);
+          errors.push(`${text} : image-titre impossible à générer`);
         }
       }
 
