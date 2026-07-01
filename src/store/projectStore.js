@@ -27,9 +27,9 @@ import {
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
 import { basenameNoExt, pathKey } from '../utils/fileUtils';
-import { sanitizeImportedName } from './importedNames';
+import { sanitizeImportedEntries, sanitizeImportedName } from './importedNames';
 
-export { sanitizeImportedName };
+export { sanitizeImportedEntries, sanitizeImportedName };
 
 export function isTextEditingTarget(target) {
   if (!(target instanceof Element)) return false;
@@ -71,25 +71,6 @@ const DEFAULT_PROJECT = normalizeProjectData({
   },
   rootEntries: [],
 });
-
-export function sanitizeImportedEntries(entries = []) {
-  return (entries ?? []).map((entry) => {
-    if (!entry || typeof entry !== 'object') return entry;
-    const fallbackName = entry.type === 'menu'
-      ? 'Collection importee'
-      : entry.type === 'zip'
-        ? 'ZIP importe'
-        : 'Histoire importee';
-    const nextEntry = {
-      ...entry,
-      name: sanitizeImportedName(entry.name, fallbackName),
-    };
-    if (entry.type === 'menu' && Array.isArray(entry.children)) {
-      nextEntry.children = sanitizeImportedEntries(entry.children);
-    }
-    return nextEntry;
-  });
-}
 
 function nameFromPath(path) {
   if (!path) return '';
