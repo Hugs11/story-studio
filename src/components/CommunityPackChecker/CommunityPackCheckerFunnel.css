@@ -7,7 +7,7 @@
 }
 
 .pack-checker-step--report {
-  padding-bottom: 18px;
+  padding-bottom: 32px;
 }
 
 .pack-checker-selected,
@@ -103,6 +103,7 @@
 
 .pack-checker-funnel .checker-report {
   overflow: visible;
+  margin-bottom: 22px;
 }
 
 .pack-checker-funnel .checker-log {
@@ -115,7 +116,15 @@
 
 .pack-checker-funnel .checker-report-footer {
   position: sticky;
-  bottom: -18px;
+  bottom: 0;
+  margin-top: 14px;
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+  box-shadow: 0 -10px 22px color-mix(in srgb, var(--bg0) 82%, transparent);
+}
+
+.pack-checker-funnel .checker-report-footer .checker-correction-cta,
+.pack-checker-funnel .checker-report-footer .btn {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 720px) {
