@@ -2,7 +2,6 @@ import { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } fro
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import { openPath } from '@tauri-apps/plugin-opener';
 import { sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
   getRecentProjects,
@@ -81,7 +80,7 @@ import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
-import { bumpPackVersion, getExportPackName } from './utils/packConvention';
+import { bumpPackVersion } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import { generateUuid } from './utils/uuid';
 import { basename } from './utils/fileUtils';
@@ -759,26 +758,6 @@ function AppContent() {
     });
   }
 
-  async function handleOpenExportFolder() {
-    const dir = getLastExportDir() || await resolveDefaultExportDir();
-    if (!dir) {
-      showErrorDialog({
-        title: 'Dossier d’export',
-        message: "Aucun dossier d'export connu pour le moment.",
-        variant: 'info',
-      });
-      return;
-    }
-    try {
-      await openPath(dir);
-    } catch (error) {
-      showErrorDialog({
-        title: 'Dossier d’export',
-        message: `Impossible d'ouvrir le dossier d'export : ${error}`,
-      });
-    }
-  }
-
   async function handleSavePackMetadata(draft, { generate = false } = {}) {
     let effectiveDraft = draft;
     // Nouvelle révision d'un pack importé : proposer (sans obligation) un nouvel UUID
@@ -1359,7 +1338,6 @@ function AppContent() {
   const canRecord = canImportStories;
   const shortcutLabels = useMemo(() => getShortcutLabelMap(keyboardShortcuts), [keyboardShortcuts]);
   const effectiveProjectFilePrefix = getProjectFilePrefix(store.project, store.savePath);
-  const exportPackName = getExportPackName(store.project.packMetadata);
   const lastExportDir = getLastExportDir();
   const modalExportFolder = (() => {
     if (lastExportDir) return lastExportDir;
@@ -1505,9 +1483,6 @@ function AppContent() {
           onOpenPreferences={() => setPrefsModalOpen(true)}
           onGenerate={handleGenerate}
           onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
-          onOpenExportFolder={handleOpenExportFolder}
-          exportPackName={exportPackName}
-          generateShortcut={shortcutLabels.generate}
           validationIssues={validationIssues}
           pathAuditPending={pathAuditPending}
           validationOpen={validationOpen}

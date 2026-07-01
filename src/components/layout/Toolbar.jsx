@@ -11,7 +11,6 @@ import { Tooltip } from '../common/Tooltip';
 import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { ValidationPill } from './ValidationPill';
 import { PackOptionsPopover } from './PackOptionsPopover';
-import { GenerateMenuPopover } from './GenerateMenuPopover';
 import { ProjectMenuPopover } from './ProjectMenuPopover';
 import './Toolbar.css';
 
@@ -70,9 +69,6 @@ export function Toolbar({
   onOpenPreferences,
   onGenerate,
   onOpenPackMetadata,
-  onOpenExportFolder,
-  exportPackName = '',
-  generateShortcut = '',
   validationIssues = [],
   pathAuditPending = false,
   validationOpen = false,
@@ -80,7 +76,6 @@ export function Toolbar({
   onSelectIssue,
 }) {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-  const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
   const successToastTimerRef = useRef(null);
 
@@ -205,27 +200,6 @@ export function Toolbar({
                   <span className="chrome-generate-main-label">Générer le pack</span>
                 </button>
               </Tooltip>
-              <GenerateMenuPopover
-                open={generateMenuOpen}
-                onOpenChange={setGenerateMenuOpen}
-                generateDisabled={generateDisabled}
-                onGenerate={onGenerate}
-                onOpenPackMetadata={onOpenPackMetadata}
-                onOpenExportFolder={onOpenExportFolder}
-                exportPackName={exportPackName}
-                generateShortcut={generateShortcut}
-                trigger={({ openPopover }) => (
-                  <button
-                    className="chrome-toolbar-cta chrome-generate-caret"
-                    onClick={openPopover}
-                    aria-label="Options de génération"
-                    aria-haspopup="menu"
-                    aria-expanded={generateMenuOpen}
-                  >
-                    <span className="chrome-generate-caret-glyph" aria-hidden="true">▾</span>
-                  </button>
-                )}
-              />
             </div>
           </>
         ) : null}
