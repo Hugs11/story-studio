@@ -244,7 +244,6 @@ function AppContent() {
   const isSavingRef = useRef(false);
   const persistProjectSnapshotRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
-  const generatedSaveNudgeJobIdsRef = useRef(new Set());
   const shortcutActionsRef = useRef({});
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
@@ -1070,37 +1069,9 @@ function AppContent() {
     },
   });
 
-  useEffect(() => {
-    const job = renderQueue.jobs.find((candidate) => (
-      candidate.status === 'done'
-      && !candidate.savePath
-      && !generatedSaveNudgeJobIdsRef.current.has(candidate.id)
-    ));
-    if (!job || store.savePath || sessionModeRef.current !== 'ephemeral') return;
-    generatedSaveNudgeJobIdsRef.current.add(job.id);
-
-    let cancelled = false;
-    (async () => {
-      const choice = await showChoiceDialog({
-        title: 'Enregistrer comme projet ?',
-        message: 'Le pack a été généré. Voulez-vous aussi enregistrer le projet source pour le reprendre plus tard ?',
-        variant: 'info',
-        cancelValue: 'cancel',
-        actions: [
-          { value: 'cancel', label: 'Annuler', autoFocus: true },
-          { value: 'discard', label: 'Ne pas enregistrer', kind: 'ghost' },
-          { value: 'save', label: 'Enregistrer comme projet', kind: 'primary' },
-        ],
-      });
-      if (!cancelled && choice === 'save') {
-        await handleSaveProjectAs();
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [handleSaveProjectAs, renderQueue.jobs, showChoiceDialog, store.savePath]);
+  // Plan 01 (révisé) : on ne propose plus d'enregistrer le projet source APRÈS
+  // génération. La proposition ne subsiste qu'à la sortie de l'app / au remplacement
+  // du travail courant (useWindowCloseGuard / useProjectLoading), jamais forcée.
 
   const handleApplyMissingMediaRelinks = useCallback(async (replacements, { saveAfter = false } = {}) => {
     const nextProject = relinkProjectMedia(store.project, replacements);
