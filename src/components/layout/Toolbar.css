@@ -240,26 +240,6 @@
   align-items: center;
 }
 
-.chrome-generate-main {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.chrome-generate-caret {
-  width: 30px;
-  min-width: 30px;
-  padding: 0;
-  border-left-color: color-mix(in srgb, var(--accent-contrast) 26%, transparent);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  justify-content: center;
-}
-
-.chrome-generate-caret-glyph {
-  font-size: 12px;
-  line-height: 1;
-}
-
 .chrome-generate-main-label {
   white-space: nowrap;
 }
