@@ -1482,7 +1482,6 @@ function AppContent() {
           onUpdateGlobalOption={handleUpdateGlobalOption}
           onOpenPreferences={() => setPrefsModalOpen(true)}
           onGenerate={handleGenerate}
-          onOpenPackMetadata={projectType !== null ? () => setPackMetadataOpen(true) : null}
           validationIssues={validationIssues}
           pathAuditPending={pathAuditPending}
           validationOpen={validationOpen}

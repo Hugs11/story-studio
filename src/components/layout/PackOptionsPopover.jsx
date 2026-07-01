@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
-import { ChevronRight, Settings, Wrench } from '../icons/LucideLocal';
+import { Wrench } from '../icons/LucideLocal';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
@@ -21,7 +21,6 @@ export function PackOptionsPopover({
   globalOptions = {},
   onOpenChange,
   onUpdateOption,
-  onOpenPackMetadata,
   onOpenPreferences,
   preferencesShortcut = '',
 }) {
@@ -71,11 +70,6 @@ export function PackOptionsPopover({
     onOpenPreferences?.();
   }
 
-  function handleOpenPackMetadata() {
-    onOpenChange?.(false);
-    onOpenPackMetadata?.();
-  }
-
   return (
     <div
       className={`pack-options-wrap ${open ? 'is-open' : ''}`}
@@ -92,27 +86,6 @@ export function PackOptionsPopover({
         <>
           <div className="pack-options-hover-bridge" aria-hidden="true" />
           <div className="pack-options-popover" role="dialog" aria-label="Options du pack">
-            {onOpenPackMetadata ? (
-              <button
-                type="button"
-                className="pack-options-gateway"
-                onClick={handleOpenPackMetadata}
-              >
-                <span className="pack-options-gateway-icon pack-options-gateway-icon--pack">
-                  <Settings strokeWidth={2} absoluteStrokeWidth />
-                </span>
-                <span className="pack-options-gateway-copy">
-                  <span className="pack-options-gateway-title">Réglages du pack</span>
-                  <span className="pack-options-gateway-subtitle">Nom, âge, langue, image de couverture, ordre du menu.</span>
-                </span>
-                <span className="pack-options-gateway-end" aria-hidden="true">
-                  <ChevronRight strokeWidth={2} absoluteStrokeWidth />
-                </span>
-              </button>
-            ) : null}
-
-            <div className="pack-options-rule" />
-
             <div className="pack-options-well">
               <div className="pack-options-well-title">Traitement audio du pack</div>
               <Tooltip text={HARMONIZE_LOUDNESS_HELP} wrap className="pack-options-row-tip">
