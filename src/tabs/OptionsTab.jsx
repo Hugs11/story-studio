@@ -223,7 +223,7 @@ export function OptionsTab({
       setPiperVoices((prev) => prev.map((voice) => (
         voice.id === piperVoice ? { ...voice, installed: true } : voice
       )));
-      setPiperProvision({ state: 'ok', message: 'Voix prête. Elle fonctionne désormais hors-ligne.' });
+      setPiperProvision({ state: 'ok', message: 'Voix prête.' });
     } catch (e) {
       setPiperProvision({ state: 'error', message: `${e}` });
     }
@@ -572,7 +572,7 @@ export function OptionsTab({
             <div className="xtts-settings">
               <div className="opts-row-sub" style={{ marginBottom: 8 }}>
                 Piper ajoute un bouton texte → audio dans tous les champs audio. La voix est téléchargée
-                automatiquement au 1er usage, puis disponible hors-ligne.
+                automatiquement au premier usage.
               </div>
               <div className="xtts-grid">
                 <label className="xtts-label">
