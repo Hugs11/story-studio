@@ -145,6 +145,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
       icon={<Wrench />}
       title="Vérifier / corriger un pack"
       subtitle="Analyse un ZIP et crée une version corrigée si besoin."
+      size="wide"
       onClose={busy ? () => {} : onClose}
       showChrome={phase === 'collect'}
       ariaLabel="Vérifier ou corriger un pack"
