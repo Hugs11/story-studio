@@ -1,7 +1,7 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Open-source Windows editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
