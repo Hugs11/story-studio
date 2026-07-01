@@ -77,8 +77,8 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   async function pickPack() {
     const selected = await openDialog({
       multiple: false,
-      title: 'Pack ZIP à vérifier',
-      filters: [{ name: 'Pack Lunii ZIP', extensions: ['zip'] }],
+      title: 'Pack à vérifier',
+      filters: [{ name: 'Pack Lunii', extensions: ['zip', '7z'] }],
     });
     if (selected) await analyzePath(Array.isArray(selected) ? selected[0] : selected);
   }
@@ -133,7 +133,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   }
 
   const primaryLabel = step === 0
-    ? (checker.zipPath ? 'Analyser' : 'Choisir un ZIP')
+    ? (checker.zipPath ? 'Analyser' : 'Choisir un pack')
     : step === 1
       ? (canFix ? 'Choisir la sortie' : 'Terminer')
       : needsMetadata
@@ -202,17 +202,17 @@ export function CommunityPackCheckerFunnel({ onClose }) {
               <FunnelSectionHeader
                 icon={<Package />}
                 title="Pack à vérifier"
-                description="Choisis ou dépose un fichier ZIP. Le fichier source reste intact."
+                description="Choisis ou dépose un fichier ZIP ou 7z. Le fichier source reste intact."
               />
               <FunnelDropZone
                 icon={<Package />}
-                title="Déposer un pack .zip"
+                title="Déposer un pack .zip ou .7z"
                 hint="L'analyse vérifie l'audio, les images, le nom, la structure et le mode nuit."
                 disabled={busy}
                 onFiles={(paths) => analyzePath(paths?.[0])}
               >
                 <button type="button" className="funnel-btn" onClick={pickPack} disabled={busy}>
-                  Choisir un ZIP
+                  Choisir un pack
                 </button>
               </FunnelDropZone>
               {checker.zipPath ? (

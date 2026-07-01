@@ -159,6 +159,7 @@ fn collect_asset_refs(
 
     let mut audio_refs = Vec::new();
     let mut image_refs = Vec::new();
+    let stage_labels = display_labels_by_stage_id(story, &stages);
     for (index, stage) in stages.iter().enumerate() {
         let stage_id = stage
             .get("uuid")
@@ -171,6 +172,10 @@ fn collect_asset_refs(
             .filter(|value| !value.trim().is_empty())
             .map(str::to_string)
             .unwrap_or_else(|| format!("Élément {}", index + 1));
+        let display_name = stage_labels
+            .get(stage_id.as_str())
+            .cloned()
+            .unwrap_or_else(|| stage_name.clone());
         let item_type = classify_stage(stage);
         if let Some(audio) = stage
             .get("audio")
@@ -180,7 +185,7 @@ fn collect_asset_refs(
             audio_refs.push(StageAssetRef {
                 stage_index: index,
                 stage_id: stage_id.clone(),
-                stage_name: stage_name.clone(),
+                stage_name: display_name.clone(),
                 asset_name: audio.to_string(),
                 item_type: item_type.clone(),
             });
@@ -193,13 +198,73 @@ fn collect_asset_refs(
             image_refs.push(StageAssetRef {
                 stage_index: index,
                 stage_id: stage_id.clone(),
-                stage_name: stage_name.clone(),
+                stage_name: display_name.clone(),
                 asset_name: image.to_string(),
                 item_type: item_type.clone(),
             });
         }
     }
     (audio_refs, image_refs, stages.len(), action_count)
+}
+
+fn display_labels_by_stage_id(
+    story: &serde_json::Value,
+    stages: &[serde_json::Value],
+) -> HashMap<String, String> {
+    let stage_by_id: HashMap<&str, &serde_json::Value> = stages
+        .iter()
+        .filter_map(|stage| Some((stage.get("uuid")?.as_str()?, stage)))
+        .collect();
+    let action_options_by_id = action_options_by_id(story);
+    let mut labels = HashMap::new();
+
+    for stage in stages {
+        if is_stage_autoplay(stage) || !stage_control_bool(stage, "wheel", false) {
+            continue;
+        }
+        let Some(visible_name) = stage_name(stage) else {
+            continue;
+        };
+        let Some(play_stage_id) = single_ok_target_stage_id(stage, &action_options_by_id) else {
+            continue;
+        };
+        let Some(play_stage) = stage_by_id.get(play_stage_id) else {
+            continue;
+        };
+        if is_stage_autoplay(play_stage)
+            && play_stage
+                .get("audio")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .is_some()
+        {
+            labels.insert(play_stage_id.to_string(), visible_name.to_string());
+        }
+    }
+
+    labels
+}
+
+fn action_options_by_id(story: &serde_json::Value) -> HashMap<&str, Vec<&str>> {
+    story
+        .get("actionNodes")
+        .and_then(|value| value.as_array())
+        .map(|actions| {
+            actions
+                .iter()
+                .filter_map(|action| {
+                    let id = action.get("id").and_then(|value| value.as_str())?;
+                    let options = action
+                        .get("options")
+                        .and_then(|value| value.as_array())?
+                        .iter()
+                        .filter_map(|value| value.as_str())
+                        .collect::<Vec<_>>();
+                    Some((id, options))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn classify_stage(stage: &serde_json::Value) -> String {
@@ -225,5 +290,40 @@ fn classify_stage(stage: &serde_json::Value) -> String {
         "Titre".to_string()
     } else {
         "Navigation".to_string()
+    }
+}
+
+fn stage_name(stage: &serde_json::Value) -> Option<&str> {
+    stage
+        .get("name")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn is_stage_autoplay(stage: &serde_json::Value) -> bool {
+    stage_control_bool(stage, "autoplay", false)
+}
+
+fn stage_control_bool(stage: &serde_json::Value, key: &str, default: bool) -> bool {
+    stage
+        .get("controlSettings")
+        .and_then(|value| value.get(key))
+        .and_then(|value| value.as_bool())
+        .unwrap_or(default)
+}
+
+fn single_ok_target_stage_id<'a>(
+    stage: &'a serde_json::Value,
+    action_options_by_id: &'a HashMap<&str, Vec<&str>>,
+) -> Option<&'a str> {
+    let action_id = stage
+        .get("okTransition")
+        .and_then(|value| value.get("actionNode"))
+        .and_then(|value| value.as_str())?;
+    let options = action_options_by_id.get(action_id)?;
+    if options.len() == 1 {
+        options.first().copied()
+    } else {
+        None
     }
 }

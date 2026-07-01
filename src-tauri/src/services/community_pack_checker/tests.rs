@@ -45,6 +45,43 @@ fn image_fix_creates_new_zip_without_overwriting_source() {
 }
 
 #[test]
+fn fixed_zip_uses_source_archive_name_after_temporary_conversion() {
+    let dir = temp_dir("source_archive_name");
+    let output_dir = dir.join("out");
+    fs::create_dir_all(&output_dir).expect("create output dir");
+    let analysis_zip = dir.join("cache.zip");
+    let source_path = dir.join("3+]Suzanne et Gaston.7z");
+    fs::write(&source_path, b"archive source").expect("write source placeholder");
+    write_studio_zip(
+        &analysis_zip,
+        story_with_image_only("cover.png"),
+        &[("cover.png", png_bytes(512, 512))],
+    );
+
+    let fixed = create_fixed_pack_with_source_log(
+        &analysis_zip,
+        &source_path,
+        Some(&output_dir),
+        None,
+        &|_| {},
+    )
+    .expect("create fixed pack");
+
+    assert_eq!(
+        fixed.source_zip_path,
+        source_path.to_string_lossy().to_string()
+    );
+    assert_eq!(
+        PathBuf::from(&fixed.fixed_zip_path)
+            .file_name()
+            .and_then(|value| value.to_str()),
+        Some("3+]Suzanne et Gaston - corrigé.zip")
+    );
+
+    fs::remove_dir_all(dir).expect("cleanup temp dir");
+}
+
+#[test]
 fn audio_silence_is_evaluated_per_file_when_ffmpeg_is_available() {
     let Ok(ffmpeg) = get_ffmpeg_path() else {
         return;
@@ -270,6 +307,21 @@ fn unsupported_image_format_is_flagged_and_converted_to_png() {
     assert_eq!((png.width(), png.height()), (320, 240));
 }
 
+#[test]
+fn play_stage_audio_uses_visible_title_label_in_report_refs() {
+    let dir = temp_dir("visible_title_label");
+    fs::create_dir_all(&dir).expect("create temp dir");
+    let zip_path = dir.join("pack-label.zip");
+    write_studio_zip(&zip_path, story_with_title_stage_play_audio(), &[]);
+
+    let doc = zip_doc::read_pack_doc(&zip_path).expect("read pack doc");
+    assert_eq!(doc.audio_refs.len(), 1);
+    assert_eq!(doc.audio_refs[0].stage_id, "play");
+    assert_eq!(doc.audio_refs[0].stage_name, "Stage visible");
+
+    fs::remove_dir_all(dir).expect("cleanup temp dir");
+}
+
 fn temp_dir(label: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
         "story_studio_checker_test_{}_{}",
@@ -322,6 +374,57 @@ fn gif_bytes(width: u32, height: u32) -> Vec<u8> {
         )
         .expect("encode gif");
     bytes
+}
+
+fn story_with_title_stage_play_audio() -> serde_json::Value {
+    serde_json::json!({
+        "format": "v1",
+        "version": 1,
+        "title": "Pack label",
+        "stageNodes": [
+            {
+                "uuid": "root",
+                "name": "Racine",
+                "squareOne": true,
+                "controlSettings": {
+                    "wheel": true,
+                    "ok": true,
+                    "home": true,
+                    "pause": true,
+                    "autoplay": false
+                },
+                "okTransition": { "actionNode": "root-action", "optionIndex": 0 }
+            },
+            {
+                "uuid": "title",
+                "name": "Stage visible",
+                "controlSettings": {
+                    "wheel": true,
+                    "ok": true,
+                    "home": true,
+                    "pause": false,
+                    "autoplay": false
+                },
+                "okTransition": { "actionNode": "play-action", "optionIndex": 0 }
+            },
+            {
+                "uuid": "play",
+                "name": "Stage caché",
+                "audio": "story.mp3",
+                "controlSettings": {
+                    "wheel": false,
+                    "ok": false,
+                    "home": true,
+                    "pause": true,
+                    "autoplay": true
+                }
+            }
+        ],
+        "actionNodes": [
+            { "id": "root-action", "options": ["title"] },
+            { "id": "play-action", "options": ["play"] }
+        ]
+    })
 }
 
 fn story_with_image_only(image: &str) -> serde_json::Value {
