@@ -116,7 +116,7 @@ export function useCommunityPackChecker() {
   const pickPack = useCallback(async () => {
     const selected = await open({
       multiple: false,
-      filters: [{ name: 'Pack Lunii ZIP', extensions: ['zip'] }],
+      filters: [{ name: 'Pack Lunii', extensions: ['zip', '7z'] }],
     });
     if (selected) {
       await analyzePath(Array.isArray(selected) ? selected[0] : selected);

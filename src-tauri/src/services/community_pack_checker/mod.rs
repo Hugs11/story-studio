@@ -77,6 +77,16 @@ pub fn create_fixed_pack_with_log(
     metadata_patch: Option<PackMetadataPatchModel>,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
+    create_fixed_pack_with_source_log(zip_path, zip_path, output_dir, metadata_patch, emit)
+}
+
+pub(crate) fn create_fixed_pack_with_source_log(
+    zip_path: &Path,
+    source_path: &Path,
+    output_dir: Option<&Path>,
+    metadata_patch: Option<PackMetadataPatchModel>,
+    emit: &dyn Fn(&str),
+) -> Result<FixedPackResultModel, String> {
     emit("Analyse préparatoire du pack source...");
     let report = analyze_pack_with_log(zip_path, emit);
     let audio_items: Vec<AudioValidationItem> = report
@@ -170,7 +180,8 @@ pub fn create_fixed_pack_with_log(
             emit("Application des métadonnées au story.json...");
             apply_metadata_patch(&mut doc.story, patch);
         }
-        let fixed_zip_path = unique_fixed_zip_path(zip_path, output_dir, metadata_patch.as_ref());
+        let fixed_zip_path =
+            unique_fixed_zip_path(source_path, output_dir, metadata_patch.as_ref());
         emit(&format!(
             "Écriture du ZIP corrigé : {}",
             fixed_zip_path.display()
@@ -186,7 +197,7 @@ pub fn create_fixed_pack_with_log(
         emit("ZIP corrigé finalisé.");
 
         Ok(FixedPackResultModel {
-            source_zip_path: zip_path.to_string_lossy().to_string(),
+            source_zip_path: source_path.to_string_lossy().to_string(),
             fixed_zip_path: fixed_zip_path.to_string_lossy().to_string(),
             fixed_count: audio_items.len() + image_items.len() + usize::from(metadata_will_change),
             audio_fixed: audio_items.len(),
