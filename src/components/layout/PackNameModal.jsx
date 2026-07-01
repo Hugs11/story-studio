@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { exists } from '@tauri-apps/plugin-fs';
 import { CircleCheck, Image, Package, RotateCcw, TriangleAlert } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
@@ -116,7 +116,6 @@ export function PackNameModal({
   const [draft, setDraft] = useState(() => defaultDraft(packMetadata));
   const [saving, setSaving] = useState(null);
   const [collision, setCollision] = useState('unknown');
-  const promptedUuidRef = useRef('');
   const coverUrl = useLocalFile(coverImage);
   useEscapeKey(open && !embedded, onClose);
 
@@ -126,20 +125,6 @@ export function PackNameModal({
       setSaving(null);
     }
   }, [open, packMetadata]);
-
-  useEffect(() => {
-    const currentUuid = String(packMetadata?.uuid || '').trim();
-    const originalUuid = String(packMetadata?.originalUuid || '').trim();
-    const isOriginalImportedUuid = !originalUuid || currentUuid === originalUuid;
-    if (!open || !promptRegenerateUuid || !currentUuid || !isOriginalImportedUuid || promptedUuidRef.current === currentUuid) return;
-    promptedUuidRef.current = currentUuid;
-    const wantsNewUuid = window.confirm(
-      "Ce pack importé a déjà un UUID. Comme tu modifies une nouvelle révision, veux-tu générer un nouvel UUID maintenant ?",
-    );
-    if (wantsNewUuid) {
-      setDraft((current) => ({ ...current, uuid: generateUuid() }));
-    }
-  }, [open, packMetadata?.uuid, promptRegenerateUuid]);
 
   const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
   const exportName = useMemo(() => {
@@ -194,6 +179,10 @@ export function PackNameModal({
   }
 
   async function submit(kind) {
+    // La proposition de régénération d'UUID (nouvelle révision d'un pack importé)
+    // est gérée en amont de la génération dans App.jsx (handleSavePackMetadata),
+    // via un dialogue in-app awaitable — pour qu'elle soit résolue AVANT l'ouverture
+    // du sélecteur de dossier de sortie (dialogue natif OS qui passerait devant).
     const payload = normalizeDraft(draft);
     setSaving(kind);
     try {
@@ -322,7 +311,7 @@ export function PackNameModal({
           {promptRegenerateUuid && packMetadata?.uuid ? (
             <div className="pack-meta-field-row">
               <span />
-              <p className="pack-meta-uuid-hint">Pack importé : garde l’UUID originel seulement si tu veux remplacer la même révision.</p>
+              <p className="pack-meta-uuid-hint">UUID importé du pack. Tu peux le régénérer si tu le souhaites.</p>
             </div>
           ) : null}
         </section>
