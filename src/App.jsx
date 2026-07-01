@@ -58,6 +58,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { AggregatePacksFunnel } from './components/AggregatePacks/AggregatePacksFunnel';
+import { SessionMediaTriageModal } from './components/SessionMediaTriage/SessionMediaTriageModal';
 import { CommunityPackCheckerFunnel } from './components/CommunityPackChecker/CommunityPackCheckerFunnel';
 import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
@@ -73,6 +74,7 @@ import { useOsFileDrop } from './hooks/useOsFileDrop';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useProjectLoading } from './hooks/useProjectLoading';
 import { useSaveProgress } from './hooks/useSaveProgress';
+import { useSessionMediaTriage } from './hooks/useSessionMediaTriage';
 import { useSyncedRef } from './hooks/useSyncedRef';
 import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
 import { useSDJobs } from './hooks/useSDJobs';
@@ -979,6 +981,14 @@ function AppContent() {
   const [importing, setImporting] = useState(null);
   const [unpacking, setUnpacking] = useState(null);
 
+  // Tri des médias de session non utilisés à la promotion (plan 22, D51).
+  const { triageSessionMedia, triageRequest } = useSessionMediaTriage({
+    store,
+    mediaLibraryPathsRef,
+    setMediaLibraryPaths,
+    showErrorDialog,
+  });
+
   const {
     saveProgress,
     saveAsProgress,
@@ -999,6 +1009,12 @@ function AppContent() {
     setSaveToast,
     setRecentProjects,
     maybeOfferTransferIntoProject,
+    triageSessionMedia: ({ project, savePath, targetWorkspaceDir }) => triageSessionMedia({
+      project,
+      sessionDir: sessionWorkspaceDir,
+      targetWorkspaceDir,
+      projectName: getProjectFilePrefix(project, savePath),
+    }),
     onProjectSaved: async (_result, options = {}) => {
       // Seule la promotion « Enregistrer comme projet » (handleSaveProjectAs) nettoie
       // le dossier de session et bascule en mode projet. Un enregistrement en place
@@ -1741,6 +1757,9 @@ function AppContent() {
 
       {saveAsProgress && <SaveProgressModal data={saveAsProgress} title="Enregistrement sous..." doneTitle="Copie terminée" />}
       {saveProgress && <SaveProgressModal data={saveProgress} title="Enregistrement..." doneTitle="Projet enregistré" />}
+      {triageRequest && (
+        <SessionMediaTriageModal items={triageRequest.items} onResolve={triageRequest.resolve} />
+      )}
       {showMissingMediaRelink && renderDeferred(
         <MissingMediaRelinkModal
           missingMedia={missingMedia}

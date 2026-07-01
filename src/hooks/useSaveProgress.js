@@ -19,6 +19,7 @@ export function useSaveProgress({
   setSaveToast,
   setRecentProjects,
   maybeOfferTransferIntoProject,
+  triageSessionMedia = null,
   onProjectSaved = null,
 }) {
   const [saveProgress, setSaveProgress] = useState(null); // null | { lines: string[], complete: boolean }
@@ -150,10 +151,20 @@ export function useSaveProgress({
           skipPrompt: isEphemeralSession,
           targetWorkspaceDir,
         });
-        if (transferResult.changed) {
+        // Tri des médias de session non utilisés (plan 22, D51) : après le
+        // transfert des médias référencés, avant le nettoyage de la session.
+        let triageResult = { ok: true, changed: false };
+        if (isEphemeralSession && triageSessionMedia) {
+          triageResult = await triageSessionMedia({
+            project: transferResult.project,
+            savePath: result.path,
+            targetWorkspaceDir,
+          });
+        }
+        if (transferResult.changed || triageResult.changed) {
           result = await saveProject(transferResult.project, result.path, onProgress, {
-            mediaTags: store.mediaTags,
-            mediaLibraryPaths: mediaLibraryPathsRef.current,
+            mediaTags: triageResult.mediaTags ?? store.mediaTags,
+            mediaLibraryPaths: triageResult.mediaLibraryPaths ?? mediaLibraryPathsRef.current,
             workspaceDir: targetWorkspaceDir,
           });
         }
@@ -164,7 +175,7 @@ export function useSaveProgress({
         await onProjectSaved?.(result, {
           promote: true,
           workspaceDir: targetWorkspaceDir,
-          cleanupSession: !transferResult.errors?.length,
+          cleanupSession: !transferResult.errors?.length && triageResult.ok,
         });
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);
@@ -190,6 +201,7 @@ export function useSaveProgress({
     setSaveToast,
     sessionModeRef,
     store,
+    triageSessionMedia,
     workspaceDirRef,
   ]);
 
