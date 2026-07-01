@@ -778,7 +778,7 @@ export function CompleteDiagramTree({
     const actions = [];
 
     actions.push({ icon: <FolderPlus />, label: 'Ajouter un dossier', fn: () => onAddMenu?.(menuId) });
-    actions.push({ icon: <Music />, label: 'Importer des histoires', fn: () => onAddStory?.(menuId) });
+    actions.push({ icon: <Music />, label: 'Importer audio ou archive', fn: () => onAddStory?.(menuId) });
 
     const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
     if (nodeType === 'root' && !hasEndNode) {

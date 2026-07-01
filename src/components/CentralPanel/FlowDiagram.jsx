@@ -36,7 +36,7 @@ function EmptyDiagramState({ onImportStories = null }) {
       {onImportStories ? (
         <button type="button" className="fd-empty-btn" onClick={onImportStories}>
           <Download className="fd-empty-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-          <span>Importer des histoires</span>
+          <span>Importer audio ou archive</span>
         </button>
       ) : null}
     </div>

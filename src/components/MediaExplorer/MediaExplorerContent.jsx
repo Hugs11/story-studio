@@ -73,7 +73,7 @@ export function MediaExplorerContent({
         <p className="media-empty-hint">Tes médias importés, générés ou extraits apparaîtront ici, prêts à être glissés-déposés.</p>
         <div className="media-empty-actions">
           <Button className="media-empty-btn" onClick={onImportMedia || onImportStories}>
-            + Importer un fichier
+            + Importer des médias
           </Button>
           {onImportMediaFolder && (
             <Button className="media-empty-btn" onClick={onImportMediaFolder}>

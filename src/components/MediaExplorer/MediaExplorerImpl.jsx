@@ -540,7 +540,7 @@ export function MediaExplorer({
 
   const actionButtons = (
     <>
-      <Tooltip text="Importer des fichiers médias">
+      <Tooltip text="Importer audio, images, ZIP ou 7z">
         <Button className="media-import-btn" onClick={onImportMedia || onImportStories}>
           <FilePlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
         </Button>
@@ -684,7 +684,7 @@ export function MediaExplorer({
           y={bgCtxMenu.y}
           onClose={() => setBgCtxMenu(null)}
           actions={[
-            { icon: <Download />, label: 'Importer des fichiers', fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
+            { icon: <Download />, label: 'Importer des médias', fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
             ...(onImportMediaFolder ? [{ icon: <FolderInput />, label: 'Importer un dossier', fn: () => { setBgCtxMenu(null); onImportMediaFolder(); } }] : []),
             ...(selectedCount > 0 ? [
               'sep',
