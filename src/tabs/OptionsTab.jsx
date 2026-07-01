@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
 import { KEYS, read as readSetting, write } from '../store/persistentSettings';
 import { THEME_OPTIONS } from '../store/themePreference';
@@ -98,6 +99,10 @@ export function OptionsTab({
   const [ytDlpUpdate, setYtDlpUpdate] = useState({ state: 'idle', message: '' });
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
+
+  // En modale : Escape ferme les Préférences. La modale des raccourcis, montée
+  // par-dessus, s'enregistre après et prend donc le dessus dans la pile Escape.
+  useEscapeKey(asModal, onClose);
   const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
   const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const screenRef = useRef(null);

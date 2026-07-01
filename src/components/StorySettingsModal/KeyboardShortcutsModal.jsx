@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '../common/Button';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import {
   DEFAULT_SHORTCUTS,
   SHORTCUT_DEFINITIONS,
@@ -82,13 +83,17 @@ export function KeyboardShortcutsModal({
     setMessage('');
   }
 
-  function handleOverlayKeyDown(event) {
-    if (captureId) return;
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    event.stopPropagation();
+  // Escape : annule la capture en cours, sinon ferme la modale. Via la pile
+  // partagée pour passer devant les Préférences ouvertes dessous, quel que
+  // soit l'élément qui a le focus.
+  useEscapeKey(true, () => {
+    if (captureId) {
+      setCaptureId(null);
+      setMessage('');
+      return;
+    }
     onClose();
-  }
+  });
 
   return (
     <div
@@ -97,7 +102,6 @@ export function KeyboardShortcutsModal({
         event.stopPropagation();
         onClose();
       }}
-      onKeyDown={handleOverlayKeyDown}
     >
       <div
         className="modal-box keyboard-shortcuts-modal"
