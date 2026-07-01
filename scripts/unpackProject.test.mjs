@@ -1,8 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildProjectAfterZipUnpack } from '../src/store/unpackProject.js';
+import { buildProjectAfterZipUnpack, getUnpackedPackDetails } from '../src/store/unpackProject.js';
 import { normalizeProjectData } from '../src/store/projectModel.js';
+
+test('unpack derives a clean title from a non-prefixed filename (no story title)', () => {
+  const { packMetadata } = getUnpackedPackDetails({
+    result: {},
+    zipPath: "C:/tmp/session/fichiers-importes/3+ Mickey & Cie partent à l'aventure.zip",
+  });
+  // Pas de préfixe « nouveau projet » injecté, et l'âge libre « 3+ » remonte vers minAge.
+  assert.equal(packMetadata.title, "Mickey & Cie partent à l'aventure");
+  assert.equal(packMetadata.minAge, '3');
+});
+
+test('unpack does not lift a leading number that is not an age token', () => {
+  const { packMetadata } = getUnpackedPackDetails({
+    result: {},
+    zipPath: 'C:/tmp/session/fichiers-importes/3+5 choses.zip',
+  });
+  assert.equal(packMetadata.title, '3+5 choses');
+});
+
+test('unpack keeps the pack uuid read from the story doc', () => {
+  const { packMetadata } = getUnpackedPackDetails({
+    result: { title: "3+]Mickey_&_Cie[by_Studio_V2", uuid: '11111111-2222-4333-8444-555555555555' },
+    zipPath: 'C:/x/3+]Mickey.zip',
+  });
+  assert.equal(packMetadata.title, 'Mickey & Cie');
+  assert.equal(packMetadata.minAge, '3');
+  assert.equal(packMetadata.uuid, '11111111-2222-4333-8444-555555555555');
+});
 
 test('zip unpack promotion keeps the local mbah project name after first save', () => {
   const project = normalizeProjectData({

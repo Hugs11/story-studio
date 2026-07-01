@@ -83,6 +83,7 @@ import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { bumpPackVersion, getExportPackName } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
+import { generateUuid } from './utils/uuid';
 import { basename } from './utils/fileUtils';
 import './styles/variables.css';
 import './styles/layout.css';
@@ -133,6 +134,14 @@ function isImportedPackPath(filePath) {
 function getImportDisplayName(filePath) {
   const fileName = basename(filePath);
   return sanitizeImportedName(fileName, fileName || 'Import en cours');
+}
+
+// Vrai si l'UUID du draft est encore l'UUID importé d'origine (non régénéré via ↺ ni
+// modifié). Sert à ne proposer la régénération que quand ça a du sens.
+function isImportedOriginalUuid(draft) {
+  const current = String(draft?.uuid || '').trim();
+  const original = String(draft?.originalUuid || '').trim();
+  return !!current && (!original || current === original);
 }
 
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
@@ -772,9 +781,27 @@ function AppContent() {
   }
 
   async function handleSavePackMetadata(draft, { generate = false } = {}) {
-    const nextPackMetadata = { ...(store.project.packMetadata ?? {}), ...draft };
+    let effectiveDraft = draft;
+    // Nouvelle révision d'un pack importé : proposer (sans obligation) un nouvel UUID
+    // AVANT de générer — donc avant le sélecteur de dossier de sortie (dialogue natif
+    // OS qui passe devant). Dialogue in-app awaitable, résolu ici puis on continue.
+    if (generate && importedPackPendingMetaRef.current && isImportedOriginalUuid(draft)) {
+      const choice = await showChoiceDialog({
+        title: "Nouvelle révision d'un pack importé",
+        message: "Ce pack a un UUID d'origine. Générer un nouvel UUID pour cette version ?\n\n"
+          + "Garde l'UUID d'origine seulement pour remplacer exactement la même révision.",
+        variant: 'info',
+        cancelValue: 'keep',
+        actions: [
+          { value: 'keep', label: "Garder l'UUID d'origine", kind: 'ghost' },
+          { value: 'renew', label: 'Générer un nouvel UUID', kind: 'primary', autoFocus: true },
+        ],
+      });
+      if (choice === 'renew') effectiveDraft = { ...draft, uuid: generateUuid() };
+    }
+    const nextPackMetadata = { ...(store.project.packMetadata ?? {}), ...effectiveDraft };
     const isSimple = store.project.projectType === 'simple';
-    const nextTitle = String(draft?.title ?? '').trim();
+    const nextTitle = String(effectiveDraft?.title ?? '').trim();
     const projectForAction = {
       ...store.project,
       packMetadata: nextPackMetadata,
@@ -1124,6 +1151,7 @@ function AppContent() {
     showErrorDialog,
     getImportDisplayName,
     isImportedPackPath,
+    onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },
   });
 
   async function handlePodcastFunnelImport(episodes, feed, onProgress) {

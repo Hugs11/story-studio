@@ -78,6 +78,7 @@ export function projectFromUnpackResult({
   return {
     project: nextProject,
     packName: unpacked.packName,
+    promoted: unpacked.promoted,
     unresolvedTransitions,
     advancedTransitionsDetected: !!result?.advancedTransitionsDetected,
   };
@@ -98,6 +99,7 @@ export function useImportSession({
   showErrorDialog,
   getImportDisplayName,
   isImportedPackPath,
+  onImportedPackPromoted,
 }) {
   const dispatchFiles = useCallback(async (menuId, files) => {
     for (let index = 0; index < files.length; index += 1) {
@@ -301,6 +303,10 @@ export function useImportSession({
       }
       store.setProject(transformed.project);
       store.setSelectedId('root');
+      // Extraire un pack qui promeut le projet vierge = importer un pack à modifier :
+      // on marque la méta comme « à confirmer » pour que la génération force la modal
+      // et propose de régénérer l'UUID (nouvelle révision), comme « Modifier un pack ».
+      if (transformed.promoted) onImportedPackPromoted?.();
       // Projet déjà enregistré : autosave .mbah immédiat. Éphémère/non-enregistré :
       // pas de save forcé, le snapshot de session suit via l'autosave.
       if (savePath) {

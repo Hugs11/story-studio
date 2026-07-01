@@ -10,6 +10,9 @@ use crate::support::archive_limits::{ARCHIVE_MAX_ENTRIES, ARCHIVE_MAX_FILE_BYTES
 use crate::support::ffmpeg::{apply_no_window, now_millis};
 
 const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
+// Incrémenter à chaque évolution du story.json produit par la conversion (voir
+// cache_key_for_source) pour ignorer les zips convertis par une version antérieure.
+const CONVERSION_FORMAT_VERSION: &str = "v2-root-uuid";
 const MAX_TOTAL_EXTRACTED_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 
 pub(crate) fn validate_existing_pack_path(path: &str) -> Result<PathBuf, String> {
@@ -195,6 +198,10 @@ fn cache_key_for_source(path: &Path) -> Result<String, String> {
         .map(|value| value.as_secs())
         .unwrap_or_default();
     let mut hasher = Sha1::new();
+    // Version du format de conversion : à incrémenter quand le story.json généré change
+    // (ici : ajout de l'UUID racine pour les packs natifs), pour invalider les caches
+    // convertis avant le changement.
+    hasher.update(CONVERSION_FORMAT_VERSION.as_bytes());
     hasher.update(path.to_string_lossy().as_bytes());
     hasher.update(metadata.len().to_string().as_bytes());
     hasher.update(modified.to_string().as_bytes());

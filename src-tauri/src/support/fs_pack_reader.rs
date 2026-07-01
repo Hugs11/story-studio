@@ -297,7 +297,7 @@ pub fn read_fs_pack_to_studio_zip(
         stage_nodes_json.push(stage_json);
     }
 
-    let story_json = serde_json::json!({
+    let mut story_json = serde_json::json!({
         "title": fallback_title,
         "version": version,
         "description": "",
@@ -307,6 +307,12 @@ pub fn read_fs_pack_to_studio_zip(
         "actionNodes": action_nodes_json,
         "stageNodes": stage_nodes_json,
     });
+    // L'UUID d'un pack Lunii natif est le nom de son dossier racine. On l'expose au
+    // niveau racine du story.json (comme le font les packs STUdio) pour qu'il survive
+    // à la conversion puis à l'extraction (sinon l'UUID d'origine est perdu à l'import).
+    if uuid::Uuid::parse_str(&pack_uuid).is_ok() {
+        story_json["uuid"] = serde_json::Value::String(pack_uuid);
+    }
 
     // Write output ZIP
     if let Some(parent) = output_zip.parent() {
