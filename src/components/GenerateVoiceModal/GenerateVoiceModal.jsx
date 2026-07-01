@@ -199,12 +199,7 @@ function PiperVoiceModal({
     }
   }
 
-  const badges = (
-    <>
-      <span className="tts-badge gpu">Piper</span>
-      <span className="tts-badge">{binaryInstalled ? 'Prêt' : 'Hors-ligne après 1er téléchargement'}</span>
-    </>
-  );
+  const badges = <span className="tts-badge gpu">Piper</span>;
 
   return (
     <VoiceModalShell
@@ -261,7 +256,7 @@ function PiperVoiceModal({
         </label>
       </div>
       <span className="tts-helper">
-        Piper fonctionne sans serveur ni configuration. La voix est téléchargée une seule fois, puis disponible hors-ligne.
+        Piper fonctionne sans serveur ni configuration. La voix est téléchargée automatiquement au premier usage.
       </span>
     </VoiceModalShell>
   );
