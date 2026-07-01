@@ -28,6 +28,7 @@ import {
   Play,
   Scissors,
   Sparkles,
+  Speech,
   Trash2,
   Upload,
 } from '../icons/LucideLocal';
@@ -35,6 +36,8 @@ import { pickAudio, pickImage, pickMultipleZip, getLastExportDir, saveLastExport
 import { copyMediaToWorkspace, projectToRustExport } from '../../store/projectIO';
 import { createZipEntry, DEFAULT_PACK_METADATA, normalizeProjectData } from '../../store/projectModel';
 import { sanitizeImportedName } from '../../store/projectStore';
+import { useProjectContext } from '../../store/ProjectContext';
+import { isTtsAvailable } from '../../store/xttsSettings';
 import { parseConventionName, generateConventionName } from '../../utils/packConvention';
 import { basename, basenameNoExt } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';
@@ -49,6 +52,8 @@ const TextImagePromptModal = lazy(() => import('../TextImageGenerator/TextImageP
   .then((module) => ({ default: module.TextImagePromptModal })));
 const RecordModal = lazy(() => import('../RecordModal/RecordModal')
   .then((module) => ({ default: module.RecordModal })));
+const GenerateVoiceModal = lazy(() => import('../GenerateVoiceModal/GenerateVoiceModal')
+  .then((module) => ({ default: module.GenerateVoiceModal })));
 const PackNameModal = lazy(() => import('../layout/PackNameModal')
   .then((module) => ({ default: module.PackNameModal })));
 
@@ -124,6 +129,7 @@ function buildAggregateProject({ packs, rootAudio, rootImage, metadata, harmoniz
 }
 
 export function AggregatePacksFunnel({ onClose }) {
+  const { xttsSettings, onUpdateXttsSettings } = useProjectContext();
   const [step, setStep] = useState(0);
   const [packs, setPacks] = useState([]);
   const [loadingPacks, setLoadingPacks] = useState(false);
@@ -139,6 +145,7 @@ export function AggregatePacksFunnel({ onClose }) {
   const [audioEditorOpen, setAudioEditorOpen] = useState(false);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [textImageOpen, setTextImageOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const sessionDirRef = useRef('');
@@ -235,6 +242,25 @@ export function AggregatePacksFunnel({ onClose }) {
   async function handleRecordAudio() {
     await ensureSessionDir();
     setRecordOpen(true);
+  }
+
+  async function handleGenerateVoice() {
+    await ensureSessionDir();
+    setVoiceOpen(true);
+  }
+
+  async function handleQueueFunnelVoice(job) {
+    const sessionDir = await ensureSessionDir();
+    const command = xttsSettings?.backend === 'piper' ? 'piper_generate_audio' : 'xtts_generate_audio';
+    const generatedPath = await invoke(command, {
+      settings: xttsSettings,
+      request: {
+        ...job.request,
+        savePath: null,
+        workspaceDir: sessionDir,
+      },
+    });
+    if (generatedPath) setRootAudio(generatedPath);
   }
 
   function toggleAudioPreview() {
@@ -398,6 +424,7 @@ export function AggregatePacksFunnel({ onClose }) {
   const totalSize = packs.reduce((sum, pack) => sum + (pack.sizeBytes || 0), 0);
   const exportName = generateConventionName(metadata);
   const outputFileName = exportName ? `${exportName}.zip` : 'Titre requis';
+  const ttsAvailable = isTtsAvailable(xttsSettings);
   const primaryDisabled = (
     (step === 0 && (packs.length === 0 || loadingPacks))
     || (step === 1 && !rootAudio)
@@ -554,6 +581,11 @@ export function AggregatePacksFunnel({ onClose }) {
             <FunnelToolButton icon={<Mic />} accent="violet" variant="solid" block onClick={handleRecordAudio}>
               Enregistrer au micro
             </FunnelToolButton>
+            {ttsAvailable && (
+              <FunnelToolButton icon={<Speech />} accent="violet" variant="solid" block onClick={handleGenerateVoice}>
+                Générer une voix
+              </FunnelToolButton>
+            )}
             <FunnelToolButton icon={<Scissors />} accent="neutral" block onClick={async () => {
               if (!rootAudio) return;
               await ensureSessionDir();
@@ -692,6 +724,22 @@ export function AggregatePacksFunnel({ onClose }) {
               setRecordOpen(false);
             }}
             onClose={() => setRecordOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {voiceOpen && ttsAvailable && (
+        <Suspense fallback={null}>
+          <GenerateVoiceModal
+            savePath={null}
+            xttsSettings={xttsSettings}
+            label="Audio du menu"
+            initialText={metadata.title || 'Mes histoires du soir'}
+            filenameHint={`menu-${metadata.title || 'agregation'}`}
+            target={null}
+            onUpdateXttsSettings={onUpdateXttsSettings}
+            onQueueGenerate={handleQueueFunnelVoice}
+            onClose={() => setVoiceOpen(false)}
           />
         </Suspense>
       )}
