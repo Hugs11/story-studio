@@ -25,8 +25,9 @@
 .funnel-modal {
   width: min(1040px, 94vw);
   /* Hauteur fixe (et non max-height) : le corps scrolle à l'intérieur, donc la
-     modale et le pied ne « sautent » pas d'une étape à l'autre (cf. maquette). */
-  height: min(640px, calc(100vh - 64px));
+     modale et le pied ne « sautent » pas d'une étape à l'autre (cf. maquette).
+     On exploite les grands écrans sans passer les funnels compacts en plein écran. */
+  height: min(780px, calc(100vh - 48px));
   display: flex;
   flex-direction: column;
   background: var(--bg1);
@@ -39,7 +40,7 @@
 
 .funnel-modal--wide {
   width: min(1220px, 96vw);
-  height: min(760px, calc(100vh - 48px));
+  height: min(920px, calc(100vh - 40px));
 }
 
 /* Funnel mono-écran (ex. « Modifier un pack ») : la modale épouse son contenu,

@@ -338,7 +338,7 @@
 }
 
 .pack-meta-preview {
-  margin: 6px 22px 0;
+  margin: 6px 22px 14px;
   padding: 13px 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
