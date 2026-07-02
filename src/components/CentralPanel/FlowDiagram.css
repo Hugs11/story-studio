@@ -718,6 +718,21 @@
   pointer-events: stroke;
 }
 
+.fd-complete-line-underlay {
+  fill: none;
+  stroke: color-mix(in srgb, var(--bg0) 84%, transparent);
+  stroke-width: 5.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-line-underlay--return {
+  stroke: color-mix(in srgb, var(--bg0) 94%, white 6%);
+  stroke-width: 6.2;
+}
+
 /* Pendant un pan/zoom, on allege le rendu : retours, labels, ombres et filtres
    sont masques le temps du geste, puis reaffiches nets a l'arret. */
 .fd-complete-stage.is-viewport-moving .fd-complete-navigation-edge,
