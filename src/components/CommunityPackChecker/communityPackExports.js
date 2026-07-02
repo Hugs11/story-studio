@@ -144,7 +144,7 @@ const PROBLEM_SECTIONS = [
     badge: 'Source',
     bucket: 'listen',
     icon: 'warning',
-    action: "Refaites le pack depuis une source audio plus propre.",
+    action: "Reprends le pack depuis une source audio plus propre.",
     match: (issue) => (
       issue.category === 'audio'
       && !issue.autoFixAvailable

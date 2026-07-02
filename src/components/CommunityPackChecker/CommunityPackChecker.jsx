@@ -40,8 +40,8 @@ const PROBLEM_SECTIONS = [
     badge: 'Source',
     bucket: 'listen',
     Icon: TriangleAlert,
-    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Refaites le pack depuis une meilleure source.",
-    action: 'Refaites le pack depuis une meilleure source.',
+    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Reprends le pack depuis une meilleure source.",
+    action: 'Reprends le pack depuis une meilleure source.',
     match: (issue) => (
       issue.category === 'audio'
       && !issue.autoFixAvailable

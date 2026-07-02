@@ -136,17 +136,17 @@ export function useMediaTransferHandlers({
       skipPrompt = false,
       targetWorkspaceDir = null,
     } = options;
-    if (!copyEnabled || !savePath) return { project, changed: false };
+    if (!copyEnabled || !savePath) return { project, changed: false, copies: [] };
 
     const candidates = collectTransferableProjectFiles(project, savePath, pathAudit);
     if (candidates.length === 0) {
       dismissedTransferPromptRef.current = null;
-      return { project, changed: false };
+      return { project, changed: false, copies: [] };
     }
 
     const signature = buildTransferPromptSignature(savePath, candidates);
     if (!forcePrompt && dismissedTransferPromptRef.current === signature) {
-      return { project, changed: false };
+      return { project, changed: false, copies: [] };
     }
 
     const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
@@ -163,7 +163,7 @@ export function useMediaTransferHandlers({
 
     if (!confirmed) {
       dismissedTransferPromptRef.current = signature;
-      return { project, changed: false };
+      return { project, changed: false, copies: [] };
     }
 
     const transferResult = await transferProjectFilesToProject(
@@ -193,6 +193,7 @@ export function useMediaTransferHandlers({
     return {
       project: transferResult.project,
       changed: transferResult.copiedCount > 0,
+      copies: transferResult.copies,
       errors: transferResult.errors,
     };
   }, [

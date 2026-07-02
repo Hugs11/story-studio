@@ -216,7 +216,7 @@ function DiagramTree({ project, projectIndex, selectedId, expandedStories, setEx
         <EmptyDiagramState onImportStories={onImportStories} />
       ) : (
         <Branch
-          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.packMetadata?.title || project.projectName || 'Pack sans nom') }}
+          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.rootName || 'Menu racine') }}
           rootEntries={project.rootEntries ?? []}
           selectedId={selectedId}
           expandedStories={expandedStories}

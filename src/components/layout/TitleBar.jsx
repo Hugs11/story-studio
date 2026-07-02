@@ -73,7 +73,7 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
     : 'chrome-titlebar-status is-saved';
   const saveIndicatorTitle = !hasSavePath
     ? 'Projet pas encore enregistré'
-    : (isDirty && saveState !== 'ok') ? 'Modifications non enregistrées' : 'Projet sauvegardé';
+    : (isDirty && saveState !== 'ok') ? 'Modifications non enregistrées' : 'Projet enregistré';
 
   async function handleToggleMaximize() {
     if (!currentWindow || isMaximizing) return;

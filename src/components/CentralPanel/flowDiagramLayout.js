@@ -215,7 +215,7 @@ export function getCompleteLayout(project, compactMode, options = {}) {
     type: 'root',
     name: project.projectType === 'simple'
       ? (project.projectName || 'Mon histoire')
-      : (project.packMetadata?.title || project.projectName || 'Pack sans nom'),
+      : (project.rootName || 'Menu racine'),
     children: project.rootEntries ?? [],
   }, metrics, options);
 
