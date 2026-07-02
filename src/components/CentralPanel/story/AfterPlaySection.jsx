@@ -260,8 +260,7 @@ export function AfterPlaySection({
     ? 'Auto-next activé'
     : null;
   const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
-  const showReturnDestinationRow = allMenus.length > 0
-    && !hasGeneratedEndNode
+  const showReturnDestinationRow = !hasGeneratedEndNode
     && !autoNextApplies
     && autoContinuationEnabled;
   const autoNextContextText = getAutoNextContextText(autoNextResolution);
