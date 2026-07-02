@@ -134,6 +134,20 @@ test('applySessionMediaTriage: sans tri, tout est conservé tel quel', () => {
   assert.deepEqual(result.mediaTags, tags);
 });
 
+test('applySessionMediaTriage: un média seulement tagué et conservé rejoint la bibliothèque', () => {
+  const taggedOnly = `${SESSION_DIR}\\fichiers-importes\\tagge.mp3`;
+  const copied = 'C:\\Workspace\\fichiers-importes\\tagge.mp3';
+  const result = applySessionMediaTriage({
+    mediaLibraryPaths: [],
+    mediaTags: { [taggedOnly]: ['favori'] },
+    replacements: new Map([[pathKey(taggedOnly), copied]]),
+    droppedPaths: [],
+  });
+
+  assert.deepEqual(result.mediaLibraryPaths, [copied]);
+  assert.deepEqual(result.mediaTags, { [copied]: ['favori'] });
+});
+
 test('collectSessionOnlyMedia: une clé de tag orpheline dans la session est détectée (P2a revue)', () => {
   const taggedOnly = `${SESSION_DIR}\\fichiers-importes\\tagge.mp3`;
   const orphans = collectSessionOnlyMedia({

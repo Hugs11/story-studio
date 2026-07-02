@@ -80,7 +80,13 @@ export function applySessionMediaTriage({ mediaLibraryPaths, mediaTags, replacem
     if (!Array.isArray(tagList) || tagList.length === 0) continue;
     const key = pathKey(path);
     if (dropped.has(key)) continue;
-    nextTags[replaceByKey.get(key) ?? path] = tagList;
+    const nextPath = replaceByKey.get(key) ?? path;
+    const nextKey = pathKey(nextPath);
+    nextTags[nextPath] = tagList;
+    if (replaceByKey.has(key) && !seen.has(nextKey)) {
+      seen.add(nextKey);
+      nextPaths.push(nextPath);
+    }
   }
 
   return { mediaLibraryPaths: nextPaths, mediaTags: nextTags };
