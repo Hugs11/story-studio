@@ -607,6 +607,44 @@ pub(super) fn walk_entry(
                     "controlSettings": stage_controls(stage),
                 }));
             }
+            // Couverture intermédiaire : si le nœud suivant est lui-même une couverture
+            // mono-option (non-autoplay, porteur d'audio/image) et que le nœud courant porte
+            // aussi sa propre couverture, on a DEUX niveaux de couverture avant la lecture
+            // (ex. agrégation « couverture de pack ▸ titre d'histoire ▸ lecture »). Une story
+            // n'a qu'un niveau (titre + lecture) ; aplatir la chaîne écraserait la couverture
+            // du milieu et perdrait ses assets. On matérialise donc le nœud courant en DOSSIER
+            // et on récurse : chaque niveau de couverture surnuméraire devient un dossier.
+            if let Some(next_stage) = stages.get(next_id).copied() {
+                let next_carries_cover = !is_stage_autoplay(next_stage)
+                    && stage_action_options(next_stage, actions).len() == 1
+                    && (next_stage.get("audio").and_then(|v| v.as_str()).is_some()
+                        || next_stage.get("image").and_then(|v| v.as_str()).is_some());
+                let current_carries_cover = item_audio.is_some() || item_image.is_some();
+                if next_carries_cover && current_carries_cover {
+                    visited.insert(next_id.to_string());
+                    let child = walk_entry(
+                        next_stage,
+                        stages,
+                        actions,
+                        assets,
+                        visited,
+                        prompt_stage_usage,
+                        night_mode_available,
+                        story_play_stage_ids,
+                    )?;
+                    return Ok(serde_json::json!({
+                        "id": stage_uuid(stage).unwrap_or(""),
+                        "type": "menu",
+                        "name": name,
+                        "audio": item_audio,
+                        "image": item_image,
+                        "autoBlackImage": item_image.is_none(),
+                        "controlSettings": stage_controls(stage),
+                        "returnOnHomeStageId": transition_target_stage_id(stage.get("homeTransition"), actions),
+                        "children": [child],
+                    }));
+                }
+            }
             visited.insert(next_id.to_string());
             // Suivre la chaîne single-option jusqu'à la décision (feuille ou sélection N≥2)
             let terminal_id = chase_single_chain(next_id, stages, actions, visited);
