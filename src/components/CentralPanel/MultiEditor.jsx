@@ -596,7 +596,7 @@ export const MultiEditor = memo(function MultiEditor({
             const unique = [...new Set(vals)];
             const isMixed = unique.length > 1;
             const value = isMixed ? false : unique[0];
-            const showDestination = allMenus.length > 0 && (isMixed || value);
+            const showDestination = isMixed || value;
 
             return (
               <div className="card">
