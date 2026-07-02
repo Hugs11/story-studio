@@ -8,7 +8,7 @@ import { useEscapeKey } from '../hooks/useEscapeKey';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
 import { KEYS, read as readSetting, write } from '../store/persistentSettings';
 import { THEME_OPTIONS } from '../store/themePreference';
-import { PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
+import { PIPER_DEFAULT_SENTENCE_SILENCE, PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import './OptionsTab.css';
 
@@ -116,6 +116,9 @@ export function OptionsTab({
   const piperSpeed = Number.isFinite(Number(xttsSettings.piperSpeed)) && Number(xttsSettings.piperSpeed) > 0
     ? Number(xttsSettings.piperSpeed)
     : 1.0;
+  const piperSentenceSilence = Number.isFinite(Number(xttsSettings.piperSentenceSilence))
+    ? Math.max(0, Math.min(1.5, Number(xttsSettings.piperSentenceSilence)))
+    : PIPER_DEFAULT_SENTENCE_SILENCE;
   const displayedWorkspaceDir = configuredWorkspaceDir || workspaceDir || '';
 
   useEffect(() => {
@@ -610,6 +613,22 @@ export function OptionsTab({
                     onChange={(e) => {
                       const value = Number(e.target.value);
                       if (Number.isFinite(value)) onUpdateXttsSettings({ piperSpeed: Math.max(0.5, Math.min(1.5, value)) });
+                    }}
+                  />
+                </label>
+
+                <label className="xtts-label">
+                  Pause phrase ({piperSentenceSilence.toFixed(2)}s)
+                  <input
+                    className="xtts-input"
+                    type="number"
+                    min="0"
+                    max="1.5"
+                    step="0.05"
+                    value={piperSentenceSilence}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value)) onUpdateXttsSettings({ piperSentenceSilence: Math.max(0, Math.min(1.5, value)) });
                     }}
                   />
                 </label>
