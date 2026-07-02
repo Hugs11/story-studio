@@ -428,7 +428,7 @@ export function OptionsTab({
           <div className="opts-row">
             <div className="opts-row-info">
               <div className="opts-row-label">Enregistrement automatique</div>
-              <div className="opts-row-sub">Enregistre automatiquement toutes les 5 minutes si des modifications sont en attente (uniquement si déjà enregistré sur disque)</div>
+              <div className="opts-row-sub">Activé par défaut : enregistre le projet toutes les 5 minutes si des modifications sont en attente. Un projet jamais enregistré est copié dans le dossier sauvegardes/ de l'emplacement de travail.</div>
             </div>
             <Toggle on={autoSaveEnabled} onChange={onAutoSaveChange} />
           </div>

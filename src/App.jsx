@@ -14,8 +14,8 @@ import {
   consolidateProject,
   projectToRustExport,
   autoSaveEphemeralProject,
-  isProjectWorthAutosaving,
 } from './store/projectIO';
+import { isProjectWorthAutosaving } from './store/autosaveDecision';
 import { getLastExportDir, saveLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
 import { MediaTransferProvider } from './store/MediaTransferContext';
@@ -221,7 +221,9 @@ function AppContent() {
   const importedPackPendingMetaRef = useRef(false);
   const [importNotice, setImportNotice] = useState(null); // string | null
   const [activeDropZone, setActiveDropZone] = useState(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, false, BOOL_CODEC);
+  // Actif par défaut (D49) ; la migration one-shot de main.jsx aligne les
+  // installations existantes.
+  const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, true, BOOL_CODEC);
   const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
   const [showCentralDiagram, setShowCentralDiagram] = usePersistentState(KEYS.SHOW_CENTRAL_DIAGRAM, false, BOOL_CODEC);
   const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());

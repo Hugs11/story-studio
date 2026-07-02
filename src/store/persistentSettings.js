@@ -1,6 +1,7 @@
 export const KEYS = Object.freeze({
   COPY_FILES: 'copyImportedFiles',
   AUTOSAVE_ENABLED: 'autoSaveEnabled',
+  AUTOSAVE_DEFAULT_ON_APPLIED: 'storyStudio.autosaveDefaultOnApplied',
   AUTOSAVE_BACKUP_LIMIT: 'autoSaveBackupLimit',
   WORKSPACE_DIR: 'storyStudioWorkspaceDir',
   USE_WORKSPACE_FOR_NEW_PROJECTS: 'storyStudio.useWorkspaceForNewProjects',
@@ -75,4 +76,17 @@ export function remove(key) {
   try {
     storage()?.removeItem(key);
   } catch {}
+}
+
+// Migrations ponctuelles des réglages persistés, appelées au boot (main.jsx)
+// avant le montage de l'app.
+export function runSettingsMigrations() {
+  // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
+  // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,
+  // donc un 'false' stocké ne distingue pas un choix explicite d'un défaut
+  // hérité : bascule one-shot vers 'true'. Désactiver ensuite reste respecté.
+  if (read(KEYS.AUTOSAVE_DEFAULT_ON_APPLIED) == null) {
+    write(KEYS.AUTOSAVE_ENABLED, 'true');
+    write(KEYS.AUTOSAVE_DEFAULT_ON_APPLIED, '1');
+  }
 }
