@@ -153,12 +153,16 @@ export function useSaveProgress({
         });
         // Tri des médias de session non utilisés (plan 22, D51) : après le
         // transfert des médias référencés, avant le nettoyage de la session.
-        let triageResult = { ok: true, changed: false };
+        // Le tri résout tous ses échecs de copie en interne (réessayer /
+        // abandonner) : à son retour, plus aucun média conservé ne dépend du
+        // dossier de session.
+        let triageResult = { changed: false };
         if (isEphemeralSession && triageSessionMedia) {
           triageResult = await triageSessionMedia({
             project: transferResult.project,
             savePath: result.path,
             targetWorkspaceDir,
+            transferCopies: transferResult.copies ?? [],
           });
         }
         if (transferResult.changed || triageResult.changed) {
@@ -175,7 +179,7 @@ export function useSaveProgress({
         await onProjectSaved?.(result, {
           promote: true,
           workspaceDir: targetWorkspaceDir,
-          cleanupSession: !transferResult.errors?.length && triageResult.ok,
+          cleanupSession: !transferResult.errors?.length,
         });
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);

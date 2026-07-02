@@ -133,3 +133,29 @@ test('applySessionMediaTriage: sans tri, tout est conservé tel quel', () => {
   assert.deepEqual(result.mediaLibraryPaths, paths);
   assert.deepEqual(result.mediaTags, tags);
 });
+
+test('collectSessionOnlyMedia: une clé de tag orpheline dans la session est détectée (P2a revue)', () => {
+  const taggedOnly = `${SESSION_DIR}\\fichiers-importes\\tagge.mp3`;
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [],
+    mediaTags: { [taggedOnly]: ['favori'] },
+    sessionDir: SESSION_DIR,
+  });
+  assert.equal(orphans.length, 1);
+  assert.equal(orphans[0].path, taggedOnly);
+});
+
+test('collectSessionOnlyMedia: les chemins déjà copiés par le transfert sont exclus (P2b revue)', () => {
+  const transferred = `${SESSION_DIR}\\voix-generees\\deja-copie.mp3`;
+  const realOrphan = `${SESSION_DIR}\\voix-generees\\orphelin.mp3`;
+  const excludeKeys = new Map([[pathKey(transferred), 'C:/Workspace/fichiers-importes/deja-copie.mp3']]);
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [transferred, realOrphan],
+    sessionDir: SESSION_DIR,
+    excludeKeys,
+  });
+  assert.equal(orphans.length, 1);
+  assert.equal(orphans[0].path, realOrphan);
+});

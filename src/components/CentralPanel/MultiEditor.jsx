@@ -169,7 +169,7 @@ export const MultiEditor = memo(function MultiEditor({
   const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : "Pendant l'histoire";
   const batchGenerationDescription = canGenerateTextImages
     ? "Crée d'un coup une image-titre pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
-    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
+    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images-titres ne sont proposées que pour les histoires et les dossiers avec image.";
 
   function getSelectedVoice() {
     if ((xttsSettings?.backend || 'piper') === 'piper') {
@@ -313,7 +313,7 @@ export const MultiEditor = memo(function MultiEditor({
                   disabled={batchBusy}
                 >
                   <Sparkles className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  {batchImageGenerating ? 'Images…' : 'Images texte'}
+                  {batchImageGenerating ? 'Images…' : 'Images-titres'}
                 </button>
               ) : null}
               {isTtsAvailable(xttsSettings) && titleAudioNodes.length > 0 && (

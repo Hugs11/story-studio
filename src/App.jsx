@@ -988,7 +988,7 @@ function AppContent() {
     store,
     mediaLibraryPathsRef,
     setMediaLibraryPaths,
-    showErrorDialog,
+    showChoiceDialog,
   });
 
   const {
@@ -1011,10 +1011,11 @@ function AppContent() {
     setSaveToast,
     setRecentProjects,
     maybeOfferTransferIntoProject,
-    triageSessionMedia: ({ project, savePath, targetWorkspaceDir }) => triageSessionMedia({
+    triageSessionMedia: ({ project, savePath, targetWorkspaceDir, transferCopies }) => triageSessionMedia({
       project,
       sessionDir: sessionWorkspaceDir,
       targetWorkspaceDir,
+      transferCopies,
       projectName: getProjectFilePrefix(project, savePath),
     }),
     onProjectSaved: async (_result, options = {}) => {

@@ -924,7 +924,7 @@ export function OptionsTab({
             <div className="opts-row-info">
               <div className="opts-row-label">Journalisation détaillée</div>
               <div className="opts-row-sub">
-                Enregistre les événements normaux (chargements, sauvegardes, générations) dans le fichier de log,
+                Enregistre les événements normaux (chargements, enregistrements, générations) dans le fichier de log,
                 en plus des erreurs. Utile pour partager le contexte d'un bug dans une issue GitHub.
                 Désactivé : seuls les avertissements et erreurs sont enregistrés.
               </div>

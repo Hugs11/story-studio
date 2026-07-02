@@ -124,7 +124,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
           {phase === 'countdown' && (
             <>
               <div className="record-countdown">{countdown}</div>
-              <div className="record-hint">Préparez-vous…</div>
+              <div className="record-hint">Prépare-toi…</div>
             </>
           )}
 

@@ -327,10 +327,13 @@ export function collectTransferableProjectFiles(project, savePath, statusByPath 
 export async function transferProjectFilesToProject(project, savePath, copyToProject, statusByPath = null) {
   const { updated, refs } = collectTransferTargets(project, savePath, statusByPath);
   if (refs.length === 0) {
-    return { project: updated, copiedCount: 0, errors: [] };
+    return { project: updated, copiedCount: 0, copies: [], errors: [] };
   }
 
   const copiedPaths = new Map();
+  // Copies réalisées `{ from, to }` : permet aux consommateurs (tri de session,
+  // plan 22) de re-pointer bibliothèque et tags sans re-copier les fichiers.
+  const copies = [];
   const errors = [];
 
   for (const ref of refs) {
@@ -341,6 +344,7 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
       try {
         nextPath = await copyToProject(ref.path, savePath);
         copiedPaths.set(cacheKey, nextPath);
+        copies.push({ from: ref.path, to: nextPath });
       } catch (error) {
         errors.push({
           path: ref.path,
@@ -357,6 +361,7 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   return {
     project: updated,
     copiedCount: copiedPaths.size,
+    copies,
     errors,
   };
 }

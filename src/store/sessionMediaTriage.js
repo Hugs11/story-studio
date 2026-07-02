@@ -21,11 +21,13 @@ function isInsideDir(path, dirPrefix) {
 }
 
 /**
- * Liste les médias de la bibliothèque qui vivent dans le dossier de session et
- * ne sont référencés par aucun nœud du projet (après transfert éventuel).
- * Retourne des `{ path, filename }` dédupliqués, dans l'ordre de la bibliothèque.
+ * Liste les médias qui vivent dans le dossier de session sans être référencés
+ * par un nœud du projet (après transfert éventuel). Candidats : entrées de la
+ * bibliothèque ET clés de tags. `excludeKeys` (Map/Set de pathKey) écarte les
+ * chemins déjà copiés par le transfert : ils ne sont pas orphelins, seulement
+ * à re-pointer. Retourne des `{ path, filename }` dédupliqués.
  */
-export function collectSessionOnlyMedia({ project, mediaLibraryPaths, sessionDir }) {
+export function collectSessionOnlyMedia({ project, mediaLibraryPaths, mediaTags = null, sessionDir, excludeKeys = null }) {
   const dirPrefix = normalizedDirPrefix(sessionDir);
   if (!dirPrefix) return [];
 
@@ -36,13 +38,15 @@ export function collectSessionOnlyMedia({ project, mediaLibraryPaths, sessionDir
 
   const seen = new Set();
   const orphans = [];
-  for (const path of mediaLibraryPaths ?? []) {
+  const candidates = [...(mediaLibraryPaths ?? []), ...Object.keys(mediaTags ?? {})];
+  for (const path of candidates) {
     if (typeof path !== 'string' || !path.trim()) continue;
     const key = pathKey(path);
     if (seen.has(key)) continue;
     seen.add(key);
     if (!isInsideDir(path, dirPrefix)) continue;
     if (referenced.has(key)) continue;
+    if (excludeKeys?.has(key)) continue;
     orphans.push({ path, filename: basename(path) || path });
   }
   return orphans;

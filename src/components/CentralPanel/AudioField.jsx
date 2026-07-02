@@ -384,12 +384,12 @@ export function AudioField({
       </div>
 
       {/* Notice conversion webm activée automatiquement */}
-      {/* Warning projet non sauvegardé — propose de sauvegarder */}
+      {/* Warning projet non enregistré — propose d'enregistrer */}
       {showNoSaveWarning && (
         <div className="modal-overlay">
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 360 }}>
             <div className="modal-header">
-              <span>Projet non sauvegardé</span>
+              <span>Projet non enregistré</span>
               <Button
                 variant="icon"
                 className="modal-close"
@@ -403,12 +403,12 @@ export function AudioField({
               {pendingGeneratedSource === 'tts' ? (
                 <>
                   L'audio genere sera stocke dans <strong>voix-generees/</strong> a cote du fichier <strong>.mbah</strong>.
-                  Sauvegardez d'abord le projet pour pouvoir utiliser XTTS.
+                  Enregistre d'abord le projet pour pouvoir utiliser XTTS.
                 </>
               ) : (
                 <>
                   L'audio sera stocke dans <strong>enregistrements/</strong> a cote du fichier <strong>.mbah</strong>.
-                  Sauvegardez d'abord le projet pour pouvoir enregistrer.
+                  Enregistre d'abord le projet pour pouvoir enregistrer.
                 </>
               )}
             </div>
