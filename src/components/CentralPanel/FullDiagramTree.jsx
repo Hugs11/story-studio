@@ -1050,6 +1050,12 @@ export function CompleteDiagramTree({
                           className="fd-complete-line-hitbox"
                           d={d}
                         />
+                        {edge.kind === 'return' ? (
+                          <path
+                            className="fd-complete-line-underlay fd-complete-line-underlay--return"
+                            d={d}
+                          />
+                        ) : null}
                         <path
                           className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
                           d={d}
