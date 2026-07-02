@@ -16,6 +16,7 @@ const BADGE_ICON_BY_KIND = {
   return: <IconReturn />,
   'prompt-return': <IconReturn />,
   home: <IconHouse />,
+  'home-implicit': <IconHouse />,
   'home-none': <IconHouse />,
   'end-node': <IconStop />,
   'end-night': <IconMoon />,

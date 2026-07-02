@@ -436,7 +436,8 @@
   background: color-mix(in oklch, oklch(0.76 0.13 185) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.76 0.13 185) 35%, transparent);
 }
-.badge-nav--home {
+.badge-nav--home,
+.badge-nav--home-implicit {
   color: oklch(0.78 0.13 240);
   background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);
