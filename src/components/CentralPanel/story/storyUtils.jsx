@@ -158,8 +158,6 @@ export function getNavigationSelectHint({
   entry = null,
   parentMenu = null,
   project = null,
-  allMenus = [],
-  allStories = [],
 }) {
   const normalized = normalizeNavigationTarget(value);
   if (!normalized) return emptyResolvedLabel;
