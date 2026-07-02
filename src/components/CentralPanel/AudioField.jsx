@@ -466,6 +466,7 @@ export function AudioField({
           workspaceDir={workspaceDir}
           projectName={projectName}
           onSaved={handleRecorded}
+          onDiscarded={onMediaCreated}
           onClose={() => setShowRecord(false)}
         />
       )}

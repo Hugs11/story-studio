@@ -3,16 +3,19 @@ import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Mic } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
+import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
 import './RecordModal.css';
 
 const COUNTDOWN_SECONDS = 3;
 
-export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved, onClose }) {
-  const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving
+export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved, onClose, onDiscarded }) {
+  const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving | saved
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(null);
+  const [savedPath, setSavedPath] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [recordingName, setRecordingName] = useState(() => {
     const prefix = sanitizeProjectPrefix(projectName);
     const stamp = Date.now();
@@ -43,7 +46,18 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
     return () => clearInterval(timerRef.current);
   }, [phase]);
 
-  useEscapeKey(true, () => onClose?.());
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, []);
+
+  useEscapeKey(true, handleClose);
+
+  function handleClose() {
+    stopPreview();
+    if (phase === 'saved' && savedPath) onDiscarded?.(savedPath);
+    onClose?.();
+  }
 
   async function startRecording() {
     try {
@@ -87,6 +101,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
   function retry() {
     stopPreview();
     blobRef.current = null;
+    setSavedPath(null);
     setDuration(0);
     setCountdown(COUNTDOWN_SECONDS);
     setPhase('countdown');
@@ -101,11 +116,27 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       const arrayBuffer = await blobRef.current.arrayBuffer();
       const data = Array.from(new Uint8Array(arrayBuffer));
       const path = await invoke('save_recording', { savePath, workspaceDir, filename, data });
-      onSaved(path);
+      setSavedPath(path);
+      setPhase('saved');
     } catch (e) {
       setError(`Écriture du fichier impossible : ${e}`);
       setPhase('error');
     }
+  }
+
+  function useSavedRecording() {
+    if (!savedPath) return;
+    stopPreview();
+    onSaved?.(savedPath);
+  }
+
+  function handleDeleted(result = {}) {
+    const path = savedPath;
+    setShowDeleteDialog(false);
+    setSavedPath(null);
+    stopPreview();
+    if (path && !result.diskDeleted) onDiscarded?.(path);
+    onClose?.();
   }
 
   function formatDuration(s) {
@@ -117,7 +148,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       <div className="modal-box record-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Enregistrement audio</span>
-          <Button variant="icon" className="modal-close" onClick={onClose}>×</Button>
+          <Button variant="icon" className="modal-close" onClick={handleClose}>×</Button>
         </div>
 
         <div className="record-body">
@@ -165,6 +196,21 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
             <div className="record-hint">Écriture du fichier…</div>
           )}
 
+          {phase === 'saved' && (
+            <>
+              <div className="record-preview-icon">
+                <Mic className="record-preview-icon-svg" strokeWidth={2} absoluteStrokeWidth />
+              </div>
+              <div className="record-hint">Audio enregistré.</div>
+              <div className="record-saved-copy">Tu peux l'utiliser maintenant ou le supprimer.</div>
+              <div className="record-actions">
+                <Button onClick={playPreview}>▶ Écouter</Button>
+                <Button variant="danger" onClick={() => setShowDeleteDialog(true)}>Supprimer</Button>
+                <Button variant="primary" onClick={useSavedRecording}>✓ Utiliser</Button>
+              </div>
+            </>
+          )}
+
           {phase === 'error' && (
             <>
               <div className="record-hint" style={{ color: '#E24B4A' }}>{error}</div>
@@ -173,6 +219,14 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
           )}
         </div>
       </div>
+      {showDeleteDialog && savedPath && (
+        <DeleteAudioDialog
+          file={savedPath}
+          workspaceDir={workspaceDir}
+          onDeleted={handleDeleted}
+          onClose={() => setShowDeleteDialog(false)}
+        />
+      )}
     </div>
   );
 }
