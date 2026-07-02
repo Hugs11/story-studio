@@ -16,9 +16,9 @@ export const BUTTON_ZOOM_FACTOR = 1.12;
 export const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 export const DRAG_START_DISTANCE = 6;
 const COMPLETE_METRICS = {
-  full: { nodeWidth: 100, rootWidth: 120, nodeHeight: 96, colGap: 12, rowGap: 92, rowStackGap: 56, padX: 32, padY: 20, navPadBottom: 44, storyRowLimit: 8, structureRowLimit: 4, rootRowLimit: 3 },
-  compact: { nodeWidth: 86, rootWidth: 98, nodeHeight: 74, colGap: 8, rowGap: 78, rowStackGap: 46, padX: 28, padY: 16, navPadBottom: 40, storyRowLimit: 6, structureRowLimit: 3, rootRowLimit: 2 },
-  minimal: { nodeWidth: 68, rootWidth: 84, nodeHeight: 58, colGap: 6, rowGap: 62, rowStackGap: 36, padX: 22, padY: 12, navPadBottom: 34, storyRowLimit: 5, structureRowLimit: 2, rootRowLimit: 2 },
+  full: { nodeWidth: 100, rootWidth: 120, nodeHeight: 96, nodeVisualHeight: 82, colGap: 12, rowGap: 92, rowStackGap: 56, padX: 32, padY: 20, navPadBottom: 48, storyRowLimit: 8, structureRowLimit: 4, rootRowLimit: 3 },
+  compact: { nodeWidth: 86, rootWidth: 98, nodeHeight: 74, nodeVisualHeight: 62, colGap: 8, rowGap: 78, rowStackGap: 46, padX: 28, padY: 16, navPadBottom: 44, storyRowLimit: 6, structureRowLimit: 3, rootRowLimit: 2 },
+  minimal: { nodeWidth: 68, rootWidth: 84, nodeHeight: 58, nodeVisualHeight: 48, colGap: 6, rowGap: 62, rowStackGap: 36, padX: 22, padY: 12, navPadBottom: 38, storyRowLimit: 5, structureRowLimit: 2, rootRowLimit: 2 },
 };
 
 export function countStories(entries) {
@@ -445,6 +445,8 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
 
 export function getCompleteNavigationEdges(project, layout) {
   const nodeMap = new Map(layout.nodes.map((node) => [node.entry.id, node]));
+  const nodeVisualHeight = layout.metrics?.nodeVisualHeight ?? layout.metrics?.nodeHeight ?? 0;
+  const visualBottom = (node) => node.y + Math.min(node.height, nodeVisualHeight || node.height);
 
   const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], layout.hasEndNode, project, project.rootEntries ?? [])
     .map((edge) => {
@@ -453,24 +455,31 @@ export function getCompleteNavigationEdges(project, layout) {
       if (!from || !to) return null;
 
       const selfLoop = edge.from === edge.to;
-      const x1 = selfLoop ? from.x + (from.width * 0.26) : from.x + (from.width / 2);
-      const y1 = selfLoop ? from.y + from.height : from.y;
-      const x2 = selfLoop ? from.x + (from.width * 0.74) : to.x + (to.width / 2);
-      const y2 = selfLoop ? from.y + from.height : to.y + to.height;
+      const sameRowReturn = edge.kind === 'return' && Math.abs(from.y - to.y) < 1;
+      const useRailReturn = sameRowReturn && !selfLoop;
+      const x1 = selfLoop ? from.x + (from.width * 0.28) : from.x + (from.width / 2);
+      const y1 = (selfLoop || useRailReturn) ? visualBottom(from) : from.y;
+      const x2 = selfLoop ? from.x + (from.width * 0.72) : to.x + (to.width / 2);
+      const y2 = visualBottom(to);
       const verticalDirection = y2 >= y1 ? 1 : -1;
       const controlOffset = selfLoop
         ? Math.max(30, from.height * 0.34)
         : Math.max(54, Math.abs(x2 - x1) * 0.18, Math.abs(y2 - y1) * 0.34);
+      const railY = useRailReturn
+        ? Math.max(y1, y2) + Math.max(22, Math.min(34, Math.abs(x2 - x1) * 0.12))
+        : null;
 
       return {
         ...edge,
         selfLoop,
+        route: useRailReturn ? 'same-row-return' : 'curve',
         x1,
         y1,
         x2,
         y2,
         labelX: x1 + ((x2 - x1) / 2),
-        labelY: selfLoop ? y1 + controlOffset + 14 : y1 + ((y2 - y1) / 2),
+        labelY: railY ?? (selfLoop ? y1 + controlOffset + 14 : y1 + ((y2 - y1) / 2)),
+        railY,
         c1y: selfLoop ? y1 + controlOffset : y1 + (controlOffset * verticalDirection),
         c2y: selfLoop ? y2 + controlOffset : y2 - (controlOffset * verticalDirection),
       };
