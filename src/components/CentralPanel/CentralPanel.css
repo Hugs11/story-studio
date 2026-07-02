@@ -1671,6 +1671,16 @@
     width: 100%;
   }
 
+  .after-play-end-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .after-play-end-row .story-end-mode {
+    margin-left: 0;
+  }
+
   .after-play-main-row,
   .after-play-destination-row {
     flex-direction: column;
