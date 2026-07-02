@@ -113,6 +113,24 @@ test('computeBadgesData : option default affiche retour et Home par défaut', ()
   );
 });
 
+test('computeBadgesData : Home actif sans transition explicite devient natif implicite', () => {
+  const entry = {
+    id: 'story-a',
+    type: 'story',
+    name: 'A',
+    audio: 'a.mp3',
+    itemAudio: 'a-title.mp3',
+    returnOnHomeNone: true,
+    controlSettings: { home: true },
+  };
+  const project = { rootEntries: [entry] };
+
+  assert.deepEqual(
+    computeBadgesData(entry, null, new Map(), project, project.rootEntries),
+    [{ kind: 'home-implicit', status: null, targetId: 'story:story-a', isDefault: false }],
+  );
+});
+
 test('computeBadgesData : Home par défaut suit le retour pour une histoire racine', () => {
   const entry = {
     id: 'story-a',
@@ -303,7 +321,15 @@ test('formatBadgeTitle : home-none, title fixe, status passe', () => {
   const ui = formatBadgeTitle({ kind: 'home-none', status: 'warn' }, null);
   assert.equal(ui.kind, 'home-none');
   assert.equal(ui.status, 'warn');
-  assert.match(ui.title, /aucune transition/);
+  assert.match(ui.title, /désactivé/);
+});
+
+test('formatBadgeTitle : home-implicit décrit la destination effective', () => {
+  const ui = formatBadgeTitle({ kind: 'home-implicit', status: null, targetId: 'menu-1' }, makeProjectIndexStub([
+    { id: 'menu-1', name: 'Menu', type: 'menu' },
+  ]));
+  assert.equal(ui.kind, 'home-implicit');
+  assert.match(ui.title, /Menu/);
 });
 
 // Mini stub d'un projectIndex compatible avec getGeneratedNavigationTargetName.
@@ -420,6 +446,7 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
     return: new Set(['kind', 'status', 'targetId', 'isDefault', 'flow']),
     'prompt-return': new Set(['kind', 'status', 'targetId', 'isDefault', 'isInactive']),
     'home-none': new Set(['kind', 'status', 'isDefault']),
+    'home-implicit': new Set(['kind', 'status', 'targetId', 'isDefault']),
     home: new Set(['kind', 'status', 'targetId', 'isInactive', 'isDefault']),
     'end-node': new Set(['kind', 'status', 'targetId', 'isDefault', 'isImportedPrompt']),
     'end-night': new Set(['kind', 'status', 'targetId', 'isDefault', 'isImportedPrompt']),
@@ -430,6 +457,7 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
     { kind: 'return', status: null, targetId: 'X', isDefault: false, flow: 'sequence' },
     { kind: 'prompt-return', status: null, targetId: 'X', isDefault: false, isInactive: false },
     { kind: 'home-none', status: null, isDefault: false },
+    { kind: 'home-implicit', status: null, targetId: 'menu-1', isDefault: false },
     { kind: 'home', status: null, targetId: 'X', isInactive: false, isDefault: false },
     { kind: 'end-node', status: null, targetId: 'X', isDefault: false, isImportedPrompt: false },
     { kind: 'end-night', status: null, targetId: 'X', isDefault: false, isImportedPrompt: false },

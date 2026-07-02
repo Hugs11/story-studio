@@ -8,14 +8,20 @@ import { isTtsAvailable, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
 import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { CircleStop, Moon, Pause, Sparkles, Speech, Trash2 } from '../icons/LucideLocal';
-import { NavigationTargetSelect } from './story/storyUtils';
+import {
+  generatedTargetIdToSelectValue,
+  NavigationTargetSelect,
+} from './story/storyUtils';
+import {
+  getGeneratedStoryNavigation,
+} from '../../store/generatedNavigation';
 import {
   canShowTextImageBatchAction,
   getTextImageBatchTargets,
 } from './multiEditorBatchTargets';
 import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
 
-const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
+const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false, home: true };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
 
 const SHARED_DURING_CONTROL_KEYS = [
@@ -154,6 +160,17 @@ export const MultiEditor = memo(function MultiEditor({
     const vals = nodes.map((n) => n[field] ?? '');
     const unique = [...new Set(vals)];
     return unique.length === 1 ? unique[0] : '__mixed__';
+  }
+
+  function getParentMenu(entry) {
+    const parentId = projectIndex?.parentMenuById?.get(entry.id) ?? null;
+    return parentId ? projectIndex?.entryById?.get(parentId) ?? null : null;
+  }
+
+  function getHomeSelectValue(entry) {
+    if (entry.returnOnHome) return entry.returnOnHome;
+    const navigation = getGeneratedStoryNavigation(entry, getParentMenu(entry), project, project?.rootEntries ?? []);
+    return generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId);
   }
 
   function getMixedBooleanValue(values) {
@@ -343,8 +360,11 @@ export const MultiEditor = memo(function MultiEditor({
             editableNodes.map((n) => n.controlSettings?.pause ?? STORY_DEFAULTS.pause),
           );
           const homeState = getMixedBooleanValue(
-            editableNodes.map((n) => !n.returnOnHomeNone),
+            editableNodes.map((n) => n.controlSettings?.home ?? STORY_DEFAULTS.home),
           );
+          const homeSelectValues = editableNodes.map(getHomeSelectValue);
+          const homeSelectUnique = [...new Set(homeSelectValues)];
+          const homeSelectValue = homeSelectUnique.length === 1 ? homeSelectUnique[0] : '__mixed__';
           const showHomeDestination = homeState.isMixed || homeState.value;
 
           return (
@@ -385,9 +405,9 @@ export const MultiEditor = memo(function MultiEditor({
                       on={homeState.value}
                       mixed={homeState.isMixed}
                       onChange={(v) => {
-                        onBulkUpdateItems(editableIds, () => ({
-                          returnOnHome: null,
-                          returnOnHomeNone: !v,
+                        onBulkUpdateItems(editableIds, (entry) => ({
+                          controlSettings: { ...entry.controlSettings, home: v },
+                          ...(v ? {} : { returnOnHome: null, returnOnHomeNone: true }),
                         }));
                       }}
                       ariaLabel="Bouton Accueil"
@@ -408,7 +428,7 @@ export const MultiEditor = memo(function MultiEditor({
                         <span className="during-play-destination-label">Destination</span>
                         <div className="during-play-home-select">
                           <NavigationTargetSelect
-                            value={getMixedSelectValue('returnOnHome')}
+                            value={homeSelectValue}
                             onChange={(target) => {
                               if (target === '__mixed__') return;
                               onBulkUpdateItems(editableIds, () => ({

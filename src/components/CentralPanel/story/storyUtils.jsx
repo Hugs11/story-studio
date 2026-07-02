@@ -18,6 +18,12 @@ export { NAV_TARGET_NEXT_STORY };
 
 export const NAV_ROOT_LABEL = 'Menu racine';
 
+export function generatedTargetIdToSelectValue(targetId) {
+  if (!targetId || isRootNavigationTarget(targetId)) return '';
+  if (isStoryNavigationTarget(targetId) || isNextStoryNavigationTarget(targetId)) return targetId;
+  return encodeMenuNavigationTarget(targetId);
+}
+
 const NAV_ICON_BY_KIND = {
   default: Link2,
   none: CircleX,
