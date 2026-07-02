@@ -51,7 +51,7 @@ function targetNameById(allMenus, allStories, targetId, fallback = 'destination 
 }
 
 function buildInheritedReturnLabel(parentMenu, allMenus, allStories, autoNextEffective) {
-  if (!parentMenu) return 'Destination actuelle de l’histoire';
+  if (!parentMenu) return null;
   if (autoNextEffective) return 'Lecture de l’histoire suivante';
   const inheritedTargetId = parentMenu.returnAfterPlay ?? null;
   if (!inheritedTargetId || isCurrentMenuNavigationTarget(inheritedTargetId)) {

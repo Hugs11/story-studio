@@ -43,9 +43,10 @@ function buildNavigationTargetOptions({
   allMenus = [],
   allStories = [],
   currentStoryId = null,
+  allowCurrentStory = false,
   includeNone = false,
   noneLabel = 'Aucune transition',
-  emptyLabel = 'Destination actuelle',
+  emptyLabel = 'Choisir une destination',
   includeDefault = true,
   includeNextStory = true,
   includeStoryPlay = true,
@@ -73,7 +74,8 @@ function buildNavigationTargetOptions({
       kind: 'menu',
     });
   }
-  for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+  const selectableStories = allStories.filter((s) => allowCurrentStory || s.id !== currentStoryId);
+  for (const story of selectableStories) {
     options.push({
       value: encodeStoryNavigationTarget(story.id),
       label: story.name || '(sans nom)',
@@ -81,7 +83,7 @@ function buildNavigationTargetOptions({
     });
   }
   if (includeStoryPlay) {
-    for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+    for (const story of selectableStories) {
       options.push({
         value: encodeStoryPlayNavigationTarget(story.id),
         label: `Lecture directe - ${story.name || '(sans nom)'}`,
@@ -185,10 +187,15 @@ export function NavigationTargetSelect({
   allMenus,
   allStories,
   currentStoryId,
+  allowCurrentStory = false,
   includeNone = false,
   noneLabel = 'Aucune transition',
-  emptyLabel = 'Destination actuelle',
+  emptyLabel = 'Choisir une destination',
   includeDefault = true,
+  resolvedDefaultValue = null,
+  resolvedDefaultLabel = null,
+  resolvedDefaultKind = 'default',
+  hideDefaultWhenResolved = false,
   style,
   includeNextStory = true,
   includeStoryPlay = true,
@@ -198,35 +205,66 @@ export function NavigationTargetSelect({
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef(null);
   const listboxId = useId();
-  const selectedValue = value ?? '';
-  const options = useMemo(() => buildNavigationTargetOptions({
-    value: selectedValue,
-    allMenus,
-    allStories,
-    currentStoryId,
-    includeNone,
-    noneLabel,
-    emptyLabel,
-    includeDefault,
-    includeNextStory,
-    includeStoryPlay,
-  }), [
-    selectedValue,
-    allMenus,
-    allStories,
-    currentStoryId,
-    includeNone,
-    noneLabel,
-    emptyLabel,
-    includeDefault,
-    includeNextStory,
-    includeStoryPlay,
-  ]);
+  const rawSelectedValue = value ?? '';
+  const normalizedResolvedValue = resolvedDefaultValue
+    ? normalizeNavigationTarget(resolvedDefaultValue)
+    : null;
+  const baseOptions = useMemo(
+    () => buildNavigationTargetOptions({
+      value: rawSelectedValue,
+      allMenus,
+      allStories,
+      currentStoryId,
+      allowCurrentStory,
+      includeNone,
+      noneLabel,
+      emptyLabel,
+      includeDefault,
+      includeNextStory,
+      includeStoryPlay,
+    }),
+    [
+      rawSelectedValue,
+      allMenus,
+      allStories,
+      currentStoryId,
+      allowCurrentStory,
+      includeNone,
+      noneLabel,
+      emptyLabel,
+      includeDefault,
+      includeNextStory,
+      includeStoryPlay,
+    ],
+  );
+  // Un « vrai » choix correspond à une ligne concrète de la liste (menu, histoire,
+  // « Histoire suivante »…). Les cibles virtuelles (racine, dossier courant) et la
+  // valeur vide n'ont pas de ligne dédiée : on les résout vers leur destination réelle
+  // pour ne jamais afficher un libellé abstrait dans le déclencheur.
+  const rawMatchesConcreteOption = !!rawSelectedValue
+    && baseOptions.some((option) => option.value === rawSelectedValue && option.value !== '');
+  const useResolvedValue = !!(normalizedResolvedValue && !rawMatchesConcreteOption);
+  const selectedValue = useResolvedValue ? normalizedResolvedValue : rawSelectedValue;
+  const hideResolvedDefault = !!(includeDefault && hideDefaultWhenResolved && useResolvedValue);
+  const options = useMemo(
+    () => (hideResolvedDefault
+      ? baseOptions.filter((option) => option.value !== '')
+      : baseOptions),
+    [baseOptions, hideResolvedDefault],
+  );
+  const resolvedSelectedOption = useResolvedValue
+    ? {
+      value: normalizedResolvedValue,
+      label: resolvedDefaultLabel || emptyLabel,
+      kind: resolvedDefaultKind || 'default',
+    }
+    : null;
   const selectableOptions = useMemo(
     () => options.filter((option) => !option.disabled),
     [options],
   );
   const selectedOption = options.find((option) => option.value === selectedValue)
+    ?? resolvedSelectedOption
     ?? options.find((option) => option.value === '')
     ?? options[0];
   const SelectedIcon = iconForKind(selectedOption?.kind);
