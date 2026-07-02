@@ -13,6 +13,8 @@ import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
+const END_NODE_ID = 'end-node';
+
 export function ProjectSimulator({
   project,
   onOpenZip,
@@ -338,7 +340,8 @@ export function ProjectSimulator({
   useEffect(() => {
     const activeId =
       state === 'cover' ? 'root' :
-      state === 'sequence' || state === 'postplay' || state === 'endnode' ? activeStory?.id :
+      state === 'endnode' ? END_NODE_ID :
+      state === 'sequence' || state === 'postplay' ? activeStory?.id :
       isSimple ? simpleStory?.id :
       currentEntry?.id;
     if (activeId && activeId !== lastEmittedActiveIdRef.current) {
@@ -615,6 +618,7 @@ export function ProjectSimulator({
         ? getExportPackName(project.packMetadata)
         : (project.projectName || 'Pack sans nom')
     ) :
+    state === 'endnode' ? `${project.endNodeName || 'Message de fin'}${project.globalOptions?.nightMode ? ' (mode nuit)' : ''}` :
     state === 'sequence' ? (activeSequenceStep?.name || activeStory?.name || 'Fin de lecture') :
     isSimple ? (simpleStory?.name || '—') :
     currentEntry?.type === 'ref'
