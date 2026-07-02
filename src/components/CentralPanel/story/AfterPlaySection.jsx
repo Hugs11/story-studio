@@ -4,7 +4,9 @@ import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import { Button } from '../../common/Button';
 import {
+  encodeStoryNavigationTarget,
   decodeNavigationStoryId,
+  isCurrentMenuNavigationTarget,
   isNextStoryNavigationTarget,
   isRootNavigationTarget,
   isStoryHomeStepNavigationTarget,
@@ -19,6 +21,7 @@ import {
   CONTROL_DEFS,
   SEQUENCE_CONTROL_DEFAULTS,
   NavigationTargetSelect,
+  generatedTargetIdToSelectValue,
   getNavigationSelectHint,
   NAV_ROOT_LABEL,
   normalizeSequenceStep,
@@ -89,12 +92,24 @@ function routeDestinationFromTarget(targetId, project, allMenus, allStories) {
   return menu ? { name: menu.name, type: 'menu' } : null;
 }
 
+function resolvedReturnSelectValueFromTarget(targetId, project) {
+  if (!targetId) return null;
+  if (isRootNavigationTarget(targetId)) {
+    const defaultDest = getDefaultPackEntryDestination(project);
+    if (!defaultDest?.id) return null;
+    if (defaultDest.type === 'story') return encodeStoryNavigationTarget(defaultDest.id);
+    if (defaultDest.type === 'menu') return generatedTargetIdToSelectValue(defaultDest.id);
+    return null;
+  }
+  return generatedTargetIdToSelectValue(targetId);
+}
+
 function getAutoNextContextText(autoNextResolution) {
   if (!autoNextResolution?.enabled) return null;
   if (autoNextResolution.applies) {
     return autoNextResolution.hasNextStory
-      ? "Auto-next est activé dans les options du pack : la destination par défaut est la lecture directe de l'histoire suivante."
-      : "Auto-next est activé dans les options du pack : aucune histoire suivante, la destination par défaut revient au dossier.";
+      ? "Auto-next est activé dans les options du pack : la sortie automatique lance directement l'histoire suivante."
+      : "Auto-next est activé dans les options du pack : aucune histoire suivante, la sortie automatique revient au dossier.";
   }
   return null;
 }
@@ -143,6 +158,20 @@ export function AfterPlaySection({
   const autoContinuationEnabled = !!effectiveEndBehavior?.autoContinuation;
   const routeFinalTargetId = effectiveEndBehavior?.finalTargetId ?? null;
   const routeFinalDestination = routeDestinationFromTarget(routeFinalTargetId, project, allMenus, allStories);
+  const returnIsVirtualTarget = isRootNavigationTarget(node.returnAfterPlay)
+    || isCurrentMenuNavigationTarget(node.returnAfterPlay);
+  // On résout l'affichage vers la destination réelle dans deux cas : le retour par
+  // défaut d'une histoire racine (elle atterrit sur sa propre vignette) et tout retour
+  // « virtuel » (racine / dossier courant) qui n'a pas de ligne dédiée dans la liste.
+  const resolvedReturnTargetId = ((!node.returnAfterPlay && !parentMenu) || returnIsVirtualTarget)
+    ? (storyNavigation?.directReturn?.targetId ?? null)
+    : null;
+  const resolvedReturnDestination = resolvedReturnTargetId
+    ? routeDestinationFromTarget(resolvedReturnTargetId, project, allMenus, allStories)
+    : null;
+  const resolvedReturnValue = resolvedReturnTargetId
+    ? resolvedReturnSelectValueFromTarget(resolvedReturnTargetId, project)
+    : null;
   const autoNextDestinationLabel = autoNextApplies
     ? (routeFinalDestination?.name || (autoNextResolution?.isLastStory ? (parentMenu?.name || 'ce dossier') : "l'histoire suivante"))
     : null;
@@ -523,7 +552,12 @@ export function AfterPlaySection({
               allMenus={allMenus}
               allStories={allStories}
               currentStoryId={node.id}
-              emptyLabel={autoNextApplies ? 'Suit auto-next global' : (inheritedReturnLabel || 'Revient à ce dossier')}
+              allowCurrentStory={!parentMenu}
+              emptyLabel={autoNextApplies ? 'Suit auto-next global' : (inheritedReturnLabel || resolvedReturnDestination?.name || 'Choisir une destination')}
+              resolvedDefaultValue={resolvedReturnValue}
+              resolvedDefaultLabel={resolvedReturnDestination?.name}
+              resolvedDefaultKind={resolvedReturnDestination?.type}
+              hideDefaultWhenResolved
             />
           </div>
         </div>
