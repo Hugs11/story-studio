@@ -633,7 +633,7 @@ function AppContent() {
         const firstWarning = transformed.unresolvedTransitions[0]?.message;
         setImportNotice(
           "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
-          + "Story Studio a conservé la structure reconnue, mais vérifiez les retours concernés avant export."
+          + "Story Studio a conservé la structure reconnue, mais vérifie les retours concernés avant export."
           + (firstWarning ? ` Exemple : ${firstWarning}` : '')
         );
       }
