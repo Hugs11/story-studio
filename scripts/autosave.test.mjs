@@ -229,12 +229,27 @@ function simpleProjectWith(story = {}) {
 
 test('isProjectWorthAutosaving: projet simple vierge (histoire pré-créée) → non', () => {
   assert.equal(isProjectWorthAutosaving(simpleProjectWith()), false);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({
+    controlSettings: { autoplay: false, wheel: false, pause: true, ok: false, home: true },
+    afterPlaybackPromptControlSettings: { autoplay: true, wheel: false, pause: false, ok: true, home: true },
+    individualOptions: {},
+    afterPlaybackSequence: [],
+  })), false);
 });
 
 test('isProjectWorthAutosaving: histoire nommée ou avec média → oui', () => {
   assert.equal(isProjectWorthAutosaving(simpleProjectWith({ name: 'Le loup' })), true);
   assert.equal(isProjectWorthAutosaving(simpleProjectWith({ audio: 'C:/a.mp3' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ itemAudio: 'C:/titre.mp3' })), true);
   assert.equal(isProjectWorthAutosaving(simpleProjectWith({ itemImage: 'C:/a.png' })), true);
+});
+
+test('isProjectWorthAutosaving: réglage utilisateur sur placeholder simple → oui', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({
+    controlSettings: { autoplay: true, wheel: false, pause: true, ok: false, home: true },
+  })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ returnAfterPlay: 'root' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ afterPlaybackSequence: [{ id: 'seq1' }] })), true);
 });
 
 test('isProjectWorthAutosaving: nom de projet ou titre de pack saisi → oui', () => {

@@ -47,6 +47,53 @@ function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+const STORY_CONTROL_DEFAULTS = Object.freeze({
+  autoplay: false,
+  wheel: false,
+  pause: true,
+  ok: false,
+  home: true,
+});
+
+const STORY_PROMPT_CONTROL_DEFAULTS = Object.freeze({
+  autoplay: true,
+  wheel: false,
+  pause: false,
+  ok: true,
+  home: true,
+});
+
+function controlsMatchDefaults(settings, defaults) {
+  const controls = settings ?? {};
+  return Object.entries(defaults).every(([key, value]) => (controls[key] ?? value) === value);
+}
+
+function hasObjectContent(value) {
+  return !!value && typeof value === 'object' && Object.keys(value).length > 0;
+}
+
+function hasUserStorySettings(entry) {
+  return !!entry.treeColor
+    || !!entry.nativeStageId
+    || !!entry.nativeReference
+    || !!entry.autoGenerateImage
+    || hasObjectContent(entry.individualOptions)
+    || !controlsMatchDefaults(entry.controlSettings, STORY_CONTROL_DEFAULTS)
+    || !controlsMatchDefaults(entry.afterPlaybackPromptControlSettings, STORY_PROMPT_CONTROL_DEFAULTS)
+    || hasPath(entry.afterPlaybackPromptAudio)
+    || !!entry.afterPlaybackPromptOkTarget
+    || !!entry.afterPlaybackPromptHomeTarget
+    || !!entry.afterPlaybackPromptHomeNone
+    || (Array.isArray(entry.afterPlaybackSequence) && entry.afterPlaybackSequence.length > 0)
+    || !!entry.afterPlaybackHomeStep
+    || !!entry.returnAfterPlay
+    || !!entry.returnOnHome
+    || !!entry.returnOnHomeNone
+    || !!entry.titleReturnOnHome
+    || !!entry.titleReturnOnHomeNone
+    || !!entry.titleControlSettings;
+}
+
 // L'histoire pré-créée du mode simple (nom vide, aucun média) n'est pas un
 // contenu utilisateur : sans ce filtre, une session simple vierge écrivait
 // immédiatement un snapshot de récupération, proposé ensuite comme « projet
@@ -56,7 +103,8 @@ function isPristinePlaceholderStory(entry) {
     && !String(entry.name ?? '').trim()
     && !hasPath(entry.audio)
     && !hasPath(entry.itemAudio)
-    && !hasPath(entry.itemImage);
+    && !hasPath(entry.itemImage)
+    && !hasUserStorySettings(entry);
 }
 
 export function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
