@@ -5,6 +5,7 @@ import {
   saveProject,
   saveProjectAs,
 } from '../store/projectIO';
+import { shouldAbortEphemeralPromotion } from '../store/projectHelpers';
 import { logger } from '../utils/logger';
 
 export function useSaveProgress({
@@ -151,6 +152,14 @@ export function useSaveProgress({
           skipPrompt: isEphemeralSession,
           targetWorkspaceDir,
         });
+        const transferErrors = transferResult.errors ?? [];
+        if (shouldAbortEphemeralPromotion({ isEphemeralSession, transferErrors })) {
+          logger.warn(`save-as:abort-ephemeral-transfer-errors count=${transferErrors.length}`);
+          setSaveAsProgress(null);
+          setSaveToast('error');
+          setTimeout(() => setSaveToast(null), 3000);
+          return null;
+        }
         // Tri des médias de session non utilisés (plan 22, D51) : après le
         // transfert des médias référencés, avant le nettoyage de la session.
         // Le tri résout tous ses échecs de copie en interne (réessayer /
@@ -179,7 +188,7 @@ export function useSaveProgress({
         await onProjectSaved?.(result, {
           promote: true,
           workspaceDir: targetWorkspaceDir,
-          cleanupSession: !transferResult.errors?.length,
+          cleanupSession: transferErrors.length === 0,
         });
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);

@@ -7,6 +7,7 @@ import {
   isProjectWorthAutosaving,
   selectStaleAutosaveBackups,
 } from '../src/store/autosaveDecision.js';
+import { shouldAbortEphemeralPromotion } from '../src/store/projectHelpers.js';
 
 function snapshot(value) {
   return JSON.stringify(value);
@@ -251,4 +252,19 @@ test('isProjectWorthAutosaving: pack avec dossier créé → oui ; pack vide →
   assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [{ id: 'm1', type: 'menu', name: 'Nouveau dossier', children: [] }] }), true);
   assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [] }), false);
   assert.equal(isProjectWorthAutosaving(null), false);
+});
+
+test('shouldAbortEphemeralPromotion: bloque seulement les erreurs de transfert en session éphémère', () => {
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: true,
+    transferErrors: [{ path: 'C:/Temp/session/a.mp3' }],
+  }), true);
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: true,
+    transferErrors: [],
+  }), false);
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: false,
+    transferErrors: [{ path: 'C:/Temp/session/a.mp3' }],
+  }), false);
 });
