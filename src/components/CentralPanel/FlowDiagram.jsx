@@ -252,6 +252,8 @@ export function FlowDiagram({
   onImportPodcast,
   onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
+  canGenerateStoryTts = true,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -475,6 +477,8 @@ export function FlowDiagram({
         onImportPodcast={onImportPodcast}
         onImportYoutube={onImportYoutube}
         onRecord={onRecord}
+        onGenerateStoryTts={onGenerateStoryTts}
+        canGenerateStoryTts={canGenerateStoryTts}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}

@@ -4,6 +4,7 @@ import {
   FolderPlus,
   Mic,
   Rss,
+  Speech,
   Youtube,
 } from '../icons/LucideLocal';
 import { LuniiIcon } from '../icons/LuniiIcon';
@@ -39,6 +40,7 @@ export function StructureActionsBar({
   onImportPodcast,
   onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
   onLaunchSimulator,
   canAddStory = true,
   canAddFolder = true,
@@ -46,6 +48,7 @@ export function StructureActionsBar({
   canImportPodcast = true,
   canImportYoutube = true,
   canRecord = true,
+  canGenerateStoryTts = true,
   canLaunchSimulator = true,
   showLabel = false,
   trailing = null,
@@ -97,6 +100,15 @@ export function StructureActionsBar({
       >
         <ActionIcon Icon={Mic} />
       </StructureActionButton>
+      {onGenerateStoryTts ? (
+        <StructureActionButton
+          title="Créer une histoire avec TTS"
+          disabled={!canGenerateStoryTts}
+          onClick={onGenerateStoryTts}
+        >
+          <ActionIcon Icon={Speech} />
+        </StructureActionButton>
+      ) : null}
       {onLaunchSimulator ? (
         <StructureActionButton
           title="Lancer le simulateur"
