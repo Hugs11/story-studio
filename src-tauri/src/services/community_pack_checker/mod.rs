@@ -448,7 +448,7 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
             PackValidationSeverity::Warning,
             "title",
             "Convention communautaire",
-            "Le nom du pack ne semble pas suivre la convention communautaire Story Studio.",
+            "Le nom du pack ne semble pas suivre la convention communautaire.",
         ));
         has_warning = true;
     }

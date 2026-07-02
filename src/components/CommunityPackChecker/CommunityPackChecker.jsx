@@ -546,9 +546,10 @@ function MiniFile({ record, open, onToggle }) {
   );
 }
 
-function ProblemGroupCard({ group, expanded, onToggle }) {
+function ProblemGroupCard({ group, expanded, onToggle, countValue = group.count, countLabel = null }) {
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
+  const displayedCountLabel = countLabel || (countValue > 1 ? 'fichiers' : 'fichier');
   return (
     <div className={`checker-group checker-group--${group.bucket} checker-group--${group.id} ${expanded ? 'is-expanded' : ''}`}>
       <button type="button" className="checker-group-head" onClick={onToggle}>
@@ -561,8 +562,8 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
           <span>{group.bucket === 'fix' ? group.action : group.explanation}</span>
         </span>
         <span className="checker-group-count">
-          <strong>{group.count}</strong>
-          <small>{group.count > 1 ? 'fichiers' : 'fichier'}</small>
+          <strong>{countValue}</strong>
+          <small>{displayedCountLabel}</small>
         </span>
         <ChevronDown className="checker-group-chevron" aria-hidden="true" />
       </button>
@@ -590,7 +591,38 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
   );
 }
 
-export function ReportView({ report, busy, canFix, onExportReport, onFixPack, onStartFix }) {
+export function FixableCorrectionsList({ report }) {
+  const groups = useMemo(
+    () => buildProblemGroups(report).filter((group) => group.bucket === 'fix'),
+    [report],
+  );
+
+  if (!groups.length) {
+    return (
+      <div className="checker-empty checker-empty--success">
+        <IconFrame Icon={Check} />
+        Aucune correction automatique à appliquer.
+      </div>
+    );
+  }
+
+  return (
+    <div className="checker-groups checker-groups--preview">
+      {groups.map((group) => (
+        <ProblemGroupCard
+          key={group.id}
+          group={group}
+          expanded
+          onToggle={() => {}}
+          countValue={group.fixCount}
+          countLabel={group.fixCount > 1 ? 'corrections' : 'correction'}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function ReportView({ report, busy, canFix, onExportReport, onFixPack, onStartFix, showFixButton = true }) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
@@ -650,14 +682,16 @@ export function ReportView({ report, busy, canFix, onExportReport, onFixPack, on
           <Download className="checker-button-icon" aria-hidden="true" />
           Exporter le rapport
         </Button>
-        <button
-          type="button"
-          className="chrome-toolbar-cta checker-correction-cta"
-          onClick={startFixFlow}
-          disabled={!canFix || busy}
-        >
-          {busy ? 'Correction...' : 'Corriger le pack'}
-        </button>
+        {showFixButton ? (
+          <button
+            type="button"
+            className="chrome-toolbar-cta checker-correction-cta"
+            onClick={startFixFlow}
+            disabled={!canFix || busy}
+          >
+            {busy ? 'Correction...' : 'Corriger le pack'}
+          </button>
+        ) : null}
       </div>
 
       {metadataOpen && !onStartFix ? (

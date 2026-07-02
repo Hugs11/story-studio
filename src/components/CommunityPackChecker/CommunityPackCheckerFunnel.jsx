@@ -13,6 +13,7 @@ import {
 } from '../funnels';
 import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
 import {
+  FixableCorrectionsList,
   ProcessLog,
   ReportView,
   TechnicalLog,
@@ -83,28 +84,29 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     if (selected) await analyzePath(Array.isArray(selected) ? selected[0] : selected);
   }
 
-  async function pickOutputDir() {
+  async function chooseOutputDir() {
     const selected = await openDialog({
       directory: true,
       multiple: false,
       title: 'Dossier du pack corrigé',
       defaultPath: outputDir || getLastExportDir() || undefined,
     });
-    if (selected) {
-      setOutputDir(selected);
-      saveLastExportDir(selected);
-    }
+    const nextOutputDir = Array.isArray(selected) ? selected[0] : selected;
+    if (!nextOutputDir) return null;
+    setOutputDir(nextOutputDir);
+    saveLastExportDir(nextOutputDir);
+    return nextOutputDir;
   }
 
   async function fixPack(metadataPatch = null) {
-    if (!outputDir) {
-      setLocalError('Choisis un dossier de sortie avant de créer le pack corrigé.');
-      return;
-    }
     setMetadataOpen(false);
     setLocalError('');
+    const selectedOutputDir = await chooseOutputDir();
+    if (!selectedOutputDir) {
+      return;
+    }
     setPhase('fixing');
-    const fixed = await checker.fixPack(metadataPatch, { outputDir });
+    const fixed = await checker.fixPack(metadataPatch, { outputDir: selectedOutputDir });
     setPhase(fixed ? 'done' : 'collect');
     if (fixed) setResult(fixed);
   }
@@ -137,10 +139,8 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   const primaryLabel = step === 0
     ? 'Analyser'
     : step === 1
-      ? (canFix ? 'Choisir la sortie' : 'Terminer')
-      : needsMetadata
-        ? 'Renseigner et corriger'
-        : 'Créer le pack corrigé';
+      ? (canFix ? 'Corriger le pack' : 'Terminer')
+      : 'Créer le pack corrigé';
 
   return (
     <FunnelShell
@@ -165,7 +165,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
           stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
           onPrimary={handlePrimary}
           primaryLabel={primaryLabel}
-          primaryDisabled={busy || (step === 0 && !checker.zipPath) || (step === 2 && !outputDir)}
+          primaryDisabled={busy || (step === 0 && !checker.zipPath)}
         />
       )}
     >
@@ -242,6 +242,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
                 onExportReport={checker.exportReport}
                 onFixPack={(metadataPatch) => fixPack(metadataPatch)}
                 onStartFix={() => setStep(2)}
+                showFixButton={false}
               />
               <TechnicalLog
                 report={checker.report}
@@ -253,39 +254,16 @@ export function CommunityPackCheckerFunnel({ onClose }) {
           ) : (
             <div className="funnel-step-content pack-checker-step">
               <FunnelSectionHeader
-                icon={<FolderOpen />}
-                title="Pack corrigé"
-                description="Choisis où créer le nouveau ZIP. Le pack source n'est pas modifié."
+                icon={<Wrench />}
+                title="Voici ce qui va être corrigé"
+                description="Le clic final ouvrira le choix du dossier de sortie, puis créera le ZIP corrigé."
               />
-              <div className="pack-checker-output">
-                <span className="pack-checker-output-icon"><FolderOpen /></span>
-                <div className="pack-checker-output-copy">
-                  <strong>Dossier de sortie</strong>
-                  <span title={outputDir}>{outputDir || 'Aucun dossier sélectionné'}</span>
-                </div>
-                <button type="button" className="funnel-btn" onClick={pickOutputDir}>
-                  Choisir
-                </button>
-              </div>
-              <div className="pack-checker-fix-card">
-                <span className="pack-checker-output-icon"><Wrench /></span>
-                <div>
-                  <strong>{needsMetadata ? 'Métadonnées à confirmer' : 'Corrections automatiques prêtes'}</strong>
-                  <p>
-                    {needsMetadata
-                      ? 'Le nom du pack demande une passe guidée avant de créer le ZIP corrigé.'
-                      : "L'audio et les images détectés seront corrigés sans changer les métadonnées."}
-                  </p>
-                </div>
-              </div>
+              <FixableCorrectionsList report={checker.report} />
               {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}
               {error ? <div className="funnel-error" role="alert">{error}</div> : null}
               <div className="pack-checker-inline-actions">
                 <FunnelToolButton icon={<Download />} accent="neutral" onClick={() => checker.exportReport('report')}>
                   Exporter le rapport
-                </FunnelToolButton>
-                <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={() => outputDir && openPath(outputDir)}>
-                  Ouvrir le dossier
                 </FunnelToolButton>
               </div>
               {metadataOpen ? (

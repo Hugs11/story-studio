@@ -567,6 +567,18 @@
   padding: 14px 18px;
 }
 
+.checker-groups--preview {
+  padding: 0;
+}
+
+.checker-groups--preview .checker-group-head {
+  cursor: default;
+}
+
+.checker-groups--preview .checker-group-chevron {
+  display: none;
+}
+
 .checker-group {
   min-width: 0;
   overflow: hidden;
