@@ -36,3 +36,7 @@ export function hasExplicitExportPackName(project) {
 export function buildTransferPromptSignature(savePath, candidates) {
   return `${savePath}::${candidates.map((candidate) => candidate.path.toLowerCase()).sort().join('|')}`;
 }
+
+export function shouldAbortEphemeralPromotion({ isEphemeralSession = false, transferErrors = [] } = {}) {
+  return !!isEphemeralSession && Array.isArray(transferErrors) && transferErrors.length > 0;
+}
