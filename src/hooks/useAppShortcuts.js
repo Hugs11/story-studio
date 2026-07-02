@@ -1,12 +1,7 @@
 import { useEffect } from 'react';
 import { isTextEditingTarget } from '../store/projectStore';
 import { findShortcutAction } from '../store/keyboardShortcuts';
-
-// Toute surface modale ouverte suspend les raccourcis globaux : les trois
-// conventions d'overlay de l'app (portail commun, modales artisanales,
-// dialogues). Le plein écran du diagramme (`fd-fullscreen-overlay`) reste une
-// surface d'édition : il n'est volontairement pas listé.
-const MODAL_SURFACE_SELECTOR = '.app-modal-overlay, .modal-overlay, .dialog-overlay';
+import { isModalSurfaceOpen } from '../utils/modalSurfaces';
 
 export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef }) {
   useEffect(() => {
@@ -21,9 +16,16 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
         e.stopPropagation();
         e.stopImmediatePropagation?.();
       };
-      if (shouldBlockNativeFind) stopShortcut();
+      // Sous une modale : aucun raccourci global. On neutralise seulement l'UI
+      // de recherche native (preventDefault) sans stopper la propagation, pour
+      // que les gestionnaires locaux de la modale reçoivent la touche (p. ex.
+      // enregistrer Ctrl+F comme raccourci dans la modale dédiée).
+      if (isModalSurfaceOpen()) {
+        if (shouldBlockNativeFind) e.preventDefault();
+        return;
+      }
 
-      if (document.querySelector(MODAL_SURFACE_SELECTOR)) return;
+      if (shouldBlockNativeFind) stopShortcut();
 
       const actions = actionsRef.current;
       const actionId = findShortcutAction(e, keyboardShortcutsRef.current, 'general');

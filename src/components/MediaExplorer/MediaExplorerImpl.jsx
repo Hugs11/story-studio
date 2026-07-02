@@ -7,6 +7,7 @@ import { Button } from '../common/Button';
 import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
@@ -344,6 +345,8 @@ export function MediaExplorer({
 
   useEffect(() => {
     function onKeyDown(e) {
+      // Même garde que useAppShortcuts : pas de raccourci global sous une modale.
+      if (isModalSurfaceOpen()) return;
       const actionId = findShortcutAction(e, getCurrentShortcuts(), 'mediaPanel');
       if (actionId !== 'mediaSearch') return;
       e.preventDefault();
