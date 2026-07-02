@@ -7,9 +7,9 @@ import './PackOptionsPopover.css';
 
 const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 const SILENCE_MODE_OPTIONS = [
-  ['normalize', 'Mesurer et ajuster', `Recommandé : mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
-  ['add', `Ajouter ${EDGE_SILENCE_LABEL}`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
-  ['off', 'Ne rien faire', 'Ne touche pas aux silences de début et de fin.'],
+  ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
+  ['add', `Ajouter ${EDGE_SILENCE_LABEL}`, `Ajouter ${EDGE_SILENCE_LABEL} aux silences de début et de fin`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
+  ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
 ];
 
 const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
@@ -29,7 +29,7 @@ export function PackOptionsPopover({
   const isSimpleProject = projectType === 'simple';
   // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
   const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
-  const activeSilenceHelp = (SILENCE_MODE_OPTIONS.find(([mode]) => mode === activeSilenceMode) ?? SILENCE_MODE_OPTIONS[0])[2];
+  const activeSilenceHelp = (SILENCE_MODE_OPTIONS.find(([mode]) => mode === activeSilenceMode) ?? SILENCE_MODE_OPTIONS[0])[3];
 
   useEffect(() => () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -110,12 +110,13 @@ export function PackOptionsPopover({
                   <span className="pack-options-control-title">Silence début / fin</span>
                 </span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
-                  {SILENCE_MODE_OPTIONS.map(([mode, label, help]) => (
+                  {SILENCE_MODE_OPTIONS.map(([mode, label, ariaLabel, help]) => (
                     <Tooltip key={mode} text={help} wrap>
                       <button
                         type="button"
                         className={`pack-options-segment ${activeSilenceMode === mode ? 'is-active' : ''}`}
                         aria-pressed={activeSilenceMode === mode}
+                        aria-label={ariaLabel}
                         onClick={() => updateOption('silenceMode', mode)}
                       >
                         {label}
