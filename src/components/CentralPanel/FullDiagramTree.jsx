@@ -54,6 +54,7 @@ export function CompleteDiagramTree({
   onImportPodcast,
   onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -71,6 +72,7 @@ export function CompleteDiagramTree({
   onAddEndNode,
   onRemoveEndNode,
   allMenus,
+  canGenerateStoryTts = true,
 }) {
   const { dropOnNode } = useMediaTransfer();
   const containerRef = useRef(null);
@@ -952,6 +954,8 @@ export function CompleteDiagramTree({
             onImportPodcast={onImportPodcast}
             onImportYoutube={onImportYoutube}
             onRecord={onRecord}
+            onGenerateStoryTts={onGenerateStoryTts}
+            canGenerateStoryTts={canGenerateStoryTts}
             onLaunchSimulator={onSimulateRoot}
             showLabel
           />

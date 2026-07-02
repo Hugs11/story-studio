@@ -355,11 +355,12 @@ export function useProjectStore() {
 
   // ── Items ─────────────────────────────────────────────────────────────────
 
-  const addStory = useCallback((menuId, audioPath) => {
+  const addStory = useCallback((menuId, audioPath, options = {}) => {
     const autoName = nameFromPath(audioPath);
+    const explicitName = typeof options.name === 'string' ? options.name.trim() : '';
     const hasImportedAudio = !!audioPath;
     const newStory = createStoryEntry({
-      name: autoName || 'Nouvelle histoire',
+      name: explicitName || autoName || 'Nouvelle histoire',
       audio: audioPath || null,
       ...(hasImportedAudio
         ? {

@@ -22,7 +22,7 @@ export function useXttsJobs(xttsStore, onAudioGenerated, workspaceDir = null, on
           try { finalPath = await addProjectPrefix(path, next.projectName); } catch { /* best effort */ }
         }
         xttsStore.updateJob(next.id, { status: 'done', resultPath: finalPath, progress: 1, progressLabel: '100%' });
-        onAudioGenerated(next.target, finalPath);
+        onAudioGenerated(next.target, finalPath, next);
         onMediaCreated?.(finalPath);
       })
       .catch((e) => {

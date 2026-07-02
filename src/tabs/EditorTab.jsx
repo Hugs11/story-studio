@@ -44,7 +44,7 @@ export function EditorTab({
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
   onAddStoryToMenu, onImportFolder, onUnpackZip,
-  onImportPodcast, onImportYoutube, onRecord, canRecord = true,
+  onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord = true, canGenerateStoryTts = true,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
   onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
@@ -167,7 +167,9 @@ export function EditorTab({
                 onImportPodcast={onImportPodcast}
                 onImportYoutube={onImportYoutube}
                 onRecord={onRecord}
+                onGenerateStoryTts={onGenerateStoryTts}
                 canRecord={canRecord}
+                canGenerateStoryTts={canGenerateStoryTts}
                 trailing={(
                   <>
                     <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">

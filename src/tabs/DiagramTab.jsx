@@ -23,6 +23,8 @@ export function DiagramTab({
   onImportPodcast,
   onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
+  canGenerateStoryTts = true,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -81,6 +83,8 @@ export function DiagramTab({
         onImportPodcast={onImportPodcast}
         onImportYoutube={onImportYoutube}
         onRecord={onRecord}
+        onGenerateStoryTts={onGenerateStoryTts}
+        canGenerateStoryTts={canGenerateStoryTts}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}

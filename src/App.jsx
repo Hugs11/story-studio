@@ -34,7 +34,7 @@ import {
   isProjectDirty,
 } from './store/projectHelpers';
 import { KEYS, read as readSetting } from './store/persistentSettings';
-import { loadXttsSettings, saveXttsSettings } from './store/xttsSettings';
+import { isTtsAvailable, loadXttsSettings, saveXttsSettings } from './store/xttsSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
@@ -96,6 +96,8 @@ const DiagramTab = lazy(() => import('./tabs/DiagramTab').then((module) => ({ de
 const OptionsTab = lazy(() => import('./tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
 const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
+const GenerateVoiceModal = lazy(() => import('./components/GenerateVoiceModal/GenerateVoiceModal')
+  .then((module) => ({ default: module.GenerateVoiceModal })));
 const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
 const MissingMediaRelinkModal = lazy(() => import('./components/MissingMediaRelink/MissingMediaRelinkModal')
   .then((module) => ({ default: module.MissingMediaRelinkModal })));
@@ -135,6 +137,18 @@ function isImportedPackPath(filePath) {
 function getImportDisplayName(filePath) {
   const fileName = basename(filePath);
   return sanitizeImportedName(fileName, fileName || 'Import en cours');
+}
+
+function getTtsStoryName(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  const punctuationIndexes = ['.', '!', '?']
+    .map((mark) => normalized.indexOf(mark))
+    .filter((index) => index >= 0);
+  const firstStop = punctuationIndexes.length > 0 ? Math.min(...punctuationIndexes) : -1;
+  const firstSentence = firstStop >= 0 ? normalized.slice(0, firstStop) : normalized;
+  const clipped = firstSentence.length > 72 ? `${firstSentence.slice(0, 72).trim()}...` : firstSentence;
+  return sanitizeImportedName(clipped, '');
 }
 
 // Vrai si l'UUID du draft est encore l'UUID importé d'origine (non régénéré via ↺ ni
@@ -200,6 +214,8 @@ function AppContent() {
   const [packOptionsOpen, setPackOptionsOpen] = useState(false);
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
   const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
+  const [toolbarTtsOpen, setToolbarTtsOpen] = useState(false);
+  const [toolbarTtsTargetMenuId, setToolbarTtsTargetMenuId] = useState(null);
   const [podcastImportOpen, setPodcastImportOpen] = useState(false);
   const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
   // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
@@ -476,7 +492,7 @@ function AppContent() {
     handleOpenAiQueue();
   }
 
-  function applyGeneratedAudioToTarget(target, path) {
+  function applyGeneratedAudioToTarget(target, path, job = null) {
     if (!target || !path) return;
     switch (target.kind) {
       case 'root':
@@ -484,6 +500,9 @@ function AppContent() {
         return;
       case 'rootStory':
         store.updateStoryAudio(path);
+        return;
+      case 'newStory':
+        store.addStory(target.menuId ?? null, path, { name: getTtsStoryName(job?.request?.text) });
         return;
       case 'menu':
         store.updateMenu(target.entryId, { [target.field]: path });
@@ -1355,6 +1374,7 @@ function AppContent() {
   const canImportStories = (store.activeTab === 'edit' || store.activeTab === 'diagram') && store.project.projectType === 'pack';
   const canAddFolder = canImportStories;
   const canRecord = canImportStories;
+  const canGenerateStoryTts = canImportStories && isTtsAvailable(xttsSettings);
   const shortcutLabels = useMemo(() => getShortcutLabelMap(keyboardShortcuts), [keyboardShortcuts]);
   const effectiveProjectFilePrefix = getProjectFilePrefix(store.project, store.savePath);
   const lastExportDir = getLastExportDir();
@@ -1371,13 +1391,21 @@ function AppContent() {
     setToolbarRecordOpen(true);
   }
 
-  function handleToolbarRecordSaved(path) {
+  function toolbarTargetMenuId() {
     const selId = store.selectedId;
     const entry = selId && selId !== 'root' ? projectIndex.entryById.get(selId) : null;
-    const menuId = !entry ? null
-      : entry.type === 'menu' ? selId
-      : (projectIndex.parentMenuById.get(selId) ?? null);
-    store.addStory(menuId, path);
+    if (!entry) return null;
+    if (entry.type === 'menu') return selId;
+    return projectIndex.parentMenuById.get(selId) ?? null;
+  }
+
+  function handleToolbarStoryTts() {
+    setToolbarTtsTargetMenuId(toolbarTargetMenuId());
+    setToolbarTtsOpen(true);
+  }
+
+  function handleToolbarRecordSaved(path) {
+    store.addStory(toolbarTargetMenuId(), path);
     setToolbarRecordOpen(false);
   }
   const canGenerate = projectType !== null && !pathAuditPending && totalIssues === 0;
@@ -1561,7 +1589,9 @@ function AppContent() {
               onImportPodcast={() => setPodcastImportOpen(true)}
               onImportYoutube={() => setYoutubeFunnelMode('editor')}
               onRecord={handleToolbarRecord}
+              onGenerateStoryTts={handleToolbarStoryTts}
               canRecord={canRecord}
+              canGenerateStoryTts={canGenerateStoryTts}
               onUnpackZip={handleUnpackZip}
               onPasteEntries={store.pasteEntriesToMenu}
               onCutPasteEntries={store.cutPasteEntriesToMenu}
@@ -1597,6 +1627,8 @@ function AppContent() {
               onImportPodcast={() => setPodcastImportOpen(true)}
               onImportYoutube={() => setYoutubeFunnelMode('editor')}
               onRecord={handleToolbarRecord}
+              onGenerateStoryTts={handleToolbarStoryTts}
+              canGenerateStoryTts={canGenerateStoryTts}
               onUpdateRoot={handleUpdateRoot}
               onUpdateMedia={store.updateRootMedia}
               onUpdateStoryAudio={store.updateStoryAudio}
@@ -1676,6 +1708,20 @@ function AppContent() {
           onDiscarded={handleMediaCreated}
           onClose={() => setToolbarRecordOpen(false)}
         />
+      )}
+
+      {toolbarTtsOpen && canGenerateStoryTts && renderDeferred(
+        <GenerateVoiceModal
+          savePath={store.savePath}
+          xttsSettings={xttsSettings}
+          label="Nouvelle histoire"
+          initialText=""
+          filenameHint="histoire-tts"
+          target={{ kind: 'newStory', menuId: toolbarTtsTargetMenuId }}
+          onUpdateXttsSettings={handleUpdateXttsSettings}
+          onQueueGenerate={handleQueueXttsGenerate}
+          onClose={() => setToolbarTtsOpen(false)}
+        />,
       )}
 
       {podcastImportOpen && renderDeferred(
