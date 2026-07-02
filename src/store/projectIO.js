@@ -9,10 +9,9 @@ import {
   normalizeProjectData,
   projectToRustExport,
   projectToSerializable,
-  visitProjectEntries,
   walkProjectMediaReferences,
 } from './projectModel';
-import { selectStaleAutosaveBackups } from './autosaveDecision';
+import { isProjectWorthAutosaving, selectStaleAutosaveBackups } from './autosaveDecision';
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 import {
   EXPORTS,
@@ -544,18 +543,6 @@ export async function loadProject() {
   if (!path) return null;
   saveProjectDir(PROJECT_OPEN_KEYS[0], path);
   return loadProjectFromPath(path);
-}
-
-export function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
-  if (!project) return false;
-  // Check media presence before projectType so imported folders/AI media trigger autosave
-  if (mediaLibraryPaths.length > 0) return true;
-  if (totalMediaCount > 0) return true;
-  if (project.projectType == null) return false;
-  if (hasPath(project.rootAudio) || hasPath(project.rootImage) || hasPath(project.thumbnailImage) || hasPath(project.nightModeAudio)) return true;
-  let count = 0;
-  visitProjectEntries(project, () => { count += 1; });
-  return count > 0;
 }
 
 export async function loadProjectFromPath(path) {

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   AUTOSAVE_ACTIONS,
   decideAutosaveAction,
+  isProjectWorthAutosaving,
   selectStaleAutosaveBackups,
 } from '../src/store/autosaveDecision.js';
 
@@ -213,4 +214,41 @@ test('selectStaleAutosaveBackups treats keep ≤ 0 as “purge everything matchi
   ];
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', 0).length, 2);
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', -1).length, 2);
+});
+
+// --- isProjectWorthAutosaving (plan 24) ---------------------------------
+
+function simpleProjectWith(story = {}) {
+  return {
+    projectType: 'simple',
+    rootAudio: null,
+    rootEntries: [{ id: 's1', type: 'story', name: '', audio: null, itemAudio: null, itemImage: null, ...story }],
+  };
+}
+
+test('isProjectWorthAutosaving: projet simple vierge (histoire pré-créée) → non', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith()), false);
+});
+
+test('isProjectWorthAutosaving: histoire nommée ou avec média → oui', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ name: 'Le loup' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ audio: 'C:/a.mp3' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ itemImage: 'C:/a.png' })), true);
+});
+
+test('isProjectWorthAutosaving: nom de projet ou titre de pack saisi → oui', () => {
+  assert.equal(isProjectWorthAutosaving({ ...simpleProjectWith(), projectName: 'Filet' }), true);
+  assert.equal(isProjectWorthAutosaving({ ...simpleProjectWith(), packMetadata: { title: 'Mon pack' } }), true);
+});
+
+test('isProjectWorthAutosaving: média racine ou bibliothèque → oui', () => {
+  assert.equal(isProjectWorthAutosaving({ projectType: 'simple', rootAudio: 'C:/t.mp3', rootEntries: [] }), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith(), ['C:/lib.mp3']), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith(), [], 3), true);
+});
+
+test('isProjectWorthAutosaving: pack avec dossier créé → oui ; pack vide → non', () => {
+  assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [{ id: 'm1', type: 'menu', name: 'Nouveau dossier', children: [] }] }), true);
+  assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [] }), false);
+  assert.equal(isProjectWorthAutosaving(null), false);
 });
