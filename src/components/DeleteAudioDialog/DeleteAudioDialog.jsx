@@ -31,7 +31,8 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
 
   async function handleConfirm() {
     setError('');
-    if (deleteFromDisk && file) {
+    const requestedDiskDelete = deleteFromDisk && effectiveAllowDiskDelete && !!file;
+    if (requestedDiskDelete) {
       try {
         await invoke('delete_workspace_media_file', { path: file, workspaceDir });
       } catch (e) {
@@ -42,11 +43,11 @@ export function DeleteAudioDialog({ file, workspaceDir = '', onDeleted, onClose,
           message: `${message}\n\nLa référence projet va être retirée, mais le fichier reste sur le disque.`,
           variant: 'warning',
         });
-        onDeleted();
+        onDeleted({ deleteFromDisk: true, diskDeleted: false });
         return;
       }
     }
-    onDeleted();
+    onDeleted({ deleteFromDisk: requestedDiskDelete, diskDeleted: requestedDiskDelete });
   }
 
   return (

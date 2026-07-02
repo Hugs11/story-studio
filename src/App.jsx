@@ -1673,6 +1673,7 @@ function AppContent() {
           workspaceDir={workspaceDir}
           projectName={effectiveProjectFilePrefix}
           onSaved={handleToolbarRecordSaved}
+          onDiscarded={handleMediaCreated}
           onClose={() => setToolbarRecordOpen(false)}
         />
       )}
