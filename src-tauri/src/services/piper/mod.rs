@@ -11,6 +11,10 @@ fn default_speed() -> f32 {
     1.0
 }
 
+fn default_sentence_silence() -> f32 {
+    0.35
+}
+
 /// Réglages Piper, désérialisés depuis l'objet `xttsSettings` côté JS (les champs
 /// non-Piper sont ignorés).
 #[derive(Deserialize)]
@@ -19,6 +23,8 @@ pub struct PiperSettings {
     pub voice: String,
     #[serde(rename = "piperSpeed", default = "default_speed")]
     pub speed: f32,
+    #[serde(rename = "piperSentenceSilence", default = "default_sentence_silence")]
+    pub sentence_silence: f32,
 }
 
 #[derive(Deserialize)]
@@ -27,6 +33,8 @@ pub struct PiperGenerateRequest {
     pub voice: Option<String>,
     #[serde(default)]
     pub speed: f32,
+    #[serde(rename = "sentenceSilence", default)]
+    pub sentence_silence: Option<f32>,
     #[serde(rename = "savePath")]
     pub save_path: Option<String>,
     #[serde(rename = "workspaceDir", default)]
@@ -63,7 +71,9 @@ pub use generation::{ensure_sync, generate_audio_sync, list_voices_sync};
 #[cfg(test)]
 mod tests {
     use super::catalog::{find_voice, DEFAULT_VOICE, VOICES};
-    use super::generation::{length_scale_for_speed, validate_text_for_generation};
+    use super::generation::{
+        length_scale_for_speed, sentence_silence_for_setting, validate_text_for_generation,
+    };
     use super::output::output_filename;
 
     #[test]
@@ -106,6 +116,13 @@ mod tests {
         // Hors bornes : clampé.
         assert!(length_scale_for_speed(10.0) >= 0.5);
         assert!(length_scale_for_speed(0.01) <= 2.0);
+    }
+
+    #[test]
+    fn sentence_silence_clamps_to_supported_range() {
+        assert!((sentence_silence_for_setting(0.35) - 0.35).abs() < f32::EPSILON);
+        assert_eq!(sentence_silence_for_setting(-1.0), 0.0);
+        assert_eq!(sentence_silence_for_setting(3.0), 1.5);
     }
 
     #[test]

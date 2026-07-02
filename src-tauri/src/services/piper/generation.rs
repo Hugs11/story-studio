@@ -45,6 +45,12 @@ pub(super) fn length_scale_for_speed(speed: f32) -> f32 {
     (1.0 / clamped).clamp(0.5, 2.0)
 }
 
+/// Durée de silence après chaque phrase. Piper accepte une valeur flottante en
+/// secondes ; on borne pour éviter les narrations cassées par une valeur extrême.
+pub(super) fn sentence_silence_for_setting(sentence_silence: f32) -> f32 {
+    sentence_silence.clamp(0.0, 1.5)
+}
+
 pub(super) fn validate_text_for_generation(text: &str) -> Result<(), String> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -96,8 +102,19 @@ pub fn generate_audio_sync(
     } else {
         settings.speed
     };
-    let result = run_piper(home, &voice_id, &request.text, &wav_tmp, speed, emit)
-        .and_then(|_| encode_mp3(&wav_tmp, &dest_mp3));
+    let sentence_silence = request
+        .sentence_silence
+        .unwrap_or(settings.sentence_silence);
+    let result = run_piper(
+        home,
+        &voice_id,
+        &request.text,
+        &wav_tmp,
+        speed,
+        sentence_silence,
+        emit,
+    )
+    .and_then(|_| encode_mp3(&wav_tmp, &dest_mp3));
     let _ = std::fs::remove_file(&wav_tmp);
     result?;
 
@@ -111,11 +128,13 @@ fn run_piper(
     text: &str,
     wav_out: &Path,
     speed: f32,
+    sentence_silence: f32,
     emit: &dyn Fn(&str),
 ) -> Result<(), String> {
     let exe = piper_exe(home);
     let (model_path, _config_path) = voice_paths(home, voice_id);
     let length_scale = length_scale_for_speed(speed);
+    let sentence_silence = sentence_silence_for_setting(sentence_silence);
 
     let mut cmd = Command::new(&exe);
     apply_no_window(&mut cmd);
@@ -126,6 +145,8 @@ fn run_piper(
         wav_out.as_os_str(),
         "--length_scale".as_ref(),
         format!("{:.3}", length_scale).as_ref(),
+        "--sentence_silence".as_ref(),
+        format!("{:.3}", sentence_silence).as_ref(),
     ]);
     // current_dir = dossier du binaire : piper y trouve espeak-ng-data et ses DLL.
     cmd.current_dir(bin_dir(home))

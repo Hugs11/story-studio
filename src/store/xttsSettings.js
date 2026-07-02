@@ -3,6 +3,7 @@ import { KEYS, read as readSetting, write as writeSetting } from './persistentSe
 // Voix Piper par défaut (D46) — doit correspondre au catalogue Rust
 // (`services/piper/catalog.rs`).
 export const PIPER_DEFAULT_VOICE = 'fr_FR-siwis-medium';
+export const PIPER_DEFAULT_SENTENCE_SILENCE = 0.35;
 
 const DEFAULT_XTTS_SETTINGS = {
   // Moteur TTS actif. Piper est le défaut zéro-config (D44/D47) ; XTTS reste
@@ -18,6 +19,7 @@ const DEFAULT_XTTS_SETTINGS = {
   // Réglages Piper.
   piperVoice: PIPER_DEFAULT_VOICE,
   piperSpeed: 1.0,
+  piperSentenceSilence: PIPER_DEFAULT_SENTENCE_SILENCE,
 };
 
 export function loadXttsSettings() {
