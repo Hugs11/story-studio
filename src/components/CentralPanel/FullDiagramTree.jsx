@@ -1023,7 +1023,9 @@ export function CompleteDiagramTree({
                 const id = edgeKey(edge);
                 const isActive = activeNavigationEdgeIds.has(id);
                 const isDimmed = hasActiveNavigationEdge && !isActive;
-                const d = `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
+                const d = edge.route === 'same-row-return'
+                  ? `M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.railY} L ${edge.x2} ${edge.railY} L ${edge.x2} ${edge.y2}`
+                  : `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
                 const labelOnly = edge.from === END_NODE_ID && edge.to === END_NODE_ID && edge.source === 'contextual';
                 return (
                   <g
