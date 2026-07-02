@@ -184,8 +184,6 @@ export function AfterPlaySection({
     entry: node,
     parentMenu,
     project,
-    allMenus,
-    allStories,
   });
   const promptHomeSelectValue = node.afterPlaybackPromptHomeNone
     ? '__none__'
