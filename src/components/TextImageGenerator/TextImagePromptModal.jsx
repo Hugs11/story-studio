@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { generateTextImage } from './generateTextImage';
 import { drawTextImage, TEXT_IMG_W, TEXT_IMG_H } from './drawTextImage';
 import { Button } from '../common/Button';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import './TextImagePromptModal.css';
 
 const OVERLAY_STYLE = {
@@ -44,13 +45,18 @@ export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
     }
   }
 
+  // Via la pile Escape partagée : ferme cette modale sans atteindre la surface
+  // du dessous (funnel/éditeur), quel que soit l'élément qui a le focus.
+  useEscapeKey(true, onCancel);
+
   function handleKeyDown(e) {
     if (e.key === 'Enter') handleGenerate();
-    if (e.key === 'Escape') onCancel();
   }
 
   return createPortal(
-    <div style={OVERLAY_STYLE} onClick={onCancel}>
+    // data-modal-surface : overlay à styles inline, reconnu par la garde des
+    // raccourcis globaux (utils/modalSurfaces.js).
+    <div style={OVERLAY_STYLE} data-modal-surface="" onClick={onCancel}>
       <div className="text-img-box" onClick={e => e.stopPropagation()}>
         <div className="text-img-header">Générer une image-titre</div>
         <div className="text-img-body">

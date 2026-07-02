@@ -7,6 +7,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../icons/LucideLocal';
 import {
@@ -212,6 +213,9 @@ export function CompleteDiagramTree({
 
   useEffect(() => {
     function onKeyDown(e) {
+      // Même garde que useAppShortcuts : couper/coller/supprimer un nœud du
+      // diagramme ne doit pas agir derrière une modale ouverte.
+      if (isModalSurfaceOpen()) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
       if (e.key === 'Escape' && activeNavigationEdgeIdRef.current) {
