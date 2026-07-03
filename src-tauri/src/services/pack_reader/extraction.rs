@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use super::projection::walk_story_doc_to_entries;
-use super::stage::{stage_action_options, stage_control_bool, stage_uuid};
+use super::stage::{is_stage_autoplay, stage_action_options, stage_control_bool, stage_uuid};
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
 use crate::domain::validation::validate_project_structure_for_generation;
@@ -211,16 +211,27 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
     let fidelity = canonical_roundtrip_is_faithful(&canonical)?;
     let canonical_round_trip_faithful = fidelity.faithful;
     let round_trip_faithful = canonical_round_trip_faithful;
+    let aggregate_wrapper_count = story_studio_aggregation_wrapper_count(&doc);
+    let aggregate_end_gap_tolerated =
+        aggregate_end_gap_is_tolerated(aggregate_wrapper_count, &fidelity);
+    let end_home_or_night_gap_tolerated = end_home_or_night_gap_is_tolerated(&fidelity);
     let authoring_editable = projected_entry_count > 0
-        && round_trip_faithful
         && structural_validation_ok
         && !uses_graph_projection
         && root_ref_ratio < ROOT_REF_RATIO_LIMIT
         && shared_entry_count == 0
-        && !has_unmodeled_wheel;
+        && !has_unmodeled_wheel
+        && (round_trip_faithful || aggregate_end_gap_tolerated || end_home_or_night_gap_tolerated);
     let read_only_inspectable = !authoring_editable && story_document_is_simulable;
     let reason = if authoring_editable {
-        "Pack authoring éditable : génération canonique fidèle au story.json d'origine.".to_string()
+        if round_trip_faithful {
+            "Pack authoring éditable : génération canonique fidèle au story.json d'origine."
+                .to_string()
+        } else if aggregate_end_gap_tolerated {
+            "Pack authoring éditable : agrégat Story Studio projeté, écart strict limité aux retours de fin/night par sous-pack.".to_string()
+        } else {
+            "Pack authoring éditable : écart strict limité aux retours/prompts de fin/night, sans perte de nœud ni d'asset.".to_string()
+        }
     } else if projected_entry_count == 0 {
         "Lecture seule : aucune entrée authoring projetée depuis le story.json.".to_string()
     } else if has_unmodeled_wheel {
@@ -260,6 +271,217 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         shared_entry_ratio,
         has_unmodeled_wheel,
     })
+}
+
+fn story_studio_aggregation_wrapper_count(doc: &serde_json::Value) -> usize {
+    let stages: HashMap<&str, &serde_json::Value> = doc
+        .get("stageNodes")
+        .and_then(|value| value.as_array())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|stage| stage_uuid(stage).map(|id| (id, stage)))
+                .collect()
+        })
+        .unwrap_or_default();
+    let actions: HashMap<&str, &serde_json::Value> = doc
+        .get("actionNodes")
+        .and_then(|value| value.as_array())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|action| {
+                    action
+                        .get("id")
+                        .and_then(|id| id.as_str())
+                        .map(|id| (id, action))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let Some(square_one) = stages.values().find(|stage| {
+        stage
+            .get("squareOne")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false)
+    }) else {
+        return 0;
+    };
+    let mut visited = HashSet::new();
+    story_studio_aggregation_wrapper_count_from(square_one, &stages, &actions, &mut visited)
+}
+
+fn story_studio_aggregation_wrapper_count_from(
+    stage: &serde_json::Value,
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+    visited: &mut HashSet<String>,
+) -> usize {
+    let Some(stage_id) = stage_uuid(stage) else {
+        return 0;
+    };
+    if !visited.insert(stage_id.to_string()) {
+        return 0;
+    }
+
+    let options = stage_action_options(stage, actions);
+    if options.len() >= 2
+        && options.iter().all(|option| {
+            stages.get(option).is_some_and(|candidate| {
+                is_story_studio_aggregation_wrapper(candidate, stages, actions)
+            })
+        })
+    {
+        return options.len();
+    }
+
+    options
+        .iter()
+        .filter_map(|option| stages.get(option).copied())
+        .map(|child| story_studio_aggregation_wrapper_count_from(child, stages, actions, visited))
+        .sum()
+}
+
+fn is_story_studio_aggregation_wrapper(
+    stage: &serde_json::Value,
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+) -> bool {
+    if is_stage_autoplay(stage)
+        || !stage_control_bool(stage, "wheel", false)
+        || !stage_control_bool(stage, "ok", false)
+        || !stage_has_audio(stage)
+    {
+        return false;
+    }
+
+    let options = stage_action_options(stage, actions);
+    let Some(first_id) = options.first().copied().filter(|_| options.len() == 1) else {
+        return false;
+    };
+    let Some(first) = stages.get(first_id).copied() else {
+        return false;
+    };
+
+    if !is_stage_autoplay(first) {
+        return stage_has_media(first) && !stage_action_options(first, actions).is_empty();
+    }
+    if !is_aggregation_intro_stage(first) {
+        return false;
+    }
+
+    let mut current = first;
+    let mut visited = HashSet::new();
+    loop {
+        let current_id = stage_uuid(current).unwrap_or("");
+        if !visited.insert(current_id) {
+            return false;
+        }
+        let current_options = stage_action_options(current, actions);
+        if current_options.len() >= 2 {
+            return true;
+        }
+        let Some(next_id) = current_options
+            .first()
+            .copied()
+            .filter(|_| current_options.len() == 1)
+        else {
+            return false;
+        };
+        let Some(next) = stages.get(next_id).copied() else {
+            return false;
+        };
+        if !is_stage_autoplay(next) {
+            return stage_control_bool(next, "wheel", false)
+                && stage_action_options(next, actions).len() >= 2;
+        }
+        if !is_aggregation_intro_stage(next) {
+            return false;
+        }
+        current = next;
+    }
+}
+
+fn stage_has_media(stage: &serde_json::Value) -> bool {
+    stage
+        .get("audio")
+        .and_then(|value| value.as_str())
+        .is_some()
+        || stage
+            .get("image")
+            .and_then(|value| value.as_str())
+            .is_some()
+}
+
+fn stage_has_audio(stage: &serde_json::Value) -> bool {
+    stage
+        .get("audio")
+        .and_then(|value| value.as_str())
+        .is_some()
+}
+
+fn is_aggregation_intro_stage(stage: &serde_json::Value) -> bool {
+    is_stage_autoplay(stage) && stage_control_bool(stage, "ok", false)
+}
+
+fn aggregate_end_gap_is_tolerated(wrapper_count: usize, fidelity: &FidelityReport) -> bool {
+    if wrapper_count < 2
+        || fidelity.faithful
+        || fidelity.invalid_transition_count != 0
+        || fidelity.generated_stage_count >= fidelity.oracle_stage_count
+    {
+        return false;
+    }
+    let missing_stage_count = fidelity.oracle_stage_count - fidelity.generated_stage_count;
+    missing_stage_count <= wrapper_count
+        && fidelity.asset_presence_gap_count <= missing_stage_count
+        && !fidelity.topology_gaps.iter().any(|gap| {
+            gap.contains("nightModeAvailable")
+                || gap.contains("squareOne manquant")
+                || gap.contains("transition invalide")
+        })
+}
+
+fn end_home_or_night_gap_is_tolerated(fidelity: &FidelityReport) -> bool {
+    if fidelity.faithful
+        || fidelity.invalid_transition_count != 0
+        || fidelity.asset_presence_gap_count != 0
+        || fidelity.generated_stage_count != fidelity.oracle_stage_count
+        || fidelity.topology_gaps.is_empty()
+    {
+        return false;
+    }
+
+    fidelity
+        .topology_gaps
+        .iter()
+        .all(|gap| is_end_home_or_night_gap(gap))
+}
+
+fn is_end_home_or_night_gap(gap: &str) -> bool {
+    gap.starts_with("nightModeAvailable :")
+        || is_end_play_home_gap(gap)
+        || is_end_prompt_ok_gap(gap)
+}
+
+fn is_end_play_home_gap(gap: &str) -> bool {
+    gap.starts_with("transition ")
+        && gap.contains("kind: Home")
+        && gap.contains("pause: true")
+        && gap.contains("autoplay: true")
+        && !gap.contains("Invalid")
+}
+
+fn is_end_prompt_ok_gap(gap: &str) -> bool {
+    gap.starts_with("transition ")
+        && gap.contains("kind: Ok")
+        && gap.contains("has_audio: true")
+        && gap.contains("has_image: false")
+        && gap.contains("wheel: false")
+        && gap.contains("ok: true")
+        && gap.contains("home: true")
+        && gap.contains("pause: false")
+        && !gap.contains("Invalid")
 }
 
 /// Teste « à sec » si un pack est éditable par Story Studio. Retourne :
@@ -977,6 +1199,156 @@ mod tests {
         })
     }
 
+    fn aggregate_with_child_night_bridges_story_json() -> serde_json::Value {
+        serde_json::json!({
+            "title": "Aggregate night bridge synthetic",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "wrap-a", "name": "Pack A", "type": "stage", "squareOne": false,
+                    "audio": "wrap-a.mp3", "image": "wrap-a.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "wrap-a-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "title-a", "name": "A", "type": "stage", "squareOne": false,
+                    "audio": "title-a.mp3", "image": "title-a.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "title-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "play-a", "name": "Lecture A", "type": "stage", "squareOne": false,
+                    "audio": "play-a.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "play-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "night-a", "name": "nightStage", "type": "stage", "squareOne": false,
+                    "audio": "night-a.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "night-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "wrap-b", "name": "Pack B", "type": "stage", "squareOne": false,
+                    "audio": "wrap-b.mp3", "image": "wrap-b.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "wrap-b-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "title-b", "name": "B", "type": "stage", "squareOne": false,
+                    "audio": "title-b.mp3", "image": "title-b.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "title-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 1 }
+                },
+                {
+                    "uuid": "play-b", "name": "Lecture B", "type": "stage", "squareOne": false,
+                    "audio": "play-b.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "play-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 1 }
+                },
+                {
+                    "uuid": "night-b", "name": "nightStage", "type": "stage", "squareOne": false,
+                    "audio": "night-b.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "night-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 1 }
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Root", "options": ["wrap-a", "wrap-b"] },
+                { "id": "wrap-a-action", "name": "Pack A", "options": ["title-a"] },
+                { "id": "title-a-action", "name": "A", "options": ["play-a"] },
+                { "id": "play-a-action", "name": "Fin A", "options": ["night-a"] },
+                { "id": "night-a-action", "name": "Retour A", "options": ["wrap-a"] },
+                { "id": "wrap-b-action", "name": "Pack B", "options": ["title-b"] },
+                { "id": "title-b-action", "name": "B", "options": ["play-b"] },
+                { "id": "play-b-action", "name": "Fin B", "options": ["night-b"] },
+                { "id": "night-b-action", "name": "Retour B", "options": ["wrap-b"] }
+            ]
+        })
+    }
+
+    fn aggregate_night_bridge_assets() -> Vec<&'static str> {
+        vec![
+            "root.mp3",
+            "cover.png",
+            "selector.mp3",
+            "selector.png",
+            "wrap-a.mp3",
+            "wrap-a.png",
+            "title-a.mp3",
+            "title-a.png",
+            "play-a.mp3",
+            "night-a.mp3",
+            "wrap-b.mp3",
+            "wrap-b.png",
+            "title-b.mp3",
+            "title-b.png",
+            "play-b.mp3",
+            "night-b.mp3",
+        ]
+    }
+
+    fn nested_aggregate_with_child_night_bridges_story_json() -> serde_json::Value {
+        let mut story = aggregate_with_child_night_bridges_story_json();
+        {
+            let stages = story["stageNodes"].as_array_mut().expect("stage nodes");
+            stages.push(serde_json::json!({
+                "uuid": "selector", "name": "Choisis ton histoire", "type": "stage", "squareOne": false,
+                "audio": "selector.mp3", "image": "selector.png",
+                "controlSettings": { "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": true },
+                "okTransition": { "actionNode": "selector-action", "optionIndex": 0 },
+                "homeTransition": null
+            }));
+            for (stage_id, option_index) in [
+                ("title-a", 0),
+                ("play-a", 0),
+                ("night-a", 0),
+                ("title-b", 1),
+                ("play-b", 1),
+                ("night-b", 1),
+            ] {
+                let stage = stages
+                    .iter_mut()
+                    .find(|stage| stage["uuid"].as_str() == Some(stage_id))
+                    .expect("nested aggregate child stage");
+                stage["homeTransition"] = serde_json::json!({
+                    "actionNode": "selector-action",
+                    "optionIndex": option_index,
+                });
+            }
+        }
+        {
+            let actions = story["actionNodes"].as_array_mut().expect("action nodes");
+            let root_action = actions
+                .iter_mut()
+                .find(|action| action["id"].as_str() == Some("root-action"))
+                .expect("root action");
+            root_action["options"] = serde_json::json!(["selector"]);
+            actions.push(serde_json::json!({
+                "id": "selector-action", "name": "Selector", "options": ["wrap-a", "wrap-b"]
+            }));
+        }
+        story
+    }
+
     #[test]
     fn wheel_autoplay_cycle_is_unmodeled() {
         assert!(super::has_unmodeled_wheel(&unmodeled_wheel_story_json()));
@@ -1175,6 +1547,106 @@ mod tests {
             !report.authoring_editable,
             "un helper orphelin non fidèle ne doit pas être annoncé éditable"
         );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn aggregate_with_only_child_night_bridge_gap_is_authoring_editable() {
+        let dir = temp_dir("aggregate_night_bridge");
+        let zip_path = dir.join("pack.zip");
+        let story = aggregate_with_child_night_bridges_story_json();
+        assert_eq!(super::story_studio_aggregation_wrapper_count(&story), 2);
+        write_story_zip_with_assets(&zip_path, &story, &aggregate_night_bridge_assets());
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+
+        assert!(
+            !report.round_trip_faithful,
+            "le verdict strict doit rester visible"
+        );
+        assert!(
+            report.authoring_editable,
+            "{} | fidelity={:?}",
+            report.reason, report.fidelity
+        );
+        assert!(
+            report.reason.contains("agrégat Story Studio"),
+            "{}",
+            report.reason
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn nested_aggregation_wrapper_count_tracks_selector_island() {
+        let story = nested_aggregate_with_child_night_bridges_story_json();
+
+        assert_eq!(super::story_studio_aggregation_wrapper_count(&story), 2);
+    }
+
+    fn fidelity_with_topology_gaps(gaps: Vec<&str>) -> super::FidelityReport {
+        super::FidelityReport {
+            faithful: false,
+            generated_stage_count: 10,
+            oracle_stage_count: 10,
+            invalid_transition_count: 0,
+            asset_presence_gap_count: 0,
+            topology_gaps: gaps.iter().map(|gap| gap.to_string()).collect(),
+            asset_presence_gaps: Vec::new(),
+            gaps: gaps.iter().map(|gap| gap.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn end_home_or_night_gap_is_authoring_tolerated() {
+        let fidelity = fidelity_with_topology_gaps(vec![
+            "nightModeAvailable : généré=false oracle=true",
+            "transition généré=131 oracle=0 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: false, home: true, pause: true, autoplay: true }, kind: Home, state: Selected { option_index: 0, option_count: 1 } }",
+            "transition généré=144 oracle=14 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: true, home: true, pause: false, autoplay: false }, kind: Ok, state: Selected { option_index: 0, option_count: 1 } }",
+        ]);
+
+        assert!(super::end_home_or_night_gap_is_tolerated(&fidelity));
+    }
+
+    #[test]
+    fn end_home_or_night_gap_requires_equal_stage_counts() {
+        let mut fidelity = fidelity_with_topology_gaps(vec![
+            "transition généré=1 oracle=0 : TopologyShape { source: ControlShape { square_one: false, has_audio: true, has_image: false, wheel: false, ok: false, home: true, pause: true, autoplay: true }, kind: Home, state: Selected { option_index: 0, option_count: 1 } }",
+        ]);
+        fidelity.generated_stage_count = 9;
+
+        assert!(!super::end_home_or_night_gap_is_tolerated(&fidelity));
+    }
+
+    #[test]
+    fn aggregate_with_extra_unmodeled_gap_stays_read_only() {
+        let dir = temp_dir("aggregate_extra_gap");
+        let zip_path = dir.join("pack.zip");
+        let mut story = aggregate_with_child_night_bridges_story_json();
+        let stages = story["stageNodes"].as_array_mut().expect("stage nodes");
+        for index in 0..3 {
+            stages.push(serde_json::json!({
+                "uuid": format!("orphan-{index}"),
+                "name": format!("Orphelin {index}"),
+                "type": "stage",
+                "squareOne": false,
+                "audio": "extra.mp3",
+                "image": null,
+                "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": false },
+                "okTransition": null,
+                "homeTransition": null
+            }));
+        }
+        let mut assets = aggregate_night_bridge_assets();
+        assets.push("extra.mp3");
+        write_story_zip_with_assets(&zip_path, &story, &assets);
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+
+        assert!(!report.round_trip_faithful);
+        assert!(!report.authoring_editable);
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -1450,5 +1922,58 @@ mod tests {
         assert!(!report.root_ref_only);
         assert_eq!(report.shared_entry_count, 0);
         assert!(!report.has_unmodeled_wheel);
+    }
+
+    #[test]
+    #[ignore]
+    fn authoring_pack_from_env_is_editable() {
+        let Some(zip_path) = std::env::var_os("STORY_STUDIO_AUTHORING_PACK") else {
+            eprintln!("[AUTHORING] SKIP - definir STORY_STUDIO_AUTHORING_PACK vers le ZIP");
+            return;
+        };
+        let zip_path = PathBuf::from(zip_path);
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
+        eprintln!(
+            "[AUTHORING] roundTripFaithful={} authoringEditable={} reason={}",
+            report.round_trip_faithful, report.authoring_editable, report.reason
+        );
+        if let Some(fidelity) = report.fidelity.as_ref() {
+            eprintln!(
+                "[AUTHORING] fidelity stages={}/{} invalidTransitions={} assetGaps={} topologyGaps={}",
+                fidelity.generated_stage_count,
+                fidelity.oracle_stage_count,
+                fidelity.invalid_transition_count,
+                fidelity.asset_presence_gap_count,
+                fidelity.topology_gaps.len()
+            );
+            if !report.authoring_editable {
+                for gap in fidelity.topology_gaps.iter().take(8) {
+                    eprintln!("[AUTHORING] gap {gap}");
+                }
+                for gap in fidelity
+                    .topology_gaps
+                    .iter()
+                    .filter(|gap| !super::is_end_home_or_night_gap(gap))
+                    .take(8)
+                {
+                    eprintln!("[AUTHORING] non-tolerated gap {gap}");
+                }
+            }
+        }
+        assert!(report.authoring_editable, "{}", report.reason);
+        let unpack_dir = temp_dir("authoring_pack_from_env");
+        let imported = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            unpack_dir.to_str().expect("utf8"),
+        )
+        .expect("unpack authoring pack");
+        eprintln!(
+            "[AUTHORING] unpack entries={}",
+            imported
+                .get("entries")
+                .and_then(|value| value.as_array())
+                .map_or(0, Vec::len)
+        );
+        fs::remove_dir_all(unpack_dir).expect("cleanup");
     }
 }
