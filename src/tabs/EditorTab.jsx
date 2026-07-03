@@ -9,6 +9,7 @@ import { Tooltip } from '../components/common/Tooltip';
 import { Search } from '../components/icons/LucideLocal';
 import { LuniiIcon } from '../components/icons/LuniiIcon';
 import { KEYS } from '../store/persistentSettings';
+import { useProjectActions } from '../store/ProjectActionsContext';
 import { usePersistentState } from '../hooks/usePersistentState';
 
 const BOOL_CODEC = {
@@ -37,24 +38,28 @@ function startResize(e, panelClass, cssVar, direction, minWidth = 150) {
 
 export function EditorTab({
   node,
-  project, selectedId, onSelect,
-  onReorder, onMoveToMenu, onAddMenu, onAddStory,
-  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onPodcastFunnel, onYoutubeFunnel, onAggregatePacks, onCheckPack, onOpenProject,
+  project, selectedId,
+  onSetProjectType, onEditPack, onPodcastFunnel, onYoutubeFunnel, onAggregatePacks, onCheckPack, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
   pendingSimulateZipPath = null, onSimulateConsumed,
   sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
-  onUpdateMenu, onDeleteMenu,
-  onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
-  onAddStoryToMenu, onImportFolder, onUnpackZip,
-  onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord = true, canGenerateStoryTts = true,
-  onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
-  onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
-  onUpdateNightModeHomeReturn,
   pathAudit, validationIssues, allMenus, projectIndex,
   treeSearchFocusTrigger,
   onFocusTreeSearch,
   showCentralDiagram,
 }) {
+  // Actions projet partagées avec DiagramTab : fournies par App via
+  // ProjectActionsContext plutôt que re-câblées en props sur chaque surface.
+  const {
+    onSelect, onReorder, onMoveToMenu,
+    onAddMenu, onAddStoryToMenu, onImportStories, onImportFolder, onUnpackZip,
+    onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord, canGenerateStoryTts,
+    onUpdateRoot, onUpdateMedia, onUpdateStoryAudio,
+    onUpdateMenu, onDeleteMenu, onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
+    onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate, onPasteEntries, onCutPasteEntries,
+    onAddEndNode, onRemoveEndNode,
+    onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn, onUpdateNightModeHomeReturn,
+  } = useProjectActions();
   const { projectType } = project;
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
@@ -270,7 +275,7 @@ export function EditorTab({
           onBulkUpdateItems={onBulkUpdateItems}
           onBulkDeleteItems={onBulkDeleteItems}
           onSetNodeColor={handleSetNodeColor}
-          onImportStories={onAddStory}
+          onImportStories={onImportStories}
           onUpdateNightModeAudio={onUpdateNightModeAudio}
           onUpdateNightMode={onUpdateNightMode}
           onUpdateNightModeReturn={onUpdateNightModeReturn}
