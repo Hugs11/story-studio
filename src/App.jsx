@@ -5,17 +5,13 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { sanitizeImportedName, useProjectStore } from './store/projectStore';
 import {
   getRecentProjects,
-  loadProjectFromPath,
   rememberRecentProject,
   ensureExportsDir,
   ensureWorkspaceDir,
   pickWorkspaceDir,
-  getWorkspaceDir,
   consolidateProject,
   projectToRustExport,
-  autoSaveEphemeralProject,
 } from './store/projectIO';
-import { isProjectWorthAutosaving } from './store/autosaveDecision';
 import { getLastExportDir, saveLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
 import { MediaTransferProvider } from './store/MediaTransferContext';
@@ -77,6 +73,7 @@ import { useSaveProgress } from './hooks/useSaveProgress';
 import { useSessionMediaTriage } from './hooks/useSessionMediaTriage';
 import { useSyncedRef } from './hooks/useSyncedRef';
 import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
+import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
@@ -121,15 +118,6 @@ const INT_CODEC = {
   },
   encode: (value) => String(value),
 };
-const SESSION_RECOVERY_FILE = '.session-recovery.mbah';
-
-function joinLocalPath(dir, fileName) {
-  if (!dir) return '';
-  const trimmed = String(dir).replace(/[\\/]+$/, '');
-  const sep = String(dir).includes('\\') ? '\\' : '/';
-  return `${trimmed}${sep}${fileName}`;
-}
-
 function isImportedPackPath(filePath) {
   return /\.(zip|7z)$/i.test(filePath || '');
 }
@@ -202,7 +190,6 @@ function AppContent() {
   const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => loadKeyboardShortcuts());
   const [themePreference, setThemePreference] = useState(() => loadThemePreference());
   const [recentProjects, setRecentProjects] = useState(() => getRecentProjects());
-  const [sessionRecoveries, setSessionRecoveries] = useState([]);
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
@@ -227,8 +214,6 @@ function AppContent() {
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
-  const [sessionMode, setSessionMode] = useState(null); // null | 'ephemeral' | 'project'
-  const [sessionWorkspaceDir, setSessionWorkspaceDir] = useState('');
   // « Modifier un pack » (plan 04) : ouverture du funnel + ZIP à simuler une fois l'éditeur monté.
   const [editPackOpen, setEditPackOpen] = useState(false);
   const [pendingSimulateZip, setPendingSimulateZip] = useState(null);
@@ -251,11 +236,6 @@ function AppContent() {
   const projectRef = useRef(store.project);
   const savePathRef = useRef(store.savePath);
   const workspaceDirRef = useRef(readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
-  const sessionModeRef = useRef(null);
-  const ephemeralSnapshotPathRef = useRef(null);
-  const ephemeralSavedSnapshotRef = useRef(null);
-  // One-shot : a-t-on déjà écrit le snapshot anti-crash pour cette session ?
-  const ephemeralSnapshotSeededRef = useRef(false);
   const mediaTagsRef = useRef(store.mediaTags);
   const mediaLibraryCountRef = useRef(0);
   const saveHandlerRef = useRef(null);
@@ -290,54 +270,6 @@ function AppContent() {
     return detach;
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    ensureWorkspaceDir().then((dir) => {
-      if (cancelled) return;
-      setConfiguredWorkspaceDir(dir);
-      if (sessionModeRef.current !== 'ephemeral') {
-        setWorkspaceDirState(dir);
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadRecoveries() {
-      try {
-        const recoveries = await invoke('list_session_recoveries');
-        if (!Array.isArray(recoveries) || recoveries.length === 0) {
-          if (!cancelled) setSessionRecoveries([]);
-          return;
-        }
-        const enriched = await Promise.all(recoveries.map(async (recovery) => {
-          try {
-            const result = await loadProjectFromPath(recovery.snapshotPath);
-            return {
-              ...recovery,
-              projectName: result.data?.projectName || 'Projet récupérable',
-              projectType: result.data?.projectType || 'pack',
-              thumbnailImage: result.data?.thumbnailImage || result.data?.rootImage || null,
-            };
-          } catch {
-            return {
-              ...recovery,
-              projectName: 'Projet récupérable',
-              projectType: 'pack',
-              thumbnailImage: null,
-            };
-          }
-        }));
-        if (!cancelled) setSessionRecoveries(enriched);
-      } catch {
-        if (!cancelled) setSessionRecoveries([]);
-      }
-    }
-    loadRecoveries();
-    return () => { cancelled = true; };
-  }, []);
-
   projectRef.current = store.project;
   savePathRef.current = store.savePath;
   mediaTagsRef.current = store.mediaTags;
@@ -345,16 +277,6 @@ function AppContent() {
   useEffect(() => {
     workspaceDirRef.current = workspaceDir;
   }, [workspaceDir]);
-
-  useEffect(() => {
-    sessionModeRef.current = sessionMode;
-    ephemeralSnapshotPathRef.current = sessionMode === 'ephemeral' && sessionWorkspaceDir
-      ? joinLocalPath(sessionWorkspaceDir, SESSION_RECOVERY_FILE)
-      : null;
-    if (sessionMode !== 'ephemeral') {
-      ephemeralSavedSnapshotRef.current = null;
-    }
-  }, [sessionMode, sessionWorkspaceDir]);
 
   useEffect(() => {
     keyboardShortcutsRef.current = keyboardShortcuts;
@@ -367,24 +289,6 @@ function AppContent() {
     saveThemePreference(themePreference);
     return cleanup;
   }, [themePreference]);
-
-  const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
-    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog).then((canLeave) => {
-      if (canLeave && sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir) {
-        invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
-          logger.warn('session:cleanup-error', error);
-        });
-      }
-      return canLeave;
-    })
-  ), [sessionWorkspaceDir, showChoiceDialog]);
-
-  useWindowCloseGuard({
-    askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
-    projectRef,
-    savedSnapshotRef,
-    saveHandlerRef,
-  });
 
   useEffect(() => {
     if (!copyImportedFilesEnabled) dismissedTransferPromptRef.current = null;
@@ -404,9 +308,9 @@ function AppContent() {
 
   useAppShortcuts({ actionsRef: shortcutActionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef });
 
-  // mediaLibraryPathsRef est consomme par useAutosave juste apres ; sa declaration
-  // doit donc preceder. (Bug TDZ latent dans le code historique, declenche par
-  // certains modes de build/runtime.)
+  // mediaLibraryPathsRef est consomme par useWorkSession et useAutosave juste
+  // apres ; sa declaration doit donc preceder. (Bug TDZ latent dans le code
+  // historique, declenche par certains modes de build/runtime.)
   const {
     mediaLibraryPaths,
     mediaLibraryPathsRef,
@@ -415,6 +319,70 @@ function AppContent() {
     handleMediaCreated,
     handleDeleteMedia,
   } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
+
+  // Machine à sessions (éphémère/projet, reprises après crash, snapshot
+  // anti-crash) : toutes les transitions et le nettoyage du dossier de session
+  // vivent dans useWorkSession.
+  const {
+    sessionMode,
+    sessionWorkspaceDir,
+    sessionRecoveries,
+    sessionModeRef,
+    ephemeralSnapshotPathRef,
+    ephemeralSavedSnapshotRef,
+    prepareNewWorkSession,
+    cleanupEphemeralSession,
+    resetWorkSession,
+    abandonWorkSession,
+    promoteSessionToProject,
+    enterProjectMode,
+    handleRecoverSession,
+    handleIgnoreSessionRecovery,
+  } = useWorkSession({
+    store,
+    sdStore,
+    xttsStore,
+    showErrorDialog,
+    useWorkspaceForNewProjects,
+    configuredWorkspaceDir,
+    setConfiguredWorkspaceDir,
+    setWorkspaceDirState,
+    workspaceDirRef,
+    savedSnapshotRef,
+    autoSavePathRef,
+    setAutoSavedPath,
+    setMediaLibraryPaths,
+    mediaTagsRef,
+    mediaLibraryPathsRef,
+    mediaLibraryCountRef,
+    importedPackPendingMetaRef,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    ensureWorkspaceDir().then((dir) => {
+      if (cancelled) return;
+      setConfiguredWorkspaceDir(dir);
+      if (sessionModeRef.current !== 'ephemeral') {
+        setWorkspaceDirState(dir);
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
+    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog).then((canLeave) => {
+      if (canLeave) cleanupEphemeralSession();
+      return canLeave;
+    })
+  ), [cleanupEphemeralSession, showChoiceDialog]);
+
+  useWindowCloseGuard({
+    askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
+    projectRef,
+    savedSnapshotRef,
+    saveHandlerRef,
+  });
 
   useAutosave({
     enabled: autoSaveEnabled || sessionMode === 'ephemeral',
@@ -435,32 +403,6 @@ function AppContent() {
     setSaveToast,
     saveHandlerRef,
   });
-
-  // Filet anti-crash : écrit le snapshot éphémère dès le premier contenu de la
-  // session (atterrissage d'un pack importé, podcast/YouTube, ou 1er édit d'un
-  // nouveau projet), sans attendre la tick d'autosave (5 min). Une seule fois
-  // par session ; le périodique prend le relais ensuite.
-  useEffect(() => {
-    if (sessionMode !== 'ephemeral') return;
-    if (ephemeralSnapshotSeededRef.current) return;
-    if (!ephemeralSnapshotPathRef.current) return;
-    // Même critère que saveProject(autosave) : n'écrire que si le projet a un
-    // contenu réel (sinon saveProject jette « projet vide »). Évite de griller
-    // le one-shot sur l'état vierge avant l'atterrissage du contenu.
-    if (!isProjectWorthAutosaving(store.project, mediaLibraryPathsRef.current, mediaLibraryCountRef.current)) return;
-    const seeded = JSON.stringify(store.project);
-    autoSaveEphemeralProject(store.project, sessionWorkspaceDir, ephemeralSnapshotPathRef.current, {
-      mediaTags: mediaTagsRef.current,
-      mediaLibraryPaths: mediaLibraryPathsRef.current,
-      totalMediaCount: mediaLibraryCountRef.current,
-    })
-      .then(() => {
-        // One-shot marqué seulement après écriture réussie.
-        ephemeralSnapshotSeededRef.current = true;
-        ephemeralSavedSnapshotRef.current = seeded;
-      })
-      .catch((error) => { logger.error('session:seed-snapshot-error', error); });
-  }, [sessionMode, sessionWorkspaceDir, store.project]);
 
   useEscapeKey(creditsOpen, () => setCreditsOpen(false));
 
@@ -551,54 +493,15 @@ function AppContent() {
   async function handleNewProject() {
     const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
     if (!canContinue) return;
-    if (sessionMode === 'ephemeral' && sessionWorkspaceDir) {
-      invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
-        logger.warn('session:cleanup-error', error);
-      });
-    }
+    cleanupEphemeralSession();
     store.resetProject();
     setMediaLibraryPaths([]);
     savedSnapshotRef.current = null;
     autoSavePathRef.current = null;
-    ephemeralSavedSnapshotRef.current = null;
     setAutoSavedPath(null);
-    setSessionMode(null);
-    setSessionWorkspaceDir('');
-    setWorkspaceDirState(configuredWorkspaceDir);
+    resetWorkSession();
     sdStore.clearDone();
     xttsStore.clearDone();
-  }
-
-  // Prépare une session de travail (éphémère par défaut, ou workspace réel si
-  // l'opt-in D25 est actif), fixe le type de projet et renvoie le dossier cible
-  // d'écriture. Partagé par « Nouveau projet » et « Modifier un pack ».
-  async function prepareNewWorkSession(type) {
-    let workspaceDir;
-    if (useWorkspaceForNewProjects) {
-      const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
-      if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
-      setSessionMode('project');
-      setSessionWorkspaceDir('');
-      setWorkspaceDirState(realWorkspace);
-      workspaceDirRef.current = realWorkspace;
-      workspaceDir = realWorkspace;
-    } else {
-      const sessionDir = await invoke('create_session_workspace');
-      setSessionMode('ephemeral');
-      setSessionWorkspaceDir(sessionDir);
-      setWorkspaceDirState(sessionDir);
-      workspaceDirRef.current = sessionDir;
-      workspaceDir = sessionDir;
-    }
-    autoSavePathRef.current = null;
-    ephemeralSavedSnapshotRef.current = null;
-    ephemeralSnapshotSeededRef.current = false;
-    setAutoSavedPath(null);
-    importedPackPendingMetaRef.current = false;
-    store.setSavePath(null);
-    store.setProjectType(type);
-    logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
-    return workspaceDir;
   }
 
   async function handleSelectProjectType(type) {
@@ -660,14 +563,7 @@ function AppContent() {
     } catch (error) {
       logger.error('edit-pack:land-error', error);
       // Échec d'extraction : nettoyer la session et revenir à l'accueil.
-      if (!useWorkspaceForNewProjects && workspaceDir) {
-        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
-      }
-      store.resetProject();
-      setSessionMode(null);
-      setSessionWorkspaceDir('');
-      setWorkspaceDirState(configuredWorkspaceDir);
-      workspaceDirRef.current = configuredWorkspaceDir;
+      abandonWorkSession(workspaceDir);
       throw error;
     }
   }
@@ -678,48 +574,6 @@ function AppContent() {
     await prepareNewWorkSession('pack');
     store.addZip(null, zipPath, packLabel, null, null);
     setPendingSimulateZip(zipPath);
-  }
-
-  async function handleRecoverSession(recovery) {
-    if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
-    try {
-      const result = await loadProjectFromPath(recovery.snapshotPath);
-      store.loadProject(result.data);
-      store.setMediaTags(result.mediaTags ?? {});
-      store.setSavePath(null);
-      setMediaLibraryPaths(result.mediaLibraryPaths ?? []);
-      savedSnapshotRef.current = null;
-      autoSavePathRef.current = null;
-      setAutoSavedPath(null);
-      sessionModeRef.current = 'ephemeral';
-      setSessionMode('ephemeral');
-      setSessionWorkspaceDir(recovery.sessionDir);
-      setWorkspaceDirState(recovery.sessionDir);
-      workspaceDirRef.current = recovery.sessionDir;
-      ephemeralSavedSnapshotRef.current = JSON.stringify(result.data);
-      // Snapshot déjà sur disque : ne pas le réécrire immédiatement (le périodique suffit).
-      ephemeralSnapshotSeededRef.current = true;
-      sdStore.clearDone();
-      xttsStore.clearDone();
-      setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
-      logger.info(`session:recovered path='${recovery.snapshotPath}'`);
-    } catch (error) {
-      logger.error('session:recover-error', error);
-      showErrorDialog({
-        title: 'Reprise impossible',
-        message: `Impossible de reprendre cette session : ${error}`,
-      });
-    }
-  }
-
-  async function handleIgnoreSessionRecovery(recovery) {
-    if (!recovery?.sessionDir) return;
-    try {
-      await invoke('cleanup_session_workspace', { path: recovery.sessionDir });
-    } catch (error) {
-      logger.warn('session:ignore-cleanup-error', error);
-    }
-    setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
   }
 
   async function resolveDefaultExportDir() {
@@ -1042,18 +896,10 @@ function AppContent() {
       // le dossier de session et bascule en mode projet. Un enregistrement en place
       // (handleSaveProject) ne doit JAMAIS supprimer la session éphémère en cours.
       if (!options.promote) return;
-      if (sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir && options.cleanupSession !== false) {
-        invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
-          logger.warn('session:cleanup-error', error);
-        });
-      }
-      sessionModeRef.current = 'project';
-      setSessionMode('project');
-      setSessionWorkspaceDir('');
-      if (options.workspaceDir) {
-        setConfiguredWorkspaceDir(options.workspaceDir);
-        setWorkspaceDirState(options.workspaceDir);
-      }
+      promoteSessionToProject({
+        workspaceDir: options.workspaceDir,
+        cleanupSession: options.cleanupSession,
+      });
     },
   });
   useSyncedRef(persistProjectSnapshotRef, persistProjectSnapshot);
@@ -1071,19 +917,8 @@ function AppContent() {
     showErrorDialog,
     isProjectDirty,
     showChoiceDialog,
-    onProjectLoaded: async () => {
-      const realWorkspace = configuredWorkspaceDir || await getWorkspaceDir();
-      setSessionMode('project');
-      setSessionWorkspaceDir('');
-      setWorkspaceDirState(realWorkspace);
-    },
-    onBeforeProjectReplaced: async () => {
-      if (sessionModeRef.current === 'ephemeral' && sessionWorkspaceDir) {
-        await invoke('cleanup_session_workspace', { path: sessionWorkspaceDir }).catch((error) => {
-          logger.warn('session:cleanup-error', error);
-        });
-      }
-    },
+    onProjectLoaded: enterProjectMode,
+    onBeforeProjectReplaced: cleanupEphemeralSession,
   });
 
   // Plan 01 (révisé) : on ne propose plus d'enregistrer le projet source APRÈS
@@ -1186,14 +1021,7 @@ function AppContent() {
       logger.info(`podcast-funnel:landed count=${result.imported}`);
     } catch (error) {
       logger.error('podcast-funnel:import-error', error);
-      if (!useWorkspaceForNewProjects && workspaceDir) {
-        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
-      }
-      store.resetProject();
-      setSessionMode(null);
-      setSessionWorkspaceDir('');
-      setWorkspaceDirState(configuredWorkspaceDir);
-      workspaceDirRef.current = configuredWorkspaceDir;
+      abandonWorkSession(workspaceDir);
       throw error;
     }
   }
@@ -1245,14 +1073,7 @@ function AppContent() {
       logger.info(`youtube-funnel:landed count=${result.imported}`);
     } catch (error) {
       logger.error('youtube-funnel:import-error', error);
-      if (!useWorkspaceForNewProjects && workspaceDir) {
-        invoke('cleanup_session_workspace', { path: workspaceDir }).catch(() => {});
-      }
-      store.resetProject();
-      setSessionMode(null);
-      setSessionWorkspaceDir('');
-      setWorkspaceDirState(configuredWorkspaceDir);
-      workspaceDirRef.current = configuredWorkspaceDir;
+      abandonWorkSession(workspaceDir);
       throw error;
     }
   }
