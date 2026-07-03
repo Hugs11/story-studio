@@ -192,6 +192,21 @@ export function useWorkSession({
     workspaceDirRef.current = configuredWorkspaceDir;
   }
 
+  // Transaction d'atterrissage de funnel : prépare la session, exécute l'import
+  // (`importFn(workspaceDir)`), et en cas d'échec logge puis abandonne la session
+  // avant de relancer l'erreur — le funnel affiche alors son écran d'erreur et
+  // l'accueil est revenu dans un état propre.
+  async function runFunnelLanding(type, importFn, { errorLog = 'funnel:land-error' } = {}) {
+    const workspaceDir = await prepareNewWorkSession(type);
+    try {
+      return await importFn(workspaceDir);
+    } catch (error) {
+      logger.error(errorLog, error);
+      abandonWorkSession(workspaceDir);
+      throw error;
+    }
+  }
+
   // Promotion « Enregistrer comme projet » : seule transition qui supprime la
   // session éphémère en cours (sauf cleanupSession=false quand des transferts de
   // médias ont échoué : la session reste récupérable). Bascule en mode projet.
@@ -274,6 +289,7 @@ export function useWorkSession({
     cleanupEphemeralSession,
     resetWorkSession,
     abandonWorkSession,
+    runFunnelLanding,
     promoteSessionToProject,
     enterProjectMode,
     handleRecoverSession,
