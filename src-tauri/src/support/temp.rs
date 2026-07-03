@@ -93,6 +93,7 @@ pub fn create_session_workspace() -> Result<String, String> {
         return Err("Dossier de session hors du temporaire systeme.".to_string());
     }
 
+    let session_dir = canonical_existing(&session_dir)?;
     Ok(path_for_frontend(&session_dir.to_string_lossy()))
 }
 
