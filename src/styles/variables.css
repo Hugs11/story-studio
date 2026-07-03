@@ -29,7 +29,8 @@
   color-scheme: light;
 
   /* Layout */
-  --col-left: clamp(180px, 18vw, 280px);
+  --col-left-min: 300px;
+  --col-left: clamp(var(--col-left-min), 18vw, 320px);
   --center-content-max: 1020px;
   --titlebar-height: 38px;
   --toolbar-height: 50px;
