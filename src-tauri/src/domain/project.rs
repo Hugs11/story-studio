@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -41,10 +40,10 @@ impl GlobalOptions {
 }
 
 fn default_add_silence_duration_sec() -> f64 {
-    // Aligné sur la cible du vérificateur de pack (0.5 s) et sur le défaut
+    // Aligné sur la cible du vérificateur de pack (0.4 s) et sur le défaut
     // frontend PACK_AUDIO_EDGE_SILENCE_SECONDS. Repli pour les projets dont le
     // JSON ne porte pas encore le champ.
-    0.5
+    0.4
 }
 
 fn default_true() -> bool {
@@ -58,12 +57,6 @@ pub(crate) struct EntryControlSettings {
     pub(crate) pause: Option<bool>,
     pub(crate) ok: Option<bool>,
     pub(crate) home: Option<bool>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub(crate) struct AudioFieldProcessing {
-    #[serde(rename = "skipSilence", default)]
-    pub(crate) skip_silence: bool,
 }
 
 #[derive(Deserialize, Clone, Default)]
@@ -96,6 +89,14 @@ pub(crate) struct ProjectEntry {
     pub(crate) entry_type: String,
     #[serde(default)]
     pub(crate) name: String,
+    #[serde(rename = "nativeStageId", default)]
+    pub(crate) native_stage_id: Option<String>,
+    /// Cible typée d'un nœud `ref` (`menu:`/`story:`/`story_play:`/`story_home_step:`).
+    #[serde(default)]
+    pub(crate) target: Option<String>,
+    /// Présentation d'un `ref` : `continue` (avant) | `return` (arrière).
+    #[serde(rename = "refKind", default)]
+    pub(crate) ref_kind: Option<String>,
     pub(crate) audio: Option<String>,
     pub(crate) image: Option<String>,
     #[serde(rename = "itemAudio")]
@@ -134,8 +135,6 @@ pub(crate) struct ProjectEntry {
     pub(crate) after_playback_sequence: Vec<AfterPlaybackSequenceStep>,
     #[serde(rename = "afterPlaybackHomeStep", default)]
     pub(crate) after_playback_home_step: Option<AfterPlaybackSequenceStep>,
-    #[serde(rename = "audioProcessing", default)]
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     #[serde(default)]
     pub(crate) children: Vec<ProjectEntry>,
 }
@@ -158,16 +157,18 @@ pub(crate) struct Project {
     pub(crate) night_mode_return: Option<String>,
     #[serde(rename = "nightModeHomeReturn")]
     pub(crate) night_mode_home_return: Option<String>,
-    #[serde(rename = "audioProcessing", default)]
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     #[serde(rename = "nativeGraph", default)]
     pub(crate) native_graph: Option<serde_json::Value>,
     #[serde(rename = "packVersion", default = "default_pack_version")]
     pub(crate) pack_version: i32,
     #[serde(rename = "packDescription", default)]
     pub(crate) pack_description: String,
+    #[serde(rename = "packUuid", default)]
+    pub(crate) pack_uuid: String,
     #[serde(rename = "rootEntries", default)]
     pub(crate) root_entries: Vec<ProjectEntry>,
+    #[serde(rename = "sharedEntries", default)]
+    pub(crate) shared_entries: Vec<ProjectEntry>,
     #[serde(rename = "globalOptions")]
     pub(crate) global_options: GlobalOptions,
 }

@@ -75,12 +75,26 @@ test('end node does not hide a story returnOnHome override', () => {
   assert.equal(nav.storyHome.targetId, 'root');
 });
 
-test('returnOnHomeNone is a visible modified behavior', () => {
-  const a = story('a', { returnOnHomeNone: true });
+test('returnOnHomeNone with disabled Home is a visible disabled behavior', () => {
+  const a = story('a', { returnOnHomeNone: true, controlSettings: { home: false } });
   const nav = getGeneratedStoryNavigation(a, null, project([a]), [a]);
 
   assert.equal(nav.storyHome.isNone, true);
+  assert.equal(nav.storyHome.isImplicit, false);
   assert.equal(nav.storyHome.targetId, null);
+  assert.equal(nav.storyHome.effectiveTargetId, null);
+});
+
+test('returnOnHomeNone with active Home exposes the effective destination', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { returnOnHomeNone: true, controlSettings: { home: true } });
+  menu.children = [a];
+  const nav = getGeneratedStoryNavigation(a, menu, project([menu]), [menu]);
+
+  assert.equal(nav.storyHome.isNone, false);
+  assert.equal(nav.storyHome.isImplicit, true);
+  assert.equal(nav.storyHome.targetId, null);
+  assert.equal(nav.storyHome.effectiveTargetId, 'menu-1');
 });
 
 test('nightModeReturn next_story resolves by source story and stays contextual globally', () => {

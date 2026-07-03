@@ -9,10 +9,9 @@ import {
   normalizeProjectData,
   projectToRustExport,
   projectToSerializable,
-  visitProjectEntries,
   walkProjectMediaReferences,
 } from './projectModel';
-import { selectStaleAutosaveBackups } from './autosaveDecision';
+import { isProjectWorthAutosaving, selectStaleAutosaveBackups } from './autosaveDecision';
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 import {
   EXPORTS,
@@ -58,13 +57,18 @@ async function getDefaultWorkspaceDir() {
 export async function getWorkspaceDir() {
   const saved = readSetting(KEYS.WORKSPACE_DIR);
   if (saved?.trim()) return saved;
-  const fallback = await getDefaultWorkspaceDir();
-  writeSetting(KEYS.WORKSPACE_DIR, fallback);
-  return fallback;
+  return getDefaultWorkspaceDir();
 }
 
 function setWorkspaceDir(path) {
   if (path?.trim()) writeSetting(KEYS.WORKSPACE_DIR, path);
+}
+
+export async function ensureWorkspaceDir() {
+  const dir = await getWorkspaceDir();
+  setWorkspaceDir(dir);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }
 
 export async function pickWorkspaceDir() {
@@ -162,10 +166,6 @@ function getProjectDir(savePath) {
   return dirname(savePath);
 }
 
-function getFileName(path) {
-  return basename(path);
-}
-
 function splitFileName(fileName) {
   const match = String(fileName || '').match(/^(.*?)(\.[^.]*)?$/);
   return {
@@ -192,17 +192,6 @@ function relativizeTagKeys(tags, mbahDir) {
   for (const [path, tagList] of Object.entries(tags)) {
     if (Array.isArray(tagList) && tagList.length > 0) {
       result[toProjectRelative(path, mbahDir)] = tagList;
-    }
-  }
-  return result;
-}
-
-function absolutizeTagKeys(tags, mbahDir) {
-  if (!tags || typeof tags !== 'object') return {};
-  const result = {};
-  for (const [path, tagList] of Object.entries(tags)) {
-    if (Array.isArray(tagList) && tagList.length > 0) {
-      result[fromProjectRelative(path, mbahDir)] = tagList;
     }
   }
   return result;
@@ -338,10 +327,13 @@ export function collectTransferableProjectFiles(project, savePath, statusByPath 
 export async function transferProjectFilesToProject(project, savePath, copyToProject, statusByPath = null) {
   const { updated, refs } = collectTransferTargets(project, savePath, statusByPath);
   if (refs.length === 0) {
-    return { project: updated, copiedCount: 0, errors: [] };
+    return { project: updated, copiedCount: 0, copies: [], errors: [] };
   }
 
   const copiedPaths = new Map();
+  // Copies réalisées `{ from, to }` : permet aux consommateurs (tri de session,
+  // plan 22) de re-pointer bibliothèque et tags sans re-copier les fichiers.
+  const copies = [];
   const errors = [];
 
   for (const ref of refs) {
@@ -352,6 +344,7 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
       try {
         nextPath = await copyToProject(ref.path, savePath);
         copiedPaths.set(cacheKey, nextPath);
+        copies.push({ from: ref.path, to: nextPath });
       } catch (error) {
         errors.push({
           path: ref.path,
@@ -368,6 +361,7 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   return {
     project: updated,
     copiedCount: copiedPaths.size,
+    copies,
     errors,
   };
 }
@@ -500,7 +494,9 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     backupLimit: options.backupLimit ?? 0,
     backupDirOverride: options.backupDirOverride ?? workspaceBackupDir,
   });
-  saveProjectDir(PROJECT_SAVE_KEYS[0], path);
+  if (!options.autosave) {
+    saveProjectDir(PROJECT_SAVE_KEYS[0], path);
+  }
   onProgress?.('Projet enregistré');
   // Return the project with absolute paths for in-memory use
   return { path, project: projectWithImages };
@@ -525,7 +521,9 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 
   onProgress?.('Enregistrement du projet...');
 
-  const resolvedWs = options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
+  const resolvedWs = options?.useProjectDirAsWorkspace
+    ? newProjectDir
+    : (options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null);
   onProgress?.('Décollage vers la lune...');
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
   const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
@@ -550,18 +548,6 @@ export async function loadProject() {
   if (!path) return null;
   saveProjectDir(PROJECT_OPEN_KEYS[0], path);
   return loadProjectFromPath(path);
-}
-
-function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
-  if (!project) return false;
-  // Check media presence before projectType so imported folders/AI media trigger autosave
-  if (mediaLibraryPaths.length > 0) return true;
-  if (totalMediaCount > 0) return true;
-  if (project.projectType == null) return false;
-  if (hasPath(project.rootAudio) || hasPath(project.rootImage) || hasPath(project.thumbnailImage) || hasPath(project.nightModeAudio)) return true;
-  let count = 0;
-  visitProjectEntries(project, () => { count += 1; });
-  return count > 0;
 }
 
 export async function loadProjectFromPath(path) {
@@ -674,6 +660,19 @@ export async function autoSaveNewProject(project, workspaceDir, options = {}) {
     mediaTags: options.mediaTags ?? {},
     mediaLibraryPaths: options.mediaLibraryPaths ?? [],
     totalMediaCount: options.totalMediaCount ?? 0,
+  });
+}
+
+export async function autoSaveEphemeralProject(project, sessionWorkspaceDir, snapshotPath, options = {}) {
+  if (!sessionWorkspaceDir || !snapshotPath) return null;
+  return saveProject(project, snapshotPath, null, {
+    autosave: true,
+    backupLimit: 0,
+    backupDirOverride: null,
+    mediaTags: options.mediaTags ?? {},
+    mediaLibraryPaths: options.mediaLibraryPaths ?? [],
+    totalMediaCount: options.totalMediaCount ?? 0,
+    workspaceDir: sessionWorkspaceDir,
   });
 }
 

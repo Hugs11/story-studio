@@ -17,7 +17,7 @@ use super::image::{
     ensure_image_320x240, image_request, stage_binary_asset, stage_binary_asset_bytes,
 };
 use super::zip_bundle::stage_imported_zip_bundle;
-use crate::domain::project::{AudioFieldProcessing, Project};
+use crate::domain::project::Project;
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
@@ -33,7 +33,6 @@ pub(crate) struct AssetRequest {
     pub(crate) role: String,
     pub(crate) source_path: String,
     pub(crate) source_kind: AssetSourceKind,
-    pub(crate) skip_silence: bool,
     pub(crate) silence_duration_sec: f64,
 }
 
@@ -100,7 +99,6 @@ fn preprocess_request(
                 processed_audio_dir,
                 canonical_options,
                 request.silence_duration_sec,
-                request.skip_silence,
                 &request.role,
             )? {
                 AudioPreparation::Encoded { output } => PreprocessedAsset::AudioProcessed {
@@ -147,11 +145,8 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     should_cancel: &(dyn Fn() -> bool + Sync),
 ) -> Result<NativeAssetPreparationReport, String> {
     let canonical = canonicalize_project(project);
-    let requests = collect_asset_requests(
-        &canonical,
-        &project.audio_processing,
-        project.global_options.add_silence_duration_sec,
-    );
+    let requests =
+        collect_asset_requests(&canonical, project.global_options.add_silence_duration_sec);
     // ffmpeg est requis dès qu'il y a de l'audio : la mesure (niveau + silences)
     // sert à décider entre copie verbatim et ré-encodage.
     let has_audio = requests
@@ -381,6 +376,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     stage_guard.disarm();
     Ok(NativeAssetPreparationReport {
         project: canonical,
+        pack_uuid: project.pack_uuid.trim().to_string(),
         stage_dir: stage_dir.to_string_lossy().to_string(),
         assets_dir: assets_dir.to_string_lossy().to_string(),
         assets: prepared_assets,
@@ -392,18 +388,12 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 
 pub(crate) fn collect_asset_requests(
     project: &CanonicalProject,
-    root_audio_processing: &HashMap<String, AudioFieldProcessing>,
     silence_duration_sec: f64,
 ) -> Vec<AssetRequest> {
     let mut requests = Vec::new();
 
     if let Some(path) = project.root_audio.as_ref() {
-        requests.push(audio_request_with_processing(
-            "rootAudio",
-            path,
-            skip_silence_for(root_audio_processing, "rootAudio"),
-            silence_duration_sec,
-        ));
+        requests.push(audio_request("rootAudio", path, silence_duration_sec));
     }
     if let Some(path) = project.root_image.as_ref() {
         requests.push(image_request("rootImage", path));
@@ -413,12 +403,7 @@ pub(crate) fn collect_asset_requests(
     }
     if !project.options.auto_next {
         if let Some(path) = project.night_mode_audio.as_ref() {
-            requests.push(audio_request_with_processing(
-                "nightModeAudio",
-                path,
-                skip_silence_for(root_audio_processing, "nightModeAudio"),
-                silence_duration_sec,
-            ));
+            requests.push(audio_request("nightModeAudio", path, silence_duration_sec));
         }
     }
 
@@ -431,8 +416,21 @@ pub(crate) fn collect_asset_requests(
             silence_duration_sec,
         );
     }
+    for entry in &project.shared_entries {
+        collect_entry_requests(
+            entry,
+            "shared",
+            &mut requests,
+            project.options.auto_next,
+            silence_duration_sec,
+        );
+    }
     if !project.options.auto_next {
-        collect_native_graph_requests(project.native_graph.as_ref(), &mut requests);
+        collect_native_graph_requests(
+            project.native_graph.as_ref(),
+            &mut requests,
+            silence_duration_sec,
+        );
     }
 
     requests
@@ -471,6 +469,7 @@ pub(crate) fn active_native_graph(
 fn collect_native_graph_requests(
     native_graph: Option<&serde_json::Value>,
     requests: &mut Vec<AssetRequest>,
+    silence_duration_sec: f64,
 ) {
     let Some(stages) = active_native_graph(native_graph)
         .and_then(|graph| graph.get("document"))
@@ -483,11 +482,10 @@ fn collect_native_graph_requests(
     for stage in stages {
         let stage_id = native_graph_stage_uuid(stage).unwrap_or("stage");
         if let Some(path) = stage.get("audio").and_then(|value| value.as_str()) {
-            requests.push(audio_request_with_processing(
+            requests.push(audio_request(
                 &native_graph_asset_role(stage_id, "audio"),
                 path,
-                true,
-                0.5,
+                silence_duration_sec,
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -510,10 +508,9 @@ fn collect_entry_requests(
         CanonicalEntry::Menu(menu) => {
             let label = scoped_label_id(prefix, &menu.id, &menu.name);
             if let Some(path) = menu.audio.as_ref() {
-                requests.push(audio_request_with_processing(
+                requests.push(audio_request(
                     &format!("{}/menuAudio", label),
                     path,
-                    skip_silence_for(&menu.audio_processing, "audio"),
                     silence_duration_sec,
                 ));
             }
@@ -527,36 +524,32 @@ fn collect_entry_requests(
         CanonicalEntry::Story(story) => {
             let label = scoped_label_id(prefix, &story.id, &story.name);
             if let Some(path) = story.audio.as_ref() {
-                requests.push(audio_request_with_processing(
+                requests.push(audio_request(
                     &format!("{}/storyAudio", label),
                     path,
-                    skip_silence_for(&story.audio_processing, "audio"),
                     silence_duration_sec,
                 ));
             }
             if let Some(path) = story.item_audio.as_ref() {
-                requests.push(audio_request_with_processing(
+                requests.push(audio_request(
                     &format!("{}/itemAudio", label),
                     path,
-                    skip_silence_for(&story.audio_processing, "itemAudio"),
                     silence_duration_sec,
                 ));
             }
             if !auto_next {
                 if let Some(path) = story.after_playback_prompt_audio.as_ref() {
-                    requests.push(audio_request_with_processing(
+                    requests.push(audio_request(
                         &format!("{}/afterPlaybackPromptAudio", label),
                         path,
-                        skip_silence_for(&story.audio_processing, "afterPlaybackPromptAudio"),
                         silence_duration_sec,
                     ));
                 }
                 for (index, step) in story.after_playback_sequence.iter().enumerate() {
                     if let Some(path) = step.audio.as_ref() {
-                        requests.push(audio_request_with_processing(
+                        requests.push(audio_request(
                             &format!("{}/afterPlaybackSequence/{}/audio", label, index),
                             path,
-                            skip_silence_for(&story.audio_processing, "afterPlaybackSequence"),
                             silence_duration_sec,
                         ));
                     }
@@ -569,10 +562,9 @@ fn collect_entry_requests(
                 }
                 if let Some(step) = story.after_playback_home_step.as_ref() {
                     if let Some(path) = step.audio.as_ref() {
-                        requests.push(audio_request_with_processing(
+                        requests.push(audio_request(
                             &format!("{}/afterPlaybackHomeStep/audio", label),
                             path,
-                            skip_silence_for(&story.audio_processing, "afterPlaybackHomeStep"),
                             silence_duration_sec,
                         ));
                     }
@@ -596,6 +588,8 @@ fn collect_entry_requests(
                 ));
             }
         }
+        // Une référence ne porte aucun asset propre : elle réutilise ceux de sa cible.
+        CanonicalEntry::Ref(_) => {}
     }
 }
 
@@ -612,27 +606,13 @@ fn emit_asset_result(asset: &PreparedAsset, emit: &dyn Fn(&str)) {
     ));
 }
 
-fn audio_request_with_processing(
-    role: &str,
-    source_path: &str,
-    skip_silence: bool,
-    silence_duration_sec: f64,
-) -> AssetRequest {
+fn audio_request(role: &str, source_path: &str, silence_duration_sec: f64) -> AssetRequest {
     AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Audio,
-        skip_silence,
         silence_duration_sec,
     }
-}
-
-fn skip_silence_for(processing: &HashMap<String, AudioFieldProcessing>, field: &str) -> bool {
-    processing
-        .get("__allAudio")
-        .or_else(|| processing.get(field))
-        .map(|value| value.skip_silence)
-        .unwrap_or(false)
 }
 
 fn zip_request(role: &str, source_path: &str) -> AssetRequest {
@@ -640,7 +620,6 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Zip,
-        skip_silence: false,
-        silence_duration_sec: 0.5,
+        silence_duration_sec: 0.0,
     }
 }

@@ -16,13 +16,15 @@ const BOOL_CODEC = {
   encode: (value) => (value ? 'true' : 'false'),
 };
 
-function startResize(e, panelClass, cssVar, direction) {
+const LEFT_PANEL_MIN_WIDTH = 300;
+
+function startResize(e, panelClass, cssVar, direction, minWidth = 150) {
   e.preventDefault();
   const startX = e.clientX;
-  const startW = document.querySelector(panelClass)?.clientWidth ?? 260;
+  const startW = document.querySelector(panelClass)?.clientWidth ?? minWidth;
   const onMove = ev => {
     const delta = direction === 1 ? ev.clientX - startX : startX - ev.clientX;
-    const newW = Math.max(150, Math.min(window.innerWidth * 0.42, startW + delta));
+    const newW = Math.max(minWidth, Math.min(window.innerWidth * 0.42, startW + delta));
     document.documentElement.style.setProperty(cssVar, `${newW}px`);
   };
   const onUp = () => {
@@ -37,12 +39,14 @@ export function EditorTab({
   node,
   project, selectedId, onSelect,
   onReorder, onMoveToMenu, onAddMenu, onAddStory,
-  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onOpenProject,
+  onUpdateRoot, onUpdateMedia, onUpdateStoryAudio, onSetProjectType, onEditPack, onPodcastFunnel, onYoutubeFunnel, onAggregatePacks, onCheckPack, onOpenProject,
   onOpenPreferences, recentProjects, onOpenRecentProject,
+  pendingSimulateZipPath = null, onSimulateConsumed,
+  sessionRecoveries = [], onRecoverSession, onIgnoreSessionRecovery,
   onUpdateMenu, onDeleteMenu,
   onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
   onAddStoryToMenu, onImportFolder, onUnpackZip,
-  onImportPodcast, onRecord, canRecord = true,
+  onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord = true, canGenerateStoryTts = true,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate,
   onAddEndNode, onRemoveEndNode, onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
@@ -93,6 +97,14 @@ export function EditorTab({
     setSimulatorZipPath(null);
   }, []);
 
+  // « Modifier un pack » non éditable (plan 04) : ouvre le simulateur ZIP dès que
+  // l'éditeur est monté avec le pack demandé.
+  useEffect(() => {
+    if (!pendingSimulateZipPath || projectType == null) return;
+    handleSimulateZip(pendingSimulateZipPath);
+    onSimulateConsumed?.();
+  }, [pendingSimulateZipPath, projectType, handleSimulateZip, onSimulateConsumed]);
+
   const handleSelectionChange = useCallback((ids) => {
     skipIdSyncRef.current = true;
     setSelectedIds(ids);
@@ -124,10 +136,18 @@ export function EditorTab({
         <div className="workspace" style={{ justifyContent: 'center' }}>
           <ModeSelector
             onSelect={onSetProjectType}
+            onEditPack={onEditPack}
+            onPodcastFunnel={onPodcastFunnel}
+            onYoutubeFunnel={onYoutubeFunnel}
+            onAggregatePacks={onAggregatePacks}
+            onCheckPack={onCheckPack}
             onOpen={onOpenProject}
             onOpenPreferences={onOpenPreferences}
             recentProjects={recentProjects}
             onOpenRecent={onOpenRecentProject}
+            sessionRecoveries={sessionRecoveries}
+            onRecoverSession={onRecoverSession}
+            onIgnoreSessionRecovery={onIgnoreSessionRecovery}
           />
         </div>
       </div>
@@ -147,8 +167,11 @@ export function EditorTab({
                 onAddFolder={onAddMenu}
                 onImportFolder={onImportFolder}
                 onImportPodcast={onImportPodcast}
+                onImportYoutube={onImportYoutube}
                 onRecord={onRecord}
+                onGenerateStoryTts={onGenerateStoryTts}
                 canRecord={canRecord}
+                canGenerateStoryTts={canGenerateStoryTts}
                 trailing={(
                   <>
                     <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">
@@ -225,7 +248,7 @@ export function EditorTab({
           />
         </div>
 
-        <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-left', '--col-left', 1)} />
+        <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-left', '--col-left', 1, LEFT_PANEL_MIN_WIDTH)} />
 
         <CentralPanel
           node={node}

@@ -88,12 +88,12 @@ export function useShuttlePlayback({ wsRef, durationRef }) {
     try {
       active.source.onended = null;
       active.source.stop();
-    } catch (_) {
+    } catch {
       // Source may already be stopped by the Web Audio clock.
     }
     try {
       active.source.disconnect();
-    } catch (_) {
+    } catch {
       // Already disconnected.
     }
     setWaveTime(nextTime);

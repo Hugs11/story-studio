@@ -1,7 +1,3 @@
-import { sanitizeProjectPrefix } from './projectPrefix.js';
-
-export { sanitizeProjectPrefix };
-
 const WEB_PATH_PATTERN = /^[a-z]+:\/\//i;
 
 export function stripWindowsLongPathPrefix(path) {

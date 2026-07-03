@@ -24,7 +24,7 @@ export const SHORTCUT_DEFINITIONS = [
   // ── Général ────────────────────────────────────────────────────────────────
   { id: 'newProject',       scope: 'general', label: 'Nouveau projet',                     defaultShortcut: { ctrl: true, key: 'n', code: 'KeyN' } },
   { id: 'openProject',      scope: 'general', label: 'Ouvrir un projet',                   defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
-  { id: 'saveProject',      scope: 'general', label: 'Sauvegarder le projet',              defaultShortcut: { ctrl: true, key: 's', code: 'KeyS' } },
+  { id: 'saveProject',      scope: 'general', label: 'Enregistrer le projet',              defaultShortcut: { ctrl: true, key: 's', code: 'KeyS' } },
   { id: 'saveAs',           scope: 'general', label: 'Enregistrer sous',                    defaultShortcut: { ctrl: true, shift: true, key: 's', code: 'KeyS' } },
   { id: 'importStories',    scope: 'general', label: 'Importer des histoires',              defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
   { id: 'addFolder',        scope: 'general', label: 'Ajouter un dossier',                  defaultShortcut: { ctrl: true, shift: true, key: 'n', code: 'KeyN' } },

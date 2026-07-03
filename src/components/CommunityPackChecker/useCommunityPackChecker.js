@@ -116,15 +116,15 @@ export function useCommunityPackChecker() {
   const pickPack = useCallback(async () => {
     const selected = await open({
       multiple: false,
-      filters: [{ name: 'Pack Lunii ZIP', extensions: ['zip'] }],
+      filters: [{ name: 'Pack Lunii', extensions: ['zip', '7z'] }],
     });
     if (selected) {
       await analyzePath(Array.isArray(selected) ? selected[0] : selected);
     }
   }, [analyzePath]);
 
-  const fixPack = useCallback(async (metadataPatch = null) => {
-    if (!zipPath) return;
+  const fixPack = useCallback(async (metadataPatch = null, options = {}) => {
+    if (!zipPath) return null;
     setError('');
     setExportNotice('');
     statusRef.current = 'fixing';
@@ -133,6 +133,7 @@ export function useCommunityPackChecker() {
     try {
       const result = await invoke('create_fixed_community_pack', {
         zipPath,
+        outputDir: options.outputDir || null,
         metadataPatch,
       });
       appendLiveLog(`ZIP corrigé créé : ${result.fixedZipPath}`);
@@ -146,11 +147,13 @@ export function useCommunityPackChecker() {
       setFixedResult(result);
       statusRef.current = 'idle';
       setStatus('idle');
+      return result;
     } catch (err) {
       appendLiveLog(`Correction interrompue : ${err}`);
       setError(String(err));
       statusRef.current = 'idle';
       setStatus('idle');
+      return null;
     }
   }, [analyzePath, appendLiveLog, zipPath]);
 

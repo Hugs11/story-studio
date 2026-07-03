@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 import {
+  ensureWorkspaceDir,
   rememberRecentProject,
   saveProject,
   saveProjectAs,
 } from '../store/projectIO';
+import { shouldAbortEphemeralPromotion } from '../store/projectHelpers';
 import { logger } from '../utils/logger';
 
 export function useSaveProgress({
@@ -13,10 +15,13 @@ export function useSaveProgress({
   autoSaveEnabled,
   autoSaveBackupLimit,
   savedSnapshotRef,
+  sessionModeRef = null,
   isSavingRef,
   setSaveToast,
   setRecentProjects,
   maybeOfferTransferIntoProject,
+  triageSessionMedia = null,
+  onProjectSaved = null,
 }) {
   const [saveProgress, setSaveProgress] = useState(null); // null | { lines: string[], complete: boolean }
   const [saveAsProgress, setSaveAsProgress] = useState(null);
@@ -84,6 +89,7 @@ export function useSaveProgress({
         store.setSavePath(result.path);
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
+        await onProjectSaved?.(result);
         if (!silent) {
           setSaveProgress(prev => prev ? { ...prev, complete: true } : null);
           setTimeout(() => setSaveProgress(null), 1500);
@@ -115,6 +121,7 @@ export function useSaveProgress({
     setSaveToast,
     store,
     workspaceDirRef,
+    onProjectSaved,
   ]);
 
   const handleSaveProjectAs = useCallback(async () => {
@@ -128,16 +135,61 @@ export function useSaveProgress({
       }
     }
     try {
-      const result = await saveProjectAs(store.project, store.savePath, onProgress, store.mediaTags, { workspaceDir: workspaceDirRef.current }, mediaLibraryPathsRef.current);
+      const isEphemeralSession = sessionModeRef?.current === 'ephemeral';
+      const targetWorkspaceDir = isEphemeralSession
+        ? await ensureWorkspaceDir()
+        : workspaceDirRef.current;
+      let result = await saveProjectAs(store.project, store.savePath, onProgress, store.mediaTags, {
+        workspaceDir: targetWorkspaceDir,
+      }, mediaLibraryPathsRef.current);
       if (!result) {
         setSaveAsProgress(null);
         return null;
       }
       if (result?.path) {
+        const transferResult = await maybeOfferTransferIntoProject(result.project, result.path, {
+          copyEnabled: true,
+          skipPrompt: isEphemeralSession,
+          targetWorkspaceDir,
+        });
+        const transferErrors = transferResult.errors ?? [];
+        if (shouldAbortEphemeralPromotion({ isEphemeralSession, transferErrors })) {
+          logger.warn(`save-as:abort-ephemeral-transfer-errors count=${transferErrors.length}`);
+          setSaveAsProgress(null);
+          setSaveToast('error');
+          setTimeout(() => setSaveToast(null), 3000);
+          return null;
+        }
+        // Tri des médias de session non utilisés (plan 22, D51) : après le
+        // transfert des médias référencés, avant le nettoyage de la session.
+        // Le tri résout tous ses échecs de copie en interne (réessayer /
+        // abandonner) : à son retour, plus aucun média conservé ne dépend du
+        // dossier de session.
+        let triageResult = { changed: false };
+        if (isEphemeralSession && triageSessionMedia) {
+          triageResult = await triageSessionMedia({
+            project: transferResult.project,
+            savePath: result.path,
+            targetWorkspaceDir,
+            transferCopies: transferResult.copies ?? [],
+          });
+        }
+        if (transferResult.changed || triageResult.changed) {
+          result = await saveProject(transferResult.project, result.path, onProgress, {
+            mediaTags: triageResult.mediaTags ?? store.mediaTags,
+            mediaLibraryPaths: triageResult.mediaLibraryPaths ?? mediaLibraryPathsRef.current,
+            workspaceDir: targetWorkspaceDir,
+          });
+        }
         store.syncProjectWithoutHistory(result.project);
         store.setSavePath(result.path);
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
+        await onProjectSaved?.(result, {
+          promote: true,
+          workspaceDir: targetWorkspaceDir,
+          cleanupSession: transferErrors.length === 0,
+        });
         setSaveToast('ok');
         setTimeout(() => setSaveToast(null), 2000);
         setSaveAsProgress(prev => prev ? { ...prev, complete: true } : null);
@@ -155,14 +207,20 @@ export function useSaveProgress({
     }
   }, [
     mediaLibraryPathsRef,
+    maybeOfferTransferIntoProject,
+    onProjectSaved,
     savedSnapshotRef,
     setRecentProjects,
     setSaveToast,
+    sessionModeRef,
     store,
+    triageSessionMedia,
     workspaceDirRef,
   ]);
 
-  const handleSave = useCallback(() => handleSaveProject(), [handleSaveProject]);
+  const handleSave = useCallback(() => (
+    store.savePath ? handleSaveProject() : handleSaveProjectAs()
+  ), [handleSaveProject, handleSaveProjectAs, store.savePath]);
 
   return {
     saveProgress,

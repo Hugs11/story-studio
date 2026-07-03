@@ -14,8 +14,8 @@ import {
   moveEntryNextTo,
   moveEntryToContainer,
   normalizeProjectData,
-  removeEntry,
-  removeEntries,
+  removeEntryCascadingRefs,
+  removeEntriesCascadingRefs,
   reorderMenuVisibleChildren,
   reorderRootVisibleEntries,
   reorderTopLevelMenus,
@@ -27,9 +27,9 @@ import {
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
 import { basenameNoExt, pathKey } from '../utils/fileUtils';
-import { sanitizeImportedName } from './importedNames';
+import { sanitizeImportedEntries, sanitizeImportedName } from './importedNames';
 
-export { sanitizeImportedName };
+export { sanitizeImportedEntries, sanitizeImportedName };
 
 export function isTextEditingTarget(target) {
   if (!(target instanceof Element)) return false;
@@ -38,7 +38,6 @@ export function isTextEditingTarget(target) {
 
 const MAX_HISTORY_SIZE = 50;
 
-const ROOT_AUDIO_FIELDS = new Set(['rootAudio', 'nightModeAudio']);
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
   'returnOnHome',
@@ -72,25 +71,6 @@ const DEFAULT_PROJECT = normalizeProjectData({
   },
   rootEntries: [],
 });
-
-export function sanitizeImportedEntries(entries = []) {
-  return (entries ?? []).map((entry) => {
-    if (!entry || typeof entry !== 'object') return entry;
-    const fallbackName = entry.type === 'menu'
-      ? 'Collection importee'
-      : entry.type === 'zip'
-        ? 'ZIP importe'
-        : 'Histoire importee';
-    const nextEntry = {
-      ...entry,
-      name: sanitizeImportedName(entry.name, fallbackName),
-    };
-    if (entry.type === 'menu' && Array.isArray(entry.children)) {
-      nextEntry.children = sanitizeImportedEntries(entry.children);
-    }
-    return nextEntry;
-  });
-}
 
 function nameFromPath(path) {
   if (!path) return '';
@@ -295,10 +275,6 @@ export function useProjectStore() {
   const updateRootMedia = useCallback((field, value) => {
     setProject(p => {
       const next = { ...p, [field]: value };
-      if (ROOT_AUDIO_FIELDS.has(field) && next.audioProcessing?.[field]) {
-        next.audioProcessing = { ...next.audioProcessing };
-        delete next.audioProcessing[field];
-      }
       return next;
     });
   }, [setProject]);
@@ -321,7 +297,7 @@ export function useProjectStore() {
   }, [setProject]);
 
   const deleteMenu = useCallback((menuId) => {
-    setProject(p => removeEntry(p, menuId));
+    setProject(p => removeEntryCascadingRefs(p, menuId));
     setSelectedId('root');
   }, [setProject]);
 
@@ -347,14 +323,6 @@ export function useProjectStore() {
         nightModeHomeReturn: rewritePromotedRootTarget(p.nightModeHomeReturn, menu.id),
         nativeGraph: menu.nativeGraph ?? p.nativeGraph ?? null,
       };
-      if (menu.audio) {
-        next.audioProcessing = { ...(p.audioProcessing ?? {}) };
-        if (menu.audioProcessing?.audio?.skipSilence === true || menu.audioProcessing?.__allAudio?.skipSilence === true) {
-          next.audioProcessing.rootAudio = { skipSilence: true };
-        } else {
-          delete next.audioProcessing.rootAudio;
-        }
-      }
       return updateProjectRootEntries(
         next,
         promoted
@@ -387,11 +355,12 @@ export function useProjectStore() {
 
   // ── Items ─────────────────────────────────────────────────────────────────
 
-  const addStory = useCallback((menuId, audioPath) => {
+  const addStory = useCallback((menuId, audioPath, options = {}) => {
     const autoName = nameFromPath(audioPath);
+    const explicitName = typeof options.name === 'string' ? options.name.trim() : '';
     const hasImportedAudio = !!audioPath;
     const newStory = createStoryEntry({
-      name: autoName || 'Nouvelle histoire',
+      name: explicitName || autoName || 'Nouvelle histoire',
       audio: audioPath || null,
       ...(hasImportedAudio
         ? {
@@ -436,12 +405,12 @@ export function useProjectStore() {
   }, [setProject]);
 
   const bulkDeleteItems = useCallback((ids) => {
-    setProject(p => removeEntries(p, ids));
+    setProject(p => removeEntriesCascadingRefs(p, ids));
     setSelectedId('root');
   }, [setProject]);
 
   const deleteItem = useCallback((itemId) => {
-    setProject(p => removeEntry(p, itemId));
+    setProject(p => removeEntryCascadingRefs(p, itemId));
     setSelectedId('root');
   }, [setProject]);
 

@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
-  decodeNavigationStoryId,
   encodeMenuNavigationTarget,
   encodeStoryHomeStepNavigationTarget,
   encodeStoryNavigationTarget,
@@ -10,9 +9,7 @@ import {
   isCurrentMenuNavigationTarget,
   isNextStoryNavigationTarget,
   isRootNavigationTarget,
-  isStoryHomeStepNavigationTarget,
   isStoryNavigationTarget,
-  isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from '../../../store/navigationTargets';
 import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal';
@@ -20,6 +17,12 @@ import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal
 export { NAV_TARGET_NEXT_STORY };
 
 export const NAV_ROOT_LABEL = 'Menu racine';
+
+export function generatedTargetIdToSelectValue(targetId) {
+  if (!targetId || isRootNavigationTarget(targetId)) return '';
+  if (isStoryNavigationTarget(targetId) || isNextStoryNavigationTarget(targetId)) return targetId;
+  return encodeMenuNavigationTarget(targetId);
+}
 
 const NAV_ICON_BY_KIND = {
   default: Link2,
@@ -40,9 +43,10 @@ function buildNavigationTargetOptions({
   allMenus = [],
   allStories = [],
   currentStoryId = null,
+  allowCurrentStory = false,
   includeNone = false,
   noneLabel = 'Aucune transition',
-  emptyLabel = 'Destination actuelle',
+  emptyLabel = 'Choisir une destination',
   includeDefault = true,
   includeNextStory = true,
   includeStoryPlay = true,
@@ -70,7 +74,8 @@ function buildNavigationTargetOptions({
       kind: 'menu',
     });
   }
-  for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+  const selectableStories = allStories.filter((s) => allowCurrentStory || s.id !== currentStoryId);
+  for (const story of selectableStories) {
     options.push({
       value: encodeStoryNavigationTarget(story.id),
       label: story.name || '(sans nom)',
@@ -78,7 +83,7 @@ function buildNavigationTargetOptions({
     });
   }
   if (includeStoryPlay) {
-    for (const story of allStories.filter((s) => s.id !== currentStoryId)) {
+    for (const story of selectableStories) {
       options.push({
         value: encodeStoryPlayNavigationTarget(story.id),
         label: `Lecture directe - ${story.name || '(sans nom)'}`,
@@ -140,22 +145,6 @@ export function resolveNavigationTargetId(target, currentMenuId = null) {
   return decodeNavigationMenuId(normalized);
 }
 
-export function targetNameById(allMenus, allStories, targetId, fallback = 'destination introuvable') {
-  if (targetId === 'root') return NAV_ROOT_LABEL;
-  if (targetId === NAV_TARGET_NEXT_STORY) return 'Histoire suivante';
-  if (!targetId) return fallback;
-  if (isStoryNavigationTarget(targetId)) {
-    const storyId = decodeNavigationStoryId(targetId);
-    const storyName = allStories.find((s) => s.id === storyId)?.name || fallback;
-    return isStoryHomeStepNavigationTarget(targetId)
-      ? `Retour de fin — ${storyName}`
-      : isStoryPlayNavigationTarget(targetId)
-      ? `Lecture directe — ${storyName}`
-      : `Titre — ${storyName}`;
-  }
-  return allMenus.find((menu) => menu.id === targetId)?.name || fallback;
-}
-
 // Calcule le texte de destination effective pour les résumés de parcours.
 // - Pour un value vide ou "root" → renvoie le défaut résolu (ex: "Quelle histoire...").
 // - Pour "next_story" → renvoie soit le nom de l'histoire suivante si entry est fourni, soit la mention contextuelle.
@@ -169,8 +158,6 @@ export function getNavigationSelectHint({
   entry = null,
   parentMenu = null,
   project = null,
-  allMenus = [],
-  allStories = [],
 }) {
   const normalized = normalizeNavigationTarget(value);
   if (!normalized) return emptyResolvedLabel;
@@ -198,10 +185,15 @@ export function NavigationTargetSelect({
   allMenus,
   allStories,
   currentStoryId,
+  allowCurrentStory = false,
   includeNone = false,
   noneLabel = 'Aucune transition',
-  emptyLabel = 'Destination actuelle',
+  emptyLabel = 'Choisir une destination',
   includeDefault = true,
+  resolvedDefaultValue = null,
+  resolvedDefaultLabel = null,
+  resolvedDefaultKind = 'default',
+  hideDefaultWhenResolved = false,
   style,
   includeNextStory = true,
   includeStoryPlay = true,
@@ -211,35 +203,66 @@ export function NavigationTargetSelect({
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef(null);
   const listboxId = useId();
-  const selectedValue = value ?? '';
-  const options = useMemo(() => buildNavigationTargetOptions({
-    value: selectedValue,
-    allMenus,
-    allStories,
-    currentStoryId,
-    includeNone,
-    noneLabel,
-    emptyLabel,
-    includeDefault,
-    includeNextStory,
-    includeStoryPlay,
-  }), [
-    selectedValue,
-    allMenus,
-    allStories,
-    currentStoryId,
-    includeNone,
-    noneLabel,
-    emptyLabel,
-    includeDefault,
-    includeNextStory,
-    includeStoryPlay,
-  ]);
+  const rawSelectedValue = value ?? '';
+  const normalizedResolvedValue = resolvedDefaultValue
+    ? normalizeNavigationTarget(resolvedDefaultValue)
+    : null;
+  const baseOptions = useMemo(
+    () => buildNavigationTargetOptions({
+      value: rawSelectedValue,
+      allMenus,
+      allStories,
+      currentStoryId,
+      allowCurrentStory,
+      includeNone,
+      noneLabel,
+      emptyLabel,
+      includeDefault,
+      includeNextStory,
+      includeStoryPlay,
+    }),
+    [
+      rawSelectedValue,
+      allMenus,
+      allStories,
+      currentStoryId,
+      allowCurrentStory,
+      includeNone,
+      noneLabel,
+      emptyLabel,
+      includeDefault,
+      includeNextStory,
+      includeStoryPlay,
+    ],
+  );
+  // Un « vrai » choix correspond à une ligne concrète de la liste (menu, histoire,
+  // « Histoire suivante »…). Les cibles virtuelles (racine, dossier courant) et la
+  // valeur vide n'ont pas de ligne dédiée : on les résout vers leur destination réelle
+  // pour ne jamais afficher un libellé abstrait dans le déclencheur.
+  const rawMatchesConcreteOption = !!rawSelectedValue
+    && baseOptions.some((option) => option.value === rawSelectedValue && option.value !== '');
+  const useResolvedValue = !!(normalizedResolvedValue && !rawMatchesConcreteOption);
+  const selectedValue = useResolvedValue ? normalizedResolvedValue : rawSelectedValue;
+  const hideResolvedDefault = !!(includeDefault && hideDefaultWhenResolved && useResolvedValue);
+  const options = useMemo(
+    () => (hideResolvedDefault
+      ? baseOptions.filter((option) => option.value !== '')
+      : baseOptions),
+    [baseOptions, hideResolvedDefault],
+  );
+  const resolvedSelectedOption = useResolvedValue
+    ? {
+      value: normalizedResolvedValue,
+      label: resolvedDefaultLabel || emptyLabel,
+      kind: resolvedDefaultKind || 'default',
+    }
+    : null;
   const selectableOptions = useMemo(
     () => options.filter((option) => !option.disabled),
     [options],
   );
   const selectedOption = options.find((option) => option.value === selectedValue)
+    ?? resolvedSelectedOption
     ?? options.find((option) => option.value === '')
     ?? options[0];
   const SelectedIcon = iconForKind(selectedOption?.kind);

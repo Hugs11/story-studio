@@ -662,6 +662,17 @@
   height: 22px;
 }
 
+.media-kind-icon--archive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-kind-icon--archive svg {
+  width: 22px;
+  height: 22px;
+}
+
 .media-item-main {
   min-width: 0;
   display: flex;

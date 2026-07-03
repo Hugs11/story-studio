@@ -19,3 +19,74 @@ export function sanitizeImportedName(value, fallback = '', options = {}) {
 
   return normalized || fallback;
 }
+
+function importedNameKey(name) {
+  return String(name || '').trim().toLocaleLowerCase();
+}
+
+function importedEntryFallbackName(entry) {
+  return entry?.type === 'menu'
+    ? 'Collection importee'
+    : entry?.type === 'zip'
+      ? 'ZIP importe'
+      : 'Histoire importee';
+}
+
+function collectImportedNameCounts(entries = [], counts = new Map()) {
+  for (const entry of entries ?? []) {
+    if (!entry || typeof entry !== 'object') continue;
+    const sanitizedName = sanitizeImportedName(entry.name, importedEntryFallbackName(entry));
+    const key = importedNameKey(sanitizedName);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    if (entry.type === 'menu' && Array.isArray(entry.children)) {
+      collectImportedNameCounts(entry.children, counts);
+    }
+  }
+  return counts;
+}
+
+function makeUniqueImportedName(name, state) {
+  const baseKey = importedNameKey(name);
+  const baseDuplicateCount = state.originalNameCounts.get(baseKey) ?? 0;
+  const nextCount = (state.countsByBaseName.get(baseKey) ?? 0) + 1;
+  state.countsByBaseName.set(baseKey, nextCount);
+
+  let count = nextCount;
+  let candidate = baseDuplicateCount <= 1 || count === 1 ? name : `${name} ${count}`;
+  let candidateKey = importedNameKey(candidate);
+  while (
+    state.usedNames.has(candidateKey)
+    || (candidateKey !== baseKey && state.originalNameCounts.has(candidateKey))
+  ) {
+    count += 1;
+    candidate = `${name} ${count}`;
+    candidateKey = importedNameKey(candidate);
+  }
+  state.countsByBaseName.set(baseKey, count);
+  state.usedNames.add(candidateKey);
+  return candidate;
+}
+
+function sanitizeImportedEntriesWithState(entries = [], state) {
+  return (entries ?? []).map((entry) => {
+    if (!entry || typeof entry !== 'object') return entry;
+    const sanitizedName = sanitizeImportedName(entry.name, importedEntryFallbackName(entry));
+    const nextEntry = {
+      ...entry,
+      name: makeUniqueImportedName(sanitizedName, state),
+    };
+    if (entry.type === 'menu' && Array.isArray(entry.children)) {
+      nextEntry.children = sanitizeImportedEntriesWithState(entry.children, state);
+    }
+    return nextEntry;
+  });
+}
+
+export function sanitizeImportedEntries(entries = []) {
+  const state = {
+    countsByBaseName: new Map(),
+    originalNameCounts: collectImportedNameCounts(entries),
+    usedNames: new Set(),
+  };
+  return sanitizeImportedEntriesWithState(entries, state);
+}

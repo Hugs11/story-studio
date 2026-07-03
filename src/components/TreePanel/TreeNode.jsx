@@ -16,6 +16,7 @@ const BADGE_ICON_BY_KIND = {
   return: <IconReturn />,
   'prompt-return': <IconReturn />,
   home: <IconHouse />,
+  'home-implicit': <IconHouse />,
   'home-none': <IconHouse />,
   'end-node': <IconStop />,
   'end-night': <IconMoon />,
@@ -108,6 +109,8 @@ function TreeNodeInner({
     resolvedIcon = <IconHouse />;
   } else if (type === 'story') {
     resolvedIcon = <IconStory />;
+  } else if (type === 'ref') {
+    resolvedIcon = <IconArrowRight />;
   } else if (type === 'zip') {
     resolvedIcon = <IconArchive />;
   } else {

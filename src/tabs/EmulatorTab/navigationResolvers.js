@@ -73,7 +73,11 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
   if (project && entry?.type === 'story') {
     const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, project.rootEntries ?? []);
     if (navigation.storyHome.isNone) return null;
-    if (navigation.storyHome.targetId) return normalizeHomeTarget(navigation.storyHome.targetId);
+    if (navigation.storyHome.targetId) {
+      return normalizeHomeTarget(navigation.storyHome.targetId, {
+        preserveStoryPlay: !!entry.nativeStageId,
+      });
+    }
   }
 
   if (entry?.returnOnHome) {
@@ -82,16 +86,19 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
       if (isRootNavigationTarget(normalized)) return 'root';
       if (isCurrentMenuNavigationTarget(normalized)) return parentMenu?.id ?? null;
       if (isNextStoryNavigationTarget(normalized)) return 'next_story';
-      if (isStoryNavigationTarget(normalized)) return normalizeHomeTarget(normalized);
+      if (isStoryNavigationTarget(normalized)) {
+        return normalizeHomeTarget(normalized, { preserveStoryPlay: !!entry.nativeStageId });
+      }
       return decodeNavigationMenuId(normalized);
     }
   }
   return resolveStoryReturnTarget(entry, parentMenu, project);
 }
 
-export function normalizeHomeTarget(target) {
+export function normalizeHomeTarget(target, options = {}) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return null;
+  if (options.preserveStoryPlay) return normalized;
   if (!isStoryPlayNavigationTarget(normalized)) return normalized;
   const storyId = decodeNavigationStoryId(normalized);
   return encodeStoryNavigationTarget(storyId);

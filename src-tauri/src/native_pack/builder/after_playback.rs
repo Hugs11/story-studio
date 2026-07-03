@@ -100,11 +100,11 @@ impl<'a> StoryBuilder<'a> {
             if is_last && step.ok_choice_targets.len() > 1 {
                 let mut options = Vec::new();
                 for target in &step.ok_choice_targets {
-                    let resolved = self.resolve_story_return_transition(
-                        Some(target.as_str()),
-                        play_return_transition.clone(),
-                    );
-                    if let Some(stage_id) = self.transition_target_stage_id(&resolved) {
+                    // Résolveur unifié (sucre au-dessus de `ref`) : préalloué pour les
+                    // convergences « en avant », repli sur le retour de lecture (indulgent).
+                    if let Some(stage_id) =
+                        self.resolve_target_stage(target, play_return_transition.clone())
+                    {
                         options.push(stage_id);
                     }
                 }

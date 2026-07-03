@@ -4,7 +4,7 @@ import { getExportPackName, parseConventionName } from '../../utils/packConventi
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
 
 // Canonical project shape:
-// - `rootEntries` is the only saved/runtime tree for project content.
+// - `rootEntries` is the main saved/runtime tree for project content.
 // - Menu children live in `children`.
 // - Imported pack projections can expose `entries`; normalization maps them to
 //   `rootEntries` or `children`.
@@ -20,6 +20,8 @@ export const DEFAULT_PACK_METADATA = Object.freeze({
   producer: '',
   bonus: '',
   description: '',
+  uuid: '',
+  originalUuid: '',
   namingMode: 'convention',
   legacyExportName: '',
   legacyName: '',
@@ -63,6 +65,7 @@ function normalizeOptions(options) {
 
 function inferEntryType(entry) {
   if (!entry || typeof entry !== 'object') return 'story';
+  if (entry.type === 'ref') return 'ref';
   if (entry.type === 'menu' || Array.isArray(entry.children) || (!entry.type && Array.isArray(entry.items))) {
     return 'menu';
   }
@@ -79,18 +82,6 @@ function normalizeControlSettings(entry, defaults) {
     ok: cs.ok ?? defaults.ok,
     home: cs.home ?? defaults.home,
   };
-}
-
-function normalizeAudioProcessing(value, fields) {
-  if (!value || typeof value !== 'object') return {};
-  const result = {};
-  for (const field of ['__allAudio', ...fields]) {
-    const processing = value[field];
-    if (processing?.skipSilence === true) {
-      result[field] = { skipSilence: true };
-    }
-  }
-  return result;
 }
 
 function normalizeImportWarnings(value) {
@@ -269,7 +260,6 @@ export function normalizeStoryEntry(entry = {}) {
           { autoplay: false, wheel: true, pause: false, ok: true, home: true },
         )
       : null,
-    audioProcessing: normalizeAudioProcessing(entry.audioProcessing, ['audio', 'itemAudio', 'afterPlaybackPromptAudio']),
   };
 }
 
@@ -282,6 +272,24 @@ export function normalizeZipEntry(entry = {}) {
     zipPath: normalizeLocalFilePath(entry.zipPath),
     coverImage: normalizeLocalFilePath(entry.coverImage),
     coverAudio: normalizeLocalFilePath(entry.coverAudio),
+  };
+}
+
+// Pointeur pur vers une autre entree (menu/story/etape). Permet de representer
+// convergence, boucle et fin partagee sans dupliquer le noeud cible : l'arbre
+// porte chaque noeud une fois, et les aretes restantes deviennent des `ref`.
+// `target` reutilise l'encodage navigation existant (menu:/story:/story_play:/
+// story_home_step:) plutot qu'un id nu, pour viser n'importe quel noeud avec un
+// seul resolveur. Un id nu sans prefixe est interprete comme `menu:<id>`.
+export function normalizeRefEntry(entry = {}) {
+  return {
+    id: entry.id || makeId(),
+    type: 'ref',
+    target: normalizeNavigationTarget(entry.target ?? entry.targetId),
+    refKind: entry.refKind === 'return' ? 'return' : 'continue',
+    label: typeof entry.label === 'string' ? entry.label : '',
+    treeColor: normalizeTreeColor(entry.treeColor),
+    nativeStageId: typeof entry.nativeStageId === 'string' ? entry.nativeStageId : null,
   };
 }
 
@@ -313,7 +321,6 @@ export function normalizeMenuEntry(entry = {}) {
     returnOnHome: normalizeNavigationTarget(entry.returnOnHome),
     nativeGraph: entry.nativeGraph ?? null,
     importedContinuation,
-    audioProcessing: normalizeAudioProcessing(entry.audioProcessing, ['audio']),
     children: children.map(normalizeEntry),
   };
 }
@@ -324,6 +331,8 @@ export function normalizeEntry(entry = {}) {
       return normalizeMenuEntry(entry);
     case 'zip':
       return normalizeZipEntry(entry);
+    case 'ref':
+      return normalizeRefEntry(entry);
     default:
       return normalizeStoryEntry(entry);
   }
@@ -365,59 +374,6 @@ function countPlayableEntries(entries) {
 
 function nativeGraphStageCount(graph) {
   return graph?.stageCount ?? graph?.document?.stageNodes?.length ?? 0;
-}
-
-function nativeGraphStageId(stage) {
-  return stage?.uuid || stage?.id || '';
-}
-
-function nativeGraphStagePositionKey(stage) {
-  const x = Number(stage?.position?.x ?? 0);
-  const y = Number(stage?.position?.y ?? 0);
-  return [Number.isFinite(y) ? y : 0, Number.isFinite(x) ? x : 0];
-}
-
-function nativeGraphStageKind(stage) {
-  if (stage?.squareOne) return 'Depart';
-  if (stage?.controlSettings?.wheel && !stage?.controlSettings?.autoplay) return 'Choix';
-  if (stage?.controlSettings?.autoplay) return 'Lecture';
-  return 'Stage';
-}
-
-function nativeGraphProjectionLabel(stage, index) {
-  const name = typeof stage?.name === 'string' ? stage.name.trim() : '';
-  if (name && name !== 'Stage title') return name;
-  return `${nativeGraphStageKind(stage)} ${String(index + 1).padStart(2, '0')}`;
-}
-
-function buildNativeGraphFallbackEntries(graph) {
-  const stages = Array.isArray(graph?.document?.stageNodes) ? graph.document.stageNodes : [];
-  const ordered = stages
-    .filter((stage) => !stage?.squareOne && nativeGraphStageId(stage))
-    .map((stage) => ({ stage, key: nativeGraphStagePositionKey(stage) }))
-    .sort((a, b) => (a.key[0] - b.key[0]) || (a.key[1] - b.key[1]))
-    .map(({ stage }, index) => ({
-      id: nativeGraphStageId(stage),
-      type: 'story',
-      name: nativeGraphProjectionLabel(stage, index),
-      nativeStageId: nativeGraphStageId(stage),
-      audio: normalizeLocalFilePath(stage.audio),
-      itemAudio: normalizeLocalFilePath(stage.audio),
-      itemImage: normalizeLocalFilePath(stage.image),
-      controlSettings: normalizeControlSettings(
-        { controlSettings: stage.controlSettings },
-        { autoplay: !!stage.controlSettings?.autoplay, wheel: !!stage.controlSettings?.wheel, pause: false, ok: false, home: true },
-      ),
-    }));
-  if (ordered.length === 0) return [];
-  return [normalizeMenuEntry({
-    id: 'native-graph-stage-map',
-    name: 'Carte du graphe interactif',
-    audio: null,
-    image: null,
-    autoBlackImage: true,
-    children: ordered,
-  })];
 }
 
 function normalizeNativeGraph(graph, rootEntries, importWarnings) {
@@ -471,6 +427,8 @@ function normalizePackMetadata(value = {}) {
     producer: String(metadata.producer ?? '').trim(),
     bonus: String(metadata.bonus ?? '').trim(),
     description: String(metadata.description ?? '').trim(),
+    uuid: String(metadata.uuid ?? metadata.packUuid ?? '').trim(),
+    originalUuid: String(metadata.originalUuid ?? metadata.uuid ?? metadata.packUuid ?? '').trim(),
     namingMode,
     legacyExportName: String(metadata.legacyExportName ?? '').trim(),
     legacyName: String(metadata.legacyName ?? '').trim(),
@@ -555,12 +513,10 @@ export function normalizeBaseProject(project = {}) {
   const projectType = inferProjectType(project, rootEntries);
   const importWarnings = normalizeImportWarnings(project.importWarnings);
   const nativeGraph = normalizeNativeGraph(project.nativeGraph, rootEntries, importWarnings);
-  if (nativeGraph && countPlayableEntries(rootEntries) <= 1) {
-    const projectedEntries = buildNativeGraphFallbackEntries(nativeGraph);
-    if (projectedEntries.length > 0) rootEntries = projectedEntries;
-  }
   const rootImage = normalizeLocalFilePath(project.rootImage);
-  const thumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
+  const rawThumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
+  const sameImage = !!project.sameImage || (!!nativeGraph && !!rootImage && rawThumbnailImage === rootImage);
+  const thumbnailImage = sameImage ? rootImage : rawThumbnailImage;
   const nativeTitle = nativeGraph?.document?.title;
   const endNodeName = String(project.endNodeName ?? '').trim() === 'Nœud de fin'
     ? 'Message de fin'
@@ -580,13 +536,12 @@ export function normalizeBaseProject(project = {}) {
     rootImage,
     treeColor: normalizeTreeColor(project.treeColor),
     thumbnailImage,
-    sameImage: !!project.sameImage || (!!nativeGraph && !!rootImage && thumbnailImage === rootImage),
+    sameImage,
     autoGenerateRootImage: !!project.autoGenerateRootImage,
     nightModeAudio: normalizeLocalFilePath(project.nightModeAudio),
     nightModeReturn: project.nightModeReturn ?? null,
     nightModeHomeReturn: project.nightModeHomeReturn ?? null,
     nativeGraph,
-    audioProcessing: normalizeAudioProcessing(project.audioProcessing, ['rootAudio', 'nightModeAudio']),
     globalOptions: normalizeOptions(project.globalOptions),
     importWarnings: nativeGraph ? [] : importWarnings,
     rootEntries,
@@ -617,6 +572,7 @@ export function projectToRustExport(project) {
     name: getExportPackName(packMetadata),
     packVersion: packMetadata.version,
     packDescription: packMetadata.description,
+    packUuid: packMetadata.uuid,
     globalOptions: {
       ...serializable.globalOptions,
       silenceMode: serializable.globalOptions.silenceMode,

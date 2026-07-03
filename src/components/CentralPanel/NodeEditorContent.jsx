@@ -3,6 +3,7 @@ import { RootEditor } from './RootEditor';
 import { MenuEditor } from './MenuEditor';
 import { StoryEditor } from './StoryEditor';
 import { ZipEditor } from './ZipEditor';
+import { RefEditor } from './RefEditor';
 import { MultiEditor } from './MultiEditor';
 import { collectAllStories, findEntryById, findParentMenuId } from '../../store/projectModel';
 
@@ -91,6 +92,18 @@ export const NodeEditorContent = memo(function NodeEditorContent({
     return (
       <ZipEditor
         node={node}
+        onUpdate={onUpdateItem}
+        onDelete={onDeleteItem}
+      />
+    );
+  }
+
+  if (node.type === 'ref') {
+    return (
+      <RefEditor
+        node={node}
+        allMenus={allMenus}
+        allStories={allStories}
         onUpdate={onUpdateItem}
         onDelete={onDeleteItem}
       />

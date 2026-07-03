@@ -22,14 +22,15 @@
   font-display: swap;
 }
 
-/* Story Studio v0.9.2 design foundations.
+/* Story Studio v0.9.3 design foundations.
    New semantic roles live beside legacy aliases so older screens keep working
    while the redesign migrates screen by screen. */
 :root {
   color-scheme: light;
 
   /* Layout */
-  --col-left: clamp(180px, 18vw, 280px);
+  --col-left-min: 300px;
+  --col-left: clamp(var(--col-left-min), 18vw, 320px);
   --center-content-max: 1020px;
   --titlebar-height: 38px;
   --toolbar-height: 50px;

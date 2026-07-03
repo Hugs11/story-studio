@@ -72,6 +72,14 @@
   color: var(--text-secondary);
 }
 
+.record-saved-copy {
+  max-width: 240px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .record-name-field {
   display: flex;
   align-items: center;

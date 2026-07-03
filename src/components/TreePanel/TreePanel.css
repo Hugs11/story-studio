@@ -14,6 +14,23 @@
   padding: 4px 0 48px 0;
 }
 
+.tree-shared-section {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.tree-section-label {
+  height: 22px;
+  padding: 5px 12px 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
 /* ── Search bar ─────────────────────────────────────────────────────────── */
 .tree-search-bar {
   --tree-search-accent: var(--accent-2);
@@ -419,7 +436,8 @@
   background: color-mix(in oklch, oklch(0.76 0.13 185) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.76 0.13 185) 35%, transparent);
 }
-.badge-nav--home {
+.badge-nav--home,
+.badge-nav--home-implicit {
   color: oklch(0.78 0.13 240);
   background: color-mix(in oklch, oklch(0.78 0.13 240) 22%, transparent);
   border-color: color-mix(in oklch, oklch(0.78 0.13 240) 35%, transparent);

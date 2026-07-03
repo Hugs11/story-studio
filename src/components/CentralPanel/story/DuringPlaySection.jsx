@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
 import { encodeMenuNavigationTarget } from '../../../store/navigationTargets';
-import { NavigationTargetSelect } from './storyUtils';
+import { getGeneratedStoryNavigation } from '../../../store/generatedNavigation';
+import { generatedTargetIdToSelectValue, NavigationTargetSelect } from './storyUtils';
 import { StoryDisclosure } from './StoryDisclosure';
 
 const TITLE_CONTROL_DEFAULTS = {
@@ -37,10 +38,15 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
   const [showAdvanced, setShowAdvanced] = useState(duringPlaySelectionAdvancedOpen);
   const controls = node.controlSettings ?? {};
   const titleControls = node.titleControlSettings ?? {};
+  const navigation = getGeneratedStoryNavigation(node, parentMenu, project, project?.rootEntries ?? []);
   const parentMenuTarget = parentMenu?.id ? encodeMenuNavigationTarget(parentMenu.id) : null;
-  const homeSelectValue = node.returnOnHome ?? parentMenuTarget ?? '';
   const pauseEnabled = controls.pause ?? PLAY_CONTROLS[0].def;
-  const homeEnabled = !node.returnOnHomeNone;
+  const homeEnabled = controls.home ?? true;
+  const effectiveHomeSelectValue = navigation.storyHome.effectiveTargetId
+    ? generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId)
+    : null;
+  const homeSelectValue = node.returnOnHome ?? effectiveHomeSelectValue ?? parentMenuTarget ?? '';
+  const includeHomeDefaultOption = !parentMenuTarget || homeSelectValue === '';
 
   return (
     <div className="card during-play-card">
@@ -71,7 +77,10 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
           <div className="sequence-control during-play-home-head">
             <Toggle
               on={homeEnabled}
-              onChange={(v) => onUpdate({ returnOnHome: null, returnOnHomeNone: !v })}
+              onChange={(v) => onUpdate({
+                controlSettings: { ...controls, home: v },
+                ...(v ? {} : { returnOnHome: null, returnOnHomeNone: true }),
+              })}
               ariaLabel="Bouton Accueil"
             />
             <Tooltip
@@ -94,7 +103,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
                     allStories={allStories}
                     currentStoryId={node.id}
                     emptyLabel="Retour au menu d'accueil"
-                    includeDefault={!parentMenuTarget}
+                    includeDefault={includeHomeDefaultOption}
                     includeStoryPlay={false}
                     size="compact"
                   />

@@ -1,4 +1,5 @@
-import { makeId, normalizeMenuEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { makeId, normalizeMenuEntry, normalizeRefEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { refTargetEntryId } from '../navigationTargets.js';
 
 function buildProjectIndexEntries(entries, ancestors, level, index) {
   let playableCount = 0;
@@ -15,6 +16,7 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
       type: entry.type,
       level,
       entry,
+      path,
     });
 
     if (entryId) {
@@ -34,7 +36,9 @@ function buildProjectIndexEntries(entries, ancestors, level, index) {
     let entryPlayableCount = 0;
     if (entry.type === 'menu') {
       entryPlayableCount = buildProjectIndexEntries(entry.children ?? [], path, level + 1, index);
-    } else if (entry.type === 'story' || entry.type === 'zip') {
+    } else if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'ref') {
+      // Une `ref` est un choix navigable (vers un nœud existant) → elle compte comme jouable
+      // (sinon un dossier de liens serait considéré « vide »). Cible pendante : signalée à part.
       entryPlayableCount = 1;
     }
 
@@ -97,6 +101,12 @@ export function createZipEntry(fields = {}) {
   return normalizeZipEntry(fields);
 }
 
+// Crée un nœud `ref` (« → nœud existant ») pointant vers une cible typée.
+// `target` réutilise l'encodage navigation (menu:/story:/story_play:/story_home_step:).
+export function createRefEntry({ target, refKind = 'continue', label = '' } = {}) {
+  return normalizeRefEntry({ target, refKind, label });
+}
+
 export function deepCloneEntry(entry) {
   if (!entry || typeof entry !== 'object') return entry;
   const cloned = { ...entry, id: makeId() };
@@ -123,6 +133,7 @@ export function findParentMenuId(project, entryId, projectIndex = null) {
   });
   return parentId;
 }
+
 
 export function findEntryPath(project, entryId, projectIndex = null) {
   if (entryId === 'root') return [];
@@ -165,12 +176,40 @@ export function buildSelectedNode(project, selectedId, projectIndex = null) {
 export function visitProjectEntries(project, visitor, projectIndex = null) {
   if (projectIndex) {
     for (const flatEntry of projectIndex.flatEntries) {
-      const path = projectIndex.pathById.get(flatEntry.id) ?? [flatEntry.entry];
+      const path = flatEntry.path ?? projectIndex.pathById.get(flatEntry.id) ?? [flatEntry.entry];
       visitor(flatEntry.entry, path.slice(0, -1));
     }
     return;
   }
   walkEntries(project.rootEntries ?? [], visitor);
+}
+
+// Ids de l'entrée + tout son sous-arbre (ce qui disparaît si on la supprime).
+export function collectEntrySubtreeIds(entry) {
+  const ids = new Set();
+  const walk = (node) => {
+    if (!node?.id) return;
+    ids.add(node.id);
+    (node.children ?? []).forEach(walk);
+  };
+  walk(entry);
+  return ids;
+}
+
+// Refs ENTRANTES qui deviendraient pendantes si on supprimait `entryId` (et son sous-arbre).
+// Garde-fou authoring : on ne laisse pas une `ref` viser une cible disparue (cf. validation).
+// Les refs situées DANS le sous-arbre supprimé ne comptent pas (elles partent avec lui).
+export function findIncomingRefs(project, entryId, projectIndex = null) {
+  const target = findEntryById(project, entryId, projectIndex);
+  if (!target) return [];
+  const removedIds = collectEntrySubtreeIds(target);
+  const incoming = [];
+  visitProjectEntries(project, (entry) => {
+    if (entry.type !== 'ref' || removedIds.has(entry.id)) return;
+    const targetId = refTargetEntryId(entry.target);
+    if (targetId && removedIds.has(targetId)) incoming.push(entry);
+  }, projectIndex);
+  return incoming;
 }
 
 export function collectAllMenus(project, projectIndex = null) {
@@ -182,7 +221,7 @@ export function collectAllMenus(project, projectIndex = null) {
     }));
   }
   const menus = [];
-  walkEntries(project.rootEntries ?? [], (entry) => {
+  visitProjectEntries(project, (entry) => {
     if (entry.type === 'menu') {
       menus.push({
         id: entry.id,
@@ -208,7 +247,7 @@ export function collectAllStories(project, projectIndex = null) {
     }
     return stories;
   }
-  walkEntries(project.rootEntries ?? [], (entry) => {
+  visitProjectEntries(project, (entry) => {
     if (entry.type === 'story') {
       stories.push({
         id: entry.id,
@@ -225,24 +264,6 @@ export function getPlayableDescendantCount(projectIndex, entryId) {
   return projectIndex.playableDescendantCountById.get(entryId) ?? 0;
 }
 
-export function collectProjectAudioPaths(project) {
-  const audioPaths = [];
-  if (project.rootAudio) audioPaths.push(project.rootAudio);
-  if (project.nightModeAudio) audioPaths.push(project.nightModeAudio);
-  visitProjectEntries(project, (entry) => {
-    if (entry.type === 'menu' && entry.audio) audioPaths.push(entry.audio);
-    if (entry.type === 'story') {
-      if (entry.audio) audioPaths.push(entry.audio);
-      if (entry.itemAudio) audioPaths.push(entry.itemAudio);
-      if (entry.afterPlaybackPromptAudio) audioPaths.push(entry.afterPlaybackPromptAudio);
-      for (const step of entry.afterPlaybackSequence ?? []) {
-        if (step.audio) audioPaths.push(step.audio);
-      }
-      if (entry.afterPlaybackHomeStep?.audio) audioPaths.push(entry.afterPlaybackHomeStep.audio);
-    }
-  });
-  return audioPaths;
-}
 
 // Retourne le chemin de l'image associee a une entree (ou a la racine), avec
 // la regle qui couvre tous les types : root utilise `rootImage`, menu utilise

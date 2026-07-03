@@ -68,11 +68,22 @@ pub fn create_fixed_pack(
     zip_path: &Path,
     metadata_patch: Option<PackMetadataPatchModel>,
 ) -> Result<FixedPackResultModel, String> {
-    create_fixed_pack_with_log(zip_path, metadata_patch, &|_| {})
+    create_fixed_pack_with_log(zip_path, None, metadata_patch, &|_| {})
 }
 
 pub fn create_fixed_pack_with_log(
     zip_path: &Path,
+    output_dir: Option<&Path>,
+    metadata_patch: Option<PackMetadataPatchModel>,
+    emit: &dyn Fn(&str),
+) -> Result<FixedPackResultModel, String> {
+    create_fixed_pack_with_source_log(zip_path, zip_path, output_dir, metadata_patch, emit)
+}
+
+pub(crate) fn create_fixed_pack_with_source_log(
+    zip_path: &Path,
+    source_path: &Path,
+    output_dir: Option<&Path>,
     metadata_patch: Option<PackMetadataPatchModel>,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
@@ -169,7 +180,8 @@ pub fn create_fixed_pack_with_log(
             emit("Application des métadonnées au story.json...");
             apply_metadata_patch(&mut doc.story, patch);
         }
-        let fixed_zip_path = unique_fixed_zip_path(zip_path, metadata_patch.as_ref());
+        let fixed_zip_path =
+            unique_fixed_zip_path(source_path, output_dir, metadata_patch.as_ref());
         emit(&format!(
             "Écriture du ZIP corrigé : {}",
             fixed_zip_path.display()
@@ -185,7 +197,7 @@ pub fn create_fixed_pack_with_log(
         emit("ZIP corrigé finalisé.");
 
         Ok(FixedPackResultModel {
-            source_zip_path: zip_path.to_string_lossy().to_string(),
+            source_zip_path: source_path.to_string_lossy().to_string(),
             fixed_zip_path: fixed_zip_path.to_string_lossy().to_string(),
             fixed_count: audio_items.len() + image_items.len() + usize::from(metadata_will_change),
             audio_fixed: audio_items.len(),
@@ -359,6 +371,13 @@ fn analyze_pack_inner(
         .unwrap_or("")
         .trim()
         .to_string();
+    report.pack_uuid = doc
+        .story
+        .get("uuid")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
     report.pack_version = doc
         .story
         .get("version")
@@ -429,7 +448,7 @@ fn validate_title(doc: &LoadedPackDoc, zip_path: &Path, report: &mut ReportModel
             PackValidationSeverity::Warning,
             "title",
             "Convention communautaire",
-            "Le nom du pack ne semble pas suivre la convention communautaire Story Studio.",
+            "Le nom du pack ne semble pas suivre la convention communautaire.",
         ));
         has_warning = true;
     }
@@ -694,15 +713,39 @@ fn validate_action_targets(doc: &LoadedPackDoc, report: &mut ReportModel) {
     }
 }
 
-fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &mut ReportModel) {
-    let extraction_dir = temp_dir.join("editable-check");
+fn validate_story_studio_editability(zip_path: &Path, _temp_dir: &Path, report: &mut ReportModel) {
     let zip_string = zip_path.to_string_lossy().to_string();
-    match pack_reader::unpack_zip_to_entries(&zip_string, &extraction_dir.to_string_lossy()) {
-        Ok(_) => {
+    match pack_reader::classify_pack_editability(&zip_string) {
+        Ok(editability) if editability.authoring_editable => {
             report.structure_summary.story_studio_editable = true;
-            report
-                .technical_log
-                .push("[OK] Structure éditable dans Story Studio".to_string());
+            report.technical_log.push(format!(
+                "[OK] Structure éditable dans Story Studio : {} entrée(s), nativeGraph={}",
+                editability.projected_entry_count, editability.has_native_graph
+            ));
+        }
+        Ok(editability) => {
+            report.structure_summary.story_studio_editable = false;
+            let mut entry = issue(
+                PackValidationSeverity::Warning,
+                "structure",
+                "Édition Story Studio",
+                "Cette structure peut être valide pour la Lunii mais Story Studio ne la classe pas authoring-editable.",
+            );
+            entry.technical_details = Some(editability.reason.clone());
+            report.issues.push(entry);
+            report.technical_log.push(format!(
+                "[WARN] Édition Story Studio refusée : {} ({} entrée(s), roundTripFaithful={}, usesGraphProjection={}, nativeGraph={}, écarts={})",
+                editability.reason,
+                editability.projected_entry_count,
+                editability.round_trip_faithful,
+                editability.uses_graph_projection,
+                editability.has_native_graph,
+                editability
+                    .fidelity
+                    .as_ref()
+                    .map(|fidelity| fidelity.gaps.len())
+                    .unwrap_or(0),
+            ));
         }
         Err(err) => {
             report.structure_summary.story_studio_editable = false;
@@ -714,10 +757,9 @@ fn validate_story_studio_editability(zip_path: &Path, temp_dir: &Path, report: &
             );
             entry.technical_details = Some(err.clone());
             report.issues.push(entry);
-            report.technical_log.push(format!(
-                "[WARN] Projection Story Studio impossible : {}",
-                err
-            ));
+            report
+                .technical_log
+                .push(format!("[WARN] Rapport d'éditabilité impossible : {}", err));
         }
     }
 }
@@ -997,6 +1039,7 @@ fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
         pack_name: pack_name.to_string(),
         pack_title: String::new(),
         pack_description: String::new(),
+        pack_uuid: String::new(),
         pack_version: 1,
         zip_path: zip_path.to_string(),
         verdict: PackValidationVerdict::Invalid,
@@ -1026,6 +1069,7 @@ fn metadata_patch_has_changes(patch: &PackMetadataPatchModel) -> bool {
         || patch.author.is_some()
         || patch.producer.is_some()
         || patch.bonus.is_some()
+        || patch.uuid.is_some()
         || patch.naming_mode.is_some()
 }
 
@@ -1054,6 +1098,17 @@ fn apply_metadata_patch(story: &mut serde_json::Value, patch: &PackMetadataPatch
         object.insert(
             "version".to_string(),
             serde_json::Value::Number(serde_json::Number::from(version.max(1))),
+        );
+    }
+    if let Some(uuid) = patch
+        .uuid
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        object.insert(
+            "uuid".to_string(),
+            serde_json::Value::String(uuid.to_string()),
         );
     }
 
@@ -1203,9 +1258,12 @@ fn write_fixed_zip(
 
 fn unique_fixed_zip_path(
     source: &Path,
+    output_dir: Option<&Path>,
     metadata_patch: Option<&PackMetadataPatchModel>,
 ) -> PathBuf {
-    let parent = source.parent().unwrap_or_else(|| Path::new("."));
+    let parent = output_dir
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or_else(|| source.parent().unwrap_or_else(|| Path::new(".")));
     let stem = metadata_patch
         .and_then(convention_zip_stem)
         .or_else(|| {

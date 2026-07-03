@@ -95,6 +95,30 @@ test('pack project missing thumbnailImage hints at the « même image » checkbo
   assert.equal(thumb.status, 'warning');
 });
 
+test('pack project with sameImage validates only the root image', () => {
+  const project = buildProject({ sameImage: true, thumbnailImage: '' });
+
+  const issues = getProjectValidationIssues(project);
+  assert.equal(
+    find(issues, (i) => /Image bibliothèque/.test(i.text)),
+    null,
+    `aucun warning vignette attendu avec même image, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
+  );
+  assert.equal(project.thumbnailImage, project.rootImage);
+});
+
+test('pack project with sameImage and missing root image does not duplicate thumbnail warning', () => {
+  const project = buildProject({ sameImage: true, rootImage: '', thumbnailImage: '' });
+
+  const issues = getProjectValidationIssues(project);
+  assert.ok(find(issues, (i) => /Image de couverture à ajouter/.test(i.text)));
+  assert.equal(
+    find(issues, (i) => /Image bibliothèque/.test(i.text)),
+    null,
+    `aucun warning vignette attendu quand même image dépend de la couverture, reçu: ${JSON.stringify(issues.map((i) => i.text))}`,
+  );
+});
+
 test('warns "Histoire à ajouter" when a story has no audio', () => {
   const project = buildProject({
     rootEntries: [
@@ -287,4 +311,82 @@ test('a story with controlSettings.autoplay = true still requires selection audi
     false,
     `aucun warning image attendu quand l'image est presente, reçu: ${JSON.stringify(aboutStory)}`,
   );
+});
+
+test('a story with an explicit silent title stage does not require selection audio', () => {
+  const project = buildProject({
+    rootEntries: [
+      {
+        id: 'story-silent-title',
+        type: 'story',
+        name: 'Titre silencieux',
+        audio: 's.mp3',
+        itemAudio: '',
+        itemImage: 'i.png',
+        titleControlSettings: { wheel: true, ok: true, home: true, pause: false, autoplay: false },
+      },
+    ],
+  });
+
+  const issues = getProjectValidationIssues(project);
+  const aboutStory = issues.filter((i) => i.id === 'story-silent-title');
+  assert.equal(
+    aboutStory.some((issue) => /Audio de sélection à ajouter/.test(issue.text)),
+    false,
+    `aucun warning audio titre attendu pour un titre explicite silencieux, reçu: ${JSON.stringify(aboutStory)}`,
+  );
+});
+
+function buildProjectWithRef(refOverride) {
+  return buildProject({
+    rootEntries: [
+      {
+        id: 'story-1',
+        type: 'story',
+        name: 'Histoire 1',
+        audio: 'D:/projet/story1.mp3',
+        itemAudio: 'D:/projet/story1-title.mp3',
+        itemImage: 'D:/projet/story1-title.png',
+      },
+      { id: 'ref-1', type: 'ref', ...refOverride },
+    ],
+  });
+}
+
+test('a ref to an existing story raises no ref issue and is not "unsupported"', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:story-1' }));
+  const refIssues = issues.filter((i) => i.id === 'ref-1');
+  assert.equal(refIssues.length, 0, `aucune issue ref attendue, reçu: ${JSON.stringify(refIssues)}`);
+});
+
+test('a ref to a missing target is flagged as an error', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({ target: 'story:does-not-exist' }));
+  const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error');
+  assert.ok(err, `une erreur de cible introuvable est attendue, reçu: ${JSON.stringify(issues)}`);
+});
+
+test('a ref without a target is flagged as an error', () => {
+  const issues = getProjectValidationIssues(buildProjectWithRef({}));
+  const err = find(issues, (i) => i.id === 'ref-1' && i.status === 'error' && /Référence sans cible/.test(i.text));
+  assert.ok(err, `une erreur "référence sans cible" est attendue, reçu: ${JSON.stringify(issues)}`);
+});
+
+test('a ref to a stale shared story is treated as a missing target', () => {
+  const project = buildProject({
+    rootEntries: [{ id: 'ref-1', type: 'ref', target: 'story:shared-story' }],
+    sharedEntries: [
+      {
+        id: 'shared-story',
+        type: 'story',
+        name: 'Scene commune',
+        audio: 'shared.mp3',
+        itemAudio: 'shared-title.mp3',
+        itemImage: 'shared.png',
+      },
+    ],
+  });
+
+  const issues = getProjectValidationIssues(project);
+  const missing = find(issues, (i) => i.id === 'ref-1' && /destination histoire introuvable/.test(i.text));
+  assert.ok(missing, `erreur cible absente attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
 });

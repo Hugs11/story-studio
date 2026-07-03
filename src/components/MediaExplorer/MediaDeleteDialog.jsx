@@ -1,4 +1,5 @@
 import { Button } from '../common/Button';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function MediaDeleteDialog({
   items,
@@ -7,12 +8,16 @@ export function MediaDeleteDialog({
   onCancel,
   onConfirm,
 }) {
+  useEscapeKey(!!items?.length, onCancel);
+
   if (!items?.length) return null;
 
   const usedCount = items.filter((item) => item.projectUsedCount > 0).length;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+    // data-modal-surface : overlay à styles inline, reconnu par la garde des
+    // raccourcis globaux (utils/modalSurfaces.js).
+    <div data-modal-surface="" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
       <div className="gen-modal" style={{ width: 380, maxWidth: '92vw' }}>
         <div className="gen-header">
           <span className="gen-title">Supprimer {items.length > 1 ? `${items.length} fichiers` : '1 fichier'}</span>

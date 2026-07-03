@@ -43,6 +43,7 @@ import {
   resolveDropTargetForNode,
 } from '../tree/treeOperations';
 import { computeBadgesData, formatBadgeTitle } from '../tree/treeNavigationBadges';
+import { buildRefDisplay } from '../tree/refDisplay';
 import {
   getGeneratedEndNodeHomeNavigation,
   getGeneratedEndNodeReturnNavigation,
@@ -114,7 +115,6 @@ export function TreePanel({
   );
   const getEntry = useCallback((entryId) => projectIndex.entryById.get(entryId) ?? null, [projectIndex]);
   const getParentId = useCallback((entryId) => projectIndex.parentMenuById.get(entryId) ?? null, [projectIndex]);
-
   const {
     selectedIds,
     setSelectedIds,
@@ -467,7 +467,7 @@ export function TreePanel({
 
     if (projectType === 'pack') {
       actions.push({ icon: <IconFolderPlus />, label: 'Créer un dossier', fn: () => onAddMenu(targetMenuId) });
-      actions.push({ icon: <IconStory />, label: 'Importer des histoires', fn: () => onAddStory(targetMenuId) });
+      actions.push({ icon: <IconStory />, label: 'Importer audio ou archive', fn: () => onAddStory(targetMenuId) });
       if (onImportFolder) {
         actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
       }
@@ -547,7 +547,7 @@ export function TreePanel({
         });
       }
 
-      if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
+      if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip' || nodeType === 'ref') {
         actions.push('sep');
         const selectedForDelete = selectedIds.has(nodeId) && selectedIds.size > 1
           ? getTopLevelSelected()
@@ -666,18 +666,16 @@ export function TreePanel({
     return actions;
   }
 
-  function renderEntries(entries, level, parentMenu = null) {
+  function renderEntries(entries, level, parentMenu = null, { sortable = true } = {}) {
     const filtered = visibleIds ? entries.filter((e) => visibleIds.has(e.id)) : entries;
     if (!filtered?.length) return null;
     const parentScopeId = parentMenu?.id ?? 'root';
-    return (
-      <SortableContext items={filtered.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
-        {filtered.map((entry) => (
+    const content = filtered.map((entry) => (
           <Fragment key={entry.id}>
             <TreeNode
               id={entry.id}
               type={entry.type}
-              label={entry.name}
+              label={entry.type === 'ref' ? buildRefDisplay(entry, projectIndex.entryById).label : entry.name}
               level={level}
               selected={selectedIds.has(entry.id)}
               cut={cutIds.has(entry.id)}
@@ -692,29 +690,32 @@ export function TreePanel({
                 guideScopeIdsById,
               })}
               dragging={!!activeId}
-              containerDroppableId={entry.type === 'menu' ? `container:${entry.id}` : null}
+              containerDroppableId={sortable && entry.type === 'menu' ? `container:${entry.id}` : null}
               navigationBadges={navigationBadgesById.get(entry.id) ?? EMPTY_BADGES}
               showNavigationBadgeColumn={showNavigationBadgeColumn}
               expanded={isExpanded(entry.id)}
               onToggleExpand={handleToggleExpand}
               childCount={countDescendants(entry)}
-              sortable
+              sortable={sortable}
               dropTarget={resolveDropTargetForNode(entry.id, entry.type, dropInfo)}
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
               hoverGuideScopeIds={guideScopeIdsById.get(entry.id)}
               hoverGuideLevel={hoverGuide?.level ?? null}
-              hoverScopeEnabled={entry.type === 'menu'}
-              onHoverScope={handleHoverScope}
+              hoverScopeEnabled={sortable && entry.type === 'menu'}
+              onHoverScope={sortable ? handleHoverScope : undefined}
             />
             {entry.type === 'menu' && isExpanded(entry.id)
-              ? renderEntries(entry.children ?? [], level + 1, entry)
+              ? renderEntries(entry.children ?? [], level + 1, entry, { sortable })
               : null}
           </Fragment>
-        ))}
+    ));
+    return sortable ? (
+      <SortableContext items={filtered.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
+        {content}
       </SortableContext>
-    );
+    ) : content;
   }
 
   const hasEndNode = projectType === 'pack' && hasVisibleEndNode(project);

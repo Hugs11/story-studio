@@ -89,7 +89,7 @@ export function ProjectMenuPopover({
           <div className="project-menu" role="menu">
             <div className="project-menu-head">
               <strong>Projet</strong>
-              <span>{saveState === 'ok' ? 'Sauvegardé' : 'Fichier et sauvegarde'}</span>
+              <span>{saveState === 'ok' ? 'Enregistré' : 'Fichier et enregistrement'}</span>
             </div>
             <ProjectMenuItem onClick={() => handleAction(onNewProject)}>
               <ToolbarIcon Icon={FilePlus} />
@@ -109,7 +109,7 @@ export function ProjectMenuPopover({
             <ProjectMenuItem onClick={() => handleAction(onSaveProject)}>
               <ToolbarIcon Icon={Save} />
               <span>
-                <strong>Sauvegarder</strong>
+                <strong>Enregistrer</strong>
                 <small>{shortcutLabels.saveProject}</small>
               </span>
             </ProjectMenuItem>

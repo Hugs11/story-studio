@@ -225,9 +225,6 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   const endNodeEffectiveTargetId = (usesEndNode || importedNightPrompt)
     ? (endNodeConfiguredTargetId ?? directReturnTarget)
     : null;
-  const homeTarget = entry?.returnOnHome
-    ? resolveGeneratedTargetForStory(entry.returnOnHome, entry, parentMenu, rootEntries, directReturnTarget)
-    : null;
   const promptOkTarget = hasPrompt
     ? resolveGeneratedTargetForStory(
       entry.afterPlaybackPromptOkTarget,
@@ -246,6 +243,24 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       promptOkTarget,
     )
     : null;
+  const sequence = entry?.afterPlaybackSequence ?? [];
+  const sequenceReturnTarget = hasSequence
+    ? resolveGeneratedTargetForStory(
+      sequence.at(-1)?.okTarget,
+      entry,
+      parentMenu,
+      rootEntries,
+      directReturnTarget,
+    )
+    : null;
+  const endEffectiveTargetId = autoNextFallback
+    ?? (endNodeEffectiveTargetId ?? sequenceReturnTarget ?? promptOkTarget ?? directReturnTarget);
+  const homeTarget = entry?.returnOnHome
+    ? resolveGeneratedTargetForStory(entry.returnOnHome, entry, parentMenu, rootEntries, directReturnTarget)
+    : null;
+  const implicitHomeTarget = !!entry?.returnOnHomeNone && entry?.controlSettings?.home !== false
+    ? endEffectiveTargetId
+    : null;
 
   return {
     directReturn: {
@@ -255,9 +270,11 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     },
     storyHome: {
       targetId: homeTarget,
+      effectiveTargetId: homeTarget ?? implicitHomeTarget,
       isConfigured: !!entry?.returnOnHome,
-      isNone: !!entry?.returnOnHomeNone,
+      isNone: !!entry?.returnOnHomeNone && entry?.controlSettings?.home === false,
       isInactive: entry?.controlSettings?.home === false,
+      isImplicit: !!entry?.returnOnHomeNone && entry?.controlSettings?.home !== false,
     },
     endNodeReturn: {
       // `targetId` (rétro-compatible) = cible explicitement configurée sur le nœud de fin.

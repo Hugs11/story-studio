@@ -36,6 +36,7 @@ fn cleanup_temp_images() {
     ] {
         cleanup_temp_image_dir(dir_name);
     }
+    support::temp::cleanup_orphan_session_workspaces(std::time::Duration::from_secs(24 * 3600));
 }
 
 fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
@@ -108,10 +109,16 @@ pub fn run() {
             commands::pack::load_pack_zip,
             commands::pack::get_pack_asset,
             commands::pack::unpack_zip_to_entries,
+            commands::pack::convert_folder_pack_to_zip,
+            commands::pack::check_pack_editability,
+            commands::pack::classify_pack_editability,
             commands::pack::analyze_community_pack,
             commands::pack::create_fixed_community_pack,
             commands::xtts::xtts_get_status,
             commands::xtts::xtts_generate_audio,
+            commands::piper::piper_list_voices,
+            commands::piper::piper_ensure_voice,
+            commands::piper::piper_generate_audio,
             commands::comfyui::comfyui_check,
             commands::comfyui::comfyui_list_workflows,
             commands::comfyui::comfyui_import_workflow,
@@ -123,6 +130,12 @@ pub fn run() {
             commands::media_probe::probe_media_files,
             commands::podcast::fetch_podcast_feed,
             commands::podcast::download_podcast_media,
+            commands::youtube::fetch_youtube_list,
+            commands::youtube::download_youtube_audio,
+            commands::youtube::update_ytdlp,
+            commands::session::create_session_workspace,
+            commands::session::cleanup_session_workspace,
+            commands::session::list_session_recoveries,
             commands::diagnostics::set_log_level,
             commands::diagnostics::get_current_log_file
         ])

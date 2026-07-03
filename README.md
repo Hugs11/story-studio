@@ -12,13 +12,13 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.2" src="https://img.shields.io/badge/version-0.9.2-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.3" src="https://img.shields.io/badge/version-0.9.3-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-## Vous cherchez a creer des histoires pour la Lunii ?
+## Tu cherches a creer des histoires pour la Lunii ?
 
 Story Studio est un editeur Windows open source pour creer, importer,
 verifier et exporter des packs d'histoires compatibles Lunii. La documentation
@@ -44,12 +44,12 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.2 adds a community pack checker/corrector, podcast import,
-pre-use audio splitting, a FLAC-based audio workflow and a complete UI redesign
-with clearer navigation rails and actions.
+Story Studio 0.9.3 adds a guided home experience, optional-save ephemeral
+sessions, assisted pack editing/checking/aggregation flows, zero-config Piper
+voice generation, YouTube import and stronger imported-pack fidelity.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.2 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.2)
+- [Read the v0.9.3 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.3)
 - [See the full changelog](CHANGELOG.md)
 
 ## At a Glance
@@ -58,10 +58,11 @@ with clearer navigation rails and actions.
 |---|---|
 | **Status** | Beta |
 | **Platform** | Windows desktop |
+| **Interface language** | French only for now |
 | **Project format** | `.mbah` |
 | **Export format** | Lunii-compatible ZIP packs |
 | **Main stack** | React 19, Vite, Tauri 2, Rust |
-| **Workflow** | Visual tree editor, ZIP pack aggregation, node-based navigation, media explorer, simulator |
+| **Workflow** | Guided home workflows, visual tree editor, ZIP pack aggregation, node-based navigation, media explorer, simulator |
 | **Privacy model** | Local app, no hosted backend, no telemetry |
 
 ## Screenshots
@@ -95,14 +96,16 @@ with clearer navigation rails and actions.
 ## Features
 
 - **Visual tree editor** with nested menus, multi-select, drag-and-drop and contextual actions.
-- **Lunii ZIP pack import**: inspect, extract into an editable project, aggregate with your own stories.
+- **Guided home workflows** to edit an existing pack, create from a podcast or YouTube, aggregate ZIP packs, and check/correct a community pack.
+- **Lunii ZIP pack import**: inspect, extract into an editable project, preserve branching graphs with shared references, and aggregate with your own stories.
 - **Built-in audio workflow**: microphone recording, trimming, cuts, fades, assembly and silence insertion.
 - **Built-in image workflow**: automatic 320×240 cropping, text-image generation from node names.
+- **Local voice generation** with Piper by default and XTTS as an advanced opt-in backend.
 - **Media explorer** with tags, filters, usage counters and quick previews.
 - **Built-in simulator** to test navigation and end nodes before export.
 - **Validation and render queue**: compatibility checks and serial generation with log tracking.
-- **Optional local integrations** XTTS (voice) and ComfyUI (images).
-- **Project comfort**: autosave, safety versions, configurable shortcuts, light/dark themes, full diagram view.
+- **Optional local integrations** YouTube via yt-dlp, XTTS (voice) and ComfyUI (images).
+- **Project comfort**: optional-save sessions, autosave, recovery snapshots, safety versions, configurable shortcuts, light/dark themes, full diagram view.
 
 ## Why Story Studio?
 

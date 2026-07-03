@@ -4,6 +4,7 @@ mod assets;
 mod builder;
 mod canonical;
 mod document;
+pub(crate) mod fidelity_judge;
 mod stats;
 mod writer;
 
@@ -27,6 +28,7 @@ pub(crate) use writer::*;
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct NativeAssetPreparationReport {
     pub(crate) project: CanonicalProject,
+    pub(crate) pack_uuid: String,
     pub(crate) stage_dir: String,
     pub(crate) assets_dir: String,
     pub(crate) assets: Vec<PreparedAsset>,
@@ -58,71 +60,35 @@ pub(crate) struct ImportedZipBundle {
 }
 
 fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDocument, String> {
-    if !report.project.options.auto_next
-        && active_native_graph(report.project.native_graph.as_ref()).is_some()
-    {
-        return build_native_graph_story_document(report);
+    if active_native_graph(report.project.native_graph.as_ref()).is_some() {
+        let fidelity = fidelity_judge::canonical_roundtrip_is_faithful(&report.project)?;
+        if !fidelity.faithful {
+            let detail = fidelity
+                .gaps
+                .iter()
+                .take(3)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" | ");
+            return Err(if detail.is_empty() {
+                "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine.".to_string()
+            } else {
+                format!(
+                    "Génération bloquée : le modèle canonique n'est pas fidèle au graphe natif d'origine ({detail})."
+                )
+            });
+        }
     }
-    let mut builder = StoryBuilder::new(report);
-    builder.build()
+    build_canonical_story_document(report)
 }
 
-fn prepared_asset_name_for_role(
-    report: &NativeAssetPreparationReport,
-    role: &str,
-) -> Result<String, String> {
-    report
-        .assets
-        .iter()
-        .find(|asset| asset.role == role)
-        .map(|asset| asset.staged_asset_name.clone())
-        .ok_or_else(|| format!("Asset natif introuvable pour {}", role))
-}
-
-fn build_native_graph_story_document(
+/// Génère le document par le chemin canonique (`StoryBuilder`). `nativeGraph`
+/// peut rester oracle du juge, mais n'est jamais rejoué comme génération.
+fn build_canonical_story_document(
     report: &NativeAssetPreparationReport,
 ) -> Result<StoryDocument, String> {
-    let graph = report
-        .project
-        .native_graph
-        .as_ref()
-        .and_then(|graph| active_native_graph(Some(graph)))
-        .ok_or_else(|| "Graphe natif absent.".to_string())?;
-    let document_value = graph
-        .get("document")
-        .cloned()
-        .ok_or_else(|| "Graphe natif sans document story.json.".to_string())?;
-    let mut document: StoryDocument = serde_json::from_value(document_value)
-        .map_err(|e| format!("Graphe natif invalide : {}", e))?;
-
-    if !report.project.name.trim().is_empty() {
-        document.title = report.project.name.clone();
-    }
-    document.night_mode_available =
-        report.project.options.night_mode && !report.project.options.auto_next;
-
-    for stage in &mut document.stage_nodes {
-        if stage.audio.is_some() {
-            let role = if stage.square_one && report.project.root_audio.is_some() {
-                "rootAudio".to_string()
-            } else {
-                native_graph_asset_role(&stage.uuid, "audio")
-            };
-            stage.audio = Some(prepared_asset_name_for_role(report, &role)?);
-        }
-        if stage.image.is_some() {
-            let role = if stage.square_one && report.project.root_image.is_some() {
-                "rootImage".to_string()
-            } else {
-                native_graph_asset_role(&stage.uuid, "image")
-            };
-            stage.image = Some(prepared_asset_name_for_role(report, &role)?);
-        }
-    }
-
-    normalize_document_for_studio_compat(&mut document);
-    validate_document_for_studio_compat(&document)?;
-    Ok(document)
+    let mut builder = StoryBuilder::new(report);
+    builder.build()
 }
 
 #[cfg(test)]

@@ -7,8 +7,9 @@ import { Button } from '../common/Button';
 import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
-import { KEYS, read, write } from '../../store/persistentSettings';
+import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
@@ -344,6 +345,8 @@ export function MediaExplorer({
 
   useEffect(() => {
     function onKeyDown(e) {
+      // Même garde que useAppShortcuts : pas de raccourci global sous une modale.
+      if (isModalSurfaceOpen()) return;
       const actionId = findShortcutAction(e, getCurrentShortcuts(), 'mediaPanel');
       if (actionId !== 'mediaSearch') return;
       e.preventDefault();
@@ -540,7 +543,7 @@ export function MediaExplorer({
 
   const actionButtons = (
     <>
-      <Tooltip text="Importer des fichiers médias">
+      <Tooltip text="Importer audio, images, ZIP ou 7z">
         <Button className="media-import-btn" onClick={onImportMedia || onImportStories}>
           <FilePlus className="media-btn-icon" strokeWidth={2} absoluteStrokeWidth />
         </Button>
@@ -684,7 +687,7 @@ export function MediaExplorer({
           y={bgCtxMenu.y}
           onClose={() => setBgCtxMenu(null)}
           actions={[
-            { icon: <Download />, label: 'Importer des fichiers', fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
+            { icon: <Download />, label: 'Importer des médias', fn: () => { setBgCtxMenu(null); (onImportMedia || onImportStories)?.(); } },
             ...(onImportMediaFolder ? [{ icon: <FolderInput />, label: 'Importer un dossier', fn: () => { setBgCtxMenu(null); onImportMediaFolder(); } }] : []),
             ...(selectedCount > 0 ? [
               'sep',

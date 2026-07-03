@@ -3,18 +3,6 @@ import { stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 
 export const cleanPath = stripWindowsLongPathPrefix;
 
-let stopCurrentAudioHandler = null;
-export function stopCurrentAudio() {
-  if (stopCurrentAudioHandler) {
-    stopCurrentAudioHandler();
-    stopCurrentAudioHandler = null;
-  }
-}
-
-export function setCurrentAudioStopper(stop) {
-  stopCurrentAudioHandler = stop;
-}
-
 export function formatDuration(secs) {
   const s = Math.round(secs);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

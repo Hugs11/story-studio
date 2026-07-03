@@ -70,7 +70,7 @@ async function queryPathSnapshot(path) {
       }
       return buildSnapshot(path, null, true);
     }
-  } catch (error) {
+  } catch {
     return buildSnapshot(path, null, false);
   }
 }
@@ -96,14 +96,6 @@ export function notifyFileChanged(path) {
   if (!normalizedPath) return;
   pathSnapshotCache.delete(normalizedPath);
   window.dispatchEvent(new CustomEvent(FILE_CHANGED_EVENT, { detail: { path: normalizedPath } }));
-}
-
-export function didPathSnapshotChange(previousSnapshot, nextSnapshot) {
-  if (!previousSnapshot && !nextSnapshot) return false;
-  if (!previousSnapshot || !nextSnapshot) return true;
-  return previousSnapshot.exists !== nextSnapshot.exists
-    || previousSnapshot.size !== nextSnapshot.size
-    || previousSnapshot.mtimeMs !== nextSnapshot.mtimeMs;
 }
 
 export async function readPathSnapshot(path, { maxAgeMs = 0, force = false } = {}) {

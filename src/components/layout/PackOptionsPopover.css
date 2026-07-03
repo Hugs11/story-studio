@@ -103,12 +103,6 @@
   height: 19px;
 }
 
-.pack-options-gateway-icon--pack {
-  border: 1px solid var(--accent-border);
-  background: var(--accent-dim);
-  color: var(--accent-text);
-}
-
 .pack-options-gateway-icon--app {
   border: 1px solid var(--accent-2-border);
   background: var(--accent-2-dim);
@@ -240,6 +234,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Aide du mode de silence actif : texte long, doit pouvoir se replier. */
+.pack-options-silence-hint {
+  white-space: normal;
 }
 
 .pack-options-control-end {

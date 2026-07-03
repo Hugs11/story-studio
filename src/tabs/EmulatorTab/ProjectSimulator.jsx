@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { decodeNavigationStoryId, isStoryNavigationTarget, isStoryPlayNavigationTarget } from '../../store/navigationTargets';
+import { decodeNavigationStoryId, isStoryNavigationTarget, isStoryPlayNavigationTarget, refTargetEntryId } from '../../store/navigationTargets';
 import { getEffectiveEndBehavior, getGeneratedStoryNavigation } from '../../store/generatedNavigation';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { getExportPackName } from '../../utils/packConvention';
@@ -11,6 +11,9 @@ import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { toPackAssetName } from '../../utils/zipAssetName';
+
+const END_NODE_ID = 'end-node';
 
 export function ProjectSimulator({
   project,
@@ -277,7 +280,7 @@ export function ProjectSimulator({
     setPaused(false);
     if (!zipPath || !assetHash) return;
     try {
-      const assetName = `assets/${assetHash}`;
+      const assetName = toPackAssetName(assetHash);
       const bytes = await invoke('get_pack_asset', { zipPath, assetName });
       // Si le composant a été démonté pendant l'await, ne pas créer l'Audio
       if (!mountedRef.current) return;
@@ -337,7 +340,8 @@ export function ProjectSimulator({
   useEffect(() => {
     const activeId =
       state === 'cover' ? 'root' :
-      state === 'sequence' || state === 'postplay' || state === 'endnode' ? activeStory?.id :
+      state === 'endnode' ? END_NODE_ID :
+      state === 'sequence' || state === 'postplay' ? activeStory?.id :
       isSimple ? simpleStory?.id :
       currentEntry?.id;
     if (activeId && activeId !== lastEmittedActiveIdRef.current) {
@@ -565,6 +569,9 @@ export function ProjectSimulator({
         setEntryIdx(0);
       } else if (currentEntry?.type === 'zip') {
         if (currentEntry.zipPath) onOpenZip(currentEntry.zipPath);
+      } else if (currentEntry?.type === 'ref') {
+        // Un nœud de référence saute vers la cible existante (comme à l'export).
+        navigateToTarget(currentEntry.target);
       } else if (currentEntry?.type === 'story') {
         setState('playing');
       }
@@ -609,15 +616,23 @@ export function ProjectSimulator({
     state === 'cover' ? (
       project.packMetadata?.title
         ? getExportPackName(project.packMetadata)
-        : (project.projectName || 'Nom de mon histoire')
+        : (project.projectName || 'Pack sans nom')
     ) :
+    state === 'endnode' ? `${project.endNodeName || 'Message de fin'}${project.globalOptions?.nightMode ? ' (mode nuit)' : ''}` :
     state === 'sequence' ? (activeSequenceStep?.name || activeStory?.name || 'Fin de lecture') :
     isSimple ? (simpleStory?.name || '—') :
-    (currentEntry?.name || '—');
+    currentEntry?.type === 'ref'
+      ? (currentEntry.label?.trim()
+        || `→ ${findEntryLocation(rootEntries, refTargetEntryId(currentEntry.target))?.entry?.name || 'lien'}`)
+    : (currentEntry?.name || (state === 'browse' && currentEntries.length === 0 ? 'Dossier vide' : '—'));
 
   const displaySub =
     state === 'cover' ? 'Appuie sur OK' :
-    state === 'browse' ? `${Math.min(entryIdx + 1, Math.max(currentEntries.length, 1))} / ${Math.max(currentEntries.length, 1)}${currentMenu ? ` · ${currentMenu.name}` : ''}` :
+    state === 'browse' ? (
+      currentEntries.length === 0
+        ? `0 / 0${currentMenu ? ` · ${currentMenu.name}` : ''}`
+        : `${Math.min(entryIdx + 1, currentEntries.length)} / ${currentEntries.length}${currentMenu ? ` · ${currentMenu.name}` : ''}`
+    ) :
     state === 'sequence' ? `▶ Sequence de fin ${Math.min(sequenceIndex + 1, Math.max(activeSequence.length, 1))} / ${Math.max(activeSequence.length, 1)}` :
     state === 'postplay' ? '▶ Fin de lecture...' :
     state === 'endnode' ? '▶ Message de fin...' :
@@ -663,7 +678,7 @@ export function ProjectSimulator({
     <LuniiShell
       image={
         zipItemForImage?.coverImage
-          ? <ZipImage zipPath={zipItemForImage.zipPath} assetName={`assets/${zipItemForImage.coverImage}`} />
+          ? <ZipImage zipPath={zipItemForImage.zipPath} assetName={toPackAssetName(zipItemForImage.coverImage)} />
           : <LocalImage file={imageFile} />
       }
       title={displayTitle}

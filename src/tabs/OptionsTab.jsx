@@ -3,18 +3,14 @@ import { Button } from '../components/common/Button';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Toggle } from '../components/common/Toggle';
-import { CommunityPackChecker } from '../components/CommunityPackChecker/CommunityPackChecker';
 import { KeyboardShortcutsModal } from '../components/StorySettingsModal/KeyboardShortcutsModal';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { pickComfyWorkflowApiJson, pickComfyWorkflowConfigJson } from '../hooks/useFileDialog';
+import { KEYS, read as readSetting, write } from '../store/persistentSettings';
 import { THEME_OPTIONS } from '../store/themePreference';
+import { PIPER_DEFAULT_SENTENCE_SILENCE, PIPER_DEFAULT_VOICE } from '../store/xttsSettings';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import './OptionsTab.css';
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
 
 const LANGUAGE_OPTIONS = [
   { value: 'fr', label: 'Francais' },
@@ -29,7 +25,7 @@ const OPTION_GROUPS = [
   {
     label: 'Général',
     items: [
-      { id: 'save', label: 'Sauvegarde' },
+      { id: 'save', label: 'Enregistrement' },
       { id: 'interface', label: 'Interface' },
       { id: 'projects-media', label: 'Projets et médias' },
     ],
@@ -44,7 +40,7 @@ const OPTION_GROUPS = [
   {
     label: 'Avancé',
     items: [
-      { id: 'community-pack', label: 'Vérifier un pack' },
+      { id: 'youtube', label: 'YouTube (yt-dlp)' },
       { id: 'diagnostic', label: 'Diagnostic' },
     ],
   },
@@ -56,7 +52,10 @@ export function OptionsTab({
   copyFilesEnabled,
   onCopyFilesChange,
   workspaceDir,
+  configuredWorkspaceDir = '',
   onPickWorkspaceDir,
+  useWorkspaceForNewProjects = false,
+  onUseWorkspaceForNewProjectsChange = null,
   onConsolidateProject,
   autoSaveEnabled,
   onAutoSaveChange,
@@ -94,8 +93,16 @@ export function OptionsTab({
   const [xttsVoices, setXttsVoices] = useState([]);
   const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
   const [xttsLogs, setXttsLogs] = useState([]);
+  const [piperVoices, setPiperVoices] = useState([]);
+  const [piperProvision, setPiperProvision] = useState({ state: 'idle', message: '' });
+  const [ytDlpPath, setYtDlpPath] = useState(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }));
+  const [ytDlpUpdate, setYtDlpUpdate] = useState({ state: 'idle', message: '' });
   const [copiedLogPath, setCopiedLogPath] = useState(null);
   const [resolvedLogPath, setResolvedLogPath] = useState('');
+
+  // En modale : Escape ferme les Préférences. La modale des raccourcis, montée
+  // par-dessus, s'enregistre après et prend donc le dessus dans la pile Escape.
+  useEscapeKey(asModal, onClose);
   const [activeSectionId, setActiveSectionId] = useState(OPTION_SECTION_IDS[0]);
   const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const screenRef = useRef(null);
@@ -104,6 +111,15 @@ export function OptionsTab({
   const highlightTimerRef = useRef(null);
   const highlightFrameRef = useRef(null);
   const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
+  const ttsBackend = xttsSettings.backend || 'piper';
+  const piperVoice = xttsSettings.piperVoice || PIPER_DEFAULT_VOICE;
+  const piperSpeed = Number.isFinite(Number(xttsSettings.piperSpeed)) && Number(xttsSettings.piperSpeed) > 0
+    ? Number(xttsSettings.piperSpeed)
+    : 1.0;
+  const piperSentenceSilence = Number.isFinite(Number(xttsSettings.piperSentenceSilence))
+    ? Math.max(0, Math.min(1.5, Number(xttsSettings.piperSentenceSilence)))
+    : PIPER_DEFAULT_SENTENCE_SILENCE;
+  const displayedWorkspaceDir = configuredWorkspaceDir || workspaceDir || '';
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +164,78 @@ export function OptionsTab({
       if (unlisten) unlisten();
     };
   }, []);
+
+  // Catalogue Piper (voix installées + à télécharger). Aucun réseau : lecture
+  // locale de l'état d'installation.
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    invoke('piper_list_voices')
+      .then((status) => setPiperVoices(status?.voices || []))
+      .catch(() => {});
+  }, []);
+
+  // Reflète les messages discrets du provisionnement Piper (téléchargement).
+  useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+    let cancelled = false;
+    let unlisten = null;
+    listen('piper-log', (event) => {
+      if (cancelled) return;
+      setPiperProvision((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    }).catch(() => {});
+    return () => { cancelled = true; if (unlisten) unlisten(); };
+  }, []);
+
+  // Reflète la progression de mise à jour de yt-dlp (téléchargement).
+  useEffect(() => {
+    if (!isTauriRuntime()) return undefined;
+    let cancelled = false;
+    let unlisten = null;
+    listen('youtube-log', (event) => {
+      if (cancelled) return;
+      setYtDlpUpdate((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    }).catch(() => {});
+    return () => { cancelled = true; if (unlisten) unlisten(); };
+  }, []);
+
+  function handleYtDlpPathChange(value) {
+    setYtDlpPath(value);
+    write(KEYS.YTDLP_CUSTOM_PATH, value);
+  }
+
+  async function handleUpdateYtDlp() {
+    setYtDlpUpdate({ state: 'loading', message: 'Mise à jour de yt-dlp…' });
+    try {
+      await invoke('update_ytdlp');
+      setYtDlpUpdate({ state: 'ok', message: 'yt-dlp est à jour.' });
+    } catch (e) {
+      setYtDlpUpdate({ state: 'error', message: `${e}` });
+    }
+  }
+
+  function handleTtsBackendChange(backend) {
+    // Sélectionner XTTS l'active (le moteur remplace l'ancien toggle d'activation).
+    onUpdateXttsSettings(backend === 'xtts' ? { backend, enabled: true } : { backend });
+  }
+
+  async function handlePreparePiperVoice() {
+    setPiperProvision({ state: 'loading', message: 'Préparation de la voix…' });
+    try {
+      await invoke('piper_ensure_voice', { voice: piperVoice });
+      setPiperVoices((prev) => prev.map((voice) => (
+        voice.id === piperVoice ? { ...voice, installed: true } : voice
+      )));
+      setPiperProvision({ state: 'ok', message: 'Voix prête.' });
+    } catch (e) {
+      setPiperProvision({ state: 'error', message: `${e}` });
+    }
+  }
 
   async function handleTestSd() {
     const launching = sdSettings?.autoStart && sdSettings?.batPath;
@@ -339,11 +427,11 @@ export function OptionsTab({
           className={sectionClass('save')}
           ref={(node) => { sectionRefs.current.save = node; }}
         >
-          <div className="opts-card-title">Sauvegarde</div>
+          <div className="opts-card-title">Enregistrement</div>
           <div className="opts-row">
             <div className="opts-row-info">
-              <div className="opts-row-label">Sauvegarde automatique</div>
-              <div className="opts-row-sub">Sauvegarde automatiquement toutes les 5 minutes si des modifications sont en attente (uniquement si déjà enregistré sur disque)</div>
+              <div className="opts-row-label">Enregistrement automatique</div>
+              <div className="opts-row-sub">Activé par défaut : enregistre le projet toutes les 5 minutes si des modifications sont en attente. Un projet jamais enregistré est copié dans le dossier sauvegardes/ de l'emplacement de travail.</div>
             </div>
             <Toggle on={autoSaveEnabled} onChange={onAutoSaveChange} />
           </div>
@@ -351,7 +439,7 @@ export function OptionsTab({
             <div className="opts-row">
               <div className="opts-row-info">
                 <div className="opts-row-label">Versions de sécurité</div>
-                <div className="opts-row-sub">Nombre de copies `.mbah` conservées avant chaque sauvegarde automatique.</div>
+                <div className="opts-row-sub">Nombre de copies `.mbah` conservées avant chaque enregistrement automatique.</div>
               </div>
               <input
                 className="xtts-input opts-number"
@@ -364,7 +452,7 @@ export function OptionsTab({
             </div>
           )}
           <div className="opts-help">
-            Raccourcis : <strong>Ctrl+S</strong> pour sauvegarder, <strong>Ctrl+Maj+S</strong> pour sauvegarder sous
+            Raccourcis : <strong>Ctrl+S</strong> pour enregistrer, <strong>Ctrl+Maj+S</strong> pour enregistrer sous
           </div>
         </section>
 
@@ -415,12 +503,21 @@ export function OptionsTab({
           <div className="opts-card-title">Gestion des projets et médias</div>
           <div className="opts-row">
             <div className="opts-row-info">
+              <div className="opts-row-label">Utiliser un workspace pour les nouveaux projets</div>
+              <div className="opts-row-sub">
+                Désactivé par défaut : les nouveaux projets commencent dans une session temporaire, sans emplacement imposé.
+              </div>
+            </div>
+            <Toggle on={!!useWorkspaceForNewProjects} onChange={onUseWorkspaceForNewProjectsChange} />
+          </div>
+          <div className="opts-row">
+            <div className="opts-row-info">
               <div className="opts-row-label">Emplacement de travail</div>
               <div className="opts-row-sub">
-                Les médias importés, enregistrés ou générés sont regroupés ici par défaut.
+                Emplacement de référence pour les projets enregistrés et les médias gérés.
               </div>
-              <div className="opts-path-value" title={workspaceDir || ''}>
-                {workspaceDir || 'Initialisation...'}
+              <div className="opts-path-value" title={displayedWorkspaceDir || ''}>
+                {displayedWorkspaceDir || 'Workspace en cours de résolution...'}
               </div>
             </div>
             <Button onClick={onPickWorkspaceDir}>
@@ -460,18 +557,101 @@ export function OptionsTab({
           className={sectionClass('xtts')}
           ref={(node) => { sectionRefs.current.xtts = node; }}
         >
-          <div className="opts-card-title">Generation de voix locale — XTTS</div>
+          <div className="opts-card-title">Génération de voix locale</div>
           <div className="opts-row">
             <div className="opts-row-info">
-              <div className="opts-row-label">Activer la generation de voix</div>
+              <div className="opts-row-label">Moteur de voix</div>
               <div className="opts-row-sub">
-                Ajoute un bouton texte → audio dans tous les champs audio de Story Studio.
+                <strong>Piper</strong> fonctionne sans configuration (recommandé). <strong>XTTS</strong> est destiné
+                aux utilisateurs avancés (clonage de voix, serveur local).
               </div>
             </div>
-            <Toggle on={xttsSettings.enabled} onChange={(v) => onUpdateXttsSettings({ enabled: v })} />
+            <select
+              className="xtts-input opts-select"
+              value={ttsBackend}
+              onChange={(e) => handleTtsBackendChange(e.target.value)}
+            >
+              <option value="piper">Piper (défaut)</option>
+              <option value="xtts">XTTS (avancé)</option>
+            </select>
           </div>
 
-          {xttsSettings.enabled && (
+          {ttsBackend === 'piper' && (
+            <div className="xtts-settings">
+              <div className="opts-row-sub" style={{ marginBottom: 8 }}>
+                Piper ajoute un bouton texte → audio dans tous les champs audio. La voix est téléchargée
+                automatiquement au premier usage.
+              </div>
+              <div className="xtts-grid">
+                <label className="xtts-label">
+                  Voix
+                  <select
+                    className="xtts-input"
+                    value={piperVoice}
+                    onChange={(e) => {
+                      write(KEYS.PIPER_LAST_VOICE, e.target.value);
+                      onUpdateXttsSettings({ piperVoice: e.target.value });
+                    }}
+                  >
+                    {(piperVoices.length > 0 ? piperVoices : [{ id: piperVoice, label: piperVoice, installed: false }]).map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.label}{voice.installed ? '' : ' — à télécharger'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="xtts-label">
+                  Vitesse ({piperSpeed.toFixed(2)}×)
+                  <input
+                    className="xtts-input"
+                    type="number"
+                    min="0.5"
+                    max="1.5"
+                    step="0.05"
+                    value={piperSpeed}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value)) onUpdateXttsSettings({ piperSpeed: Math.max(0.5, Math.min(1.5, value)) });
+                    }}
+                  />
+                </label>
+
+                <label className="xtts-label">
+                  Pause phrase ({piperSentenceSilence.toFixed(2)}s)
+                  <input
+                    className="xtts-input"
+                    type="number"
+                    min="0"
+                    max="1.5"
+                    step="0.05"
+                    value={piperSentenceSilence}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value)) onUpdateXttsSettings({ piperSentenceSilence: Math.max(0, Math.min(1.5, value)) });
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="xtts-actions">
+                <Button onClick={handlePreparePiperVoice} disabled={piperProvision.state === 'loading'}>
+                  {piperProvision.state === 'loading' ? 'Téléchargement…' : 'Préparer la voix maintenant'}
+                </Button>
+                <span className="opts-row-sub">
+                  Optionnel : prépare la voix sélectionnée à l’avance pour éviter l’attente au 1er usage.
+                </span>
+              </div>
+
+              {piperProvision.state !== 'idle' && (
+                <div className={`info-box ${piperProvision.state === 'error' ? 'warn' : ''}`}>
+                  {piperProvision.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {ttsBackend === 'xtts' && (
             <div className="xtts-settings">
               <div className="xtts-grid">
                 <label className="xtts-label">
@@ -707,12 +887,50 @@ export function OptionsTab({
         </section>
 
         <section
-          id="community-pack"
-          className={sectionClass('community-pack')}
-          ref={(node) => { sectionRefs.current['community-pack'] = node; }}
+          id="youtube"
+          className={sectionClass('youtube')}
+          ref={(node) => { sectionRefs.current.youtube = node; }}
         >
-          <div className="opts-card-title">Vérifier un pack</div>
-          <CommunityPackChecker />
+          <div className="opts-card-title">YouTube (yt-dlp)</div>
+          <div className="opts-help">
+            Le funnel « Pack depuis YouTube » télécharge automatiquement yt-dlp au premier usage et le
+            garde à jour. YouTube bloquant les versions périmées, ces réglages ne servent qu'en cas de souci.
+          </div>
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Mettre à jour yt-dlp maintenant</div>
+              <div className="opts-row-sub">
+                Force le téléchargement de la dernière version. Utile si un import échoue avec un message
+                de version obsolète.
+              </div>
+            </div>
+            <Button onClick={handleUpdateYtDlp} disabled={ytDlpUpdate.state === 'loading'} style={{ flexShrink: 0 }}>
+              {ytDlpUpdate.state === 'loading' ? 'Mise à jour…' : 'Mettre à jour'}
+            </Button>
+          </div>
+          {ytDlpUpdate.state !== 'idle' && (
+            <div className={`info-box ${ytDlpUpdate.state === 'error' ? 'warn' : ''}`}>
+              {ytDlpUpdate.message}
+            </div>
+          )}
+          <div className="opts-row">
+            <div className="opts-row-info">
+              <div className="opts-row-label">Chemin yt-dlp personnalisé</div>
+              <div className="opts-row-sub">
+                Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet
+                d'un <code>yt-dlp.exe</code> pour l'utiliser à la place (le téléchargement auto est alors ignoré).
+              </div>
+            </div>
+            <input
+              className="xtts-input"
+              type="text"
+              spellCheck={false}
+              placeholder="C:\\chemin\\vers\\yt-dlp.exe"
+              value={ytDlpPath}
+              onChange={(event) => handleYtDlpPathChange(event.target.value)}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </div>
         </section>
 
         <section
@@ -725,7 +943,7 @@ export function OptionsTab({
             <div className="opts-row-info">
               <div className="opts-row-label">Journalisation détaillée</div>
               <div className="opts-row-sub">
-                Enregistre les événements normaux (chargements, sauvegardes, générations) dans le fichier de log,
+                Enregistre les événements normaux (chargements, enregistrements, générations) dans le fichier de log,
                 en plus des erreurs. Utile pour partager le contexte d'un bug dans une issue GitHub.
                 Désactivé : seuls les avertissements et erreurs sont enregistrés.
               </div>

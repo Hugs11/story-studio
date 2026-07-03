@@ -1,14 +1,11 @@
 import { useEffect } from 'react';
 import { isTextEditingTarget } from '../store/projectStore';
 import { findShortcutAction } from '../store/keyboardShortcuts';
+import { isModalSurfaceOpen } from '../utils/modalSurfaces';
 
 export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef }) {
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.target?.closest?.('.keyboard-shortcuts-modal')) return;
-      if (document.querySelector('.audio-editor-modal')) return;
-      if (document.querySelector('.image-editor-box')) return;
-
       const shouldBlockNativeFind = e.ctrlKey
         && !e.shiftKey
         && !e.altKey
@@ -19,6 +16,15 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
         e.stopPropagation();
         e.stopImmediatePropagation?.();
       };
+      // Sous une modale : aucun raccourci global. On neutralise seulement l'UI
+      // de recherche native (preventDefault) sans stopper la propagation, pour
+      // que les gestionnaires locaux de la modale reçoivent la touche (p. ex.
+      // enregistrer Ctrl+F comme raccourci dans la modale dédiée).
+      if (isModalSurfaceOpen()) {
+        if (shouldBlockNativeFind) e.preventDefault();
+        return;
+      }
+
       if (shouldBlockNativeFind) stopShortcut();
 
       const actions = actionsRef.current;

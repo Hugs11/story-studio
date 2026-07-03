@@ -5,11 +5,14 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::services::project_files::validate_existing_file_path;
+use crate::services::project_files::{validate_existing_dir_path, validate_existing_file_path};
 use crate::support::archive_limits::{ARCHIVE_MAX_ENTRIES, ARCHIVE_MAX_FILE_BYTES};
 use crate::support::ffmpeg::{apply_no_window, now_millis};
 
 const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
+// Incrémenter à chaque évolution du story.json produit par la conversion (voir
+// cache_key_for_source) pour ignorer les zips convertis par une version antérieure.
+const CONVERSION_FORMAT_VERSION: &str = "v2-root-uuid";
 const MAX_TOTAL_EXTRACTED_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 
 pub(crate) fn validate_existing_pack_path(path: &str) -> Result<PathBuf, String> {
@@ -74,22 +77,7 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
         }
 
         let pack_root = locate_pack_root(&extracted_dir)?;
-        if looks_like_studio_pack_directory(&pack_root) {
-            zip_directory_to_file(&pack_root, &converted_zip)?;
-        } else if looks_like_fs_pack_directory(&pack_root) {
-            convert_fs_pack_directory_to_zip(
-                &pack_root,
-                &converted_zip,
-                &fallback_pack_title(&source),
-            )?;
-        } else {
-            return Err(format!(
-                "Archive importee non reconnue : {}",
-                source.display()
-            ));
-        }
-
-        Ok(())
+        convert_pack_root_to_zip(&pack_root, &converted_zip, &fallback_pack_title(&source))
     })();
 
     if conversion_result.is_err() {
@@ -113,6 +101,82 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
     Ok(cached_zip)
 }
 
+/// Convertit un **dossier brut** de pack Lunii (pris directement sur la carte SD :
+/// pack filesystem `ri/si/li/ni/...` ou pack Studio `story.json + assets/`) en un
+/// ZIP Studio mis en cache sous `temp/`, et renvoie son chemin. Aucune archive
+/// intermédiaire : on localise la racine du pack dans le dossier puis on convertit.
+pub(crate) fn ensure_studio_pack_zip_from_dir(dir: &str) -> Result<PathBuf, String> {
+    let source = validate_existing_dir_path(dir, "Dossier de pack importe")?;
+
+    let cache_dir = std::env::temp_dir().join(IMPORTED_PACK_CACHE_DIR);
+    fs::create_dir_all(&cache_dir).map_err(|e| {
+        format!(
+            "Impossible de creer le cache des archives importees : {}",
+            e
+        )
+    })?;
+    let cache_key = cache_key_for_source(&source)?;
+    let cached_zip = cache_dir.join(format!("{}.zip", cache_key));
+    if cached_zip.exists() {
+        if zip_contains_story_json(&cached_zip).unwrap_or(false) {
+            return Ok(cached_zip);
+        }
+        let _ = fs::remove_file(&cached_zip);
+    }
+
+    let workspace = std::env::temp_dir().join(format!(
+        "story_studio_imported_pack_{}_{}",
+        now_millis(),
+        cache_key,
+    ));
+    let converted_zip = workspace.join("converted.zip");
+    fs::create_dir_all(&workspace).map_err(|e| {
+        format!(
+            "Impossible de preparer le dossier temporaire d'import : {}",
+            e
+        )
+    })?;
+
+    let conversion_result = (|| -> Result<(), String> {
+        let pack_root = locate_pack_root(&source)?;
+        convert_pack_root_to_zip(&pack_root, &converted_zip, &fallback_pack_title(&source))
+    })();
+
+    if conversion_result.is_err() {
+        let _ = fs::remove_dir_all(&workspace);
+    }
+    conversion_result?;
+
+    fs::copy(&converted_zip, &cached_zip).map_err(|e| {
+        format!(
+            "Impossible de mettre en cache l'archive convertie {} : {}",
+            cached_zip.display(),
+            e
+        )
+    })?;
+    let _ = fs::remove_dir_all(&workspace);
+
+    Ok(cached_zip)
+}
+
+/// Convertit une racine de pack déjà localisée (Studio ou filesystem) en ZIP Studio.
+fn convert_pack_root_to_zip(
+    pack_root: &Path,
+    output_zip: &Path,
+    fallback_title: &str,
+) -> Result<(), String> {
+    if looks_like_studio_pack_directory(pack_root) {
+        zip_directory_to_file(pack_root, output_zip)
+    } else if looks_like_fs_pack_directory(pack_root) {
+        convert_fs_pack_directory_to_zip(pack_root, output_zip, fallback_title)
+    } else {
+        Err(format!(
+            "Archive importee non reconnue : {}",
+            pack_root.display()
+        ))
+    }
+}
+
 fn pack_extension(path: &Path) -> Option<String> {
     path.extension()
         .and_then(OsStr::to_str)
@@ -134,6 +198,10 @@ fn cache_key_for_source(path: &Path) -> Result<String, String> {
         .map(|value| value.as_secs())
         .unwrap_or_default();
     let mut hasher = Sha1::new();
+    // Version du format de conversion : à incrémenter quand le story.json généré change
+    // (ici : ajout de l'UUID racine pour les packs natifs), pour invalider les caches
+    // convertis avant le changement.
+    hasher.update(CONVERSION_FORMAT_VERSION.as_bytes());
     hasher.update(path.to_string_lossy().as_bytes());
     hasher.update(metadata.len().to_string().as_bytes());
     hasher.update(modified.to_string().as_bytes());
@@ -616,6 +684,38 @@ mod tests {
         let err = ensure_studio_pack_zip(zip_path.to_str().expect("zip path utf8"))
             .expect_err("reject unrecognized zip");
         assert!(err.contains("non reconnue") || err.contains("Aucun pack Lunii reconnu"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn ensure_studio_pack_zip_from_dir_converts_studio_directory() {
+        let dir = temp_import_dir("studio_dir");
+        let pack_dir = dir.join("pack");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Dir pack","stageNodes":[]}"#,
+        )
+        .expect("write story.json");
+        fs::write(pack_dir.join("assets").join("a.png"), b"png").expect("write asset");
+
+        let zip = ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"))
+            .expect("convert studio directory");
+        assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn ensure_studio_pack_zip_from_dir_rejects_non_pack_directory() {
+        let dir = temp_import_dir("non_pack_dir");
+        fs::create_dir_all(&dir).expect("create temp dir");
+        fs::write(dir.join("readme.txt"), b"not a pack").expect("write file");
+
+        let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"))
+            .expect_err("reject non-pack directory");
+        assert!(err.contains("Aucun pack Lunii reconnu") || err.contains("non reconnue"));
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }

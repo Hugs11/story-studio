@@ -12,6 +12,70 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.3] - 2026-07-03
+
+Story Studio v0.9.3 adds an assisted workflow layer on top of the existing
+editor: a redesigned home screen, guided import/generation funnels, ephemeral
+sessions, zero-config local voice generation, YouTube import and stronger
+imported-pack fidelity.
+
+### Added
+
+- Added a redesigned home screen centered on guided workflows: edit an existing
+  pack, create from a podcast, create from YouTube, aggregate packs and
+  check/correct a community pack.
+- Added a reusable funnel chassis with shared modal layout, stepper, drop zones,
+  tool buttons, generation progress and final states.
+- Added ephemeral project sessions so new work can start without choosing a
+  `.mbah` file first, with optional save prompts, crash recovery snapshots and
+  cleanup of temporary workspaces.
+- Added Piper as the default zero-config local TTS backend, with automatic
+  runtime provisioning of the engine and French voices.
+- Added YouTube import through runtime-downloaded `yt-dlp`, including video,
+  playlist and channel listing, thumbnail import and editor insertion.
+- Added a generative aggregate-packs funnel that builds a new pack directly from
+  several ZIP/7z packs without opening the full editor.
+- Added shared reference entries for imported branching graphs, including tree,
+  editor, diagram, simulator, validation and native export support.
+- Added a canonical fidelity judge and baseline coverage for imported packs.
+- Added a session-media triage step before cleaning up ephemeral sessions, so
+  unused generated/imported media can be kept or discarded intentionally.
+
+### Changed
+
+- Reworked imported pack projection around native graph classification, shared
+  entries and canonical fidelity checks; complex packs that cannot be edited
+  safely are kept out of the editable path.
+- Improved the edit-existing-pack flow with dry-run editability checks, folder
+  pack conversion, metadata prefill and suggested version bumps at generation.
+- Moved the community pack checker out of Preferences into its own guided
+  home-screen tool and refined the correction flow.
+- Enabled autosave by default for saved projects while keeping explicit user
+  opt-outs, and skipped empty simple-mode recovery snapshots.
+- Improved audio handling for generated and corrected packs, including silence
+  alignment with official packs and clearer generation controls.
+- Simplified generation and options UI, tightened funnel sizing and refreshed
+  French wording around save states, placeholders, checker messages and labels.
+- Added ESLint and Knip configuration, then removed stale JS/Rust helpers,
+  duplicated hooks and obsolete native graph fallback code.
+
+### Fixed
+
+- Fixed imported aggregate handling, duplicate imported entry names and imported
+  pack UUID/name recovery.
+- Fixed several navigation edge cases around refs, implicit Home playback,
+  root/virtual after-play returns, generated navigation badges and simulator
+  end-node selection.
+- Fixed global shortcuts leaking through modals, inline overlays and dialogs.
+- Fixed ephemeral promotion failure handling, tag-only media triage and transfer
+  copy reuse.
+- Fixed compact editor layouts, after-play controls, diagram return rails, tree
+  panel minimum width and pack-checker stale styles.
+- Fixed post-recording deletion, render queue close controls, archive labels,
+  Piper feedback and remaining import notice wording.
+
+---
+
 ## [0.9.2] - 2026-06-18
 
 Story Studio v0.9.2 focuses on making pack preparation easier to understand:

@@ -6,6 +6,7 @@ import { pickAudio } from '../../hooks/useFileDialog';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { notifyFileChanged } from '../../store/fileMetadataCache';
 import { useProjectContext } from '../../store/ProjectContext';
+import { isTtsAvailable } from '../../store/xttsSettings';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
 import { RecordModal } from '../RecordModal/RecordModal';
@@ -52,6 +53,7 @@ export function AudioField({
     pathAudit,
     onImportFile,
     onSave,
+    onUpdateXttsSettings,
     onQueueXttsGenerate,
     onMediaCreated,
   } = useProjectContext();
@@ -71,6 +73,7 @@ export function AudioField({
   const filename = file ? basename(file) : null;
   const displayPath = file ? stripWindowsLongPathPrefix(file) : null;
   const fileAvailable = !!file && pathAudit[file] !== false;
+  const ttsAvailable = isTtsAvailable(xttsSettings);
   const showFilledState = !!file && fileAvailable;
   const audioUrl = useLocalFile(showFilledState ? file : null);
   const tooltipText = description || displayPath || '';
@@ -278,7 +281,7 @@ export function AudioField({
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                   </Button>
                 </Tooltip>
-                {xttsSettings?.enabled && (
+                {ttsAvailable && (
                   <Tooltip text="Générer une voix depuis un texte">
                     <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleTts(); }} aria-label="Générer une voix depuis un texte">
                       <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
@@ -362,7 +365,7 @@ export function AudioField({
                   <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
                 </Button>
               </Tooltip>
-              {xttsSettings?.enabled && (
+              {ttsAvailable && (
                 <Tooltip text="Générer une nouvelle voix depuis un texte">
                   <Button variant="icon" size="sm" onClick={handleTts} aria-label="Générer une nouvelle voix depuis un texte">
                     <Speech className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
@@ -381,12 +384,12 @@ export function AudioField({
       </div>
 
       {/* Notice conversion webm activée automatiquement */}
-      {/* Warning projet non sauvegardé — propose de sauvegarder */}
+      {/* Warning projet non enregistré — propose d'enregistrer */}
       {showNoSaveWarning && (
         <div className="modal-overlay">
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width: 360 }}>
             <div className="modal-header">
-              <span>Projet non sauvegardé</span>
+              <span>Projet non enregistré</span>
               <Button
                 variant="icon"
                 className="modal-close"
@@ -400,12 +403,12 @@ export function AudioField({
               {pendingGeneratedSource === 'tts' ? (
                 <>
                   L'audio genere sera stocke dans <strong>voix-generees/</strong> a cote du fichier <strong>.mbah</strong>.
-                  Sauvegardez d'abord le projet pour pouvoir utiliser XTTS.
+                  Enregistre d'abord le projet pour pouvoir utiliser XTTS.
                 </>
               ) : (
                 <>
                   L'audio sera stocke dans <strong>enregistrements/</strong> a cote du fichier <strong>.mbah</strong>.
-                  Sauvegardez d'abord le projet pour pouvoir enregistrer.
+                  Enregistre d'abord le projet pour pouvoir enregistrer.
                 </>
               )}
             </div>
@@ -417,7 +420,7 @@ export function AudioField({
                 Annuler
               </Button>
               <Button variant="primary" onClick={handleSaveAndContinue} disabled={savingGeneratedAudio}>
-                {savingGeneratedAudio ? 'Sauvegarde…' : 'Sauvegarder le projet…'}
+                {savingGeneratedAudio ? 'Enregistrement…' : 'Enregistrer le projet…'}
               </Button>
             </div>
           </div>
@@ -463,11 +466,12 @@ export function AudioField({
           workspaceDir={workspaceDir}
           projectName={projectName}
           onSaved={handleRecorded}
+          onDiscarded={onMediaCreated}
           onClose={() => setShowRecord(false)}
         />
       )}
 
-      {showTts && xttsSettings?.enabled && (
+      {showTts && ttsAvailable && (
         <GenerateVoiceModal
           savePath={generatedAudioSavePath || savePath}
           xttsSettings={xttsSettings}
@@ -475,6 +479,7 @@ export function AudioField({
           initialText={ttsTextSuggestion}
           filenameHint={ttsFilenameHint}
           target={xttsTarget}
+          onUpdateXttsSettings={onUpdateXttsSettings}
           onQueueGenerate={onQueueXttsGenerate}
           onClose={() => setShowTts(false)}
         />

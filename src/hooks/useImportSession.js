@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ask } from '@tauri-apps/plugin-dialog';
 import {
   getExtractedZipsDir,
 } from '../store/projectIO';
@@ -11,12 +10,79 @@ import {
 import { findEntryById } from '../store/projectModel';
 import { buildProjectAfterZipUnpack } from '../store/unpackProject';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
-import { markEntryAudioSkipSilence } from '../store/projectHelpers';
-import { formatPackAudioEdgeSilence } from '../config/audioProcessing';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
+
+/**
+ * Construit le projet résultant d'une extraction de ZIP à partir du résultat
+ * Rust (`unpack_zip_to_entries`). Pur (aucune I/O, aucun store) : applique la
+ * promotion en pack, les avertissements de transitions, autoNext et night-mode.
+ * Réutilisé par l'extraction manuelle (`handleUnpackZip`) et par l'entrée
+ * « Modifier un pack » (session éphémère). Retourne `null` si le pack ne
+ * contient aucune entrée.
+ */
+export function projectFromUnpackResult({
+  baseProject,
+  menuId = null,
+  itemId = null,
+  zipPath = '',
+  zipName = '',
+  result = {},
+  savedDuringUnpack = false,
+}) {
+  const entries = sanitizeImportedEntries(result?.entries ?? []);
+  if (!entries.length) return null;
+
+  const unpacked = buildProjectAfterZipUnpack({
+    project: baseProject,
+    menuId,
+    itemId,
+    entries,
+    zipPath,
+    zipName,
+    result,
+    savedDuringUnpack,
+  });
+  let nextProject = unpacked.project;
+  const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
+    ? result.unresolvedTransitions.map((warning) => ({
+        ...warning,
+        sourceRootId: result?.rootId ?? null,
+        sourceName: unpacked.packName,
+      }))
+    : [];
+  nextProject = {
+    ...nextProject,
+    importWarnings: [
+      ...(nextProject.importWarnings ?? []).filter((warning) => warning?.sourceRootId !== result?.rootId),
+      ...unresolvedTransitions,
+    ],
+  };
+  if (result?.autoNext) {
+    nextProject = {
+      ...nextProject,
+      globalOptions: { ...nextProject.globalOptions, autoNext: true, nightMode: false },
+    };
+  }
+  if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
+    nextProject = {
+      ...nextProject,
+      nightModeAudio: result.nightModeAudio,
+      nightModeReturn: result.nightModeReturn ?? null,
+      nightModeHomeReturn: result.nightModeHomeReturn ?? null,
+      globalOptions: { ...nextProject.globalOptions, nightMode: true },
+    };
+  }
+  return {
+    project: nextProject,
+    packName: unpacked.packName,
+    promoted: unpacked.promoted,
+    unresolvedTransitions,
+    advancedTransitionsDetected: !!result?.advancedTransitionsDetected,
+  };
+}
 
 export function useImportSession({
   store,
@@ -30,10 +96,10 @@ export function useImportSession({
   addPathsToMediaLibrary,
   persistProjectSnapshot,
   workspaceDirRef,
-  handleSaveProject,
   showErrorDialog,
   getImportDisplayName,
   isImportedPackPath,
+  onImportedPackPromoted,
 }) {
   const dispatchFiles = useCallback(async (menuId, files) => {
     for (let index = 0; index < files.length; index += 1) {
@@ -187,41 +253,47 @@ export function useImportSession({
     if (!zipItem?.zipPath) return;
     const menuId = projectIndex.parentMenuById.get(itemId) ?? null;
 
-    let effectiveSavePath = store.savePath;
-    let baseProject = store.project;
-    let savedDuringUnpack = false;
-    if (!effectiveSavePath) {
-      const saveResult = await handleSaveProject({ returnResult: true });
-      if (!saveResult?.path) return;
-      effectiveSavePath = saveResult.path;
-      baseProject = saveResult.project ?? baseProject;
-      savedDuringUnpack = true;
-    }
+    // Persistance différée (plan 01) : extraire un ZIP n'impose JAMAIS d'enregistrer
+    // le projet. En session éphémère (savePath == null) on extrait dans le workspace
+    // de session et l'autosave écrit le snapshot de récupération. Forcer un save ici
+    // (ancien comportement) déclenchait la promotion via handleSaveProject, donc le
+    // cleanup du dossier de session — ce qui supprimait le ZIP source avant même son
+    // extraction (« Archive introuvable »).
+    const baseProject = store.project;
+    const savePath = store.savePath;
     const currentZipItem = findEntryById(baseProject, itemId) ?? zipItem;
     if (!currentZipItem?.zipPath) return;
 
-    const skipSilenceForExtractedAudio = await ask(
-      `Les audios d'un pack extrait contiennent souvent déjà leurs silences de début/fin. Voulez-vous exclure les audios extraits de l'ajout global de ${formatPackAudioEdgeSilence()} ?`,
-      {
+    const wsDir = workspaceDirRef.current
+      || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' })
+      || (savePath ? savePath.replace(/[\\/][^\\/]+$/, '') : '');
+    if (!wsDir) {
+      showErrorDialog({
         title: 'Extraction du pack',
-        kind: 'info',
-        okLabel: 'Exclure du silence',
-        cancelLabel: 'Garder le traitement global',
-      }
-    );
+        message: "Aucun espace de travail n'est disponible pour extraire ce pack.",
+      });
+      return;
+    }
 
     setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
     try {
       const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
-      const wsDir = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }) || effectiveSavePath.replace(/[\\/][^\\/]+$/, '');
       const destDir = `${getExtractedZipsDir(wsDir)}/${extractedDirName}`;
       const result = await invoke('unpack_zip_to_entries', {
         zipPath: currentZipItem.zipPath,
         destDir,
         workspaceDir: wsDir,
       });
-      const entries = sanitizeImportedEntries(result?.entries ?? []);
-      if (!entries.length) {
+      const transformed = projectFromUnpackResult({
+        baseProject,
+        menuId,
+        itemId,
+        zipPath: currentZipItem.zipPath,
+        zipName: currentZipItem.name,
+        result,
+        savedDuringUnpack: false,
+      });
+      if (!transformed) {
         showErrorDialog({
           title: 'Extraction du pack',
           message: 'Aucune entrée trouvée dans ce ZIP.',
@@ -229,81 +301,22 @@ export function useImportSession({
         });
         return;
       }
-
-      const processedEntries = (skipSilenceForExtractedAudio
-        ? entries.map(markEntryAudioSkipSilence)
-        : entries);
-      const unpackedProject = buildProjectAfterZipUnpack({
-        project: baseProject,
-        menuId,
-        itemId,
-        entries: processedEntries,
-        zipPath: currentZipItem.zipPath,
-        zipName: currentZipItem.name,
-        result,
-        savedDuringUnpack,
-      });
-      let nextProject = unpackedProject.project;
-      const unresolvedTransitions = Array.isArray(result?.unresolvedTransitions)
-        ? result.unresolvedTransitions.map((warning) => ({
-            ...warning,
-            sourceRootId: result?.rootId ?? null,
-            sourceName: unpackedProject.packName,
-          }))
-        : [];
-      nextProject = {
-        ...nextProject,
-        importWarnings: [
-          ...(nextProject.importWarnings ?? []).filter((warning) => warning?.sourceRootId !== result?.rootId),
-          ...unresolvedTransitions,
-        ],
-      };
-      if (result?.autoNext) {
-        nextProject = {
-          ...nextProject,
-          globalOptions: {
-            ...nextProject.globalOptions,
-            autoNext: true,
-            nightMode: false,
-          },
-        };
-      }
-      if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
-        nextProject = {
-          ...nextProject,
-          nightModeAudio: result.nightModeAudio,
-          nightModeReturn: result.nightModeReturn ?? null,
-          nightModeHomeReturn: result.nightModeHomeReturn ?? null,
-          audioProcessing: skipSilenceForExtractedAudio
-            ? {
-                ...(nextProject.audioProcessing ?? {}),
-                nightModeAudio: { skipSilence: true },
-              }
-            : nextProject.audioProcessing,
-          globalOptions: {
-            ...nextProject.globalOptions,
-            nightMode: true,
-          },
-        };
-      }
-      if (skipSilenceForExtractedAudio) {
-        nextProject = {
-          ...nextProject,
-          audioProcessing: {
-            ...(nextProject.audioProcessing ?? {}),
-            ...(nextProject.rootAudio ? { rootAudio: { skipSilence: true } } : {}),
-            ...(nextProject.nightModeAudio ? { nightModeAudio: { skipSilence: true } } : {}),
-          },
-        };
-      }
-      store.setProject(nextProject);
+      store.setProject(transformed.project);
       store.setSelectedId('root');
-      await persistProjectSnapshot(nextProject, effectiveSavePath);
-      if (result?.advancedTransitionsDetected) {
-        const firstWarning = unresolvedTransitions[0]?.message;
+      // Extraire un pack qui promeut le projet vierge = importer un pack à modifier :
+      // on marque la méta comme « à confirmer » pour que la génération force la modal
+      // et propose de régénérer l'UUID (nouvelle révision), comme « Modifier un pack ».
+      if (transformed.promoted) onImportedPackPromoted?.();
+      // Projet déjà enregistré : autosave .mbah immédiat. Éphémère/non-enregistré :
+      // pas de save forcé, le snapshot de session suit via l'autosave.
+      if (savePath) {
+        await persistProjectSnapshot(transformed.project, savePath);
+      }
+      if (transformed.advancedTransitionsDetected) {
+        const firstWarning = transformed.unresolvedTransitions[0]?.message;
         setImportNotice(
           "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
-          + "Story Studio a conservé la structure reconnue, mais vérifiez les retours concernés avant export."
+          + "Story Studio a conservé la structure reconnue, mais vérifie les retours concernés avant export."
           + (firstWarning ? ` Exemple : ${firstWarning}` : '')
         );
       }
@@ -315,6 +328,25 @@ export function useImportSession({
     } finally {
       setUnpacking(null);
     }
+  }
+
+  // Extrait un pack dans un projet de session vierge (« Modifier un pack »,
+  // plan 04) : aucune sauvegarde forcée, l'écriture va dans le dossier de
+  // session. Retourne le projet promu (ou `null` si aucune entrée). Le caller
+  // (App.jsx) gère le store et la persistance éphémère.
+  async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject }) {
+    const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
+    const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
+    const result = await invoke('unpack_zip_to_entries', { zipPath, destDir, workspaceDir });
+    return projectFromUnpackResult({
+      baseProject,
+      menuId: null,
+      itemId: null,
+      zipPath,
+      zipName,
+      result,
+      savedDuringUnpack: false,
+    });
   }
 
   async function handleImportMediaLibrary() {
@@ -362,40 +394,87 @@ export function useImportSession({
     }
   }
 
-  async function handleImportPodcastEpisodes(episodes, feed) {
-    if (!Array.isArray(episodes) || episodes.length === 0) return;
+  // Télécharge l'audio d'une entrée selon sa source et renvoie un chemin temp.
+  // Podcast : flux direct (`download_podcast_media`). YouTube : via yt-dlp
+  // (`download_youtube_audio`, qui extrait le MP3 avec le ffmpeg embarqué).
+  async function downloadEntryAudio(source, entry, displayName) {
+    if (source === 'youtube') {
+      const ytdlpPath = readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' });
+      return invoke('download_youtube_audio', {
+        videoUrl: entry.audioUrl,
+        fileName: displayName,
+        ytdlpPath,
+      });
+    }
+    return invoke('download_podcast_media', { url: entry.audioUrl, fileName: displayName });
+  }
 
-    const selectedId = store.selectedId;
-    const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
-    const targetMenuId = selectedNode?.type === 'menu'
-      ? selectedNode.id
-      : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+  // Importe une liste d'entrées média (podcast ou YouTube) en histoires.
+  // Source-agnostique : le funnel podcast (plan 06), la modale podcast historique
+  // et le funnel YouTube (plan 09) partagent ce handler. Les entrées exposent un
+  // shape commun (`title`, `audioUrl`, `imageUrl`) ; seul le téléchargement audio
+  // diffère (`options.source`).
+  // `options` :
+  //   - `source` : 'podcast' (défaut) | 'youtube'.
+  //   - `targetMenuId` : menu cible explicite (`null` = racine). Si absent, on
+  //     déduit la cible de la sélection courante (comportement éditeur).
+  //   - `onProgress` : reçoit la progression à la place de la modale globale
+  //     `setImporting` (le funnel l'affiche dans son propre écran).
+  //   - `suppressDialog` : laisse le caller signaler l'échec lui-même.
+  // Retourne `{ total, failures, imported }`.
+  async function handleImportMediaEpisodes(episodes, feed, options = {}) {
+    if (!Array.isArray(episodes) || episodes.length === 0) {
+      return { total: 0, failures: 0, imported: 0 };
+    }
+
+    const {
+      source = 'podcast',
+      targetMenuId: explicitTargetMenuId,
+      onProgress = null,
+      suppressDialog = false,
+    } = options;
+    const report = onProgress ?? setImporting;
+    const isYoutube = source === 'youtube';
+    const itemLabel = isYoutube ? 'vidéo' : 'épisode';
+
+    let targetMenuId;
+    if (explicitTargetMenuId !== undefined) {
+      targetMenuId = explicitTargetMenuId;
+    } else {
+      const selectedId = store.selectedId;
+      const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
+      targetMenuId = selectedNode?.type === 'menu'
+        ? selectedNode.id
+        : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+    }
 
     const total = episodes.length;
-    const feedTitle = feed?.title || 'Podcast';
+    const feedTitle = feed?.title || (isYoutube ? 'YouTube' : 'Podcast');
     const feedImage = feed?.imageUrl || null;
-    logger.info(`import-podcast:start count=${total} target=${targetMenuId ?? 'root'}`);
-    setImporting({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
+    logger.info(`import-media:start source=${source} count=${total} target=${targetMenuId ?? 'root'}`);
+    report({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
 
     let failures = 0;
     try {
       for (let index = 0; index < episodes.length; index += 1) {
         const episode = episodes[index];
-        const displayName = episode.title || `Épisode ${index + 1}`;
+        const displayName = episode.title || `${isYoutube ? 'Vidéo' : 'Épisode'} ${index + 1}`;
         try {
-          setImporting({ name: displayName, index: index + 1, total, phase: "Téléchargement de l'épisode..." });
-          const tmpAudio = await invoke('download_podcast_media', { url: episode.audioUrl, fileName: displayName });
+          report({ name: displayName, index: index + 1, total, phase: `Téléchargement de la ${itemLabel}...` });
+          const tmpAudio = await downloadEntryAudio(source, episode, displayName);
           const audio = await copyGeneratedMediaToProject(tmpAudio);
 
           let itemImage = null;
           const imageUrl = episode.imageUrl || feedImage;
           if (imageUrl) {
-            setImporting({ name: displayName, index: index + 1, total, phase: 'Récupération de la jaquette...' });
+            report({ name: displayName, index: index + 1, total, phase: 'Récupération de la vignette...' });
             try {
-              const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-jaquette` });
+              // download_podcast_media est un téléchargeur HTTP générique : il sert
+              // aussi à récupérer les miniatures YouTube.
+              const tmpImage = await invoke('download_podcast_media', { url: imageUrl, fileName: `${displayName}-vignette` });
               itemImage = await copyGeneratedMediaToProject(tmpImage);
             } catch (imageError) {
-              logger.warn(`import-podcast:cover-error name='${displayName}' error=${imageError}`);
+              logger.warn(`import-media:cover-error source=${source} name='${displayName}' error=${imageError}`);
             }
           }
           if (!itemImage) {
@@ -406,22 +485,25 @@ export function useImportSession({
           if (itemImage) store.updateItem(storyId, { itemImage });
         } catch (episodeError) {
           failures += 1;
-          logger.error(`import-podcast:episode-error name='${displayName}' error=${episodeError}`);
+          logger.error(`import-media:item-error source=${source} name='${displayName}' error=${episodeError}`);
         }
       }
     } finally {
-      setImporting(null);
+      // Ne nettoie que la modale globale ; le funnel gère lui-même son écran.
+      if (!onProgress) setImporting(null);
     }
 
-    if (failures > 0) {
+    if (failures > 0 && !suppressDialog) {
       showErrorDialog({
-        title: 'Import du podcast',
+        title: isYoutube ? 'Import YouTube' : 'Import du podcast',
         message: failures === total
-          ? "Aucun épisode n'a pu être importé. Vérifiez votre connexion ou l'adresse du flux."
-          : `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+          ? `Aucune ${itemLabel} n'a pu être importée. Vérifie ta connexion ou l'adresse ${isYoutube ? 'YouTube' : 'du flux'}.`
+          : `${failures} ${itemLabel}(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
         variant: failures === total ? 'warning' : 'info',
       });
     }
+
+    return { total, failures, imported: total - failures };
   }
 
   return {
@@ -430,8 +512,9 @@ export function useImportSession({
     handleAddStoryToMenu,
     handleImportFolder,
     handleUnpackZip,
+    unpackZipIntoBlankProject,
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
-    handleImportPodcastEpisodes,
+    handleImportMediaEpisodes,
   };
 }

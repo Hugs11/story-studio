@@ -45,6 +45,8 @@ fn makes_root_menu_selectable_when_pack_has_multiple_root_entries() {
                     ..Default::default()
                 }),
             ],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -147,6 +149,8 @@ fn keeps_single_cover_stage_when_pack_has_multiple_root_entries() {
                     ..Default::default()
                 }),
             ],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -301,6 +305,8 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
                     ..Default::default()
                 }),
             ],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -487,6 +493,8 @@ fn omits_menu_image_when_auto_black_image_is_enabled() {
                 })],
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -632,6 +640,8 @@ fn builds_regular_imported_zip_under_root() {
                 zip_path: Some("imported.zip".to_string()),
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),
@@ -858,6 +868,8 @@ fn builds_collection_import_without_extra_square_one() {
                 zip_path: Some("collection.zip".to_string()),
                 ..Default::default()
             })],
+
+            shared_entries: Vec::new(),
         },
         vec![
             prepared_asset("rootAudio", "cover.mp3"),

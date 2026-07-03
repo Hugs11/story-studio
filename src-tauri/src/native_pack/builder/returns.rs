@@ -65,6 +65,62 @@ impl<'a> StoryBuilder<'a> {
         self.resolve_story_return_transition(target_menu_id, fallback_transition)
     }
 
+    pub(in crate::native_pack::builder) fn resolve_play_home_transition_for_story(
+        &self,
+        story: &CanonicalStory,
+        target_menu_id: Option<&str>,
+        fallback_transition: Transition,
+    ) -> Transition {
+        let imported_native_story = story
+            .native_stage_id
+            .as_deref()
+            .is_some_and(|stage_id| !stage_id.trim().is_empty());
+        if imported_native_story {
+            self.resolve_story_return_transition(target_menu_id, fallback_transition)
+        } else {
+            self.resolve_story_home_transition(target_menu_id, fallback_transition)
+        }
+    }
+
+    /// Stage natif d'une cible déjà PRÉALLOUÉ (donc disponible avant sa construction).
+    /// Permet de résoudre une convergence « en avant » (vers un nœud bâti plus tard),
+    /// là où `transition_target_stage_id` échouerait faute d'action node déjà présent.
+    /// Limité aux cibles dont le stage est préalloué : `story_play:` / `story_home_step:`.
+    pub(in crate::native_pack::builder) fn preallocated_target_stage(
+        &self,
+        target: &str,
+    ) -> Option<String> {
+        match decode_navigation_target(Some(target))? {
+            NavigationTarget::StoryPlay(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .map(|prealloc| prealloc.play_stage_id.clone()),
+            NavigationTarget::StoryHomeStep(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .and_then(|prealloc| prealloc.home_step_stage_id.clone()),
+            _ => None,
+        }
+    }
+
+    /// Résolveur unifié cible typée → stage natif, partagé par les nœuds `ref` et la
+    /// convergence de fin (`okChoiceTargets`) — c'est le « sucre au-dessus de `ref` » de
+    /// l'Étape 7. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
+    /// résolution via transition (cibles déjà construites). Le `fallback` paramètre la
+    /// sémantique : transition de repli (convergence indulgente) ou sentinelle non résolue
+    /// (`option_index < 0`) pour exiger une cible réelle (refs).
+    pub(in crate::native_pack::builder) fn resolve_target_stage(
+        &self,
+        target: &str,
+        fallback: Transition,
+    ) -> Option<String> {
+        if let Some(stage_id) = self.preallocated_target_stage(target) {
+            return Some(stage_id);
+        }
+        let transition = self.resolve_story_return_transition(Some(target), fallback);
+        self.transition_target_stage_id(&transition)
+    }
+
     pub(in crate::native_pack::builder) fn transition_target_stage_id(
         &self,
         transition: &Transition,
@@ -93,7 +149,7 @@ impl<'a> StoryBuilder<'a> {
         if let Some(target) = story.title_return_on_home.as_deref() {
             let resolved = resolve_next_story_target(Some(target), siblings, story_index);
             return Some(
-                self.resolve_story_home_transition(resolved.as_deref(), fallback_transition),
+                self.resolve_story_return_transition(resolved.as_deref(), fallback_transition),
             );
         }
 

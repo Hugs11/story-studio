@@ -430,6 +430,11 @@
   border-top-color: var(--warning);
 }
 
+.fd-complete-legend-line--reference {
+  border-top-style: dotted;
+  border-top-color: var(--accent, #8b7cff);
+}
+
 .fd-complete-stage {
   flex: 1;
   min-height: 0;
@@ -713,6 +718,21 @@
   pointer-events: stroke;
 }
 
+.fd-complete-line-underlay {
+  fill: none;
+  stroke: color-mix(in srgb, var(--bg0) 84%, transparent);
+  stroke-width: 5.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-line-underlay--return {
+  stroke: color-mix(in srgb, var(--bg0) 94%, white 6%);
+  stroke-width: 6.2;
+}
+
 /* Pendant un pan/zoom, on allege le rendu : retours, labels, ombres et filtres
    sont masques le temps du geste, puis reaffiches nets a l'arret. */
 .fd-complete-stage.is-viewport-moving .fd-complete-navigation-edge,
@@ -747,8 +767,8 @@
   stroke: #43435a;
   stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   pointer-events: none;
 }
 
@@ -926,6 +946,28 @@
   stroke-width: 3;
   opacity: 1;
   filter: drop-shadow(0 0 4px rgba(155, 79, 0, 0.28));
+}
+
+/* Arête d'un nœud de référence (« → nœud existant ») vers sa cible. */
+.fd-complete-line--reference {
+  stroke: var(--accent, #8b7cff);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 4;
+  opacity: 0.78;
+}
+
+.fd-complete-line--reference.is-related {
+  stroke: color-mix(in srgb, var(--accent, #8b7cff) 86%, white 14%);
+  stroke-width: 1.6;
+  opacity: 0.98;
+}
+
+.fd-complete-navigation-edge.is-active .fd-complete-line--reference {
+  stroke: color-mix(in srgb, var(--accent, #8b7cff) 92%, white 8%);
+  stroke-width: 2.6;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent, #8b7cff) 60%, transparent));
+  animation: fd-active-flow 0.8s linear infinite;
 }
 
 @keyframes fd-active-flow {

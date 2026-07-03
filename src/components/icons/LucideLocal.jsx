@@ -54,12 +54,6 @@ const filePenNode = [
   ['path', { d: 'M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z' }],
 ];
 
-const kanbanNode = [
-  ['path', { d: 'M5 3v14' }],
-  ['path', { d: 'M12 3v8' }],
-  ['path', { d: 'M19 3v18' }],
-];
-
 const panelLeftNode = [
   ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
   ['path', { d: 'M9 3v18' }],
@@ -106,6 +100,12 @@ const downloadNode = [
   ['path', { d: 'M12 15V3' }],
   ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }],
   ['path', { d: 'm7 10 5 5 5-5' }],
+];
+
+const uploadNode = [
+  ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }],
+  ['polyline', { points: '17 8 12 3 7 8' }],
+  ['line', { x1: '12', y1: '3', x2: '12', y2: '15' }],
 ];
 
 const folderPlusNode = [
@@ -196,6 +196,10 @@ const rotateCcwNode = [
 
 const chevronRightNode = [
   ['path', { d: 'm9 18 6-6-6-6' }],
+];
+
+const chevronLeftNode = [
+  ['path', { d: 'm15 18-6-6 6-6' }],
 ];
 
 const chevronDownNode = [
@@ -355,8 +359,23 @@ const rssNode = [
   ['circle', { cx: '5', cy: '19', r: '1' }],
 ];
 
+const youtubeNode = [
+  ['path', { d: 'M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17' }],
+  ['path', { d: 'm10 15 5-3-5-3z' }],
+];
+
+const shieldCheckNode = [
+  ['path', { d: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z' }],
+  ['path', { d: 'm9 12 2 2 4-4' }],
+];
+
+const layersNode = [
+  ['path', { d: 'M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z' }],
+  ['path', { d: 'M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12' }],
+  ['path', { d: 'M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
-export const Kanban = createLocalLucideIcon(kanbanNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const Network = createLocalLucideIcon(networkNode);
@@ -365,6 +384,7 @@ export const FilePlus = createLocalLucideIcon(filePlusNode);
 export const FolderOpen = createLocalLucideIcon(folderOpenNode);
 export const Save = createLocalLucideIcon(saveNode);
 export const Download = createLocalLucideIcon(downloadNode);
+export const Upload = createLocalLucideIcon(uploadNode);
 export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);
@@ -380,6 +400,7 @@ export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
 export const ChevronRight = createLocalLucideIcon(chevronRightNode);
+export const ChevronLeft = createLocalLucideIcon(chevronLeftNode);
 export const ChevronDown = createLocalLucideIcon(chevronDownNode);
 export const ChevronUp = createLocalLucideIcon(chevronUpNode);
 export const MoveUp = createLocalLucideIcon(moveUpNode);
@@ -408,3 +429,6 @@ export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);
 export const Search = createLocalLucideIcon(searchNode);
 export const Rss = createLocalLucideIcon(rssNode);
+export const Youtube = createLocalLucideIcon(youtubeNode);
+export const ShieldCheck = createLocalLucideIcon(shieldCheckNode);
+export const Layers = createLocalLucideIcon(layersNode);

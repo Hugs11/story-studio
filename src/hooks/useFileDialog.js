@@ -73,6 +73,17 @@ export async function pickZip() {
   }, [DIR_KEYS.zip, LEGACY_IMPORT_KEY], DIR_KEYS.zip);
 }
 
+export async function pickMultipleZip() {
+  const result = await open({
+    multiple: true,
+    filters: [{ name: 'Archives Lunii', extensions: ['zip', '7z'] }],
+    defaultPath: getLastDir([DIR_KEYS.multiZip, DIR_KEYS.zip, LEGACY_IMPORT_KEY]),
+  });
+  const files = Array.isArray(result) ? result : (result ? [result] : []);
+  if (files.length > 0) saveLastDir(DIR_KEYS.multiZip, files[0]);
+  return files;
+}
+
 export async function pickMultipleAudioOrZip() {
   const result = await open({
     multiple: true,

@@ -219,7 +219,11 @@ export function RenderQueuePanel({ jobs, onRemove, onCancel, onClearDone, onClos
           {doneCount > 0 && (
             <Button size="sm" onClick={onClearDone}>Vider terminés</Button>
           )}
-          <Button size="sm" onClick={onClose} title="Fermer">✕</Button>
+          {/* En embedded, la fermeture est assurée par la croix du bottom panel
+              (bottom-workspace-close) — pas de doublon ici, comme SDQueuePanel. */}
+          {!embedded && (
+            <Button size="sm" onClick={onClose} title="Fermer">✕</Button>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.4;
+pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.35;
 pub(crate) const AUDIO_MAX_EDGE_SILENCE_SECONDS: f64 = 1.0;
 
 pub(crate) const IMAGE_TARGET_WIDTH: u32 = 320;
@@ -142,6 +142,7 @@ pub struct PackValidationReport {
     pub pack_name: String,
     pub pack_title: String,
     pub pack_description: String,
+    pub pack_uuid: String,
     pub pack_version: u32,
     pub zip_path: String,
     pub verdict: PackValidationVerdict,
@@ -179,6 +180,7 @@ pub struct PackMetadataPatch {
     pub author: Option<String>,
     pub producer: Option<String>,
     pub bonus: Option<String>,
+    pub uuid: Option<String>,
     pub naming_mode: Option<String>,
 }
 

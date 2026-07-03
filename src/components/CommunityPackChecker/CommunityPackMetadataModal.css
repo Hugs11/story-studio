@@ -252,6 +252,35 @@
   color: var(--accent-2-text);
 }
 
+.checker-meta-uuid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.checker-meta-uuid input {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.checker-meta-uuid button {
+  min-width: 88px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.checker-meta-uuid button:hover {
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
+}
+
 .checker-meta-preview {
   display: flex;
   flex-direction: column;
