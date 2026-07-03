@@ -139,6 +139,26 @@ function getTtsStoryName(text) {
   return sanitizeImportedName(clipped, '');
 }
 
+// Textes des funnels média d'accueil (podcast/YouTube, plan 09) : flux identiques,
+// seul le vocabulaire change. Consommé par landMediaFunnel (et l'import éditeur
+// YouTube pour les mêmes messages d'échec).
+const MEDIA_FUNNEL_COPY = {
+  podcast: {
+    defaultTitle: 'Podcast',
+    coverFilePrefix: 'podcast',
+    logPrefix: 'podcast-funnel',
+    allFailedMessage: "Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.",
+    someFailedNotice: (failures, total) => `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+  },
+  youtube: {
+    defaultTitle: 'YouTube',
+    coverFilePrefix: 'youtube',
+    logPrefix: 'youtube-funnel',
+    allFailedMessage: "Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.",
+    someFailedNotice: (failures, total) => `${failures} vidéo(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
+  },
+};
+
 // Vrai si l'UUID du draft est encore l'UUID importé d'origine (non régénéré via ↺ ni
 // modifié). Sert à ne proposer la régénération que quand ça a du sens.
 function isImportedOriginalUuid(draft) {
@@ -333,7 +353,7 @@ function AppContent() {
     prepareNewWorkSession,
     cleanupEphemeralSession,
     resetWorkSession,
-    abandonWorkSession,
+    runFunnelLanding,
     promoteSessionToProject,
     enterProjectMode,
     handleRecoverSession,
@@ -528,8 +548,7 @@ function AppContent() {
   // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
   // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
   async function handleLandEditablePack({ zipPath, packLabel }) {
-    const workspaceDir = await prepareNewWorkSession('pack');
-    try {
+    await runFunnelLanding('pack', async (workspaceDir) => {
       const transformed = await unpackZipIntoBlankProject({
         zipPath,
         zipName: packLabel,
@@ -560,12 +579,7 @@ function AppContent() {
         );
       }
       logger.info(`edit-pack:landed zip='${zipPath}'`);
-    } catch (error) {
-      logger.error('edit-pack:land-error', error);
-      // Échec d'extraction : nettoyer la session et revenir à l'accueil.
-      abandonWorkSession(workspaceDir);
-      throw error;
-    }
+    }, { errorLog: 'edit-pack:land-error' });
   }
 
   // Pack non éditable : le funnel propose la simulation. Session éphémère
@@ -977,73 +991,25 @@ function AppContent() {
     onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },
   });
 
-  async function handlePodcastFunnelImport(episodes, feed, onProgress) {
-    const workspaceDir = await prepareNewWorkSession('pack');
-    try {
-      const feedTitle = String(feed?.title || '').trim();
-      onProgress?.({ name: feedTitle || 'Podcast', index: 0, total: episodes.length, phase: 'Préparation de la session…' });
-      let feedCover = null;
-      if (feed?.imageUrl) {
-        try {
-          const tmpImage = await invoke('download_podcast_media', {
-            url: feed.imageUrl,
-            fileName: `${feedTitle || 'podcast'}-couverture`,
-          });
-          feedCover = await copyGeneratedMediaToProject(tmpImage);
-        } catch (coverError) {
-          logger.warn(`podcast-funnel:cover-error title='${feedTitle || 'Podcast'}' error=${coverError}`);
-        }
-      }
-      if (feedTitle || feedCover) {
-        store.setProject((project) => ({
-          ...project,
-          ...(feedTitle ? { projectName: feedTitle, rootName: feedTitle } : {}),
-          ...(feedCover ? { rootImage: feedCover, thumbnailImage: feedCover } : {}),
-          packMetadata: {
-            ...(project.packMetadata ?? {}),
-            ...(feedTitle ? { title: feedTitle } : {}),
-          },
-        }));
-      }
-      store.setSelectedId('root');
-      const result = await handleImportMediaEpisodes(episodes, feed, {
-        source: 'podcast',
-        targetMenuId: null,
-        onProgress,
-        suppressDialog: true,
-      });
-      if (result.total > 0 && result.failures >= result.total) {
-        throw new Error("Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.");
-      }
-      if (result.failures > 0) {
-        setImportNotice(`${result.failures} épisode(s) sur ${result.total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`);
-      }
-      logger.info(`podcast-funnel:landed count=${result.imported}`);
-    } catch (error) {
-      logger.error('podcast-funnel:import-error', error);
-      abandonWorkSession(workspaceDir);
-      throw error;
-    }
-  }
-
-  // Funnel YouTube depuis l'accueil (plan 09) : jumeau de handlePodcastFunnelImport.
-  // Crée la session éphémère, pré-remplit titre + vignette depuis la source, puis
-  // importe les vidéos en histoires (source yt-dlp) avant l'atterrissage éditeur.
-  async function handleYoutubeFunnelImport(videos, list, onProgress) {
-    const workspaceDir = await prepareNewWorkSession('pack');
-    try {
+  // Funnels média d'accueil (podcast et YouTube, plan 09) : flux jumeaux — crée la
+  // session éphémère, pré-remplit titre + vignette depuis la source (flux RSS ou
+  // liste yt-dlp), puis importe les épisodes/vidéos en histoires avant
+  // l'atterrissage éditeur. Vocabulaire par source dans MEDIA_FUNNEL_COPY.
+  async function landMediaFunnel(source, items, list, onProgress) {
+    const copy = MEDIA_FUNNEL_COPY[source];
+    await runFunnelLanding('pack', async () => {
       const listTitle = String(list?.title || '').trim();
-      onProgress?.({ name: listTitle || 'YouTube', index: 0, total: videos.length, phase: 'Préparation de la session…' });
+      onProgress?.({ name: listTitle || copy.defaultTitle, index: 0, total: items.length, phase: 'Préparation de la session…' });
       let listCover = null;
       if (list?.imageUrl) {
         try {
           const tmpImage = await invoke('download_podcast_media', {
             url: list.imageUrl,
-            fileName: `${listTitle || 'youtube'}-couverture`,
+            fileName: `${listTitle || copy.coverFilePrefix}-couverture`,
           });
           listCover = await copyGeneratedMediaToProject(tmpImage);
         } catch (coverError) {
-          logger.warn(`youtube-funnel:cover-error title='${listTitle || 'YouTube'}' error=${coverError}`);
+          logger.warn(`${copy.logPrefix}:cover-error title='${listTitle || copy.defaultTitle}' error=${coverError}`);
         }
       }
       if (listTitle || listCover) {
@@ -1058,40 +1024,45 @@ function AppContent() {
         }));
       }
       store.setSelectedId('root');
-      const result = await handleImportMediaEpisodes(videos, list, {
-        source: 'youtube',
+      const result = await handleImportMediaEpisodes(items, list, {
+        source,
         targetMenuId: null,
         onProgress,
         suppressDialog: true,
       });
       if (result.total > 0 && result.failures >= result.total) {
-        throw new Error("Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.");
+        throw new Error(copy.allFailedMessage);
       }
       if (result.failures > 0) {
-        setImportNotice(`${result.failures} vidéo(s) sur ${result.total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`);
+        setImportNotice(copy.someFailedNotice(result.failures, result.total));
       }
-      logger.info(`youtube-funnel:landed count=${result.imported}`);
-    } catch (error) {
-      logger.error('youtube-funnel:import-error', error);
-      abandonWorkSession(workspaceDir);
-      throw error;
-    }
+      logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
+    }, { errorLog: `${copy.logPrefix}:import-error` });
+  }
+
+  async function handlePodcastFunnelImport(episodes, feed, onProgress) {
+    await landMediaFunnel('podcast', episodes, feed, onProgress);
+  }
+
+  async function handleYoutubeFunnelImport(videos, list, onProgress) {
+    await landMediaFunnel('youtube', videos, list, onProgress);
   }
 
   // Import YouTube depuis l'éditeur libre (plan 09) : pas de nouvelle session, on
   // insère dans le projet courant (cible déduite de la sélection comme les autres
   // imports média). Lève en cas d'échec total → écran d'erreur du funnel.
   async function handleYoutubeEditorImport(videos, list, onProgress) {
+    const copy = MEDIA_FUNNEL_COPY.youtube;
     const result = await handleImportMediaEpisodes(videos, list, {
       source: 'youtube',
       onProgress,
       suppressDialog: true,
     });
     if (result.total > 0 && result.failures >= result.total) {
-      throw new Error("Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.");
+      throw new Error(copy.allFailedMessage);
     }
     if (result.failures > 0) {
-      setImportNotice(`${result.failures} vidéo(s) sur ${result.total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`);
+      setImportNotice(copy.someFailedNotice(result.failures, result.total));
     }
     logger.info(`youtube-editor:imported count=${result.imported}`);
   }
