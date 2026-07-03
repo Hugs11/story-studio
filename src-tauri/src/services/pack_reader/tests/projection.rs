@@ -988,3 +988,199 @@ fn cloche_retour_home_targets_do_not_flood_import_warnings() {
     assert!(unresolved.is_empty());
     assert!(entries[0].get("returnOnHome").is_none());
 }
+
+#[test]
+fn aggregation_wrapper_autoplay_intro_before_selector_stays_menu() {
+    let wrapper = serde_json::json!({
+        "uuid": "wrapper",
+        "name": "Pack enfant",
+        "audio": "wrapper.mp3",
+        "image": "wrapper.png",
+        "okTransition": { "actionNode": "wrapper-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let intro = serde_json::json!({
+        "uuid": "intro",
+        "name": "Intro",
+        "audio": "intro.mp3",
+        "okTransition": { "actionNode": "intro-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": true, "wheel": false, "ok": true, "home": true, "pause": true }
+    });
+    let selector = serde_json::json!({
+        "uuid": "selector",
+        "name": "Choix",
+        "audio": "selector.mp3",
+        "okTransition": { "actionNode": "selector-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": true, "wheel": false, "ok": true, "home": true }
+    });
+    let title_a = serde_json::json!({
+        "uuid": "title-a",
+        "name": "A",
+        "audio": "title-a.mp3",
+        "image": "title-a.png",
+        "okTransition": { "actionNode": "title-a-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let play_a = serde_json::json!({
+        "uuid": "play-a",
+        "name": "Lecture A",
+        "audio": "play-a.mp3",
+        "controlSettings": { "autoplay": true, "wheel": false, "ok": false, "home": true }
+    });
+    let title_b = serde_json::json!({
+        "uuid": "title-b",
+        "name": "B",
+        "audio": "title-b.mp3",
+        "image": "title-b.png",
+        "okTransition": { "actionNode": "title-b-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let play_b = serde_json::json!({
+        "uuid": "play-b",
+        "name": "Lecture B",
+        "audio": "play-b.mp3",
+        "controlSettings": { "autoplay": true, "wheel": false, "ok": false, "home": true }
+    });
+    let wrapper_action = serde_json::json!({ "id": "wrapper-action", "options": ["intro"] });
+    let intro_action = serde_json::json!({ "id": "intro-action", "options": ["selector"] });
+    let selector_action =
+        serde_json::json!({ "id": "selector-action", "options": ["title-a", "title-b"] });
+    let title_a_action = serde_json::json!({ "id": "title-a-action", "options": ["play-a"] });
+    let title_b_action = serde_json::json!({ "id": "title-b-action", "options": ["play-b"] });
+    let stages = HashMap::from([
+        ("wrapper", &wrapper),
+        ("intro", &intro),
+        ("selector", &selector),
+        ("title-a", &title_a),
+        ("play-a", &play_a),
+        ("title-b", &title_b),
+        ("play-b", &play_b),
+    ]);
+    let actions = HashMap::from([
+        ("wrapper-action", &wrapper_action),
+        ("intro-action", &intro_action),
+        ("selector-action", &selector_action),
+        ("title-a-action", &title_a_action),
+        ("title-b-action", &title_b_action),
+    ]);
+    let assets = HashMap::from([
+        ("wrapper.mp3".to_string(), PathBuf::from("wrapper.mp3")),
+        ("wrapper.png".to_string(), PathBuf::from("wrapper.png")),
+        ("intro.mp3".to_string(), PathBuf::from("intro.mp3")),
+        ("selector.mp3".to_string(), PathBuf::from("selector.mp3")),
+        ("title-a.mp3".to_string(), PathBuf::from("title-a.mp3")),
+        ("title-a.png".to_string(), PathBuf::from("title-a.png")),
+        ("play-a.mp3".to_string(), PathBuf::from("play-a.mp3")),
+        ("title-b.mp3".to_string(), PathBuf::from("title-b.mp3")),
+        ("title-b.png".to_string(), PathBuf::from("title-b.png")),
+        ("play-b.mp3".to_string(), PathBuf::from("play-b.mp3")),
+    ]);
+    let mut visited = HashSet::from(["wrapper".to_string()]);
+    let prompt_stage_usage = HashMap::new();
+    let story_play_stage_ids = HashSet::from(["play-a", "play-b"]);
+
+    let entry = walk_entry(
+        &wrapper,
+        &stages,
+        &actions,
+        &assets,
+        &mut visited,
+        &prompt_stage_usage,
+        false,
+        &story_play_stage_ids,
+    )
+    .expect("wrapper projection");
+
+    assert_eq!(entry["type"].as_str(), Some("menu"));
+    assert_eq!(entry["id"].as_str(), Some("wrapper"));
+    let intro_entry = &entry["children"][0];
+    assert_eq!(intro_entry["id"].as_str(), Some("intro"));
+    assert_eq!(intro_entry["type"].as_str(), Some("menu"));
+    let selector_entry = &intro_entry["children"][0];
+    assert_eq!(selector_entry["id"].as_str(), Some("selector"));
+    assert_eq!(selector_entry["type"].as_str(), Some("menu"));
+    assert_eq!(selector_entry["children"].as_array().map(Vec::len), Some(2));
+}
+
+#[test]
+fn story_item_before_end_prompt_is_not_aggregation_wrapper() {
+    let item = serde_json::json!({
+        "uuid": "item",
+        "name": "loutre.mp3 item",
+        "audio": "item.mp3",
+        "image": "item.png",
+        "okTransition": { "actionNode": "item-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let play = serde_json::json!({
+        "uuid": "play",
+        "name": "loutre.mp3 Stage node",
+        "audio": "play.mp3",
+        "okTransition": { "actionNode": "play-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": true, "wheel": false, "ok": false, "home": true, "pause": true }
+    });
+    let prompt = serde_json::json!({
+        "uuid": "prompt",
+        "name": "Une autre bestiole",
+        "audio": "prompt.mp3",
+        "okTransition": { "actionNode": "prompt-action", "optionIndex": 0 },
+        "controlSettings": { "autoplay": false, "wheel": false, "ok": true, "home": true }
+    });
+    let next_a = serde_json::json!({
+        "uuid": "next-a",
+        "name": "A",
+        "audio": "a.mp3",
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let next_b = serde_json::json!({
+        "uuid": "next-b",
+        "name": "B",
+        "audio": "b.mp3",
+        "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
+    });
+    let item_action = serde_json::json!({ "id": "item-action", "options": ["play"] });
+    let play_action = serde_json::json!({ "id": "play-action", "options": ["prompt"] });
+    let prompt_action =
+        serde_json::json!({ "id": "prompt-action", "options": ["next-a", "next-b"] });
+    let stages = HashMap::from([
+        ("item", &item),
+        ("play", &play),
+        ("prompt", &prompt),
+        ("next-a", &next_a),
+        ("next-b", &next_b),
+    ]);
+    let actions = HashMap::from([
+        ("item-action", &item_action),
+        ("play-action", &play_action),
+        ("prompt-action", &prompt_action),
+    ]);
+    let assets = HashMap::from([
+        ("item.mp3".to_string(), PathBuf::from("item.mp3")),
+        ("item.png".to_string(), PathBuf::from("item.png")),
+        ("play.mp3".to_string(), PathBuf::from("play.mp3")),
+        ("prompt.mp3".to_string(), PathBuf::from("prompt.mp3")),
+        ("a.mp3".to_string(), PathBuf::from("a.mp3")),
+        ("b.mp3".to_string(), PathBuf::from("b.mp3")),
+    ]);
+    let mut visited = HashSet::from(["item".to_string()]);
+    let prompt_stage_usage = HashMap::new();
+    let story_play_stage_ids = HashSet::from(["play"]);
+
+    let entry = walk_entry(
+        &item,
+        &stages,
+        &actions,
+        &assets,
+        &mut visited,
+        &prompt_stage_usage,
+        true,
+        &story_play_stage_ids,
+    )
+    .expect("story projection");
+
+    assert_eq!(entry["type"].as_str(), Some("story"));
+    assert_eq!(entry["id"].as_str(), Some("item"));
+    assert_eq!(entry["audio"].as_str(), Some("play.mp3"));
+    assert_eq!(entry["itemAudio"].as_str(), Some("item.mp3"));
+    assert_eq!(entry["itemImage"].as_str(), Some("item.png"));
+}
