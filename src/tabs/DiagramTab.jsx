@@ -1,46 +1,28 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FlowDiagram } from '../components/CentralPanel/FlowDiagram';
+import { useProjectActions } from '../store/ProjectActionsContext';
 
 export function DiagramTab({
   project,
   projectType,
   projectIndex,
   selectedId,
-  onSelect,
-  onMoveToMenu,
-  onUpdateRoot,
-  onUpdateMedia,
-  onUpdateStoryAudio,
-  onUpdateMenu,
-  onDeleteMenu,
-  onUpdateItem,
-  onDeleteItem,
   allMenus,
   allStories,
   inspectRequest,
-  onImportStories,
-  onImportFolder,
-  onImportPodcast,
-  onImportYoutube,
-  onRecord,
-  onGenerateStoryTts,
-  canGenerateStoryTts = true,
-  onAddMenu,
-  onAddStory,
-  onUnpackZip,
-  onSetMenuAsRoot,
-  onBulkUpdateItems,
-  onBulkDeleteItems,
-  onPasteEntries,
-  onCutPasteEntries,
-  onDuplicate,
-  onAddEndNode,
-  onRemoveEndNode,
-  onUpdateNightModeAudio,
-  onUpdateNightMode,
-  onUpdateNightModeReturn,
-  onUpdateNightModeHomeReturn,
 }) {
+  // Actions projet partagées avec EditorTab : fournies par App via
+  // ProjectActionsContext plutôt que re-câblées en props sur chaque surface.
+  const {
+    onSelect, onMoveToMenu,
+    onAddMenu, onAddStoryToMenu, onImportStories, onImportFolder, onUnpackZip,
+    onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canGenerateStoryTts,
+    onUpdateRoot, onUpdateMedia, onUpdateStoryAudio,
+    onUpdateMenu, onDeleteMenu, onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
+    onSetMenuAsRoot, onDuplicate, onPasteEntries, onCutPasteEntries,
+    onAddEndNode, onRemoveEndNode,
+    onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn, onUpdateNightModeHomeReturn,
+  } = useProjectActions();
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const skipIdSyncRef = useRef(false);
 
@@ -86,7 +68,7 @@ export function DiagramTab({
         onGenerateStoryTts={onGenerateStoryTts}
         canGenerateStoryTts={canGenerateStoryTts}
         onAddMenu={onAddMenu}
-        onAddStory={onAddStory}
+        onAddStory={onAddStoryToMenu}
         onUnpackZip={onUnpackZip}
         onSetMenuAsRoot={onSetMenuAsRoot}
         onBulkUpdateItems={onBulkUpdateItems}

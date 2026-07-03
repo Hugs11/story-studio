@@ -14,6 +14,7 @@ import {
 } from './store/projectIO';
 import { getLastExportDir, saveLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
+import { ProjectActionsContext } from './store/ProjectActionsContext';
 import { MediaTransferProvider } from './store/MediaTransferContext';
 import { getGenerateErrors } from './store/projectValidation';
 import { collectMediaLibrary } from './store/mediaLibrary';
@@ -1225,6 +1226,46 @@ function AppContent() {
     hasValidationErrors: totalIssues > 0,
   });
 
+  // Actions projet partagées entre les surfaces d'édition (EditorTab, DiagramTab),
+  // consommées via useProjectActions. Noms canoniques : onImportStories = sélecteur
+  // de fichiers vers la racine ; onAddStoryToMenu = sélecteur vers un menu cible.
+  const projectActions = {
+    onSelect: store.setSelectedId,
+    onReorder: handleReorder,
+    onMoveToMenu: store.moveItemToMenu,
+    onAddMenu: handleAddMenu,
+    onAddStoryToMenu: handleAddStoryToMenu,
+    onImportStories: handleAddStory,
+    onImportFolder: handleImportFolder,
+    onImportPodcast: () => setPodcastImportOpen(true),
+    onImportYoutube: () => setYoutubeFunnelMode('editor'),
+    onRecord: handleToolbarRecord,
+    onGenerateStoryTts: handleToolbarStoryTts,
+    canRecord,
+    canGenerateStoryTts,
+    onUnpackZip: handleUnpackZip,
+    onUpdateRoot: handleUpdateRoot,
+    onUpdateMedia: store.updateRootMedia,
+    onUpdateStoryAudio: store.updateStoryAudio,
+    onUpdateMenu: handleUpdateMenu,
+    onDeleteMenu: handleDeleteMenu,
+    onUpdateItem: handleUpdateItem,
+    onDeleteItem: handleDeleteItem,
+    onBulkUpdateItems: handleBulkUpdateItems,
+    onBulkDeleteItems: handleBulkDeleteItems,
+    onSetMenuAsRoot: handleSetMenuAsRoot,
+    onDemoteRootToMenu: handleDemoteRootToMenu,
+    onDuplicate: store.duplicateEntry,
+    onPasteEntries: store.pasteEntriesToMenu,
+    onCutPasteEntries: store.cutPasteEntriesToMenu,
+    onAddEndNode: handleAddEndNode,
+    onRemoveEndNode: handleRemoveEndNode,
+    onUpdateNightModeAudio: (value) => store.updateRootMedia('nightModeAudio', value),
+    onUpdateNightMode: (value) => store.updateGlobalOption('nightMode', value),
+    onUpdateNightModeReturn: (value) => store.updateRootMedia('nightModeReturn', value),
+    onUpdateNightModeHomeReturn: (value) => store.updateRootMedia('nightModeHomeReturn', value),
+  };
+
   const optionsTabProps = {
     copyFilesEnabled: copyImportedFilesEnabled,
     onCopyFilesChange: handleCopyImportedFilesChange,
@@ -1282,6 +1323,7 @@ function AppContent() {
       onQueueXttsGenerate: handleQueueXttsGenerate,
       onMediaCreated: handleMediaCreated,
     }}>
+    <ProjectActionsContext.Provider value={projectActions}>
     <div className="app">
       <TitleBar
         projectName={titleBarName}
@@ -1344,14 +1386,6 @@ function AppContent() {
               project={store.project}
               node={selectedNode}
               selectedId={store.selectedId}
-              onSelect={store.setSelectedId}
-              onReorder={handleReorder}
-              onMoveToMenu={store.moveItemToMenu}
-              onAddMenu={handleAddMenu}
-              onAddStory={handleAddStory}
-              onUpdateRoot={handleUpdateRoot}
-              onUpdateMedia={store.updateRootMedia}
-              onUpdateStoryAudio={store.updateStoryAudio}
               onSetProjectType={handleSelectProjectType}
               onEditPack={handleEditExistingPack}
               onPodcastFunnel={() => setPodcastFunnelOpen(true)}
@@ -1367,33 +1401,6 @@ function AppContent() {
               sessionRecoveries={sessionRecoveries}
               onRecoverSession={handleRecoverSession}
               onIgnoreSessionRecovery={handleIgnoreSessionRecovery}
-              savePath={store.savePath}
-              onUpdateMenu={handleUpdateMenu}
-              onDeleteMenu={handleDeleteMenu}
-              onSetMenuAsRoot={handleSetMenuAsRoot}
-              onDemoteRootToMenu={handleDemoteRootToMenu}
-              onUpdateItem={handleUpdateItem}
-              onDeleteItem={handleDeleteItem}
-              onBulkUpdateItems={handleBulkUpdateItems}
-              onBulkDeleteItems={handleBulkDeleteItems}
-              onAddStoryToMenu={handleAddStoryToMenu}
-              onImportFolder={handleImportFolder}
-              onImportPodcast={() => setPodcastImportOpen(true)}
-              onImportYoutube={() => setYoutubeFunnelMode('editor')}
-              onRecord={handleToolbarRecord}
-              onGenerateStoryTts={handleToolbarStoryTts}
-              canRecord={canRecord}
-              canGenerateStoryTts={canGenerateStoryTts}
-              onUnpackZip={handleUnpackZip}
-              onPasteEntries={store.pasteEntriesToMenu}
-              onCutPasteEntries={store.cutPasteEntriesToMenu}
-              onDuplicate={store.duplicateEntry}
-              onAddEndNode={handleAddEndNode}
-              onRemoveEndNode={handleRemoveEndNode}
-              onUpdateNightModeAudio={(value) => store.updateRootMedia('nightModeAudio', value)}
-              onUpdateNightMode={(value) => store.updateGlobalOption('nightMode', value)}
-              onUpdateNightModeReturn={(value) => store.updateRootMedia('nightModeReturn', value)}
-              onUpdateNightModeHomeReturn={(value) => store.updateRootMedia('nightModeHomeReturn', value)}
               pathAudit={pathAudit}
               validationIssues={validationIssues}
               allMenus={allMenus}
@@ -1412,38 +1419,6 @@ function AppContent() {
               allStories={allStories}
               selectedId={store.selectedId}
               inspectRequest={diagramInspectRequest}
-              onSelect={store.setSelectedId}
-              onMoveToMenu={store.moveItemToMenu}
-              onImportStories={() => handleAddStory()}
-              onImportFolder={handleImportFolder}
-              onImportPodcast={() => setPodcastImportOpen(true)}
-              onImportYoutube={() => setYoutubeFunnelMode('editor')}
-              onRecord={handleToolbarRecord}
-              onGenerateStoryTts={handleToolbarStoryTts}
-              canGenerateStoryTts={canGenerateStoryTts}
-              onUpdateRoot={handleUpdateRoot}
-              onUpdateMedia={store.updateRootMedia}
-              onUpdateStoryAudio={store.updateStoryAudio}
-              onUpdateMenu={handleUpdateMenu}
-              onDeleteMenu={handleDeleteMenu}
-              onUpdateItem={handleUpdateItem}
-              onDeleteItem={handleDeleteItem}
-              onAddMenu={handleAddMenu}
-              onAddStory={handleAddStoryToMenu}
-              onUnpackZip={handleUnpackZip}
-              onSetMenuAsRoot={handleSetMenuAsRoot}
-              onDemoteRootToMenu={handleDemoteRootToMenu}
-              onBulkUpdateItems={handleBulkUpdateItems}
-              onBulkDeleteItems={handleBulkDeleteItems}
-              onPasteEntries={store.pasteEntriesToMenu}
-              onCutPasteEntries={store.cutPasteEntriesToMenu}
-              onDuplicate={store.duplicateEntry}
-              onAddEndNode={handleAddEndNode}
-              onRemoveEndNode={handleRemoveEndNode}
-              onUpdateNightModeAudio={(value) => store.updateRootMedia('nightModeAudio', value)}
-              onUpdateNightMode={(value) => store.updateGlobalOption('nightMode', value)}
-              onUpdateNightModeReturn={(value) => store.updateRootMedia('nightModeReturn', value)}
-              onUpdateNightModeHomeReturn={(value) => store.updateRootMedia('nightModeHomeReturn', value)}
             />,
           )}
           {projectType !== null && bottomPanelOpen && (
@@ -1685,6 +1660,7 @@ function AppContent() {
         <CreditsModal appVersion={appVersion} onClose={() => setCreditsOpen(false)} />
       )}
     </div>
+    </ProjectActionsContext.Provider>
     </ProjectContext.Provider>
     </MediaTransferProvider>
   );
