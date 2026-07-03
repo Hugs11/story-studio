@@ -391,12 +391,11 @@ function AppContent() {
     return () => { cancelled = true; };
   }, []);
 
-  const askSaveBeforeLeaveCurrent = useCallback((project, savedSnapshot, onSave) => (
-    askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog).then((canLeave) => {
-      if (canLeave) cleanupEphemeralSession();
-      return canLeave;
-    })
-  ), [cleanupEphemeralSession, showChoiceDialog]);
+  const askSaveBeforeLeaveCurrent = useCallback(async (project, savedSnapshot, onSave) => {
+    const canLeave = await askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog);
+    if (canLeave) await cleanupEphemeralSession();
+    return canLeave;
+  }, [cleanupEphemeralSession, showChoiceDialog]);
 
   useWindowCloseGuard({
     askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
@@ -514,7 +513,6 @@ function AppContent() {
   async function handleNewProject() {
     const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
     if (!canContinue) return;
-    cleanupEphemeralSession();
     store.resetProject();
     setMediaLibraryPaths([]);
     savedSnapshotRef.current = null;
