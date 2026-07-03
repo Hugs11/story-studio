@@ -211,7 +211,9 @@ mod tests {
         let older_snapshot = PathBuf::from(&older).join(SESSION_RECOVERY_FILE);
         let newer_snapshot = PathBuf::from(&newer).join(SESSION_RECOVERY_FILE);
         fs::write(&older_snapshot, b"{}").expect("write older snapshot");
-        std::thread::sleep(std::time::Duration::from_millis(2));
+        // Windows CI can coalesce very close filesystem timestamps, so keep the
+        // gap comfortably above millisecond rounding before testing sort order.
+        std::thread::sleep(std::time::Duration::from_millis(100));
         fs::write(&newer_snapshot, b"{}").expect("write newer snapshot");
 
         let recoveries = list_session_recoveries();
