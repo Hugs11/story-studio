@@ -147,10 +147,17 @@ export function computeBadgesData(entry, parentMenu, issuesById, project, rootEn
     }
   }
 
-  if (navigation.storyHome.isNone) {
+  if (navigation.storyHome.isInactive) {
     out.push({
       kind: 'home-none',
       status: homeStatus,
+      isDefault: false,
+    });
+  } else if (navigation.storyHome.isImplicit) {
+    out.push({
+      kind: 'home-implicit',
+      status: homeStatus,
+      targetId: navigation.storyHome.effectiveTargetId,
       isDefault: false,
     });
   } else if (navigation.storyHome.isConfigured) {
@@ -222,8 +229,18 @@ export function formatBadgeTitle(data, projectIndex) {
         kind: 'home-none',
         status: data.status,
         label: '⌂',
-        title: 'Appuie sur le bouton Accueil pendant la lecture → aucune transition',
+        title: 'Bouton Accueil désactivé pendant la lecture',
       };
+    case 'home-implicit': {
+      const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      return {
+        key: `home:implicit:${data.targetId}:${homeName}`,
+        kind: 'home-implicit',
+        status: data.status,
+        label: '⌂',
+        title: `Appuie sur le bouton Accueil pendant la lecture → « ${homeName} »`,
+      };
+    }
     case 'home': {
       const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
       return {

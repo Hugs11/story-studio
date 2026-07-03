@@ -36,7 +36,7 @@ function EmptyDiagramState({ onImportStories = null }) {
       {onImportStories ? (
         <button type="button" className="fd-empty-btn" onClick={onImportStories}>
           <Download className="fd-empty-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-          <span>Importer des histoires</span>
+          <span>Importer audio ou archive</span>
         </button>
       ) : null}
     </div>
@@ -216,7 +216,7 @@ function DiagramTree({ project, projectIndex, selectedId, expandedStories, setEx
         <EmptyDiagramState onImportStories={onImportStories} />
       ) : (
         <Branch
-          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.packMetadata?.title || project.projectName || 'Nom du pack') }}
+          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.rootName || 'Menu racine') }}
           rootEntries={project.rootEntries ?? []}
           selectedId={selectedId}
           expandedStories={expandedStories}
@@ -250,7 +250,10 @@ export function FlowDiagram({
   onImportStories,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
+  canGenerateStoryTts = true,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -472,7 +475,10 @@ export function FlowDiagram({
         onImportStories={onImportStories}
         onImportFolder={onImportFolder}
         onImportPodcast={onImportPodcast}
+        onImportYoutube={onImportYoutube}
         onRecord={onRecord}
+        onGenerateStoryTts={onGenerateStoryTts}
+        canGenerateStoryTts={canGenerateStoryTts}
         onAddMenu={onAddMenu}
         onAddStory={onAddStory}
         onUnpackZip={onUnpackZip}

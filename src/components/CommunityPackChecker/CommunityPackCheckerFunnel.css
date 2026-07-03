@@ -1,0 +1,71 @@
+.pack-checker-funnel {
+  min-height: 100%;
+}
+
+.pack-checker-step {
+  gap: 14px;
+}
+
+.pack-checker-step--report {
+  padding-bottom: 32px;
+}
+
+.pack-checker-selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg2);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.pack-checker-selected svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--accent-2-text);
+}
+
+.pack-checker-selected span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pack-checker-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pack-checker-funnel .checker-report {
+  overflow: visible;
+  margin-bottom: 22px;
+}
+
+.pack-checker-funnel .checker-log {
+  max-height: none;
+}
+
+.pack-checker-funnel .checker-log pre {
+  max-height: 180px;
+}
+
+.pack-checker-funnel .checker-report-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 14px;
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+  box-shadow: 0 -10px 22px color-mix(in srgb, var(--bg0) 82%, transparent);
+}
+
+.pack-checker-funnel .checker-report-footer .checker-correction-cta,
+.pack-checker-funnel .checker-report-footer .btn {
+  flex: 0 0 auto;
+}

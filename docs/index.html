@@ -6,7 +6,7 @@
     <title>Story Studio — Créer des histoires et packs compatibles Lunii</title>
     <meta
       name="description"
-      content="Story Studio est un éditeur Windows open source pour créer des histoires pour la Lunii, importer, corriger et exporter des packs d'histoires compatibles Lunii."
+      content="Story Studio est un éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii."
     />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0c1227" />
@@ -15,7 +15,7 @@
     <meta property="og:title" content="Story Studio — Créer des histoires pour la Lunii" />
     <meta
       property="og:description"
-      content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer, corriger et exporter des packs compatibles Lunii."
+      content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -29,7 +29,7 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Story Studio — Créer des histoires pour la Lunii" />
-    <meta name="twitter:description" content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer, corriger et exporter des packs compatibles Lunii." />
+    <meta name="twitter:description" content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
@@ -39,13 +39,13 @@
         "@type": "SoftwareApplication",
         "name": "Story Studio",
         "alternateName": "Studio Story",
-        "description": "Éditeur Windows open source pour créer des histoires pour la Lunii, importer, corriger et exporter des packs d'histoires compatibles Lunii.",
+        "description": "Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs d'histoires compatibles Lunii.",
         "url": "https://hugs11.github.io/story-studio/",
         "downloadUrl": "https://github.com/Hugs11/story-studio/releases/latest",
         "codeRepository": "https://github.com/Hugs11/story-studio",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Windows",
-        "softwareVersion": "0.9.2",
+        "softwareVersion": "0.9.3",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -530,13 +530,13 @@
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.2</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.3</h2>
             <ul>
-              <li>Vérificateur/correcteur de packs communautaires avec analyse audio, image, métadonnées et navigation.</li>
-              <li>Workflow audio plus propre : FLAC jusqu'à l'export, volume cible, limiteur de crête et silences mesurés.</li>
-              <li>Découpage audio avant utilisation et import direct depuis des podcasts RSS.</li>
-              <li>Refonte complète de l'interface pour mieux comprendre les actions, les états et les rails de navigation.</li>
-              <li>Améliorations de l'arbre, du diagramme, du relink des médias manquants et de l'éditeur image.</li>
+              <li>Nouvel accueil guidé pour modifier un pack, créer depuis un podcast ou YouTube, agréger des archives et vérifier/corriger un pack.</li>
+              <li>Sessions non enregistrées par défaut : travail immédiat, enregistrement optionnel, reprise après crash et tri des médias à conserver.</li>
+              <li>Piper devient le moteur vocal local par défaut, sans serveur ni configuration, avec voix françaises téléchargées au premier usage.</li>
+              <li>Import YouTube via yt-dlp auto-téléchargé et import de vidéos, playlists ou chaînes dans l'éditeur.</li>
+              <li>Import de packs plus fidèle : références partagées, juge de fidélité canonique, agrégats et graphes ramifiés mieux préservés.</li>
             </ul>
           </div>
         </div>
@@ -569,9 +569,9 @@
                 </span>
                 <h3>Démarrez en quelques secondes</h3>
                 <p>
-                  Un écran d'accueil clair pour retrouver vos projets récents,
-                  importer un pack existant ou en créer un nouveau. Pas de menus
-                  cachés, pas de configuration interminable.
+                  Un écran d'accueil clair pour créer librement, modifier un
+                  pack existant, importer depuis un podcast ou YouTube, agréger
+                  plusieurs archives et vérifier un pack communautaire.
                 </p>
               </div>
             </div>
@@ -690,10 +690,11 @@
                     <rect x="3" y="14" width="7" height="7" />
                   </svg>
                 </span>
-                <h3>Importez depuis un podcast</h3>
+                <h3>Importez depuis un podcast ou YouTube</h3>
                 <p>
-                  Récupérez des épisodes depuis un flux RSS et transformez-les
-                  plus vite en contenus prêts à organiser dans votre pack.
+                  Récupérez des épisodes depuis un flux RSS ou des vidéos depuis
+                  YouTube, puis retrouvez-les comme histoires prêtes à organiser
+                  dans votre pack.
                 </p>
               </div>
             </div>
@@ -716,9 +717,9 @@
                 </span>
                 <h3>Audio sans complication</h3>
                 <p>
-                  Enregistrez votre voix au micro, coupez, ajoutez des fondus,
-                  assemblez plusieurs fichiers en une seule piste — directement dans
-                  l'app.
+                  Enregistrez votre voix au micro, générez une voix locale avec
+                  Piper, coupez, ajoutez des fondus et assemblez plusieurs
+                  fichiers en une seule piste — directement dans l'app.
                 </p>
               </div>
             </div>

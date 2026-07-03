@@ -16,6 +16,18 @@
   font-family: var(--font-sans);
 }
 
+.pack-meta-modal--embedded {
+  width: 100%;
+  max-height: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.pack-meta-modal--embedded .pack-meta-header {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
 .pack-meta-header {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) 28px;
@@ -209,6 +221,31 @@
   font-size: 11px;
 }
 
+.pack-meta-uuid-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pack-meta-uuid-input {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.pack-meta-uuid-button {
+  width: 32px;
+  height: 32px;
+}
+
+.pack-meta-uuid-hint {
+  margin: -3px 0 0;
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .pack-meta-age-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -277,6 +314,13 @@
   color: var(--accent);
 }
 
+/* Âge « Autre » sélectionné : même entourage de couleur qu'un chip prédéfini actif. */
+.pack-meta-age-custom.is-active .pack-meta-age-other {
+  border-color: var(--accentBorder);
+  background: var(--accentDim);
+  color: var(--accent);
+}
+
 .pack-meta-age-other {
   flex: 0 0 44px !important;
   width: 44px;
@@ -294,7 +338,7 @@
 }
 
 .pack-meta-preview {
-  margin: 6px 22px 0;
+  margin: 6px 22px 14px;
   padding: 13px 16px;
   border-radius: 8px;
   border: 1px solid var(--border);

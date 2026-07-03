@@ -22,13 +22,12 @@ function parseIssue(issue) {
     return { groupKey: '__pack__', groupLabel: 'Pack', label: text };
   }
   const location = text.slice(0, dashIdx);
-  const error = text.slice(dashIdx + 3);
-  const parts = location.split(' / ');
-  const nodeName = parts[parts.length - 1] || location;
+  // L'en-tête de groupe porte déjà le chemin complet du nœud : les items ne
+  // gardent que le champ à corriger, sans re-préfixer le nom.
   return {
     groupKey: location,
     groupLabel: location,
-    label: parts.length > 1 ? `${nodeName} — ${error}` : error,
+    label: text.slice(dashIdx + 3),
   };
 }
 

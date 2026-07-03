@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
-import { ChevronRight, Settings, Wrench } from '../icons/LucideLocal';
+import { Wrench } from '../icons/LucideLocal';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
+const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 const SILENCE_MODE_OPTIONS = [
-  ['normalize', 'Calcul 0,5 s', `Mesure les silences de début/fin et les ramène à exactement ${formatPackAudioEdgeSilence()} (coupe si trop long, complète si trop court).`],
-  ['add', 'Ajoute 0,5 s', `Ajoute ${formatPackAudioEdgeSilence()} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
-  ['off', 'Off', 'Ne touche pas aux silences de début et de fin.'],
+  ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
+  ['add', `Ajouter ${EDGE_SILENCE_LABEL}`, `Ajouter ${EDGE_SILENCE_LABEL} aux silences de début et de fin`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
+  ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
 ];
 
-const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si vos fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
+const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
 
 export function PackOptionsPopover({
   open,
@@ -20,13 +21,15 @@ export function PackOptionsPopover({
   globalOptions = {},
   onOpenChange,
   onUpdateOption,
-  onOpenPackMetadata,
   onOpenPreferences,
   preferencesShortcut = '',
 }) {
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
   const isSimpleProject = projectType === 'simple';
+  // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
+  const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
+  const activeSilenceHelp = (SILENCE_MODE_OPTIONS.find(([mode]) => mode === activeSilenceMode) ?? SILENCE_MODE_OPTIONS[0])[3];
 
   useEffect(() => () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -70,11 +73,6 @@ export function PackOptionsPopover({
     onOpenPreferences?.();
   }
 
-  function handleOpenPackMetadata() {
-    onOpenChange?.(false);
-    onOpenPackMetadata?.();
-  }
-
   return (
     <div
       className={`pack-options-wrap ${open ? 'is-open' : ''}`}
@@ -91,27 +89,6 @@ export function PackOptionsPopover({
         <>
           <div className="pack-options-hover-bridge" aria-hidden="true" />
           <div className="pack-options-popover" role="dialog" aria-label="Options du pack">
-            {onOpenPackMetadata ? (
-              <button
-                type="button"
-                className="pack-options-gateway"
-                onClick={handleOpenPackMetadata}
-              >
-                <span className="pack-options-gateway-icon pack-options-gateway-icon--pack">
-                  <Settings strokeWidth={2} absoluteStrokeWidth />
-                </span>
-                <span className="pack-options-gateway-copy">
-                  <span className="pack-options-gateway-title">Réglages du pack</span>
-                  <span className="pack-options-gateway-subtitle">Nom, âge, langue, image de couverture, ordre du menu.</span>
-                </span>
-                <span className="pack-options-gateway-end" aria-hidden="true">
-                  <ChevronRight strokeWidth={2} absoluteStrokeWidth />
-                </span>
-              </button>
-            ) : null}
-
-            <div className="pack-options-rule" />
-
             <div className="pack-options-well">
               <div className="pack-options-well-title">Traitement audio du pack</div>
               <Tooltip text={HARMONIZE_LOUDNESS_HELP} wrap className="pack-options-row-tip">
@@ -133,12 +110,13 @@ export function PackOptionsPopover({
                   <span className="pack-options-control-title">Silence début / fin</span>
                 </span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
-                  {SILENCE_MODE_OPTIONS.map(([mode, label, help]) => (
+                  {SILENCE_MODE_OPTIONS.map(([mode, label, ariaLabel, help]) => (
                     <Tooltip key={mode} text={help} wrap>
                       <button
                         type="button"
-                        className={`pack-options-segment ${globalOptions.silenceMode === mode ? 'is-active' : ''}`}
-                        aria-pressed={globalOptions.silenceMode === mode}
+                        className={`pack-options-segment ${activeSilenceMode === mode ? 'is-active' : ''}`}
+                        aria-pressed={activeSilenceMode === mode}
+                        aria-label={ariaLabel}
                         onClick={() => updateOption('silenceMode', mode)}
                       >
                         {label}
@@ -146,6 +124,7 @@ export function PackOptionsPopover({
                     </Tooltip>
                   ))}
                 </div>
+                <span className="pack-options-control-hint pack-options-silence-hint">{activeSilenceHelp}</span>
               </div>
 
               <div className="pack-options-well-sep" />

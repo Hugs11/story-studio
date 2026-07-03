@@ -114,7 +114,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             <strong>Mode histoire simple</strong>
             <span>
               Tu crées un pack contenant une seule histoire. Pour des menus, plusieurs histoires ou
-              une navigation personnalisée, utilise plutôt le mode « Créer un pack d'histoires ».
+              une navigation personnalisée, utilise plutôt l'« Éditeur libre ».
             </span>
           </div>
           <button
@@ -195,10 +195,10 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                   extraActions={[
                     {
                       key: 'generate-text',
-                      label: 'Générer un texte',
+                      label: 'Générer une image-titre',
                       icon: '✦',
                       onClick: handleGenerateTextImage,
-                      title: "Créer une image texte à partir du nom de l'histoire",
+                      title: "Créer une image-titre à partir du nom de l'histoire",
                     },
                   ]}
                   onPick={(f) => {
@@ -245,10 +245,10 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                       extraActions={[
                         {
                           key: 'generate-text',
-                          label: 'Générer un texte',
+                          label: 'Générer une image-titre',
                           icon: '✦',
                           onClick: handleGenerateTextImage,
-                          title: "Créer une image texte à partir du nom de l'histoire",
+                          title: "Créer une image-titre à partir du nom de l'histoire",
                         },
                       ]}
                       onPick={(f) => { onUpdateMedia('rootImage', f); onUpdateMedia('autoGenerateRootImage', false); }}
@@ -270,10 +270,10 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                       extraActions={[
                         {
                           key: 'generate-text',
-                          label: 'Générer un texte',
+                          label: 'Générer une image-titre',
                           icon: '✦',
                           onClick: handleGenerateThumbnailTextImage,
-                          title: "Créer une image texte pour le catalogue à partir du nom de l'histoire",
+                          title: "Créer une image-titre pour le catalogue à partir du nom de l'histoire",
                         },
                       ]}
                       onPick={(f) => onUpdateMedia('thumbnailImage', f)}

@@ -454,7 +454,7 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
             disabled={resolvedCount === 0 || applying}
           >
             {applying && <Loader2 className="relink-spin" />}
-            {applying ? 'Application…' : 'Appliquer et sauvegarder'}
+            {applying ? 'Application…' : 'Appliquer et enregistrer'}
           </button>
         </footer>
       </div>

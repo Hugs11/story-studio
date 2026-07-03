@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import {
   AUTOSAVE_ACTIONS,
   decideAutosaveAction,
+  isProjectWorthAutosaving,
   selectStaleAutosaveBackups,
 } from '../src/store/autosaveDecision.js';
+import { shouldAbortEphemeralPromotion } from '../src/store/projectHelpers.js';
 
 function snapshot(value) {
   return JSON.stringify(value);
@@ -64,6 +66,38 @@ test('decideAutosaveAction creates a new autosave when no savePath but workspace
   });
   assert.equal(action.kind, AUTOSAVE_ACTIONS.AUTOSAVE_NEW);
   assert.equal(action.workspaceDir, 'D:/ws');
+});
+
+test('decideAutosaveAction routes an ephemeral project to the session recovery snapshot', () => {
+  const action = decideAutosaveAction({
+    isSaving: false,
+    currentSnapshot: '{"a":1}',
+    savedSnapshot: null,
+    isDirty: true,
+    savePath: null,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: 'D:/temp/story_studio_session_1_2/.session-recovery.mbah',
+    autoSavePath: null,
+  });
+  assert.equal(action.kind, AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL);
+  assert.equal(action.workspaceDir, 'D:/temp/story_studio_session_1_2');
+  assert.equal(action.path, 'D:/temp/story_studio_session_1_2/.session-recovery.mbah');
+});
+
+test('decideAutosaveAction skips an unchanged ephemeral snapshot without marking the project saved', () => {
+  const action = decideAutosaveAction({
+    isSaving: false,
+    currentSnapshot: '{"a":1}',
+    savedSnapshot: null,
+    isDirty: true,
+    savePath: null,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: 'D:/temp/story_studio_session_1_2/.session-recovery.mbah',
+    lastEphemeralSnapshot: '{"a":1}',
+  });
+  assert.equal(action.kind, AUTOSAVE_ACTIONS.SKIP_UNCHANGED);
 });
 
 test('decideAutosaveAction reuses the existing autosave file when one is already known', () => {
@@ -181,4 +215,71 @@ test('selectStaleAutosaveBackups treats keep ≤ 0 as “purge everything matchi
   ];
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', 0).length, 2);
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', -1).length, 2);
+});
+
+// --- isProjectWorthAutosaving (plan 24) ---------------------------------
+
+function simpleProjectWith(story = {}) {
+  return {
+    projectType: 'simple',
+    rootAudio: null,
+    rootEntries: [{ id: 's1', type: 'story', name: '', audio: null, itemAudio: null, itemImage: null, ...story }],
+  };
+}
+
+test('isProjectWorthAutosaving: projet simple vierge (histoire pré-créée) → non', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith()), false);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({
+    controlSettings: { autoplay: false, wheel: false, pause: true, ok: false, home: true },
+    afterPlaybackPromptControlSettings: { autoplay: true, wheel: false, pause: false, ok: true, home: true },
+    individualOptions: {},
+    afterPlaybackSequence: [],
+  })), false);
+});
+
+test('isProjectWorthAutosaving: histoire nommée ou avec média → oui', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ name: 'Le loup' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ audio: 'C:/a.mp3' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ itemAudio: 'C:/titre.mp3' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ itemImage: 'C:/a.png' })), true);
+});
+
+test('isProjectWorthAutosaving: réglage utilisateur sur placeholder simple → oui', () => {
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({
+    controlSettings: { autoplay: true, wheel: false, pause: true, ok: false, home: true },
+  })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ returnAfterPlay: 'root' })), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith({ afterPlaybackSequence: [{ id: 'seq1' }] })), true);
+});
+
+test('isProjectWorthAutosaving: nom de projet ou titre de pack saisi → oui', () => {
+  assert.equal(isProjectWorthAutosaving({ ...simpleProjectWith(), projectName: 'Filet' }), true);
+  assert.equal(isProjectWorthAutosaving({ ...simpleProjectWith(), packMetadata: { title: 'Mon pack' } }), true);
+});
+
+test('isProjectWorthAutosaving: média racine ou bibliothèque → oui', () => {
+  assert.equal(isProjectWorthAutosaving({ projectType: 'simple', rootAudio: 'C:/t.mp3', rootEntries: [] }), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith(), ['C:/lib.mp3']), true);
+  assert.equal(isProjectWorthAutosaving(simpleProjectWith(), [], 3), true);
+});
+
+test('isProjectWorthAutosaving: pack avec dossier créé → oui ; pack vide → non', () => {
+  assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [{ id: 'm1', type: 'menu', name: 'Nouveau dossier', children: [] }] }), true);
+  assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [] }), false);
+  assert.equal(isProjectWorthAutosaving(null), false);
+});
+
+test('shouldAbortEphemeralPromotion: bloque seulement les erreurs de transfert en session éphémère', () => {
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: true,
+    transferErrors: [{ path: 'C:/Temp/session/a.mp3' }],
+  }), true);
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: true,
+    transferErrors: [],
+  }), false);
+  assert.equal(shouldAbortEphemeralPromotion({
+    isEphemeralSession: false,
+    transferErrors: [{ path: 'C:/Temp/session/a.mp3' }],
+  }), false);
 });

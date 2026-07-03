@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/LucideLocal';
 import { generateConventionName, parseConventionName } from '../../utils/packConvention';
+import { generateUuid } from '../../utils/uuid';
 import './CommunityPackMetadataModal.css';
 
 const AGE_CHIPS = ['2', '3', '6', '9', '12'];
@@ -19,6 +20,7 @@ function normalizeDraft(draft) {
     producer: parsedTitle?.producer || String(draft.producer || '').trim(),
     bonus: parsedTitle?.bonus || String(draft.bonus || '').trim(),
     description: String(draft.description || '').trim(),
+    uuid: String(draft.uuid || '').trim(),
     minAge: parsedTitle?.minAge || String(draft.minAge || '3').replace(/\D/g, '') || '3',
     version: Math.max(normalizeVersion(parsedTitle?.version), normalizeVersion(draft.version)),
     namingMode: 'convention',
@@ -39,6 +41,7 @@ function defaultDraft(report) {
     producer: parsed.producer || '',
     bonus: parsed.bonus || '',
     description: report?.packDescription || parsed.description || '',
+    uuid: report?.packUuid || '',
     minAge: parsed.minAge || '3',
     version: currentVersion + 1,
     namingMode: 'convention',
@@ -75,6 +78,7 @@ export function CommunityPackMetadataModal({
   onSubmit,
 }) {
   const [draft, setDraft] = useState(() => defaultDraft(report));
+  const promptedUuidRef = useRef('');
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
   const exportName = useMemo(() => generateConventionName(normalized), [normalized]);
   const tokens = useMemo(() => filenameTokens(exportName), [exportName]);
@@ -82,6 +86,18 @@ export function CommunityPackMetadataModal({
   const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
   const customAge = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
   const canSubmit = normalized.title.length > 0 && !busy;
+
+  useEffect(() => {
+    const currentUuid = String(report?.packUuid || '').trim();
+    if (!currentUuid || promptedUuidRef.current === currentUuid) return;
+    promptedUuidRef.current = currentUuid;
+    const wantsNewUuid = window.confirm(
+      "Ce pack va être corrigé dans une nouvelle archive. Veux-tu générer un nouvel UUID maintenant ?",
+    );
+    if (wantsNewUuid) {
+      setDraft((current) => ({ ...current, uuid: generateUuid() }));
+    }
+  }, [report?.packUuid]);
 
   function updateField(field, value) {
     setDraft((current) => ({
@@ -92,6 +108,10 @@ export function CommunityPackMetadataModal({
 
   function updateAge(value) {
     updateField('minAge', String(value || '').replace(/\D/g, ''));
+  }
+
+  function regenerateUuid() {
+    updateField('uuid', generateUuid());
   }
 
   function submit() {
@@ -193,6 +213,14 @@ export function CommunityPackMetadataModal({
             <label>
               <span>Description</span>
               <textarea value={draft.description || ''} onChange={(event) => updateField('description', event.target.value)} rows={3} placeholder="Description ou changelog..." />
+            </label>
+
+            <label>
+              <span>UUID</span>
+              <div className="checker-meta-uuid">
+                <input value={draft.uuid || ''} onChange={(event) => updateField('uuid', event.target.value)} placeholder="UUID du pack" />
+                <button type="button" onClick={regenerateUuid}>Générer</button>
+              </div>
             </label>
           </section>
         </div>

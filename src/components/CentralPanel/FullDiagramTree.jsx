@@ -7,6 +7,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../icons/LucideLocal';
 import {
@@ -51,7 +52,9 @@ export function CompleteDiagramTree({
   onImportStories,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
   onAddMenu,
   onAddStory,
   onUnpackZip,
@@ -69,6 +72,7 @@ export function CompleteDiagramTree({
   onAddEndNode,
   onRemoveEndNode,
   allMenus,
+  canGenerateStoryTts = true,
 }) {
   const { dropOnNode } = useMediaTransfer();
   const containerRef = useRef(null);
@@ -211,6 +215,9 @@ export function CompleteDiagramTree({
 
   useEffect(() => {
     function onKeyDown(e) {
+      // Même garde que useAppShortcuts : couper/coller/supprimer un nœud du
+      // diagramme ne doit pas agir derrière une modale ouverte.
+      if (isModalSurfaceOpen()) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
       if (e.key === 'Escape' && activeNavigationEdgeIdRef.current) {
@@ -339,6 +346,7 @@ export function CompleteDiagramTree({
   const returnEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'return'), [navigationEdges]);
   const homeEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'home'), [navigationEdges]);
   const sequenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'sequence'), [navigationEdges]);
+  const referenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'reference'), [navigationEdges]);
   const nodeLabelById = useMemo(() => new Map(layout.nodes.map((node) => [
     node.entry.id,
     node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
@@ -360,7 +368,7 @@ export function CompleteDiagramTree({
   );
   const getNavigationEdgeForNode = useCallback((nodeId) => {
     if (!showReturns || !nodeId) return null;
-    const priority = { sequence: 0, return: 1, home: 2 };
+    const priority = { sequence: 0, return: 1, reference: 1, home: 2 };
     const byPriority = (a, b) => (priority[a.kind] ?? 9) - (priority[b.kind] ?? 9);
     const outgoing = navigationEdges
       .filter((edge) => edge.from === nodeId)
@@ -439,9 +447,12 @@ export function CompleteDiagramTree({
       ? 'Retour Home'
       : edge.kind === 'sequence'
         ? 'Séquence de fin'
-        : 'Retour';
+        : edge.kind === 'reference'
+          ? 'Lien'
+          : 'Retour';
     if (edge.kind === 'home') return `Bouton Home pendant « ${from} » → « ${to} »`;
     if (edge.kind === 'sequence') return `Séquence de fin de « ${from} » → « ${to} »`;
+    if (edge.kind === 'reference') return `Lien vers un nœud existant : « ${from} » → « ${to} »`;
     return edge.label ? `${edge.label} : ${from} → ${to}` : `${kindLabel} : « ${from} » → « ${to} »`;
   }
   function updateNavigationTooltip(event, edge) {
@@ -773,7 +784,7 @@ export function CompleteDiagramTree({
     const actions = [];
 
     actions.push({ icon: <FolderPlus />, label: 'Ajouter un dossier', fn: () => onAddMenu?.(menuId) });
-    actions.push({ icon: <Music />, label: 'Importer des histoires', fn: () => onAddStory?.(menuId) });
+    actions.push({ icon: <Music />, label: 'Importer audio ou archive', fn: () => onAddStory?.(menuId) });
 
     const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
     if (nodeType === 'root' && !hasEndNode) {
@@ -831,7 +842,7 @@ export function CompleteDiagramTree({
       });
     }
 
-    if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
+    if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip' || nodeType === 'ref') {
       actions.push('sep');
       const selectedForDelete = selectedIds?.has(nodeId) && selectedIds?.size > 1
         ? getTopLevelSelected(nodeId)
@@ -941,7 +952,10 @@ export function CompleteDiagramTree({
             onAddFolder={onAddMenu}
             onImportFolder={onImportFolder}
             onImportPodcast={onImportPodcast}
+            onImportYoutube={onImportYoutube}
             onRecord={onRecord}
+            onGenerateStoryTts={onGenerateStoryTts}
+            canGenerateStoryTts={canGenerateStoryTts}
             onLaunchSimulator={onSimulateRoot}
             showLabel
           />
@@ -1013,7 +1027,9 @@ export function CompleteDiagramTree({
                 const id = edgeKey(edge);
                 const isActive = activeNavigationEdgeIds.has(id);
                 const isDimmed = hasActiveNavigationEdge && !isActive;
-                const d = `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
+                const d = edge.route === 'same-row-return'
+                  ? `M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.railY} L ${edge.x2} ${edge.railY} L ${edge.x2} ${edge.y2}`
+                  : `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
                 const labelOnly = edge.from === END_NODE_ID && edge.to === END_NODE_ID && edge.source === 'contextual';
                 return (
                   <g
@@ -1040,6 +1056,12 @@ export function CompleteDiagramTree({
                           className="fd-complete-line-hitbox"
                           d={d}
                         />
+                        {edge.kind === 'return' ? (
+                          <path
+                            className="fd-complete-line-underlay fd-complete-line-underlay--return"
+                            d={d}
+                          />
+                        ) : null}
                         <path
                           className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
                           d={d}
@@ -1120,6 +1142,12 @@ export function CompleteDiagramTree({
             <div className="fd-complete-legend-item">
               <span className="fd-complete-legend-line fd-complete-legend-line--sequence" />
               <span>Sequences de fin</span>
+            </div>
+          ) : null}
+          {referenceEdges.length > 0 ? (
+            <div className="fd-complete-legend-item">
+              <span className="fd-complete-legend-line fd-complete-legend-line--reference" />
+              <span>Liens</span>
             </div>
           ) : null}
         </div>

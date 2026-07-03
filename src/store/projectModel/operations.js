@@ -1,5 +1,5 @@
 import { isSameMediaPath, makeId, normalizeBaseProject, normalizeEntry } from './schema.js';
-import { extractEntry, findEntryById } from './index.js';
+import { extractEntry, findEntryById, findIncomingRefs } from './index.js';
 
 function replaceEntryTree(entries, entryId, replacer) {
   return entries.map((entry) => {
@@ -28,25 +28,6 @@ function removeEntriesTree(entries, entryIds) {
       : entry);
 }
 
-function updateNativeGraphStage(graph, stageId, fields) {
-  if (!graph || !stageId || !fields || typeof fields !== 'object') return graph;
-  const stages = graph?.document?.stageNodes;
-  if (!Array.isArray(stages)) return graph;
-  const stageIndex = stages.findIndex((stage) => (stage?.uuid || stage?.id) === stageId);
-  if (stageIndex < 0) return graph;
-  const nextGraph = structuredClone(graph);
-  const stage = nextGraph.document.stageNodes[stageIndex];
-  if (Object.prototype.hasOwnProperty.call(fields, 'name')) stage.name = fields.name ?? '';
-  if (Object.prototype.hasOwnProperty.call(fields, 'audio')) stage.audio = fields.audio ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'itemAudio')) stage.audio = fields.itemAudio ?? stage.audio ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'image')) stage.image = fields.image ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'itemImage')) stage.image = fields.itemImage ?? stage.image ?? null;
-  if (Object.prototype.hasOwnProperty.call(fields, 'controlSettings')) {
-    stage.controlSettings = { ...(stage.controlSettings ?? {}), ...(fields.controlSettings ?? {}) };
-  }
-  return nextGraph;
-}
-
 function clearNativeGraphMedia(graph, path) {
   const stages = graph?.document?.stageNodes;
   if (!Array.isArray(stages)) return graph;
@@ -73,16 +54,6 @@ function clearNativeGraphMedia(graph, path) {
   };
 }
 
-function clearAudioProcessingField(entry, field) {
-  if (!entry.audioProcessing?.[field]) return entry;
-  const audioProcessing = { ...entry.audioProcessing };
-  delete audioProcessing[field];
-  return {
-    ...entry,
-    audioProcessing: Object.keys(audioProcessing).length > 0 ? audioProcessing : {},
-  };
-}
-
 function clearEntryMediaReferences(entry, path) {
   if (!entry || typeof entry !== 'object') return entry;
   let next = { ...entry };
@@ -90,9 +61,6 @@ function clearEntryMediaReferences(entry, path) {
   function clearField(field) {
     if (!isSameMediaPath(next[field], path)) return;
     next = { ...next, [field]: null };
-    if (field === 'audio' || field === 'itemAudio' || field === 'afterPlaybackPromptAudio') {
-      next = clearAudioProcessingField(next, field);
-    }
   }
 
   if (next.type === 'menu') {
@@ -238,30 +206,9 @@ export function cutPasteEntries(project, sourceIds, targetMenuId) {
 }
 
 export function updateEntry(project, entryId, fields) {
-  const audioFields = ['audio', 'itemAudio', 'afterPlaybackPromptAudio'];
-  let nativeStageId = null;
-  const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) => {
-      const next = { ...entry, ...fields };
-      if (!Object.prototype.hasOwnProperty.call(fields, 'audioProcessing')) {
-        for (const field of audioFields) {
-          if (Object.prototype.hasOwnProperty.call(fields, field) && next.audioProcessing?.[field]) {
-            next.audioProcessing = { ...next.audioProcessing };
-            delete next.audioProcessing[field];
-          }
-        }
-      }
-      const normalized = normalizeEntry(next);
-      nativeStageId = normalized.nativeStageId ?? null;
-      return normalized;
-    });
-  let nextProject = updateProjectRootEntries(project, nextRootEntries);
-  if (nativeStageId && nextProject.nativeGraph?.preserveForRoundTrip === true) {
-    nextProject = normalizeBaseProject({
-      ...nextProject,
-      nativeGraph: updateNativeGraphStage(nextProject.nativeGraph, nativeStageId, fields),
-    });
-  }
-  return nextProject;
+  const nextRootEntries = replaceEntryTree(project.rootEntries ?? [], entryId, (entry) =>
+    normalizeEntry({ ...entry, ...fields }));
+  return updateProjectRootEntries(project, nextRootEntries);
 }
 
 export function clearMediaReferences(project, path) {
@@ -270,10 +217,6 @@ export function clearMediaReferences(project, path) {
   for (const field of ['rootAudio', 'rootImage', 'thumbnailImage', 'nightModeAudio']) {
     if (isSameMediaPath(next[field], path)) {
       next[field] = null;
-      if ((field === 'rootAudio' || field === 'nightModeAudio') && next.audioProcessing?.[field]) {
-        next.audioProcessing = { ...next.audioProcessing };
-        delete next.audioProcessing[field];
-      }
     }
   }
   next.nativeGraph = clearNativeGraphMedia(next.nativeGraph, path);
@@ -289,6 +232,26 @@ export function removeEntries(project, entryIds) {
   const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
   if (ids.size === 0) return project;
   return updateProjectRootEntries(project, removeEntriesTree(project.rootEntries ?? [], ids));
+}
+
+// Supprime une entrée ET les refs qui pointeraient désormais dans le vide (garde-fou :
+// jamais de cible pendante dans le projet — cf. validation à l'export).
+export function removeEntryCascadingRefs(project, entryId) {
+  const danglingRefs = findIncomingRefs(project, entryId);
+  if (danglingRefs.length === 0) return removeEntry(project, entryId);
+  return removeEntries(project, new Set([entryId, ...danglingRefs.map((entry) => entry.id)]));
+}
+
+export function removeEntriesCascadingRefs(project, entryIds) {
+  const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
+  if (ids.size === 0) return project;
+  const danglingRefIds = new Set();
+  for (const id of ids) {
+    for (const ref of findIncomingRefs(project, id)) {
+      if (!ids.has(ref.id)) danglingRefIds.add(ref.id);
+    }
+  }
+  return removeEntries(project, new Set([...ids, ...danglingRefIds]));
 }
 
 export function replaceEntryWithEntries(project, containerId, entryId, replacementEntries) {

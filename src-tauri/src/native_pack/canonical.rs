@@ -1,11 +1,10 @@
 use serde::Serialize;
-use std::collections::HashMap;
 
 use crate::domain::project::{
-    AfterPlaybackSequenceStep, AudioFieldProcessing, EntryControlSettings, GlobalOptions, Project,
-    ProjectEntry, SilenceMode,
+    AfterPlaybackSequenceStep, EntryControlSettings, GlobalOptions, Project, ProjectEntry,
+    SilenceMode,
 };
-use crate::domain::validation::project_root_entries;
+use crate::domain::validation::{project_root_entries, project_shared_entries};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CanonicalProject {
@@ -22,6 +21,7 @@ pub(crate) struct CanonicalProject {
     pub(crate) native_graph: Option<serde_json::Value>,
     pub(crate) options: CanonicalOptions,
     pub(crate) entries: Vec<CanonicalEntry>,
+    pub(crate) shared_entries: Vec<CanonicalEntry>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -39,6 +39,16 @@ pub(crate) enum CanonicalEntry {
     Menu(CanonicalMenu),
     Story(CanonicalStory),
     Zip(CanonicalZip),
+    Ref(CanonicalRef),
+}
+
+/// Nœud de référence : ne produit PAS de sous-arbre, mais une arête vers un nœud
+/// existant (`target` typé). Résolu à l'export en une transition native réelle.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct CanonicalRef {
+    pub(crate) id: String,
+    pub(crate) target: String,
+    pub(crate) ref_kind: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -55,7 +65,6 @@ pub(crate) struct CanonicalMenu {
     pub(crate) pause: bool,
     pub(crate) return_after_play: Option<String>,
     pub(crate) return_on_home: Option<String>,
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
     pub(crate) children: Vec<CanonicalEntry>,
 }
 
@@ -74,7 +83,6 @@ impl Default for CanonicalMenu {
             pause: false,
             return_after_play: None,
             return_on_home: None,
-            audio_processing: HashMap::new(),
             children: Vec::new(),
         }
     }
@@ -84,6 +92,7 @@ impl Default for CanonicalMenu {
 pub(crate) struct CanonicalStory {
     pub(crate) id: String,
     pub(crate) name: String,
+    pub(crate) native_stage_id: Option<String>,
     pub(crate) audio: Option<String>,
     pub(crate) item_audio: Option<String>,
     pub(crate) item_image: Option<String>,
@@ -105,7 +114,6 @@ pub(crate) struct CanonicalStory {
     pub(crate) title_return_on_home: Option<String>,
     pub(crate) title_return_on_home_none: bool,
     pub(crate) title_control_settings: Option<EntryControlSettings>,
-    pub(crate) audio_processing: HashMap<String, AudioFieldProcessing>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -127,6 +135,7 @@ impl Default for CanonicalStory {
         Self {
             id: String::new(),
             name: String::new(),
+            native_stage_id: None,
             audio: None,
             item_audio: None,
             item_image: None,
@@ -148,7 +157,6 @@ impl Default for CanonicalStory {
             title_return_on_home: None,
             title_return_on_home_none: false,
             title_control_settings: None,
-            audio_processing: HashMap::new(),
         }
     }
 }
@@ -231,6 +239,11 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
     let mut entries = Vec::new();
 
     let root_entries = project_root_entries(project);
+    let shared_entries: Vec<CanonicalEntry> = project_shared_entries(project)
+        .iter()
+        .filter(|entry| matches!(entry.entry_type.as_str(), "menu" | "story" | "ref"))
+        .map(canonicalize_project_entry)
+        .collect();
     if project_type == "simple" {
         if let Some(story) = root_entries
             .iter()
@@ -239,6 +252,9 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
             entries.push(canonicalize_project_entry(story));
         }
     } else {
+        // Les `ref` deviennent `CanonicalEntry::Ref` (résolus en transitions natives à
+        // l'export, cf. `resolve_pending_ref_options`) — plus de filtre anti-story-fantôme :
+        // le bras `"ref"` de `canonicalize_project_entry` empêche désormais le repli `_ => Story`.
         entries.extend(root_entries.iter().map(canonicalize_project_entry));
     }
 
@@ -256,6 +272,7 @@ pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
         native_graph: project.native_graph.clone(),
         options: canonicalize_options(&project.global_options),
         entries,
+        shared_entries,
     }
 }
 
@@ -320,12 +337,16 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
                 .unwrap_or(false),
             return_after_play: entry.return_after_play.clone(),
             return_on_home: entry.return_on_home.clone(),
-            audio_processing: entry.audio_processing.clone(),
             children: entry
                 .children
                 .iter()
                 .map(canonicalize_project_entry)
                 .collect(),
+        }),
+        "ref" => CanonicalEntry::Ref(CanonicalRef {
+            id: entry.id.clone(),
+            target: entry.target.clone().unwrap_or_default(),
+            ref_kind: entry.ref_kind.clone(),
         }),
         "zip" => CanonicalEntry::Zip(CanonicalZip {
             id: entry.id.clone(),
@@ -335,6 +356,7 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
         _ => CanonicalEntry::Story(CanonicalStory {
             id: entry.id.clone(),
             name: entry.name.clone(),
+            native_stage_id: entry.native_stage_id.clone(),
             audio: entry.audio.clone(),
             item_audio: entry.item_audio.clone(),
             item_image: entry.item_image.clone(),
@@ -385,7 +407,48 @@ fn canonicalize_project_entry(entry: &ProjectEntry) -> CanonicalEntry {
             title_return_on_home: entry.title_return_on_home.clone(),
             title_return_on_home_none: entry.title_return_on_home_none,
             title_control_settings: entry.title_control_settings.clone(),
-            audio_processing: entry.audio_processing.clone(),
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::project::ProjectEntry;
+
+    fn entry(id: &str, entry_type: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: entry_type.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn ref_children_become_ref_not_storified() {
+        let mut reference = entry("r", "ref");
+        reference.target = Some("story:s".to_string());
+        reference.ref_kind = Some("continue".to_string());
+        let menu = ProjectEntry {
+            id: "m".to_string(),
+            entry_type: "menu".to_string(),
+            name: "Menu".to_string(),
+            children: vec![entry("s", "story"), reference],
+            ..Default::default()
+        };
+        let CanonicalEntry::Menu(canonical) = canonicalize_project_entry(&menu) else {
+            panic!("expected a menu");
+        };
+        assert_eq!(
+            canonical.children.len(),
+            2,
+            "la ref doit etre conservee comme arete, pas transformee en story fantome",
+        );
+        assert!(matches!(canonical.children[0], CanonicalEntry::Story(_)));
+        let CanonicalEntry::Ref(reference) = &canonical.children[1] else {
+            panic!("le second enfant doit etre une ref");
+        };
+        assert_eq!(reference.target, "story:s");
+        assert_eq!(reference.ref_kind.as_deref(), Some("continue"));
     }
 }

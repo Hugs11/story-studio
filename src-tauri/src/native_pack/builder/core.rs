@@ -5,6 +5,7 @@ use super::super::{
     validate_document_for_studio_compat, ActionNode, ControlSettings, NativeAssetPreparationReport,
     StageNode, StoryDocument, Transition,
 };
+use super::refs::PendingRefOption;
 use super::{menu::*, story::*, transitions::*};
 
 pub(in crate::native_pack) struct StoryBuilder<'a> {
@@ -18,6 +19,7 @@ pub(in crate::native_pack) struct StoryBuilder<'a> {
         std::collections::HashMap<String, MenuPrealloc>,
     pub(in crate::native_pack::builder) story_prealloc:
         std::collections::HashMap<String, StoryPrealloc>,
+    pub(in crate::native_pack::builder) pending_ref_options: Vec<PendingRefOption>,
 }
 
 impl<'a> StoryBuilder<'a> {
@@ -30,6 +32,7 @@ impl<'a> StoryBuilder<'a> {
             night_bridge_cache: std::collections::HashMap::new(),
             menu_prealloc: std::collections::HashMap::new(),
             story_prealloc: std::collections::HashMap::new(),
+            pending_ref_options: Vec::new(),
         }
     }
 
@@ -40,19 +43,41 @@ impl<'a> StoryBuilder<'a> {
         let cover_image = self.asset_name("rootImage")?;
         let cover_stage_id = self.next_id();
         let root_action_id = self.next_id();
+        let shared_action_id = (!project.shared_entries.is_empty()).then(|| self.next_id());
+        let shared_approach_action_ids: Vec<String> = project
+            .shared_entries
+            .iter()
+            .map(|_| self.next_id())
+            .collect();
         self.root_action_id = Some(root_action_id.clone());
         self.night_bridge_cache.clear();
 
         // Pré-alloue les action node IDs de tous les menus pour que returnAfterPlay
         // puisse référencer n'importe quel menu indépendamment de l'ordre de build.
         preallocate_menus(&project.entries, &root_action_id, &mut self.menu_prealloc);
+        if let Some(action_id) = shared_action_id.as_deref() {
+            preallocate_menus(&project.shared_entries, action_id, &mut self.menu_prealloc);
+        }
         // Pré-alloue les play stage IDs de toutes les histoires pour les transitions story→story.
         preallocate_story_play_stages(&project.entries, &mut self.story_prealloc);
+        preallocate_story_play_stages(&project.shared_entries, &mut self.story_prealloc);
         preallocate_story_approach_transitions(
             &project.entries,
             &root_action_id,
             &self.menu_prealloc,
             &mut self.story_prealloc,
+        );
+        if let Some(action_id) = shared_action_id.as_deref() {
+            preallocate_story_approach_transitions(
+                &project.shared_entries,
+                action_id,
+                &self.menu_prealloc,
+                &mut self.story_prealloc,
+            );
+        }
+        self.preallocate_shared_entry_approaches(
+            &project.shared_entries,
+            &shared_approach_action_ids,
         );
 
         let root_targets = if project.project_type == "simple" {
@@ -63,6 +88,20 @@ impl<'a> StoryBuilder<'a> {
 
         if root_targets.is_empty() {
             return Err("Aucune entree native construite pour le projet.".to_string());
+        }
+
+        if let Some(action_id) = shared_action_id.as_deref() {
+            let shared_targets = self.build_shared_entries(
+                &project.shared_entries,
+                action_id,
+                &shared_approach_action_ids,
+            )?;
+            self.action_nodes.push(ActionNode {
+                id: action_id.to_string(),
+                name: action_node_name(),
+                options: shared_targets,
+                position: zero_position(),
+            });
         }
 
         self.action_nodes.push(ActionNode {
@@ -93,6 +132,10 @@ impl<'a> StoryBuilder<'a> {
             }),
             position: zero_position(),
         });
+
+        // Tout l'arbre est construit : les nœuds `ref` peuvent maintenant pointer vers
+        // le vrai stage natif de leur cible (y compris les références « en avant »).
+        self.resolve_pending_ref_options()?;
 
         let mut document = StoryDocument {
             title: project_name,

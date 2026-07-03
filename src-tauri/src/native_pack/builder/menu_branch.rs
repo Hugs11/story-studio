@@ -22,7 +22,7 @@ impl<'a> StoryBuilder<'a> {
             .unwrap_or_else(|| self.next_id());
         let mut option_stage_ids = Vec::new();
         let explicit_menu_home_transition = menu.return_on_home.as_deref().map(|target| {
-            self.resolve_story_home_transition(Some(target), menu_replay_transition.clone())
+            self.resolve_story_return_transition(Some(target), menu_replay_transition.clone())
         });
         let is_choice_node = explicit_menu_home_transition.is_some()
             || menu_home_transition.is_some()
@@ -95,7 +95,8 @@ impl<'a> StoryBuilder<'a> {
                             } else if auto_next_active && story.return_on_home.is_none() {
                                 menu_replay_transition.clone()
                             } else {
-                                self.resolve_story_home_transition(
+                                self.resolve_play_home_transition_for_story(
+                                    story,
                                     story_home.as_deref(),
                                     play_return_transition.clone(),
                                 )
@@ -144,6 +145,13 @@ impl<'a> StoryBuilder<'a> {
                         Some(menu_replay_transition.clone()),
                         false,
                     )?);
+                }
+                CanonicalEntry::Ref(reference) => {
+                    // Une référence ne construit aucun sous-arbre : l'option pointera vers le
+                    // stage natif existant de la cible. Placeholder valide (le stage du menu)
+                    // en attendant la passe de résolution finale.
+                    self.record_ref_option(&menu_action_id, child_index, &reference.target);
+                    option_stage_ids.push(menu_stage_id.clone());
                 }
             }
         }

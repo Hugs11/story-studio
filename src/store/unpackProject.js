@@ -3,6 +3,20 @@ import { basenameNoExt } from '../utils/fileUtils.js';
 import { parseConventionName } from '../utils/packConvention.js';
 import { sanitizeImportedName } from './importedNames.js';
 
+// Remonte un préfixe d'âge « libre » (« 3+ Mickey… », « 6+_Titre ») vers minAge et le
+// retire du titre. Contrairement à la convention stricte « N+] » (gérée par
+// parseConventionName), certains packs notent l'âge sans crochet ; sans ce traitement,
+// le « 3+ » restait dans le titre et se dédoublait dans le nom exporté (« 3+]3+_… »).
+function liftLeadingAge(name, fallbackAge = '3') {
+  // « N+ » suivi d'un séparateur (« ] » ou espace) et d'un titre : on remonte l'âge,
+  // sans toucher « 3+5 » ni « 3+Mickey » (pas de séparateur = pas un préfixe d'âge).
+  const match = String(name || '').match(/^\s*(\d{1,2})\s*\+(?:\]|\s)\s*(\S.*)$/);
+  if (match && match[2].trim()) {
+    return { minAge: match[1], title: match[2].trim() };
+  }
+  return { minAge: fallbackAge, title: String(name || '').trim() };
+}
+
 export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = '' } = {}) {
   const zipFilename = basenameNoExt(zipPath);
   const rawTitle = String(result?.title || '').trim();
@@ -13,21 +27,27 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
   const packName = (rawTitle && (isTitleConvention || !isZipConvention))
     ? sanitizeImportedName(rawTitle, zipName || 'Pack importé')
     : sanitizeImportedName(zipFilename || zipName, 'Pack importé');
+  const fallbackAge = (zipFilename || zipName || '').match(/^\s*(\d+)\s*\+/)?.[1] || '3';
+  const lifted = liftLeadingAge(packName, fallbackAge);
   const packMetadata = parsedPackName
     ? {
         ...parsedPackName,
         version: result?.packVersion ?? parsedPackName.version,
         description: result?.packDescription ?? '',
+        uuid: result?.uuid ?? result?.packUuid ?? '',
+        originalUuid: result?.uuid ?? result?.packUuid ?? '',
         namingMode: 'convention',
       }
     : {
-        title: packName,
+        title: lifted.title,
         author: '',
         version: result?.packVersion ?? 1,
-        minAge: ((zipFilename || zipName || '').match(/^(\d+)\+\]/)?.[1]) || '3',
+        minAge: lifted.minAge,
         producer: '',
         bonus: '',
         description: result?.packDescription ?? '',
+        uuid: result?.uuid ?? result?.packUuid ?? '',
+        originalUuid: result?.uuid ?? result?.packUuid ?? '',
         namingMode: 'convention',
         legacyExportName: '',
         legacyName: '',
@@ -82,6 +102,7 @@ export function buildProjectAfterZipUnpack({
 
   return {
     project: nextProject,
+    promoted: shouldPromote,
     ...details,
   };
 }

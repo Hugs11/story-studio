@@ -4,17 +4,24 @@ import { Tooltip } from '../common/Tooltip';
 import { findEntryById } from '../../store/projectModel';
 import { useProjectContext } from '../../store/ProjectContext';
 import { KEYS, read } from '../../store/persistentSettings';
+import { isTtsAvailable, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
 import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { CircleStop, Moon, Pause, Sparkles, Speech, Trash2 } from '../icons/LucideLocal';
-import { NavigationTargetSelect } from './story/storyUtils';
+import {
+  generatedTargetIdToSelectValue,
+  NavigationTargetSelect,
+} from './story/storyUtils';
+import {
+  getGeneratedStoryNavigation,
+} from '../../store/generatedNavigation';
 import {
   canShowTextImageBatchAction,
   getTextImageBatchTargets,
 } from './multiEditorBatchTargets';
 import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
 
-const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false };
+const STORY_DEFAULTS = { autoplay: false, pause: true, wheel: false, home: true };
 const MENU_DEFAULTS = { autoplay: false, pause: false, wheel: true };
 
 const SHARED_DURING_CONTROL_KEYS = [
@@ -155,6 +162,17 @@ export const MultiEditor = memo(function MultiEditor({
     return unique.length === 1 ? unique[0] : '__mixed__';
   }
 
+  function getParentMenu(entry) {
+    const parentId = projectIndex?.parentMenuById?.get(entry.id) ?? null;
+    return parentId ? projectIndex?.entryById?.get(parentId) ?? null : null;
+  }
+
+  function getHomeSelectValue(entry) {
+    if (entry.returnOnHome) return entry.returnOnHome;
+    const navigation = getGeneratedStoryNavigation(entry, getParentMenu(entry), project, project?.rootEntries ?? []);
+    return generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId);
+  }
+
   function getMixedBooleanValue(values) {
     const unique = [...new Set(values)];
     return {
@@ -167,10 +185,14 @@ export const MultiEditor = memo(function MultiEditor({
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
   const playbackControlTitle = onlyMenus ? 'Comportement des dossiers' : "Pendant l'histoire";
   const batchGenerationDescription = canGenerateTextImages
-    ? "Crée d'un coup une image texte pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
-    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images texte ne sont proposées que pour les histoires et les dossiers avec image.";
+    ? "Crée d'un coup une image-titre pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
+    : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images-titres ne sont proposées que pour les histoires et les dossiers avec image.";
 
   function getSelectedVoice() {
+    if ((xttsSettings?.backend || 'piper') === 'piper') {
+      // Piper a toujours une voix par défaut : jamais vide, pas de pré-sélection requise.
+      return xttsSettings?.piperVoice || read(KEYS.PIPER_LAST_VOICE) || PIPER_DEFAULT_VOICE;
+    }
     const favoriteVoices = Array.isArray(xttsSettings?.favoriteVoices) ? xttsSettings.favoriteVoices : [];
     return (
       read(KEYS.XTTS_LAST_VOICE) ||
@@ -208,7 +230,7 @@ export const MultiEditor = memo(function MultiEditor({
             );
           }
         } catch {
-          errors.push(`${text} : image texte impossible à générer`);
+          errors.push(`${text} : image-titre impossible à générer`);
         }
       }
 
@@ -308,10 +330,10 @@ export const MultiEditor = memo(function MultiEditor({
                   disabled={batchBusy}
                 >
                   <Sparkles className="batch-generate-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-                  {batchImageGenerating ? 'Images…' : 'Images texte'}
+                  {batchImageGenerating ? 'Images…' : 'Images-titres'}
                 </button>
               ) : null}
-              {xttsSettings?.enabled && titleAudioNodes.length > 0 && (
+              {isTtsAvailable(xttsSettings) && titleAudioNodes.length > 0 && (
                 <button
                   type="button"
                   className="batch-generate-btn"
@@ -338,8 +360,11 @@ export const MultiEditor = memo(function MultiEditor({
             editableNodes.map((n) => n.controlSettings?.pause ?? STORY_DEFAULTS.pause),
           );
           const homeState = getMixedBooleanValue(
-            editableNodes.map((n) => !n.returnOnHomeNone),
+            editableNodes.map((n) => n.controlSettings?.home ?? STORY_DEFAULTS.home),
           );
+          const homeSelectValues = editableNodes.map(getHomeSelectValue);
+          const homeSelectUnique = [...new Set(homeSelectValues)];
+          const homeSelectValue = homeSelectUnique.length === 1 ? homeSelectUnique[0] : '__mixed__';
           const showHomeDestination = homeState.isMixed || homeState.value;
 
           return (
@@ -380,9 +405,9 @@ export const MultiEditor = memo(function MultiEditor({
                       on={homeState.value}
                       mixed={homeState.isMixed}
                       onChange={(v) => {
-                        onBulkUpdateItems(editableIds, () => ({
-                          returnOnHome: null,
-                          returnOnHomeNone: !v,
+                        onBulkUpdateItems(editableIds, (entry) => ({
+                          controlSettings: { ...entry.controlSettings, home: v },
+                          ...(v ? {} : { returnOnHome: null, returnOnHomeNone: true }),
                         }));
                       }}
                       ariaLabel="Bouton Accueil"
@@ -403,7 +428,7 @@ export const MultiEditor = memo(function MultiEditor({
                         <span className="during-play-destination-label">Destination</span>
                         <div className="during-play-home-select">
                           <NavigationTargetSelect
-                            value={getMixedSelectValue('returnOnHome')}
+                            value={homeSelectValue}
                             onChange={(target) => {
                               if (target === '__mixed__') return;
                               onBulkUpdateItems(editableIds, () => ({
@@ -571,7 +596,7 @@ export const MultiEditor = memo(function MultiEditor({
             const unique = [...new Set(vals)];
             const isMixed = unique.length > 1;
             const value = isMixed ? false : unique[0];
-            const showDestination = allMenus.length > 0 && (isMixed || value);
+            const showDestination = isMixed || value;
 
             return (
               <div className="card">

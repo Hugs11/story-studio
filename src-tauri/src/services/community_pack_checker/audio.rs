@@ -666,7 +666,7 @@ fn add_silence_issue(
             target,
             format!("Le silence au {} est trop court.", side),
             Some(format!(
-                "Détecté : {:.2} s. Accepté : {:.1} à {:.1} s. Correction proposée : ajouter {:.2} s.",
+                "Détecté : {:.2} s. Accepté : {:.2} à {:.2} s. Correction proposée : ajouter {:.2} s.",
                 measured,
                 AUDIO_MIN_EDGE_SILENCE_SECONDS,
                 AUDIO_MAX_EDGE_SILENCE_SECONDS,
@@ -689,7 +689,7 @@ fn add_silence_issue(
             target,
             format!("Le silence au {} est trop long.", side),
             Some(format!(
-                "Détecté : {:.2} s. Accepté : {:.1} à {:.1} s. Correction proposée : ramener à {:.2} s.",
+                "Détecté : {:.2} s. Accepté : {:.2} à {:.2} s. Correction proposée : ramener à {:.2} s.",
                 measured,
                 AUDIO_MIN_EDGE_SILENCE_SECONDS,
                 AUDIO_MAX_EDGE_SILENCE_SECONDS,

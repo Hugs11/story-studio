@@ -7,19 +7,17 @@
 //
 // Regles partagees JS <-> Rust (toute divergence est un bug a corriger):
 //   - Audio racine obligatoire (rootAudio).
-//   - Image racine / vignette obligatoires sur pack.
+//   - Image racine obligatoire, vignette obligatoire sur pack sauf si `sameImage`.
 //   - Story : audio obligatoire, accessibilite disque verifiee.
-//   - Story : itemImage + itemAudio obligatoires.
+//   - Story : itemImage obligatoire, itemAudio obligatoire sauf titre explicite silencieux.
 //   - Zip : zipPath obligatoire et fichier accessible.
 //   - Pack non-vide : au moins une histoire jouable.
+//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences).
 //
 // Regles UX uniquement (cote JS, signalees a l'utilisateur en temps reel) :
 //   - "duplicateId" : doublons d'ID dans rootEntries. Rust ne controle pas
 //     (la generation cree des ids assainis distincts).
 //   - "rootReservedId" : ID 'root' reserve. Rust applique implicitement.
-//   - Cibles de navigation cassees (returnAfterPlay, etc.) : warning JS,
-//     Rust accepte mais l'execution peut etre incoherente (cas couvert par
-//     le test round-trip native_pack/tests/roundtrip.rs).
 //   - emptyMenu / emptyPack : warnings JS, Rust refuse via "aucune histoire".
 //
 // Si une regle est ajoutee : l'implementer des deux cotes, etendre
@@ -43,10 +41,6 @@ function hasPath(value) {
 
 function isBrokenPath(value, fileAudit = {}) {
   return hasPath(value) && fileAudit[value] === false;
-}
-
-function isAccessiblePath(value, fileAudit = {}) {
-  return hasPath(value) && fileAudit[value] !== false;
 }
 
 function labelOrFallback(value, fallback) {
@@ -100,11 +94,12 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
 function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
   const itemId = item?.id ?? null;
+  const explicitTitleStage = !!item?.titleControlSettings;
   if (!hasPath(item?.audio)) pushWarning(issues, itemId, missingField(name, 'histoire', { feminine: true }));
   else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'histoire'));
   if (!hasPath(item?.itemImage)) pushWarning(issues, itemId, missingField(name, 'image', { feminine: true }));
   else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image'));
-  if (!hasPath(item?.itemAudio)) pushWarning(issues, itemId, missingField(name, 'audio titre'));
+  if (!hasPath(item?.itemAudio) && !explicitTitleStage) pushWarning(issues, itemId, missingField(name, 'audio titre'));
   else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio titre'));
   if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
     pushWarning(issues, itemId, brokenField(name, "audio de fin d'histoire"));
@@ -127,7 +122,7 @@ function validateZipItem(issues, item, fallbackName, fileAudit) {
 export function getProjectValidationIssues(project, fileAudit = {}, providedProjectIndex = null) {
   const issues = [];
   const projectType = project?.projectType;
-  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Nom de mon histoire');
+  const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Pack sans nom');
   const autoNext = !!project?.globalOptions?.autoNext;
   const nightMode = !!project?.globalOptions?.nightMode;
   const hasEndNode = !autoNext && (nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode);
@@ -161,17 +156,18 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'audio intro'));
   if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField('Menu racine', 'image de couverture', { feminine: true }));
   else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'image de couverture'));
+  const rootImageAsThumbnail = !!project?.sameImage;
   if (projectType === 'pack') {
-    if (!hasPath(project?.thumbnailImage)) {
+    if (!rootImageAsThumbnail && !hasPath(project?.thumbnailImage)) {
       pushWarning(
         issues,
         'root',
         `${missingField('Menu racine', 'image bibliothèque', { feminine: true })} (cocher « même image » ou en choisir une)`,
       );
-    } else if (isBrokenPath(project?.thumbnailImage, fileAudit)) {
+    } else if (!rootImageAsThumbnail && isBrokenPath(project?.thumbnailImage, fileAudit)) {
       pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
     }
-  } else if (hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
+  } else if (!rootImageAsThumbnail && hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
     pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
@@ -193,13 +189,30 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
     const entryLabel = labelOrFallback(entry?.name, entry?.type === 'menu' ? 'Collection' : 'Element');
     const pathLabel = [...ancestors.map((parent) => labelOrFallback(parent?.name, 'Collection')), entryLabel]
       .join(' / ');
-    const parentMenu = ancestors.length > 0 ? ancestors[ancestors.length - 1] : null;
     const entryId = typeof entry?.id === 'string' ? entry.id.trim() : '';
     if (!entryId) {
       pushError(issues, null, VALIDATION_MESSAGES.missingInternalId(pathLabel));
     } else if (entryId === 'root') {
       pushError(issues, entryId, VALIDATION_MESSAGES.reservedIdInvalid(pathLabel));
     }
+    if (entry?.type === 'ref') {
+      // Une reference est un pointeur pur : sa seule contrainte est de resoudre
+      // vers une cible existante. On reutilise le resolveur de navigation.
+      if (!hasPath(entry?.target)) {
+        pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.refTargetMissing(pathLabel));
+      } else {
+        validateNavigationTarget(
+          issues,
+          entry?.id ?? null,
+          `${entryLabel} — référence`,
+          entry?.target,
+          projectIndex,
+          menuIds,
+        );
+      }
+      return;
+    }
+
     if (entry?.type !== 'menu' && entry?.type !== 'story' && entry?.type !== 'zip') {
       pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.unsupportedEntryType(pathLabel));
       return;

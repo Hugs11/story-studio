@@ -3,10 +3,7 @@ use std::path::PathBuf;
 
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
-use super::native_graph::{
-    build_native_graph_flat_stage_map_entry, build_native_graph_projection_entries,
-    has_interactive_branching_graph, native_graph_with_resolved_assets,
-};
+use super::graph_import::project_story_graph_values;
 use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
@@ -22,6 +19,7 @@ use super::story_entry::{
     resolve_after_playback_step_assets,
 };
 use super::transitions::{has_transition_target, transition_target_stage_id};
+use crate::native_pack::StoryDocument;
 
 /// Convertit le document story.json en `{ rootAudio, rootImage, entries }`.
 /// rootAudio/rootImage = assets du squareOne (cover du pack).
@@ -391,25 +389,36 @@ pub(super) fn walk_story_doc_to_entries(
     }
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
-    let needs_native_graph_projection = unresolved_transitions_detected && has_branching_graph;
-    let native_graph = if needs_native_graph_projection {
-        Some(native_graph_with_resolved_assets(doc, assets))
+    let graph_import_safe_unresolved =
+        unresolved_transitions_are_square_one_home_only(&unresolved_transitions, sq_id);
+    let graph_import_existing_unresolved =
+        unresolved_transition_targets_exist(&unresolved_transitions, &stages);
+    let graph_import_can_model = !unresolved_transitions_detected
+        || graph_import_safe_unresolved
+        || graph_import_existing_unresolved;
+    // Seul graph_import projette les graphes branchants. Les graphes que graph_import
+    // décline (diagnostics) ou ne peut pas modéliser (transitions pendantes) retombent
+    // sur l'arbre walk_entry et restent classés en lecture seule. Plus de projecteur
+    // « natif » lossy de repli : la simulation lit le story.json brut, pas un nativeGraph.
+    let graph_import_projection = if has_branching_graph && graph_import_can_model {
+        serde_json::from_value::<StoryDocument>(doc.clone())
+            .ok()
+            .and_then(|document| project_story_graph_values(&document, assets).ok())
+            .filter(|projection| {
+                projection.diagnostics.is_empty() && !projection.root_entries.is_empty()
+            })
     } else {
         None
     };
-    if needs_native_graph_projection {
-        let mut projected_entries =
-            build_native_graph_projection_entries(sq, &stages, &actions, assets);
-        if projected_entries.len() <= 1 {
-            projected_entries = build_native_graph_flat_stage_map_entry(&stages, assets);
-        }
-        if !projected_entries.is_empty() {
-            entries = projected_entries;
-        }
+    let uses_graph_import_projection = graph_import_projection.is_some();
+    let mut shared_entries = Vec::new();
+    if let Some(graph_projection) = graph_import_projection {
+        entries = graph_projection.root_entries;
+        shared_entries = graph_projection.shared_entries;
     }
     let auto_next_detected =
-        !needs_native_graph_projection && extract_auto_next_return_overrides(&mut entries);
-    let reported_unresolved_transitions = if needs_native_graph_projection {
+        !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
+    let reported_unresolved_transitions = if uses_graph_import_projection {
         Vec::new()
     } else {
         unresolved_transitions
@@ -437,11 +446,64 @@ pub(super) fn walk_story_doc_to_entries(
         "nightModeAudio": if auto_next_detected { None } else { night_mode_audio },
         "nightModeReturn": if auto_next_detected { None } else { night_mode_return },
         "nightModeHomeReturn": if auto_next_detected { None } else { night_mode_home_return },
-        "nativeGraph": native_graph,
+        "nativeGraph": serde_json::Value::Null,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,
+        "usesGraphProjection": uses_graph_import_projection,
+        "sharedEntries": shared_entries,
         "entries": entries
     }))
+}
+
+fn unresolved_transitions_are_square_one_home_only(
+    unresolved_transitions: &[serde_json::Value],
+    square_one_id: &str,
+) -> bool {
+    !unresolved_transitions.is_empty()
+        && unresolved_transitions.iter().all(|transition| {
+            transition
+                .get("field")
+                .and_then(|value| value.as_str())
+                .is_some_and(|field| field.contains("Home"))
+                && transition
+                    .get("targetStageId")
+                    .and_then(|value| value.as_str())
+                    == Some(square_one_id)
+        })
+}
+
+fn unresolved_transition_targets_exist(
+    unresolved_transitions: &[serde_json::Value],
+    stages: &HashMap<&str, &serde_json::Value>,
+) -> bool {
+    !unresolved_transitions.is_empty()
+        && unresolved_transitions.iter().all(|transition| {
+            transition
+                .get("targetStageId")
+                .and_then(|value| value.as_str())
+                .is_some_and(|stage_id| stages.contains_key(stage_id))
+        })
+}
+
+/// Signature d'un graphe branchant interactif : au moins un stage autoplay « dispatcher »
+/// dont toutes les options OK pointent vers des stages roue non-autoplay. C'est le seul
+/// cas que `graph_import` tente de projeter ; sinon `walk_entry` traite l'arbre.
+fn has_interactive_branching_graph(
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+) -> bool {
+    stages.values().any(|stage| {
+        if !is_stage_autoplay(stage) {
+            return false;
+        }
+        let options = stage_action_options(stage, actions);
+        options.len() >= 2
+            && options.iter().all(|stage_id| {
+                stages.get(stage_id).is_some_and(|candidate| {
+                    stage_control_bool(candidate, "wheel", false) && !is_stage_autoplay(candidate)
+                })
+            })
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -477,6 +539,161 @@ fn collect_children_entries(
             })
         })
         .collect()
+}
+
+fn stage_carries_audio(stage: &serde_json::Value) -> bool {
+    stage.get("audio").and_then(|v| v.as_str()).is_some()
+}
+
+fn is_aggregation_intro_stage(stage: &serde_json::Value) -> bool {
+    is_stage_autoplay(stage) && stage_control_bool(stage, "ok", false)
+}
+
+fn stage_menu_entry(
+    stage: &serde_json::Value,
+    audio: Option<String>,
+    image: Option<String>,
+    children: Vec<serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": stage_uuid(stage).unwrap_or(""),
+        "type": "menu",
+        "name": stage.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+        "audio": audio,
+        "image": image,
+        "autoBlackImage": image.is_none(),
+        "controlSettings": stage_controls(stage),
+        "returnOnHomeStageId": transition_target_stage_id(stage.get("homeTransition"), actions),
+        "children": children,
+    })
+}
+
+fn autoplay_intro_entry(
+    stage: &serde_json::Value,
+    assets: &HashMap<String, PathBuf>,
+) -> serde_json::Value {
+    let intro_audio = resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets);
+    let intro_name = stage
+        .get("name")
+        .and_then(|v| v.as_str())
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or("Intro")
+        .to_string();
+    serde_json::json!({
+        "id": stage_uuid(stage).unwrap_or(""),
+        "type": "story",
+        "name": intro_name,
+        "audio": intro_audio,
+        "itemAudio": serde_json::Value::Null,
+        "itemImage": serde_json::Value::Null,
+        "controlSettings": stage_controls(stage),
+    })
+}
+
+/// Reconnaît l'enveloppe que Story Studio génère autour d'un ZIP importé dans
+/// une agrégation : un wrapper sélectionnable, puis le `post-root` du pack enfant.
+/// Si ce `post-root` contient des intros autoplay menant à un sélecteur à N choix,
+/// on projette ce sous-graphe comme une mini-racine au lieu de l'aplatir en story.
+#[allow(clippy::too_many_arguments)]
+fn try_project_aggregation_wrapper(
+    stage: &serde_json::Value,
+    name: &str,
+    item_audio: Option<String>,
+    item_image: Option<String>,
+    opts: &[&str],
+    stages: &HashMap<&str, &serde_json::Value>,
+    actions: &HashMap<&str, &serde_json::Value>,
+    assets: &HashMap<String, PathBuf>,
+    visited: &mut HashSet<String>,
+    prompt_stage_usage: &HashMap<String, usize>,
+    night_mode_available: bool,
+    story_play_stage_ids: &HashSet<&str>,
+) -> Result<Option<serde_json::Value>, String> {
+    if opts.len() != 1
+        || is_stage_autoplay(stage)
+        || !stage_control_bool(stage, "wheel", false)
+        || !stage_control_bool(stage, "ok", false)
+        || !stage_carries_audio(stage)
+    {
+        return Ok(None);
+    }
+
+    let next_id = opts[0];
+    if visited.contains(next_id) {
+        return Ok(None);
+    }
+
+    let mut local_visited = visited.clone();
+    local_visited.insert(next_id.to_string());
+    let mut intro_entries = Vec::new();
+    let mut effective_id = next_id;
+
+    while let Some(candidate) = stages.get(effective_id).copied() {
+        if !is_aggregation_intro_stage(candidate) {
+            break;
+        }
+        let candidate_opts = stage_action_options(candidate, actions);
+        if candidate_opts.len() != 1 {
+            break;
+        }
+        let next = candidate_opts[0];
+        if local_visited.contains(next) {
+            break;
+        }
+        intro_entries.push(autoplay_intro_entry(candidate, assets));
+        local_visited.insert(next.to_string());
+        effective_id = next;
+    }
+
+    let Some(terminal) = stages.get(effective_id).copied() else {
+        return Ok(None);
+    };
+    let terminal_opts = stage_action_options(terminal, actions);
+    if terminal_opts.len() < 2 || intro_entries.is_empty() {
+        return Ok(None);
+    }
+
+    let terminal_children = collect_children_entries(
+        terminal,
+        stages,
+        actions,
+        assets,
+        &mut local_visited,
+        prompt_stage_usage,
+        night_mode_available,
+        story_play_stage_ids,
+    );
+    let terminal_audio = resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets);
+    let terminal_image = resolve_asset(terminal.get("image").and_then(|v| v.as_str()), assets);
+    let content_entries = if terminal_audio.is_some() || terminal_image.is_some() {
+        vec![stage_menu_entry(
+            terminal,
+            terminal_audio,
+            terminal_image,
+            terminal_children,
+            actions,
+        )]
+    } else {
+        terminal_children
+    };
+    if content_entries.is_empty() {
+        return Ok(None);
+    }
+
+    let children = chain_intro_entries_before_content(intro_entries, content_entries);
+    *visited = local_visited;
+    Ok(Some(serde_json::json!({
+        "id": stage_uuid(stage).unwrap_or(""),
+        "type": "menu",
+        "name": name,
+        "audio": item_audio,
+        "image": item_image,
+        "autoBlackImage": item_image.is_none(),
+        "controlSettings": stage_controls(stage),
+        "returnOnHomeStageId": transition_target_stage_id(stage.get("homeTransition"), actions),
+        "children": children,
+    })))
 }
 
 /// Classifie un stage comme entrée projet (story ou menu).
@@ -544,6 +761,60 @@ pub(super) fn walk_entry(
                     "itemImage": item_image,
                     "controlSettings": stage_controls(stage),
                 }));
+            }
+            if let Some(wrapper_entry) = try_project_aggregation_wrapper(
+                stage,
+                &name,
+                item_audio.clone(),
+                item_image.clone(),
+                &opts,
+                stages,
+                actions,
+                assets,
+                visited,
+                prompt_stage_usage,
+                night_mode_available,
+                story_play_stage_ids,
+            )? {
+                return Ok(wrapper_entry);
+            }
+            // Couverture intermédiaire : si le nœud suivant est lui-même une couverture
+            // mono-option (non-autoplay, porteur d'audio/image) et que le nœud courant porte
+            // aussi sa propre couverture, on a DEUX niveaux de couverture avant la lecture
+            // (ex. agrégation « couverture de pack ▸ titre d'histoire ▸ lecture »). Une story
+            // n'a qu'un niveau (titre + lecture) ; aplatir la chaîne écraserait la couverture
+            // du milieu et perdrait ses assets. On matérialise donc le nœud courant en DOSSIER
+            // et on récurse : chaque niveau de couverture surnuméraire devient un dossier.
+            if let Some(next_stage) = stages.get(next_id).copied() {
+                let next_carries_cover = !is_stage_autoplay(next_stage)
+                    && stage_action_options(next_stage, actions).len() == 1
+                    && (next_stage.get("audio").and_then(|v| v.as_str()).is_some()
+                        || next_stage.get("image").and_then(|v| v.as_str()).is_some());
+                let current_carries_cover = item_audio.is_some() || item_image.is_some();
+                if next_carries_cover && current_carries_cover {
+                    visited.insert(next_id.to_string());
+                    let child = walk_entry(
+                        next_stage,
+                        stages,
+                        actions,
+                        assets,
+                        visited,
+                        prompt_stage_usage,
+                        night_mode_available,
+                        story_play_stage_ids,
+                    )?;
+                    return Ok(serde_json::json!({
+                        "id": stage_uuid(stage).unwrap_or(""),
+                        "type": "menu",
+                        "name": name,
+                        "audio": item_audio,
+                        "image": item_image,
+                        "autoBlackImage": item_image.is_none(),
+                        "controlSettings": stage_controls(stage),
+                        "returnOnHomeStageId": transition_target_stage_id(stage.get("homeTransition"), actions),
+                        "children": [child],
+                    }));
+                }
             }
             visited.insert(next_id.to_string());
             // Suivre la chaîne single-option jusqu'à la décision (feuille ou sélection N≥2)

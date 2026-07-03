@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
-import { AppModalPortal } from '../common/AppModalPortal';
 import { CommunityPackMetadataModal } from './CommunityPackMetadataModal';
 import {
   Check,
@@ -14,14 +13,10 @@ import {
   Moon,
   Music,
   Network,
-  Package,
   Scissors,
-  Square,
   TriangleAlert,
   Wrench,
-  X,
 } from '../icons/LucideLocal';
-import { useCommunityPackChecker } from './useCommunityPackChecker';
 import {
   Measure,
   audioMeasureRows,
@@ -33,7 +28,10 @@ import {
   imageMeasureRows,
 } from './packCheckerMeasures';
 import { ConformingSection } from './CommunityPackConforming';
+import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import './CommunityPackChecker.css';
+
+const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 
 const PROBLEM_SECTIONS = [
   {
@@ -42,8 +40,8 @@ const PROBLEM_SECTIONS = [
     badge: 'Source',
     bucket: 'listen',
     Icon: TriangleAlert,
-    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Refaites le pack depuis une meilleure source.",
-    action: 'Refaites le pack depuis une meilleure source.',
+    explanation: "La saturation est présente dans le fichier d'origine : aucune correction ne la rattrape. Reprends le pack depuis une meilleure source.",
+    action: 'Reprends le pack depuis une meilleure source.',
     match: (issue) => (
       issue.category === 'audio'
       && !issue.autoFixAvailable
@@ -67,7 +65,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     Icon: Scissors,
     explanation: 'Le blanc avant ou après la voix sort de la fenêtre attendue.',
-    action: 'On ajuste le silence vers 0,50 s.',
+    action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
     match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('silence'),
   },
   {
@@ -376,7 +374,7 @@ function summarizeGroups(groups, report) {
       Icon: TriangleAlert,
       title: fixCount > 0 ? 'Pack corrigeable, mais audio déjà saturé' : 'Audio déjà saturé',
       subtitle: fixCount > 0
-        ? "Le reste sera corrigé ; pour l'audio saturé, refaites le pack depuis une source propre."
+        ? "Le reste sera corrigé ; l'audio saturé doit être repris depuis une source propre."
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
@@ -386,7 +384,9 @@ function summarizeGroups(groups, report) {
     return {
       tone: 'listen',
       Icon: Info,
-      title: 'Pack corrigeable, avec quelques fichiers à écouter',
+      title: listenCount === 1
+        ? 'Pack corrigeable, avec un fichier à écouter'
+        : `Pack corrigeable, avec ${listenCount} fichiers à écouter`,
       subtitle: 'Le reste peut être corrigé automatiquement.',
       listenCount,
       fixCount,
@@ -412,7 +412,7 @@ function categoryStats(summary) {
   };
 }
 
-function titleNeedsCorrection(report) {
+export function titleNeedsCorrection(report) {
   return (report?.titleSummary?.warnings || 0) > 0 || (report?.titleSummary?.errors || 0) > 0;
 }
 
@@ -462,7 +462,7 @@ function SummaryTiles({ report, saturatedCount = 0 }) {
       </SummaryTile>
       <SummaryTile title="Structure" Icon={Network} tone={structureOk ? 'ok' : 'listen'}>
         <div className="checker-single-stat">
-          <strong>{structureOk ? 'Correcte' : 'À vérifier'}</strong>
+          <strong>{structureOk ? 'Correcte' : 'Vérification manuelle'}</strong>
           <span>{report.structureSummary?.stageCount ?? 0} étapes</span>
         </div>
       </SummaryTile>
@@ -546,9 +546,10 @@ function MiniFile({ record, open, onToggle }) {
   );
 }
 
-function ProblemGroupCard({ group, expanded, onToggle }) {
+function ProblemGroupCard({ group, expanded, onToggle, countValue = group.count, countLabel = null }) {
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
+  const displayedCountLabel = countLabel || (countValue > 1 ? 'fichiers' : 'fichier');
   return (
     <div className={`checker-group checker-group--${group.bucket} checker-group--${group.id} ${expanded ? 'is-expanded' : ''}`}>
       <button type="button" className="checker-group-head" onClick={onToggle}>
@@ -561,8 +562,8 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
           <span>{group.bucket === 'fix' ? group.action : group.explanation}</span>
         </span>
         <span className="checker-group-count">
-          <strong>{group.count}</strong>
-          <small>{group.count > 1 ? 'fichiers' : 'fichier'}</small>
+          <strong>{countValue}</strong>
+          <small>{displayedCountLabel}</small>
         </span>
         <ChevronDown className="checker-group-chevron" aria-hidden="true" />
       </button>
@@ -590,7 +591,38 @@ function ProblemGroupCard({ group, expanded, onToggle }) {
   );
 }
 
-function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
+export function FixableCorrectionsList({ report }) {
+  const groups = useMemo(
+    () => buildProblemGroups(report).filter((group) => group.bucket === 'fix'),
+    [report],
+  );
+
+  if (!groups.length) {
+    return (
+      <div className="checker-empty checker-empty--success">
+        <IconFrame Icon={Check} />
+        Aucune correction automatique à appliquer.
+      </div>
+    );
+  }
+
+  return (
+    <div className="checker-groups checker-groups--preview">
+      {groups.map((group) => (
+        <ProblemGroupCard
+          key={group.id}
+          group={group}
+          expanded
+          onToggle={() => {}}
+          countValue={group.fixCount}
+          countLabel={group.fixCount > 1 ? 'corrections' : 'correction'}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function ReportView({ report, busy, canFix, onExportReport, onFixPack, onStartFix, showFixButton = true }) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
@@ -600,6 +632,10 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   const SummaryIcon = summary.Icon;
 
   function startFixFlow() {
+    if (onStartFix) {
+      onStartFix();
+      return;
+    }
     setMetadataOpen(true);
   }
 
@@ -646,17 +682,19 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
           <Download className="checker-button-icon" aria-hidden="true" />
           Exporter le rapport
         </Button>
-        <button
-          type="button"
-          className="chrome-toolbar-cta checker-correction-cta"
-          onClick={startFixFlow}
-          disabled={!canFix || busy}
-        >
-          {busy ? 'Correction...' : 'Corriger le pack'}
-        </button>
+        {showFixButton ? (
+          <button
+            type="button"
+            className="chrome-toolbar-cta checker-correction-cta"
+            onClick={startFixFlow}
+            disabled={!canFix || busy}
+          >
+            {busy ? 'Correction...' : 'Corriger le pack'}
+          </button>
+        ) : null}
       </div>
 
-      {metadataOpen ? (
+      {metadataOpen && !onStartFix ? (
         <CommunityPackMetadataModal
           report={report}
           busy={busy}
@@ -671,7 +709,7 @@ function ReportView({ report, busy, canFix, onExportReport, onFixPack }) {
   );
 }
 
-function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
+export function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
   if (!report) return null;
   return (
     <details className="checker-log">
@@ -686,7 +724,7 @@ function TechnicalLog({ report, onCopyLog, onExportLog, onExportJson }) {
   );
 }
 
-function ProcessLog({ status, lines }) {
+export function ProcessLog({ status, lines }) {
   const linesRef = useRef(null);
   useEffect(() => {
     const node = linesRef.current;
@@ -711,165 +749,6 @@ function ProcessLog({ status, lines }) {
           <div key={`${index}-${line}`}>{line}</div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function CheckerWorkspace({ checker, maximized, onMaximizeToggle, onClose }) {
-  const busy = checker.status === 'analyzing' || checker.status === 'fixing';
-  const canFix = (checker.report?.correctionsAvailable > 0 || titleNeedsCorrection(checker.report))
-    && checker.status !== 'fixing';
-
-  function handleDrop(event) {
-    event.preventDefault();
-    const file = event.dataTransfer?.files?.[0];
-    const path = file?.path || file?.webkitRelativePath;
-    if (path) checker.analyzePath(path);
-  }
-
-  return (
-    <div className={`checker-modal-shell ${maximized ? 'is-maximized' : ''}`} role="dialog" aria-modal="true" aria-label="Vérifier un pack">
-      <header className="checker-modal-header">
-        <div className="checker-modal-title">
-          <span className="checker-drop-icon"><IconFrame Icon={Package} /></span>
-          <div>
-            <strong>Vérifier un pack</strong>
-            <span title={checker.zipPath || undefined}>{checker.zipPath || 'Aucun ZIP sélectionné'}</span>
-          </div>
-        </div>
-        <div className="checker-modal-window-actions">
-          <button
-            type="button"
-            className="checker-modal-close checker-modal-maximize"
-            onClick={onMaximizeToggle}
-            aria-label={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
-            title={maximized ? 'Réduire la fenêtre' : 'Maximiser la fenêtre'}
-          >
-            <Square className="checker-icon" aria-hidden="true" />
-          </button>
-          <button type="button" className="checker-modal-close" onClick={onClose} aria-label="Fermer">
-            <X className="checker-icon" aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      <div className="checker-modal-body">
-        <div
-          className="checker-drop checker-drop--modal"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={handleDrop}
-        >
-          <div className="checker-drop-main">
-            <div className="checker-drop-icon"><IconFrame Icon={Package} /></div>
-            <div>
-              <div className="checker-drop-title">Vérifier un pack communautaire</div>
-              <div className="checker-drop-sub">
-                Analyse un ZIP existant et classe les corrections par type.
-              </div>
-              {checker.zipPath ? <div className="checker-path" title={checker.zipPath}>{checker.zipPath}</div> : null}
-            </div>
-          </div>
-          <div className="checker-actions">
-            <Button onClick={checker.pickPack} disabled={busy}>
-              Choisir un ZIP
-            </Button>
-            <Button onClick={() => checker.analyzePath(checker.zipPath)} disabled={busy || !checker.zipPath}>
-              {checker.status === 'analyzing' ? 'Analyse...' : 'Relancer'}
-            </Button>
-          </div>
-        </div>
-
-        <ProcessLog status={checker.status} lines={checker.liveLog} />
-
-        {checker.error ? <div className="info-box warn">{checker.error}</div> : null}
-        {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}
-        {checker.fixedResult ? (
-          <div className="checker-fixed">
-            <span>ZIP corrigé créé : <strong>{checker.fixedResult.fixedZipPath}</strong></span>
-            <Button size="sm" onClick={checker.openFixedLocation}>Ouvrir</Button>
-          </div>
-        ) : null}
-
-        <ReportView
-          report={checker.report}
-          busy={busy}
-          canFix={canFix}
-          onExportReport={checker.exportReport}
-          onFixPack={checker.fixPack}
-        />
-        <TechnicalLog
-          report={checker.report}
-          onCopyLog={checker.copyLog}
-          onExportLog={checker.exportReport}
-          onExportJson={checker.exportReport}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function CommunityPackChecker() {
-  const checker = useCommunityPackChecker();
-  const [open, setOpen] = useState(false);
-  const [maximized, setMaximized] = useState(false);
-  const busy = checker.status === 'analyzing' || checker.status === 'fixing';
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open]);
-
-  async function handlePickFromEntry() {
-    setOpen(true);
-    await checker.pickPack();
-  }
-
-  return (
-    <div className="checker-root">
-      <div className="checker-entry">
-        <div className="checker-entry-main">
-          <div className="checker-drop-icon"><IconFrame Icon={Package} /></div>
-          <div>
-            <div className="checker-drop-title">Vérifier un pack communautaire</div>
-            <div className="checker-drop-sub">
-              Ouvre une fenêtre dédiée pour analyser, corriger et exporter le rapport.
-            </div>
-            {checker.zipPath ? <div className="checker-path" title={checker.zipPath}>{checker.zipPath}</div> : null}
-          </div>
-        </div>
-        <div className="checker-actions">
-          <Button onClick={() => setOpen(true)} disabled={busy}>
-            Ouvrir
-          </Button>
-          <Button variant="primary-violet" onClick={handlePickFromEntry} disabled={busy}>
-            Choisir un ZIP
-          </Button>
-        </div>
-      </div>
-
-      {open ? (
-        <AppModalPortal
-          className="checker-modal-backdrop"
-        >
-          <div
-            className="checker-modal-click-layer"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setOpen(false);
-            }}
-          >
-            <CheckerWorkspace
-              checker={checker}
-              maximized={maximized}
-              onMaximizeToggle={() => setMaximized((value) => !value)}
-              onClose={() => setOpen(false)}
-            />
-          </div>
-        </AppModalPortal>
-      ) : null}
     </div>
   );
 }

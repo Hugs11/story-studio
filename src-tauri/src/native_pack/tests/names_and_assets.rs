@@ -109,6 +109,8 @@ fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
                 night_mode: false,
             },
             entries: Vec::new(),
+
+            shared_entries: Vec::new(),
         },
         Vec::new(),
         Vec::new(),
@@ -182,17 +184,10 @@ fn builds_audio_filters_with_shared_normalizer() {
         night_mode: false,
     };
 
+    assert_eq!(audio_filters(&no_silence), "aformat=channel_layouts=mono");
     assert_eq!(
-        audio_filters(&no_silence, false),
-        "aformat=channel_layouts=mono"
-    );
-    assert_eq!(
-        audio_filters(&with_silence, false),
-        "aformat=channel_layouts=mono,adelay=500,apad=pad_dur=0.5"
-    );
-    assert_eq!(
-        audio_filters(&with_silence, true),
-        "aformat=channel_layouts=mono"
+        audio_filters(&with_silence),
+        "aformat=channel_layouts=mono,adelay=400,apad=pad_dur=0.4"
     );
 }
 
@@ -208,14 +203,13 @@ fn builds_audio_filters_with_gain_limiter_before_silence() {
     assert_eq!(
         audio_filters_with_action(
             &with_silence,
-            false,
-            0.5,
+            crate::support::audio_norm::EDGE_SILENCE_SEC,
             &crate::support::audio_norm::LoudnessAction::GainLimit {
                 gain_db: 4.0,
                 expected_limiting_db: 2.0,
             },
         ),
-        "aformat=channel_layouts=mono,volume=4dB,alimiter=limit=0.794328:level=disabled,adelay=500,apad=pad_dur=0.5"
+        "aformat=channel_layouts=mono,volume=4dB,alimiter=limit=0.794328:level=disabled,adelay=400,apad=pad_dur=0.4"
     );
 }
 
@@ -229,7 +223,7 @@ fn builds_audio_filters_with_configured_silence_duration() {
     };
 
     assert_eq!(
-        audio_filters_with_duration(&with_silence, false, 1.0),
+        audio_filters_with_duration(&with_silence, 1.0),
         "aformat=channel_layouts=mono,adelay=1000,apad=pad_dur=1"
     );
 }

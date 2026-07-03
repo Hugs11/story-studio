@@ -132,3 +132,22 @@ fn save_recording_prefers_workspace_dir() {
 
     fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
 }
+
+#[test]
+fn save_recording_accepts_session_workspace_without_save_path() {
+    let session =
+        crate::support::temp::create_session_workspace().expect("create session workspace");
+
+    let written = save_recording(None, Some(&session), "session-recording.webm", b"audio")
+        .expect("save recording in session workspace");
+    let written_path = PathBuf::from(&written);
+    let expected_recordings_dir = PathBuf::from(&session).join("enregistrements");
+
+    assert_eq!(
+        written_path.parent(),
+        Some(expected_recordings_dir.as_path())
+    );
+    assert_eq!(fs::read(&written_path).expect("read recording"), b"audio");
+
+    crate::support::temp::cleanup_session_workspace(&session).expect("cleanup session");
+}

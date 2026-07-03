@@ -1,8 +1,10 @@
 export const KEYS = Object.freeze({
   COPY_FILES: 'copyImportedFiles',
   AUTOSAVE_ENABLED: 'autoSaveEnabled',
+  AUTOSAVE_DEFAULT_ON_APPLIED: 'storyStudio.autosaveDefaultOnApplied',
   AUTOSAVE_BACKUP_LIMIT: 'autoSaveBackupLimit',
   WORKSPACE_DIR: 'storyStudioWorkspaceDir',
+  USE_WORKSPACE_FOR_NEW_PROJECTS: 'storyStudio.useWorkspaceForNewProjects',
   SHOW_CENTRAL_DIAGRAM: 'showCentralDiagram',
   BOTTOM_PANEL_OPEN: 'bottomPanelOpen',
   BOTTOM_PANEL_TAB: 'bottomPanelTab',
@@ -40,6 +42,9 @@ export const KEYS = Object.freeze({
   TREE_SHOW_GUIDES: 'tree_show_guides',
   XTTS_LAST_VOICE: 'xtts_last_voice',
   XTTS_LAST_SPEAKER: 'xtts_last_speaker',
+  PIPER_LAST_VOICE: 'piper_last_voice',
+  YOUTUBE_CGU_ACCEPTED: 'storyStudio.youtubeCguAccepted',
+  YTDLP_CUSTOM_PATH: 'storyStudio.ytDlpCustomPath',
   SIMPLE_MODE_INFO_DISMISS: 'storyStudio.simpleModeInfoDismissed',
   BOTTOM_PANEL_HEIGHT: 'bottomPanelHeight',
   MEDIA_EXPLORER_COL_WIDTHS: 'me-col-widths-v2',
@@ -71,4 +76,17 @@ export function remove(key) {
   try {
     storage()?.removeItem(key);
   } catch {}
+}
+
+// Migrations ponctuelles des réglages persistés, appelées au boot (main.jsx)
+// avant le montage de l'app.
+export function runSettingsMigrations() {
+  // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
+  // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,
+  // donc un 'false' stocké ne distingue pas un choix explicite d'un défaut
+  // hérité : bascule one-shot vers 'true'. Désactiver ensuite reste respecté.
+  if (read(KEYS.AUTOSAVE_DEFAULT_ON_APPLIED) == null) {
+    write(KEYS.AUTOSAVE_ENABLED, 'true');
+    write(KEYS.AUTOSAVE_DEFAULT_ON_APPLIED, '1');
+  }
 }

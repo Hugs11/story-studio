@@ -1,0 +1,686 @@
+/* ============================================================================
+   Châssis commun des funnels (plan 03)
+   ----------------------------------------------------------------------------
+   Gabarit réutilisable par toutes les entrées guidées de la 0.9.3.
+   Référence visuelle : maquette « Agréger des packs » (hifi, sombre). Ici, on
+   exprime tout via les tokens de variables.css → fonctionne en SOMBRE ET CLAIR.
+
+   Convention de couleur du funnel (inverse la dominante de l'app) :
+     • violet  (--accent-2*) = information / structure / contrôles.
+     • orange  (--accent)    = action principale UNIQUEMENT (CTA, Terminer).
+
+   Sommaire :
+     1. Overlay + modale (shell)
+     2. En-tête
+     3. Stepper
+     4. Corps + en-tête de section
+     5. Pied (actions)
+     6. Bouton-outil (D42)
+     7. Écran Génération
+     8. Écran Terminé
+     9. Responsive
+   ========================================================================== */
+
+/* 1. Overlay + modale (shell) ------------------------------------------------ */
+.funnel-modal {
+  width: min(1040px, 94vw);
+  /* Hauteur fixe (et non max-height) : le corps scrolle à l'intérieur, donc la
+     modale et le pied ne « sautent » pas d'une étape à l'autre (cf. maquette).
+     On exploite les grands écrans sans passer les funnels compacts en plein écran. */
+  height: min(780px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg1);
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-overlay);
+  color: var(--text);
+}
+
+.funnel-modal--wide {
+  width: min(1220px, 96vw);
+  height: min(920px, calc(100vh - 40px));
+}
+
+/* Funnel mono-écran (ex. « Modifier un pack ») : la modale épouse son contenu,
+   centrée par l'overlay, sans vide. Plafonnée pour rester dans la fenêtre. */
+.funnel-modal--fit {
+  height: auto;
+  max-height: min(640px, calc(100vh - 64px));
+}
+
+/* En mode fit, les ecrans de traitement/termine restent compacts (pas le grand
+   gabarit des funnels generatifs) pour limiter le saut de hauteur entre ecrans. */
+.funnel-modal--fit .funnel-process,
+.funnel-modal--fit .funnel-done {
+  min-height: 280px;
+}
+
+.funnel-spacer { flex: 1; }
+
+/* 2. En-tête ----------------------------------------------------------------- */
+.funnel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.funnel-head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 1px solid var(--accent-2-border);
+  flex: 0 0 auto;
+}
+
+.funnel-head-icon svg { width: 17px; height: 17px; }
+
+.funnel-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.funnel-head-title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funnel-head-subtitle {
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funnel-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.funnel-icon-btn svg { width: 17px; height: 17px; }
+.funnel-icon-btn:hover { background: var(--bg2); color: var(--text); }
+.funnel-icon-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* 3. Stepper ----------------------------------------------------------------- */
+.funnel-stepper {
+  flex: 0 0 auto;
+  padding: 16px 28px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.funnel-stepper-track {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+
+.funnel-step {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.funnel-step:disabled { cursor: default; }
+
+/* Connecteur vers la pastille précédente, violet jusqu'à l'étape atteinte. */
+.funnel-step-connector {
+  position: absolute;
+  top: 13px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.funnel-step:first-child .funnel-step-connector { display: none; }
+.funnel-step.is-done .funnel-step-connector,
+.funnel-step.is-current .funnel-step-connector { background: var(--accent-2); }
+
+.funnel-step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  flex: 0 0 auto;
+  background: var(--bg2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.funnel-step-circle svg { width: 14px; height: 14px; }
+
+.funnel-step.is-done .funnel-step-circle {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--accent-2) 76%, #000);
+}
+
+.funnel-step.is-current .funnel-step-circle {
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 1.5px solid color-mix(in srgb, var(--accent-2) 60%, transparent);
+}
+
+.funnel-step.is-error .funnel-step-circle {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+.funnel-step-label {
+  font-size: 11.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.funnel-step.is-done .funnel-step-label { color: var(--text-secondary); }
+.funnel-step.is-current .funnel-step-label { color: var(--text); font-weight: var(--weight-bold); }
+.funnel-step.is-error .funnel-step-label { color: var(--danger-text); }
+
+/* 4. Corps + en-tête de section ---------------------------------------------- */
+.funnel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.funnel-body::-webkit-scrollbar { width: 10px; }
+
+.funnel-body::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.funnel-body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+.funnel-step-content { padding: 24px 28px; }
+
+.funnel-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.funnel-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 1px solid var(--accent-2-border);
+  flex: 0 0 auto;
+}
+
+.funnel-section-icon svg { width: 18px; height: 18px; }
+
+.funnel-section-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.funnel-section-title {
+  font-size: 16px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+}
+
+.funnel-section-desc {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* Badge « Pré-rempli » et équivalents (info, donc violet). */
+.funnel-badge {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--accent-2-text);
+  background: var(--accent-2-dim);
+  border: 1px solid var(--accent-2-border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+}
+
+/* 5. Pied (actions) ---------------------------------------------------------- */
+.funnel-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.funnel-foot-label {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.funnel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.funnel-btn svg { width: 15px; height: 15px; }
+
+/* CTA principal : orange (seule action déclenchante). */
+.funnel-btn-primary {
+  border: 1px solid var(--accent-border);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: var(--weight-bold);
+}
+
+.funnel-btn-primary:hover { filter: brightness(1.06); }
+
+.funnel-btn-primary:disabled {
+  cursor: not-allowed;
+  filter: none;
+  background: var(--primary-disabled-bg);
+  border-color: var(--primary-disabled-border);
+  color: var(--primary-disabled-text);
+}
+
+/* Bouton « Précédent » : secondaire neutre. */
+.funnel-btn-back {
+  padding: 0 14px;
+  border: 1px solid var(--borderLt);
+  background: transparent;
+  color: var(--text);
+}
+
+.funnel-btn-back:hover { border-color: var(--control-border-hover); background: var(--bg2); }
+.funnel-btn-back:disabled { cursor: default; opacity: 0.5; }
+
+/* 6. Bouton-outil (D42) ------------------------------------------------------ */
+.funnel-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.funnel-tool-btn svg { width: 16px; height: 16px; }
+.funnel-tool-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+
+/* Variante pleine largeur (deux boutons côte à côte sous un média). */
+.funnel-tool-btn--block { flex: 1; }
+
+/* Accent violet (défaut) — solid puis outline. */
+.funnel-tool-btn--violet.is-solid {
+  background: color-mix(in srgb, var(--accent-2) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 55%, transparent);
+  color: var(--accent-2-text);
+}
+
+.funnel-tool-btn--violet.is-outline {
+  background: transparent;
+  border: 1px solid var(--accent-2-border);
+  color: var(--accent-2-text);
+}
+
+.funnel-tool-btn--violet:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-2) 30%, transparent);
+}
+
+/* Accent orange — réservé aux cas où l'outil EST l'action attendue. */
+.funnel-tool-btn--orange.is-solid {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+}
+
+.funnel-tool-btn--orange.is-outline {
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+}
+
+.funnel-tool-btn--orange:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/* Variante « neutre » (boutons type Réenregistrer/Édition audio). */
+.funnel-tool-btn--neutral {
+  background: var(--bg2);
+  border: 1px solid var(--borderLt);
+  color: var(--text);
+}
+
+.funnel-tool-btn--neutral:hover:not(:disabled) {
+  border-color: var(--control-border-hover);
+  background: var(--bg3);
+}
+
+/* 6b. Zone de dépôt + erreur ------------------------------------------------- */
+.funnel-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  border: 1.5px dashed var(--borderLt);
+  border-radius: 12px;
+  background: var(--bg0);
+  padding: 28px 24px;
+  transition: border-color var(--dur-fast) var(--ease-standard),
+    background var(--dur-fast) var(--ease-standard);
+}
+
+.funnel-dropzone.is-over {
+  border-color: var(--accent-2-border);
+  background: var(--accent-2-dim);
+}
+
+.funnel-dropzone-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+  border: 1px solid var(--accent-2-border);
+  flex-shrink: 0;
+}
+
+.funnel-dropzone-icon svg { width: 22px; height: 22px; }
+
+.funnel-dropzone-title {
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+
+.funnel-dropzone-hint {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.funnel-dropzone-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.funnel-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+  word-break: break-word;
+}
+
+/* 7. Écran Génération -------------------------------------------------------- */
+.funnel-process {
+  height: 100%;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+
+.funnel-spinner {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-2);
+  animation: funnel-spin 0.8s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes funnel-spin { to { transform: rotate(360deg); } }
+
+.funnel-process-title {
+  font-size: 17px;
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.funnel-process-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.funnel-phases {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.funnel-phase {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.funnel-phase-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.funnel-phase.is-active .funnel-phase-dot {
+  background: var(--accent-2-dim);
+  border-color: color-mix(in srgb, var(--accent-2) 55%, transparent);
+  color: var(--accent-2-text);
+}
+
+.funnel-phase.is-done .funnel-phase-dot {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+
+.funnel-phase-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+
+.funnel-phase.is-active .funnel-phase-label { color: var(--text); font-weight: var(--weight-semibold); }
+.funnel-phase.is-done .funnel-phase-label { color: var(--text-secondary); }
+
+.funnel-progress { width: 100%; max-width: 380px; }
+
+.funnel-progress-track {
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+.funnel-progress-fill {
+  height: 100%;
+  background: var(--accent-2);
+  border-radius: var(--radius-pill);
+  transition: width var(--dur-fast) linear;
+}
+
+.funnel-progress-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+/* 8. Écran Terminé ----------------------------------------------------------- */
+.funnel-done {
+  height: 100%;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+
+.funnel-done-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.funnel-done-badge--error {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.funnel-done-badge svg { width: 28px; height: 28px; }
+
+.funnel-done-title {
+  font-size: 19px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.funnel-done-file {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funnel-done-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.funnel-done-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Boutons d'action des écrans Terminé : plus hauts/larges que le pied. */
+.funnel-done-actions .funnel-btn { height: 42px; padding: 0 18px; border-radius: 9px; font-size: 13.5px; }
+.funnel-done-actions .funnel-btn svg { width: 17px; height: 17px; }
+
+/* 9. Responsive -------------------------------------------------------------- */
+@media (max-width: 720px) {
+  .funnel-modal { max-height: calc(100vh - 32px); }
+  .funnel-stepper { padding: 14px 16px 12px; }
+  .funnel-step-label { display: none; }
+  .funnel-step-content { padding: 20px 16px; }
+  .funnel-head { padding: 14px 16px; }
+  .funnel-foot { padding: 12px 16px; }
+}

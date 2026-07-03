@@ -78,17 +78,3 @@ pub(super) fn stage_action_options<'a>(
         None => vec![],
     }
 }
-
-pub(super) fn stage_position_key(stage: &serde_json::Value) -> (i64, i64) {
-    let x = stage
-        .get("position")
-        .and_then(|position| position.get("x"))
-        .and_then(|value| value.as_f64())
-        .unwrap_or(0.0);
-    let y = stage
-        .get("position")
-        .and_then(|position| position.get("y"))
-        .and_then(|value| value.as_f64())
-        .unwrap_or(0.0);
-    ((y * 100.0) as i64, (x * 100.0) as i64)
-}

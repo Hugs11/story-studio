@@ -4,6 +4,8 @@ import {
   FolderPlus,
   Mic,
   Rss,
+  Speech,
+  Youtube,
 } from '../icons/LucideLocal';
 import { LuniiIcon } from '../icons/LuniiIcon';
 import { Tooltip } from '../common/Tooltip';
@@ -36,13 +38,17 @@ export function StructureActionsBar({
   onAddFolder,
   onImportFolder,
   onImportPodcast,
+  onImportYoutube,
   onRecord,
+  onGenerateStoryTts,
   onLaunchSimulator,
   canAddStory = true,
   canAddFolder = true,
   canImportFolder = true,
   canImportPodcast = true,
+  canImportYoutube = true,
   canRecord = true,
+  canGenerateStoryTts = true,
   canLaunchSimulator = true,
   showLabel = false,
   trailing = null,
@@ -51,7 +57,7 @@ export function StructureActionsBar({
     <div className={`structure-actions-bar structure-actions-bar--${variant}`} aria-label="Ajouter à la structure">
       {showLabel ? <span className="structure-actions-label">Ajouter</span> : null}
       <StructureActionButton
-        title="Importer une histoire (fichier audio / pack zip)"
+        title="Importer audio, ZIP ou 7z"
         disabled={!canAddStory}
         onClick={() => onAddStory?.(targetMenuId)}
       >
@@ -78,6 +84,15 @@ export function StructureActionsBar({
       >
         <ActionIcon Icon={Rss} />
       </StructureActionButton>
+      {onImportYoutube ? (
+        <StructureActionButton
+          title="Importer depuis YouTube"
+          disabled={!canImportYoutube}
+          onClick={onImportYoutube}
+        >
+          <ActionIcon Icon={Youtube} />
+        </StructureActionButton>
+      ) : null}
       <StructureActionButton
         title="Enregistrer une histoire avec le micro"
         disabled={!canRecord}
@@ -85,6 +100,15 @@ export function StructureActionsBar({
       >
         <ActionIcon Icon={Mic} />
       </StructureActionButton>
+      {onGenerateStoryTts ? (
+        <StructureActionButton
+          title="Créer une histoire avec TTS"
+          disabled={!canGenerateStoryTts}
+          onClick={onGenerateStoryTts}
+        >
+          <ActionIcon Icon={Speech} />
+        </StructureActionButton>
+      ) : null}
       {onLaunchSimulator ? (
         <StructureActionButton
           title="Lancer le simulateur"

@@ -11,10 +11,6 @@ export function setLogLevel(level) {
   if (typeof rank === 'number') currentLevel = rank;
 }
 
-export function getLogLevel() {
-  return Object.keys(LEVEL_RANK).find((key) => LEVEL_RANK[key] === currentLevel) || 'warn';
-}
-
 let pluginLogPromise = null;
 async function getPluginLog() {
   if (!isTauriRuntime()) return null;

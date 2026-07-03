@@ -16,14 +16,14 @@ async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDial
     : JSON.stringify(project) === savedSnapshot;
   if (unchanged) return true;
   const choice = await showChoiceDialog({
-    title: 'Projet non sauvegardé',
-    message: 'Voulez-vous sauvegarder le projet avant de continuer ?',
+    title: 'Projet non enregistré',
+    message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
     variant: 'warning',
     cancelValue: 'cancel',
     actions: [
       { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: 'Ne pas sauvegarder', kind: 'danger-outline' },
-      { value: 'save', label: 'Sauvegarder', kind: 'primary' },
+      { value: 'discard', label: 'Quitter sans enregistrer', kind: 'danger-outline' },
+      { value: 'save', label: 'Enregistrer comme projet', kind: 'primary' },
     ],
   });
   if (choice === 'save') {
@@ -50,6 +50,8 @@ export function useProjectLoading({
   showErrorDialog,
   isProjectDirty,
   showChoiceDialog,
+  onProjectLoaded = null,
+  onBeforeProjectReplaced = null,
 }) {
   const applyLoadedProject = useCallback(async (result) => {
     const entries = result?.data?.rootEntries?.length ?? 0;
@@ -62,6 +64,7 @@ export function useProjectLoading({
     savedSnapshotRef.current = JSON.stringify(result.data);
     autoSavePathRef.current = null;
     setAutoSavedPath(null);
+    await onProjectLoaded?.(result);
     sdStore.clearDone();
     xttsStore.clearDone();
     // Recalculer les métadonnées ZIP manquantes pour les projets anciens
@@ -94,6 +97,7 @@ export function useProjectLoading({
     setMediaLibraryPaths,
     setRecentProjects,
     store,
+    onProjectLoaded,
     xttsStore,
   ]);
 
@@ -108,9 +112,10 @@ export function useProjectLoading({
     if (!canContinue) return;
     const result = await loadProject();
     if (result) {
+      await onBeforeProjectReplaced?.();
       await applyLoadedProject(result);
     }
-  }, [applyLoadedProject, handleSaveProject, isProjectDirty, savedSnapshotRef, showChoiceDialog, store.project]);
+  }, [applyLoadedProject, handleSaveProject, isProjectDirty, onBeforeProjectReplaced, savedSnapshotRef, showChoiceDialog, store.project]);
 
   const handleLoadRecent = useCallback(async (path) => {
     const canContinue = await askSaveBeforeLeave(
@@ -123,6 +128,7 @@ export function useProjectLoading({
     if (!canContinue) return;
     try {
       const result = await loadProjectFromPath(path);
+      await onBeforeProjectReplaced?.();
       await applyLoadedProject(result);
     } catch (e) {
       logger.error(`load-recent:error path='${path}' error=${e}`);
@@ -136,6 +142,7 @@ export function useProjectLoading({
     applyLoadedProject,
     handleSaveProject,
     isProjectDirty,
+    onBeforeProjectReplaced,
     savedSnapshotRef,
     setRecentProjects,
     showErrorDialog,
