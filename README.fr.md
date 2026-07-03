@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.2" src="https://img.shields.io/badge/version-0.9.2-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.3" src="https://img.shields.io/badge/version-0.9.3-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -40,13 +40,13 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.2 ajoute un vérificateur/correcteur de packs communautaires,
-l'import de podcasts, le découpage audio avant utilisation, un workflow audio
-basé sur le FLAC et une refonte complète de l'interface avec des rails de
-navigation et des actions plus lisibles.
+Story Studio 0.9.3 ajoute un accueil guidé, des sessions non enregistrées avec
+enregistrement optionnel, des flux assistés pour modifier, vérifier ou agréger
+des packs, la génération vocale Piper sans configuration, l'import YouTube et
+une meilleure fidélité des packs importés.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.2](https://github.com/Hugs11/story-studio/releases/tag/v0.9.2)
+- [Lire les notes de version 0.9.3](https://github.com/Hugs11/story-studio/releases/tag/v0.9.3)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## En un coup d'œil
@@ -58,7 +58,7 @@ navigation et des actions plus lisibles.
 | **Format projet** | `.mbah` |
 | **Format d'export** | Packs ZIP compatibles Lunii |
 | **Stack principale** | React 19, Vite, Tauri 2, Rust |
-| **Workflow** | Éditeur arborescent visuel, agrégation de packs ZIP, navigation par nœuds, explorateur de médias, simulateur |
+| **Workflow** | Accueil guidé, éditeur arborescent visuel, agrégation de packs ZIP, navigation par nœuds, explorateur de médias, simulateur |
 | **Vie privée** | App locale, aucun backend hébergé, aucune télémétrie |
 
 ## Captures d'écran
@@ -92,14 +92,16 @@ navigation et des actions plus lisibles.
 ## Fonctionnalités
 
 - **Éditeur visuel arborescent** avec menus imbriqués, multi-sélection, glisser-déposer et actions contextuelles.
-- **Import de packs ZIP Lunii** : inspection, extraction en projet éditable, agrégation avec vos propres histoires.
+- **Flux guidés depuis l'accueil** pour modifier un pack existant, créer depuis un podcast ou YouTube, agréger des ZIP et vérifier/corriger un pack communautaire.
+- **Import de packs ZIP Lunii** : inspection, extraction en projet éditable, préservation des graphes ramifiés via références partagées, agrégation avec vos propres histoires.
 - **Workflow audio intégré** : enregistrement micro, rognage, coupes, fondus, assemblage et insertion de silence.
 - **Workflow image intégré** : recadrage 320×240 automatique, génération d'images textuelles depuis les noms.
+- **Génération vocale locale** avec Piper par défaut et XTTS en option avancée.
 - **Explorateur de médias** avec tags, filtres, compteurs d'utilisation et aperçus rapides.
 - **Simulateur intégré** pour tester la navigation et les nœuds de fin avant export.
 - **Validation et file de rendu** : vérifications de compatibilité et génération en série avec suivi des logs.
-- **Intégrations locales optionnelles** XTTS (voix) et ComfyUI (images).
-- **Confort projet** : autosave, versions de sécurité, raccourcis configurables, thèmes clair/sombre, vue diagramme.
+- **Intégrations locales optionnelles** YouTube via yt-dlp, XTTS (voix) et ComfyUI (images).
+- **Confort projet** : sessions non enregistrées, enregistrement automatique, reprise après crash, versions de sécurité, raccourcis configurables, thèmes clair/sombre, vue diagramme.
 
 ## Pourquoi Story Studio ?
 

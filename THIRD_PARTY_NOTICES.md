@@ -139,11 +139,23 @@ to the downloaded copies, which is why they are disclosed here.
   (always the latest release; integrity verified against that release's
   `SHA2-256SUMS` before use).
 - **Upstream project:** <https://github.com/yt-dlp/yt-dlp>
-- **License:** **The Unlicense** (public-domain dedication)
-- **License text:** <https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE>
+- **License:** the yt-dlp source project is licensed under **The Unlicense**,
+  but the standalone Windows release binary downloaded here is a
+  **PyInstaller-bundled executable**. Upstream documents that those executables
+  include GPLv3+ licensed code and that the combined work is therefore
+  **GPL v3 or later**.
+- **License texts / notices:**
+  - yt-dlp source license: <https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE>
+  - yt-dlp licensing notes: <https://github.com/yt-dlp/yt-dlp#licensing>
+  - yt-dlp third-party notices:
+    <https://github.com/yt-dlp/yt-dlp/blob/master/THIRD_PARTY_LICENSES.txt>
+  - GPL v3: <https://www.gnu.org/licenses/gpl-3.0.en.html>
 
 The latest version is always fetched because YouTube blocks outdated releases.
-yt-dlp uses the bundled `ffmpeg.exe` (see above) to extract audio.
+yt-dlp uses the bundled `ffmpeg.exe` (see above) to extract audio. Story Studio
+does not redistribute `yt-dlp.exe`; it is fetched at runtime. If a future
+release bundles `yt-dlp.exe`, treat that bundled binary as GPL v3 or later and
+include the matching upstream third-party notices.
 
 ### Piper (text-to-speech)
 
@@ -164,15 +176,21 @@ yt-dlp uses the bundled `ffmpeg.exe` (see above) to extract audio.
     **ONNX Runtime**, licensed under the **MIT License** —
     <https://github.com/microsoft/onnxruntime/blob/main/LICENSE>.
   - Each voice model carries **its own license**, documented in that voice's
-    `MODEL_CARD` in the `piper-voices` repository. The French voices used by
-    default (`fr_FR-siwis-medium`, `fr_FR-tom-medium`, `fr_FR-gilles-low`) are
-    based on openly licensed datasets (e.g. CC BY / CC0); check each MODEL_CARD
-    for the exact terms.
+    `MODEL_CARD` in the `piper-voices` repository. The French voices available
+    in Story Studio are:
+    - `fr_FR-siwis-medium`: dataset/model card license **CC BY 4.0** —
+      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/siwis/medium/MODEL_CARD>
+    - `fr_FR-tom-medium`: dataset/model card license **AGPL v3** —
+      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/tom/medium/MODEL_CARD>
+    - `fr_FR-gilles-low`: dataset/model card license **CC0** —
+      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/gilles/low/MODEL_CARD>
 
 Because the Piper Windows archive includes eSpeak NG (GPL v3), treat the
 downloaded Piper toolchain as **GPL v3** for any redistribution. Story Studio
 does not redistribute it — it is fetched at runtime from the official sources
-above — but anyone who chooses to bundle it must honor those terms.
+above — but anyone who chooses to bundle it must honor those terms. If a future
+release bundles Piper voices too, review each selected voice model card and
+document the exact voice license in the bundled-assets section.
 
 ## Distribution notes
 
@@ -184,5 +202,5 @@ hard **100 MiB per-file** limit (the current binary is close to that limit).
 yt-dlp and Piper are **not** bundled: they are downloaded at runtime (see
 "Runtime-downloaded tools" above). If a future release decides to bundle either
 of them in the installer, move its entry up and document the exact file, version,
-SHA-256 and the resulting license obligations (notably Piper's GPL v3 eSpeak NG
-component).
+SHA-256 and the resulting license obligations (notably yt-dlp's GPLv3+
+standalone Windows binary and Piper's GPL v3 eSpeak NG component).
