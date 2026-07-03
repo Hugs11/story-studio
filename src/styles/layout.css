@@ -90,7 +90,7 @@ body {
   border-right: 0.5px solid var(--border);
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-width: var(--col-left-min);
 }
 
 .panel-left-header {

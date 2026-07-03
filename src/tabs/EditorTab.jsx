@@ -16,13 +16,15 @@ const BOOL_CODEC = {
   encode: (value) => (value ? 'true' : 'false'),
 };
 
-function startResize(e, panelClass, cssVar, direction) {
+const LEFT_PANEL_MIN_WIDTH = 300;
+
+function startResize(e, panelClass, cssVar, direction, minWidth = 150) {
   e.preventDefault();
   const startX = e.clientX;
-  const startW = document.querySelector(panelClass)?.clientWidth ?? 260;
+  const startW = document.querySelector(panelClass)?.clientWidth ?? minWidth;
   const onMove = ev => {
     const delta = direction === 1 ? ev.clientX - startX : startX - ev.clientX;
-    const newW = Math.max(150, Math.min(window.innerWidth * 0.42, startW + delta));
+    const newW = Math.max(minWidth, Math.min(window.innerWidth * 0.42, startW + delta));
     document.documentElement.style.setProperty(cssVar, `${newW}px`);
   };
   const onUp = () => {
@@ -246,7 +248,7 @@ export function EditorTab({
           />
         </div>
 
-        <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-left', '--col-left', 1)} />
+        <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-left', '--col-left', 1, LEFT_PANEL_MIN_WIDTH)} />
 
         <CentralPanel
           node={node}
