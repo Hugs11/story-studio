@@ -1,40 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { TreePanel } from '../components/TreePanel/TreePanel';
-import { TreeDisplayPopover } from '../components/TreePanel/TreeDisplayPopover';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
-import { StructureActionsBar } from '../components/structure/StructureActionsBar';
-import { Tooltip } from '../components/common/Tooltip';
-import { Search } from '../components/icons/LucideLocal';
-import { LuniiIcon } from '../components/icons/LuniiIcon';
-import { KEYS } from '../store/persistentSettings';
+import { StructurePanel, useStructureNodeColor } from '../components/structure/StructurePanel';
+import { LEFT_PANEL_MIN_WIDTH, startResize } from '../components/structure/panelResize';
 import { useProjectActions } from '../store/ProjectActionsContext';
-import { usePersistentState } from '../hooks/usePersistentState';
-
-const BOOL_CODEC = {
-  decode: (value) => value === 'true',
-  encode: (value) => (value ? 'true' : 'false'),
-};
-
-const LEFT_PANEL_MIN_WIDTH = 300;
-
-function startResize(e, panelClass, cssVar, direction, minWidth = 150) {
-  e.preventDefault();
-  const startX = e.clientX;
-  const startW = document.querySelector(panelClass)?.clientWidth ?? minWidth;
-  const onMove = ev => {
-    const delta = direction === 1 ? ev.clientX - startX : startX - ev.clientX;
-    const newW = Math.max(minWidth, Math.min(window.innerWidth * 0.42, startW + delta));
-    document.documentElement.style.setProperty(cssVar, `${newW}px`);
-  };
-  const onUp = () => {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-  };
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-}
 
 export function EditorTab({
   node,
@@ -51,37 +21,19 @@ export function EditorTab({
   // Actions projet partagées avec DiagramTab : fournies par App via
   // ProjectActionsContext plutôt que re-câblées en props sur chaque surface.
   const {
-    onSelect, onReorder, onMoveToMenu,
-    onAddMenu, onAddStoryToMenu, onImportStories, onImportFolder, onUnpackZip,
-    onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord, canGenerateStoryTts,
+    onSelect, onMoveToMenu,
+    onImportStories,
     onUpdateRoot, onUpdateMedia, onUpdateStoryAudio,
     onUpdateMenu, onDeleteMenu, onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
-    onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate, onPasteEntries, onCutPasteEntries,
-    onAddEndNode, onRemoveEndNode,
+    onRemoveEndNode,
     onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn, onUpdateNightModeHomeReturn,
   } = useProjectActions();
   const { projectType } = project;
+  const handleSetNodeColor = useStructureNodeColor();
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
-  const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);
-  const [showNavigationBadges, setShowNavigationBadges] = usePersistentState(
-    KEYS.TREE_SHOW_DEFAULT_NAVIGATION_BADGES,
-    true,
-    {
-      decode: (value) => value !== 'false',
-      encode: (value) => (value ? 'true' : 'false'),
-    },
-  );
-  const [showTreeGuides, setShowTreeGuides] = usePersistentState(KEYS.TREE_SHOW_GUIDES, true, BOOL_CODEC);
   const skipIdSyncRef = useRef(false);
-
-  const structureActionTargetMenuId = useMemo(() => {
-    if (projectType !== 'pack' || !selectedId || selectedId === 'root') return null;
-    const entry = projectIndex.entryById.get(selectedId);
-    if (entry?.type === 'menu') return selectedId;
-    return projectIndex.parentMenuById.get(selectedId) ?? null;
-  }, [projectIndex, projectType, selectedId]);
 
   const handleSimulateNode = useCallback((nodeId) => {
     setSimulatorZipPath(null);
@@ -114,17 +66,6 @@ export function EditorTab({
     skipIdSyncRef.current = true;
     setSelectedIds(ids);
   }, []);
-
-  const handleSetNodeColor = useCallback((nodeId, nodeType, color) => {
-    const fields = { treeColor: color };
-    if (nodeType === 'root') {
-      onUpdateMedia('treeColor', color);
-    } else if (nodeType === 'menu') {
-      onUpdateMenu(fields, nodeId);
-    } else {
-      onUpdateItem(fields, nodeId);
-    }
-  }, [onUpdateMedia, onUpdateMenu, onUpdateItem]);
 
   useEffect(() => {
     if (skipIdSyncRef.current) {
@@ -162,96 +103,20 @@ export function EditorTab({
   return (
     <div className="screen visible">
       <div className="workspace">
-        <div className="panel-left">
-          {projectType === 'pack' ? (
-            <div className="panel-left-header panel-left-header--actions">
-              <StructureActionsBar
-                variant="panel"
-                targetMenuId={structureActionTargetMenuId}
-                onAddStory={onAddStoryToMenu}
-                onAddFolder={onAddMenu}
-                onImportFolder={onImportFolder}
-                onImportPodcast={onImportPodcast}
-                onImportYoutube={onImportYoutube}
-                onRecord={onRecord}
-                onGenerateStoryTts={onGenerateStoryTts}
-                canRecord={canRecord}
-                canGenerateStoryTts={canGenerateStoryTts}
-                trailing={(
-                  <>
-                    <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">
-                      <button
-                        type="button"
-                        className="tree-display-trigger tree-search-trigger"
-                        aria-label="Rechercher dans la structure"
-                        onClick={() => {
-                          setTreeDisplayOpen(false);
-                          onFocusTreeSearch?.();
-                        }}
-                      >
-                        <Search className="tree-display-trigger-icon" strokeWidth={2.15} absoluteStrokeWidth />
-                      </button>
-                    </Tooltip>
-                    <Tooltip text="Lancer le simulateur" placement="below">
-                      <button
-                        type="button"
-                        className="tree-display-trigger"
-                        aria-label="Lancer le simulateur"
-                        onClick={handleSimulateRoot}
-                      >
-                        <LuniiIcon className="tree-display-trigger-icon tree-display-trigger-icon--lunii" />
-                      </button>
-                    </Tooltip>
-                    <TreeDisplayPopover
-                      open={treeDisplayOpen}
-                      onOpenChange={setTreeDisplayOpen}
-                      showNavigationBadges={showNavigationBadges}
-                      onShowNavigationBadgesChange={setShowNavigationBadges}
-                      showGuides={showTreeGuides}
-                      onShowGuidesChange={setShowTreeGuides}
-                    />
-                  </>
-                )}
-              />
-            </div>
-          ) : null}
-          {projectType === 'pack' ? null : (
-            <div className="panel-left-header panel-left-header--empty" aria-hidden="true" />
-          )}
-          <TreePanel
-            project={project}
-            projectType={projectType}
-            showNavigationBadges={showNavigationBadges}
-            showTreeGuides={showTreeGuides}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onSelectionChange={handleSelectionChange}
-            onReorder={onReorder}
-            onMoveToMenu={onMoveToMenu}
-            onAddMenu={onAddMenu}
-            onAddStory={onAddStoryToMenu}
-            onImportFolder={onImportFolder}
-            onDeleteMenu={onDeleteMenu}
-            onDeleteItem={onDeleteItem}
-            onBulkDeleteItems={onBulkDeleteItems}
-            onBulkUpdateItems={onBulkUpdateItems}
-            onUnpackZip={onUnpackZip}
-            onSimulateZip={handleSimulateZip}
-            onPasteEntries={onPasteEntries}
-            onCutPasteEntries={onCutPasteEntries}
-            onSetMenuAsRoot={onSetMenuAsRoot}
-            onDemoteRootToMenu={onDemoteRootToMenu}
-            onDuplicate={onDuplicate}
-            onSetNodeColor={handleSetNodeColor}
-            onAddEndNode={onAddEndNode}
-            onRemoveEndNode={onRemoveEndNode}
-            onSimulateNode={handleSimulateNode}
-            pathAudit={pathAudit}
-            validationIssues={validationIssues}
-            projectIndex={projectIndex}
-            treeSearchFocusTrigger={treeSearchFocusTrigger}
-          />
-        </div>
+        <StructurePanel
+          project={project}
+          projectType={projectType}
+          selectedId={selectedId}
+          projectIndex={projectIndex}
+          pathAudit={pathAudit}
+          validationIssues={validationIssues}
+          treeSearchFocusTrigger={treeSearchFocusTrigger}
+          onSelectionChange={handleSelectionChange}
+          onFocusTreeSearch={onFocusTreeSearch}
+          onSimulateNode={handleSimulateNode}
+          onSimulateZip={handleSimulateZip}
+          onSimulateRoot={handleSimulateRoot}
+        />
 
         <div className="resize-handle" onMouseDown={e => startResize(e, '.panel-left', '--col-left', 1, LEFT_PANEL_MIN_WIDTH)} />
 
