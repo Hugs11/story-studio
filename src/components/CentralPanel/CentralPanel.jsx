@@ -1,8 +1,9 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { NodeEditorContent } from './NodeEditorContent';
 import { EndNodeEditor } from './EndNodeEditor';
 import { END_NODE_ID } from '../TreePanel/TreePanel';
 import { collectAllStories } from '../../store/projectModel';
+import { useProjectActions } from '../../store/ProjectActionsContext';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
   getDefaultPackEntryDestination,
@@ -13,8 +14,6 @@ import { isNextStoryNavigationTarget, isRootNavigationTarget, normalizeNavigatio
 import { NAV_ROOT_LABEL } from './story/storyUtils';
 import './CentralPanel.css';
 
-const FlowDiagram = lazy(() => import('./FlowDiagram').then((module) => ({ default: module.FlowDiagram })));
-
 export function CentralPanel({
   node,
   selectedId,
@@ -23,53 +22,23 @@ export function CentralPanel({
   projectType,
   allMenus,
   projectIndex,
-  onSelect,
-  onMoveToMenu,
-  onUpdateRoot,
-  onUpdateMedia,
-  onUpdateStoryAudio,
-  onUpdateMenu,
-  onDeleteMenu,
-  onUpdateItem,
-  onDeleteItem,
-  onBulkUpdateItems,
-  onBulkDeleteItems,
-  onSetNodeColor,
-  onImportStories,
-  onUpdateNightModeAudio,
-  onUpdateNightMode,
-  onUpdateNightModeReturn,
-  onUpdateNightModeHomeReturn,
-  onRemoveEndNode,
-  showCentralDiagram = false,
 }) {
-  const [showFlowDiagram, setShowFlowDiagram] = useState(false);
-
-  useEffect(() => {
-    if (projectType !== 'pack' || !showCentralDiagram) {
-      setShowFlowDiagram(false);
-      return undefined;
-    }
-    if (showFlowDiagram) return undefined;
-
-    let cancelled = false;
-    const idleHandle = window.requestIdleCallback
-      ? window.requestIdleCallback(() => {
-        if (!cancelled) setShowFlowDiagram(true);
-      }, { timeout: 250 })
-      : null;
-    const timeoutHandle = idleHandle == null
-      ? window.setTimeout(() => {
-        if (!cancelled) setShowFlowDiagram(true);
-      }, 120)
-      : null;
-
-    return () => {
-      cancelled = true;
-      if (idleHandle != null && window.cancelIdleCallback) window.cancelIdleCallback(idleHandle);
-      if (timeoutHandle != null) window.clearTimeout(timeoutHandle);
-    };
-  }, [projectType, showFlowDiagram, showCentralDiagram]);
+  const {
+    onUpdateRoot,
+    onUpdateMedia,
+    onUpdateStoryAudio,
+    onUpdateMenu,
+    onDeleteMenu,
+    onUpdateItem,
+    onDeleteItem,
+    onBulkUpdateItems,
+    onBulkDeleteItems,
+    onUpdateNightModeAudio,
+    onUpdateNightMode,
+    onUpdateNightModeReturn,
+    onUpdateNightModeHomeReturn,
+    onRemoveEndNode,
+  } = useProjectActions();
 
   const isMultiSelect = selectedIds && selectedIds.size > 1;
   const allStories = useMemo(
@@ -202,36 +171,6 @@ export function CentralPanel({
           onUpdateItem={onUpdateItem}
           onDeleteItem={onDeleteItem}
         />
-        {projectType === 'pack' && showFlowDiagram ? (
-          <Suspense fallback={<div className="card" style={{ minHeight: 160 }}>Chargement du diagramme...</div>}>
-            <FlowDiagram
-              project={project}
-              projectType={projectType}
-              allMenus={allMenus}
-              allStories={allStories}
-              projectIndex={projectIndex}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onMoveToMenu={onMoveToMenu}
-              onUpdateRoot={onUpdateRoot}
-              onUpdateMedia={onUpdateMedia}
-              onUpdateStoryAudio={onUpdateStoryAudio}
-              onUpdateMenu={onUpdateMenu}
-              onDeleteMenu={onDeleteMenu}
-              onUpdateItem={onUpdateItem}
-              onDeleteItem={onDeleteItem}
-              onBulkDeleteItems={onBulkDeleteItems}
-              onBulkUpdateItems={onBulkUpdateItems}
-              onSetNodeColor={onSetNodeColor}
-              onImportStories={onImportStories}
-              onUpdateNightModeAudio={onUpdateNightModeAudio}
-              onUpdateNightMode={onUpdateNightMode}
-              onUpdateNightModeReturn={onUpdateNightModeReturn}
-              onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
-              onRemoveEndNode={onRemoveEndNode}
-            />
-          </Suspense>
-        ) : null}
       </div>
     </div>
   );

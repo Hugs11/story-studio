@@ -19,7 +19,7 @@ const NAVIGATION_BADGES_CODEC = {
   encode: (value) => (value ? 'true' : 'false'),
 };
 
-export function useStructureNodeColor() {
+function useStructureNodeColor() {
   const { onUpdateMedia, onUpdateMenu, onUpdateItem } = useProjectActions();
 
   return useCallback((nodeId, nodeType, color) => {

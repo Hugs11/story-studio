@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { buildSelectedNode, findEntryPath as getProjectEntryPath } from '../../store/projectModel';
+import { buildSelectedNode } from '../../store/projectModel';
+import { useProjectActions } from '../../store/ProjectActionsContext';
 import { NodeEditorContent } from './NodeEditorContent';
 import { EndNodeEditor } from './EndNodeEditor';
 import { MultiEditor } from './MultiEditor';
@@ -8,10 +8,8 @@ import { FloatingSimulator } from '../FloatingSimulator/FloatingSimulator';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { KEYS, read, write } from '../../store/persistentSettings';
-import { Download } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
-import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStory } from '../TreePanel/TreeIcons';
-import { END_NODE_ID, TYPE_LABELS, describeContainer, countStories } from './flowDiagramLayout';
+import { END_NODE_ID, TYPE_LABELS } from './flowDiagramLayout';
 import './FlowDiagram.css';
 
 const INSPECTOR_WIDTH_DEFAULT = 680;
@@ -27,20 +25,6 @@ function clampInspectorWidth(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return INSPECTOR_WIDTH_DEFAULT;
   return Math.max(INSPECTOR_WIDTH_MIN, Math.min(getInspectorMaxWidth(), Math.round(numeric)));
-}
-
-function EmptyDiagramState({ onImportStories = null }) {
-  return (
-    <div className="fd-empty">
-      <span>Ajoute des dossiers, ZIP ou histoires pour voir la structure.</span>
-      {onImportStories ? (
-        <button type="button" className="fd-empty-btn" onClick={onImportStories}>
-          <Download className="fd-empty-btn-icon" strokeWidth={2} absoluteStrokeWidth />
-          <span>Importer audio ou archive</span>
-        </button>
-      ) : null}
-    </div>
-  );
 }
 
 function inspectorTitle(node) {
@@ -65,169 +49,6 @@ function inspectorTypeLabel(node) {
   return label || 'Réglages';
 }
 
-function DiagramNodeIcon({ type }) {
-  if (type === 'root') return <IconHouse />;
-  if (type === 'menu') return <IconFolderOpen />;
-  if (type === 'story') return <IconStory />;
-  if (type === 'zip') return <IconArchive />;
-  if (type === 'end-node') return <IconMoon />;
-  return null;
-}
-
-function NodeCard({ type, name, selected, detail, badge, onClick }) {
-  return (
-    <button
-      type="button"
-      className={`fd-node-card fd-node-card--${type} ${selected ? 'is-selected' : ''}`}
-      onClick={onClick}
-      title={name || '(sans nom)'}
-    >
-      <div className="fd-node-icon"><DiagramNodeIcon type={type} /></div>
-      <div className="fd-node-copy">
-        <div className="fd-node-top">
-          <div className="fd-node-name">{name || '(sans nom)'}</div>
-          {badge ? <span className="fd-node-badge">{badge}</span> : null}
-        </div>
-        {detail ? <div className="fd-node-detail">{detail}</div> : null}
-      </div>
-    </button>
-  );
-}
-
-function StoryCluster({ containerKey, stories, expanded, onToggle, selectedId, onSelect }) {
-  if (!stories.length) return null;
-
-  return (
-    <div className="fd-story-cluster">
-      <button type="button" className="fd-story-toggle" onClick={() => onToggle(containerKey)}>
-        <span className="fd-story-toggle-label">{expanded ? '▾' : '▸'} Histoires</span>
-        <span className="fd-story-toggle-count">{stories.length}</span>
-      </button>
-      {expanded && (
-        <div className="fd-story-list">
-          {stories.map((story) => (
-            <button
-              key={story.id}
-              type="button"
-              className={`fd-story-chip ${story.id === selectedId ? 'is-selected' : ''}`}
-              onClick={() => onSelect?.(story.id)}
-              title={story.name || '(sans nom)'}
-            >
-              <span className="fd-story-chip-icon"><DiagramNodeIcon type="story" /></span>
-              <span className="fd-story-chip-label">{story.name || '(sans nom)'}</span>
-              {(story.afterPlaybackSequence?.length ?? 0) > 0 ? (
-                <span className="fd-story-chip-badge">Fin x{story.afterPlaybackSequence.length}</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Branch({
-  entry,
-  rootEntries,
-  selectedId,
-  expandedStories,
-  onToggleStories,
-  onSelect,
-}) {
-  const isRoot = entry.type === 'root';
-  const entries = isRoot ? rootEntries : (entry.children ?? []);
-  const structuralChildren = entries.filter((child) => child.type === 'menu' || child.type === 'zip');
-  const storyChildren = entries.filter((child) => child.type === 'story');
-  const containerKey = isRoot ? 'root' : entry.id;
-  const detail = describeContainer(entries);
-  const badge = !isRoot ? countStories(entries) || null : (rootEntries?.length ?? 0);
-
-  return (
-    <div className="fd-branch">
-      <NodeCard
-        type={entry.type}
-        name={entry.name}
-        selected={selectedId === entry.id}
-        detail={detail}
-        badge={badge}
-        onClick={() => onSelect?.(entry.id)}
-      />
-
-      {(structuralChildren.length > 0 || storyChildren.length > 0) && (
-        <div className="fd-branch-children">
-          <StoryCluster
-            containerKey={containerKey}
-            stories={storyChildren}
-            expanded={!!expandedStories[containerKey]}
-            onToggle={onToggleStories}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
-
-          {structuralChildren.map((child) => (
-            <div key={child.id} className="fd-child-row">
-              <div className="fd-child-elbow" />
-              <Branch
-                entry={child}
-                rootEntries={rootEntries}
-                selectedId={selectedId}
-                expandedStories={expandedStories}
-                onToggleStories={onToggleStories}
-                onSelect={onSelect}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DiagramTree({ project, projectIndex, selectedId, expandedStories, setExpandedStories, onSelect, onImportStories }) {
-  const selectedPath = useMemo(() => (
-    selectedId && selectedId !== 'root'
-      ? getProjectEntryPath(project, selectedId, projectIndex) ?? []
-      : []
-  ), [project, projectIndex, selectedId]);
-
-  const breadcrumb = [
-    { id: 'root', name: project.rootName || 'Racine' },
-    ...selectedPath.map((entry) => ({ id: entry.id, name: entry.name || TYPE_LABELS[entry.type] })),
-  ];
-
-  function toggleStories(containerKey) {
-    setExpandedStories((prev) => ({ ...prev, [containerKey]: !prev[containerKey] }));
-  }
-
-  return (
-    <div className="fd-tree-shell">
-      <div className="fd-breadcrumbs">
-        <div className="fd-breadcrumbs-title">Branche active</div>
-        <div className="fd-breadcrumbs-list">
-          {breadcrumb.map((item) => (
-            <span key={item.id} className={item.id === selectedId ? 'is-active' : ''}>
-              {item.name}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {(project.rootEntries?.length ?? 0) === 0 ? (
-        <EmptyDiagramState onImportStories={onImportStories} />
-      ) : (
-        <Branch
-          entry={{ id: 'root', type: 'root', name: project.projectType === 'simple' ? (project.projectName || 'Mon histoire') : (project.rootName || 'Menu racine') }}
-          rootEntries={project.rootEntries ?? []}
-          selectedId={selectedId}
-          expandedStories={expandedStories}
-          onToggleStories={toggleStories}
-          onSelect={onSelect}
-        />
-      )}
-    </div>
-  );
-}
-
 export function FlowDiagram({
   project,
   projectType,
@@ -237,43 +58,25 @@ export function FlowDiagram({
   selectedId = 'root',
   selectedIds,
   inspectRequest = null,
-  onSelect,
   onSelectionChange,
-  onMoveToMenu,
-  onUpdateRoot,
-  onUpdateMedia,
-  onUpdateStoryAudio,
-  onUpdateMenu,
-  onDeleteMenu,
-  onUpdateItem,
-  onDeleteItem,
-  onImportStories,
-  onImportFolder,
-  onImportPodcast,
-  onImportYoutube,
-  onRecord,
-  onGenerateStoryTts,
-  canGenerateStoryTts = true,
-  onAddMenu,
-  onAddStory,
-  onUnpackZip,
-  onSetMenuAsRoot,
-  onBulkUpdateItems,
-  onBulkDeleteItems,
-  onSetNodeColor,
-  onPasteEntries,
-  onCutPasteEntries,
-  onDuplicate,
-  onAddEndNode,
-  onRemoveEndNode,
-  onUpdateNightModeAudio,
-  onUpdateNightMode,
-  onUpdateNightModeReturn,
-  onUpdateNightModeHomeReturn,
-  displayMode = 'card',
 }) {
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [expandedInlineStories, setExpandedInlineStories] = useState({});
+  const {
+    onSelect,
+    onUpdateRoot,
+    onUpdateMedia,
+    onUpdateStoryAudio,
+    onUpdateMenu,
+    onDeleteMenu,
+    onUpdateItem,
+    onDeleteItem,
+    onBulkUpdateItems,
+    onBulkDeleteItems,
+    onUpdateNightModeAudio,
+    onUpdateNightMode,
+    onUpdateNightModeReturn,
+    onUpdateNightModeHomeReturn,
+    onRemoveEndNode,
+  } = useProjectActions();
   const [previewNodeId, setPreviewNodeId] = useState(null);
   const [previewZipPath, setPreviewZipPath] = useState(null);
   const [inspectorNodeId, setInspectorNodeId] = useState(null);
@@ -341,19 +144,6 @@ export function FlowDiagram({
     persistInspectorWidth(updateInspectorWidth(nextWidth));
   }
 
-  const selectedPath = useMemo(() => (
-    selectedId && selectedId !== 'root'
-      ? getProjectEntryPath(project, selectedId, projectIndex) ?? []
-      : []
-  ), [project, projectIndex, selectedId]);
-
-  useEffect(() => {
-    const selectedEntry = selectedPath[selectedPath.length - 1];
-    if (selectedEntry?.type !== 'story') return;
-    const containerKey = selectedPath.length > 1 ? selectedPath[selectedPath.length - 2].id : 'root';
-    setExpandedInlineStories((prev) => (prev[containerKey] ? prev : { ...prev, [containerKey]: true }));
-  }, [selectedPath]);
-
   useEffect(() => {
     const targetId = inspectRequest?.id;
     if (!targetId) return;
@@ -365,17 +155,7 @@ export function FlowDiagram({
     setInspectorNodeId(targetId);
   }, [inspectRequest, onSelect, onSelectionChange]);
 
-  const fullViewActive = displayMode === 'screen' || fullscreenOpen;
-
-  useEffect(() => {
-    if (!fullscreenOpen) return undefined;
-    document.body.classList.add('fd-fullscreen-open');
-    return () => {
-      document.body.classList.remove('fd-fullscreen-open');
-    };
-  }, [fullscreenOpen]);
-
-  // Ouverture auto des panneaux à la sélection (désactivable via checkbox)
+  // Ouverture auto des panneaux à la sélection (désactivable via checkbox).
   useEffect(() => {
     if (selectedIds && selectedIds.size === 0) {
       setInspectorNodeId(null);
@@ -391,13 +171,11 @@ export function FlowDiagram({
       setMultiPanelOpen(false);
       if (autoOpenSettings && selectedId && selectedId !== 'root') {
         setInspectorNodeId(selectedId);
-      } else if (!autoOpenSettings) {
-        // ne pas forcer la fermeture — l'utilisateur peut avoir ouvert manuellement
       }
     }
   }, [selectedId, selectedIds, autoOpenSettings]);
 
-  useEscapeKey(fullViewActive, () => {
+  useEscapeKey(true, () => {
     if (previewNodeId || previewZipPath) {
       setPreviewNodeId(null);
       setPreviewZipPath(null);
@@ -405,9 +183,7 @@ export function FlowDiagram({
     }
     if (inspectorNodeId) {
       setInspectorNodeId(null);
-      return;
     }
-    if (displayMode !== 'screen') setFullscreenOpen(false);
   });
 
   const previewNode = useMemo(
@@ -415,9 +191,6 @@ export function FlowDiagram({
     [project, previewNodeId, projectIndex],
   );
 
-  // Simulation depuis le diagramme via le FloatingSimulator : un noeud ou, pour
-  // un pack importe, un zip standalone (« Simuler ce pack… »). Les deux sont
-  // exclusifs.
   const handlePreviewNode = useCallback((nodeId) => {
     setPreviewZipPath(null);
     setPreviewNodeId(nodeId);
@@ -436,6 +209,7 @@ export function FlowDiagram({
     setPreviewNodeId(null);
     setPreviewZipPath(null);
   }, []);
+
   const inspectorNode = useMemo(
     () => {
       if (!inspectorNodeId) return null;
@@ -454,11 +228,21 @@ export function FlowDiagram({
 
   if (project?.projectType !== 'pack' && project?.projectType !== 'simple') return null;
 
-  // ⚙ ouvre le multi-panel si multi-sélection, sinon l'inspecteur simple
   function handleInspect(nodeId) {
     setMultiPanelOpen(false);
     setInspectorNodeId(nodeId);
   }
+
+  const autoOpenCheckbox = (
+    <label className="fd-header-setting">
+      <input
+        type="checkbox"
+        checked={autoOpenSettings}
+        onChange={handleAutoOpenChange}
+      />
+      Ouverture auto des réglages
+    </label>
+  );
 
   const fullViewContent = (
     <>
@@ -467,34 +251,11 @@ export function FlowDiagram({
         projectIndex={projectIndex}
         selectedId={selectedId}
         selectedIds={selectedIds}
-        onSelect={onSelect}
         onSelectionChange={onSelectionChange}
         onPreview={handlePreviewNode}
         onInspect={handleInspect}
-        onMoveToMenu={onMoveToMenu}
-        onImportStories={onImportStories}
-        onImportFolder={onImportFolder}
-        onImportPodcast={onImportPodcast}
-        onImportYoutube={onImportYoutube}
-        onRecord={onRecord}
-        onGenerateStoryTts={onGenerateStoryTts}
-        canGenerateStoryTts={canGenerateStoryTts}
-        onAddMenu={onAddMenu}
-        onAddStory={onAddStory}
-        onUnpackZip={onUnpackZip}
         onSimulateZip={handleSimulateZip}
         onSimulateRoot={handlePreviewRoot}
-        onSetMenuAsRoot={onSetMenuAsRoot}
-        onDeleteMenu={onDeleteMenu}
-        onDeleteItem={onDeleteItem}
-        onBulkDeleteItems={onBulkDeleteItems}
-        onBulkUpdateItems={onBulkUpdateItems}
-        onSetNodeColor={onSetNodeColor}
-        onPasteEntries={onPasteEntries}
-        onCutPasteEntries={onCutPasteEntries}
-        onDuplicate={onDuplicate}
-        onAddEndNode={onAddEndNode}
-        onRemoveEndNode={onRemoveEndNode}
         allMenus={allMenus}
       />
 
@@ -613,67 +374,15 @@ export function FlowDiagram({
     </>
   );
 
-  const fullscreenTree = fullscreenOpen ? createPortal(
-    <div className="fd-fullscreen-overlay">
-      <div className="fd-fullscreen">
-        <div className="modal-header fd-fullscreen-header">
-          <span>Diagramme complet du pack</span>
-          <div className="fd-fullscreen-actions">
-            {autoOpenCheckbox}
-            <Button variant="icon" className="modal-close" onClick={() => setFullscreenOpen(false)}>✕</Button>
-          </div>
-        </div>
-        <div className="fd-fullscreen-body">
-          {fullViewContent}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  ) : null;
-
-  const autoOpenCheckbox = (
-    <label className="fd-header-setting">
-      <input
-        type="checkbox"
-        checked={autoOpenSettings}
-        onChange={handleAutoOpenChange}
-      />
-      Ouverture auto des réglages
-    </label>
-  );
-
-  if (displayMode === 'screen') {
-    return (
-      <div className="fd-fullscreen fd-fullscreen--embedded">
-        <div className="modal-header fd-fullscreen-header">
-          <span>Diagramme complet du pack</span>
-          {autoOpenCheckbox}
-        </div>
-        <div className="fd-fullscreen-body">
-          {fullViewContent}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <>
-      <div className="card">
-        <div className="fd-card-head">
-          <div className="card-title">Structure du pack</div>
-        </div>
-
-        <DiagramTree
-          project={project}
-          projectIndex={projectIndex}
-          selectedId={selectedId}
-          expandedStories={expandedInlineStories}
-          setExpandedStories={setExpandedInlineStories}
-          onSelect={onSelect}
-          onImportStories={onImportStories}
-        />
+    <div className="fd-fullscreen fd-fullscreen--embedded">
+      <div className="modal-header fd-fullscreen-header">
+        <span>Diagramme complet du pack</span>
+        {autoOpenCheckbox}
       </div>
-      {fullscreenTree}
-    </>
+      <div className="fd-fullscreen-body">
+        {fullViewContent}
+      </div>
+    </div>
   );
 }

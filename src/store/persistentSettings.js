@@ -5,7 +5,6 @@ export const KEYS = Object.freeze({
   AUTOSAVE_BACKUP_LIMIT: 'autoSaveBackupLimit',
   WORKSPACE_DIR: 'storyStudioWorkspaceDir',
   USE_WORKSPACE_FOR_NEW_PROJECTS: 'storyStudio.useWorkspaceForNewProjects',
-  SHOW_CENTRAL_DIAGRAM: 'showCentralDiagram',
   BOTTOM_PANEL_OPEN: 'bottomPanelOpen',
   BOTTOM_PANEL_TAB: 'bottomPanelTab',
   LAST_EXPORT_DIR: 'lastExportDir',
@@ -81,6 +80,8 @@ export function remove(key) {
 // Migrations ponctuelles des réglages persistés, appelées au boot (main.jsx)
 // avant le montage de l'app.
 export function runSettingsMigrations() {
+  remove('showCentralDiagram');
+
   // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
   // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,
   // donc un 'false' stocké ne distingue pas un choix explicite d'un défaut

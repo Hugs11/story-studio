@@ -247,7 +247,6 @@ function AppContent() {
   // installations existantes.
   const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, true, BOOL_CODEC);
   const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
-  const [showCentralDiagram, setShowCentralDiagram] = usePersistentState(KEYS.SHOW_CENTRAL_DIAGRAM, false, BOOL_CODEC);
   const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());
   const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
@@ -1285,8 +1284,6 @@ function AppContent() {
     onUpdateXttsSettings: handleUpdateXttsSettings,
     sdSettings: sdStore.sdSettings,
     onUpdateSdSettings: sdStore.updateSdSettings,
-    showCentralDiagram,
-    onShowCentralDiagramChange: setShowCentralDiagram,
     verboseLogging,
     onVerboseLoggingChange: handleVerboseLoggingChange,
     onCopyLogPath: handleCopyLogPath,
@@ -1405,7 +1402,6 @@ function AppContent() {
               projectIndex={projectIndex}
               treeSearchFocusTrigger={treeSearchFocusTrigger}
               onFocusTreeSearch={() => setTreeSearchFocusTrigger((n) => n + 1)}
-              showCentralDiagram={showCentralDiagram}
             />,
           )}
           {store.activeTab === 'diagram' && renderDeferred(

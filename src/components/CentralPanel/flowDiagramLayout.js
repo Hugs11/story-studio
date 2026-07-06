@@ -10,8 +10,8 @@ import { canMoveEntryToContainer } from '../tree/treeOperations';
 export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', ref: 'Lien', 'end-node': 'Message de fin' };
 // Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
 export { MIME } from '../../utils/mimeTypes';
-export const ZOOM_MIN = 0.08;
-export const ZOOM_MAX = 1.9;
+const ZOOM_MIN = 0.08;
+const ZOOM_MAX = 1.9;
 export const BUTTON_ZOOM_FACTOR = 1.12;
 export const WHEEL_ZOOM_SENSITIVITY = 0.0012;
 export const DRAG_START_DISTANCE = 6;
@@ -20,23 +20,6 @@ const COMPLETE_METRICS = {
   compact: { nodeWidth: 86, rootWidth: 98, nodeHeight: 74, nodeVisualHeight: 62, colGap: 8, rowGap: 78, rowStackGap: 46, padX: 28, padY: 16, navPadBottom: 44, storyRowLimit: 6, structureRowLimit: 3, rootRowLimit: 2 },
   minimal: { nodeWidth: 68, rootWidth: 84, nodeHeight: 58, nodeVisualHeight: 48, colGap: 6, rowGap: 62, rowStackGap: 36, padX: 22, padY: 12, navPadBottom: 38, storyRowLimit: 5, structureRowLimit: 2, rootRowLimit: 2 },
 };
-
-export function countStories(entries) {
-  return (entries ?? []).filter((entry) => entry.type === 'story').length;
-}
-
-function countStructuralNodes(entries) {
-  return (entries ?? []).filter((entry) => entry.type === 'menu' || entry.type === 'zip').length;
-}
-
-export function describeContainer(entries) {
-  const stories = countStories(entries);
-  const structural = countStructuralNodes(entries);
-  const parts = [];
-  if (structural > 0) parts.push(`${structural} sous-noeud${structural > 1 ? 's' : ''}`);
-  if (stories > 0) parts.push(`${stories} histoire${stories > 1 ? 's' : ''}`);
-  return parts.join(' • ');
-}
 
 export function clampZoom(value) {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));

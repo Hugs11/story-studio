@@ -5,8 +5,8 @@
 // modales artisanales `modal-overlay`, dialogues `dialog-overlay`) et le
 // marqueur `data-modal-surface` pour les overlays qui ne peuvent pas porter ces
 // classes (styles inline dédiés). Toute nouvelle modale doit rentrer dans l'une
-// de ces conventions. Le plein écran du diagramme (`fd-fullscreen-overlay`)
-// reste une surface d'édition : volontairement hors liste.
+// de ces conventions. Le diagramme complet reste une surface d'édition :
+// volontairement hors liste.
 const MODAL_SURFACE_SELECTOR = '.app-modal-overlay, .modal-overlay, .dialog-overlay, [data-modal-surface]';
 
 export function isModalSurfaceOpen() {

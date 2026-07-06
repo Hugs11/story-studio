@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { CentralPanel } from '../components/CentralPanel/CentralPanel';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
-import { StructurePanel, useStructureNodeColor } from '../components/structure/StructurePanel';
+import { StructurePanel } from '../components/structure/StructurePanel';
 import { LEFT_PANEL_MIN_WIDTH, startResize } from '../components/structure/panelResize';
 import { useProjectActions } from '../store/ProjectActionsContext';
 
@@ -16,20 +16,11 @@ export function EditorTab({
   pathAudit, validationIssues, allMenus, projectIndex,
   treeSearchFocusTrigger,
   onFocusTreeSearch,
-  showCentralDiagram,
 }) {
   // Actions projet partagées avec DiagramTab : fournies par App via
   // ProjectActionsContext plutôt que re-câblées en props sur chaque surface.
-  const {
-    onSelect, onMoveToMenu,
-    onImportStories,
-    onUpdateRoot, onUpdateMedia, onUpdateStoryAudio,
-    onUpdateMenu, onDeleteMenu, onUpdateItem, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
-    onRemoveEndNode,
-    onUpdateNightModeAudio, onUpdateNightMode, onUpdateNightModeReturn, onUpdateNightModeHomeReturn,
-  } = useProjectActions();
+  const { onSelect } = useProjectActions();
   const { projectType } = project;
-  const handleSetNodeColor = useStructureNodeColor();
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
@@ -128,25 +119,6 @@ export function EditorTab({
           projectType={projectType}
           allMenus={allMenus}
           projectIndex={projectIndex}
-          onSelect={onSelect}
-          onMoveToMenu={onMoveToMenu}
-          onUpdateRoot={onUpdateRoot}
-          onUpdateMedia={onUpdateMedia}
-          onUpdateStoryAudio={onUpdateStoryAudio}
-          onUpdateMenu={onUpdateMenu}
-          onDeleteMenu={onDeleteMenu}
-          onUpdateItem={onUpdateItem}
-          onDeleteItem={onDeleteItem}
-          onBulkUpdateItems={onBulkUpdateItems}
-          onBulkDeleteItems={onBulkDeleteItems}
-          onSetNodeColor={handleSetNodeColor}
-          onImportStories={onImportStories}
-          onUpdateNightModeAudio={onUpdateNightModeAudio}
-          onUpdateNightMode={onUpdateNightMode}
-          onUpdateNightModeReturn={onUpdateNightModeReturn}
-          onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
-          onRemoveEndNode={onRemoveEndNode}
-          showCentralDiagram={showCentralDiagram}
         />
 
         <FloatingSimulator
