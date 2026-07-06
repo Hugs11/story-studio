@@ -39,7 +39,7 @@ function DiagramPanelHeader({
   const isFull = variant === 'plein';
 
   return (
-    <div className={`fd-panel-header fd-panel-header--${variant}`}>
+    <div className="fd-panel-header">
       {isFull ? (
         <>
           <div className="fd-panel-left-toggles" aria-label="Panneau gauche du diagramme">
@@ -99,7 +99,6 @@ export function DiagramPanel({
   onPreview,
   onSimulateZip,
   onSimulateRoot,
-  resetSignal = null,
 }) {
   const [controlsHost, setControlsHost] = useState(null);
 
@@ -109,7 +108,7 @@ export function DiagramPanel({
   const showHint = variant === 'plein' && leftSlot !== DIAGRAM_LEFT_SLOTS.SETTINGS;
 
   return (
-    <div className={`fd-panel fd-panel--${variant}`} data-project-type={projectType}>
+    <div className="fd-panel" data-project-type={projectType}>
       <DiagramPanelHeader
         variant={variant}
         leftSlot={leftSlot}
@@ -132,7 +131,6 @@ export function DiagramPanel({
           controlsHost={controlsHost}
           showActionsBar={showActionsBar}
           showHint={showHint}
-          resetSignal={resetSignal}
         />
       </div>
     </div>
