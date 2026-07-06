@@ -22,6 +22,7 @@ export function CentralPanel({
   projectType,
   allMenus,
   projectIndex,
+  header = null,
 }) {
   const {
     onUpdateRoot,
@@ -88,77 +89,37 @@ export function CentralPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.nightModeHomeReturn, project.nightModeReturn, defaultPackEntryLabel, projectIndex]);
 
+  let content = null;
+
   if (!isMultiSelect && selectedId === END_NODE_ID) {
-    return (
-      <div className="panel-center">
-
-        <div className="center-body">
-          <EndNodeEditor
-            endNodeName={project.endNodeName || 'Message de fin'}
-            nightModeAudio={project.nightModeAudio}
-            nightModeActive={!!project.globalOptions?.nightMode}
-            nightModeReturn={project.nightModeReturn ?? null}
-            nightModeHomeReturn={project.nightModeHomeReturn ?? null}
-            nightModeReturnResolvedLabel={endNodeReturnResolvedLabel}
-            nightModeHomeReturnResolvedLabel={endNodeHomeResolvedLabel}
-            projectName={project.projectName}
-            allMenus={allMenus}
-            allStories={allStories}
-            onUpdateNightModeAudio={onUpdateNightModeAudio}
-            onUpdateNightMode={onUpdateNightMode}
-            onUpdateNightModeReturn={onUpdateNightModeReturn}
-            onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
-            onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
-            onRemove={onRemoveEndNode}
-          />
-        </div>
-      </div>
+    content = (
+      <EndNodeEditor
+        endNodeName={project.endNodeName || 'Message de fin'}
+        nightModeAudio={project.nightModeAudio}
+        nightModeActive={!!project.globalOptions?.nightMode}
+        nightModeReturn={project.nightModeReturn ?? null}
+        nightModeHomeReturn={project.nightModeHomeReturn ?? null}
+        nightModeReturnResolvedLabel={endNodeReturnResolvedLabel}
+        nightModeHomeReturnResolvedLabel={endNodeHomeResolvedLabel}
+        projectName={project.projectName}
+        allMenus={allMenus}
+        allStories={allStories}
+        onUpdateNightModeAudio={onUpdateNightModeAudio}
+        onUpdateNightMode={onUpdateNightMode}
+        onUpdateNightModeReturn={onUpdateNightModeReturn}
+        onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
+        onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
+        onRemove={onRemoveEndNode}
+      />
     );
-  }
-
-  if (!isMultiSelect && !node) {
-    return (
-      <div className="panel-center">
-
-        <div className="center-body" />
-      </div>
-    );
-  }
-
-  if (isMultiSelect) {
+  } else if (isMultiSelect) {
     const count = selectedIds.size;
-    return (
-      <div className="panel-center">
-
-        <div className="center-body">
-          <div className="multiselect-hint">{count} éléments sélectionnés — modification groupée</div>
-          <NodeEditorContent
-            node={node}
-            selectedIds={selectedIds}
-            project={project}
-            projectIndex={projectIndex}
-            projectType={projectType}
-            allMenus={allMenus}
-            onUpdateRoot={onUpdateRoot}
-            onUpdateMedia={onUpdateMedia}
-            onUpdateStoryAudio={onUpdateStoryAudio}
-            onUpdateMenu={onUpdateMenu}
-            onDeleteMenu={onDeleteMenu}
-            onUpdateItem={onUpdateItem}
-            onDeleteItem={onDeleteItem}
-            onBulkUpdateItems={onBulkUpdateItems}
-            onBulkDeleteItems={onBulkDeleteItems}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="panel-center">
-      <div className="center-body">
+    content = (
+      <>
+        <div className="multiselect-hint">{count} éléments sélectionnés — modification groupée</div>
         <NodeEditorContent
           node={node}
+          selectedIds={selectedIds}
           project={project}
           projectIndex={projectIndex}
           projectType={projectType}
@@ -170,7 +131,35 @@ export function CentralPanel({
           onDeleteMenu={onDeleteMenu}
           onUpdateItem={onUpdateItem}
           onDeleteItem={onDeleteItem}
+          onBulkUpdateItems={onBulkUpdateItems}
+          onBulkDeleteItems={onBulkDeleteItems}
         />
+      </>
+    );
+  } else if (node) {
+    content = (
+      <NodeEditorContent
+        node={node}
+        project={project}
+        projectIndex={projectIndex}
+        projectType={projectType}
+        allMenus={allMenus}
+        onUpdateRoot={onUpdateRoot}
+        onUpdateMedia={onUpdateMedia}
+        onUpdateStoryAudio={onUpdateStoryAudio}
+        onUpdateMenu={onUpdateMenu}
+        onDeleteMenu={onDeleteMenu}
+        onUpdateItem={onUpdateItem}
+        onDeleteItem={onDeleteItem}
+      />
+    );
+  }
+
+  return (
+    <div className="panel-center">
+      {header}
+      <div className="center-body">
+        {content}
       </div>
     </div>
   );

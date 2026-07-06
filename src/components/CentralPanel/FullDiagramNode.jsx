@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
 import { Tooltip } from '../common/Tooltip';
-import { Eye, Settings } from '../icons/LucideLocal';
+import { Eye } from '../icons/LucideLocal';
 import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID } from './flowDiagramLayout';
 import { useZipCover } from './useZipCover.js';
@@ -62,7 +62,6 @@ export function FullDiagramNode({
   onSelectionChange,
   onContextMenu,
   onPreview,
-  onInspect,
   onDragPointerDown,
   onToggleCollapse,
   viewportRootRef,
@@ -165,21 +164,6 @@ export function FullDiagramNode({
             }}
           >
             <Eye style={{ width: 16, height: 16 }} />
-          </button>
-        </Tooltip>
-        <Tooltip text="Ouvrir les réglages de ce nœud">
-          <button
-            type="button"
-            className="fd-complete-node-action fd-complete-node-action--inspect"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelectionChange?.(new Set([entry.id]));
-              onSelect?.(entry.id);
-              onInspect?.(entry.id);
-            }}
-          >
-            <Settings style={{ width: 16, height: 16 }} />
           </button>
         </Tooltip>
       </div>

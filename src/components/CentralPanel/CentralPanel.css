@@ -480,10 +480,8 @@
 }
 
 /* L'empilement image/son depend de la largeur reelle du panneau central (plus
-   etroit que la fenetre a cause des panneaux lateraux), pas de la fenetre.
-   On exclut le panneau flottant du diagramme : il a deja son propre conteneur
-   et ses requetes non nommees ne doivent pas se rattacher a ce card. */
-.card:has(> .media-split):not(.fd-floating-panel-body *) {
+   etroit que la fenetre a cause des panneaux lateraux), pas de la fenetre. */
+.card:has(> .media-split) {
   container: media-card / inline-size;
 }
 

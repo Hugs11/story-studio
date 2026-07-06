@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CircleCheck,
-  FilePen,
   Network,
   Package,
   PanelLeft,
@@ -59,8 +58,8 @@ export function Toolbar({
   onOpenProject,
   onSaveProject,
   onSaveProjectAs,
-  activeTab = 'edit',
-  onActiveTabChange,
+  diagramOpen = false,
+  onToggleDiagram,
   packOptionsOpen = false,
   onPackOptionsOpenChange,
   projectType,
@@ -87,21 +86,6 @@ export function Toolbar({
     if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
     successToastTimerRef.current = setTimeout(() => setSuccessToast(false), 2200);
   }
-
-  const panelTabs = [
-    {
-      id: 'edit',
-      label: 'Éditeur',
-      title: withShortcut('Éditeur', shortcutLabels.tabEdit),
-      Icon: FilePen,
-    },
-    {
-      id: 'diagram',
-      label: 'Diagramme',
-      title: withShortcut('Diagramme', shortcutLabels.tabDiagram),
-      Icon: Network,
-    },
-  ];
 
   return (
     <div className="chrome-toolbar">
@@ -130,19 +114,16 @@ export function Toolbar({
         />
       </div>
 
-      <div className="chrome-toolbar-center" role="tablist" aria-label="Vue principale">
-        {panelTabs.map(({ id, label, title, Icon }) => (
-          <ToolbarButton
-            key={id}
-            id={`tab-${id}`}
-            title={title}
-            label={label}
-            onClick={() => onActiveTabChange?.(id)}
-            active={activeTab === id}
-          >
-            <ToolbarIcon Icon={Icon} />
-          </ToolbarButton>
-        ))}
+      <div className="chrome-toolbar-center">
+        <ToolbarButton
+          id="diagram-toggle"
+          title={withShortcut('Ouvrir/fermer le diagramme', shortcutLabels.tabDiagram)}
+          label="Diagramme"
+          onClick={onToggleDiagram}
+          active={diagramOpen}
+        >
+          <ToolbarIcon Icon={Network} />
+        </ToolbarButton>
       </div>
 
       <div className="chrome-toolbar-right">

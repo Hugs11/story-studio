@@ -115,7 +115,6 @@ function applyPromotedMenuDefaultsToChild(child, promotedMenu) {
 export function useProjectStore() {
   const [project, setProjectRaw] = useState(DEFAULT_PROJECT);
   const [selectedId, setSelectedId] = useState('root');
-  const [activeTab, setActiveTab] = useState('edit');
   const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
   const redoRef = useRef([]);
@@ -167,7 +166,6 @@ export function useProjectStore() {
     setProjectRaw(DEFAULT_PROJECT);
     setSelectedId('root');
     setSavePath(null);
-    setActiveTab('edit');
     setMediaTagsRaw({});
   }, []);
 
@@ -246,7 +244,6 @@ export function useProjectStore() {
       }
       return updateProjectRootEntries({ ...p, projectType: type }, p.rootEntries ?? []);
     });
-    setActiveTab('edit');
     logger.info(`project:set-type type=${type}`);
   }, [setProject]);
 
@@ -488,7 +485,6 @@ export function useProjectStore() {
     project, setProject, loadProject, resetProject, syncProjectWithoutHistory,
     savePath, setSavePath,
     selectedId, setSelectedId,
-    activeTab, setActiveTab,
     canUndo, undo, canRedo, redo,
     setProjectType, updateStoryAudio,
     updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption,
