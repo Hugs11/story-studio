@@ -70,14 +70,11 @@ export function OptionsTab({
   keyboardShortcuts,
   onUpdateKeyboardShortcuts,
   onBackToHome,
-  showCentralDiagram,
-  onShowCentralDiagramChange,
   verboseLogging = false,
   onVerboseLoggingChange = null,
   onCopyLogPath = null,
   onResolveLogPath = null,
   project = null,
-  savePath = null,
   asModal = false,
   onClose = null,
 }) {
@@ -485,13 +482,6 @@ export function OptionsTab({
             <Button onClick={() => setShortcutsOpen(true)}>
               Modifier
             </Button>
-          </div>
-          <div className="opts-row">
-            <div className="opts-row-info">
-              <div className="opts-row-label">Diagramme condensé dans le panneau central</div>
-              <div className="opts-row-sub">Affiche la structure du pack sous le formulaire d'édition (désactivé par défaut)</div>
-            </div>
-            <Toggle on={!!showCentralDiagram} onChange={onShowCentralDiagramChange} />
           </div>
         </section>
 
