@@ -196,13 +196,12 @@ export function WorkspaceView({
       onPreview={handleSimulateNode}
       onSimulateZip={handleSimulateZip}
       onSimulateRoot={handleSimulateRoot}
-      resetSignal={variant}
     />
   );
 
   const renderDiagramResizeHandle = () => (
     <div
-      className="resize-handle resize-handle--diagram"
+      className="resize-handle"
       onMouseDown={(event) => startResize(
         event,
         '.workspace-diagram-column',
@@ -219,7 +218,7 @@ export function WorkspaceView({
 
   const renderSettingsResizeHandle = () => (
     <div
-      className="resize-handle resize-handle--settings"
+      className="resize-handle"
       onMouseDown={(event) => startResize(
         event,
         '.workspace-settings-slot',
@@ -262,7 +261,6 @@ export function WorkspaceView({
   const isFull = state === DIAGRAM_VIEW_STATES.FULL;
   const workspaceClass = [
     'workspace',
-    state === DIAGRAM_VIEW_STATES.CLOSED ? 'workspace--diagram-closed' : '',
     isColumn ? 'workspace--diagram-column' : '',
     isFull ? 'workspace--diagram-full' : '',
   ].filter(Boolean).join(' ');

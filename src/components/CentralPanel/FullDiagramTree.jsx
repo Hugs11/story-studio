@@ -39,7 +39,6 @@ export function CompleteDiagramTree({
   controlsHost = null,
   showActionsBar = false,
   showHint = false,
-  resetSignal = null,
 }) {
   const {
     onSelect,
@@ -276,10 +275,6 @@ export function CompleteDiagramTree({
   useEffect(() => {
     resetInitialCenter();
   }, [project, focusMode, collapsedIds, resetInitialCenter]);
-
-  useEffect(() => {
-    resetInitialCenter();
-  }, [resetInitialCenter, resetSignal]);
 
   useLayoutEffect(() => {
     centerInitialViewport(layout);
