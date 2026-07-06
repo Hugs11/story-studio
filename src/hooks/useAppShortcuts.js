@@ -79,14 +79,14 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
       if (actionId === 'tabEdit') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
-        actions.setActiveTab?.('edit');
+        actions.closeDiagram?.();
         return;
       }
 
       if (actionId === 'tabDiagram') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
-        actions.setActiveTab?.('diagram');
+        actions.toggleDiagram?.();
         return;
       }
 
@@ -106,7 +106,7 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
 
       if (actionId === 'treeSearch') {
         stopShortcut();
-        if (!actions.projectActionsVisible || actions.activeTab !== 'edit') return;
+        if (!actions.projectActionsVisible || !actions.treeSearchVisible) return;
         actions.focusTreeSearch?.();
         return;
       }

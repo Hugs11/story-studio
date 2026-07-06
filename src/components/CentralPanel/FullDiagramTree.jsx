@@ -34,9 +34,12 @@ export function CompleteDiagramTree({
   selectedIds,
   onSelectionChange,
   onPreview,
-  onInspect,
   onSimulateZip,
   onSimulateRoot,
+  controlsHost = null,
+  showActionsBar = false,
+  showHint = false,
+  resetSignal = null,
 }) {
   const {
     onSelect,
@@ -274,6 +277,10 @@ export function CompleteDiagramTree({
     resetInitialCenter();
   }, [project, focusMode, collapsedIds, resetInitialCenter]);
 
+  useEffect(() => {
+    resetInitialCenter();
+  }, [resetInitialCenter, resetSignal]);
+
   useLayoutEffect(() => {
     centerInitialViewport(layout);
   }, [centerInitialViewport, layout]);
@@ -415,15 +422,29 @@ export function CompleteDiagramTree({
     });
   }
 
+  const viewControls = (
+    <DiagramViewToggles
+      showReturns={showReturns}
+      onShowReturnsChange={handleShowReturnsChange}
+      focusMode={focusMode}
+      onFocusModeToggle={() => setFocusMode((current) => !current)}
+      hasCollapsedNodes={collapsedIds.size > 0}
+      onOpenAll={() => setCollapsedIds(new Set())}
+    />
+  );
+
   return (
     <div className="fd-complete-shell">
+      {controlsHost ? createPortal(viewControls, controlsHost) : null}
       <div
         ref={containerRef}
         className={`fd-complete-stage ${isPanning ? 'is-panning' : ''}`}
         {...stagePointerHandlers}
       >
+        {showActionsBar ? (
         <div className="fd-complete-topbar">
           <StructureActionsBar
+            variant="floating"
             targetMenuId={structureActionTargetMenuId}
             onAddStory={onAddStoryToMenu}
             onAddFolder={onAddMenu}
@@ -436,15 +457,8 @@ export function CompleteDiagramTree({
             onLaunchSimulator={onSimulateRoot}
             showLabel
           />
-          <DiagramViewToggles
-            showReturns={showReturns}
-            onShowReturnsChange={handleShowReturnsChange}
-            focusMode={focusMode}
-            onFocusModeToggle={() => setFocusMode((current) => !current)}
-            hasCollapsedNodes={collapsedIds.size > 0}
-            onOpenAll={() => setCollapsedIds(new Set())}
-          />
         </div>
+        ) : null}
         <DiagramZoomControls
           zoomValueRef={zoomValueRef}
           zoom={zoomRef.current}
@@ -568,7 +582,6 @@ export function CompleteDiagramTree({
                   onSelectionChange={onSelectionChange}
                   onContextMenu={handleContextMenu}
                   onPreview={onPreview}
-                  onInspect={onInspect}
                   onDragPointerDown={handleDragPointerDown}
                   onToggleCollapse={toggleCollapse}
                   viewportRootRef={containerRef}
@@ -601,6 +614,11 @@ export function CompleteDiagramTree({
             style={{ left: navigationTooltip.left, top: navigationTooltip.top }}
           >
             {navigationTooltip.text}
+          </div>
+        ) : null}
+        {showHint ? (
+          <div className="fd-diagram-hint">
+            Clique un nœud pour ouvrir ses réglages à gauche
           </div>
         ) : null}
       </div>

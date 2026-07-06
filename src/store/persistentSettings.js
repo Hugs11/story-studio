@@ -34,8 +34,12 @@ export const KEYS = Object.freeze({
   SD_RESULTS: 'sdJobResults',
   MEDIA_METADATA_PREFIX: 'ss-meta-v2:',
   AUDIO_ASSEMBLY_OPTIONS: 'audio-assembly-opts',
-  FLOW_DIAGRAM_AUTO_OPEN_SETTINGS: 'fd_auto_open_settings',
-  FLOW_DIAGRAM_INSPECTOR_WIDTH: 'fd_inspector_width',
+  DIAGRAM_VIEW_STATE: 'diagramViewState',
+  DIAGRAM_LAST_OPEN_STATE: 'diagramLastOpenState',
+  DIAGRAM_PLEIN_LEFT_SLOT: 'diagramPleinLeftSlot',
+  DIAGRAM_COLUMN_WIDTH: 'diagramColumnWidth',
+  SETTINGS_SLOT_WIDTH: 'diagramSettingsSlotWidth',
+  TREE_PANEL_WIDTH: 'treePanelWidth',
   FLOW_DIAGRAM_SHOW_RETURNS: 'fd_show_returns',
   TREE_SHOW_DEFAULT_NAVIGATION_BADGES: 'tree_show_default_navigation_badges',
   TREE_SHOW_GUIDES: 'tree_show_guides',
@@ -81,6 +85,8 @@ export function remove(key) {
 // avant le montage de l'app.
 export function runSettingsMigrations() {
   remove('showCentralDiagram');
+  remove('fd_auto_open_settings');
+  remove('fd_inspector_width');
 
   // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
   // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,

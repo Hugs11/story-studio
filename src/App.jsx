@@ -77,6 +77,7 @@ import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
 import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
+import { useDiagramViewState, DIAGRAM_LEFT_SLOTS, DIAGRAM_VIEW_STATES } from './workspace/useDiagramViewState';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
@@ -84,13 +85,13 @@ import { bumpPackVersion } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import { generateUuid } from './utils/uuid';
 import { basename } from './utils/fileUtils';
+import { END_NODE_ID } from './components/CentralPanel/flowDiagramLayout';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
 
-const EditorTab = lazy(() => import('./tabs/EditorTab').then((module) => ({ default: module.EditorTab })));
-const DiagramTab = lazy(() => import('./tabs/DiagramTab').then((module) => ({ default: module.DiagramTab })));
+const WorkspaceView = lazy(() => import('./workspace/WorkspaceView').then((module) => ({ default: module.WorkspaceView })));
 const OptionsTab = lazy(() => import('./tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
 const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
 const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
@@ -218,6 +219,7 @@ function AppContent() {
   const [sdGenerateContext, setSdGenerateContext] = useState(null);
   const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
   const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
+  const diagramView = useDiagramViewState();
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [packOptionsOpen, setPackOptionsOpen] = useState(false);
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
@@ -267,7 +269,6 @@ function AppContent() {
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
   const [validationOpen, setValidationOpen] = useState(false);
-  const [diagramInspectRequest, setDiagramInspectRequest] = useState(null);
   const [dismissedMissingMediaSignature, setDismissedMissingMediaSignature] = useState('');
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
@@ -1131,13 +1132,6 @@ function AppContent() {
     projectIndex,
   });
 
-  const allStories = useMemo(
-    () => projectIndex.flatEntries
-      .filter((e) => e.type === 'story' || e.type === 'zip')
-      .map((e) => ({ id: e.id, name: e.entry.name, type: e.type })),
-    [projectIndex],
-  );
-
   const { projectType } = store.project;
   const missingMedia = useMemo(
     () => collectMissingMedia(store.project, pathAudit),
@@ -1156,12 +1150,30 @@ function AppContent() {
   const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
   const totalIssues = errors + warnings;
 
-  const statusText = projectType === null ? 'Choisis un type de projet' : '';
+  const selectedStatusName = useMemo(() => {
+    if (projectType === null) return null;
+    if (store.selectedId === END_NODE_ID) return store.project.endNodeName || 'Message de fin';
+    if (store.selectedId === 'root') {
+      return projectType === 'simple'
+        ? (store.project.projectName || 'Mon histoire')
+        : (store.project.rootName || store.project.projectName || 'Menu racine');
+    }
+    const entry = projectIndex.entryById.get(store.selectedId);
+    return entry?.name || '(sans nom)';
+  }, [projectIndex, projectType, store.project, store.selectedId]);
+  const diagramStatusLabel = diagramView.state === DIAGRAM_VIEW_STATES.FULL
+    ? 'diagramme plein écran'
+    : diagramView.state === DIAGRAM_VIEW_STATES.COLUMN
+      ? 'vue combinée'
+      : 'vue éditeur';
+  const statusText = projectType === null
+    ? 'Choisis un type de projet'
+    : `Sélection : ${selectedStatusName} — ${diagramStatusLabel}`;
   const projectDirty = savedSnapshotRef.current === null
     ? isProjectDirty(store.project)
     : JSON.stringify(store.project) !== savedSnapshotRef.current;
   const titleBarName = store.project.projectName?.trim() || null;
-  const canImportStories = (store.activeTab === 'edit' || store.activeTab === 'diagram') && store.project.projectType === 'pack';
+  const canImportStories = store.project.projectType === 'pack';
   const canAddFolder = canImportStories;
   const canRecord = canImportStories;
   const canGenerateStoryTts = canImportStories && isTtsAvailable(xttsSettings);
@@ -1207,14 +1219,15 @@ function AppContent() {
     addFolder: () => store.addMenu(),
     openPackOptions: () => setPackOptionsOpen(true),
     openPreferences: () => setPrefsModalOpen(true),
-    setActiveTab: store.setActiveTab,
+    closeDiagram: diagramView.closeDiagram,
+    toggleDiagram: diagramView.toggleDiagram,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
     toggleValidation: () => setValidationOpen((open) => !open),
     undo: store.undo,
     redo: store.redo,
     projectActionsVisible: projectType !== null,
-    activeTab: store.activeTab,
+    treeSearchVisible: diagramView.treeVisible,
     canImportStories,
     canAddFolder,
     canGenerate,
@@ -1223,7 +1236,7 @@ function AppContent() {
     hasValidationErrors: totalIssues > 0,
   });
 
-  // Actions projet partagées entre les surfaces d'édition (EditorTab, DiagramTab),
+  // Actions projet partagées entre les surfaces d'édition (arbre, réglages, diagramme),
   // consommées via useProjectActions. Noms canoniques : onImportStories = sélecteur
   // de fichiers vers la racine ; onAddStoryToMenu = sélecteur vers un menu cible.
   const projectActions = {
@@ -1349,8 +1362,8 @@ function AppContent() {
           onOpenProject={handleLoad}
           onSaveProject={handleSave}
           onSaveProjectAs={handleSaveProjectAs}
-          activeTab={store.activeTab}
-          onActiveTabChange={store.setActiveTab}
+          diagramOpen={diagramView.diagramOpen}
+          onToggleDiagram={diagramView.toggleDiagram}
           packOptionsOpen={packOptionsOpen}
           onPackOptionsOpenChange={setPackOptionsOpen}
           projectType={store.project.projectType}
@@ -1365,19 +1378,17 @@ function AppContent() {
           onSelectIssue={(id) => {
             if (!id) return;
             store.setSelectedId(id);
-            if (store.activeTab === 'diagram') {
-              setDiagramInspectRequest({ id, nonce: Date.now() });
-              return;
+            if (diagramView.state === DIAGRAM_VIEW_STATES.FULL) {
+              diagramView.forceLeftSlot(DIAGRAM_LEFT_SLOTS.SETTINGS);
             }
-            store.setActiveTab('edit');
           }}
         />
       )}
 
       <div className="chrome-shell">
         <div className="chrome-content">
-          {store.activeTab === 'edit' && renderDeferred(
-            <EditorTab
+          {renderDeferred(
+            <WorkspaceView
               project={store.project}
               node={selectedNode}
               selectedId={store.selectedId}
@@ -1402,17 +1413,7 @@ function AppContent() {
               projectIndex={projectIndex}
               treeSearchFocusTrigger={treeSearchFocusTrigger}
               onFocusTreeSearch={() => setTreeSearchFocusTrigger((n) => n + 1)}
-            />,
-          )}
-          {store.activeTab === 'diagram' && renderDeferred(
-            <DiagramTab
-              project={store.project}
-              projectType={projectType}
-              projectIndex={projectIndex}
-              allMenus={allMenus}
-              allStories={allStories}
-              selectedId={store.selectedId}
-              inspectRequest={diagramInspectRequest}
+              diagramView={diagramView}
             />,
           )}
           {projectType !== null && bottomPanelOpen && (
@@ -1438,7 +1439,12 @@ function AppContent() {
               onRemoveAudioJob={xttsStore.removeJob}
               getAudioUsage={getAudioJobUsage}
               getImageUsage={getImageJobUsage}
-              onSelectNode={(id) => { store.setActiveTab('edit'); store.setSelectedId(id); }}
+              onSelectNode={(id) => {
+                store.setSelectedId(id);
+                if (diagramView.state === DIAGRAM_VIEW_STATES.FULL) {
+                  diagramView.forceLeftSlot(DIAGRAM_LEFT_SLOTS.SETTINGS);
+                }
+              }}
               renderQueue={renderQueue}
               mediaTags={store.mediaTags}
               onAddMediaTag={store.addMediaTag}

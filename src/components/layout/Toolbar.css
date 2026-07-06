@@ -24,10 +24,6 @@
 
 .chrome-toolbar-center {
   justify-content: center;
-  padding: 3px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--bg2) 54%, transparent);
 }
 
 .chrome-toolbar-right {
@@ -142,25 +138,23 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='tab-edit'],
-.chrome-toolbar-btn[data-toolbar-id='tab-diagram'] {
-  min-width: 96px;
-  border-color: transparent;
-  background: transparent;
+.chrome-toolbar-btn[data-toolbar-id='diagram-toggle'] {
+  min-width: 116px;
+  color: var(--control-text-muted);
+  border-color: var(--control-border);
+  background: color-mix(in srgb, var(--bg2) 70%, transparent);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='tab-edit']:hover:not(:disabled),
-.chrome-toolbar-btn[data-toolbar-id='tab-diagram']:hover:not(:disabled) {
-  color: var(--text);
-  border-color: transparent;
-  background: transparent;
+.chrome-toolbar-btn[data-toolbar-id='diagram-toggle']:hover:not(:disabled),
+.chrome-toolbar-btn[data-toolbar-id='diagram-toggle'].is-active {
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='tab-edit'].is-active,
-.chrome-toolbar-btn[data-toolbar-id='tab-diagram'].is-active {
-  color: var(--text);
-  border-color: var(--borderLt);
-  background: var(--bg3);
+.chrome-toolbar-btn[data-toolbar-id='diagram-toggle']:focus-visible {
+  outline-color: var(--accent-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .chrome-pack-options-caret {
@@ -270,9 +264,8 @@
 }
 
 @media (max-width: 1360px) {
-  .chrome-toolbar-btn[data-toolbar-id='tab-edit'],
-  .chrome-toolbar-btn[data-toolbar-id='tab-diagram'] {
-    min-width: 84px;
+  .chrome-toolbar-btn[data-toolbar-id='diagram-toggle'] {
+    min-width: 98px;
   }
 }
 
