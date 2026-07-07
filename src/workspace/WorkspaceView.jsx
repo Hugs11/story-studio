@@ -137,6 +137,7 @@ export function WorkspaceView({
       project={project}
       projectType={projectType}
       selectedId={selectedId}
+      selectedIds={selectedIds}
       projectIndex={projectIndex}
       pathAudit={pathAudit}
       validationIssues={validationIssues}

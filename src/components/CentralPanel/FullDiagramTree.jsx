@@ -72,8 +72,6 @@ export function CompleteDiagramTree({
   const [navigationTooltip, setNavigationTooltip] = useState(null);
   const [focusMode, setFocusMode] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
-  const selectedIdsRef = useRef(selectedIds);
-  const onSelectionChangeRef = useRef(onSelectionChange);
   const activeNavigationEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
 
@@ -93,13 +91,14 @@ export function CompleteDiagramTree({
     write(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, checked ? 'true' : 'false');
   }, []);
 
+  // Le pan du fond sert a naviguer dans le canvas, pas a changer le modele de
+  // selection : on conserve la selection globale (l'arbre controle refleterait
+  // sinon un etat vide incoherent avec `selectedId`). On ne nettoie que le survol
+  // d'aretes de navigation.
   const handleStagePanStart = useCallback(() => {
     setHoveredNavigationEdgeId(null);
     setPinnedNavigationEdgeId(null);
     setNavigationTooltip(null);
-    if (selectedIdsRef.current?.size) {
-      onSelectionChangeRef.current?.(new Set());
-    }
   }, []);
 
   const {
@@ -117,8 +116,6 @@ export function CompleteDiagramTree({
     stagePointerHandlers,
   } = useDiagramViewport({ onStagePanStart: handleStagePanStart });
 
-  selectedIdsRef.current = selectedIds;
-  onSelectionChangeRef.current = onSelectionChange;
   const visibleProject = useMemo(
     () => (focusMode ? buildFocusProject(project, selectedId, END_NODE_ID, projectIndex) : project),
     [focusMode, project, projectIndex, selectedId],

@@ -38,6 +38,7 @@ export function StructurePanel({
   project,
   projectType,
   selectedId,
+  selectedIds,
   projectIndex,
   pathAudit,
   validationIssues,
@@ -135,6 +136,7 @@ export function StructurePanel({
         showNavigationBadges={showNavigationBadges}
         showTreeGuides={showTreeGuides}
         selectedId={selectedId}
+        selectedIds={selectedIds}
         onSelect={onSelect}
         onSelectionChange={onSelectionChange}
         onReorder={onReorder}

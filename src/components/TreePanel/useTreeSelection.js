@@ -1,8 +1,10 @@
 // Hook : gere la selection multiple du TreePanel (single click, ctrl+click,
-// shift+click range via flatNodes, END_NODE_ID, root) et la synchro avec la
-// selection externe `selectedId`. Extrait de TreePanel.jsx.
+// shift+click range via flatNodes, END_NODE_ID, root). La selection `selectedIds`
+// est CONTROLEE par l'hote (passee en prop) : le hook ne la stocke plus, il
+// calcule le prochain etat et l'emet via `onSelectionChange`. Extrait de
+// TreePanel.jsx.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { END_NODE_ID } from './treePanelConstants.js';
 
@@ -13,8 +15,10 @@ export function toggleTreeSelection({ id, selectedIds, selectedId }) {
 
   if (next.has(id)) {
     next.delete(id);
-    if (next.size === 0) next.add(id);
-    if (id === selectedId) {
+    if (next.size === 0) {
+      next.add(id);
+      nextSelectedId = id;
+    } else if (id === selectedId) {
       nextSelectedId = [...next].find((currentId) => currentId !== id) ?? 'root';
     }
   } else {
@@ -51,43 +55,40 @@ export function rangeTreeSelection({
 }
 
 export function useTreeSelection({
+  selectedIds,
   selectedId,
   onSelect,
   onSelectionChange,
   flatNodes,
   flatNodeIndexById,
 }) {
-  const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const anchorIdRef = useRef(selectedId);
-  const skipSyncRef = useRef(false);
-  const prevSelectedIdRef = useRef(selectedId);
+  // Miroir ref de la selection controlee : lu par l'effet de recalage d'ancre
+  // sans devoir en dependre (motif state+ref du projet).
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
 
   const callOnSelect = useCallback((id) => {
-    skipSyncRef.current = true;
     onSelect(id);
   }, [onSelect]);
 
+  // L'hote est la source de verite de `selectedIds` ; le hook ne resynchronise
+  // plus. On garde seulement l'ancre du shift-range coherente : si une selection
+  // venue de l'exterieur (diagramme, simulateur, pastille...) ne contient plus
+  // l'ancre courante, on la recale sur l'element actif.
   useEffect(() => {
-    if (selectedId !== prevSelectedIdRef.current) {
-      prevSelectedIdRef.current = selectedId;
-      if (skipSyncRef.current) {
-        skipSyncRef.current = false;
-      } else {
-        setSelectedIds(new Set([selectedId]));
-        anchorIdRef.current = selectedId;
-      }
+    if (!selectedIdsRef.current.has(anchorIdRef.current)) {
+      anchorIdRef.current = selectedId;
     }
-  }, [selectedId]);
+  }, [selectedId, selectedIds]);
 
   const handleNodeSelect = useCallback((id, e) => {
     const isCtrl = e?.ctrlKey || e?.metaKey;
     const isShift = e?.shiftKey;
 
     if (id === END_NODE_ID && !isCtrl && !isShift) {
-      const single = new Set([END_NODE_ID]);
-      setSelectedIds(single);
-      onSelectionChange?.(single);
       anchorIdRef.current = END_NODE_ID;
+      onSelectionChange?.(new Set([END_NODE_ID]));
       callOnSelect(END_NODE_ID);
       return;
     }
@@ -95,7 +96,6 @@ export function useTreeSelection({
     if (isCtrl && !isShift) {
       const { next, nextSelectedId, nextAnchorId } = toggleTreeSelection({ id, selectedIds, selectedId });
       if (nextAnchorId) anchorIdRef.current = nextAnchorId;
-      setSelectedIds(next);
       onSelectionChange?.(next);
       if (nextSelectedId) callOnSelect(nextSelectedId);
     } else if (isShift && anchorIdRef.current) {
@@ -108,27 +108,21 @@ export function useTreeSelection({
         additive: isCtrl,
       });
       if (!next) {
+        anchorIdRef.current = id;
+        onSelectionChange?.(new Set([id]));
         callOnSelect(id);
-        const single = new Set([id]);
-        setSelectedIds(single);
-        onSelectionChange?.(single);
         return;
       }
-      setSelectedIds(next);
       onSelectionChange?.(next);
       callOnSelect(id);
     } else {
-      const single = new Set([id]);
-      setSelectedIds(single);
-      onSelectionChange?.(single);
       anchorIdRef.current = id;
+      onSelectionChange?.(new Set([id]));
       callOnSelect(id);
     }
   }, [callOnSelect, flatNodeIndexById, flatNodes, onSelectionChange, selectedId, selectedIds]);
 
   return {
-    selectedIds,
-    setSelectedIds,
     anchorIdRef,
     callOnSelect,
     handleNodeSelect,

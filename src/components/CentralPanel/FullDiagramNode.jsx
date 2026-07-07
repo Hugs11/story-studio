@@ -8,6 +8,7 @@ import { Tooltip } from '../common/Tooltip';
 import { Eye } from '../icons/LucideLocal';
 import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID } from './flowDiagramLayout';
+import { toggleDiagramSelection } from './diagram/diagramSelection';
 import { useZipCover } from './useZipCover.js';
 
 function DiagramNodeTypeIcon({ entry }) {
@@ -100,15 +101,9 @@ export function FullDiagramNode({
     }
 
     if (e.ctrlKey || e.metaKey || e.shiftKey) { // Shift = Ctrl dans le diagramme (pas de liste plate pour le range)
-      const next = new Set([...(selectedIds ?? [selectedId])].filter((id) => id !== END_NODE_ID));
-      if (next.has(entry.id)) {
-        next.delete(entry.id);
-        if (next.size === 0) next.add(entry.id);
-      } else {
-        next.add(entry.id);
-      }
+      const { next, nextSelectedId } = toggleDiagramSelection({ id: entry.id, selectedIds, selectedId });
       onSelectionChange?.(next);
-      onSelect?.(entry.id);
+      onSelect?.(nextSelectedId);
     } else {
       onSelectionChange?.(new Set([entry.id]));
       onSelect?.(entry.id);
@@ -130,6 +125,9 @@ export function FullDiagramNode({
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
+          // Emettre la selection avant onSelect pour reduire une eventuelle multi
+          // au seul noeud focus (l'arbre controle reflete alors le singleton).
+          onSelectionChange?.(new Set([entry.id]));
           onSelect?.(entry.id);
         }
       }}
