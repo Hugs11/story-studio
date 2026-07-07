@@ -37,9 +37,10 @@ export const SHORTCUT_DEFINITIONS = [
       { ctrl: true, key: ';', code: 'Semicolon' },
     ],
   },
-  { id: 'tabEdit',          scope: 'general', label: 'Fermer le diagramme',                defaultShortcut: { ctrl: true, key: '1', code: 'Digit1' }, aliases: [{ ctrl: true, key: '1', code: 'Numpad1' }] },
-  { id: 'tabDiagram',       scope: 'general', label: 'Ouvrir/fermer le diagramme',         defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
-  { id: 'tabOptions',       scope: 'general', label: 'Onglet options',                     defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
+  { id: 'toggleTree',       scope: 'general', label: 'Afficher/masquer l\'arbre',           defaultShortcut: { ctrl: true, key: '1', code: 'Digit1' }, aliases: [{ ctrl: true, key: '1', code: 'Numpad1' }] },
+  { id: 'toggleSettings',   scope: 'general', label: 'Afficher/masquer les réglages',       defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
+  { id: 'toggleDiagram',    scope: 'general', label: 'Afficher/masquer le diagramme',       defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
+  { id: 'tabOptions',       scope: 'general', label: 'Préférences',                         defaultShortcut: { ctrl: true, shift: true, key: 'o', code: 'KeyO' } },
   { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
   { id: 'treeSearch',       scope: 'general', label: 'Rechercher dans la structure',        defaultShortcut: { ctrl: true, key: 'f', code: 'KeyF' } },
   { id: 'toggleValidation', scope: 'general', label: 'Ouvrir les éléments à corriger',      defaultShortcut: { ctrl: true, shift: true, key: 'e', code: 'KeyE' } },
@@ -180,7 +181,7 @@ export function getShortcutLabelMap(shortcuts) {
 export function loadKeyboardShortcuts() {
   const parsed = read(KEYS.KEYBOARD_SHORTCUTS, { parse: JSON.parse });
   if (!parsed) return DEFAULT_SHORTCUTS;
-  const { shortcuts: migrated, changed } = migrateLegacyTabShortcuts(parsed);
+  const { shortcuts: migrated, changed } = migratePanelToggleShortcuts(parsed);
   if (changed) saveKeyboardShortcuts(migrated);
   return Object.fromEntries(
     EDITABLE_DEFINITIONS.map((definition) => [
@@ -190,28 +191,46 @@ export function loadKeyboardShortcuts() {
   );
 }
 
-function migrateLegacyTabShortcuts(shortcuts) {
-  const legacyTabEdit = { ctrl: true, key: '1', code: 'Digit1' };
-  const legacyTabDiagram = { ctrl: true, key: '3', code: 'Digit3' };
-  const legacyTabOptions = { ctrl: true, key: '4', code: 'Digit4' };
+// Vague 2 : le modèle « onglets » (tabEdit/tabDiagram + tabOptions sur Ctrl+3)
+// devient les 3 bascules de panneaux (toggleTree/toggleSettings/toggleDiagram sur
+// Ctrl+1/2/3) et tabOptions déménage sur Ctrl+Maj+O. Migre le blob persisté pour
+// éviter des ids morts et un conflit Ctrl+3 invisible entre tabOptions et toggleDiagram.
+function migratePanelToggleShortcuts(shortcuts) {
+  const next = { ...shortcuts };
+  let changed = false;
 
-  const isLegacySimulatorGap = shortcutEquals(shortcuts?.tabEdit, legacyTabEdit)
-    && shortcutEquals(shortcuts?.tabDiagram, legacyTabDiagram)
-    && shortcutEquals(shortcuts?.tabOptions, legacyTabOptions);
-
-  if (!isLegacySimulatorGap) {
-    return { shortcuts, changed: false };
+  // 1. Ids morts du modèle onglets.
+  for (const deadId of ['tabEdit', 'tabDiagram']) {
+    if (deadId in next) {
+      delete next[deadId];
+      changed = true;
+    }
   }
 
-  return {
-    shortcuts: {
-      ...shortcuts,
-      tabEdit: normalizeShortcut({ ctrl: true, key: '1', code: 'Digit1' }),
-      tabDiagram: normalizeShortcut({ ctrl: true, key: '2', code: 'Digit2' }),
-      tabOptions: normalizeShortcut({ ctrl: true, key: '3', code: 'Digit3' }),
-    },
-    changed: true,
-  };
+  // 2. Nouvelles bascules : créer avec leur défaut si absentes (les alias Numpad
+  //    restent gérés par findShortcutAction tant que la combinaison est le défaut).
+  for (const id of ['toggleTree', 'toggleSettings', 'toggleDiagram']) {
+    if (next[id] == null) {
+      const definition = SHORTCUT_DEFINITIONS.find((d) => d.id === id);
+      next[id] = normalizeShortcut(definition.defaultShortcut);
+      changed = true;
+    }
+  }
+
+  // 3. tabOptions déménage vers Ctrl+Maj+O UNIQUEMENT si sa valeur stockée est un
+  //    ancien défaut connu (Ctrl+3 post-vague 1, ou Ctrl+4 legacy avant la migration
+  //    simulateur). Une vraie personnalisation utilisateur est conservée.
+  const legacyOptionsDefaults = [
+    { ctrl: true, key: '3', code: 'Digit3' },
+    { ctrl: true, key: '4', code: 'Digit4' },
+  ];
+  if (next.tabOptions != null
+    && legacyOptionsDefaults.some((legacy) => shortcutEquals(next.tabOptions, legacy))) {
+    next.tabOptions = normalizeShortcut({ ctrl: true, shift: true, key: 'o', code: 'KeyO' });
+    changed = true;
+  }
+
+  return { shortcuts: next, changed };
 }
 
 export function saveKeyboardShortcuts(shortcuts) {

@@ -102,23 +102,6 @@ body {
   overflow: hidden;
 }
 
-.workspace-settings-slot {
-  flex: 0 0 var(--workspace-settings-slot-width, 404px);
-  min-width: 320px;
-  max-width: 640px;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-  background: var(--bg1);
-  border-right: 0.5px solid var(--border);
-}
-
-.workspace-settings-slot .panel-center {
-  width: 100%;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 /* Poignée de redimensionnement */
 .resize-handle {
   width: 5px;

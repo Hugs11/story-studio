@@ -2,12 +2,9 @@ import { useState } from 'react';
 import {
   Maximize2,
   Minimize2,
-  PanelLeft,
-  SlidersHorizontal,
   X,
 } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
-import { DIAGRAM_LEFT_SLOTS } from '../../workspace/useDiagramViewState';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import './FlowDiagram.css';
 
@@ -29,8 +26,6 @@ function IconButton({ label, onClick, active = false, children }) {
 
 function DiagramPanelHeader({
   variant,
-  leftSlot,
-  onLeftSlotChange,
   onMaximize,
   onMinimize,
   onClose,
@@ -40,27 +35,6 @@ function DiagramPanelHeader({
 
   return (
     <div className="fd-panel-header">
-      {isFull ? (
-        <>
-          <div className="fd-panel-left-toggles" aria-label="Panneau gauche du diagramme">
-            <IconButton
-              label="Afficher l'arbre"
-              active={leftSlot === DIAGRAM_LEFT_SLOTS.TREE}
-              onClick={() => onLeftSlotChange?.(DIAGRAM_LEFT_SLOTS.TREE)}
-            >
-              <PanelLeft aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              label="Afficher les réglages"
-              active={leftSlot === DIAGRAM_LEFT_SLOTS.SETTINGS}
-              onClick={() => onLeftSlotChange?.(DIAGRAM_LEFT_SLOTS.SETTINGS)}
-            >
-              <SlidersHorizontal aria-hidden="true" />
-            </IconButton>
-          </div>
-          <span className="fd-panel-separator" aria-hidden="true" />
-        </>
-      ) : null}
       <div className="fd-panel-title">
         {isFull ? 'Diagramme complet du pack' : 'Diagramme'}
       </div>
@@ -91,8 +65,8 @@ export function DiagramPanel({
   selectedIds,
   onSelectionChange,
   variant = 'plein',
-  leftSlot = DIAGRAM_LEFT_SLOTS.TREE,
-  onLeftSlotChange,
+  showActionsBar = false,
+  showHint = false,
   onMaximize,
   onMinimize,
   onClose,
@@ -104,15 +78,10 @@ export function DiagramPanel({
 
   if (project?.projectType !== 'pack' && project?.projectType !== 'simple') return null;
 
-  const showActionsBar = variant === 'plein' && leftSlot !== DIAGRAM_LEFT_SLOTS.TREE;
-  const showHint = variant === 'plein' && leftSlot !== DIAGRAM_LEFT_SLOTS.SETTINGS;
-
   return (
     <div className="fd-panel" data-project-type={projectType}>
       <DiagramPanelHeader
         variant={variant}
-        leftSlot={leftSlot}
-        onLeftSlotChange={onLeftSlotChange}
         onMaximize={onMaximize}
         onMinimize={onMinimize}
         onClose={onClose}

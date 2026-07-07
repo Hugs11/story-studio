@@ -77,7 +77,7 @@ import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
 import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
-import { useDiagramViewState, DIAGRAM_LEFT_SLOTS, DIAGRAM_VIEW_STATES } from './workspace/useDiagramViewState';
+import { useDiagramViewState } from './workspace/useDiagramViewState';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
@@ -1161,14 +1161,14 @@ function AppContent() {
     const entry = projectIndex.entryById.get(store.selectedId);
     return entry?.name || '(sans nom)';
   }, [projectIndex, projectType, store.project, store.selectedId]);
-  const diagramStatusLabel = diagramView.state === DIAGRAM_VIEW_STATES.FULL
-    ? 'diagramme plein écran'
-    : diagramView.state === DIAGRAM_VIEW_STATES.COLUMN
-      ? 'vue combinée'
-      : 'vue éditeur';
+  const activePanelsLabel = [
+    diagramView.showTree && 'arbre',
+    diagramView.showSettings && 'réglages',
+    diagramView.showDiagram && 'diagramme',
+  ].filter(Boolean).join(' + ');
   const statusText = projectType === null
     ? 'Choisis un type de projet'
-    : `Sélection : ${selectedStatusName} — ${diagramStatusLabel}`;
+    : `Sélection : ${selectedStatusName} — panneaux : ${activePanelsLabel}`;
   const projectDirty = savedSnapshotRef.current === null
     ? isProjectDirty(store.project)
     : JSON.stringify(store.project) !== savedSnapshotRef.current;
@@ -1219,7 +1219,8 @@ function AppContent() {
     addFolder: () => store.addMenu(),
     openPackOptions: () => setPackOptionsOpen(true),
     openPreferences: () => setPrefsModalOpen(true),
-    closeDiagram: diagramView.closeDiagram,
+    toggleTree: diagramView.toggleTree,
+    toggleSettings: diagramView.toggleSettings,
     toggleDiagram: diagramView.toggleDiagram,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
@@ -1362,7 +1363,13 @@ function AppContent() {
           onOpenProject={handleLoad}
           onSaveProject={handleSave}
           onSaveProjectAs={handleSaveProjectAs}
-          diagramOpen={diagramView.diagramOpen}
+          panels={{
+            showTree: diagramView.showTree,
+            showSettings: diagramView.showSettings,
+            showDiagram: diagramView.showDiagram,
+          }}
+          onToggleTree={diagramView.toggleTree}
+          onToggleSettings={diagramView.toggleSettings}
           onToggleDiagram={diagramView.toggleDiagram}
           packOptionsOpen={packOptionsOpen}
           onPackOptionsOpenChange={setPackOptionsOpen}
@@ -1378,9 +1385,7 @@ function AppContent() {
           onSelectIssue={(id) => {
             if (!id) return;
             store.setSelectedId(id);
-            if (diagramView.state === DIAGRAM_VIEW_STATES.FULL) {
-              diagramView.forceLeftSlot(DIAGRAM_LEFT_SLOTS.SETTINGS);
-            }
+            if (!diagramView.showSettings) diagramView.restoreSettings();
           }}
         />
       )}
@@ -1441,9 +1446,7 @@ function AppContent() {
               getImageUsage={getImageJobUsage}
               onSelectNode={(id) => {
                 store.setSelectedId(id);
-                if (diagramView.state === DIAGRAM_VIEW_STATES.FULL) {
-                  diagramView.forceLeftSlot(DIAGRAM_LEFT_SLOTS.SETTINGS);
-                }
+                if (!diagramView.showSettings) diagramView.restoreSettings();
               }}
               renderQueue={renderQueue}
               mediaTags={store.mediaTags}
