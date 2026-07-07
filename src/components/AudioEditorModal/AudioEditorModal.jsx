@@ -1,11 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { Play, Pause, Square, SkipBack, SkipForward, Scissors, RotateCcw, Crop } from '../icons/LucideLocal';
+import { RotateCcw } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { basename } from '../../utils/fileUtils';
 import {
@@ -13,29 +12,20 @@ import {
   SKIP_STEP,
   ZOOM_MIN,
   ZOOM_MAX,
-  WHEEL_ZOOM_SENSITIVITY,
   KEYBOARD_ZOOM_STEP,
   formatTime,
 } from './audioEditorConstants';
-import { markersAfterAction } from './audioEditorMarkers';
 import { createAudioEditorWaveformOptions, styleRegionHandles } from './audioEditorWaveform';
-import {
-  currentFadeValue as currentFadeValuePure,
-  fadeConfig as fadeConfigPure,
-  fadeLimit as fadeLimitPure,
-  fadeTargetFromPointer as fadeTargetFromPointerPure,
-  isFadeHandleClick,
-} from './fadeUtils';
 import { useAudioEditorShortcuts } from './useAudioEditorShortcuts';
 import { useShuttlePlayback } from './useShuttlePlayback';
+import { useWaveformViewport } from './useWaveformViewport';
+import { useStagedAudioEdit } from './useStagedAudioEdit';
+import { useFadeMenus } from './useFadeMenus';
+import { AudioEditorTransportBar } from './AudioEditorTransportBar';
+import { AudioEditorFadeOverlays } from './AudioEditorFadeOverlays';
 import './AudioEditorModal.css';
 
 export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, onCancel }) {
-  const [sourcePath, setSourcePath] = useState(filePath);
-  const [previewPath, setPreviewPath] = useState(null);
-  const audioUrl = useLocalFile(previewPath || sourcePath || filePath);
-  const [fadePopover, setFadePopover] = useState(null);
-  const [fadeContextMenu, setFadeContextMenu] = useState(null);
   const containerRef = useRef(null);
   const wsRef = useRef(null);
   const regionRef = useRef(null);
@@ -43,27 +33,12 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const isClampingRef = useRef(false);
   const trimStartRef = useRef(0);
   const trimEndRef = useRef(0);
-  const initialEditRef = useRef(null);
-  const preStagedSelectionRef = useRef(null);
-  const preStagedCutMarkersRef = useRef([]);
-  const skipNextZoomEffectRef = useRef(false);
-  const actionBasePathRef = useRef(filePath);
-  const pendingViewportRef = useRef(null);
   const auditionEndRef = useRef(null);
 
-  const [editInfo, setEditInfo] = useState(null);
-  const [stagedEdit, setStagedEdit] = useState(null);
-  const [hasChainedPreview, setHasChainedPreview] = useState(false);
-  const [cutMarkers, setCutMarkers] = useState([]);
   const [duration, setDuration] = useState(0);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
-  const [fadeInSec, setFadeInSec] = useState(0);
-  const [fadeOutSec, setFadeOutSec] = useState(0);
-  const [cutFadeSec, setCutFadeSec] = useState(0);
-  const [zoom, setZoom] = useState(80);
   const [isLoading, setIsLoading] = useState(true);
-  const [applyMode, setApplyMode] = useState(null); // 'trim' | 'cut' | 'preview' | 'restore' | null
   const [error, setError] = useState(null);
 
   const {
@@ -82,82 +57,105 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     resetReverseBuffer,
   } = useShuttlePlayback({ wsRef, durationRef });
 
-  const isApplying = applyMode !== null;
-  const isPreviewingEdit = !!previewPath;
+  const {
+    zoom,
+    setZoom,
+    getWavePointer,
+    zoomAtCurrentCursor,
+    rememberWaveViewport,
+    applyReadyViewport,
+    handleWheel,
+  } = useWaveformViewport({
+    wsRef,
+    durationRef,
+    containerRef,
+    getCurrentAudioTime,
+    clampAudioTime,
+    isLoading,
+    onError: setError,
+  });
+
+  const {
+    sourcePath,
+    previewPath,
+    discardPreviewPath,
+    editInfo,
+    stagedEdit,
+    cutMarkers,
+    fadeInSec,
+    setFadeInSec,
+    fadeOutSec,
+    setFadeOutSec,
+    cutFadeSec,
+    setCutFadeSec,
+    applyMode,
+    isApplying,
+    fadeMax,
+    outputFadeMax,
+    cutFadeMax,
+    canValidate,
+    initialEditRef,
+    undoStagedEdit,
+    regenerateFadePreview,
+    handleRestoreOriginal,
+    handleStageAction,
+    handleApply,
+  } = useStagedAudioEdit({
+    filePath,
+    savePath,
+    workspaceDir,
+    onConfirm,
+    wsRef,
+    durationRef,
+    duration,
+    trimStart,
+    trimEnd,
+    stopShuttle,
+    rememberWaveViewport,
+    setError,
+  });
+
+  const audioUrl = useLocalFile(previewPath || sourcePath || filePath);
+
+  const {
+    fadePopover,
+    fadeContextMenu,
+    currentFadeValue,
+    fadeConfig,
+    openFadePopover,
+    openContextFadePopover,
+    handleWaveformContextMenu,
+    handleWaveformClick,
+    setFadeValue,
+    handleFadePopoverOk,
+  } = useFadeMenus({
+    fadeInSec,
+    fadeOutSec,
+    cutFadeSec,
+    setFadeInSec,
+    setFadeOutSec,
+    setCutFadeSec,
+    fadeMax,
+    outputFadeMax,
+    cutFadeMax,
+    stagedEdit,
+    previewPath,
+    discardPreviewPath,
+    regenerateFadePreview,
+    stopShuttle,
+    getWavePointer,
+    durationRef,
+    regionRef,
+    trimStartRef,
+    trimEndRef,
+  });
+
   const filename = basename(filePath);
   const trimDuration = Math.max(0, trimEnd - trimStart);
   const canOperate = !isLoading && !isApplying && trimEnd > trimStart + 0.01;
   const canCut = canOperate && trimDuration < duration - 0.01;
-  const fadeMax = Math.max(0, Math.min(10, trimDuration / 2));
-  const outputFadeMax = isPreviewingEdit ? Math.max(0, Math.min(10, duration / 2)) : fadeMax;
-  const cutFadeAnchor = stagedEdit?.mode === 'cut' ? stagedEdit.startSec : trimStart;
-  const cutFadeMax = Math.max(0, Math.min(5, cutFadeAnchor));
-  const canValidate = !!stagedEdit && !isApplying;
 
   useEscapeKey(!isApplying, onCancel);
-
-  useEffect(() => {
-    let cancelled = false;
-    setSourcePath(filePath);
-    setPreviewPath(null);
-    setStagedEdit(null);
-    setEditInfo(null);
-    setHasChainedPreview(false);
-    setCutMarkers([]);
-    actionBasePathRef.current = filePath;
-    preStagedSelectionRef.current = null;
-    preStagedCutMarkersRef.current = [];
-    setFadeInSec(0);
-    setFadeOutSec(0);
-    setCutFadeSec(0);
-    initialEditRef.current = null;
-    invoke('audio_edit_info', {
-      inputPath: filePath,
-      savePath: savePath ?? null,
-      workspaceDir: workspaceDir ?? null,
-    }).then((info) => {
-      if (cancelled) return;
-      setEditInfo(info);
-      if (info?.source_path) setSourcePath(info.source_path);
-      if (info?.mode === 'cut' || info?.mode === 'trim') {
-        setStagedEdit({
-          mode: info.mode,
-          startSec: Number(info?.start_sec ?? 0),
-          endSec: Number(info?.end_sec ?? 0),
-          fadeInSec: Number(info?.fade_in_sec ?? 0),
-          fadeOutSec: Number(info?.fade_out_sec ?? 0),
-          cutFadeSec: Number(info?.cut_fade_sec ?? 0),
-        });
-      }
-      setFadeInSec(Number(info?.fade_in_sec ?? 0));
-      setFadeOutSec(Number(info?.fade_out_sec ?? 0));
-      setCutFadeSec(Number(info?.cut_fade_sec ?? 0));
-      const hasSavedSelection = Number.isFinite(Number(info?.start_sec))
-        && Number.isFinite(Number(info?.end_sec))
-        && Number(info.end_sec) > Number(info.start_sec);
-      initialEditRef.current = hasSavedSelection
-        ? {
-            start: Number(info.start_sec),
-            end: Number(info.end_sec),
-          }
-        : null;
-    }).catch(() => {
-      if (!cancelled) setSourcePath(filePath);
-    });
-    return () => { cancelled = true; };
-  }, [filePath, savePath]);
-
-  useEffect(() => {
-    if (!fadePopover && !fadeContextMenu) return undefined;
-    function handlePointerDown(e) {
-      if (e.target.closest?.('.audio-editor-fade-popover')) return;
-      if (e.target.closest?.('.audio-editor-fade-context-menu')) return;
-      setFadePopover(null);
-      setFadeContextMenu(null);
-    }
-    window.addEventListener('pointerdown', handlePointerDown);
-    return () => window.removeEventListener('pointerdown', handlePointerDown);
-  }, [fadePopover, fadeContextMenu]);
 
   // reason: ces 5 deps changent en pratique TOUJOURS EN GROUPE -- chaque
   // mutation de stagedEdit / cutMarkers / previewPath passe par
@@ -196,25 +194,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       durationRef.current = dur;
       setDuration(dur);
 
-      const containerWidth = containerRef.current?.clientWidth ?? 600;
-      const fitZoom = Math.max(1, Math.min(200, Math.floor(containerWidth / dur)));
-      const pendingViewport = pendingViewportRef.current;
-      pendingViewportRef.current = null;
-      const initialZoom = pendingViewport?.zoom ?? fitZoom;
-      if (pendingViewport) skipNextZoomEffectRef.current = true;
-      setZoom(initialZoom);
-      applyWaveZoom(initialZoom, ws);
-      restoreWaveViewport(ws, pendingViewport, initialZoom, containerWidth);
-      if (pendingViewport) {
-        requestAnimationFrame(() => {
-          if (!mounted || wsRef.current !== ws) return;
-          restoreWaveViewport(ws, pendingViewport, initialZoom, containerWidth);
-        });
-        window.setTimeout(() => {
-          if (!mounted || wsRef.current !== ws) return;
-          restoreWaveViewport(ws, pendingViewport, initialZoom, containerWidth);
-        }, 40);
-      }
+      applyReadyViewport(ws, dur, () => mounted && wsRef.current === ws);
 
       if (showingStagedPreview) {
         trimStartRef.current = 0;
@@ -380,17 +360,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       setTrimEnd(parseFloat(end.toFixed(3)));
     });
 
-    function handleWheel(e) {
-      if (!e.ctrlKey) return;
-      e.preventDefault();
-      const pointer = getWavePointer(e);
-      setZoom((z) => {
-        const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z - e.deltaY * WHEEL_ZOOM_SENSITIVITY));
-        skipNextZoomEffectRef.current = true;
-        zoomAtPointer(next, pointer);
-        return next;
-      });
-    }
     containerRef.current?.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
@@ -403,14 +372,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       regionRef.current = null;
     };
   }, [audioUrl, sourcePath, previewPath, stagedEdit, cutMarkers]);
-
-  useEffect(() => {
-    if (skipNextZoomEffectRef.current) {
-      skipNextZoomEffectRef.current = false;
-      return;
-    }
-    if (!isLoading) applyWaveZoom(zoom);
-  }, [zoom, isLoading]);
 
   useAudioEditorShortcuts({
     isLoading,
@@ -518,383 +479,6 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setWaveTime(trimEndRef.current);
   }
 
-  function getWavePointer(e) {
-    const ws = wsRef.current;
-    const wrapper = ws?.getWrapper?.();
-    const scroller = wrapper?.parentElement;
-    const fallback = containerRef.current;
-    const rect = (scroller ?? wrapper ?? fallback)?.getBoundingClientRect?.();
-    const dur = durationRef.current || 0;
-    if (!rect || !dur) return null;
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const scroll = ws?.getScroll?.() ?? scroller?.scrollLeft ?? 0;
-    const totalWidth = wrapper?.scrollWidth || wrapper?.clientWidth || rect.width;
-    const pxPerSec = totalWidth / dur;
-    if (!Number.isFinite(pxPerSec) || pxPerSec <= 0) return null;
-    return {
-      x,
-      time: Math.max(0, Math.min((scroll + x) / pxPerSec, dur)),
-      pxPerSec,
-      scroller,
-      clientWidth: scroller?.clientWidth ?? rect.width,
-    };
-  }
-
-  function applyWaveZoom(nextZoom, instance = wsRef.current) {
-    if (!instance) return false;
-    try {
-      if ((instance.getDuration?.() ?? 0) <= 0) return false;
-      instance.zoom(nextZoom);
-      return true;
-    } catch (err) {
-      if (!String(err).includes('No audio loaded')) {
-        setError(String(err));
-      }
-      return false;
-    }
-  }
-
-  function zoomAtPointer(nextZoom, pointer) {
-    const ws = wsRef.current;
-    if (!ws) return;
-    if (!applyWaveZoom(nextZoom, ws)) return;
-    if (!pointer) return;
-    const dur = durationRef.current || 0;
-    const clientWidth = pointer.clientWidth || pointer.scroller?.clientWidth || 0;
-    if (!dur || !clientWidth) return;
-    if (nextZoom * dur <= clientWidth) {
-      ws.setScroll?.(0);
-      if (pointer.scroller) pointer.scroller.scrollLeft = 0;
-      return;
-    }
-    const nextScroll = Math.max(0, pointer.time * nextZoom - pointer.x);
-    ws.setScroll?.(nextScroll);
-    if (pointer.scroller) pointer.scroller.scrollLeft = nextScroll;
-  }
-
-  function getCursorZoomAnchor() {
-    const ws = wsRef.current;
-    const wrapper = ws?.getWrapper?.();
-    const scroller = wrapper?.parentElement;
-    const dur = durationRef.current || 0;
-    const current = getCurrentAudioTime();
-    const width = scroller?.clientWidth ?? containerRef.current?.clientWidth ?? 0;
-    if (!ws || !wrapper || !dur || !width) return null;
-    const totalWidth = wrapper.scrollWidth || wrapper.clientWidth || width;
-    const pxPerSec = totalWidth / dur;
-    const scroll = ws.getScroll?.() ?? scroller?.scrollLeft ?? 0;
-    const x = Math.max(0, Math.min(current * pxPerSec - scroll, width));
-    return {
-      x,
-      time: current,
-      pxPerSec,
-      scroller,
-      clientWidth: width,
-    };
-  }
-
-  function rememberWaveViewport() {
-    const ws = wsRef.current;
-    const wrapper = ws?.getWrapper?.();
-    const scroller = wrapper?.parentElement;
-    const dur = durationRef.current || 0;
-    const width = scroller?.clientWidth ?? containerRef.current?.clientWidth ?? 0;
-    if (!ws || !wrapper || !dur || !width) return;
-    const totalWidth = wrapper.scrollWidth || wrapper.clientWidth || width;
-    const pxPerSec = totalWidth / dur;
-    const scroll = ws.getScroll?.() ?? scroller?.scrollLeft ?? 0;
-    const x = width / 2;
-    const actualZoom = Number.isFinite(pxPerSec) && pxPerSec > 0 ? pxPerSec : zoom;
-    pendingViewportRef.current = {
-      zoom: Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, actualZoom)),
-      x,
-      time: clampAudioTime((scroll + x) / pxPerSec),
-    };
-  }
-
-  function restoreWaveViewport(instance, viewport, fallbackZoom, fallbackWidth = 0) {
-    if (!instance || !viewport || !Number.isFinite(viewport.time)) return;
-    const nextZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Number(viewport.zoom ?? fallbackZoom)));
-    if (!applyWaveZoom(nextZoom, instance)) return;
-
-    const wrapper = instance.getWrapper?.();
-    const scroller = wrapper?.parentElement;
-    const dur = durationRef.current || instance.getDuration?.() || 0;
-    const width = scroller?.clientWidth ?? fallbackWidth ?? containerRef.current?.clientWidth ?? 0;
-    if (!wrapper || !dur || !width) return;
-
-    const totalWidth = Math.max(wrapper.scrollWidth || 0, wrapper.clientWidth || 0, nextZoom * dur);
-    const maxScroll = Math.max(0, totalWidth - width);
-    const anchorX = Math.max(0, Math.min(Number(viewport.x ?? width / 2), width));
-    const nextScroll = Math.max(0, Math.min(maxScroll, viewport.time * nextZoom - anchorX));
-
-    instance.setScroll?.(nextScroll);
-    if (scroller) scroller.scrollLeft = nextScroll;
-  }
-
-  function zoomAtCurrentCursor(delta) {
-    setZoom((z) => {
-      const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z + delta));
-      skipNextZoomEffectRef.current = true;
-      zoomAtPointer(next, getCursorZoomAnchor());
-      return next;
-    });
-  }
-
-  function undoStagedEdit() {
-    wsRef.current?.stop();
-    const previousSelection = preStagedSelectionRef.current;
-    initialEditRef.current = previousSelection
-      ? {
-          start: previousSelection.start,
-          end: previousSelection.end,
-        }
-      : null;
-    setPreviewPath(null);
-    setStagedEdit(null);
-    setHasChainedPreview(false);
-    setCutMarkers(preStagedCutMarkersRef.current ?? []);
-    actionBasePathRef.current = filePath;
-    setApplyMode(null);
-    setError(null);
-  }
-
-  function openFadePopover(target, e) {
-    e.preventDefault();
-    e.stopPropagation();
-    setFadeContextMenu(null);
-    const value = target === 'in' ? fadeInSec : target === 'out' ? fadeOutSec : cutFadeSec;
-    setFadePopover({
-      target,
-      x: e.clientX,
-      y: e.clientY,
-      value,
-    });
-  }
-
-  function openContextFadePopover(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    const target = fadeContextMenu?.target ?? 'cut';
-    const limit = fadeLimit(target);
-    const current = currentFadeValue(target);
-    const defaultValue = limit > 0 ? Math.min(1, limit) : 0;
-    const nextValue = current > 0 ? Math.min(current, limit) : defaultValue;
-    const x = fadeContextMenu?.x ?? e.clientX;
-    const y = fadeContextMenu?.y ?? e.clientY;
-    setFadeValue(target, nextValue);
-    setFadeContextMenu(null);
-    setFadePopover({
-      target,
-      x,
-      y,
-      value: nextValue,
-    });
-  }
-
-  function handleWaveformContextMenu(e) {
-    const target = fadeTargetFromPointer(e);
-    if (!target) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setFadePopover(null);
-    setFadeContextMenu({
-      target,
-      x: e.clientX,
-      y: e.clientY,
-    });
-  }
-
-  function handleWaveformClick(e) {
-    if (e.button !== 0) return;
-    if (!isFadeHandleClick(e)) return;
-    const target = fadeTargetFromPointer(e, { existingOnly: true });
-    if (!target) return;
-    openFadePopover(target, e);
-  }
-
-  const currentFadeValue = (target) => currentFadeValuePure(target, { fadeInSec, fadeOutSec, cutFadeSec });
-  const fadeLimit = (target) => fadeLimitPure(target, { outputFadeMax, cutFadeMax });
-  const fadeConfig = (target) => fadeConfigPure(target, { fadeInSec, fadeOutSec, cutFadeSec, outputFadeMax, cutFadeMax });
-
-  function fadeTargetFromPointer(e, options = {}) {
-    return fadeTargetFromPointerPure(
-      getWavePointer(e),
-      {
-        durationRef, regionRef, previewPath, stagedEdit,
-        fadeInSec, fadeOutSec, cutFadeSec,
-        outputFadeMax, cutFadeMax, fadeMax,
-        trimStartRef, trimEndRef,
-      },
-      options,
-    );
-  }
-
-  function setFadeValue(target, value) {
-    const next = Number(value);
-    const clamped = Math.min(next, fadeLimit(target));
-    if (target === 'in') setFadeInSec(clamped);
-    if (target === 'out') setFadeOutSec(clamped);
-    if (target === 'cut') setCutFadeSec(clamped);
-    setFadePopover((popover) => popover ? { ...popover, value: clamped } : popover);
-    if (!stagedEdit) {
-      setPreviewPath(null);
-    }
-  }
-
-  async function handleFadePopoverOk() {
-    stopShuttle();
-    const target = fadePopover?.target;
-    setFadePopover(null);
-    await regenerateFadePreview({}, target);
-  }
-
-  async function regenerateFadePreview(overrides = {}, target = null) {
-    const fullDuration = durationRef.current || duration;
-    if (!fullDuration || fullDuration <= 0) return;
-    const edit = {
-      ...(stagedEdit ?? {
-        mode: 'trim',
-        startSec: 0,
-        endSec: fullDuration,
-        cutFadeSec: 0,
-      }),
-      fadeInSec: Math.min(overrides.fadeInSec ?? fadeInSec, outputFadeMax),
-      fadeOutSec: Math.min(overrides.fadeOutSec ?? fadeOutSec, outputFadeMax),
-      cutFadeSec: Math.min(overrides.cutFadeSec ?? cutFadeSec, cutFadeMax),
-    };
-    rememberWaveViewport();
-    setApplyMode('preview');
-    setError(null);
-    try {
-      const sourcePathForPreview = actionBasePathRef.current || filePath;
-      const path = await invoke('preview_audio_edit', {
-        inputPath: sourcePathForPreview,
-        mode: edit.mode,
-        startSec: edit.startSec,
-        endSec: edit.endSec,
-        savePath: savePath ?? null,
-        workspaceDir: workspaceDir ?? null,
-        fadeInSec: edit.fadeInSec,
-        fadeOutSec: edit.fadeOutSec,
-        cutFadeSec: edit.cutFadeSec,
-      });
-      if (target === 'cut') {
-        setCutMarkers(markersAfterAction(
-          preStagedCutMarkersRef.current ?? [],
-          edit.mode,
-          edit.startSec,
-          edit.endSec,
-          durationRef.current,
-          edit.cutFadeSec,
-        ));
-      } else if (!stagedEdit) {
-        actionBasePathRef.current = sourcePathForPreview;
-        setCutMarkers([]);
-      }
-      setStagedEdit(edit);
-      setPreviewPath(path);
-      setApplyMode(null);
-    } catch (err) {
-      setError(String(err));
-      setApplyMode(null);
-    }
-  }
-
-  async function handleRestoreOriginal() {
-    stopShuttle();
-    setApplyMode('restore');
-    setError(null);
-    try {
-      const result = await invoke('restore_audio_original', {
-        inputPath: filePath,
-        savePath: savePath ?? null,
-        workspaceDir: workspaceDir ?? null,
-      });
-      onConfirm(result);
-    } catch (err) {
-      setError(String(err));
-      setApplyMode(null);
-    }
-  }
-
-  async function handleStageAction(mode) {
-    stopShuttle();
-    setApplyMode('preview');
-    setError(null);
-    const sourcePathForPreview = previewPath || filePath;
-    const willChainPreview = !!previewPath || hasChainedPreview;
-    const nextCutMarkers = markersAfterAction(cutMarkers, mode, trimStart, trimEnd, durationRef.current, 0);
-    preStagedCutMarkersRef.current = cutMarkers;
-    preStagedSelectionRef.current = {
-      start: trimStart,
-      end: trimEnd,
-    };
-    const edit = {
-      mode,
-      startSec: trimStart,
-      endSec: mode === 'cut' && trimEnd >= duration - 0.01 ? 1_000_000 : trimEnd,
-      fadeInSec,
-      fadeOutSec,
-      cutFadeSec: 0,
-    };
-    try {
-      const path = await invoke('preview_audio_edit', {
-        inputPath: sourcePathForPreview,
-        mode,
-        startSec: edit.startSec,
-        endSec: edit.endSec,
-        savePath: savePath ?? null,
-        workspaceDir: workspaceDir ?? null,
-        fadeInSec: edit.fadeInSec,
-        fadeOutSec: edit.fadeOutSec,
-        cutFadeSec: edit.cutFadeSec,
-      });
-      actionBasePathRef.current = sourcePathForPreview;
-      setHasChainedPreview(willChainPreview);
-      setCutFadeSec(0);
-      setCutMarkers(nextCutMarkers);
-      setStagedEdit(edit);
-      initialEditRef.current = null;
-      setPreviewPath(path);
-      setApplyMode(null);
-    } catch (err) {
-      setError(String(err));
-      setApplyMode(null);
-    }
-  }
-
-  async function handleApply() {
-    if (!stagedEdit) return;
-    stopShuttle();
-    setApplyMode(stagedEdit.mode);
-    setError(null);
-    try {
-      const result = hasChainedPreview && previewPath
-        ? await invoke('commit_audio_preview', {
-            inputPath: filePath,
-            previewPath,
-            savePath: savePath ?? null,
-            workspaceDir: workspaceDir ?? null,
-          })
-        : await invoke('apply_audio_edit', {
-            inputPath: filePath,
-            mode: stagedEdit.mode,
-            startSec: stagedEdit.startSec,
-            endSec: stagedEdit.endSec,
-            savePath: savePath ?? null,
-            workspaceDir: workspaceDir ?? null,
-            fadeInSec: stagedEdit.fadeInSec,
-            fadeOutSec: stagedEdit.fadeOutSec,
-            cutFadeSec: stagedEdit.cutFadeSec,
-          });
-      onConfirm(result);
-    } catch (err) {
-      setError(String(err));
-      setApplyMode(null);
-    }
-  }
-
   return (
     <div className="modal-overlay" onClick={isApplying ? undefined : onCancel}>
       <div className="modal-box audio-editor-modal" onClick={(e) => e.stopPropagation()}>
@@ -924,92 +508,27 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             <div ref={containerRef} className="audio-editor-waveform" />
           </div>
 
-          {/* Barre d'outils transport */}
-          <div className="audio-tb-row audio-editor-controls-row">
-            <div className="audio-editor-fade-slot is-left">
-              <Tooltip text={fadeInSec > 0 ? `Fondu entrée ${formatTime(Math.min(fadeInSec, fadeMax))}` : 'Ajouter un fondu en entrée'}>
-                <Button
-                  variant="icon"
-                  className={`audio-tb-btn audio-editor-fade-chip${fadeInSec > 0 ? ' is-active' : ''}`}
-                  onClick={(e) => openFadePopover('in', e)}
-                  onContextMenu={(e) => openFadePopover('in', e)}
-                  disabled={isApplying}
-                >
-                  ↗
-                </Button>
-              </Tooltip>
-            </div>
-            <div className="audio-tb">
-              <Tooltip text="Marquer le point d'entrée à la position du curseur (i)">
-                <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markStartHere} disabled={isLoading}>{`{`}</Button>
-              </Tooltip>
-              <Tooltip text="Marquer le point de sortie à la position du curseur (o)">
-                <Button variant="icon" className="audio-tb-btn audio-tb-btn-marker" onClick={markEndHere} disabled={isLoading}>{`}`}</Button>
-              </Tooltip>
-
-              <div className="audio-tb-sep" />
-
-              <Tooltip text={isPlaying ? 'Pause (Espace)' : 'Play / Pause (Espace)'}>
-                <Button variant="icon" className={`audio-tb-btn${isPlaying ? ' is-active' : ''}`} onClick={handlePlayPause} disabled={isLoading}>
-                  {isPlaying ? <Pause /> : <Play />}
-                </Button>
-              </Tooltip>
-              <Tooltip text="Stop">
-                <Button variant="icon" className="audio-tb-btn" onClick={stopPlayback} disabled={isLoading}><Square /></Button>
-              </Tooltip>
-              <Tooltip text="Reculer de 5s">
-                <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }} disabled={isLoading}><SkipBack /></Button>
-              </Tooltip>
-              <Tooltip text="Avancer de 5s">
-                <Button variant="icon" className="audio-tb-btn" onClick={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }} disabled={isLoading}><SkipForward /></Button>
-              </Tooltip>
-
-              <div className="audio-tb-sep" />
-
-              <Tooltip text="Aller au point d'entrée (Shift+I)">
-                <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimStart} disabled={isLoading}>|▶</Button>
-              </Tooltip>
-              <Tooltip text="Aller au point de sortie (Shift+O)">
-                <Button variant="icon" className="audio-tb-btn audio-tb-btn-text" onClick={goToTrimEnd} disabled={isLoading}>▶|</Button>
-              </Tooltip>
-
-              <div className="audio-tb-sep" />
-
-              <Tooltip text="Garder la sélection (Ctrl+K)">
-                <Button
-                  variant="icon"
-                  className="audio-tb-btn"
-                  onClick={() => handleStageAction('trim')}
-                  disabled={!canOperate}
-                >
-                  <Crop />
-                </Button>
-              </Tooltip>
-              <Tooltip text="Supprimer la sélection (Ctrl+X)">
-                <Button
-                  variant="icon"
-                  className="audio-tb-btn audio-tb-btn-danger"
-                  onClick={() => handleStageAction('cut')}
-                  disabled={!canCut}
-                >
-                  <Scissors />
-                </Button>
-              </Tooltip>
-            </div>
-            <div className="audio-editor-fade-slot is-right">
-              <Tooltip text={fadeOutSec > 0 ? `Fondu sortie ${formatTime(Math.min(fadeOutSec, fadeMax))}` : 'Ajouter un fondu en sortie'}>
-                <Button
-                  variant="icon"
-                  className={`audio-tb-btn audio-editor-fade-chip${fadeOutSec > 0 ? ' is-active' : ''}`}
-                  onClick={(e) => openFadePopover('out', e)}
-                  onContextMenu={(e) => openFadePopover('out', e)}
-                  disabled={isApplying}
-                >
-                  ↘
-                </Button>
-              </Tooltip>
-            </div>
-          </div>
+          <AudioEditorTransportBar
+            fadeInSec={fadeInSec}
+            fadeOutSec={fadeOutSec}
+            fadeMax={fadeMax}
+            isApplying={isApplying}
+            isLoading={isLoading}
+            isPlaying={isPlaying}
+            canOperate={canOperate}
+            canCut={canCut}
+            onOpenFadePopover={openFadePopover}
+            onMarkStart={markStartHere}
+            onMarkEnd={markEndHere}
+            onPlayPause={handlePlayPause}
+            onStop={stopPlayback}
+            onSkipBack={() => { stopShuttle(); wsRef.current?.skip(-SKIP_STEP); }}
+            onSkipForward={() => { stopShuttle(); wsRef.current?.skip(SKIP_STEP); }}
+            onGoToTrimStart={goToTrimStart}
+            onGoToTrimEnd={goToTrimEnd}
+            onStageTrim={() => handleStageAction('trim')}
+            onStageCut={() => handleStageAction('cut')}
+          />
 
           {/* Zoom */}
           <div className="audio-editor-row audio-editor-zoom-row">
@@ -1070,54 +589,15 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           </Tooltip>
         </div>
 
-        {fadeContextMenu && (
-          <div
-            className="audio-editor-fade-context-menu"
-            style={{ left: fadeContextMenu.x, top: fadeContextMenu.y }}
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            <button className="audio-editor-fade-context-item" onClick={openContextFadePopover}>
-              {currentFadeValue(fadeContextMenu.target) > 0
-                ? 'Modifier le fondu'
-                : fadeContextMenu.target === 'in'
-                  ? 'Ajouter un fondu en entrée'
-                  : fadeContextMenu.target === 'out'
-                    ? 'Ajouter un fondu en sortie'
-                    : 'Ajouter un fondu'}
-            </button>
-          </div>
-        )}
-
-        {fadePopover && (() => {
-          const config = fadeConfig(fadePopover.target);
-          return (
-            <div
-              className="audio-editor-fade-popover"
-              style={{ left: fadePopover.x, top: fadePopover.y }}
-              onClick={(e) => e.stopPropagation()}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className="audio-editor-fade-popover-title">{config.label}</div>
-              <div className="audio-editor-row">
-                <input
-                  type="range"
-                  min={0}
-                  max={config.max}
-                  step={0.05}
-                  value={config.value}
-                  onChange={(e) => setFadeValue(fadePopover.target, e.target.value)}
-                  autoFocus
-                />
-                <span className="audio-editor-zoom-val">{formatTime(config.value)}</span>
-              </div>
-              <div className="audio-editor-fade-popover-actions">
-                <Button size="sm" onClick={() => setFadeValue(fadePopover.target, 0)}>Retirer</Button>
-                <Button size="sm" variant="primary" onClick={handleFadePopoverOk}>OK</Button>
-              </div>
-            </div>
-          );
-        })()}
+        <AudioEditorFadeOverlays
+          fadeContextMenu={fadeContextMenu}
+          fadePopover={fadePopover}
+          currentFadeValue={currentFadeValue}
+          fadeConfig={fadeConfig}
+          onOpenContextFadePopover={openContextFadePopover}
+          onSetFadeValue={setFadeValue}
+          onPopoverOk={handleFadePopoverOk}
+        />
       </div>
     </div>
   );
