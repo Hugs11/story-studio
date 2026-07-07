@@ -1,9 +1,5 @@
-import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { Button } from '../../components/common/Button';
 import { Toggle } from '../../components/common/Toggle';
-import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 const LANGUAGE_OPTIONS = [
   { value: 'fr', label: 'Francais' },
@@ -14,61 +10,22 @@ const LANGUAGE_OPTIONS = [
   { value: 'pt', label: 'Portugues' },
 ];
 
-export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
-  const [xttsProbe, setXttsProbe] = useState({ state: 'idle', message: '' });
-  const [xttsVoices, setXttsVoices] = useState([]);
-  const [xttsVoicesLoaded, setXttsVoicesLoaded] = useState(false);
-  const [xttsLogs, setXttsLogs] = useState([]);
-
-  const favoriteVoices = Array.isArray(xttsSettings.favoriteVoices) ? xttsSettings.favoriteVoices : [];
-
-  useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-
-    let cancelled = false;
-    let unlisten = null;
-    listen('xtts-log', (event) => {
-      if (cancelled) return;
-      setXttsLogs((prev) => [...prev, String(event.payload)].slice(-60));
-    }).then((fn) => {
-      if (cancelled) fn();
-      else unlisten = fn;
-    }).catch(() => {});
-    return () => {
-      cancelled = true;
-      if (unlisten) unlisten();
-    };
-  }, []);
-
-  async function handleTestXtts() {
-    setXttsProbe({ state: 'loading', message: 'Connexion a XTTS en cours…' });
-    setXttsLogs([`Test XTTS depuis ${xttsSettings.serverUrl}`]);
-    try {
-      const status = await invoke('xtts_get_status', { settings: xttsSettings });
-      const voices = status.voices || [];
-      setXttsVoices(voices);
-      setXttsVoicesLoaded(true);
-      const voicesLabel = voices.length === 0
-        ? 'aucune voix detectee'
-        : `${voices.length} voix detectee(s)`;
-      const deviceLabel = status.device === 'cuda' ? 'GPU CUDA' : status.device === 'cpu' ? 'CPU' : 'device inconnu';
-      setXttsProbe({ state: 'ok', message: `Serveur pret sur ${deviceLabel} • ${voicesLabel}` });
-    } catch (e) {
-      setXttsProbe({ state: 'error', message: String(e) });
-    }
-  }
-
-  function handleToggleXttsFavorite(voiceName) {
-    const nextFavorites = favoriteVoices.includes(voiceName)
-      ? favoriteVoices.filter((voice) => voice !== voiceName)
-      : [...favoriteVoices, voiceName];
-    onUpdateXttsSettings({ favoriteVoices: nextFavorites });
-  }
-
-  function handleClearXttsFavorites() {
-    onUpdateXttsSettings({ favoriteVoices: [] });
-  }
-
+export function XttsVoiceSettings({
+  xttsSettings,
+  xttsProbe,
+  xttsVoices,
+  xttsVoicesLoaded,
+  xttsLogs,
+  favoriteVoices,
+  testXtts,
+  toggleXttsFavorite,
+  clearXttsFavorites,
+  updateServerUrl,
+  updateXttsDir,
+  updateLanguage,
+  updateAutoStart,
+  updateForceCpu,
+}) {
   return (
     <div className="xtts-settings">
       <div className="xtts-grid">
@@ -77,7 +34,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
           <input
             className="xtts-input"
             value={xttsSettings.serverUrl}
-            onChange={(e) => onUpdateXttsSettings({ serverUrl: e.target.value })}
+            onChange={(e) => updateServerUrl(e.target.value)}
             placeholder="http://127.0.0.1:8020"
           />
         </label>
@@ -87,7 +44,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
           <input
             className="xtts-input"
             value={xttsSettings.xttsDir}
-            onChange={(e) => onUpdateXttsSettings({ xttsDir: e.target.value })}
+            onChange={(e) => updateXttsDir(e.target.value)}
             placeholder="C:\\chemin\\vers\\XTTS"
           />
         </label>
@@ -97,7 +54,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
           <select
             className="xtts-input"
             value={xttsSettings.language}
-            onChange={(e) => onUpdateXttsSettings({ language: e.target.value })}
+            onChange={(e) => updateLanguage(e.target.value)}
           >
             {LANGUAGE_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
@@ -113,7 +70,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
             Story Studio lancera `server.py` depuis ton dossier XTTS si besoin.
           </div>
         </div>
-        <Toggle on={xttsSettings.autoStart} onChange={(v) => onUpdateXttsSettings({ autoStart: v })} />
+        <Toggle on={xttsSettings.autoStart} onChange={updateAutoStart} />
       </div>
 
       <div className="opts-row opts-row--pt">
@@ -123,11 +80,11 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
             XTTS s'exécute sur CPU — plus lent (~3×) mais libère le GPU pour ComfyUI.
           </div>
         </div>
-        <Toggle on={xttsSettings.forceCpu} onChange={(v) => onUpdateXttsSettings({ forceCpu: v })} />
+        <Toggle on={xttsSettings.forceCpu} onChange={updateForceCpu} />
       </div>
 
       <div className="xtts-actions">
-        <Button onClick={handleTestXtts} disabled={xttsProbe.state === 'loading'}>
+        <Button onClick={testXtts} disabled={xttsProbe.state === 'loading'}>
           {xttsProbe.state === 'loading' ? 'Test en cours…' : 'Tester et actualiser les voix'}
         </Button>
         <span className="opts-row-sub">
@@ -159,7 +116,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
               Coche uniquement les voix que tu veux voir dans le modal de generation.
             </div>
           </div>
-          <Button onClick={handleClearXttsFavorites} disabled={favoriteVoices.length === 0}>
+          <Button onClick={clearXttsFavorites} disabled={favoriteVoices.length === 0}>
             Tout afficher
           </Button>
         </div>
@@ -179,7 +136,7 @@ export function XttsVoiceSettings({ xttsSettings, onUpdateXttsSettings }) {
                 <input
                   type="checkbox"
                   checked={favoriteVoices.includes(voiceName)}
-                  onChange={() => handleToggleXttsFavorite(voiceName)}
+                  onChange={() => toggleXttsFavorite(voiceName)}
                 />
                 <span>{voiceName}</span>
               </label>

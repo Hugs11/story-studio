@@ -1,8 +1,12 @@
 import { PiperVoiceSettings } from './PiperVoiceSettings';
 import { XttsVoiceSettings } from './XttsVoiceSettings';
+import { usePiperVoiceOptions } from './usePiperVoiceOptions';
+import { useXttsVoiceOptions } from './useXttsVoiceOptions';
 
 export function VoiceSection({ className, sectionRef, xttsSettings, onUpdateXttsSettings }) {
   const ttsBackend = xttsSettings.backend || 'piper';
+  const piperOptions = usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings });
+  const xttsOptions = useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings });
 
   function handleTtsBackendChange(backend) {
     // Sélectionner XTTS l'active (le moteur remplace l'ancien toggle d'activation).
@@ -31,11 +35,14 @@ export function VoiceSection({ className, sectionRef, xttsSettings, onUpdateXtts
       </div>
 
       {ttsBackend === 'piper' && (
-        <PiperVoiceSettings xttsSettings={xttsSettings} onUpdateXttsSettings={onUpdateXttsSettings} />
+        <PiperVoiceSettings {...piperOptions} />
       )}
 
       {ttsBackend === 'xtts' && (
-        <XttsVoiceSettings xttsSettings={xttsSettings} onUpdateXttsSettings={onUpdateXttsSettings} />
+        <XttsVoiceSettings
+          xttsSettings={xttsSettings}
+          {...xttsOptions}
+        />
       )}
     </section>
   );
