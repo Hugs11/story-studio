@@ -174,8 +174,12 @@ export function WorkspaceView({
     />
   );
 
+  // `key={variant}` : remonte le diagramme au passage plein↔colonne (Agrandir/Réduire)
+  // pour le re-centrer sur la nouvelle largeur (comportement vague 1). `variant` suit
+  // `showSettings`, pas `showTree` — donc pas de re-fit au simple masquage de l'arbre.
   const renderDiagramPanel = (variant) => (
     <DiagramPanel
+      key={variant}
       project={project}
       projectType={projectType}
       projectIndex={projectIndex}
@@ -236,23 +240,19 @@ export function WorkspaceView({
   }
 
   // Composition « 3 bascules » : arbre (fixe) · réglages (flex) · diagramme (colonne
-  // fixe si réglages visibles, plein sinon). Le layout fin (poignées, responsive,
-  // barre « Ajouter ») est affiné au plan F ; ici on garde une compo simple mais correcte.
+  // fixe si réglages visibles, plein sinon). La poignée arbre ne s'affiche que si un
+  // panneau la suit (réglages ou diagramme) ; la poignée du milieu, qu'en « colonne ».
   const workspaceClass = [
     'workspace',
-    isColonne ? 'workspace--diagram-column' : '',
     isPlein ? 'workspace--diagram-full' : '',
   ].filter(Boolean).join(' ');
 
   return (
     <div className="screen visible">
       <div className={workspaceClass} style={style}>
-        {showTree ? (
-          <>
-            {renderStructurePanel()}
-            {renderTreeResizeHandle()}
-          </>
-        ) : null}
+        {showTree ? renderStructurePanel() : null}
+
+        {showTree && (showSettings || showDiagram) ? renderTreeResizeHandle() : null}
 
         {showSettings ? renderCentralPanel({ withHeader: isColonne }) : null}
 
