@@ -34,11 +34,10 @@ export const KEYS = Object.freeze({
   SD_RESULTS: 'sdJobResults',
   MEDIA_METADATA_PREFIX: 'ss-meta-v2:',
   AUDIO_ASSEMBLY_OPTIONS: 'audio-assembly-opts',
-  DIAGRAM_VIEW_STATE: 'diagramViewState',
-  DIAGRAM_LAST_OPEN_STATE: 'diagramLastOpenState',
-  DIAGRAM_PLEIN_LEFT_SLOT: 'diagramPleinLeftSlot',
+  DIAGRAM_SHOW_TREE: 'diagramShowTree',
+  DIAGRAM_SHOW_SETTINGS: 'diagramShowSettings',
+  DIAGRAM_SHOW_DIAGRAM: 'diagramShowDiagram',
   DIAGRAM_COLUMN_WIDTH: 'diagramColumnWidth',
-  SETTINGS_SLOT_WIDTH: 'diagramSettingsSlotWidth',
   TREE_PANEL_WIDTH: 'treePanelWidth',
   FLOW_DIAGRAM_SHOW_RETURNS: 'fd_show_returns',
   TREE_SHOW_DEFAULT_NAVIGATION_BADGES: 'tree_show_default_navigation_badges',
@@ -87,6 +86,15 @@ export function runSettingsMigrations() {
   remove('showCentralDiagram');
   remove('fd_auto_open_settings');
   remove('fd_inspector_width');
+
+  // Vague 2 : la machine « ferme/colonne/plein » + slot gauche est remplacée par
+  // 3 bascules de panneaux indépendantes (showTree/showSettings/showDiagram, dont
+  // les défauts sont fournis par useDiagramViewState). La vue n'est pas une donnée
+  // projet : on purge simplement les clés de l'ancien modèle, sans migrer de valeur.
+  remove('diagramViewState');
+  remove('diagramLastOpenState');
+  remove('diagramPleinLeftSlot');
+  remove('diagramSettingsSlotWidth');
 
   // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
   // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,

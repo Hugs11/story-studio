@@ -49,6 +49,27 @@ function ToolbarButton({
   );
 }
 
+// Bouton segmenté du pill « Arbre / Réglages / Diagramme ».
+// `inert` : la bascule est bloquée (Réglages seul panneau central) → clic no-op côté
+// hook, on signale seulement l'état verrouillé visuellement.
+function PanelToggle({ id, title, Icon, active, inert = false, onClick }) {
+  return (
+    <Tooltip text={title}>
+      <button
+        type="button"
+        data-toolbar-id={id}
+        className={`chrome-panel-toggle ${active ? 'is-active' : ''} ${inert ? 'is-inert' : ''}`}
+        onClick={onClick}
+        aria-pressed={active}
+        aria-disabled={inert || undefined}
+        aria-label={title}
+      >
+        <ToolbarIcon Icon={Icon} className="chrome-icon" />
+      </button>
+    </Tooltip>
+  );
+}
+
 export function Toolbar({
   showProjectActions,
   shortcutLabels = DEFAULT_SHORTCUT_LABELS,
@@ -58,7 +79,9 @@ export function Toolbar({
   onOpenProject,
   onSaveProject,
   onSaveProjectAs,
-  diagramOpen = false,
+  panels = { showTree: true, showSettings: true, showDiagram: false },
+  onToggleTree,
+  onToggleSettings,
   onToggleDiagram,
   packOptionsOpen = false,
   onPackOptionsOpenChange,
@@ -115,15 +138,30 @@ export function Toolbar({
       </div>
 
       <div className="chrome-toolbar-center">
-        <ToolbarButton
-          id="diagram-toggle"
-          title={withShortcut('Ouvrir/fermer le diagramme', shortcutLabels.tabDiagram)}
-          label="Diagramme"
-          onClick={onToggleDiagram}
-          active={diagramOpen}
-        >
-          <ToolbarIcon Icon={Network} />
-        </ToolbarButton>
+        <div className="chrome-panel-pill" role="group" aria-label="Panneaux affichés">
+          <PanelToggle
+            id="toggle-tree"
+            title={withShortcut('Afficher/masquer l’arbre', shortcutLabels.toggleTree)}
+            Icon={PanelLeft}
+            active={panels.showTree}
+            onClick={onToggleTree}
+          />
+          <PanelToggle
+            id="toggle-settings"
+            title={withShortcut('Afficher/masquer les réglages', shortcutLabels.toggleSettings)}
+            Icon={SlidersHorizontal}
+            active={panels.showSettings}
+            inert={panels.showSettings && !panels.showDiagram}
+            onClick={onToggleSettings}
+          />
+          <PanelToggle
+            id="toggle-diagram"
+            title={withShortcut('Afficher/masquer le diagramme', shortcutLabels.toggleDiagram)}
+            Icon={Network}
+            active={panels.showDiagram}
+            onClick={onToggleDiagram}
+          />
+        </div>
       </div>
 
       <div className="chrome-toolbar-right">

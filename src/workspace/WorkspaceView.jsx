@@ -12,10 +12,6 @@ import { useProjectActions } from '../store/ProjectActionsContext';
 import {
   DIAGRAM_COLUMN_WIDTH_MAX,
   DIAGRAM_COLUMN_WIDTH_MIN,
-  DIAGRAM_LEFT_SLOTS,
-  DIAGRAM_VIEW_STATES,
-  SETTINGS_SLOT_WIDTH_MAX,
-  SETTINGS_SLOT_WIDTH_MIN,
   getTreePanelMaxWidth,
 } from './useDiagramViewState';
 import { SettingsPanelHeader } from './SettingsPanelHeader';
@@ -55,17 +51,16 @@ export function WorkspaceView({
   const skipIdSyncRef = useRef(false);
 
   const {
-    state,
-    leftSlot,
-    maximize,
-    minimize,
+    showTree,
+    showSettings,
+    showDiagram,
+    isColonne,
+    isPlein,
+    maximizeDiagram,
+    restoreSettings,
     closeDiagram,
-    setLeftSlot,
-    forceLeftSlot,
     diagramColumnWidth,
     setDiagramColumnWidth,
-    settingsSlotWidth,
-    setSettingsSlotWidth,
     treePanelWidth,
     setTreePanelWidth,
   } = diagramView;
@@ -103,10 +98,12 @@ export function WorkspaceView({
   const handleDiagramSelectionChange = useCallback((ids) => {
     skipIdSyncRef.current = true;
     setSelectedIds(ids);
-    if (state === DIAGRAM_VIEW_STATES.FULL && ids?.size > 0) {
-      forceLeftSlot(DIAGRAM_LEFT_SLOTS.SETTINGS);
+    // En « plein » (diagramme seul), une sélection venue du diagramme réaffiche les
+    // réglages pour éditer l'élément cliqué.
+    if (isPlein && ids?.size > 0) {
+      restoreSettings();
     }
-  }, [forceLeftSlot, state]);
+  }, [isPlein, restoreSettings]);
 
   useEffect(() => {
     if (skipIdSyncRef.current) {
@@ -119,16 +116,14 @@ export function WorkspaceView({
   const style = {
     '--col-left': `${treePanelWidth}px`,
     '--workspace-diagram-column-width': `${diagramColumnWidth}px`,
-    '--workspace-settings-slot-width': `${settingsSlotWidth}px`,
   };
 
-  const settingsHeader = (closable = false) => (
+  const settingsHeader = (
     <SettingsPanelHeader
       node={node}
       selectedId={selectedId}
       selectedIds={selectedIds}
       project={project}
-      onClose={closable ? () => forceLeftSlot(DIAGRAM_LEFT_SLOTS.TREE) : null}
     />
   );
 
@@ -166,7 +161,7 @@ export function WorkspaceView({
     />
   );
 
-  const renderCentralPanel = ({ withHeader = false, headerClosable = false } = {}) => (
+  const renderCentralPanel = ({ withHeader = false } = {}) => (
     <CentralPanel
       node={node}
       selectedId={selectedId}
@@ -175,7 +170,7 @@ export function WorkspaceView({
       projectType={projectType}
       allMenus={allMenus}
       projectIndex={projectIndex}
-      header={withHeader ? settingsHeader(headerClosable) : null}
+      header={withHeader ? settingsHeader : null}
     />
   );
 
@@ -188,10 +183,10 @@ export function WorkspaceView({
       selectedIds={selectedIds}
       onSelectionChange={handleDiagramSelectionChange}
       variant={variant}
-      leftSlot={leftSlot}
-      onLeftSlotChange={setLeftSlot}
-      onMaximize={maximize}
-      onMinimize={minimize}
+      showActionsBar={showDiagram && !showTree}
+      showHint={showDiagram && !showSettings}
+      onMaximize={maximizeDiagram}
+      onMinimize={restoreSettings}
       onClose={closeDiagram}
       onPreview={handleSimulateNode}
       onSimulateZip={handleSimulateZip}
@@ -211,23 +206,6 @@ export function WorkspaceView({
         {
           maxWidth: DIAGRAM_COLUMN_WIDTH_MAX,
           onResize: setDiagramColumnWidth,
-        },
-      )}
-    />
-  );
-
-  const renderSettingsResizeHandle = () => (
-    <div
-      className="resize-handle"
-      onMouseDown={(event) => startResize(
-        event,
-        '.workspace-settings-slot',
-        '--workspace-settings-slot-width',
-        1,
-        SETTINGS_SLOT_WIDTH_MIN,
-        {
-          maxWidth: SETTINGS_SLOT_WIDTH_MAX,
-          onResize: setSettingsSlotWidth,
         },
       )}
     />
@@ -257,52 +235,34 @@ export function WorkspaceView({
     );
   }
 
-  const isColumn = state === DIAGRAM_VIEW_STATES.COLUMN;
-  const isFull = state === DIAGRAM_VIEW_STATES.FULL;
+  // Composition « 3 bascules » : arbre (fixe) · réglages (flex) · diagramme (colonne
+  // fixe si réglages visibles, plein sinon). Le layout fin (poignées, responsive,
+  // barre « Ajouter ») est affiné au plan F ; ici on garde une compo simple mais correcte.
   const workspaceClass = [
     'workspace',
-    isColumn ? 'workspace--diagram-column' : '',
-    isFull ? 'workspace--diagram-full' : '',
+    isColonne ? 'workspace--diagram-column' : '',
+    isPlein ? 'workspace--diagram-full' : '',
   ].filter(Boolean).join(' ');
 
   return (
     <div className="screen visible">
       <div className={workspaceClass} style={style}>
-        {!isFull ? (
+        {showTree ? (
           <>
             {renderStructurePanel()}
             {renderTreeResizeHandle()}
-            {renderCentralPanel({ withHeader: isColumn })}
-            {isColumn ? (
-              <>
-                {renderDiagramResizeHandle()}
-                <div className="workspace-diagram-column">
-                  {renderDiagramPanel("colonne")}
-                </div>
-              </>
-            ) : null}
           </>
-        ) : (
-          <>
-            {leftSlot === DIAGRAM_LEFT_SLOTS.TREE ? (
-              <>
-                {renderStructurePanel()}
-                {renderTreeResizeHandle()}
-              </>
-            ) : null}
-            {leftSlot === DIAGRAM_LEFT_SLOTS.SETTINGS ? (
-              <>
-                <div className="workspace-settings-slot">
-                  {renderCentralPanel({ withHeader: true, headerClosable: true })}
-                </div>
-                {renderSettingsResizeHandle()}
-              </>
-            ) : null}
-            <div className="workspace-diagram-full">
-              {renderDiagramPanel("plein")}
-            </div>
-          </>
-        )}
+        ) : null}
+
+        {showSettings ? renderCentralPanel({ withHeader: isColonne }) : null}
+
+        {showSettings && showDiagram ? renderDiagramResizeHandle() : null}
+
+        {showDiagram ? (
+          <div className={isPlein ? 'workspace-diagram-full' : 'workspace-diagram-column'}>
+            {renderDiagramPanel(isPlein ? 'plein' : 'colonne')}
+          </div>
+        ) : null}
 
         <FloatingSimulator
           project={project}

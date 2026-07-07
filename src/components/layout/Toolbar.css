@@ -138,23 +138,53 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='diagram-toggle'] {
-  min-width: 116px;
-  color: var(--control-text-muted);
-  border-color: var(--control-border);
-  background: color-mix(in srgb, var(--bg2) 70%, transparent);
+/* Pill de bascules « Arbre / Réglages / Diagramme » au centre de la toolbar. */
+.chrome-panel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg0);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='diagram-toggle']:hover:not(:disabled),
-.chrome-toolbar-btn[data-toolbar-id='diagram-toggle'].is-active {
+.chrome-panel-toggle {
+  width: 34px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--control-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.chrome-panel-toggle:hover:not(.is-inert) {
+  color: var(--control-text);
+  background: var(--bg3);
+}
+
+.chrome-panel-toggle.is-active {
   color: var(--accent-text);
   border-color: var(--accent-border);
   background: var(--accent-dim);
 }
 
-.chrome-toolbar-btn[data-toolbar-id='diagram-toggle']:focus-visible {
-  outline-color: var(--accent-text);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+.chrome-panel-toggle.is-inert {
+  cursor: default;
+}
+
+.chrome-panel-toggle:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
 }
 
 .chrome-pack-options-caret {
@@ -260,12 +290,6 @@
   .chrome-toolbar-sep {
     margin-left: 2px;
     margin-right: 2px;
-  }
-}
-
-@media (max-width: 1360px) {
-  .chrome-toolbar-btn[data-toolbar-id='diagram-toggle'] {
-    min-width: 98px;
   }
 }
 

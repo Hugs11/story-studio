@@ -47,22 +47,12 @@
   justify-content: flex-end;
 }
 
-.fd-panel-window-controls,
-.fd-panel-left-toggles {
+.fd-panel-window-controls {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
-}
-
-.fd-panel-window-controls {
   margin-left: auto;
-}
-
-.fd-panel-separator {
-  width: 1px;
-  height: 20px;
-  background: var(--borderLt);
 }
 
 .fd-panel-icon-btn {

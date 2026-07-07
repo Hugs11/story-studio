@@ -76,14 +76,21 @@ export function useAppShortcuts({ actionsRef, keyboardShortcutsRef, saveHandlerR
         return;
       }
 
-      if (actionId === 'tabEdit') {
+      if (actionId === 'toggleTree') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
-        actions.closeDiagram?.();
+        actions.toggleTree?.();
         return;
       }
 
-      if (actionId === 'tabDiagram') {
+      if (actionId === 'toggleSettings') {
+        if (!actions.projectActionsVisible) return;
+        stopShortcut();
+        actions.toggleSettings?.();
+        return;
+      }
+
+      if (actionId === 'toggleDiagram') {
         if (!actions.projectActionsVisible) return;
         stopShortcut();
         actions.toggleDiagram?.();
