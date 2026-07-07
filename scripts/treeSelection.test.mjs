@@ -30,6 +30,19 @@ test('toggleTreeSelection adds a story to an existing root selection', () => {
   assert.equal(nextAnchorId, 'story-a');
 });
 
+test('toggleTreeSelection keeps the active singleton selected and active', () => {
+  const { next, nextSelectedId, nextAnchorId } = toggleTreeSelection({
+    id: 'story-a',
+    selectedId: 'story-a',
+    selectedIds: new Set(['story-a']),
+  });
+
+  assert.deepEqual([...next], ['story-a']);
+  assert.equal(nextSelectedId, 'story-a');
+  assert.equal(nextAnchorId, null);
+  assert.ok(next.has(nextSelectedId));
+});
+
 test('toggleTreeSelection adds end node to an existing selection', () => {
   const { next, nextSelectedId, nextAnchorId } = toggleTreeSelection({
     id: 'end-node',

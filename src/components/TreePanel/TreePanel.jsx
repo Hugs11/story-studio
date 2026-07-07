@@ -55,7 +55,7 @@ import './TreePanel.css';
 export { END_NODE_ID };
 
 export function TreePanel({
-  project, projectType, selectedId, onSelect, onReorder, onMoveToMenu,
+  project, projectType, selectedId, selectedIds, onSelect, onReorder, onMoveToMenu,
   onAddMenu, onAddStory, onImportFolder, onDeleteMenu, onDeleteItem, onUnpackZip, onSimulateZip,
   onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
@@ -116,12 +116,11 @@ export function TreePanel({
   const getEntry = useCallback((entryId) => projectIndex.entryById.get(entryId) ?? null, [projectIndex]);
   const getParentId = useCallback((entryId) => projectIndex.parentMenuById.get(entryId) ?? null, [projectIndex]);
   const {
-    selectedIds,
-    setSelectedIds,
     anchorIdRef,
     callOnSelect,
     handleNodeSelect,
   } = useTreeSelection({
+    selectedIds,
     selectedId,
     onSelect,
     onSelectionChange,
@@ -330,9 +329,7 @@ export function TreePanel({
     if (onlyEndNodeSelected) {
       const removed = await onRemoveEndNode?.();
       if (removed === false) return;
-      const rootSet = new Set(['root']);
-      setSelectedIds(rootSet);
-      onSelectionChange?.(rootSet);
+      onSelectionChange?.(new Set(['root']));
       callOnSelect('root');
       return;
     }
@@ -340,9 +337,7 @@ export function TreePanel({
     const toDelete = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
     if (toDelete.length === 0) return;
     onBulkDeleteItems?.(toDelete);
-    const rootSet = new Set(['root']);
-    setSelectedIds(rootSet);
-    onSelectionChange?.(rootSet);
+    onSelectionChange?.(new Set(['root']));
     callOnSelect('root');
   }
 
@@ -447,12 +442,14 @@ export function TreePanel({
     e.stopPropagation();
     if (projectType !== 'pack') return;
     if (!selectedIds.has(nodeId)) {
-      setSelectedIds(new Set([nodeId]));
+      // Emettre la selection AVANT callOnSelect : le menu doit refleter le seul
+      // noeud vise, pas une ancienne multi (evite une action groupee surprise).
+      onSelectionChange?.(new Set([nodeId]));
       anchorIdRef.current = nodeId;
       callOnSelect(nodeId);
     }
     setCtxMenu({ x: e.clientX, y: e.clientY, nodeId, nodeType });
-  }, [callOnSelect, projectType, selectedIds]);
+  }, [anchorIdRef, callOnSelect, onSelectionChange, projectType, selectedIds]);
 
   function buildActions(nodeId, nodeType) {
     const isRootCtx = nodeType === 'root' || nodeType === 'root-bg';
@@ -555,9 +552,7 @@ export function TreePanel({
         const deleteFn = selectedForDelete.length > 1
           ? () => {
             onBulkDeleteItems?.(selectedForDelete);
-            const rootSet = new Set(['root']);
-            setSelectedIds(rootSet);
-            onSelectionChange?.(rootSet);
+            onSelectionChange?.(new Set(['root']));
             callOnSelect('root');
           }
           : nodeType === 'menu'
