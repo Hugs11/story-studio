@@ -17,16 +17,25 @@
   color: var(--text);
 }
 
+/* En-tête diagramme : membre droit du bandeau uniforme (44 px fixes, fond commun,
+   nowrap) — aligné sur `.panel-left-header` et `.settings-panel-header`. Le bandeau
+   ne doit jamais passer sur deux lignes : titre et contrôles ellipsent/compactent,
+   ils ne poussent pas la hauteur. */
 .fd-panel-header {
-  min-height: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  flex-shrink: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow: hidden;
   background: color-mix(in srgb, var(--bg1) 88%, var(--bg2));
+  /* Conteneur de requête pour compacter les contrôles de vue portalés selon la
+     largeur réelle de la colonne diagramme (340→920 px), pas la fenêtre. */
+  container-type: inline-size;
+  container-name: fd-diagram-header;
 }
 
 .fd-panel-title {
@@ -42,9 +51,10 @@
 
 .fd-panel-view-controls {
   min-width: 0;
-  flex: 1 1 190px;
+  flex: 1 1 auto;
   display: flex;
   justify-content: flex-end;
+  overflow: hidden;
 }
 
 .fd-panel-window-controls {
@@ -215,9 +225,33 @@
 .fd-complete-viewbar {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 3px;
   min-width: 0;
+}
+
+/* Compactage des libellés des contrôles de vue : version longue par défaut, version
+   courte quand la colonne diagramme devient étroite, pour garder les 3 contrôles
+   présents sur une seule ligne de 44 px (plan G) plutôt que de les tronquer. */
+.fd-ctrl-label--short {
+  display: none;
+}
+
+.fd-complete-toggle .fd-ctrl-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container fd-diagram-header (max-width: 500px) {
+  .fd-ctrl-label--full {
+    display: none;
+  }
+
+  .fd-ctrl-label--short {
+    display: inline;
+  }
 }
 
 .fd-complete-topbar .structure-actions-bar {

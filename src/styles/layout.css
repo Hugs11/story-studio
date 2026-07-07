@@ -120,15 +120,22 @@ body {
   min-width: var(--col-left-min);
 }
 
+/* En-tête arbre : membre gauche du bandeau uniforme (44 px fixes, fond commun,
+   nowrap) — aligné sur `.settings-panel-header` et `.fd-panel-header`. Pas
+   d'`overflow: hidden` ici : le `TreeDisplayPopover` (bouton œil) s'ouvre sous le
+   header en enfant positionné et serait tronqué ; la hauteur fixe suffit à empêcher
+   toute croissance verticale. */
 .panel-left-header {
-  min-height: 38px;
+  height: 44px;
+  flex: 0 0 44px;
   padding: 4px 8px;
-  border-bottom: 0.5px solid var(--border);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  flex-shrink: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
+  background: color-mix(in srgb, var(--bg1) 88%, var(--bg2));
 }
 
 .panel-left-header--actions {
@@ -136,7 +143,6 @@ body {
 }
 
 .panel-left-header--empty {
-  min-height: 36px;
   padding: 0;
 }
 
@@ -173,13 +179,17 @@ body {
   flex-shrink: 0;
 }
 
+/* En-tête réglages : membre central du bandeau uniforme (44 px fixes, fond commun,
+   nowrap) — aligné sur `.panel-left-header` et `.fd-panel-header`. */
 .settings-panel-header {
-  min-height: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   padding: 7px 10px 7px 12px;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 9px;
-  flex-shrink: 0;
+  overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg1) 88%, var(--bg2));
 }

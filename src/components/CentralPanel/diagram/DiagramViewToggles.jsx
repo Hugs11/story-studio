@@ -14,14 +14,19 @@ export function DiagramViewToggles({
           checked={showReturns}
           onChange={(event) => onShowReturnsChange(event.target.checked)}
         />
-        <span>Afficher les retours</span>
+        {/* Libellés double : version longue par défaut, version courte sous
+            ~500 px de colonne (voir `@container fd-diagram-header` dans
+            FlowDiagram.css) pour tenir le bandeau 44 px sur une seule ligne. */}
+        <span className="fd-ctrl-label fd-ctrl-label--full">Afficher les retours</span>
+        <span className="fd-ctrl-label fd-ctrl-label--short">Retours</span>
       </label>
       <button
         type="button"
         className={`fd-complete-mode-btn ${focusMode ? 'is-active' : ''}`}
         onClick={onFocusModeToggle}
       >
-        Focus branche
+        <span className="fd-ctrl-label fd-ctrl-label--full">Focus branche</span>
+        <span className="fd-ctrl-label fd-ctrl-label--short">Focus</span>
       </button>
       {hasCollapsedNodes ? (
         <button
@@ -29,7 +34,8 @@ export function DiagramViewToggles({
           className="fd-complete-clear-collapse"
           onClick={onOpenAll}
         >
-          Tout ouvrir
+          <span className="fd-ctrl-label fd-ctrl-label--full">Tout ouvrir</span>
+          <span className="fd-ctrl-label fd-ctrl-label--short">Tout</span>
         </button>
       ) : null}
     </div>

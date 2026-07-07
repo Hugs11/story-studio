@@ -49,10 +49,14 @@ function getHeaderData({ node, selectedId, selectedIds, project }) {
   const rootTitle = project?.projectType === 'simple'
     ? (project?.projectName || 'Mon histoire')
     : (project?.rootName || project?.projectName || 'Menu racine');
+  // Badge du root : dépend du type de projet — « Histoire simple » en `simple`
+  // (le header est visible dans l'éditeur simple sans diagramme depuis le plan G),
+  // « Pack » sinon. « Histoire » seul serait ambigu avec TYPE_LABELS.story.
+  const rootBadge = project?.projectType === 'simple' ? 'Histoire simple' : 'Pack';
   return {
     type,
     title: type === 'root' ? rootTitle : (node.name || TYPE_LABELS[type] || 'Réglages'),
-    badge: type === 'root' ? 'Pack' : (TYPE_LABELS[type] || 'Réglages'),
+    badge: type === 'root' ? rootBadge : (TYPE_LABELS[type] || 'Réglages'),
     icon: node.icon ?? null,
   };
 }

@@ -54,8 +54,8 @@ export function WorkspaceView({
     showTree,
     showSettings,
     showDiagram,
-    isColonne,
     isPlein,
+    toggleSettings,
     maximizeDiagram,
     restoreSettings,
     closeDiagram,
@@ -118,12 +118,17 @@ export function WorkspaceView({
     '--workspace-diagram-column-width': `${diagramColumnWidth}px`,
   };
 
+  // Réglages = colonne centrale dockée : son en-tête est systématique dès que
+  // Réglages est visible. Le ✕ (fermer Réglages) n'apparaît que si le diagramme
+  // est là — masquer Réglages est interdit quand il est le seul panneau central
+  // (invariant), donc `toggleSettings` ne serait un vrai fermeur que si `showDiagram`.
   const settingsHeader = (
     <SettingsPanelHeader
       node={node}
       selectedId={selectedId}
       selectedIds={selectedIds}
       project={project}
+      onClose={showDiagram ? toggleSettings : null}
     />
   );
 
@@ -161,7 +166,7 @@ export function WorkspaceView({
     />
   );
 
-  const renderCentralPanel = ({ withHeader = false } = {}) => (
+  const renderCentralPanel = () => (
     <CentralPanel
       node={node}
       selectedId={selectedId}
@@ -170,7 +175,7 @@ export function WorkspaceView({
       projectType={projectType}
       allMenus={allMenus}
       projectIndex={projectIndex}
-      header={withHeader ? settingsHeader : null}
+      header={settingsHeader}
     />
   );
 
@@ -254,7 +259,7 @@ export function WorkspaceView({
 
         {showTree && (showSettings || showDiagram) ? renderTreeResizeHandle() : null}
 
-        {showSettings ? renderCentralPanel({ withHeader: isColonne }) : null}
+        {showSettings ? renderCentralPanel() : null}
 
         {showSettings && showDiagram ? renderDiagramResizeHandle() : null}
 
