@@ -117,9 +117,9 @@ export function useDiagramViewState() {
     showTree,
     showSettings,
     showDiagram,
-    // dérivés de lecture (présentation)
-    isFerme: !showDiagram,
-    isColonne: showSettings && showDiagram,
+    // dérivé de lecture (présentation) : seul `isPlein` est encore consommé
+    // (WorkspaceView, layout diagramme plein/colonne). `isFerme`/`isColonne` ont
+    // été retirés avec le header Réglages systématique (plan G, plus aucun lecteur).
     isPlein: showDiagram && !showSettings,
     treeVisible: showTree,
     // actions
