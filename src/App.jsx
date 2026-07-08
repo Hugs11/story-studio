@@ -38,6 +38,7 @@ import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { usePackGeneration } from './hooks/usePackGeneration';
 import { useAppDerivedState } from './hooks/useAppDerivedState';
 import { useAppPreferences } from './hooks/useAppPreferences';
+import { useAppShortcutActions } from './hooks/useAppShortcutActions';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { useMediaImport } from './hooks/useMediaImport';
@@ -588,7 +589,7 @@ function AppContent() {
 
   // Modèle de lecture du shell (plan T, iso-fonctionnel) : sélection courante,
   // validation, statut, dirty state, capacités toolbar, labels de raccourcis,
-  // dossier d'export modal. Appelé AVANT useSyncedRef(shortcutActionsRef, …) qui
+  // dossier d'export modal. Appelé AVANT useAppShortcutActions qui
   // consomme canGenerate/totalIssues/canImportStories/canAddFolder.
   const {
     projectType,
@@ -645,29 +646,23 @@ function AppContent() {
     modals.close('record');
   }
 
-  useSyncedRef(shortcutActionsRef, {
-    newProject: handleNewProject,
-    openProject: handleLoad,
-    importStories: handleAddStory,
-    addFolder: () => store.addMenu(),
-    openPackOptions: () => modals.open('packOptions'),
-    openPreferences: () => modals.open('prefs'),
-    toggleTree: diagramView.toggleTree,
-    toggleSettings: diagramView.toggleSettings,
-    toggleDiagram: diagramView.toggleDiagram,
-    generate: handleGenerate,
-    focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
-    toggleValidation: () => modals.toggle('validation'),
-    undo: store.undo,
-    redo: store.redo,
-    projectActionsVisible: projectType !== null,
-    treeSearchVisible: diagramView.treeVisible,
+  // Table d'actions des raccourcis (plan U, iso-fonctionnel) : écrit
+  // shortcutActionsRef pendant le rendu, lue par les listeners de useAppShortcuts.
+  useAppShortcutActions({
+    shortcutActionsRef,
+    store,
+    modals,
+    diagramView,
+    setTreeSearchFocusTrigger,
+    handleNewProject,
+    handleLoad,
+    handleAddStory,
+    handleGenerate,
+    projectType,
     canImportStories,
     canAddFolder,
     canGenerate,
-    canUndo: store.canUndo,
-    canRedo: store.canRedo,
-    hasValidationErrors: totalIssues > 0,
+    totalIssues,
   });
 
   // Actions projet partagées entre les surfaces d'édition (arbre, réglages, diagramme),
