@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { useProjectStore } from './store/projectStore';
@@ -28,21 +28,14 @@ import {
   setCurrentShortcuts,
 } from './store/keyboardShortcuts';
 import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
-import { SaveProgressModal } from './components/common/SaveProgressModal';
-import { GenerateProgressModal } from './components/GenerateModal/GenerateProgressModal';
-import { ImportNoticeToast } from './components/common/ImportNoticeToast';
-import { CreditsModal } from './components/common/CreditsModal';
 import { TitleBar } from './components/layout/TitleBar';
 import { Toolbar } from './components/layout/Toolbar';
 import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
-import { AggregatePacksFunnel } from './components/AggregatePacks/AggregatePacksFunnel';
-import { SessionMediaTriageModal } from './components/SessionMediaTriage/SessionMediaTriageModal';
-import { CommunityPackCheckerFunnel } from './components/CommunityPackChecker/CommunityPackCheckerFunnel';
-import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
-import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
-import { YoutubeImportFunnel } from './components/YoutubeImport/YoutubeImportFunnel';
+import { AppModals } from './components/AppModals';
+import { renderDeferred } from './components/renderDeferred';
 import { useEscapeKey } from './hooks/useEscapeKey';
+import { useDisclosures } from './hooks/useDisclosures';
 import { useAiGeneration } from './hooks/useAiGeneration';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { usePackGeneration } from './hooks/usePackGeneration';
@@ -75,24 +68,6 @@ import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
 
 const WorkspaceView = lazy(() => import('./workspace/WorkspaceView').then((module) => ({ default: module.WorkspaceView })));
-const OptionsTab = lazy(() => import('./tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
-const SDGenerateModal = lazy(() => import('./components/SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
-const RecordModal = lazy(() => import('./components/RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
-const GenerateVoiceModal = lazy(() => import('./components/GenerateVoiceModal/GenerateVoiceModal')
-  .then((module) => ({ default: module.GenerateVoiceModal })));
-const PackNameModal = lazy(() => import('./components/layout/PackNameModal').then((module) => ({ default: module.PackNameModal })));
-const MissingMediaRelinkModal = lazy(() => import('./components/MissingMediaRelink/MissingMediaRelinkModal')
-  .then((module) => ({ default: module.MissingMediaRelinkModal })));
-const PodcastImportModal = lazy(() => import('./components/PodcastImport/PodcastImportModal')
-  .then((module) => ({ default: module.PodcastImportModal })));
-
-function renderDeferred(children, fallback = null) {
-  return (
-    <Suspense fallback={fallback}>
-      {children}
-    </Suspense>
-  );
-}
 
 // Codecs réutilisés par les `usePersistentState` ci-dessous.
 const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
@@ -152,24 +127,23 @@ function AppContent() {
   const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
   const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
   const diagramView = useDiagramViewState();
-  const [creditsOpen, setCreditsOpen] = useState(false);
-  const [packOptionsOpen, setPackOptionsOpen] = useState(false);
-  const [toolbarRecordOpen, setToolbarRecordOpen] = useState(false);
-  const [toolbarTtsOpen, setToolbarTtsOpen] = useState(false);
+  // Consolidation des booléens d'ouverture de modales/overlays (plan O). Les flags
+  // qui portent une donnée restent des useState dédiés (toolbarTtsTargetMenuId,
+  // youtubeFunnelMode, pendingSimulateZip).
+  const modals = useDisclosures([
+    'credits', 'packOptions', 'record', 'tts', 'podcastImport', 'podcastFunnel',
+    'aggregatePacks', 'packChecker', 'editPack', 'prefs', 'validation',
+  ]);
   const [toolbarTtsTargetMenuId, setToolbarTtsTargetMenuId] = useState(null);
-  const [podcastImportOpen, setPodcastImportOpen] = useState(false);
-  const [podcastFunnelOpen, setPodcastFunnelOpen] = useState(false);
   // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
   // dans le projet courant (éditeur libre). Plan 09.
   const [youtubeFunnelMode, setYoutubeFunnelMode] = useState(null);
-  const [aggregatePacksOpen, setAggregatePacksOpen] = useState(false);
-  const [packCheckerOpen, setPackCheckerOpen] = useState(false);
   const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
-  // « Modifier un pack » (plan 04) : ouverture du funnel + ZIP à simuler une fois l'éditeur monté.
-  const [editPackOpen, setEditPackOpen] = useState(false);
+  // « Modifier un pack » (plan 04) : ZIP à simuler une fois l'éditeur monté
+  // (l'ouverture du funnel est portée par la disclosure `editPack`).
   const [pendingSimulateZip, setPendingSimulateZip] = useState(null);
   // D34 : force la modal de métadonnées (version suggérée) à la 1re génération d'un
   // pack importé. Ref (pas state) : lu/écrit synchronement dans le flux de génération.
@@ -181,7 +155,6 @@ function AppContent() {
   const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, true, BOOL_CODEC);
   const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
   const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());
-  const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
   const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex, store.savePath);
   const aiQueueActiveCount = sdStore.pendingCount + xttsStore.pendingCount;
@@ -199,7 +172,6 @@ function AppContent() {
   const shortcutActionsRef = useRef({});
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
-  const [validationOpen, setValidationOpen] = useState(false);
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
@@ -350,7 +322,7 @@ function AppContent() {
     saveHandlerRef,
   });
 
-  useEscapeKey(creditsOpen, () => setCreditsOpen(false));
+  useEscapeKey(modals.isOpen('credits'), () => modals.close('credits'));
 
   // Dispatch de génération IA (SD/ComfyUI + XTTS) + application d'un audio généré
   // à sa cible. Appelé AVANT useSDJobs/useXttsJobs : applyGeneratedAudioToTarget
@@ -633,7 +605,7 @@ function AppContent() {
     setAutoSavedPath,
     sdStore,
     xttsStore,
-    setEditPackOpen,
+    setEditPackOpen: (open) => modals.set('editPack', open),
     setPendingSimulateZip,
     setImportNotice,
     showErrorDialog,
@@ -732,7 +704,7 @@ function AppContent() {
   })();
 
   function handleToolbarRecord() {
-    setToolbarRecordOpen(true);
+    modals.open('record');
   }
 
   function toolbarTargetMenuId() {
@@ -745,12 +717,12 @@ function AppContent() {
 
   function handleToolbarStoryTts() {
     setToolbarTtsTargetMenuId(toolbarTargetMenuId());
-    setToolbarTtsOpen(true);
+    modals.open('tts');
   }
 
   function handleToolbarRecordSaved(path) {
     store.addStory(toolbarTargetMenuId(), path);
-    setToolbarRecordOpen(false);
+    modals.close('record');
   }
   const canGenerate = projectType !== null && !pathAuditPending && totalIssues === 0;
 
@@ -759,14 +731,14 @@ function AppContent() {
     openProject: handleLoad,
     importStories: handleAddStory,
     addFolder: () => store.addMenu(),
-    openPackOptions: () => setPackOptionsOpen(true),
-    openPreferences: () => setPrefsModalOpen(true),
+    openPackOptions: () => modals.open('packOptions'),
+    openPreferences: () => modals.open('prefs'),
     toggleTree: diagramView.toggleTree,
     toggleSettings: diagramView.toggleSettings,
     toggleDiagram: diagramView.toggleDiagram,
     generate: handleGenerate,
     focusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
-    toggleValidation: () => setValidationOpen((open) => !open),
+    toggleValidation: () => modals.toggle('validation'),
     undo: store.undo,
     redo: store.redo,
     projectActionsVisible: projectType !== null,
@@ -790,7 +762,7 @@ function AppContent() {
     onAddStoryToMenu: handleAddStoryToMenu,
     onImportStories: handleAddStory,
     onImportFolder: handleImportFolder,
-    onImportPodcast: () => setPodcastImportOpen(true),
+    onImportPodcast: () => modals.open('podcastImport'),
     onImportYoutube: () => setYoutubeFunnelMode('editor'),
     onRecord: handleToolbarRecord,
     onGenerateStoryTts: handleToolbarStoryTts,
@@ -892,7 +864,7 @@ function AppContent() {
         saveState={saveToast}
         showProjectMeta={projectType !== null}
         onOpenPackMetadata={projectType !== null ? packMetadata.openPackMetadata : null}
-        onOpenCredits={() => setCreditsOpen(true)}
+        onOpenCredits={() => modals.open('credits')}
       />
 
       {projectType !== null && (
@@ -913,17 +885,17 @@ function AppContent() {
           onToggleTree={diagramView.toggleTree}
           onToggleSettings={diagramView.toggleSettings}
           onToggleDiagram={diagramView.toggleDiagram}
-          packOptionsOpen={packOptionsOpen}
-          onPackOptionsOpenChange={setPackOptionsOpen}
+          packOptionsOpen={modals.isOpen('packOptions')}
+          onPackOptionsOpenChange={(open) => modals.set('packOptions', open)}
           projectType={store.project.projectType}
           globalOptions={store.project.globalOptions}
           onUpdateGlobalOption={handleUpdateGlobalOption}
-          onOpenPreferences={() => setPrefsModalOpen(true)}
+          onOpenPreferences={() => modals.open('prefs')}
           onGenerate={handleGenerate}
           validationIssues={validationIssues}
           pathAuditPending={pathAuditPending}
-          validationOpen={validationOpen}
-          onValidationOpenChange={setValidationOpen}
+          validationOpen={modals.isOpen('validation')}
+          onValidationOpenChange={(open) => modals.set('validation', open)}
           onSelectIssue={(id) => {
             if (!id) return;
             store.setSelectedId(id);
@@ -941,14 +913,14 @@ function AppContent() {
               selectedId={store.selectedId}
               onSetProjectType={handleSelectProjectType}
               onEditPack={handleEditExistingPack}
-              onPodcastFunnel={() => setPodcastFunnelOpen(true)}
+              onPodcastFunnel={() => modals.open('podcastFunnel')}
               onYoutubeFunnel={() => setYoutubeFunnelMode('home')}
-              onAggregatePacks={() => setAggregatePacksOpen(true)}
-              onCheckPack={() => setPackCheckerOpen(true)}
+              onAggregatePacks={() => modals.open('aggregatePacks')}
+              onCheckPack={() => modals.open('packChecker')}
               pendingSimulateZipPath={pendingSimulateZip}
               onSimulateConsumed={() => setPendingSimulateZip(null)}
               onOpenProject={handleLoad}
-              onOpenPreferences={() => setPrefsModalOpen(true)}
+              onOpenPreferences={() => modals.open('prefs')}
               recentProjects={recentProjects}
               onOpenRecentProject={handleLoadRecent}
               sessionRecoveries={sessionRecoveries}
@@ -1003,153 +975,51 @@ function AppContent() {
         </div>
       </div>
 
-      {prefsModalOpen && renderDeferred(
-        <OptionsTab
-          {...optionsTabProps}
-          asModal
-          onClose={() => setPrefsModalOpen(false)}
-        />,
-      )}
-
-      {toolbarRecordOpen && renderDeferred(
-        <RecordModal
-          savePath={store.savePath}
-          workspaceDir={workspaceDir}
-          projectName={effectiveProjectFilePrefix}
-          onSaved={handleToolbarRecordSaved}
-          onDiscarded={handleMediaCreated}
-          onClose={() => setToolbarRecordOpen(false)}
-        />
-      )}
-
-      {toolbarTtsOpen && canGenerateStoryTts && renderDeferred(
-        <GenerateVoiceModal
-          savePath={store.savePath}
-          xttsSettings={xttsSettings}
-          label="Nouvelle histoire"
-          initialText=""
-          filenameHint="histoire-tts"
-          target={{ kind: 'newStory', menuId: toolbarTtsTargetMenuId }}
-          onUpdateXttsSettings={handleUpdateXttsSettings}
-          onQueueGenerate={handleQueueXttsGenerate}
-          onClose={() => setToolbarTtsOpen(false)}
-        />,
-      )}
-
-      {podcastImportOpen && renderDeferred(
-        <PodcastImportModal
-          onImport={(episodes, feed) => handleImportMediaEpisodes(episodes, feed)}
-          onClose={() => setPodcastImportOpen(false)}
-        />,
-      )}
-
-      {editPackOpen && (
-        <EditPackFunnel
-          onClose={() => setEditPackOpen(false)}
-          onLand={handleLandEditablePack}
-          onSimulate={handleSimulatePackReady}
-        />
-      )}
-
-      {podcastFunnelOpen && (
-        <PodcastImportFunnel
-          onClose={() => setPodcastFunnelOpen(false)}
-          onImport={handlePodcastFunnelImport}
-        />
-      )}
-
-      {youtubeFunnelMode && (
-        <YoutubeImportFunnel
-          mode={youtubeFunnelMode}
-          onClose={() => setYoutubeFunnelMode(null)}
-          onImport={youtubeFunnelMode === 'editor' ? handleYoutubeEditorImport : handleYoutubeFunnelImport}
-        />
-      )}
-
-      {aggregatePacksOpen && (
-        <AggregatePacksFunnel
-          onClose={() => setAggregatePacksOpen(false)}
-        />
-      )}
-
-      {packCheckerOpen && (
-        <CommunityPackCheckerFunnel
-          onClose={() => setPackCheckerOpen(false)}
-        />
-      )}
-
-      {packMetadata.open && renderDeferred(
-        <PackNameModal
-          open={packMetadata.open}
-          packMetadata={{
-            ...(store.project.packMetadata ?? {}),
-            // Titre pré-rempli si vide : nom du menu racine (pack) puis nom du
-            // projet, en cohérence avec le titre affiché dans RootEditor.
-            title: store.project.packMetadata?.title
-              || (projectType === 'pack' ? store.project.rootName : '')
-              || store.project.projectName
-              || '',
-          }}
-          project={store.project}
-          coverImage={store.project.thumbnailImage || store.project.rootImage}
-          exportFolder={modalExportFolder}
-          generateDisabled={!canGenerate}
-          promptRegenerateUuid={importedPackPendingMetaRef.current}
-          onSave={(draft) => handleSavePackMetadata(draft, { generate: false })}
-          onSaveAndGenerate={(draft) => handleSavePackMetadata(draft, { generate: true })}
-          onClose={packMetadata.close}
-        />,
-      )}
-
-      {/* SD — modale de génération */}
-      {sdGenerate.open && renderDeferred(
-        <SDGenerateModal
-          sdSettings={sdStore.sdSettings}
-          onGenerate={handleSDGenerate}
-          currentImagePath={sdGenerate.context?.currentImagePath ?? null}
-          currentImageLabel={sdGenerate.context?.currentImageLabel ?? null}
-          rootImagePath={store.project.rootImage ?? null}
-          initialJob={sdGenerate.context?.regenerateJob ?? null}
-          onClose={sdGenerate.close}
-        />,
-      )}
-
-      {saveAsProgress && <SaveProgressModal data={saveAsProgress} title="Enregistrement sous..." doneTitle="Copie terminée" />}
-      {saveProgress && <SaveProgressModal data={saveProgress} title="Enregistrement..." doneTitle="Projet enregistré" />}
-      {triageRequest && (
-        <SessionMediaTriageModal items={triageRequest.items} onResolve={triageRequest.resolve} />
-      )}
-      {showMissingMediaRelink && renderDeferred(
-        <MissingMediaRelinkModal
-          missingMedia={missingMedia}
-          workspaceDir={workspaceDir}
-          onApply={handleApplyMissingMediaRelinks}
-          onClose={() => setDismissedMissingMediaSignature(missingMediaSignature)}
-        />,
-      )}
-
-      {unpacking && (
-        <GenerateProgressModal title="Extraction en cours...">
-          <div className="gen-progress-name">{unpacking.name}</div>
-          <div className="gen-progress-desc">
-            Story Studio analyse le pack et extrait les éléments éditables.
-          </div>
-        </GenerateProgressModal>
-      )}
-
-      {importing && (
-        <GenerateProgressModal title="Import en cours...">
-          <div className="gen-progress-name">{importing.name}</div>
-          <div className="gen-progress-desc">{importing.phase}</div>
-          <div className="gen-progress-meta">
-            {importing.total > 1 ? `Fichier ${Math.max(importing.index, 1)} sur ${importing.total}` : 'Traitement du fichier importé'}
-          </div>
-        </GenerateProgressModal>
-      )}
-
-      {importNotice && (
-        <ImportNoticeToast message={importNotice} onClose={() => setImportNotice(null)} />
-      )}
+      <AppModals
+        modals={modals}
+        youtubeFunnelMode={youtubeFunnelMode}
+        setYoutubeFunnelMode={setYoutubeFunnelMode}
+        toolbarTtsTargetMenuId={toolbarTtsTargetMenuId}
+        project={store.project}
+        savePath={store.savePath}
+        projectType={projectType}
+        workspaceDir={workspaceDir}
+        projectName={effectiveProjectFilePrefix}
+        appVersion={appVersion}
+        xttsSettings={xttsSettings}
+        sdSettings={sdStore.sdSettings}
+        canGenerate={canGenerate}
+        canGenerateStoryTts={canGenerateStoryTts}
+        modalExportFolder={modalExportFolder}
+        importedPackPendingMetaRef={importedPackPendingMetaRef}
+        optionsTabProps={optionsTabProps}
+        sdGenerate={sdGenerate}
+        onSDGenerate={handleSDGenerate}
+        onQueueXttsGenerate={handleQueueXttsGenerate}
+        onUpdateXttsSettings={handleUpdateXttsSettings}
+        packMetadata={packMetadata}
+        onSavePackMetadata={handleSavePackMetadata}
+        onLandEditablePack={handleLandEditablePack}
+        onSimulatePackReady={handleSimulatePackReady}
+        onImportMediaEpisodes={handleImportMediaEpisodes}
+        onPodcastFunnelImport={handlePodcastFunnelImport}
+        onYoutubeFunnelImport={handleYoutubeFunnelImport}
+        onYoutubeEditorImport={handleYoutubeEditorImport}
+        importing={importing}
+        unpacking={unpacking}
+        showMissingMediaRelink={showMissingMediaRelink}
+        missingMedia={missingMedia}
+        missingMediaSignature={missingMediaSignature}
+        onApplyMissingMediaRelinks={handleApplyMissingMediaRelinks}
+        setDismissedMissingMediaSignature={setDismissedMissingMediaSignature}
+        saveProgress={saveProgress}
+        saveAsProgress={saveAsProgress}
+        triageRequest={triageRequest}
+        importNotice={importNotice}
+        setImportNotice={setImportNotice}
+        onToolbarRecordSaved={handleToolbarRecordSaved}
+        onMediaCreated={handleMediaCreated}
+      />
 
       {/* Bottom bar */}
       <div className="bottombar">
@@ -1196,11 +1066,6 @@ function AppContent() {
         )}
         {appVersion && <span className="bottombar-version">v{appVersion}</span>}
       </div>
-
-      {/* Credits modal */}
-      {creditsOpen && (
-        <CreditsModal appVersion={appVersion} onClose={() => setCreditsOpen(false)} />
-      )}
     </div>
     </ProjectActionsContext.Provider>
     </ProjectContext.Provider>
