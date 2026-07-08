@@ -1,14 +1,10 @@
 import { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { useProjectStore } from './store/projectStore';
 import {
   getRecentProjects,
-  rememberRecentProject,
   ensureWorkspaceDir,
-  pickWorkspaceDir,
-  consolidateProject,
 } from './store/projectIO';
 import { getLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
@@ -18,7 +14,7 @@ import { collectMediaLibrary } from './store/mediaLibrary';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
 import { KEYS, read as readSetting } from './store/persistentSettings';
-import { isTtsAvailable, loadXttsSettings, saveXttsSettings } from './store/xttsSettings';
+import { isTtsAvailable, loadXttsSettings } from './store/xttsSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
@@ -50,6 +46,7 @@ import { useEscapeKey } from './hooks/useEscapeKey';
 import { useAiGeneration } from './hooks/useAiGeneration';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { usePackGeneration } from './hooks/usePackGeneration';
+import { useAppPreferences } from './hooks/useAppPreferences';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { useMediaImport } from './hooks/useMediaImport';
@@ -68,7 +65,7 @@ import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { useDiagramViewState } from './workspace/useDiagramViewState';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
-import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
+import { loadVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import { END_NODE_ID } from './components/CentralPanel/flowDiagramLayout';
@@ -488,96 +485,6 @@ function AppContent() {
   );
   mediaLibraryCountRef.current = mediaLibraryCount;
 
-  async function handlePickWorkspaceDir() {
-    const chosen = await pickWorkspaceDir();
-    if (chosen) {
-      logger.info(`workspace:switched path='${chosen}'`);
-      setConfiguredWorkspaceDir(chosen);
-      if (sessionMode !== 'ephemeral') {
-        setWorkspaceDirState(chosen);
-      }
-    }
-  }
-
-  async function handleVerboseLoggingChange(enabled) {
-    setVerboseLoggingState(enabled);
-    saveVerboseLoggingPref(enabled);
-    const level = verboseLevelName(enabled);
-    setLogLevel(level);
-    if (isTauriRuntime()) {
-      try { await invoke('set_log_level', { level }); }
-      catch (err) { logger.error('logging:set-level-error', err); }
-    }
-    logger.warn(`logging:level-changed level=${level}`);
-  }
-
-  function logDirOf(filePath) {
-    if (typeof filePath !== 'string' || !filePath) return null;
-    return filePath.replace(/[\\/][^\\/]*$/, '') || filePath;
-  }
-
-  async function handleResolveLogPath() {
-    if (!isTauriRuntime()) return null;
-    try {
-      const file = await invoke('get_current_log_file');
-      return logDirOf(file);
-    } catch (err) {
-      logger.error('logging:resolve-path-error', err);
-      return null;
-    }
-  }
-
-  async function handleCopyLogPath() {
-    if (!isTauriRuntime()) return null;
-    try {
-      const file = await invoke('get_current_log_file');
-      const dir = logDirOf(file);
-      if (!dir) return null;
-      await navigator.clipboard.writeText(dir);
-      return dir;
-    } catch (err) {
-      logger.error('logging:copy-path-error', err);
-      return null;
-    }
-  }
-
-  async function handleConsolidateProject() {
-    const destinationDir = await openDialog({
-      directory: true,
-      multiple: false,
-      title: 'Choisir le dossier de consolidation',
-    });
-    if (!destinationDir) return null;
-    setSaveProgress({ lines: ['Consolidation du projet...'], complete: false });
-    try {
-      const result = await consolidateProject(store.project, store.savePath, destinationDir, (step) => {
-        setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
-      });
-      const summary = `${result.copiedCount} fichier(s) copié(s)`;
-      const warnings = result.errors.length > 0 ? `, ${result.errors.length} erreur(s)` : '';
-      setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, `${summary}${warnings}`], complete: true } : null);
-      setTimeout(() => setSaveProgress(null), 2200);
-      if (result.path && result.project) {
-        setRecentProjects(rememberRecentProject(result.project, result.path));
-      }
-      if (result.errors.length > 0) {
-        showErrorDialog({
-          title: 'Projet consolidé',
-          message: `Projet consolidé avec des fichiers manquants :\n\n${result.errors.slice(0, 5).map((error) => `• ${error.path}\n  ${error.error}`).join('\n')}`,
-          variant: 'warning',
-        });
-      }
-      return result;
-    } catch (error) {
-      setSaveProgress(null);
-      showErrorDialog({
-        title: 'Consolidation impossible',
-        message: `Consolidation impossible : ${error}`,
-      });
-      return null;
-    }
-  }
-
   // Tri des médias de session non utilisés à la promotion (plan 22, D51).
   const { triageSessionMedia, triageRequest } = useSessionMediaTriage({
     store,
@@ -735,46 +642,34 @@ function AppContent() {
   useSyncedRef(saveHandlerRef, handleSave);
   useSyncedRef(saveAsHandlerRef, handleSaveProjectAs);
 
-  async function handleUpdateGlobalOption(key, value) {
-    store.updateGlobalOption(key, value);
-  }
-
-  function handleAddEndNode() {
-    store.updateGlobalOption('endNode', true);
-    store.setSelectedId('end-node');
-  }
-
-  async function handleRemoveEndNode(options = {}) {
-    if (!options?.skipConfirm) {
-      const confirmed = await showConfirmDialog({
-        title: 'Supprimer le message de fin',
-        message:
-          "Supprimer le message de fin du pack ?\n\n"
-          + "Les histoires ne joueront plus de message commun à leur conclusion. Le mode nuit sera aussi désactivé.",
-        variant: 'warning',
-        okLabel: 'Supprimer',
-        okKind: 'danger',
-        cancelLabel: 'Annuler',
-      });
-      if (!confirmed) return false;
-    }
-
-    store.updateRootMedia('nightModeAudio', null);
-    store.updateRootMedia('nightModeReturn', null);
-    store.updateRootMedia('nightModeHomeReturn', null);
-    store.updateGlobalOption('nightMode', false);
-    store.updateGlobalOption('endNode', false);
-    store.setSelectedId('root');
-    return true;
-  }
-
-  function handleUpdateXttsSettings(fields) {
-    setXttsSettings(prev => {
-      const next = { ...prev, ...fields };
-      saveXttsSettings(next);
-      return next;
-    });
-  }
+  // Grappe « préférences & réglages » (plan N, iso-fonctionnel) : dossier workspace,
+  // logging verbeux (+ chemins de log), consolidation projet, options globales,
+  // message de fin et réglages XTTS. Appelée APRÈS useSaveProgress (setSaveProgress
+  // pilote la progression de handleConsolidateProject) et useWorkSession (sessionMode).
+  // xttsSettings reste chez l'hôte (lu par la génération / ProjectContext / OptionsTab) :
+  // le hook ne reçoit que setXttsSettings.
+  const {
+    handlePickWorkspaceDir,
+    handleVerboseLoggingChange,
+    handleResolveLogPath,
+    handleCopyLogPath,
+    handleConsolidateProject,
+    handleUpdateGlobalOption,
+    handleAddEndNode,
+    handleRemoveEndNode,
+    handleUpdateXttsSettings,
+  } = useAppPreferences({
+    store,
+    sessionMode,
+    setConfiguredWorkspaceDir,
+    setWorkspaceDirState,
+    setVerboseLoggingState,
+    setSaveProgress,
+    setRecentProjects,
+    setXttsSettings,
+    showErrorDialog,
+    showConfirmDialog,
+  });
 
   const sel = store.selectedId;
   const {
