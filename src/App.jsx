@@ -2,7 +2,7 @@ import { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } fro
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import { sanitizeImportedName, useProjectStore } from './store/projectStore';
+import { useProjectStore } from './store/projectStore';
 import {
   getRecentProjects,
   rememberRecentProject,
@@ -59,10 +59,9 @@ import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { usePackGeneration } from './hooks/usePackGeneration';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
-import { useImportSession } from './hooks/useImportSession';
+import { useMediaImport } from './hooks/useMediaImport';
 import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
-import { useOsFileDrop } from './hooks/useOsFileDrop';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useProjectLifecycle } from './hooks/useProjectLifecycle';
 import { useProjectLoading } from './hooks/useProjectLoading';
@@ -78,7 +77,6 @@ import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger'
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { getProjectFilePrefix } from './utils/projectPrefix';
-import { basename } from './utils/fileUtils';
 import { END_NODE_ID } from './components/CentralPanel/flowDiagramLayout';
 import './styles/variables.css';
 import './styles/layout.css';
@@ -114,35 +112,6 @@ const INT_CODEC = {
   },
   encode: (value) => String(value),
 };
-function isImportedPackPath(filePath) {
-  return /\.(zip|7z)$/i.test(filePath || '');
-}
-
-function getImportDisplayName(filePath) {
-  const fileName = basename(filePath);
-  return sanitizeImportedName(fileName, fileName || 'Import en cours');
-}
-
-// Textes des funnels média d'accueil (podcast/YouTube, plan 09) : flux identiques,
-// seul le vocabulaire change. Consommé par landMediaFunnel (et l'import éditeur
-// YouTube pour les mêmes messages d'échec).
-const MEDIA_FUNNEL_COPY = {
-  podcast: {
-    defaultTitle: 'Podcast',
-    coverFilePrefix: 'podcast',
-    logPrefix: 'podcast-funnel',
-    allFailedMessage: "Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.",
-    someFailedNotice: (failures, total) => `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
-  },
-  youtube: {
-    defaultTitle: 'YouTube',
-    coverFilePrefix: 'youtube',
-    logPrefix: 'youtube-funnel',
-    allFailedMessage: "Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.",
-    someFailedNotice: (failures, total) => `${failures} vidéo(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
-  },
-};
-
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
 // false si l'utilisateur a annulé ou si la sauvegarde n'a pas abouti.
 // savedSnapshot : JSON.stringify du projet au moment du dernier save/load, ou null si projet vierge
@@ -620,9 +589,6 @@ function AppContent() {
     }
   }
 
-  const [importing, setImporting] = useState(null);
-  const [unpacking, setUnpacking] = useState(null);
-
   // Tri des médias de session non utilisés à la promotion (plan 22, D51).
   const { triageSessionMedia, triageRequest } = useSessionMediaTriage({
     store,
@@ -716,8 +682,13 @@ function AppContent() {
     store,
   ]);
 
+  // Grappe « funnels média d'accueil » (plan L, iso-fonctionnel) : atterrissage
+  // podcast/YouTube + regroupement des appels d'import déjà-hookés
+  // (useImportSession/useOsFileDrop, ré-exposés). Appelée APRÈS useMediaTransferHandlers
+  // (copy-handlers), useSaveProgress (persistProjectSnapshot) et useWorkSession
+  // (runFunnelLanding), et AVANT ses consommateurs (ProjectActionsContext,
+  // useProjectLifecycle qui lit unpackZipIntoBlankProject).
   const {
-    dispatchFiles,
     handleAddStory,
     handleAddStoryToMenu,
     handleImportFolder,
@@ -726,30 +697,34 @@ function AppContent() {
     handleImportMediaLibrary,
     handleImportMediaLibraryFolder,
     handleImportMediaEpisodes,
-  } = useImportSession({
+    importing,
+    unpacking,
+    handlePodcastFunnelImport,
+    handleYoutubeFunnelImport,
+    handleYoutubeEditorImport,
+  } = useMediaImport({
     store,
     projectIndex,
     maybeCopyToProject,
     copyGeneratedMediaToProject,
     extractAudioEmbeddedImage,
-    setImporting,
-    setUnpacking,
-    setImportNotice,
     addPathsToMediaLibrary,
     persistProjectSnapshot,
     workspaceDirRef,
+    importedPackPendingMetaRef,
+    runFunnelLanding,
+    setImportNotice,
+    setActiveDropZone,
     showErrorDialog,
-    getImportDisplayName,
-    isImportedPackPath,
-    onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },
   });
 
   // Cycle de vie du projet (plan K, iso-fonctionnel) : nouveau projet (reset vers
   // l'accueil), choix du type (session éphémère) et atterrissage depuis les funnels
   // « Modifier un pack » (éditable) / « Simuler » (non éditable). Appelée APRÈS
-  // useWorkSession, useSaveProgress et useImportSession : elle consomme
+  // useWorkSession, useSaveProgress et useMediaImport : elle consomme
   // runFunnelLanding/prepareNewWorkSession/resetWorkSession, handleSave et
-  // unpackZipIntoBlankProject. askSaveBeforeLeaveCurrent reste chez l'hôte (garde
+  // unpackZipIntoBlankProject (ré-exposé par useMediaImport).
+  // askSaveBeforeLeaveCurrent reste chez l'hôte (garde
   // partagée avec useWindowCloseGuard) et lui est passée en entrée.
   const {
     handleNewProject,
@@ -776,93 +751,6 @@ function AppContent() {
     setPendingSimulateZip,
     setImportNotice,
     showErrorDialog,
-  });
-
-  // Funnels média d'accueil (podcast et YouTube, plan 09) : flux jumeaux — crée la
-  // session éphémère, pré-remplit titre + vignette depuis la source (flux RSS ou
-  // liste yt-dlp), puis importe les épisodes/vidéos en histoires avant
-  // l'atterrissage éditeur. Vocabulaire par source dans MEDIA_FUNNEL_COPY.
-  async function landMediaFunnel(source, items, list, onProgress) {
-    const copy = MEDIA_FUNNEL_COPY[source];
-    await runFunnelLanding('pack', async () => {
-      const listTitle = String(list?.title || '').trim();
-      onProgress?.({ name: listTitle || copy.defaultTitle, index: 0, total: items.length, phase: 'Préparation de la session…' });
-      let listCover = null;
-      if (list?.imageUrl) {
-        try {
-          const tmpImage = await invoke('download_podcast_media', {
-            url: list.imageUrl,
-            fileName: `${listTitle || copy.coverFilePrefix}-couverture`,
-          });
-          listCover = await copyGeneratedMediaToProject(tmpImage);
-        } catch (coverError) {
-          logger.warn(`${copy.logPrefix}:cover-error title='${listTitle || copy.defaultTitle}' error=${coverError}`);
-        }
-      }
-      if (listTitle || listCover) {
-        store.setProject((project) => ({
-          ...project,
-          ...(listTitle ? { projectName: listTitle, rootName: listTitle } : {}),
-          ...(listCover ? { rootImage: listCover, thumbnailImage: listCover } : {}),
-          packMetadata: {
-            ...(project.packMetadata ?? {}),
-            ...(listTitle ? { title: listTitle } : {}),
-          },
-        }));
-      }
-      store.setSelectedId('root');
-      const result = await handleImportMediaEpisodes(items, list, {
-        source,
-        targetMenuId: null,
-        onProgress,
-        suppressDialog: true,
-      });
-      if (result.total > 0 && result.failures >= result.total) {
-        throw new Error(copy.allFailedMessage);
-      }
-      if (result.failures > 0) {
-        setImportNotice(copy.someFailedNotice(result.failures, result.total));
-      }
-      logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
-    }, { errorLog: `${copy.logPrefix}:import-error` });
-  }
-
-  async function handlePodcastFunnelImport(episodes, feed, onProgress) {
-    await landMediaFunnel('podcast', episodes, feed, onProgress);
-  }
-
-  async function handleYoutubeFunnelImport(videos, list, onProgress) {
-    await landMediaFunnel('youtube', videos, list, onProgress);
-  }
-
-  // Import YouTube depuis l'éditeur libre (plan 09) : pas de nouvelle session, on
-  // insère dans le projet courant (cible déduite de la sélection comme les autres
-  // imports média). Lève en cas d'échec total → écran d'erreur du funnel.
-  async function handleYoutubeEditorImport(videos, list, onProgress) {
-    const copy = MEDIA_FUNNEL_COPY.youtube;
-    const result = await handleImportMediaEpisodes(videos, list, {
-      source: 'youtube',
-      onProgress,
-      suppressDialog: true,
-    });
-    if (result.total > 0 && result.failures >= result.total) {
-      throw new Error(copy.allFailedMessage);
-    }
-    if (result.failures > 0) {
-      setImportNotice(copy.someFailedNotice(result.failures, result.total));
-    }
-    logger.info(`youtube-editor:imported count=${result.imported}`);
-  }
-
-  useOsFileDrop({
-    dispatchFiles,
-    maybeCopyToProject,
-    copyGeneratedMediaToProject,
-    extractAudioEmbeddedImage,
-    addPathsToMediaLibrary,
-    setImporting,
-    setActiveDropZone,
-    getImportDisplayName,
   });
 
   useSyncedRef(saveHandlerRef, handleSave);
