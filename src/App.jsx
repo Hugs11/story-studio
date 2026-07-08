@@ -35,7 +35,6 @@ import { isTtsAvailable, loadXttsSettings, saveXttsSettings } from './store/xtts
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
-import { getImageJobTargetLabel } from './store/aiJobLabels';
 import { useRenderQueueExecutor } from './hooks/useRenderQueueExecutor';
 import { useProjectFileAudit } from './hooks/useProjectFileAudit';
 import { useProjectDerivedData } from './hooks/useProjectDerivedData';
@@ -61,6 +60,7 @@ import { EditPackFunnel } from './components/EditPack/EditPackFunnel';
 import { PodcastImportFunnel } from './components/PodcastImport/PodcastImportFunnel';
 import { YoutubeImportFunnel } from './components/YoutubeImport/YoutubeImportFunnel';
 import { useEscapeKey } from './hooks/useEscapeKey';
+import { useAiGeneration } from './hooks/useAiGeneration';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
@@ -127,18 +127,6 @@ function isImportedPackPath(filePath) {
 function getImportDisplayName(filePath) {
   const fileName = basename(filePath);
   return sanitizeImportedName(fileName, fileName || 'Import en cours');
-}
-
-function getTtsStoryName(text) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return '';
-  const punctuationIndexes = ['.', '!', '?']
-    .map((mark) => normalized.indexOf(mark))
-    .filter((index) => index >= 0);
-  const firstStop = punctuationIndexes.length > 0 ? Math.min(...punctuationIndexes) : -1;
-  const firstSentence = firstStop >= 0 ? normalized.slice(0, firstStop) : normalized;
-  const clipped = firstSentence.length > 72 ? `${firstSentence.slice(0, 72).trim()}...` : firstSentence;
-  return sanitizeImportedName(clipped, '');
 }
 
 // Textes des funnels média d'accueil (podcast/YouTube, plan 09) : flux identiques,
@@ -215,8 +203,6 @@ function AppContent() {
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
-  const [sdGenerateOpen, setSdGenerateOpen] = useState(false);
-  const [sdGenerateContext, setSdGenerateContext] = useState(null);
   const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
   const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
   const diagramView = useDiagramViewState();
@@ -426,89 +412,31 @@ function AppContent() {
 
   useEscapeKey(creditsOpen, () => setCreditsOpen(false));
 
+  // Dispatch de génération IA (SD/ComfyUI + XTTS) + application d'un audio généré
+  // à sa cible. Appelé AVANT useSDJobs/useXttsJobs : applyGeneratedAudioToTarget
+  // leur est passé et doit exister au moment du câblage.
+  const {
+    handleOpenAiQueue,
+    handleOpenSDGenerate,
+    handleRegenerateImageJob,
+    handleSDGenerate,
+    applyGeneratedAudioToTarget,
+    handleQueueXttsGenerate,
+    sdGenerate,
+  } = useAiGeneration({
+    store,
+    sdStore,
+    xttsStore,
+    projectIndex,
+    xttsSettings,
+    setBottomPanelOpen,
+    setBottomPanelTab,
+  });
+
   useSDJobs(sdStore, workspaceDir, handleMediaCreated);
   useXttsJobs(xttsStore, applyGeneratedAudioToTarget, workspaceDir, handleMediaCreated);
 
-  function handleOpenAiQueue() {
-    setBottomPanelTab('ai');
-    setBottomPanelOpen(true);
-  }
-
-  function handleOpenSDGenerate(context = null) {
-    setSdGenerateContext(context);
-    setSdGenerateOpen(true);
-  }
-
-  function handleRegenerateImageJob(job) {
-    if (!job) return;
-    setSdGenerateContext({ regenerateJob: job });
-    setSdGenerateOpen(true);
-  }
-
-  function handleSDGenerate(workflowId, workflowName, params) {
-    sdStore.addJob(workflowId, workflowName, params, {
-      projectName: getProjectFilePrefix(store.project, store.savePath),
-      fieldId: sdGenerateContext?.fieldId || null,
-      targetLabel: getImageJobTargetLabel(sdGenerateContext, projectIndex),
-    });
-    handleOpenAiQueue();
-  }
-
-  function applyGeneratedAudioToTarget(target, path, job = null) {
-    if (!target || !path) return;
-    switch (target.kind) {
-      case 'root':
-        store.updateRootMedia(target.field, path);
-        return;
-      case 'rootStory':
-        store.updateStoryAudio(path);
-        return;
-      case 'newStory':
-        store.addStory(target.menuId ?? null, path, { name: getTtsStoryName(job?.request?.text) });
-        return;
-      case 'menu':
-        store.updateMenu(target.entryId, { [target.field]: path });
-        return;
-      case 'story':
-        store.updateItem(target.entryId, { [target.field]: path });
-        return;
-      case 'storySequence': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        if (!entry?.afterPlaybackSequence?.length) return;
-        store.updateItem(target.entryId, {
-          afterPlaybackSequence: entry.afterPlaybackSequence.map((step) => (
-            step.id === target.stepId ? { ...step, [target.field]: path } : step
-          )),
-        });
-        return;
-      }
-      case 'storyHomeStep': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        if (!entry?.afterPlaybackHomeStep) return;
-        store.updateItem(target.entryId, {
-          afterPlaybackHomeStep: { ...entry.afterPlaybackHomeStep, [target.field]: path },
-        });
-        return;
-      }
-      default:
-        return;
-    }
-  }
-
   const { getAudioJobUsage, getImageJobUsage } = useAiJobUsage({ project: store.project, projectIndex });
-
-  async function handleQueueXttsGenerate(job) {
-    xttsStore.addJob({
-      label: job.targetLabel || 'Audio IA',
-      targetLabel: job.targetLabel || 'Audio IA',
-      voiceLabel: job.voiceLabel || 'XTTS',
-      target: job.target || null,
-      request: job.request,
-      settings: { ...xttsSettings },
-      projectName: getProjectFilePrefix(store.project, store.savePath),
-    });
-    handleOpenAiQueue();
-  }
 
   async function handleNewProject() {
     const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
@@ -1560,18 +1488,15 @@ function AppContent() {
       )}
 
       {/* SD — modale de génération */}
-      {sdGenerateOpen && renderDeferred(
+      {sdGenerate.open && renderDeferred(
         <SDGenerateModal
           sdSettings={sdStore.sdSettings}
           onGenerate={handleSDGenerate}
-          currentImagePath={sdGenerateContext?.currentImagePath ?? null}
-          currentImageLabel={sdGenerateContext?.currentImageLabel ?? null}
+          currentImagePath={sdGenerate.context?.currentImagePath ?? null}
+          currentImageLabel={sdGenerate.context?.currentImageLabel ?? null}
           rootImagePath={store.project.rootImage ?? null}
-          initialJob={sdGenerateContext?.regenerateJob ?? null}
-          onClose={() => {
-            setSdGenerateOpen(false);
-            setSdGenerateContext(null);
-          }}
+          initialJob={sdGenerate.context?.regenerateJob ?? null}
+          onClose={sdGenerate.close}
         />,
       )}
 
