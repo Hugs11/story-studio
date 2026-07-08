@@ -64,6 +64,7 @@ import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
 import { useOsFileDrop } from './hooks/useOsFileDrop';
 import { usePersistentState } from './hooks/usePersistentState';
+import { useProjectLifecycle } from './hooks/useProjectLifecycle';
 import { useProjectLoading } from './hooks/useProjectLoading';
 import { useSaveProgress } from './hooks/useSaveProgress';
 import { useSessionMediaTriage } from './hooks/useSessionMediaTriage';
@@ -76,7 +77,6 @@ import { useDiagramViewState } from './workspace/useDiagramViewState';
 import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
 import { loadVerboseLoggingPref, saveVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
-import { bumpPackVersion } from './utils/packConvention';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import { basename } from './utils/fileUtils';
 import { END_NODE_ID } from './components/CentralPanel/flowDiagramLayout';
@@ -442,85 +442,6 @@ function AppContent() {
     showChoiceDialog,
   });
 
-  async function handleNewProject() {
-    const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
-    if (!canContinue) return;
-    store.resetProject();
-    setMediaLibraryPaths([]);
-    savedSnapshotRef.current = null;
-    autoSavePathRef.current = null;
-    setAutoSavedPath(null);
-    resetWorkSession();
-    sdStore.clearDone();
-    xttsStore.clearDone();
-  }
-
-  async function handleSelectProjectType(type) {
-    try {
-      await prepareNewWorkSession(type);
-    } catch (error) {
-      logger.error('session:start-error', error);
-      showErrorDialog({
-        title: 'Nouveau projet',
-        message: `Impossible de préparer le dossier de travail : ${error}`,
-      });
-    }
-  }
-
-  // Entrée accueil « Modifier un pack » (plan 04) : ouvre le funnel dédié
-  // (zone de dépôt fichier/dossier, vérification d'éditabilité D31 et
-  // décompression affichées dans le funnel).
-  function handleEditExistingPack() {
-    setEditPackOpen(true);
-  }
-
-  // Pack éditable confirmé par le funnel : crée la session éphémère, extrait le
-  // pack (décompression affichée DANS le funnel) puis atterrit dans l'éditeur.
-  // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
-  // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
-  async function handleLandEditablePack({ zipPath, packLabel }) {
-    await runFunnelLanding('pack', async (workspaceDir) => {
-      const transformed = await unpackZipIntoBlankProject({
-        zipPath,
-        zipName: packLabel,
-        workspaceDir,
-        baseProject: store.project,
-      });
-      if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
-      // D34 : suggérer une version incrémentée (_V2 si aucune) et forcer la modal
-      // de métadonnées pré-remplie à la première génération du pack importé.
-      const landedProject = transformed.project.packMetadata
-        ? {
-            ...transformed.project,
-            packMetadata: {
-              ...transformed.project.packMetadata,
-              version: bumpPackVersion(transformed.project.packMetadata.version),
-            },
-          }
-        : transformed.project;
-      store.setProject(landedProject);
-      store.setSelectedId('root');
-      importedPackPendingMetaRef.current = true;
-      if (transformed.advancedTransitionsDetected) {
-        const firstWarning = transformed.unresolvedTransitions[0]?.message;
-        setImportNotice(
-          "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
-          + "Story Studio a conservé la structure reconnue, mais vérifie les retours concernés avant export."
-          + (firstWarning ? ` Exemple : ${firstWarning}` : '')
-        );
-      }
-      logger.info(`edit-pack:landed zip='${zipPath}'`);
-    }, { errorLog: 'edit-pack:land-error' });
-  }
-
-  // Pack non éditable : le funnel propose la simulation. Session éphémère
-  // minimale + pack en entrée ZIP + ouverture du simulateur (lecture seule).
-  async function handleSimulatePackReady({ zipPath, packLabel }) {
-    await prepareNewWorkSession('pack');
-    store.addZip(null, zipPath, packLabel, null, null);
-    setPendingSimulateZip(zipPath);
-  }
-
   const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
     const nextProjectName = projectName ?? name;
     if (nextProjectName !== undefined) store.updateProjectName(nextProjectName);
@@ -821,6 +742,40 @@ function AppContent() {
     getImportDisplayName,
     isImportedPackPath,
     onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },
+  });
+
+  // Cycle de vie du projet (plan K, iso-fonctionnel) : nouveau projet (reset vers
+  // l'accueil), choix du type (session éphémère) et atterrissage depuis les funnels
+  // « Modifier un pack » (éditable) / « Simuler » (non éditable). Appelée APRÈS
+  // useWorkSession, useSaveProgress et useImportSession : elle consomme
+  // runFunnelLanding/prepareNewWorkSession/resetWorkSession, handleSave et
+  // unpackZipIntoBlankProject. askSaveBeforeLeaveCurrent reste chez l'hôte (garde
+  // partagée avec useWindowCloseGuard) et lui est passée en entrée.
+  const {
+    handleNewProject,
+    handleSelectProjectType,
+    handleEditExistingPack,
+    handleLandEditablePack,
+    handleSimulatePackReady,
+  } = useProjectLifecycle({
+    store,
+    askSaveBeforeLeaveCurrent,
+    handleSave,
+    prepareNewWorkSession,
+    runFunnelLanding,
+    resetWorkSession,
+    unpackZipIntoBlankProject,
+    savedSnapshotRef,
+    autoSavePathRef,
+    importedPackPendingMetaRef,
+    setMediaLibraryPaths,
+    setAutoSavedPath,
+    sdStore,
+    xttsStore,
+    setEditPackOpen,
+    setPendingSimulateZip,
+    setImportNotice,
+    showErrorDialog,
   });
 
   // Funnels média d'accueil (podcast et YouTube, plan 09) : flux jumeaux — crée la
