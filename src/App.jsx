@@ -1,4 +1,4 @@
-import { lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { useProjectStore } from './store/projectStore';
@@ -6,9 +6,6 @@ import {
   getRecentProjects,
   ensureWorkspaceDir,
 } from './store/projectIO';
-import { ProjectContext } from './store/ProjectContext';
-import { ProjectActionsContext } from './store/ProjectActionsContext';
-import { MediaTransferProvider } from './store/MediaTransferContext';
 import { collectMediaLibrary } from './store/mediaLibrary';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
@@ -25,12 +22,8 @@ import {
   setCurrentShortcuts,
 } from './store/keyboardShortcuts';
 import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
-import { TitleBar } from './components/layout/TitleBar';
-import { Toolbar } from './components/layout/Toolbar';
-import { BottomWorkspacePanel } from './components/BottomWorkspacePanel/BottomWorkspacePanel';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
-import { AppModals } from './components/AppModals';
-import { renderDeferred } from './components/renderDeferred';
+import { AppShell } from './components/AppShell';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useDisclosures } from './hooks/useDisclosures';
 import { useAiGeneration } from './hooks/useAiGeneration';
@@ -68,8 +61,6 @@ import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
-
-const WorkspaceView = lazy(() => import('./workspace/WorkspaceView').then((module) => ({ default: module.WorkspaceView })));
 
 // Codecs réutilisés par les `usePersistentState` ci-dessous.
 const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
@@ -740,239 +731,208 @@ function AppContent() {
     handleMediaCreated,
   });
 
-  return (
-    <MediaTransferProvider
-      dropOnNode={dropOnNode}
-      notifyCutPaste={notifyCutPaste}
-      activeDropZone={activeDropZone}
-      setActiveDropZone={setActiveDropZone}
-    >
-    <ProjectContext.Provider value={projectContextValue}>
-    <ProjectActionsContext.Provider value={projectActions}>
-    <div className="app">
-      <TitleBar
-        projectName={titleBarName}
-        packMetadata={projectType === 'pack'
-          ? store.project.packMetadata
-          : projectType === 'simple'
-            ? {
-                ...(store.project.packMetadata ?? {}),
-                title: store.project.packMetadata?.title || store.project.projectName || '',
-              }
-            : null}
-        packCoverImage={projectType !== null ? (store.project.thumbnailImage || store.project.rootImage) : null}
-        isDirty={projectDirty}
-        hasSavePath={!!store.savePath}
-        saveState={saveToast}
-        showProjectMeta={projectType !== null}
-        onOpenPackMetadata={projectType !== null ? packMetadata.openPackMetadata : null}
-        onOpenCredits={() => modals.open('credits')}
-      />
+  // Mur de props d'`AppModals` (~45 clés) : spread tel quel dans le shell, sans
+  // renommer aucune clé (plan W) pour éviter les fautes de frappe silencieuses.
+  const appModalsProps = {
+    modals,
+    youtubeFunnelMode,
+    setYoutubeFunnelMode,
+    toolbarTtsTargetMenuId,
+    project: store.project,
+    savePath: store.savePath,
+    projectType,
+    workspaceDir,
+    projectName: effectiveProjectFilePrefix,
+    appVersion,
+    xttsSettings,
+    sdSettings: sdStore.sdSettings,
+    canGenerate,
+    canGenerateStoryTts,
+    modalExportFolder,
+    importedPackPendingMetaRef,
+    optionsTabProps,
+    sdGenerate,
+    onSDGenerate: handleSDGenerate,
+    onQueueXttsGenerate: handleQueueXttsGenerate,
+    onUpdateXttsSettings: handleUpdateXttsSettings,
+    packMetadata,
+    onSavePackMetadata: handleSavePackMetadata,
+    onLandEditablePack: handleLandEditablePack,
+    onSimulatePackReady: handleSimulatePackReady,
+    onImportMediaEpisodes: handleImportMediaEpisodes,
+    onPodcastFunnelImport: handlePodcastFunnelImport,
+    onYoutubeFunnelImport: handleYoutubeFunnelImport,
+    onYoutubeEditorImport: handleYoutubeEditorImport,
+    importing,
+    unpacking,
+    showMissingMediaRelink,
+    missingMedia,
+    missingMediaSignature,
+    onApplyMissingMediaRelinks: handleApplyMissingMediaRelinks,
+    setDismissedMissingMediaSignature,
+    saveProgress,
+    saveAsProgress,
+    triageRequest,
+    importNotice,
+    setImportNotice,
+    onToolbarRecordSaved: handleToolbarRecordSaved,
+    onMediaCreated: handleMediaCreated,
+  };
 
-      {projectType !== null && (
-        <Toolbar
-          showProjectActions={projectType !== null}
-          shortcutLabels={shortcutLabels}
-          saveState={saveToast}
-          generateDisabled={!canGenerate}
-          onNewProject={handleNewProject}
-          onOpenProject={handleLoad}
-          onSaveProject={handleSave}
-          onSaveProjectAs={handleSaveProjectAs}
-          panels={{
-            showTree: diagramView.showTree,
-            showSettings: diagramView.showSettings,
-            showDiagram: diagramView.showDiagram,
-          }}
-          onToggleTree={diagramView.toggleTree}
-          onToggleSettings={diagramView.toggleSettings}
-          onToggleDiagram={diagramView.toggleDiagram}
-          packOptionsOpen={modals.isOpen('packOptions')}
-          onPackOptionsOpenChange={(open) => modals.set('packOptions', open)}
-          projectType={store.project.projectType}
-          globalOptions={store.project.globalOptions}
-          onUpdateGlobalOption={handleUpdateGlobalOption}
-          onOpenPreferences={() => modals.open('prefs')}
-          onGenerate={handleGenerate}
-          validationIssues={validationIssues}
-          pathAuditPending={pathAuditPending}
-          validationOpen={modals.isOpen('validation')}
-          onValidationOpenChange={(open) => modals.set('validation', open)}
-          onSelectIssue={(id) => {
-            if (!id) return;
-            store.setSelectedId(id);
-            if (!diagramView.showSettings) diagramView.restoreSettings();
-          }}
-        />
-      )}
+  // Groupes de props du shell présentational (plan W). Aucune logique métier :
+  // uniquement du branchement de valeurs/handlers déjà calculés vers le chrome.
+  const appShellProps = {
+    mediaTransfer: {
+      dropOnNode,
+      notifyCutPaste,
+      activeDropZone,
+      setActiveDropZone,
+    },
+    projectContextValue,
+    projectActions,
+    projectType,
+    titleBar: {
+      projectName: titleBarName,
+      packMetadata: projectType === 'pack'
+        ? store.project.packMetadata
+        : projectType === 'simple'
+          ? {
+              ...(store.project.packMetadata ?? {}),
+              title: store.project.packMetadata?.title || store.project.projectName || '',
+            }
+          : null,
+      packCoverImage: projectType !== null ? (store.project.thumbnailImage || store.project.rootImage) : null,
+      isDirty: projectDirty,
+      hasSavePath: !!store.savePath,
+      saveState: saveToast,
+      showProjectMeta: projectType !== null,
+      onOpenPackMetadata: projectType !== null ? packMetadata.openPackMetadata : null,
+      onOpenCredits: () => modals.open('credits'),
+    },
+    toolbar: projectType !== null ? {
+      showProjectActions: projectType !== null,
+      shortcutLabels,
+      saveState: saveToast,
+      generateDisabled: !canGenerate,
+      onNewProject: handleNewProject,
+      onOpenProject: handleLoad,
+      onSaveProject: handleSave,
+      onSaveProjectAs: handleSaveProjectAs,
+      panels: {
+        showTree: diagramView.showTree,
+        showSettings: diagramView.showSettings,
+        showDiagram: diagramView.showDiagram,
+      },
+      onToggleTree: diagramView.toggleTree,
+      onToggleSettings: diagramView.toggleSettings,
+      onToggleDiagram: diagramView.toggleDiagram,
+      packOptionsOpen: modals.isOpen('packOptions'),
+      onPackOptionsOpenChange: (open) => modals.set('packOptions', open),
+      projectType: store.project.projectType,
+      globalOptions: store.project.globalOptions,
+      onUpdateGlobalOption: handleUpdateGlobalOption,
+      onOpenPreferences: () => modals.open('prefs'),
+      onGenerate: handleGenerate,
+      validationIssues,
+      pathAuditPending,
+      validationOpen: modals.isOpen('validation'),
+      onValidationOpenChange: (open) => modals.set('validation', open),
+      onSelectIssue: (id) => {
+        if (!id) return;
+        store.setSelectedId(id);
+        if (!diagramView.showSettings) diagramView.restoreSettings();
+      },
+    } : null,
+    workspace: {
+      project: store.project,
+      node: selectedNode,
+      selectedId: store.selectedId,
+      onSetProjectType: handleSelectProjectType,
+      onEditPack: handleEditExistingPack,
+      onPodcastFunnel: () => modals.open('podcastFunnel'),
+      onYoutubeFunnel: () => setYoutubeFunnelMode('home'),
+      onAggregatePacks: () => modals.open('aggregatePacks'),
+      onCheckPack: () => modals.open('packChecker'),
+      pendingSimulateZipPath: pendingSimulateZip,
+      onSimulateConsumed: () => setPendingSimulateZip(null),
+      onOpenProject: handleLoad,
+      onOpenPreferences: () => modals.open('prefs'),
+      recentProjects,
+      onOpenRecentProject: handleLoadRecent,
+      sessionRecoveries,
+      onRecoverSession: handleRecoverSession,
+      onIgnoreSessionRecovery: handleIgnoreSessionRecovery,
+      pathAudit,
+      validationIssues,
+      allMenus,
+      projectIndex,
+      treeSearchFocusTrigger,
+      onFocusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
+      diagramView,
+    },
+    bottomPanel: {
+      open: bottomPanelOpen,
+      activeTab: bottomPanelTab,
+      onActiveTabChange: setBottomPanelTab,
+      onClose: () => setBottomPanelOpen(false),
+      project: store.project,
+      pathAudit,
+      sdJobs: sdStore.jobs,
+      xttsJobs: xttsStore.jobs,
+      mediaLibraryPaths,
+      onImportStories: () => handleAddStory(),
+      onImportMedia: handleImportMediaLibrary,
+      onImportMediaFolder: handleImportMediaLibraryFolder,
+      onOpenAiQueue: handleOpenAiQueue,
+      onRegenerateImage: handleRegenerateImageJob,
+      onClearAiDone: () => {
+        sdStore.clearDone();
+        xttsStore.clearDone();
+      },
+      onRemoveImageJob: sdStore.removeJob,
+      onRemoveAudioJob: xttsStore.removeJob,
+      getAudioUsage: getAudioJobUsage,
+      getImageUsage: getImageJobUsage,
+      onSelectNode: (id) => {
+        store.setSelectedId(id);
+        if (!diagramView.showSettings) diagramView.restoreSettings();
+      },
+      renderQueue,
+      mediaTags: store.mediaTags,
+      onAddMediaTag: store.addMediaTag,
+      onRemoveMediaTag: store.removeMediaTag,
+      onDeleteMedia: handleDeleteMedia,
+      savePath: store.savePath,
+      projectName: effectiveProjectFilePrefix,
+      onMediaCreated: handleMediaCreated,
+    },
+    appModalsProps,
+    bottomBar: {
+      statusText,
+      projectType,
+      open: bottomPanelOpen,
+      mediaLibraryCount,
+      renderQueueActiveCount: renderQueue.activeCount,
+      renderQueueHasResults: renderQueue.hasResults,
+      aiQueueActiveCount,
+      aiQueueHasResults,
+      onOpenMedia: () => {
+        setBottomPanelTab('media');
+        setBottomPanelOpen(true);
+      },
+      onOpenRenderQueue: () => {
+        setBottomPanelTab('queue');
+        setBottomPanelOpen(true);
+      },
+      onOpenAiQueue: () => {
+        setBottomPanelTab('ai');
+        setBottomPanelOpen(true);
+      },
+      appVersion,
+    },
+  };
 
-      <div className="chrome-shell">
-        <div className="chrome-content">
-          {renderDeferred(
-            <WorkspaceView
-              project={store.project}
-              node={selectedNode}
-              selectedId={store.selectedId}
-              onSetProjectType={handleSelectProjectType}
-              onEditPack={handleEditExistingPack}
-              onPodcastFunnel={() => modals.open('podcastFunnel')}
-              onYoutubeFunnel={() => setYoutubeFunnelMode('home')}
-              onAggregatePacks={() => modals.open('aggregatePacks')}
-              onCheckPack={() => modals.open('packChecker')}
-              pendingSimulateZipPath={pendingSimulateZip}
-              onSimulateConsumed={() => setPendingSimulateZip(null)}
-              onOpenProject={handleLoad}
-              onOpenPreferences={() => modals.open('prefs')}
-              recentProjects={recentProjects}
-              onOpenRecentProject={handleLoadRecent}
-              sessionRecoveries={sessionRecoveries}
-              onRecoverSession={handleRecoverSession}
-              onIgnoreSessionRecovery={handleIgnoreSessionRecovery}
-              pathAudit={pathAudit}
-              validationIssues={validationIssues}
-              allMenus={allMenus}
-              projectIndex={projectIndex}
-              treeSearchFocusTrigger={treeSearchFocusTrigger}
-              onFocusTreeSearch={() => setTreeSearchFocusTrigger((n) => n + 1)}
-              diagramView={diagramView}
-            />,
-          )}
-          {projectType !== null && bottomPanelOpen && (
-            <BottomWorkspacePanel
-              activeTab={bottomPanelTab}
-              onActiveTabChange={setBottomPanelTab}
-              onClose={() => setBottomPanelOpen(false)}
-              project={store.project}
-              pathAudit={pathAudit}
-              sdJobs={sdStore.jobs}
-              xttsJobs={xttsStore.jobs}
-              mediaLibraryPaths={mediaLibraryPaths}
-              onImportStories={() => handleAddStory()}
-              onImportMedia={handleImportMediaLibrary}
-              onImportMediaFolder={handleImportMediaLibraryFolder}
-              onOpenAiQueue={handleOpenAiQueue}
-              onRegenerateImage={handleRegenerateImageJob}
-              onClearAiDone={() => {
-                sdStore.clearDone();
-                xttsStore.clearDone();
-              }}
-              onRemoveImageJob={sdStore.removeJob}
-              onRemoveAudioJob={xttsStore.removeJob}
-              getAudioUsage={getAudioJobUsage}
-              getImageUsage={getImageJobUsage}
-              onSelectNode={(id) => {
-                store.setSelectedId(id);
-                if (!diagramView.showSettings) diagramView.restoreSettings();
-              }}
-              renderQueue={renderQueue}
-              mediaTags={store.mediaTags}
-              onAddMediaTag={store.addMediaTag}
-              onRemoveMediaTag={store.removeMediaTag}
-              onDeleteMedia={handleDeleteMedia}
-              savePath={store.savePath}
-              projectName={effectiveProjectFilePrefix}
-              onMediaCreated={handleMediaCreated}
-            />
-          )}
-        </div>
-      </div>
-
-      <AppModals
-        modals={modals}
-        youtubeFunnelMode={youtubeFunnelMode}
-        setYoutubeFunnelMode={setYoutubeFunnelMode}
-        toolbarTtsTargetMenuId={toolbarTtsTargetMenuId}
-        project={store.project}
-        savePath={store.savePath}
-        projectType={projectType}
-        workspaceDir={workspaceDir}
-        projectName={effectiveProjectFilePrefix}
-        appVersion={appVersion}
-        xttsSettings={xttsSettings}
-        sdSettings={sdStore.sdSettings}
-        canGenerate={canGenerate}
-        canGenerateStoryTts={canGenerateStoryTts}
-        modalExportFolder={modalExportFolder}
-        importedPackPendingMetaRef={importedPackPendingMetaRef}
-        optionsTabProps={optionsTabProps}
-        sdGenerate={sdGenerate}
-        onSDGenerate={handleSDGenerate}
-        onQueueXttsGenerate={handleQueueXttsGenerate}
-        onUpdateXttsSettings={handleUpdateXttsSettings}
-        packMetadata={packMetadata}
-        onSavePackMetadata={handleSavePackMetadata}
-        onLandEditablePack={handleLandEditablePack}
-        onSimulatePackReady={handleSimulatePackReady}
-        onImportMediaEpisodes={handleImportMediaEpisodes}
-        onPodcastFunnelImport={handlePodcastFunnelImport}
-        onYoutubeFunnelImport={handleYoutubeFunnelImport}
-        onYoutubeEditorImport={handleYoutubeEditorImport}
-        importing={importing}
-        unpacking={unpacking}
-        showMissingMediaRelink={showMissingMediaRelink}
-        missingMedia={missingMedia}
-        missingMediaSignature={missingMediaSignature}
-        onApplyMissingMediaRelinks={handleApplyMissingMediaRelinks}
-        setDismissedMissingMediaSignature={setDismissedMissingMediaSignature}
-        saveProgress={saveProgress}
-        saveAsProgress={saveAsProgress}
-        triageRequest={triageRequest}
-        importNotice={importNotice}
-        setImportNotice={setImportNotice}
-        onToolbarRecordSaved={handleToolbarRecordSaved}
-        onMediaCreated={handleMediaCreated}
-      />
-
-      {/* Bottom bar */}
-      <div className="bottombar">
-        <span className="status-text">{statusText}</span>
-        {projectType !== null && !bottomPanelOpen && (
-          <button
-            className="rq-bottombar-btn"
-            onClick={() => {
-              setBottomPanelTab('media');
-              setBottomPanelOpen(true);
-            }}
-          >
-            Médias
-            <span>({mediaLibraryCount})</span>
-          </button>
-        )}
-        {projectType !== null && !bottomPanelOpen && (
-          <button
-            className={`rq-bottombar-btn${renderQueue.activeCount > 0 ? ' has-active' : ''}`}
-            onClick={() => {
-              setBottomPanelTab('queue');
-              setBottomPanelOpen(true);
-            }}
-          >
-            {renderQueue.activeCount > 0 && <span className="rq-spinner" />}
-            File de rendu
-            {renderQueue.activeCount > 0 && <span className="bottom-status-pill">{renderQueue.activeCount}</span>}
-            {renderQueue.activeCount === 0 && renderQueue.hasResults && <span className="bottom-status-pill is-done">✓</span>}
-          </button>
-        )}
-        {projectType !== null && !bottomPanelOpen && (
-          <button
-            className={`rq-bottombar-btn${aiQueueActiveCount > 0 ? ' has-active' : ''}`}
-            onClick={() => {
-              setBottomPanelTab('ai');
-              setBottomPanelOpen(true);
-            }}
-          >
-            {aiQueueActiveCount > 0 && <span className="rq-spinner" />}
-            File IA
-            {aiQueueActiveCount > 0 && <span className="bottom-status-pill">{aiQueueActiveCount}</span>}
-            {aiQueueActiveCount === 0 && aiQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
-          </button>
-        )}
-        {appVersion && <span className="bottombar-version">v{appVersion}</span>}
-      </div>
-    </div>
-    </ProjectActionsContext.Provider>
-    </ProjectContext.Provider>
-    </MediaTransferProvider>
-  );
+  return <AppShell {...appShellProps} />;
 }
 
 export default function App() {
