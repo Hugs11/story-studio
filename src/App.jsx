@@ -15,13 +15,6 @@ import { ProjectContext } from './store/ProjectContext';
 import { ProjectActionsContext } from './store/ProjectActionsContext';
 import { MediaTransferProvider } from './store/MediaTransferContext';
 import { collectMediaLibrary } from './store/mediaLibrary';
-import {
-  buildRelinkSignature,
-  collectMissingMedia,
-  relinkMediaLibraryPaths,
-  relinkMediaTags,
-  relinkProjectMedia,
-} from './store/missingMediaRelink';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
 import { KEYS, read as readSetting } from './store/persistentSettings';
@@ -62,6 +55,7 @@ import { useAutosave } from './hooks/useAutosave';
 import { useMediaImport } from './hooks/useMediaImport';
 import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
+import { useMissingMediaRelink } from './hooks/useMissingMediaRelink';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useProjectLifecycle } from './hooks/useProjectLifecycle';
 import { useProjectLoading } from './hooks/useProjectLoading';
@@ -209,7 +203,6 @@ function AppContent() {
   const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
   const [validationOpen, setValidationOpen] = useState(false);
-  const [dismissedMissingMediaSignature, setDismissedMissingMediaSignature] = useState('');
   const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
@@ -254,10 +247,6 @@ function AppContent() {
   useEffect(() => {
     if (!copyImportedFilesEnabled) dismissedTransferPromptRef.current = null;
   }, [copyImportedFilesEnabled]);
-
-  useEffect(() => {
-    setDismissedMissingMediaSignature('');
-  }, [store.savePath]);
 
   useEffect(() => {
     if (renderQueue.panelOpen) {
@@ -658,29 +647,19 @@ function AppContent() {
   // génération. La proposition ne subsiste qu'à la sortie de l'app / au remplacement
   // du travail courant (useWindowCloseGuard / useProjectLoading), jamais forcée.
 
-  const handleApplyMissingMediaRelinks = useCallback(async (replacements, { saveAfter = false } = {}) => {
-    const nextProject = relinkProjectMedia(store.project, replacements);
-    const nextMediaTags = relinkMediaTags(store.mediaTags, replacements);
-    const nextMediaLibraryPaths = relinkMediaLibraryPaths(mediaLibraryPathsRef.current, replacements);
-    store.setProject(nextProject);
-    store.setMediaTags(nextMediaTags);
-    setMediaLibraryPaths(nextMediaLibraryPaths);
-    mediaLibraryPathsRef.current = nextMediaLibraryPaths;
-    setDismissedMissingMediaSignature(buildRelinkSignature(collectMissingMedia(nextProject, pathAudit)));
-    if (saveAfter) {
-      await handleSaveProject({
-        projectOverride: nextProject,
-        mediaTagsOverride: nextMediaTags,
-        mediaLibraryPathsOverride: nextMediaLibraryPaths,
-      });
-    }
-  }, [
-    handleSaveProject,
-    mediaLibraryPathsRef,
-    pathAudit,
-    setMediaLibraryPaths,
+  const {
+    missingMedia,
+    missingMediaSignature,
+    dismissedMissingMediaSignature,
+    setDismissedMissingMediaSignature,
+    handleApplyMissingMediaRelinks,
+  } = useMissingMediaRelink({
     store,
-  ]);
+    mediaLibraryPathsRef,
+    setMediaLibraryPaths,
+    pathAudit,
+    handleSaveProject,
+  });
 
   // Grappe « funnels média d'accueil » (plan L, iso-fonctionnel) : atterrissage
   // podcast/YouTube + regroupement des appels d'import déjà-hookés
@@ -809,14 +788,6 @@ function AppContent() {
   });
 
   const { projectType } = store.project;
-  const missingMedia = useMemo(
-    () => collectMissingMedia(store.project, pathAudit),
-    [store.project, pathAudit],
-  );
-  const missingMediaSignature = useMemo(
-    () => buildRelinkSignature(missingMedia),
-    [missingMedia],
-  );
   const showMissingMediaRelink = projectType !== null
     && !!store.savePath
     && !pathAuditPending
