@@ -45,8 +45,10 @@ import { useMediaImport } from './hooks/useMediaImport';
 import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
 import { useMissingMediaRelink } from './hooks/useMissingMediaRelink';
+import { useOptionsTabProps } from './hooks/useOptionsTabProps';
 import { usePersistentState } from './hooks/usePersistentState';
 import { useProjectActionsValue } from './hooks/useProjectActionsValue';
+import { useProjectContextValue } from './hooks/useProjectContextValue';
 import { useProjectLifecycle } from './hooks/useProjectLifecycle';
 import { useProjectLoading } from './hooks/useProjectLoading';
 import { useProjectMutations } from './hooks/useProjectMutations';
@@ -691,34 +693,52 @@ function AppContent() {
     canGenerateStoryTts,
   });
 
-  const optionsTabProps = {
-    copyFilesEnabled: copyImportedFilesEnabled,
-    onCopyFilesChange: handleCopyImportedFilesChange,
+  const optionsTabProps = useOptionsTabProps({
+    copyImportedFilesEnabled,
+    handleCopyImportedFilesChange,
     workspaceDir,
     configuredWorkspaceDir,
-    onPickWorkspaceDir: handlePickWorkspaceDir,
+    handlePickWorkspaceDir,
     useWorkspaceForNewProjects,
-    onUseWorkspaceForNewProjectsChange: setUseWorkspaceForNewProjects,
-    onConsolidateProject: handleConsolidateProject,
+    setUseWorkspaceForNewProjects,
+    handleConsolidateProject,
     autoSaveEnabled,
-    onAutoSaveChange: setAutoSaveEnabled,
+    setAutoSaveEnabled,
     autoSaveBackupLimit,
-    onAutoSaveBackupLimitChange: setAutoSaveBackupLimit,
+    setAutoSaveBackupLimit,
     themePreference,
-    onThemePreferenceChange: setThemePreference,
+    setThemePreference,
     keyboardShortcuts,
-    onUpdateKeyboardShortcuts: setKeyboardShortcuts,
+    setKeyboardShortcuts,
     xttsSettings,
-    onUpdateXttsSettings: handleUpdateXttsSettings,
+    handleUpdateXttsSettings,
     sdSettings: sdStore.sdSettings,
     onUpdateSdSettings: sdStore.updateSdSettings,
     verboseLogging,
-    onVerboseLoggingChange: handleVerboseLoggingChange,
-    onCopyLogPath: handleCopyLogPath,
-    onResolveLogPath: handleResolveLogPath,
+    handleVerboseLoggingChange,
+    handleCopyLogPath,
+    handleResolveLogPath,
     project: store.project,
     savePath: store.savePath,
-  };
+  });
+
+  const projectContextValue = useProjectContextValue({
+    savePath: store.savePath,
+    projectName: effectiveProjectFilePrefix,
+    workspaceDir,
+    project: store.project,
+    xttsSettings,
+    sdStore,
+    xttsStore,
+    pathAudit,
+    maybeCopyToProject,
+    extractAudioEmbeddedImage,
+    handleSaveProject,
+    handleOpenSDGenerate,
+    handleUpdateXttsSettings,
+    handleQueueXttsGenerate,
+    handleMediaCreated,
+  });
 
   return (
     <MediaTransferProvider
@@ -727,25 +747,7 @@ function AppContent() {
       activeDropZone={activeDropZone}
       setActiveDropZone={setActiveDropZone}
     >
-    <ProjectContext.Provider value={{
-      savePath: store.savePath,
-      projectName: effectiveProjectFilePrefix,
-      workspaceDir,
-      globalOptions: store.project.globalOptions,
-      xttsSettings,
-      sdSettings: sdStore.sdSettings,
-      sdJobs: sdStore.jobs,
-      xttsJobs: xttsStore.jobs,
-      pathAudit,
-      onImportFile: maybeCopyToProject,
-      onExtractAudioEmbeddedImage: extractAudioEmbeddedImage,
-      onSave: handleSaveProject,
-      onOpenSDGenerate: handleOpenSDGenerate,
-      onRemoveSdResult: sdStore.removeResult,
-      onUpdateXttsSettings: handleUpdateXttsSettings,
-      onQueueXttsGenerate: handleQueueXttsGenerate,
-      onMediaCreated: handleMediaCreated,
-    }}>
+    <ProjectContext.Provider value={projectContextValue}>
     <ProjectActionsContext.Provider value={projectActions}>
     <div className="app">
       <TitleBar
