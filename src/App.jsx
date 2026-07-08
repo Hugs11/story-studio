@@ -6,7 +6,6 @@ import {
   getRecentProjects,
   ensureWorkspaceDir,
 } from './store/projectIO';
-import { getLastExportDir } from './hooks/useFileDialog';
 import { ProjectContext } from './store/ProjectContext';
 import { ProjectActionsContext } from './store/ProjectActionsContext';
 import { MediaTransferProvider } from './store/MediaTransferContext';
@@ -14,15 +13,13 @@ import { collectMediaLibrary } from './store/mediaLibrary';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
 import { KEYS, read as readSetting } from './store/persistentSettings';
-import { isTtsAvailable, loadXttsSettings } from './store/xttsSettings';
+import { loadXttsSettings } from './store/xttsSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
 import { useRenderQueueExecutor } from './hooks/useRenderQueueExecutor';
 import { useProjectFileAudit } from './hooks/useProjectFileAudit';
-import { useProjectDerivedData } from './hooks/useProjectDerivedData';
 import {
-  getShortcutLabelMap,
   loadKeyboardShortcuts,
   saveKeyboardShortcuts,
   setCurrentShortcuts,
@@ -39,6 +36,7 @@ import { useDisclosures } from './hooks/useDisclosures';
 import { useAiGeneration } from './hooks/useAiGeneration';
 import { useAiJobUsage } from './hooks/useAiJobUsage';
 import { usePackGeneration } from './hooks/usePackGeneration';
+import { useAppDerivedState } from './hooks/useAppDerivedState';
 import { useAppPreferences } from './hooks/useAppPreferences';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
@@ -63,7 +61,6 @@ import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger'
 import { loadVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
 import { isTauriRuntime } from './utils/tauriRuntime';
 import { getProjectFilePrefix } from './utils/projectPrefix';
-import { END_NODE_ID } from './components/CentralPanel/flowDiagramLayout';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
@@ -589,65 +586,42 @@ function AppContent() {
     showConfirmDialog,
   });
 
-  const sel = store.selectedId;
+  // Modèle de lecture du shell (plan T, iso-fonctionnel) : sélection courante,
+  // validation, statut, dirty state, capacités toolbar, labels de raccourcis,
+  // dossier d'export modal. Appelé AVANT useSyncedRef(shortcutActionsRef, …) qui
+  // consomme canGenerate/totalIssues/canImportStories/canAddFolder.
   const {
+    projectType,
     selectedNode,
     validationIssues,
     allMenus,
-  } = useProjectDerivedData(store.project, {
-    selectedId: sel,
-    fileAudit: pathAudit,
+    showMissingMediaRelink,
+    totalIssues,
+    statusText,
+    projectDirty,
+    titleBarName,
+    canImportStories,
+    canAddFolder,
+    canRecord,
+    canGenerateStoryTts,
+    shortcutLabels,
+    effectiveProjectFilePrefix,
+    modalExportFolder,
+    canGenerate,
+  } = useAppDerivedState({
+    store,
     projectIndex,
+    pathAudit,
+    pathAuditPending,
+    missingMedia,
+    missingMediaSignature,
+    dismissedMissingMediaSignature,
+    diagramView,
+    savedSnapshotRef,
+    workspaceDirRef,
+    keyboardShortcuts,
+    xttsSettings,
   });
-
-  const { projectType } = store.project;
-  const showMissingMediaRelink = projectType !== null
-    && !!store.savePath
-    && !pathAuditPending
-    && missingMedia.length > 0
-    && missingMediaSignature !== dismissedMissingMediaSignature;
-  const errors = validationIssues.filter((issue) => issue.status === 'error').length;
-  const warnings = validationIssues.filter((issue) => issue.status === 'warning').length;
-  const totalIssues = errors + warnings;
-
-  const selectedStatusName = useMemo(() => {
-    if (projectType === null) return null;
-    if (store.selectedId === END_NODE_ID) return store.project.endNodeName || 'Message de fin';
-    if (store.selectedId === 'root') {
-      return projectType === 'simple'
-        ? (store.project.projectName || 'Mon histoire')
-        : (store.project.rootName || store.project.projectName || 'Menu racine');
-    }
-    const entry = projectIndex.entryById.get(store.selectedId);
-    return entry?.name || '(sans nom)';
-  }, [projectIndex, projectType, store.project, store.selectedId]);
-  const activePanelsLabel = [
-    diagramView.showTree && 'arbre',
-    diagramView.showSettings && 'réglages',
-    diagramView.showDiagram && 'diagramme',
-  ].filter(Boolean).join(' + ');
-  const statusText = projectType === null
-    ? 'Choisis un type de projet'
-    : `Sélection : ${selectedStatusName} — panneaux : ${activePanelsLabel}`;
-  const projectDirty = savedSnapshotRef.current === null
-    ? isProjectDirty(store.project)
-    : JSON.stringify(store.project) !== savedSnapshotRef.current;
-  const titleBarName = store.project.projectName?.trim() || null;
-  const canImportStories = store.project.projectType === 'pack';
-  const canAddFolder = canImportStories;
-  const canRecord = canImportStories;
-  const canGenerateStoryTts = canImportStories && isTtsAvailable(xttsSettings);
-  const shortcutLabels = useMemo(() => getShortcutLabelMap(keyboardShortcuts), [keyboardShortcuts]);
-  const effectiveProjectFilePrefix = getProjectFilePrefix(store.project, store.savePath);
-  const lastExportDir = getLastExportDir();
-  const modalExportFolder = (() => {
-    if (lastExportDir) return lastExportDir;
-    const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
-    if (!ws) return null;
-    const trimmed = ws.replace(/[\\/]+$/, '');
-    const sep = ws.includes('\\') ? '\\' : '/';
-    return `${trimmed}${sep}exports`;
-  })();
 
   function handleToolbarRecord() {
     modals.open('record');
@@ -670,7 +644,6 @@ function AppContent() {
     store.addStory(toolbarTargetMenuId(), path);
     modals.close('record');
   }
-  const canGenerate = projectType !== null && !pathAuditPending && totalIssues === 0;
 
   useSyncedRef(shortcutActionsRef, {
     newProject: handleNewProject,
