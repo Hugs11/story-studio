@@ -8,14 +8,14 @@ import {
 } from './funnelNavigation.js';
 
 /**
- * Machine à états partagée des funnels (plan 03).
+ * Machine à états partagée des funnels.
  *
  * Le hook ne connaît que la *navigation* (phase + index d'étape) ; chaque
  * funnel garde ses propres données métier et calcule lui-même la validité de
  * l'étape courante (`canContinue`). On évite ainsi de coupler le châssis à un
  * schéma de données particulier.
  *
- * Familles de sortie (cf. plan 03 §3) :
+ * Familles de sortie :
  *  - `editor`     : la collecte terminée ouvre l'éditeur (pas de phase `processing`).
  *  - `generative` : collecte → génération → terminé → retour accueil.
  *  - `tool`       : fichier → analyse/correction → terminé → retour accueil.

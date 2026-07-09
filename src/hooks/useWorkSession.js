@@ -46,9 +46,9 @@ export function useWorkSession({
   const [sessionWorkspaceDir, setSessionWorkspaceDir] = useState('');
   const [sessionRecoveries, setSessionRecoveries] = useState([]);
   const sessionModeRef = useRef(null);
-  // Miroir ref de sessionWorkspaceDir : les nettoyages appelés depuis des closures
+  // Miroir ref de sessionWorkspaceDir : les nettoyages appelés depuis des fermetures
   // montées une seule fois (garde de fermeture de fenêtre) doivent lire la valeur
-  // courante, pas celle du render où la closure a été créée.
+  // courante, pas celle du rendu où la fermeture a été créée.
   const sessionWorkspaceDirRef = useRef('');
   const ephemeralSnapshotPathRef = useRef(null);
   const ephemeralSavedSnapshotRef = useRef(null);
@@ -130,7 +130,7 @@ export function useWorkSession({
   }, [sessionMode, sessionWorkspaceDir, store.project]);
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
-  // l'opt-in D25 est actif), fixe le type de projet et renvoie le dossier cible
+  // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
   // d'écriture. Partagé par « Nouveau projet » et les funnels d'entrée éditeur.
   async function prepareNewWorkSession(type) {
     let workspaceDir;
@@ -180,7 +180,7 @@ export function useWorkSession({
   }
 
   // Échec d'un atterrissage de funnel : nettoie la session tout juste créée
-  // (jamais le workspace réel D25), vide le projet et revient à l'accueil.
+  // (jamais le workspace réel), vide le projet et revient à l'accueil.
   function abandonWorkSession(sessionDir) {
     if (!useWorkspaceForNewProjects && sessionDir) {
       invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});

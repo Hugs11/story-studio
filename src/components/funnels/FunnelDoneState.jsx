@@ -1,7 +1,7 @@
 import { Check } from '../icons/LucideLocal';
 
 /**
- * Écran « Terminé » du châssis (plan 03) pour les funnels génératifs/outils.
+ * Écran « Terminé » du châssis pour les funnels génératifs/outils.
  * Pastille succès + titre + nom de fichier (optionnel) + méta + zone d'actions.
  *
  * Les actions sont fournies par le funnel (`children`) : typiquement un bouton

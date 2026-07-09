@@ -1,4 +1,4 @@
-//! Service YouTube (plan 09) : transforme une URL (vidéo / playlist / chaîne) en
+//! Service YouTube : transforme une URL (vidéo / playlist / chaîne) en
 //! histoires audio via **yt-dlp**. Jumeau de `services/podcast`, mais la source
 //! est YouTube et l'acquisition passe par le binaire yt-dlp (provisionné au 1er
 //! usage, cf. `provision`) qui s'appuie sur le ffmpeg embarqué pour extraire le MP3.
@@ -15,7 +15,7 @@ mod process;
 mod provision;
 
 /// Une vidéo listée. Les noms de champs miroir `PodcastEpisode` (camelCase) pour
-/// que le funnel et le handler d'import soient mutualisés côté JS : `audioUrl`
+/// que le funnel et le gestionnaire d'import soient mutualisés côté JS : `audioUrl`
 /// porte ici l'URL **de la vidéo** (consommée par `download_youtube_audio`).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

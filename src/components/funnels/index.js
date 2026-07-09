@@ -1,5 +1,5 @@
 /**
- * Châssis commun des funnels (plan 03) — point d'entrée public.
+ * Châssis commun des funnels — point d'entrée public.
  *
  * Les funnels de la 0.9.3 (modifier un pack, podcast, agréger, YouTube,
  * vérifier/corriger…) composent ces primitives plutôt que de réimplémenter

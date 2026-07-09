@@ -2,7 +2,7 @@ import { isTauriRuntime } from './tauriRuntime';
 
 const isDev = import.meta.env.DEV;
 
-// Frontend log event names should use the `module:action` convention.
+// Les événements de log frontend suivent la convention `module:action`.
 const LEVEL_RANK = { off: 0, error: 1, warn: 2, info: 3, debug: 4, trace: 5 };
 let currentLevel = LEVEL_RANK.warn;
 

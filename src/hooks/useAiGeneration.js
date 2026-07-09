@@ -15,8 +15,8 @@ function getTtsStoryName(text) {
   return sanitizeImportedName(clipped, '');
 }
 
-// Dispatch de génération IA extrait d'AppContent (plan I, iso-fonctionnel) :
-// ouverture de la file IA, génération/régénération d'image (SD/ComfyUI),
+// Dispatch de génération IA extrait d'AppContent : ouverture de la file IA,
+// génération/régénération d'image (SD/ComfyUI),
 // génération de voix (XTTS) et application d'un audio généré à sa cible.
 //
 // Ordre d'appel critique dans l'hôte : `applyGeneratedAudioToTarget` est passé à

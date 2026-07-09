@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from '../icons/LucideLocal';
 
 /**
- * Pied de modale du châssis (plan 03) : bouton « Précédent » (secondaire,
+ * Pied de modale du châssis : bouton « Précédent » (secondaire,
  * désactivé à la 1re étape), libellé centré « Étape N / M », et CTA principal
  * orange à droite (« Continuer », ou un libellé/icône custom à la dernière
  * étape — p. ex. « Générer le pack »).

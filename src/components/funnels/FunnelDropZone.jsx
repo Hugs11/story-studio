@@ -4,7 +4,7 @@ import { Upload } from '../icons/LucideLocal';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 /**
- * Zone de dépôt réutilisable du châssis (plan 03) — gabarit de la maquette :
+ * Zone de dépôt réutilisable du châssis — gabarit de la maquette :
  * carte pointillée, pastille violette, titre, indice, et un slot d'actions
  * (boutons « Parcourir… »). Accepte le drag & drop OS (fichiers ET dossiers) via
  * l'événement Tauri `onDragDropEvent`, avec hit-test sur la zone (`data-funnel-drop`).

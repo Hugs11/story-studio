@@ -160,7 +160,7 @@ export function useSaveProgress({
           setTimeout(() => setSaveToast(null), 3000);
           return null;
         }
-        // Tri des médias de session non utilisés (plan 22, D51) : après le
+        // Tri des médias de session non utilisés : après le
         // transfert des médias référencés, avant le nettoyage de la session.
         // Le tri résout tous ses échecs de copie en interne (réessayer /
         // abandonner) : à son retour, plus aucun média conservé ne dépend du

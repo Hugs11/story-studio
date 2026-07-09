@@ -8,8 +8,8 @@ import { getShortcutLabelMap } from '../store/keyboardShortcuts';
 import { getProjectFilePrefix } from '../utils/projectPrefix';
 import { END_NODE_ID } from '../components/CentralPanel/flowDiagramLayout';
 
-// Modèle de lecture du shell (plan T, iso-fonctionnel) : sélection courante,
-// validation, libellé de statut, dirty state, capacités toolbar, labels de
+// Modèle de lecture du shell : sélection courante, validation, libellé de
+// statut, dirty state, capacités toolbar, labels de
 // raccourcis et dossier d'export modal. Déplacement pur du bloc qui vivait dans
 // AppContent — aucune mutation du projet ici, et AUCUNE MÉMOÏSATION NOUVELLE :
 // seuls selectedStatusName et shortcutLabels étaient des useMemo, ils le restent.

@@ -292,7 +292,7 @@ function shouldTransferProjectPath(path, savePath, statusByPath = null) {
 }
 
 // Construit la liste mutable des references a transferer, sur un clone du projet.
-// Le caller peut muter `ref.obj[ref.key]` pour rediriger les chemins.
+// L'appelant peut muter `ref.obj[ref.key]` pour rediriger les chemins.
 function collectTransferTargets(project, savePath, statusByPath = null) {
   const updated = structuredClone(projectToSerializable(normalizeProjectData(project)));
   const refs = [];
@@ -331,8 +331,8 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   }
 
   const copiedPaths = new Map();
-  // Copies réalisées `{ from, to }` : permet aux consommateurs (tri de session,
-  // plan 22) de re-pointer bibliothèque et tags sans re-copier les fichiers.
+  // Copies réalisées `{ from, to }` : permet aux consommateurs de re-pointer
+  // bibliothèque et tags sans re-copier les fichiers.
   const copies = [];
   const errors = [];
 

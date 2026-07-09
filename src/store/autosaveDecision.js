@@ -97,7 +97,7 @@ function hasUserStorySettings(entry) {
 // L'histoire pré-créée du mode simple (nom vide, aucun média) n'est pas un
 // contenu utilisateur : sans ce filtre, une session simple vierge écrivait
 // immédiatement un snapshot de récupération, proposé ensuite comme « projet
-// récupérable » alors que rien n'a été saisi (plan 24).
+// récupérable » alors que rien n'a été saisi.
 function isPristinePlaceholderStory(entry) {
   return entry?.type === 'story'
     && !String(entry.name ?? '').trim()

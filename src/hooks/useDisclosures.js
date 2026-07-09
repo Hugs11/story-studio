@@ -2,7 +2,7 @@ import { useMemo, useReducer } from 'react';
 
 // Consolide N booléens d'ouverture de modales/overlays en un seul reducer, exposant
 // une API open/close/toggle/set/isOpen(name). Remplace autant de useState épars dans
-// AppContent (plan O). Les dispatchers sont stables entre les rendus ; seul l'objet
+// AppContent. Les dispatchers sont stables entre les rendus ; seul l'objet
 // retourné change quand un flag change (pour qu'isOpen lise l'état frais).
 //
 // NE PAS y absorber les flags qui portent une DONNÉE (mode d'un funnel, id de menu

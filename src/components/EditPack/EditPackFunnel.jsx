@@ -14,7 +14,7 @@ import { basename } from '../../utils/fileUtils';
 const ARCHIVE_RE = /\.(zip|7z)$/i;
 
 /**
- * Funnel « Modifier un pack » (plan 04), monté sur le châssis (plan 03).
+ * Funnel « Modifier un pack », monté sur le châssis commun des funnels.
  * Enchaîne, sans quitter l'overlay : zone de dépôt (fichier/dossier) →
  * vérification d'éditabilité → décompression in-funnel → l'éditeur s'ouvre avec
  * le pack décompressé. Si non éditable : proposition de simulation.

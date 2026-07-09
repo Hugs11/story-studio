@@ -49,7 +49,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
         let initialContext = null;
 
         if (fromProject) {
-          // Étape 1 : sauter le squareOne via okTransition
+          // D'abord, sauter le squareOne via okTransition.
           const ok = squareOne.okTransition;
           if (ok) {
             const an = actionNodes.get(ok.actionNode);
@@ -60,7 +60,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
             }
           }
 
-          // Étape 2 : sauter un éventuel nœud autoplay intermédiaire (ex : night-mode)
+          // Puis, sauter un éventuel nœud autoplay intermédiaire (ex : night-mode).
           {
             const stage = stageNodes.get(initialStageId);
             if (stage?.controlSettings?.autoplay && stage.okTransition) {

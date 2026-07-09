@@ -1,5 +1,5 @@
 //! Catalogue figé des artefacts Piper téléchargeables : binaire Windows + voix
-//! françaises par défaut (D45/D46). Toutes les URL sont des sources officielles
+//! françaises par défaut. Toutes les URL sont des sources officielles
 //! HTTPS, épinglées par version pour la reproductibilité. Aucun binaire n'est
 //! embarqué dans le dépôt ; tout est provisionné au 1er usage.
 
@@ -14,7 +14,7 @@ pub(super) const BINARY_URL: &str =
 /// Base HuggingFace pour les voix `rhasspy/piper-voices`, épinglée au tag v1.0.0.
 const VOICES_BASE: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0";
 
-/// Identifiant de la voix par défaut (D46) — voix FR féminine claire, mono-locuteur.
+/// Identifiant de la voix par défaut — voix FR féminine claire, mono-locuteur.
 pub(super) const DEFAULT_VOICE: &str = "fr_FR-siwis-medium";
 
 /// Une voix du catalogue. `id` est la clé canonique Piper (`fr_FR-siwis-medium`)
@@ -37,7 +37,7 @@ impl VoiceEntry {
     }
 }
 
-/// Voix FR par défaut (D46). Toutes mono-locuteur : pas besoin de `--speaker`.
+/// Voix FR par défaut. Toutes mono-locuteur : pas besoin de `--speaker`.
 pub(super) const VOICES: &[VoiceEntry] = &[
     VoiceEntry {
         id: "fr_FR-siwis-medium",

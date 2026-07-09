@@ -150,7 +150,7 @@ export function resolveNavigationTargetId(target, currentMenuId = null) {
 // - Pour "next_story" → renvoie soit le nom de l'histoire suivante si entry est fourni, soit la mention contextuelle.
 // - Pour un menu/story explicite → null (pas de hint nécessaire).
 //
-// Le caller passe `emptyResolvedLabel` qui décrit ce que "vide" signifie dans son contexte
+// L'appelant passe `emptyResolvedLabel` qui décrit ce que "vide" signifie dans son contexte
 // (héritage parent vs premier élément du pack vs etc).
 export function getNavigationSelectHint({
   value,

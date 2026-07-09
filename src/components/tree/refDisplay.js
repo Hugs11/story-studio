@@ -1,4 +1,4 @@
-// Rendu minimal d'un nœud `ref` dans l'arbre (Étape 2f).
+// Rendu minimal d'un nœud `ref` dans l'arbre.
 //
 // Une `ref` est un pointeur pur : elle n'a pas de nom propre, son libellé est dérivé
 // de sa cible. On résout l'id d'entrée ciblé via l'encodage navigation existant, puis

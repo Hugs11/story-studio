@@ -6,8 +6,8 @@ import { saveVerboseLoggingPref, verboseLevelName } from '../store/loggingPrefer
 import { logger, setLogLevel } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 
-// Grappe « préférences & réglages » extraite d'AppContent (plan N, iso-fonctionnel) :
-// dossier workspace, logging verbeux (+ chemins de log), consolidation projet,
+// Grappe « préférences & réglages » extraite d'AppContent : dossier workspace,
+// logging verbeux (+ chemins de log), consolidation projet,
 // options globales du pack, message de fin (end node) et réglages XTTS. Ce sont les
 // actions qui alimentent la modale de Préférences (OptionsTab asModal) et les
 // éditeurs qui consomment onUpdateGlobalOption / onAddEndNode / onRemoveEndNode

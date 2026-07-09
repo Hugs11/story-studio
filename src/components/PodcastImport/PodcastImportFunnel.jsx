@@ -38,7 +38,7 @@ function episodeMeta(ep) {
 }
 
 /**
- * Funnel accueil « Pack depuis un podcast » (plan 06).
+ * Funnel accueil « Pack depuis un podcast ».
  * Réutilise les commandes podcast et délègue l'import réel à App/useImportSession,
  * qui crée les histoires dans l'éditeur après préparation de session.
  */

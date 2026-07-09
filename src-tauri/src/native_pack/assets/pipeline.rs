@@ -174,7 +174,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     let mut seen_assets: HashMap<String, PathBuf> = HashMap::new();
     let mut transformed_audio_count = 0usize;
 
-    // Lot 11 P4 : pipeline d'assets parallelise via rayon, avec instrumentation
+    // Pipeline d'assets parallelise via rayon, avec instrumentation
     // timing pour comparer parallele vs serie.
     //
     // Phase 1 (PARALLELE) : preprocess de chaque request. Ce sont les

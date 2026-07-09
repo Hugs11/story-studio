@@ -7,9 +7,9 @@ import { usePersistentState } from './usePersistentState';
 // pas de raison de partager un helper tant qu'un seul consommateur l'utilise.
 const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
 
-// Modèle du panneau de travail bas et de la bottombar (plan Y, iso-fonctionnel) :
-// état ouvert/onglet actif (persistés), ouverture automatique depuis la file de
-// rendu, compteurs médias/IA. Déplacement pur du haut d'AppContent.
+// Modèle du panneau de travail bas et de la bottombar : état ouvert/onglet
+// actif (persistés), ouverture automatique depuis la file de rendu, compteurs
+// médias/IA. Déplacement pur du haut d'AppContent.
 //
 // Ordre d'appel critique dans l'hôte : `setOpen`/`setActiveTab` sont passés à
 // `useAiGeneration` (ouverture de la file IA) — ce hook doit donc être appelé
@@ -19,7 +19,7 @@ const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(
 //
 // Fidélité de persistance : `bottomPanelOpen` via le codec booléen ci-dessus,
 // `bottomPanelTab` en string brute, sans codec (comportement historique).
-// Règle de vague : aucune mémoïsation nouvelle — seul le `useMemo` déjà présent
+// Ne pas ajouter de mémoïsation — seul le `useMemo` déjà présent
 // (`mediaLibraryCount`) est déplacé tel quel.
 export function useBottomWorkspacePanelModel({
   project,

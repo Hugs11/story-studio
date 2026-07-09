@@ -1,12 +1,12 @@
 /**
- * Helpers purs du châssis de funnel (plan 03).
+ * Helpers purs du châssis de funnel.
  *
  * Aucune dépendance React : la logique de navigation pas-à-pas et de
  * dérivation d'état du stepper est isolée ici pour être testée seule
  * (`scripts/funnelNavigation.test.mjs`). `useFunnel` consomme ces helpers.
  */
 
-/** Familles de sortie d'un funnel (cf. plan 03 §3). */
+/** Familles de sortie d'un funnel. */
 export const FUNNEL_FAMILIES = Object.freeze(['editor', 'generative', 'tool']);
 
 /** Phases d'un funnel : saisie → traitement → terminé. */

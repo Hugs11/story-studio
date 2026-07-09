@@ -22,8 +22,8 @@ const MissingMediaRelinkModal = lazy(() => import('./MissingMediaRelink/MissingM
 const PodcastImportModal = lazy(() => import('./PodcastImport/PodcastImportModal')
   .then((module) => ({ default: module.PodcastImportModal })));
 
-// Mur de modales/overlays d'AppContent (plan O, iso-fonctionnel). Composant
-// présentational pur : aucune logique, seulement du rendu conditionnel et du
+// Mur de modales/overlays d'AppContent. Composant présentational pur : aucune
+// logique, seulement du rendu conditionnel et du
 // branchement de props. Chaque overlay reste sous sa garde `open &&` /
 // `renderDeferred(...)` et conserve le code-split (imports lazy).
 //

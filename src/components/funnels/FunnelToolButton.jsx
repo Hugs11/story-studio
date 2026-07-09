@@ -1,5 +1,5 @@
 /**
- * Bouton-outil du châssis (plan 03, décision D42).
+ * Bouton-outil du châssis.
  *
  * Présentationnel : il ouvre, à la demande du funnel consommateur, un outil
  * existant de l'app (RecordModal, TextImageGenerator, AudioEditorModal,

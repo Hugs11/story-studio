@@ -28,8 +28,8 @@ impl<'a> StoryBuilder<'a> {
             || menu_home_transition.is_some()
             || force_choice_node;
 
-        // Pre-pass: record approach_transition for each story so returnAfterPlay "story:id"
-        // can navigate to the title screen (not directly to the play stage).
+        // Prépasse : enregistrer approach_transition pour chaque histoire afin que
+        // returnAfterPlay "story:id" revienne à l'écran titre, pas directement au stage de lecture.
         for (idx, child) in menu.children.iter().enumerate() {
             if let CanonicalEntry::Story(s) = child {
                 if let Some(prealloc) = self.story_prealloc.get_mut(&s.id) {
@@ -46,8 +46,8 @@ impl<'a> StoryBuilder<'a> {
                         &menu.children,
                         child_index,
                     );
-                    // Default return when neither menu nor story sets returnAfterPlay:
-                    // go back to the menu stage (matching the UI's resolveReturnTarget fallback).
+                    // Retour par défaut quand ni le menu ni l'histoire ne définit returnAfterPlay :
+                    // revenir au stage du menu, comme le repli resolveReturnTarget de l'UI.
                     let fallback_transition = self.resolve_story_return_transition(
                         menu_return.as_deref(),
                         menu_replay_transition.clone(),
@@ -80,9 +80,9 @@ impl<'a> StoryBuilder<'a> {
                         &menu.children,
                         child_index,
                     );
-                    // When returnOnHome is not set but returnAfterPlay IS set, home
-                    // stays on the parent menu so it differs from the generated OK path.
-                    // Under auto_next, Home also stays on the menu by default.
+                    // Quand returnOnHome est absent mais returnAfterPlay défini, Home reste
+                    // sur le menu parent pour différer du chemin OK généré. Avec auto_next,
+                    // Home reste aussi sur le menu par défaut.
                     let play_home_transition = if story.return_on_home_none {
                         None
                     } else {

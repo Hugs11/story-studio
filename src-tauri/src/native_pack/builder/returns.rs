@@ -49,8 +49,9 @@ impl<'a> StoryBuilder<'a> {
         target_menu_id: Option<&str>,
         fallback_transition: Transition,
     ) -> Transition {
-        // "story_play:X" on a home target means the reader navigated via the play stage.
-        // Home should go back to the title/selection stage (approach), not directly to play.
+        // "story_play:X" sur une cible Home signifie que le lecteur est arrivé via
+        // le stage de lecture. Home doit revenir au stage titre/sélection (approach),
+        // pas directement à la lecture.
         if let Some(t) = target_menu_id {
             if let Some(story_id) = t.strip_prefix("story_play:") {
                 return self
@@ -105,7 +106,7 @@ impl<'a> StoryBuilder<'a> {
 
     /// Résolveur unifié cible typée → stage natif, partagé par les nœuds `ref` et la
     /// convergence de fin (`okChoiceTargets`) — c'est le « sucre au-dessus de `ref` » de
-    /// l'Étape 7. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
+    /// fin de séquence. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
     /// résolution via transition (cibles déjà construites). Le `fallback` paramètre la
     /// sémantique : transition de repli (convergence indulgente) ou sentinelle non résolue
     /// (`option_index < 0`) pour exiger une cible réelle (refs).

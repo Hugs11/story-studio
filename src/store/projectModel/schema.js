@@ -3,12 +3,12 @@ import { PACK_AUDIO_EDGE_SILENCE_SECONDS } from '../../config/audioProcessing.js
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
 
-// Canonical project shape:
-// - `rootEntries` is the main saved/runtime tree for project content.
-// - Menu children live in `children`.
-// - Imported pack projections can expose `entries`; normalization maps them to
-//   `rootEntries` or `children`.
-// - Legacy `rootItems` / `menus` are read only as migration inputs.
+// Forme canonique du projet :
+// - `rootEntries` porte l'arbre principal sauvegardé et manipulé à l'exécution.
+// - Les enfants d'un menu vivent dans `children`.
+// - Les projections de packs importés peuvent exposer `entries`; la normalisation
+//   les mappe vers `rootEntries` ou `children`.
+// - Les anciens `rootItems` / `menus` ne servent qu'à la migration.
 export const PROJECT_SCHEMA_VERSION = 3;
 export const SILENCE_MODES = Object.freeze(['off', 'add', 'normalize']);
 

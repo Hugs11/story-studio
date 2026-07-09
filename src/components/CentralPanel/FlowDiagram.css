@@ -232,7 +232,7 @@
 
 /* Compactage des libellés des contrôles de vue : version longue par défaut, version
    courte quand la colonne diagramme devient étroite, pour garder les 3 contrôles
-   présents sur une seule ligne de 44 px (plan G) plutôt que de les tronquer. */
+   présents sur une seule ligne de 44 px plutôt que de les tronquer. */
 .fd-ctrl-label--short {
   display: none;
 }

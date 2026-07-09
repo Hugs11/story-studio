@@ -132,7 +132,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
     };
   }, [sourcePath]);
 
-  // Re-render canvas quand transform ou filtres changent
+  // Redessiner le canvas quand transform ou filtres changent.
   useEffect(() => {
     if (!imgLoaded) return;
     try {

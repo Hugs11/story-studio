@@ -1,10 +1,10 @@
-// Construit la valeur de ProjectActionsContext (plan S, iso-fonctionnel) : l'objet
-// d'actions projet partagé entre les surfaces d'édition (arbre, réglages, diagramme),
+// Construit la valeur de ProjectActionsContext : l'objet d'actions projet partagé
+// entre les surfaces d'édition (arbre, réglages, diagramme),
 // consommé via useProjectActions. Déplacement pur du littéral qui vivait dans
 // AppContent — mêmes clés, même ordre, RECONSTRUIT À CHAQUE RENDU (aucune
 // mémoïsation : plusieurs callbacks capturent modals/store par référence courante et
 // canRecord/canGenerateStoryTts changent à chaque rendu ; un useMemo les figerait sans
-// warning). L'hôte agrège ici les handlers venus de plusieurs sources : mutations
+// warning). L'hôte agrège ici les gestionnaires venus de plusieurs sources : mutations
 // (useProjectMutations), imports (useMediaImport), préférences (useAppPreferences),
 // toolbar (resté chez l'hôte) + les setters de flags (modals, setYoutubeFunnelMode).
 export function useProjectActionsValue({

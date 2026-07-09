@@ -1,4 +1,4 @@
-// Convention de détection des surfaces modales (plan 21).
+// Convention de détection des surfaces modales.
 //
 // Une surface modale ouverte suspend les raccourcis globaux. Sont reconnues :
 // les trois conventions d'overlay de l'app (portail commun `app-modal-overlay`,

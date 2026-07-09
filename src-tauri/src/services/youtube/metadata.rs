@@ -13,7 +13,7 @@ use super::provision::ensure_ytdlp;
 use super::{YoutubeList, YoutubeVideo};
 use crate::support::ffmpeg::apply_no_window;
 
-/// Plafond de vidéos listées (D23 — garde-fou « chaîne énorme »). Au-delà, l'UI
+/// Plafond de vidéos listées. Au-delà, l'UI
 /// avertit que la liste est tronquée.
 const MAX_LIST_ENTRIES: usize = 400;
 const LIST_TIMEOUT: Duration = Duration::from_secs(120);

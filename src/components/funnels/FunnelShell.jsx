@@ -4,7 +4,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import './funnels.css';
 
 /**
- * Coquille commune des funnels (plan 03) : overlay assombri/flouté
+ * Coquille commune des funnels : overlay assombri/flouté
  * (`AppModalPortal`) + modale responsive avec en-tête (pastille violette, titre,
  * sous-titre, bouton fermer), un slot `stepper`, un corps scrollable et un slot
  * `footer`. Escape et × appellent `onClose`.

@@ -1,4 +1,4 @@
-// Tri des médias de session à la promotion « Enregistrer comme projet » (plan 22, D51).
+// Tri des médias de session à la promotion « Enregistrer comme projet ».
 //
 // À la promotion d'une session éphémère, seuls les médias référencés par les
 // nœuds sont transférés vers le workspace (`transferProjectFilesToProject`),

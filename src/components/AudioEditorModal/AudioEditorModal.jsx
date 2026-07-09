@@ -163,9 +163,9 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   // invoke('preview_audio_edit', ...) -> setPreviewPath(newPath) -> audioUrl
   // change. Le re-decode audio est donc inherent au workflow (le user
   // bouge un fade -> ffmpeg regenere un preview -> waveform recharge).
-  // Lot 11 P3 : analyse approfondie a montre que separer en 2 useEffects
-  // coordonnes via wsReady ne procurerait aucun gain pratique. On garde
-  // le pattern actuel ; la presence des 5 deps est une securite pour
+  // Séparer cette synchronisation en deux effets coordonnés via wsReady ne
+  // procure pas de gain pratique. On garde le pattern actuel ; la présence
+  // des 5 deps est une sécurité pour
   // les cas hypothetiques ou stagedEdit/cutMarkers changerait sans
   // changement audio.
   useEffect(() => {

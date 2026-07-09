@@ -1,9 +1,8 @@
-// Construit la surface de props de l'onglet Préférences (plan V, iso-fonctionnel) :
-// l'objet transmis à <AppModals optionsTabProps> puis à OptionsTab. Déplacement pur
-// du littéral qui vivait dans AppContent — mêmes clés, même ordre, RECONSTRUIT À
-// CHAQUE RENDU (aucune mémoïsation : c'était déjà le comportement, et plusieurs
-// valeurs — settings, project — changent par rendu ; un useMemo les figerait sans
-// warning). L'hôte agrège ici les valeurs et handlers venus de plusieurs sources :
+// Construit la surface de props de l'onglet Préférences :
+// l'objet transmis à <AppModals optionsTabProps> puis à OptionsTab.
+// RECONSTRUIT À CHAQUE RENDU : plusieurs valeurs — settings, project — changent
+// par rendu ; un useMemo les figerait sans warning. L'hôte agrège ici les
+// valeurs et gestionnaires venus de plusieurs sources :
 // préférences (useAppPreferences), média (useMediaTransferHandlers), store SD, states
 // de shell (thème, raccourcis, autosave, logging).
 export function useOptionsTabProps({

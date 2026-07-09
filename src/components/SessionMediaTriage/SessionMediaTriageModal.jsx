@@ -13,7 +13,7 @@ function parentFolderHint(path) {
 }
 
 /**
- * Tri des médias de session non utilisés à la promotion (plan 22, D51).
+ * Tri des médias de session non utilisés à la promotion.
  * Tout est coché par défaut ; « Conserver la sélection » copie les cochés dans
  * le workspace, « Tout abandonner » les laisse partir avec la session.
  * Escape et clic hors de la boîte valent « Conserver la sélection » (choix sûr).

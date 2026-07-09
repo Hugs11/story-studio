@@ -50,7 +50,7 @@ function getHeaderData({ node, selectedId, selectedIds, project }) {
     ? (project?.projectName || 'Mon histoire')
     : (project?.rootName || project?.projectName || 'Menu racine');
   // Badge du root : dépend du type de projet — « Histoire simple » en `simple`
-  // (le header est visible dans l'éditeur simple sans diagramme depuis le plan G),
+  // (le header est visible dans l'éditeur simple même sans diagramme),
   // « Pack » sinon. « Histoire » seul serait ambigu avec TYPE_LABELS.story.
   const rootBadge = project?.projectType === 'simple' ? 'Histoire simple' : 'Pack';
   return {

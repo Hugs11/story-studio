@@ -106,9 +106,9 @@ impl<'a> StoryBuilder<'a> {
             return Ok(imported_entry_stage_id);
         }
 
-        // When wrapping for selection, the wrapper stage already shows the imported cover
-        // audio/image. The ok_transition must skip the imported squareOne and go directly
-        // to the first real content stage, otherwise the cover plays twice.
+        // En mode wrapper de sélection, le stage wrapper affiche déjà l'audio/image
+        // de couverture importés. ok_transition doit sauter le squareOne importé
+        // et viser le premier vrai stage de contenu, sinon la couverture joue deux fois.
         let imported_post_root_stage_id = stage_id_map
             .get(&bundle.post_root_stage_id)
             .cloned()
@@ -144,8 +144,8 @@ impl<'a> StoryBuilder<'a> {
                 pause: false,
                 autoplay: false,
             },
-            // At root level, parent_return_transition would loop back to this wrapper stage
-            // (root_action[n] == wrapper_stage_id). Use None to avoid the self-loop.
+            // À la racine, parent_return_transition bouclerait vers ce stage wrapper
+            // (root_action[n] == wrapper_stage_id). None évite l'auto-boucle.
             home_transition: if self.root_action_id.as_deref()
                 == Some(parent_return_transition.action_node.as_str())
             {

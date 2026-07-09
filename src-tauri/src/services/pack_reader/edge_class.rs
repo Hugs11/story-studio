@@ -1,13 +1,13 @@
-//! Classification des arêtes natives (Étape 2c — verrou central).
+//! Classification des arêtes natives.
 //!
-//! Deux étages strictement séparés (cf. plan §3) :
+//! Deux étages strictement séparés :
 //!   A. `classify_stage_edges` — classe **statique** d'une arête (fonction pure du graphe,
 //!      sans état de parcours) : Ok / ChoiceOption / Home / GlobalNight / Unresolved.
 //!   B. `project_edge` — **décision de projection** (classe statique × état `placed`) :
 //!      Containment / Reference / OutOfTree.
 //!
 //! Ce module n'est PAS branché sur l'import de prod : il sert uniquement d'ancrage de
-//! mesure pour la baseline métriques (Étape 2d). D'où le gating `#[cfg(test)]` sur sa
+//! mesure pour les métriques d'import. D'où le gating `#[cfg(test)]` sur sa
 //! déclaration dans `mod.rs` — il n'est compilé que pour les tests.
 
 use std::collections::{HashMap, HashSet};
@@ -104,7 +104,7 @@ pub(super) fn project_edge(class: EdgeClass, target_placed: bool) -> Projection 
     }
 }
 
-/// Compteurs de projection sur un graphe (ancrage de test + socle Étape 3 / baseline 2d).
+/// Compteurs de projection sur un graphe (ancrage de test et métriques d'import).
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(super) struct ProjectionStats {
     pub(super) containment: usize,
