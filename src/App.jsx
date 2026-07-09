@@ -1,29 +1,18 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { getVersion } from '@tauri-apps/api/app';
 import { useProjectStore } from './store/projectStore';
-import {
-  getRecentProjects,
-  ensureWorkspaceDir,
-} from './store/projectIO';
+import { ensureWorkspaceDir } from './store/projectIO';
 import { collectMediaLibrary } from './store/mediaLibrary';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
-import { KEYS, read as readSetting } from './store/persistentSettings';
-import { loadXttsSettings } from './store/xttsSettings';
+import { KEYS } from './store/persistentSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
 import { useRenderQueueExecutor } from './hooks/useRenderQueueExecutor';
 import { useProjectFileAudit } from './hooks/useProjectFileAudit';
-import {
-  loadKeyboardShortcuts,
-  saveKeyboardShortcuts,
-  setCurrentShortcuts,
-} from './store/keyboardShortcuts';
-import { applyThemePreference, loadThemePreference, saveThemePreference } from './store/themePreference';
 import { ErrorDialogProvider, useErrorDialog } from './components/common/Dialog';
 import { AppShell } from './components/AppShell';
+import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { useDisclosures } from './hooks/useDisclosures';
 import { useAiGeneration } from './hooks/useAiGeneration';
@@ -53,24 +42,16 @@ import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
 import { useDiagramViewState } from './workspace/useDiagramViewState';
-import { logger, installGlobalErrorHandlers, setLogLevel } from './utils/logger';
-import { loadVerboseLoggingPref, verboseLevelName } from './store/loggingPreference';
-import { isTauriRuntime } from './utils/tauriRuntime';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import './styles/variables.css';
 import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
 
-// Codecs réutilisés par les `usePersistentState` ci-dessous.
+// Codec du dernier `usePersistentState` resté ici (`bottomPanelOpen`). Le reste
+// des états persistés — et la copie d'INT_CODEC — vit dans useAppBootstrap ; le
+// plan Y (panneau bas) résorbera cette dernière ligne.
 const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
-const INT_CODEC = {
-  decode: (raw) => {
-    const n = Number(raw);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  },
-  encode: (value) => String(value),
-};
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
 // false si l'utilisateur a annulé ou si la sauvegarde n'a pas abouti.
 // savedSnapshot : JSON.stringify du projet au moment du dernier save/load, ou null si projet vierge
@@ -109,11 +90,6 @@ function AppContent() {
   const renderQueue = useRenderQueueStore();
   const [saveToast, setSaveToast] = useState(null); // null | 'ok' | 'error'
   const [, setAutoSavedPath] = useState(null); // path of last autosave (display only)
-  const [appVersion, setAppVersion] = useState('');
-  const [xttsSettings, setXttsSettings] = useState(() => loadXttsSettings());
-  const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => loadKeyboardShortcuts());
-  const [themePreference, setThemePreference] = useState(() => loadThemePreference());
-  const [recentProjects, setRecentProjects] = useState(() => getRecentProjects());
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
@@ -131,10 +107,6 @@ function AppContent() {
   // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
   // dans le projet courant (éditeur libre). Plan 09.
   const [youtubeFunnelMode, setYoutubeFunnelMode] = useState(null);
-  const [copyImportedFilesEnabled, setCopyImportedFilesEnabled] = usePersistentState(KEYS.COPY_FILES, false, BOOL_CODEC);
-  const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
-  const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
-  const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
   // « Modifier un pack » (plan 04) : ZIP à simuler une fois l'éditeur monté
   // (l'ouverture du funnel est portée par la disclosure `editPack`).
   const [pendingSimulateZip, setPendingSimulateZip] = useState(null);
@@ -143,18 +115,49 @@ function AppContent() {
   const importedPackPendingMetaRef = useRef(false);
   const [importNotice, setImportNotice] = useState(null); // string | null
   const [activeDropZone, setActiveDropZone] = useState(null);
-  // Actif par défaut (D49) ; la migration one-shot de main.jsx aligne les
-  // installations existantes.
-  const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, true, BOOL_CODEC);
-  const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
-  const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
   const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex, store.savePath);
   const aiQueueActiveCount = sdStore.pendingCount + xttsStore.pendingCount;
   const aiQueueHasResults = sdStore.hasResults || xttsStore.hasResults;
+
+  // Bootstrap applicatif (plan X, iso-fonctionnel) : version, préférences globales
+  // persistées, refs synchronisées (workspace/raccourcis) et effets thème/logging/
+  // raccourcis. Appelé AVANT useWorkSession, qui consomme configuredWorkspaceDir/
+  // setConfiguredWorkspaceDir/setWorkspaceDirState/workspaceDirRef. Positionné ici
+  // (après useProjectFileAudit) pour laisser ses effets de sync de ref dans leur
+  // créneau d'origine. L'effet ensureWorkspaceDir reste chez l'hôte (il lit
+  // sessionModeRef, né plus bas dans useWorkSession).
+  const {
+    appVersion,
+    xttsSettings,
+    setXttsSettings,
+    keyboardShortcuts,
+    setKeyboardShortcuts,
+    keyboardShortcutsRef,
+    themePreference,
+    setThemePreference,
+    recentProjects,
+    setRecentProjects,
+    copyImportedFilesEnabled,
+    setCopyImportedFilesEnabled,
+    configuredWorkspaceDir,
+    setConfiguredWorkspaceDir,
+    workspaceDir,
+    setWorkspaceDirState,
+    workspaceDirRef,
+    useWorkspaceForNewProjects,
+    setUseWorkspaceForNewProjects,
+    autoSaveEnabled,
+    setAutoSaveEnabled,
+    autoSaveBackupLimit,
+    setAutoSaveBackupLimit,
+    verboseLogging,
+    setVerboseLoggingState,
+    dismissedTransferPromptRef,
+  } = useAppBootstrap();
+
   const projectRef = useRef(store.project);
   const savePathRef = useRef(store.savePath);
-  const workspaceDirRef = useRef(readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const mediaTagsRef = useRef(store.mediaTags);
   const mediaLibraryCountRef = useRef(0);
   const saveHandlerRef = useRef(null);
@@ -163,52 +166,13 @@ function AppContent() {
   const persistProjectSnapshotRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
   const shortcutActionsRef = useRef({});
-  const keyboardShortcutsRef = useRef(keyboardShortcuts);
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
-  const dismissedTransferPromptRef = useRef(null);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
-
-  useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
-
-  useEffect(() => {
-    const detach = installGlobalErrorHandlers();
-    const verbose = loadVerboseLoggingPref();
-    const level = verboseLevelName(verbose);
-    setLogLevel(level);
-    if (isTauriRuntime()) {
-      invoke('set_log_level', { level })
-        .then(() => {
-          logger.info(`boot:verbose-enabled value=${verbose} runtime=tauri ua=${navigator.userAgent.slice(0, 80)}`);
-        })
-        .catch(() => {});
-    }
-    return detach;
-  }, []);
 
   projectRef.current = store.project;
   savePathRef.current = store.savePath;
   mediaTagsRef.current = store.mediaTags;
-
-  useEffect(() => {
-    workspaceDirRef.current = workspaceDir;
-  }, [workspaceDir]);
-
-  useEffect(() => {
-    keyboardShortcutsRef.current = keyboardShortcuts;
-    setCurrentShortcuts(keyboardShortcuts);
-    saveKeyboardShortcuts(keyboardShortcuts);
-  }, [keyboardShortcuts]);
-
-  useEffect(() => {
-    const cleanup = applyThemePreference(themePreference);
-    saveThemePreference(themePreference);
-    return cleanup;
-  }, [themePreference]);
-
-  useEffect(() => {
-    if (!copyImportedFilesEnabled) dismissedTransferPromptRef.current = null;
-  }, [copyImportedFilesEnabled]);
 
   useEffect(() => {
     if (renderQueue.panelOpen) {
