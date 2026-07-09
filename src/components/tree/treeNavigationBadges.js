@@ -10,7 +10,7 @@
 //
 //   2. formatBadgeTitle(data, projectIndex)
 //      -> Badge UI prêt a afficher (key, label, title, status). Resout les
-//      `targetId` en noms via projectIndex. A refaire a chaque render quand
+//      `targetId` en noms via projectIndex. À refaire à chaque rendu quand
 //      projectIndex change (rapide : un seul Map.get).
 //
 // Pourquoi cette separation : sans elle, un rename d'une cible distante
@@ -78,8 +78,8 @@ function pushTargetBadge(out, badge) {
   out.push(badge);
 }
 
-// Etape 1 : structure des badges (kind, status, targetId pour les badges
-// qui reference une autre entry). Ne resout PAS les noms.
+// Structure des badges (kind, status, targetId pour les badges qui référencent
+// une autre entrée). Ne résout PAS les noms.
 export function computeBadgesData(entry, parentMenu, issuesById, project, rootEntries, options = {}) {
   const showDefaultReturns = !!options.showDefaultReturns;
   if (entry?.type === 'menu' && entry.nativeGraph?.preserveForRoundTrip === true) {
@@ -181,8 +181,8 @@ export function computeBadgesData(entry, parentMenu, issuesById, project, rootEn
   return out;
 }
 
-// Etape 2 : transforme un BadgeData en Badge UI consumable par TreeNode.
-// Resout les noms via projectIndex (lookup Map).
+// Transforme un BadgeData en badge UI consommable par TreeNode.
+// Résout les noms via projectIndex (lookup Map).
 export function formatBadgeTitle(data, projectIndex) {
   switch (data.kind) {
     case 'graph':

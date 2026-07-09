@@ -614,7 +614,7 @@ fn fidelity_external_packs_from_env() {
     }
 }
 
-// ── Étape 2 (plan 12) : classement des packs réels par le juge de fidélité ───
+// ── Classement des packs réels par le juge de fidélité ───
 //
 // Passe chaque pack au juge canonique et CONSIGNE qui passe / qui échoue + pourquoi.
 // Piloté par env (`STORY_STUDIO_BASELINE_DIR`), aucun nom de pack en dur : on scanne
@@ -710,8 +710,8 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
         .unwrap_or("Pack importé")
         .to_string();
     let mut project = fidelity_project(&imported, &title);
-    // Oracle = le story.json ORIGINAL (vérité terrain), que l'import ait gardé un
-    // nativeGraph (Lapin) ou non (Dersouzala/Bestioles importent « propre »).
+    // Oracle = le story.json ORIGINAL (vérité terrain), que l'import ait conservé
+    // un nativeGraph ou produit un modèle directement fidèle.
     project.native_graph = Some(serde_json::json!({
         "preserveForRoundTrip": true,
         "document": doc,

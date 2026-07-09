@@ -181,7 +181,7 @@ export function WorkspaceView({
   );
 
   // `key={variant}` : remonte le diagramme au passage plein↔colonne (Agrandir/Réduire)
-  // pour le re-centrer sur la nouvelle largeur (comportement vague 1). `variant` suit
+  // pour le re-centrer sur la nouvelle largeur. `variant` suit
   // `showSettings`, pas `showTree` — donc pas de re-fit au simple masquage de l'arbre.
   const renderDiagramPanel = (variant) => (
     <DiagramPanel

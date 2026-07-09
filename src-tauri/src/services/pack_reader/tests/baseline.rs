@@ -1,4 +1,4 @@
-//! Baseline métriques d'import (Étape 2d) — garde-fou observationnel.
+//! Métriques d'import — garde-fou observationnel.
 //!
 //! `#[ignore]` : ne tourne pas en CI (les packs sont hors repo). Lancer explicitement :
 //!   $env:STORY_STUDIO_BASELINE_DIR="C:\chemin\vers\packs"; \

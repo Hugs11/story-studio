@@ -15,7 +15,7 @@ function getImportDisplayName(filePath) {
   return sanitizeImportedName(fileName, fileName || 'Import en cours');
 }
 
-// Textes des funnels média d'accueil (podcast/YouTube, plan 09) : flux identiques,
+// Textes des funnels média d'accueil (podcast/YouTube) : flux identiques,
 // seul le vocabulaire change. Consommé par landMediaFunnel (et l'import éditeur
 // YouTube pour les mêmes messages d'échec).
 const MEDIA_FUNNEL_COPY = {
@@ -35,12 +35,11 @@ const MEDIA_FUNNEL_COPY = {
   },
 };
 
-// Grappe « funnels média d'accueil » extraite d'AppContent (plan L, iso-fonctionnel).
-// Regroupe la couche funnel (atterrissage podcast/YouTube) ET les appels des hooks
-// d'import déjà extraits (useImportSession/useOsFileDrop), dont il ré-expose toutes
-// les sorties pour ProjectActionsContext et useProjectLifecycle.
+// Coordonne les funnels média d'accueil et les hooks d'import
+// (useImportSession/useOsFileDrop), puis ré-expose leurs sorties pour
+// ProjectActionsContext et useProjectLifecycle.
 //
-// Fournisseurs en amont : les copy-handlers de useMediaTransferHandlers
+// Fournisseurs en amont : les gestionnaires de copie de useMediaTransferHandlers
 // (maybeCopyToProject/copyGeneratedMediaToProject/extractAudioEmbeddedImage),
 // persistProjectSnapshot (useSaveProgress) et runFunnelLanding (useWorkSession).
 // Le hook doit donc être appelé APRÈS ces trois-là, et AVANT ses consommateurs
@@ -86,7 +85,7 @@ export function useMediaImport({
 
   const { dispatchFiles, handleImportMediaEpisodes } = importSession;
 
-  // Funnels média d'accueil (podcast et YouTube, plan 09) : flux jumeaux — crée la
+  // Funnels média d'accueil (podcast et YouTube) : flux jumeaux — crée la
   // session éphémère, pré-remplit titre + vignette depuis la source (flux RSS ou
   // liste yt-dlp), puis importe les épisodes/vidéos en histoires avant
   // l'atterrissage éditeur. Vocabulaire par source dans MEDIA_FUNNEL_COPY.
@@ -143,7 +142,7 @@ export function useMediaImport({
     await landMediaFunnel('youtube', videos, list, onProgress);
   }
 
-  // Import YouTube depuis l'éditeur libre (plan 09) : pas de nouvelle session, on
+  // Import YouTube depuis l'éditeur libre : pas de nouvelle session, on
   // insère dans le projet courant (cible déduite de la sélection comme les autres
   // imports média). Lève en cas d'échec total → écran d'erreur du funnel.
   async function handleYoutubeEditorImport(videos, list, onProgress) {

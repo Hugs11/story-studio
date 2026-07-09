@@ -1,4 +1,4 @@
-//! Backend TTS Piper (D44) : moteur de voix **zéro-config** par défaut. Un simple
+//! Backend TTS Piper : moteur de voix **zéro-config** par défaut. Un simple
 //! exécutable autonome (pas de serveur, pas de Python) provisionné au 1er usage.
 //! Comparé à `services/xtts`, il n'y a **aucun cycle de vie serveur** : on
 //! télécharge le binaire + la voix une fois, puis on invoque `piper.exe`.

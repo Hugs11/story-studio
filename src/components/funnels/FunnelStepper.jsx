@@ -2,7 +2,7 @@ import { Check } from '../icons/LucideLocal';
 import { deriveStepStatus } from './funnelNavigation.js';
 
 /**
- * Stepper horizontal cliquable du châssis (plan 03).
+ * Stepper horizontal cliquable du châssis.
  *
  * Navigation libre : cliquer une pastille saute à l'étape (`onStepClick`).
  * Le statut de chaque étape est dérivé de `current` ; `errorSteps` force l'état

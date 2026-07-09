@@ -23,7 +23,7 @@ use super::{build_canonical_story_document, NativeAssetPreparationReport, Prepar
 
 /// Verdict du juge : fidèle ou non, avec le détail des écarts. Chaque écart = une
 /// « forme » de stage dont le compte diffère entre la génération canonique et l'oracle
-/// (un nœud / une arête présent d'un côté et pas de l'autre) → matière à combler (Étape 3).
+/// (un nœud / une arête présent d'un côté et pas de l'autre) → matière à combler.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct FidelityReport {
     pub(crate) faithful: bool,

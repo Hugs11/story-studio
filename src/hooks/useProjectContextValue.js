@@ -1,11 +1,9 @@
-// Construit la valeur de ProjectContext.Provider (plan V, iso-fonctionnel) : le
+// Construit la valeur de ProjectContext.Provider : le
 // contexte consommé par les éditeurs (import/copie projet, audio/image, génération
-// SD/XTTS, sauvegarde). Déplacement pur du littéral qui vivait dans AppContent —
-// mêmes clés, même ordre, RECONSTRUIT À CHAQUE RENDU (aucune mémoïsation : c'était
-// déjà le comportement, et plusieurs sources — project, jobs des stores — changent
-// par rendu ; un useMemo les figerait sans warning). Les stores SD/XTTS sont passés
-// entiers : le hook en dérive sdSettings/sdJobs/xttsJobs/onRemoveSdResult, exactement
-// comme le faisait l'hôte.
+// SD/XTTS, sauvegarde). RECONSTRUIT À CHAQUE RENDU : plusieurs sources — project,
+// jobs des stores — changent par rendu ; un useMemo les figerait sans warning.
+// Les stores SD/XTTS sont passés entiers : le hook en dérive
+// sdSettings/sdJobs/xttsJobs/onRemoveSdResult.
 export function useProjectContextValue({
   savePath,
   projectName,

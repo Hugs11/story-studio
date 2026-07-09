@@ -17,11 +17,11 @@ export default defineConfig(async () => ({
     }),
   ].filter(Boolean),
 
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+  // Options Vite propres au développement Tauri, appliquées seulement en `tauri dev` ou `tauri build`.
   //
-  // 1. prevent Vite from obscuring rust errors
+  // 1. Empêcher Vite de masquer les erreurs Rust.
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  // 2. Tauri attend un port fixe : échouer si ce port est indisponible.
   server: {
     port: 1420,
     strictPort: true,

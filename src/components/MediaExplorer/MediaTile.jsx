@@ -38,7 +38,7 @@ export function MediaTile({
     );
     obs.observe(el);
     return () => obs.disconnect();
-  // reason: markForProbe est passe par le parent et peut etre re-cree a chaque render ;
+  // Raison : markForProbe est passé par le parent et peut être recréé à chaque rendu ;
   // on observe seulement quand l'item ou la vue change, pas quand la prop fonction bouge.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, item.path, item.exists]);

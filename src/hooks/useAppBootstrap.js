@@ -15,9 +15,9 @@ import { logger, installGlobalErrorHandlers, setLogLevel } from '../utils/logger
 import { loadVerboseLoggingPref, verboseLevelName } from '../store/loggingPreference';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 
-// Codecs des `usePersistentState` de ce hook. BOOL_CODEC est une COPIE privée :
-// l'original reste dans App.jsx tant que `bottomPanelOpen` y vit (plan Y le
-// résorbe). INT_CODEC a suivi son seul consommateur (`autoSaveBackupLimit`) ici.
+// Codecs des `usePersistentState` ci-dessous. BOOL_CODEC existe aussi en copie
+// privée dans useBottomWorkspacePanelModel : duplication assumée, un helper
+// partagé pour deux consommateurs n'apporterait rien.
 const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
 const INT_CODEC = {
   decode: (raw) => {
@@ -27,14 +27,12 @@ const INT_CODEC = {
   encode: (value) => String(value),
 };
 
-// Bootstrap applicatif (plan X, iso-fonctionnel) : version de l'app, préférences
-// globales persistées chargées au démarrage, refs synchronisées et effets
-// thème/logging/raccourcis. Déplacement pur du haut d'AppContent. Ce hook PRÉPARE
+// Bootstrap applicatif : version de l'app, préférences globales persistées chargées
+// au démarrage, refs synchronisées et effets thème/logging/raccourcis. Ce hook PRÉPARE
 // l'app ; il ne porte NI la session, NI la sauvegarde, NI l'import (qui restent
 // câblés dans AppContent). L'effet `ensureWorkspaceDir` reste volontairement chez
 // l'hôte : il lit `sessionModeRef` qui n'existe qu'après useWorkSession.
-// Règle de vague : aucune mémoïsation nouvelle — rien de calculé par rendu n'est
-// figé ici.
+// Ne pas ajouter de mémoïsation — rien de calculé par rendu ne doit être figé ici.
 export function useAppBootstrap() {
   const [appVersion, setAppVersion] = useState('');
   const [xttsSettings, setXttsSettings] = useState(() => loadXttsSettings());
@@ -45,8 +43,7 @@ export function useAppBootstrap() {
   const [configuredWorkspaceDir, setConfiguredWorkspaceDir] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [workspaceDir, setWorkspaceDirState] = useState(() => readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' }));
   const [useWorkspaceForNewProjects, setUseWorkspaceForNewProjects] = usePersistentState(KEYS.USE_WORKSPACE_FOR_NEW_PROJECTS, false, BOOL_CODEC);
-  // Actif par défaut (D49) ; la migration one-shot de main.jsx aligne les
-  // installations existantes.
+  // Actif par défaut ; la migration one-shot de main.jsx aligne les installations existantes.
   const [autoSaveEnabled, setAutoSaveEnabled] = usePersistentState(KEYS.AUTOSAVE_ENABLED, true, BOOL_CODEC);
   const [autoSaveBackupLimit, setAutoSaveBackupLimit] = usePersistentState(KEYS.AUTOSAVE_BACKUP_LIMIT, 5, INT_CODEC);
   const [verboseLogging, setVerboseLoggingState] = useState(() => loadVerboseLoggingPref());

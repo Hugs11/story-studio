@@ -91,10 +91,9 @@ pub(crate) struct AfterPlaybackSequenceTransitions {
     pub(crate) home: Option<Transition>,
 }
 
-// Appends a sanitized id suffix to prevent role collisions
-// when sibling entries share the same display name (e.g. all named "Stage title"
-// after importing a Lunii official pack). Falls back to name-only when id is
-// empty (some tests and legacy imports can still construct id-less entries).
+// Ajoute un suffixe d'id assaini pour éviter les collisions de rôle quand des
+// entrées sœurs partagent le même libellé. Replie sur le nom seul quand l'id
+// est vide (certains tests et imports legacy construisent encore des entrées sans id).
 pub(crate) fn scoped_label_id(prefix: &str, id: &str, name: &str) -> String {
     let trimmed = name.trim();
     let label = if trimmed.is_empty() {
@@ -122,8 +121,8 @@ pub(crate) fn sanitize_stage_label(label: &str) -> String {
 
 pub(crate) fn normalize_document_for_studio_compat(document: &mut StoryDocument) {
     for stage in &mut document.stage_nodes {
-        // STUdio recreates ports from controlSettings before replaying transitions.
-        // A declared transition must therefore expose the matching port.
+        // STUdio recrée les ports depuis controlSettings avant de rejouer les transitions.
+        // Une transition déclarée doit donc exposer le port correspondant.
         if stage.ok_transition.is_some()
             && !stage.control_settings.ok
             && !stage.control_settings.autoplay
@@ -194,9 +193,10 @@ pub(crate) fn validate_document_for_studio_compat(document: &StoryDocument) -> R
             }
         }
 
-        // Après Studio rule: homeTransition and okTransition must not resolve to the same target stage.
-        // Only applies to navigation/title stages (wheel=true). Pure play stages (wheel=false,
-        // autoplay=true) legitimately route both transitions to the same return target.
+        // Règle Après Studio : homeTransition et okTransition ne doivent pas
+        // résoudre vers le même stage cible. Ne s'applique qu'aux stages de
+        // navigation/titre (wheel=true). Les stages de lecture pure (wheel=false,
+        // autoplay=true) peuvent légitimement router les deux transitions vers la même cible.
         if stage.control_settings.wheel {
             if let (Some(ht), Some(ot)) =
                 (stage.home_transition.as_ref(), stage.ok_transition.as_ref())

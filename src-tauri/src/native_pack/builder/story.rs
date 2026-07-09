@@ -10,8 +10,8 @@ pub(crate) struct StoryPrealloc {
     pub(crate) play_action_id: String,
     pub(crate) home_step_stage_id: Option<String>,
     pub(crate) home_step_action_id: Option<String>,
-    // Set during build_menu_branch pre-pass; used by returnAfterPlay "story:id"
-    // to land on the title screen (not directly on the play stage).
+    // Défini pendant la prépasse build_menu_branch ; utilisé par returnAfterPlay
+    // "story:id" pour revenir sur l'écran titre, pas directement sur le stage de lecture.
     pub(crate) approach_transition: Option<Transition>,
 }
 

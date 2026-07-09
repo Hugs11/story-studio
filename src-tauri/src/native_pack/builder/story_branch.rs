@@ -29,9 +29,9 @@ impl<'a> StoryBuilder<'a> {
         let auto_next_active = self.report.project.options.auto_next;
         let has_effective_night_mode =
             self.report.project.night_mode_audio.is_some() && !auto_next_active;
-        // force_autoplay ensures the firmware fires okTransition automatically.
-        // Required when returnAfterPlay is set, and also when the story is inside a
-        // nested menu with no explicit navigation controls — otherwise the audio loops.
+        // force_autoplay garantit que le firmware déclenche okTransition automatiquement.
+        // Requis avec returnAfterPlay, et aussi quand l'histoire est dans un menu imbriqué
+        // sans contrôles de navigation explicites ; sinon l'audio boucle.
         let force_autoplay = auto_next_active
             || story
                 .return_after_play

@@ -16,9 +16,9 @@ function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-// Job shape:
+// Structure d'un job :
 // {
-//   id: string,           // uuid client-side
+//   id: string,           // uuid côté client
 //   workflowId: string,
 //   workflowName: string,
 //   status: 'pending' | 'submitting' | 'running' | 'done' | 'error',

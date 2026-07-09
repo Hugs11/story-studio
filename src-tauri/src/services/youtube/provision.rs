@@ -1,4 +1,4 @@
-//! Provisionnement yt-dlp (D22) : télécharge **la dernière version** du binaire
+//! Provisionnement yt-dlp : télécharge **la dernière version** du binaire
 //! Windows dans un dossier app-data inscriptible, vérifie son intégrité contre le
 //! `SHA2-256SUMS` officiel de la même release, puis le **maintient à jour**
 //! (re-téléchargement périodique). YouTube bloque les versions périmées, donc on

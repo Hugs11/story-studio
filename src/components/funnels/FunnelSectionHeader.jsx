@@ -1,5 +1,5 @@
 /**
- * En-tête de section répété en haut de chaque étape de collecte (plan 03) :
+ * En-tête de section répété en haut de chaque étape de collecte :
  * pastille violette (icône), titre, description, et un slot optionnel à droite
  * (`trailing`) pour un badge « Pré-rempli » ou tout autre indicateur.
  *

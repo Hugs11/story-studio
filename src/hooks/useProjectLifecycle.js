@@ -1,8 +1,8 @@
 import { logger } from '../utils/logger';
 import { bumpPackVersion } from '../utils/packConvention';
 
-// Grappe « cycle de vie du projet » extraite d'AppContent (plan K, iso-fonctionnel) :
-// nouveau projet (reset vers l'accueil, PAS de session), choix du type (création de
+// Grappe « cycle de vie du projet » extraite d'AppContent : nouveau projet
+// (reset vers l'accueil, PAS de session), choix du type (création de
 // la session éphémère) et atterrissage depuis les funnels « Modifier un pack »
 // (éditable) / « Simuler » (non éditable). Orchestre useWorkSession + la garde de
 // sauvegarde.
@@ -62,8 +62,8 @@ export function useProjectLifecycle({
     }
   }
 
-  // Entrée accueil « Modifier un pack » (plan 04) : ouvre le funnel dédié
-  // (zone de dépôt fichier/dossier, vérification d'éditabilité D31 et
+  // Entrée accueil « Modifier un pack » : ouvre le funnel dédié
+  // (zone de dépôt fichier/dossier, vérification d'éditabilité et
   // décompression affichées dans le funnel).
   function handleEditExistingPack() {
     setEditPackOpen(true);
@@ -82,8 +82,8 @@ export function useProjectLifecycle({
         baseProject: store.project,
       });
       if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
-      // D34 : suggérer une version incrémentée (_V2 si aucune) et forcer la modal
-      // de métadonnées pré-remplie à la première génération du pack importé.
+      // Suggérer une version incrémentée (_V2 si aucune) et forcer la modal de
+      // métadonnées pré-remplie à la première génération du pack importé.
       const landedProject = transformed.project.packMetadata
         ? {
             ...transformed.project,

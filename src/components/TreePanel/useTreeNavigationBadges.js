@@ -42,10 +42,10 @@ export function useTreeNavigationBadges({
   //     jusqu'a ce que Y soit re-touchee. En pratique, getGeneratedStoryNavigation
   //     n'utilise `rootEntries` que pour resoudre la cible `next-story` au
   //     niveau d'un menu, et cela n'apparait que dans le `targetId` resolu --
-  //     dont la traduction en NOM se fait via formatBadgeTitle a chaque render
+  //     dont la traduction en NOM se fait via formatBadgeTitle à chaque rendu
   //     (qui voit le projectIndex courant). Donc en pratique : ok.
   //
-  // Les titres textuels sont reformates a chaque render via formatBadgeTitle,
+  // Les titres textuels sont reformates à chaque rendu via formatBadgeTitle,
   // donc tout rename de cible apparait immediatement dans l'UI meme si la DATA
   // n'est pas recalculee.
   const badgesDataCacheRef = useRef(new Map());

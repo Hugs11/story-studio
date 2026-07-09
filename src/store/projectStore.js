@@ -119,8 +119,8 @@ export function useProjectStore() {
   const historyRef = useRef([]);
   const redoRef = useRef([]);
   // canUndo / canRedo sont des derives purs des refs : on les recalcule au
-  // render au lieu de les stocker en state. Toute mutation des refs est suivie
-  // d'un setProjectRaw qui declenche un re-render, donc les valeurs restent
+  // rendu au lieu de les stocker en state. Toute mutation des refs est suivie
+  // d'un setProjectRaw qui declenche un nouveau rendu, donc les valeurs restent
   // synchronisees sans setState-dans-setState (anti-pattern React).
   const canUndo = historyRef.current.length > 0;
   const canRedo = redoRef.current.length > 0;

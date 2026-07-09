@@ -1,5 +1,5 @@
 /* ============================================================================
-   Châssis commun des funnels (plan 03)
+   Châssis commun des funnels
    ----------------------------------------------------------------------------
    Gabarit réutilisable par toutes les entrées guidées de la 0.9.3.
    Référence visuelle : maquette « Agréger des packs » (hifi, sombre). Ici, on
@@ -15,7 +15,7 @@
      3. Stepper
      4. Corps + en-tête de section
      5. Pied (actions)
-     6. Bouton-outil (D42)
+     6. Bouton-outil
      7. Écran Génération
      8. Écran Terminé
      9. Responsive
@@ -354,7 +354,7 @@
 .funnel-btn-back:hover { border-color: var(--control-border-hover); background: var(--bg2); }
 .funnel-btn-back:disabled { cursor: default; opacity: 0.5; }
 
-/* 6. Bouton-outil (D42) ------------------------------------------------------ */
+/* 6. Bouton-outil ------------------------------------------------------ */
 .funnel-tool-btn {
   display: inline-flex;
   align-items: center;

@@ -6,7 +6,7 @@ import { pathKey } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
 
 /**
- * Tri des médias de session à la promotion (plan 22, D51).
+ * Tri des médias de session à la promotion.
  *
  * `triageSessionMedia({ project, sessionDir, targetWorkspaceDir, projectName, transferCopies })`
  * - re-pointe bibliothèque et tags vers les fichiers déjà copiés par le

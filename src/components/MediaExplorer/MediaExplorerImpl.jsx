@@ -283,7 +283,7 @@ export function MediaExplorer({
     });
   }, [allTags]);
 
-  // Keyboard Delete — ref holds current selection to avoid re-registering on every render
+  // Touche Suppr : la ref garde la sélection courante sans réenregistrer l'écouteur à chaque rendu.
   const visibleSelectedRef = useRef(visibleSelectedItems);
   useEffect(() => { visibleSelectedRef.current = visibleSelectedItems; }, [visibleSelectedItems]);
   useEffect(() => {

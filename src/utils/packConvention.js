@@ -121,7 +121,7 @@ export function generateConventionName(metadata = {}) {
 }
 
 /**
- * Version suivante suggérée pour un pack (D34, « Modifier un pack ») : incrémente
+ * Version suivante suggérée pour un pack : incrémente
  * la version courante d'une unité. Sans version (ou version invalide), suggère 2
  * → suffixe `_V2`. L'utilisateur reste libre de la changer.
  */

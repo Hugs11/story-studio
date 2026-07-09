@@ -218,7 +218,7 @@ function migratePanelToggleShortcuts(shortcuts) {
   }
 
   // 3. tabOptions déménage vers Ctrl+Maj+O UNIQUEMENT si sa valeur stockée est un
-  //    ancien défaut connu (Ctrl+3 post-vague 1, ou Ctrl+4 legacy avant la migration
+  //    ancien défaut connu (Ctrl+3 ou Ctrl+4 legacy avant la migration
   //    simulateur). Une vraie personnalisation utilisateur est conservée.
   const legacyOptionsDefaults = [
     { ctrl: true, key: '3', code: 'Digit3' },

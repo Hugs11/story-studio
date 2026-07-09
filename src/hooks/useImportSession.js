@@ -253,11 +253,11 @@ export function useImportSession({
     if (!zipItem?.zipPath) return;
     const menuId = projectIndex.parentMenuById.get(itemId) ?? null;
 
-    // Persistance différée (plan 01) : extraire un ZIP n'impose JAMAIS d'enregistrer
+    // Persistance différée : extraire un ZIP n'impose JAMAIS d'enregistrer
     // le projet. En session éphémère (savePath == null) on extrait dans le workspace
     // de session et l'autosave écrit le snapshot de récupération. Forcer un save ici
-    // (ancien comportement) déclenchait la promotion via handleSaveProject, donc le
-    // cleanup du dossier de session — ce qui supprimait le ZIP source avant même son
+    // déclenchait la promotion via handleSaveProject, donc le nettoyage du dossier
+    // de session — ce qui supprimait le ZIP source avant même son
     // extraction (« Archive introuvable »).
     const baseProject = store.project;
     const savePath = store.savePath;
@@ -330,9 +330,9 @@ export function useImportSession({
     }
   }
 
-  // Extrait un pack dans un projet de session vierge (« Modifier un pack »,
-  // plan 04) : aucune sauvegarde forcée, l'écriture va dans le dossier de
-  // session. Retourne le projet promu (ou `null` si aucune entrée). Le caller
+  // Extrait un pack dans un projet de session vierge (« Modifier un pack ») :
+  // aucune sauvegarde forcée, l'écriture va dans le dossier de
+  // session. Retourne le projet promu (ou `null` si aucune entrée). L'appelant
   // (App.jsx) gère le store et la persistance éphémère.
   async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject }) {
     const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
@@ -410,9 +410,9 @@ export function useImportSession({
   }
 
   // Importe une liste d'entrées média (podcast ou YouTube) en histoires.
-  // Source-agnostique : le funnel podcast (plan 06), la modale podcast historique
-  // et le funnel YouTube (plan 09) partagent ce handler. Les entrées exposent un
-  // shape commun (`title`, `audioUrl`, `imageUrl`) ; seul le téléchargement audio
+  // Source-agnostique : le funnel podcast, la modale podcast historique
+  // et le funnel YouTube partagent ce gestionnaire. Les entrées exposent un
+  // format commun (`title`, `audioUrl`, `imageUrl`) ; seul le téléchargement audio
   // diffère (`options.source`).
   // `options` :
   //   - `source` : 'podcast' (défaut) | 'youtube'.
@@ -420,7 +420,7 @@ export function useImportSession({
   //     déduit la cible de la sélection courante (comportement éditeur).
   //   - `onProgress` : reçoit la progression à la place de la modale globale
   //     `setImporting` (le funnel l'affiche dans son propre écran).
-  //   - `suppressDialog` : laisse le caller signaler l'échec lui-même.
+  //   - `suppressDialog` : laisse l'appelant signaler l'échec lui-même.
   // Retourne `{ total, failures, imported }`.
   async function handleImportMediaEpisodes(episodes, feed, options = {}) {
     if (!Array.isArray(episodes) || episodes.length === 0) {

@@ -10,7 +10,7 @@ import { renderDeferred } from './renderDeferred';
 
 const WorkspaceView = lazy(() => import('../workspace/WorkspaceView').then((module) => ({ default: module.WorkspaceView })));
 
-// Shell présentational d'`AppContent` (plan W, iso-fonctionnel). Composant pur :
+// Shell présentational d'`AppContent`. Composant pur :
 // aucune logique métier, uniquement le rendu du chrome (providers, `.app`,
 // TitleBar, Toolbar, WorkspaceView, BottomWorkspacePanel, AppModals, bottombar),
 // alimenté par des groupes de props déjà bâtis par l'hôte.

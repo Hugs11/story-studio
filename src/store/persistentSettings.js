@@ -96,7 +96,7 @@ export function runSettingsMigrations() {
   remove('diagramPleinLeftSlot');
   remove('diagramSettingsSlotWidth');
 
-  // D49 (plan 24) : l'enregistrement automatique devient actif par défaut.
+  // L'enregistrement automatique devient actif par défaut.
   // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,
   // donc un 'false' stocké ne distingue pas un choix explicite d'un défaut
   // hérité : bascule one-shot vers 'true'. Désactiver ensuite reste respecté.

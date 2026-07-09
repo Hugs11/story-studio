@@ -88,7 +88,7 @@ function AppContent() {
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
   const diagramView = useDiagramViewState();
-  // Consolidation des booléens d'ouverture de modales/overlays (plan O). Les flags
+  // Consolidation des booléens d'ouverture de modales/overlays. Les flags
   // qui portent une donnée restent des useState dédiés (toolbarTtsTargetMenuId,
   // youtubeFunnelMode, pendingSimulateZip).
   const modals = useDisclosures([
@@ -97,12 +97,12 @@ function AppContent() {
   ]);
   const [toolbarTtsTargetMenuId, setToolbarTtsTargetMenuId] = useState(null);
   // null = fermé ; 'home' = entrée accueil (session éphémère) ; 'editor' = import
-  // dans le projet courant (éditeur libre). Plan 09.
+  // dans le projet courant (éditeur libre).
   const [youtubeFunnelMode, setYoutubeFunnelMode] = useState(null);
-  // « Modifier un pack » (plan 04) : ZIP à simuler une fois l'éditeur monté
+  // « Modifier un pack » : ZIP à simuler une fois l'éditeur monté
   // (l'ouverture du funnel est portée par la disclosure `editPack`).
   const [pendingSimulateZip, setPendingSimulateZip] = useState(null);
-  // D34 : force la modal de métadonnées (version suggérée) à la 1re génération d'un
+  // Force la modal de métadonnées (version suggérée) à la 1re génération d'un
   // pack importé. Ref (pas state) : lu/écrit synchronement dans le flux de génération.
   const importedPackPendingMetaRef = useRef(false);
   const [importNotice, setImportNotice] = useState(null); // string | null
@@ -110,13 +110,13 @@ function AppContent() {
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
   const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex, store.savePath);
 
-  // Bootstrap applicatif (plan X, iso-fonctionnel) : version, préférences globales
-  // persistées, refs synchronisées (workspace/raccourcis) et effets thème/logging/
-  // raccourcis. Appelé AVANT useWorkSession, qui consomme configuredWorkspaceDir/
-  // setConfiguredWorkspaceDir/setWorkspaceDirState/workspaceDirRef. Positionné ici
-  // (après useProjectFileAudit) pour laisser ses effets de sync de ref dans leur
-  // créneau d'origine. L'effet ensureWorkspaceDir reste chez l'hôte (il lit
-  // sessionModeRef, né plus bas dans useWorkSession).
+  // Bootstrap applicatif : version, préférences globales persistées, refs
+  // synchronisées (workspace/raccourcis) et effets thème/logging/raccourcis. Appelé
+  // AVANT useWorkSession, qui consomme configuredWorkspaceDir/setConfiguredWorkspaceDir/
+  // setWorkspaceDirState/workspaceDirRef. Positionné ici (après useProjectFileAudit)
+  // pour laisser ses effets de sync de ref dans leur créneau d'origine. L'effet
+  // ensureWorkspaceDir reste chez l'hôte (il lit sessionModeRef, né plus bas dans
+  // useWorkSession).
   const {
     appVersion,
     xttsSettings,
@@ -178,11 +178,11 @@ function AppContent() {
     handleDeleteMedia,
   } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
 
-  // Modèle du panneau bas + bottombar (plan Y, iso-fonctionnel) : état ouvert/onglet
-  // (persistés), ouverture auto depuis la file de rendu, compteurs médias/IA. Appelé
-  // APRÈS useMediaLibraryPaths (mediaLibraryPaths) et AVANT useAiGeneration, qui
-  // consomme setOpen/setActiveTab pour ouvrir la file IA. mediaLibraryCountRef est
-  // fournie ici (consommée par useWorkSession/useAutosave) et synchronisée par le hook.
+  // Modèle du panneau bas + bottombar : état ouvert/onglet (persistés), ouverture auto
+  // depuis la file de rendu, compteurs médias/IA. Appelé APRÈS useMediaLibraryPaths
+  // (mediaLibraryPaths) et AVANT useAiGeneration, qui consomme setOpen/setActiveTab pour
+  // ouvrir la file IA. mediaLibraryCountRef est fournie ici (consommée par
+  // useWorkSession/useAutosave) et synchronisée par le hook.
   const bottomWorkspace = useBottomWorkspacePanelModel({
     project: store.project,
     pathAudit,
@@ -308,10 +308,10 @@ function AppContent() {
 
   const { getAudioJobUsage, getImageJobUsage } = useAiJobUsage({ project: store.project, projectIndex });
 
-  // Grappe « générer le pack » (plan J, iso-fonctionnel) : étape métadonnées
-  // (PackNameModal), gardes de validation, résolution du dossier d'export et
-  // enfilement du job dans la file de rendu. `importedPackPendingMetaRef` est
-  // partagée avec useWorkSession (D34) : le hook la lit et la remet à false.
+  // Grappe « générer le pack » : étape métadonnées (PackNameModal), gardes de
+  // validation, résolution du dossier d'export et enfilement du job dans la file de
+  // rendu. `importedPackPendingMetaRef` est partagée avec useWorkSession : le hook la
+  // lit et la remet à false.
   const {
     handleGenerate,
     handleSavePackMetadata,
@@ -353,7 +353,7 @@ function AppContent() {
     addPathsToMediaLibrary,
   });
 
-  // Tri des médias de session non utilisés à la promotion (plan 22, D51).
+  // Tri des médias de session non utilisés à la promotion.
   const { triageSessionMedia, triageRequest } = useSessionMediaTriage({
     store,
     mediaLibraryPathsRef,
@@ -418,7 +418,7 @@ function AppContent() {
     onBeforeProjectReplaced: cleanupEphemeralSession,
   });
 
-  // Plan 01 (révisé) : on ne propose plus d'enregistrer le projet source APRÈS
+  // On ne propose plus d'enregistrer le projet source APRÈS
   // génération. La proposition ne subsiste qu'à la sortie de l'app / au remplacement
   // du travail courant (useWindowCloseGuard / useProjectLoading), jamais forcée.
 
@@ -436,10 +436,10 @@ function AppContent() {
     handleSaveProject,
   });
 
-  // Grappe « funnels média d'accueil » (plan L, iso-fonctionnel) : atterrissage
-  // podcast/YouTube + regroupement des appels d'import déjà-hookés
+  // Grappe « funnels média d'accueil » : atterrissage podcast/YouTube + regroupement
+  // des appels d'import déjà-hookés
   // (useImportSession/useOsFileDrop, ré-exposés). Appelée APRÈS useMediaTransferHandlers
-  // (copy-handlers), useSaveProgress (persistProjectSnapshot) et useWorkSession
+  // (gestionnaires de copie), useSaveProgress (persistProjectSnapshot) et useWorkSession
   // (runFunnelLanding), et AVANT ses consommateurs (ProjectActionsContext,
   // useProjectLifecycle qui lit unpackZipIntoBlankProject).
   const {
@@ -472,8 +472,8 @@ function AppContent() {
     showErrorDialog,
   });
 
-  // Cycle de vie du projet (plan K, iso-fonctionnel) : nouveau projet (reset vers
-  // l'accueil), choix du type (session éphémère) et atterrissage depuis les funnels
+  // Cycle de vie du projet : nouveau projet (reset vers l'accueil), choix du type
+  // (session éphémère) et atterrissage depuis les funnels
   // « Modifier un pack » (éditable) / « Simuler » (non éditable). Appelée APRÈS
   // useWorkSession, useSaveProgress et useMediaImport : elle consomme
   // runFunnelLanding/prepareNewWorkSession/resetWorkSession, handleSave et
@@ -510,8 +510,8 @@ function AppContent() {
   useSyncedRef(saveHandlerRef, handleSave);
   useSyncedRef(saveAsHandlerRef, handleSaveProjectAs);
 
-  // Grappe « préférences & réglages » (plan N, iso-fonctionnel) : dossier workspace,
-  // logging verbeux (+ chemins de log), consolidation projet, options globales,
+  // Grappe « préférences & réglages » : dossier workspace, logging verbeux
+  // (+ chemins de log), consolidation projet, options globales,
   // message de fin et réglages XTTS. Appelée APRÈS useSaveProgress (setSaveProgress
   // pilote la progression de handleConsolidateProject) et useWorkSession (sessionMode).
   // xttsSettings reste chez l'hôte (lu par la génération / ProjectContext / OptionsTab) :
@@ -539,8 +539,8 @@ function AppContent() {
     showConfirmDialog,
   });
 
-  // Modèle de lecture du shell (plan T, iso-fonctionnel) : sélection courante,
-  // validation, statut, dirty state, capacités toolbar, labels de raccourcis,
+  // Modèle de lecture du shell : sélection courante, validation, statut, dirty
+  // state, capacités toolbar, labels de raccourcis,
   // dossier d'export modal. Appelé AVANT useAppShortcutActions qui
   // consomme canGenerate/totalIssues/canImportStories/canAddFolder.
   const {
@@ -598,8 +598,8 @@ function AppContent() {
     modals.close('record');
   }
 
-  // Table d'actions des raccourcis (plan U, iso-fonctionnel) : écrit
-  // shortcutActionsRef pendant le rendu, lue par les listeners de useAppShortcuts.
+  // Table d'actions des raccourcis : écrit shortcutActionsRef pendant le rendu,
+  // lue par les listeners de useAppShortcuts.
   useAppShortcutActions({
     shortcutActionsRef,
     store,
@@ -618,7 +618,7 @@ function AppContent() {
   });
 
   // Actions projet partagées entre les surfaces d'édition (arbre, réglages, diagramme),
-  // consommées via useProjectActions. La valeur agrège des handlers venus de plusieurs
+  // consommées via useProjectActions. La valeur agrège des gestionnaires venus de plusieurs
   // hooks (mutations, import, préférences, toolbar) ; reconstruite à chaque rendu.
   const projectActions = useProjectActionsValue({
     store,
@@ -691,7 +691,7 @@ function AppContent() {
   });
 
   // Mur de props d'`AppModals` (~45 clés) : spread tel quel dans le shell, sans
-  // renommer aucune clé (plan W) pour éviter les fautes de frappe silencieuses.
+  // renommer aucune clé pour éviter les fautes de frappe silencieuses.
   const appModalsProps = {
     modals,
     youtubeFunnelMode,
@@ -738,8 +738,8 @@ function AppContent() {
     onMediaCreated: handleMediaCreated,
   };
 
-  // Groupes de props du shell présentational (plan W). Aucune logique métier :
-  // uniquement du branchement de valeurs/handlers déjà calculés vers le chrome.
+  // Groupes de props du shell présentational. Aucune logique métier :
+  // uniquement du branchement de valeurs/gestionnaires déjà calculés vers le chrome.
   const appShellProps = {
     mediaTransfer: {
       dropOnNode,

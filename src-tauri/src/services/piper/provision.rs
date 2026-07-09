@@ -1,4 +1,4 @@
-//! Provisionnement Piper (D45) : télécharge **une fois** le binaire Windows et
+//! Provisionnement Piper : télécharge **une fois** le binaire Windows et
 //! la/les voix demandées dans un dossier app-data inscriptible, puis valide
 //! structurellement les artefacts. Aucun serveur, aucune dépendance Python.
 //!

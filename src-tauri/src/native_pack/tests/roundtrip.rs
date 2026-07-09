@@ -533,7 +533,7 @@ fn modeled_branching_graph_does_not_trigger_native_graph() {
 
 /// Type d'architecture (aucun nom de pack réel) : un menu-choix dont une option
 /// « revisite » une histoire déjà présente — une convergence orpheline modélisée par
-/// un nœud `ref`. Attendu Étape 6 : la ref génère une VRAIE transition native vers le
+/// un nœud `ref`. Attendu : la ref génère une VRAIE transition native vers le
 /// stage existant de la cible, sans créer de stage fantôme et sans casser la validité STUdio.
 #[test]
 fn menu_reference_option_resolves_to_existing_target_stage_without_ghost() {
@@ -803,9 +803,9 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
     let _ = fs::remove_dir_all(base);
 }
 
-/// Étape 7 : un choix de convergence en fin de séquence qui vise des histoires construites
-/// APRÈS (références « en avant »). La résolution inline ne voyait que les cibles arrière ;
-/// la résolution préallouée (`preallocated_target_stage`) lève la limite. Type d'architecture.
+/// Choix de convergence en fin de séquence qui vise des histoires construites APRÈS
+/// (références « en avant »). La résolution inline ne voyait que les cibles arrière ;
+/// la résolution préallouée (`preallocated_target_stage`) lève la limite.
 #[test]
 fn end_sequence_convergence_choice_resolves_forward_references() {
     let base = temp_roundtrip_dir("forward_choice");
@@ -928,7 +928,7 @@ fn end_sequence_convergence_choice_resolves_forward_references() {
     let _ = fs::remove_dir_all(base);
 }
 
-/// Type d'architecture « Lapin » : un arbre de choix dont la convergence est HÉBERGÉE
+/// Type d'architecture : un arbre de choix dont la convergence est HÉBERGÉE
 /// (returnAfterPlay = badge, pas de feuille `ref`). Regénéré par le chemin CANONIQUE
 /// (`native_graph: None`) → la convergence A→B survit sans parachute, et round-trip.
 #[test]

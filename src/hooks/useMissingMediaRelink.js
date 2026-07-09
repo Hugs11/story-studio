@@ -7,8 +7,8 @@ import {
   relinkProjectMedia,
 } from '../store/missingMediaRelink';
 
-// Grappe « média manquant » extraite d'AppContent (plan M, iso-fonctionnel).
-// Détecte les médias introuvables (dérivés mémoïsés du projet + audit disque),
+// Grappe « média manquant » extraite d'AppContent. Détecte les médias introuvables
+// (dérivés mémoïsés du projet + audit disque),
 // calcule une signature de déduplication et applique le relink (projet + tags +
 // chemins de bibliothèque), avec sauvegarde optionnelle.
 //

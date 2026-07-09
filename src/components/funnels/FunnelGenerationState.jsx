@@ -1,5 +1,5 @@
 /**
- * Écran « Génération » du châssis (plan 03) pour les funnels génératifs/outils.
+ * Écran « Génération » du châssis pour les funnels génératifs/outils.
  * Spinner violet + liste de phases (à venir / en cours / faite) + barre de
  * progression. Stepper et pied sont masqués par le shell (`showChrome=false`).
  *

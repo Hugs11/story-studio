@@ -1,4 +1,4 @@
-//! Commandes Tauri du funnel YouTube (plan 09). Miroir de `commands::podcast`,
+//! Commandes Tauri du funnel YouTube. Miroir de `commands::podcast`,
 //! avec en plus la mise à jour du binaire yt-dlp. Les téléchargements lourds
 //! tournent sur `spawn_blocking` et émettent leur progression via `youtube-log`.
 

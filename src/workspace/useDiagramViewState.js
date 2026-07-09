@@ -19,7 +19,7 @@ export function getTreePanelMaxWidth() {
   return Math.max(LEFT_PANEL_MIN_WIDTH, Math.round(window.innerWidth * 0.42));
 }
 
-// Codec booléen stable (défini au niveau module pour ne pas réécrire à chaque render).
+// Codec booléen stable (défini au niveau module pour ne pas réécrire à chaque rendu).
 const BOOL_CODEC = Object.freeze({
   decode: (value) => value === 'true',
   encode: (value) => (value ? 'true' : 'false'),
@@ -119,7 +119,7 @@ export function useDiagramViewState() {
     showDiagram,
     // dérivé de lecture (présentation) : seul `isPlein` est encore consommé
     // (WorkspaceView, layout diagramme plein/colonne). `isFerme`/`isColonne` ont
-    // été retirés avec le header Réglages systématique (plan G, plus aucun lecteur).
+    // été retirés avec le header Réglages systématique.
     isPlein: showDiagram && !showSettings,
     treeVisible: showTree,
     // actions

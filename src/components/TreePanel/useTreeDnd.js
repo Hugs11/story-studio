@@ -1,5 +1,5 @@
 // Hook : encapsule toute la machinerie dnd-kit du TreePanel (sensors,
-// collision detection, position de drop calculee, handlers drag start /
+// détection de collision, position de drop calculée, gestionnaires drag start /
 // move / end / cancel). Extrait de TreePanel.jsx.
 
 import { useCallback, useRef, useState } from 'react';

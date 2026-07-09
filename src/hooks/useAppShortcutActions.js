@@ -1,8 +1,8 @@
 import { useSyncedRef } from './useSyncedRef';
 
-// Table d'actions des raccourcis clavier (plan U, iso-fonctionnel) : maintient
-// shortcutActionsRef, la table lue par les listeners installés par
-// useAppShortcuts. Déplacement pur du bloc qui vivait dans AppContent.
+// Table d'actions des raccourcis clavier : maintient shortcutActionsRef, la
+// table lue par les listeners installés par useAppShortcuts. Déplacement pur du
+// bloc qui vivait dans AppContent.
 // useSyncedRef écrit la ref PENDANT le rendu (pas dans un effet) : ne pas le
 // remplacer par un useEffect. Les clés sont des ids d'action alignés avec les
 // préférences clavier (store/keyboardShortcuts.js) : ne pas les renommer. Les

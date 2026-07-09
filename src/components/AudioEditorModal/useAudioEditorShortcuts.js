@@ -10,9 +10,9 @@
 //     go start/end, shuttle back/stop/fwd, mark in/out, preview in/out)
 //
 // On garde l'eslint-disable react-hooks/exhaustive-deps : les actions sont
-// definies dans le scope du composant et capturent les latest values via
-// les deps listees. Lister tous les handlers re-attacherait l'event
-// listener a chaque render.
+// définies dans le scope du composant et capturent les valeurs courantes via
+// les deps listées. Lister tous les gestionnaires ré-attacherait l'écouteur
+// d'événement à chaque rendu.
 
 import { useEffect } from 'react';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
@@ -69,9 +69,9 @@ export function useAudioEditorShortcuts({
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  // reason: handler clavier global, actions captures dans le scope du composant
-  // appelant via deps listees. Lister tous les handlers re-attacherait l'event
-  // listener a chaque render.
+  // Raison : gestionnaire clavier global, actions capturées dans le scope du
+  // composant appelant via deps listées. Lister tous les gestionnaires
+  // ré-attacherait l'écouteur d'événement à chaque rendu.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, stagedEdit, previewPath, canOperate, canCut]);
 }

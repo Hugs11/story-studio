@@ -16,12 +16,12 @@ function isImportedOriginalUuid(draft) {
   return !!current && (!original || current === original);
 }
 
-// Grappe « générer le pack » extraite d'AppContent (plan J, iso-fonctionnel) :
-// étape métadonnées (PackNameModal), gardes de validation (audit en cours puis
-// erreurs bloquantes), résolution du dossier d'export et enfilement du job de
-// génération dans la file de rendu.
+// Grappe « générer le pack » extraite d'AppContent : étape métadonnées
+// (PackNameModal), gardes de validation (audit en cours puis erreurs bloquantes),
+// résolution du dossier d'export et enfilement du job de génération dans la file
+// de rendu.
 //
-// `importedPackPendingMetaRef` est PARTAGÉE avec useWorkSession (D34) : le hook la
+// `importedPackPendingMetaRef` est PARTAGÉE avec useWorkSession : le hook la
 // lit et la remet à false après confirmation des métadonnées ; ne pas en créer de
 // copie locale.
 export function usePackGeneration({
@@ -129,7 +129,7 @@ export function usePackGeneration({
     }
     store.setProject(projectForAction);
     setPackMetadataOpen(false);
-    // L'utilisateur a confirmé les métadonnées : ne plus reforcer la modal (D34).
+    // L'utilisateur a confirmé les métadonnées : ne plus reforcer la modal.
     importedPackPendingMetaRef.current = false;
     // skipMetadata : on revient de la modale, on génère sans la rouvrir (évite la boucle).
     if (generate) await handleGenerate(projectForAction, { skipMetadata: true });

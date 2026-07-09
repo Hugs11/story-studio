@@ -18,7 +18,7 @@ const STEPS = [
   { key: 'videos', label: 'Vidéos' },
 ];
 
-// Garde-fou de sélection (D23) : au-delà, on avertit (ton friendly, non bloquant).
+// Garde-fou de sélection : au-delà, on avertit (ton friendly, non bloquant).
 const SELECTION_SOFT_CAP = 50;
 
 function videoMeta(video) {
@@ -26,13 +26,13 @@ function videoMeta(video) {
 }
 
 /**
- * Funnel « Pack depuis YouTube » (plan 09) — jumeau du funnel podcast, source
+ * Funnel « Pack depuis YouTube » — jumeau du funnel podcast, source
  * yt-dlp. Sert l'entrée accueil (`mode="home"`, session éphémère créée par le
  * parent) **et** l'import dans l'éditeur libre (`mode="editor"`, projet courant) :
  * le composant est identique, seul `onImport` change côté parent.
  *
- * Premier usage : avertissement CGU (D24, accepté une fois) puis téléchargement
- * automatique de yt-dlp (D22), reflété par l'écran « Préparation… ».
+ * Premier usage : avertissement CGU (accepté une fois) puis téléchargement
+ * automatique de yt-dlp, reflété par l'écran « Préparation… ».
  */
 export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
   const ytDlpPath = useMemo(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }), []);

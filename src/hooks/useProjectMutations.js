@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 
-// Grappe « mutations projet » extraite d'AppContent (plan S, iso-fonctionnel) : les 11
-// wrappers fins qui adaptent les mutations du store à la signature attendue par les
+// Grappe « mutations projet » extraite d'AppContent : les 11 wrappers fins qui
+// adaptent les mutations du store à la signature attendue par les
 // surfaces d'édition (arbre, réglages, diagramme), consommés via ProjectActionsContext.
 // Déplacement pur — mêmes noms, mêmes gardes (`if (menuId)`, `typeof id === 'string'`),
 // mêmes valeurs par défaut qui lisent store.selectedId AU MOMENT DE L'APPEL
 // (handleUpdateMenu/handleDeleteMenu/handleUpdateItem/handleDeleteItem). Les
 // `useCallback` préexistants sont conservés tels quels (pas de mémoïsation nouvelle).
 //
-// Périmètre volontairement étroit : aucun handler d'import (useMediaImport), de
+// Périmètre volontairement étroit : aucun gestionnaire d'import (useMediaImport), de
 // préférences / message de fin (useAppPreferences) ni de toolbar (resté chez l'hôte).
 export function useProjectMutations({ store }) {
   const handleUpdateRoot = useCallback(({ projectName, name, rootName, endNodeName, packMetadata }) => {
