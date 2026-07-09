@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProjectStore } from './store/projectStore';
 import { ensureWorkspaceDir } from './store/projectIO';
-import { collectMediaLibrary } from './store/mediaLibrary';
 import { buildProjectIndex } from './store/projectModel';
 import { isProjectDirty } from './store/projectHelpers';
-import { KEYS } from './store/persistentSettings';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
@@ -23,12 +21,12 @@ import { useAppPreferences } from './hooks/useAppPreferences';
 import { useAppShortcutActions } from './hooks/useAppShortcutActions';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAutosave } from './hooks/useAutosave';
+import { useBottomWorkspacePanelModel } from './hooks/useBottomWorkspacePanelModel';
 import { useMediaImport } from './hooks/useMediaImport';
 import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
 import { useMissingMediaRelink } from './hooks/useMissingMediaRelink';
 import { useOptionsTabProps } from './hooks/useOptionsTabProps';
-import { usePersistentState } from './hooks/usePersistentState';
 import { useProjectActionsValue } from './hooks/useProjectActionsValue';
 import { useProjectContextValue } from './hooks/useProjectContextValue';
 import { useProjectLifecycle } from './hooks/useProjectLifecycle';
@@ -48,10 +46,6 @@ import './styles/layout.css';
 import './components/layout/AppChrome.css';
 import './components/RenderQueuePanel/RenderQueuePanel.css';
 
-// Codec du dernier `usePersistentState` resté ici (`bottomPanelOpen`). Le reste
-// des états persistés — et la copie d'INT_CODEC — vit dans useAppBootstrap ; le
-// plan Y (panneau bas) résorbera cette dernière ligne.
-const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(!!value) };
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
 // false si l'utilisateur a annulé ou si la sauvegarde n'a pas abouti.
 // savedSnapshot : JSON.stringify du projet au moment du dernier save/load, ou null si projet vierge
@@ -93,8 +87,6 @@ function AppContent() {
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
-  const [bottomPanelOpen, setBottomPanelOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
-  const [bottomPanelTab, setBottomPanelTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
   const diagramView = useDiagramViewState();
   // Consolidation des booléens d'ouverture de modales/overlays (plan O). Les flags
   // qui portent une donnée restent des useState dédiés (toolbarTtsTargetMenuId,
@@ -117,8 +109,6 @@ function AppContent() {
   const [activeDropZone, setActiveDropZone] = useState(null);
   const projectIndex = useMemo(() => buildProjectIndex(store.project), [store.project]);
   const { statusByPath: pathAudit, pending: pathAuditPending } = useProjectFileAudit(store.project, projectIndex, store.savePath);
-  const aiQueueActiveCount = sdStore.pendingCount + xttsStore.pendingCount;
-  const aiQueueHasResults = sdStore.hasResults || xttsStore.hasResults;
 
   // Bootstrap applicatif (plan X, iso-fonctionnel) : version, préférences globales
   // persistées, refs synchronisées (workspace/raccourcis) et effets thème/logging/
@@ -174,14 +164,6 @@ function AppContent() {
   savePathRef.current = store.savePath;
   mediaTagsRef.current = store.mediaTags;
 
-  useEffect(() => {
-    if (renderQueue.panelOpen) {
-      setBottomPanelOpen(true);
-      setBottomPanelTab('queue');
-      renderQueue.setPanelOpen(false);
-    }
-  }, [renderQueue.panelOpen, renderQueue.setPanelOpen]);
-
   useAppShortcuts({ actionsRef: shortcutActionsRef, keyboardShortcutsRef, saveHandlerRef, saveAsHandlerRef });
 
   // mediaLibraryPathsRef est consomme par useWorkSession et useAutosave juste
@@ -195,6 +177,25 @@ function AppContent() {
     handleMediaCreated,
     handleDeleteMedia,
   } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
+
+  // Modèle du panneau bas + bottombar (plan Y, iso-fonctionnel) : état ouvert/onglet
+  // (persistés), ouverture auto depuis la file de rendu, compteurs médias/IA. Appelé
+  // APRÈS useMediaLibraryPaths (mediaLibraryPaths) et AVANT useAiGeneration, qui
+  // consomme setOpen/setActiveTab pour ouvrir la file IA. mediaLibraryCountRef est
+  // fournie ici (consommée par useWorkSession/useAutosave) et synchronisée par le hook.
+  const bottomWorkspace = useBottomWorkspacePanelModel({
+    project: store.project,
+    pathAudit,
+    sdJobs: sdStore.jobs,
+    xttsJobs: xttsStore.jobs,
+    sdPendingCount: sdStore.pendingCount,
+    xttsPendingCount: xttsStore.pendingCount,
+    sdHasResults: sdStore.hasResults,
+    xttsHasResults: xttsStore.hasResults,
+    mediaLibraryPaths,
+    mediaLibraryCountRef,
+    renderQueue,
+  });
 
   // Machine à sessions (éphémère/projet, reprises après crash, snapshot
   // anti-crash) : toutes les transitions et le nettoyage du dossier de session
@@ -298,8 +299,8 @@ function AppContent() {
     xttsStore,
     projectIndex,
     xttsSettings,
-    setBottomPanelOpen,
-    setBottomPanelTab,
+    setBottomPanelOpen: bottomWorkspace.setOpen,
+    setBottomPanelTab: bottomWorkspace.setActiveTab,
   });
 
   useSDJobs(sdStore, workspaceDir, handleMediaCreated);
@@ -351,12 +352,6 @@ function AppContent() {
     showErrorDialog,
     addPathsToMediaLibrary,
   });
-
-  const mediaLibraryCount = useMemo(
-    () => collectMediaLibrary({ project: store.project, statusByPath: pathAudit, sdJobs: sdStore.jobs, xttsJobs: xttsStore.jobs, extraPaths: mediaLibraryPaths }).length,
-    [store.project, pathAudit, sdStore.jobs, xttsStore.jobs, mediaLibraryPaths],
-  );
-  mediaLibraryCountRef.current = mediaLibraryCount;
 
   // Tri des médias de session non utilisés à la promotion (plan 22, D51).
   const { triageSessionMedia, triageRequest } = useSessionMediaTriage({
@@ -835,10 +830,10 @@ function AppContent() {
       diagramView,
     },
     bottomPanel: {
-      open: bottomPanelOpen,
-      activeTab: bottomPanelTab,
-      onActiveTabChange: setBottomPanelTab,
-      onClose: () => setBottomPanelOpen(false),
+      open: bottomWorkspace.open,
+      activeTab: bottomWorkspace.activeTab,
+      onActiveTabChange: bottomWorkspace.setActiveTab,
+      onClose: bottomWorkspace.close,
       project: store.project,
       pathAudit,
       sdJobs: sdStore.jobs,
@@ -874,24 +869,15 @@ function AppContent() {
     bottomBar: {
       statusText,
       projectType,
-      open: bottomPanelOpen,
-      mediaLibraryCount,
+      open: bottomWorkspace.open,
+      mediaLibraryCount: bottomWorkspace.mediaLibraryCount,
       renderQueueActiveCount: renderQueue.activeCount,
       renderQueueHasResults: renderQueue.hasResults,
-      aiQueueActiveCount,
-      aiQueueHasResults,
-      onOpenMedia: () => {
-        setBottomPanelTab('media');
-        setBottomPanelOpen(true);
-      },
-      onOpenRenderQueue: () => {
-        setBottomPanelTab('queue');
-        setBottomPanelOpen(true);
-      },
-      onOpenAiQueue: () => {
-        setBottomPanelTab('ai');
-        setBottomPanelOpen(true);
-      },
+      aiQueueActiveCount: bottomWorkspace.aiQueueActiveCount,
+      aiQueueHasResults: bottomWorkspace.aiQueueHasResults,
+      onOpenMedia: () => bottomWorkspace.openTab('media'),
+      onOpenRenderQueue: () => bottomWorkspace.openTab('queue'),
+      onOpenAiQueue: () => bottomWorkspace.openTab('ai'),
       appVersion,
     },
   };
