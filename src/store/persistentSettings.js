@@ -37,7 +37,7 @@ export const KEYS = Object.freeze({
   DIAGRAM_SHOW_TREE: 'diagramShowTree',
   DIAGRAM_SHOW_SETTINGS: 'diagramShowSettings',
   DIAGRAM_SHOW_DIAGRAM: 'diagramShowDiagram',
-  DIAGRAM_COLUMN_WIDTH: 'diagramColumnWidth',
+  SETTINGS_PANEL_WIDTH: 'settingsPanelWidth',
   TREE_PANEL_WIDTH: 'treePanelWidth',
   FLOW_DIAGRAM_SHOW_RETURNS: 'fd_show_returns',
   TREE_SHOW_DEFAULT_NAVIGATION_BADGES: 'tree_show_default_navigation_badges',
@@ -95,6 +95,7 @@ export function runSettingsMigrations() {
   remove('diagramLastOpenState');
   remove('diagramPleinLeftSlot');
   remove('diagramSettingsSlotWidth');
+  remove('diagramColumnWidth');
 
   // L'enregistrement automatique devient actif par défaut.
   // `usePersistentState` a toujours écrit la valeur par défaut dès le montage,

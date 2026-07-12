@@ -6,15 +6,18 @@ import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { StructurePanel } from '../components/structure/StructurePanel';
 import {
   LEFT_PANEL_MIN_WIDTH,
-  startResize,
 } from '../components/structure/panelResize';
+import { PanelResizeHandle } from '../components/structure/PanelResizeHandle';
 import { useProjectActions } from '../store/ProjectActionsContext';
 import {
-  DIAGRAM_COLUMN_WIDTH_MAX,
-  DIAGRAM_COLUMN_WIDTH_MIN,
   getTreePanelMaxWidth,
+  SETTINGS_PANEL_WIDTH_DEFAULT,
+  SETTINGS_PANEL_WIDTH_MAX,
+  SETTINGS_PANEL_WIDTH_MIN,
+  TREE_PANEL_WIDTH_DEFAULT,
 } from './useDiagramViewState';
 import { SettingsPanelHeader } from './SettingsPanelHeader';
+import { WorkspaceEmptyState } from './WorkspaceEmptyState';
 
 export function WorkspaceView({
   project,
@@ -55,12 +58,14 @@ export function WorkspaceView({
     showSettings,
     showDiagram,
     isPlein,
+    toggleTree,
     toggleSettings,
+    toggleDiagram,
     maximizeDiagram,
     restoreSettings,
     closeDiagram,
-    diagramColumnWidth,
-    setDiagramColumnWidth,
+    settingsPanelWidth,
+    setSettingsPanelWidth,
     treePanelWidth,
     setTreePanelWidth,
   } = diagramView;
@@ -115,20 +120,18 @@ export function WorkspaceView({
 
   const style = {
     '--col-left': `${treePanelWidth}px`,
-    '--workspace-diagram-column-width': `${diagramColumnWidth}px`,
+    '--workspace-settings-panel-width': `${settingsPanelWidth}px`,
   };
 
   // Réglages = colonne centrale dockée : son en-tête est systématique dès que
-  // Réglages est visible. Le ✕ (fermer Réglages) n'apparaît que si le diagramme
-  // est là — masquer Réglages est interdit quand il est le seul panneau central
-  // (invariant), donc `toggleSettings` ne serait un vrai fermeur que si `showDiagram`.
+  // Réglages est visible, avec un fermeur utilisable dans tous les états.
   const settingsHeader = (
     <SettingsPanelHeader
       node={node}
       selectedId={selectedId}
       selectedIds={selectedIds}
       project={project}
-      onClose={showDiagram ? toggleSettings : null}
+      onClose={toggleSettings}
     />
   );
 
@@ -151,19 +154,15 @@ export function WorkspaceView({
   );
 
   const renderTreeResizeHandle = () => (
-    <div
-      className="resize-handle"
-      onMouseDown={(event) => startResize(
-        event,
-        '.panel-left',
-        '--col-left',
-        1,
-        LEFT_PANEL_MIN_WIDTH,
-        {
-          maxWidth: getTreePanelMaxWidth,
-          onResize: setTreePanelWidth,
-        },
-      )}
+    <PanelResizeHandle
+      ariaLabel="Redimensionner l’arbre"
+      panelClass=".panel-left"
+      cssVar="--col-left"
+      minWidth={LEFT_PANEL_MIN_WIDTH}
+      maxWidth={getTreePanelMaxWidth}
+      value={treePanelWidth}
+      defaultValue={TREE_PANEL_WIDTH_DEFAULT}
+      onResize={setTreePanelWidth}
     />
   );
 
@@ -204,20 +203,16 @@ export function WorkspaceView({
     />
   );
 
-  const renderDiagramResizeHandle = () => (
-    <div
-      className="resize-handle"
-      onMouseDown={(event) => startResize(
-        event,
-        '.workspace-diagram-column',
-        '--workspace-diagram-column-width',
-        -1,
-        DIAGRAM_COLUMN_WIDTH_MIN,
-        {
-          maxWidth: DIAGRAM_COLUMN_WIDTH_MAX,
-          onResize: setDiagramColumnWidth,
-        },
-      )}
+  const renderSettingsResizeHandle = () => (
+    <PanelResizeHandle
+      ariaLabel="Redimensionner les réglages"
+      panelClass=".panel-center"
+      cssVar="--workspace-settings-panel-width"
+      minWidth={SETTINGS_PANEL_WIDTH_MIN}
+      maxWidth={SETTINGS_PANEL_WIDTH_MAX}
+      value={settingsPanelWidth}
+      defaultValue={SETTINGS_PANEL_WIDTH_DEFAULT}
+      onResize={setSettingsPanelWidth}
     />
   );
 
@@ -245,27 +240,38 @@ export function WorkspaceView({
     );
   }
 
-  // Composition « 3 bascules » : arbre (fixe) · réglages (flex) · diagramme (colonne
-  // fixe si réglages visibles, plein sinon). La poignée arbre ne s'affiche que si un
-  // panneau la suit (réglages ou diagramme) ; la poignée du milieu, qu'en « colonne ».
+  // Composition « 3 bascules » : arbre (fixe) · réglages (colonne plafonnée) ·
+  // diagramme (flex). Chaque poignée déplace la frontière qu'elle matérialise.
   const workspaceClass = [
     'workspace',
     isPlein ? 'workspace--diagram-full' : '',
+    showDiagram ? 'workspace--with-diagram' : '',
+    !showDiagram ? 'workspace--without-diagram' : '',
+    !showDiagram && !showSettings && showTree ? 'workspace--tree-only' : '',
   ].filter(Boolean).join(' ');
+  const hasVisiblePanel = showTree || showSettings || showDiagram;
 
   return (
     <div className="screen visible">
       <div className={workspaceClass} style={style}>
+        {!hasVisiblePanel ? (
+          <WorkspaceEmptyState
+            onShowTree={toggleTree}
+            onShowSettings={toggleSettings}
+            onShowDiagram={toggleDiagram}
+          />
+        ) : null}
+
         {showTree ? renderStructurePanel() : null}
 
         {showTree && (showSettings || showDiagram) ? renderTreeResizeHandle() : null}
 
         {showSettings ? renderCentralPanel() : null}
 
-        {showSettings && showDiagram ? renderDiagramResizeHandle() : null}
+        {showSettings && showDiagram ? renderSettingsResizeHandle() : null}
 
         {showDiagram ? (
-          <div className={isPlein ? 'workspace-diagram-full' : 'workspace-diagram-column'}>
+          <div className="workspace-diagram">
             {renderDiagramPanel(isPlein ? 'plein' : 'colonne')}
           </div>
         ) : null}
