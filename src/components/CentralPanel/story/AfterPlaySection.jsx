@@ -37,7 +37,6 @@ import { useProjectContext } from '../../../store/ProjectContext';
 import { pickAudio } from '../../../hooks/useFileDialog';
 import { basename } from '../../../utils/fileUtils';
 import { buildLocalEndDraftFields, createLocalEndDraft, selectLocalEndDraftAudio } from '../../../store/localEndDraft';
-import { getEffectiveEndMessageControlState } from '../../../store/endMessagePresentation';
 
 function destinationHintLabel(label) {
   if (!label) return null;
@@ -132,7 +131,7 @@ export function AfterPlaySection({
   onAfterPlayFocusConsumed,
 }) {
   const { showConfirmDialog } = useErrorDialog();
-  const { onSelect, onAttachStoryEndToGlobal } = useProjectActions();
+  const { onAttachStoryEndToGlobal } = useProjectActions();
   const { onImportFile } = useProjectContext();
   const autoNextEnabled = !!project?.globalOptions?.autoNext;
   const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
@@ -153,8 +152,6 @@ export function AfterPlaySection({
   // en envoyant vers une autre destination. Le moteur de navigation est la
   // source de vérité pour qualifier un message comme global importé.
   const endMessage = storyNavigation?.endMessage ?? { presentationKind: 'none' };
-  const endMessageControls = endMessage.controls ?? {};
-  const endMessageControlState = getEffectiveEndMessageControlState(endMessageControls, endMessage.effectiveHome);
   const usesGlobalEndNodeAudio = endMessage.presentationKind === 'global';
   const hasGeneratedEndNode = usesGlobalEndNodeAudio;
   const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
@@ -401,17 +398,17 @@ export function AfterPlaySection({
         </div>
       </div>
     ) : (
-      <div className="end-summary">
-        <div>
-          <div className="end-summary-title">🌙 Utilise le message de fin du pack</div>
-          <div className="end-summary-copy">
-            Lecture : {endMessageControlState.playback === 'autoplay' ? 'enchaînement automatique' : endMessageControlState.playback === 'wait-ok' ? 'attend OK' : 'reste sur le message'} · {endMessageControlState.home === 'disabled' ? 'Accueil désactivé' : endMessageControlState.home === 'pack-start' ? 'Accueil → début du pack' : 'Accueil → destination configurée'} · Pause {endMessageControls.pause === false ? 'désactivée' : 'activée'}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <Button size="sm" onClick={() => onSelect?.('end-node')}>Modifier le message du pack</Button>
-          <Button size="sm" onClick={startLocalDraft}>Créer une fin locale</Button>
-        </div>
+      <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
+        <Tooltip text={addPromptTooltip} placement="above">
+          <Button size="sm" onClick={startLocalDraft}>
+            Ajouter un audio de fin
+          </Button>
+        </Tooltip>
+        <Tooltip text={addSequenceTooltip} placement="above">
+          <Button size="sm" onClick={startSequence}>
+            Ajouter un scénario de fin
+          </Button>
+        </Tooltip>
       </div>
     );
   } else if (hasSequence) {
@@ -712,9 +709,7 @@ export function AfterPlaySection({
         </div>
       </div>
 
-      {endMessage.presentationKind === 'global' ? (
-        <div className="story-advanced-controls">{endContent}</div>
-      ) : showAdvancedControls ? (
+      {showAdvancedControls ? (
         <StoryDisclosure
           open={showAdvanced}
           onToggle={() => setShowAdvanced((v) => !v)}
