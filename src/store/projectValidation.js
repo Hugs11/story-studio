@@ -34,6 +34,7 @@
 import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } from './projectModel.js';
 import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
 import { VALIDATION_MESSAGES, brokenField, emptyTarget, missingField, missingTarget } from './validationMessages.js';
+import { isStorySelectionAudioRequired } from './storyTitleStage.js';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -94,12 +95,12 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
 function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   const name = labelOrFallback(item?.name, fallbackName);
   const itemId = item?.id ?? null;
-  const explicitTitleStage = !!item?.titleControlSettings;
+  const selectionAudioRequired = isStorySelectionAudioRequired(item);
   if (!hasPath(item?.audio)) pushWarning(issues, itemId, missingField(name, 'histoire', { feminine: true }));
   else if (isBrokenPath(item?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'histoire'));
   if (!hasPath(item?.itemImage)) pushWarning(issues, itemId, missingField(name, 'image', { feminine: true }));
   else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image'));
-  if (!hasPath(item?.itemAudio) && !explicitTitleStage) pushWarning(issues, itemId, missingField(name, 'audio titre'));
+  if (!hasPath(item?.itemAudio) && selectionAudioRequired) pushWarning(issues, itemId, missingField(name, 'audio titre'));
   else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio titre'));
   if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
     pushWarning(issues, itemId, brokenField(name, "audio de fin d'histoire"));

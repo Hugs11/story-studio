@@ -10,6 +10,67 @@ use crate::support::audio_norm::{edges_from_envelope, parse_rms_envelope, EdgeMe
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 
 #[test]
+fn silent_title_stage_is_not_treated_as_missing_audio() {
+    let dir = temp_dir("silent_title_stage");
+    fs::create_dir_all(&dir).expect("create temp dir");
+    let zip_path = dir.join("silent-title.zip");
+    write_studio_zip(
+        &zip_path,
+        serde_json::json!({
+            "format": "v1",
+            "version": 1,
+            "title": "Titre silencieux",
+            "stageNodes": [
+                {
+                    "uuid": "title-silent",
+                    "name": "Titre silencieux",
+                    "audio": null,
+                    "image": "cover.png",
+                    "controlSettings": {
+                        "wheel": true, "ok": true, "home": true,
+                        "pause": false, "autoplay": false
+                    },
+                    "okTransition": { "actionNode": "play-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-play",
+                    "name": "Lecture",
+                    "audio": "story.mp3",
+                    "controlSettings": {
+                        "wheel": false, "ok": false, "home": true,
+                        "pause": true, "autoplay": true
+                    }
+                }
+            ],
+            "actionNodes": [{ "id": "play-action", "options": ["story-play"] }]
+        }),
+        &[
+            ("cover.png", png_bytes(320, 240)),
+            ("story.mp3", vec![1, 2, 3]),
+        ],
+    );
+
+    let doc = zip_doc::read_pack_doc(&zip_path).expect("load pack document");
+    assert_eq!(doc.audio_refs.len(), 1);
+    assert_eq!(doc.audio_refs[0].stage_id, "story-play");
+    assert!(doc
+        .audio_refs
+        .iter()
+        .all(|asset| asset.stage_id != "title-silent"));
+
+    let mut report = empty_report("silent-title", &zip_path.to_string_lossy());
+    validate_asset_presence(&doc, &mut report);
+    assert!(report.issues.iter().all(|issue| {
+        issue
+            .technical_details
+            .as_deref()
+            .is_none_or(|details| !details.contains("title-silent"))
+    }));
+
+    fs::remove_dir_all(dir).expect("cleanup temp dir");
+}
+
+#[test]
 fn image_fix_creates_new_zip_without_overwriting_source() {
     let dir = temp_dir("image_fix");
     fs::create_dir_all(&dir).expect("create temp dir");

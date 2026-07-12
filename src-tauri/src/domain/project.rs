@@ -103,6 +103,8 @@ pub(crate) struct ProjectEntry {
     pub(crate) item_audio: Option<String>,
     #[serde(rename = "itemImage")]
     pub(crate) item_image: Option<String>,
+    #[serde(rename = "silentTitleStage", default)]
+    pub(crate) silent_title_stage: bool,
     #[serde(rename = "zipPath")]
     pub(crate) zip_path: Option<String>,
     #[serde(rename = "autoBlackImage", default)]

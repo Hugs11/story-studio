@@ -43,7 +43,7 @@ fn validate_story_entry_for_generation(
     file_validation: FileValidation,
     errors: &mut Vec<String>,
 ) {
-    let explicit_title_stage = entry.title_control_settings.is_some();
+    let explicit_title_stage = entry.silent_title_stage;
     match entry.entry_type.as_str() {
         "zip" => {
             let zip_label = format!("{} : ZIP", context);
@@ -1217,6 +1217,7 @@ mod tests {
     fn explicit_silent_title_stage_does_not_require_item_audio() {
         let mut story = story_entry_with_paths("story-silent-title", "Titre silencieux");
         story.item_audio = None;
+        story.silent_title_stage = true;
         story.title_control_settings = Some(EntryControlSettings {
             wheel: Some(true),
             ok: Some(true),

@@ -87,7 +87,13 @@ fn builds_story_title_without_item_audio() {
             return_on_home_none: false,
             title_return_on_home: None,
             title_return_on_home_none: false,
-            title_control_settings: None,
+            title_control_settings: Some(crate::domain::project::EntryControlSettings {
+                autoplay: Some(false),
+                wheel: Some(true),
+                pause: Some(false),
+                ok: Some(true),
+                home: Some(true),
+            }),
         })],
 
         shared_entries: Vec::new(),
@@ -118,6 +124,16 @@ fn builds_story_title_without_item_audio() {
 
     assert_eq!(title_stage.audio, None);
     assert_eq!(title_stage.image.as_deref(), Some("item.png"));
+    assert!(title_stage.control_settings.wheel);
+    assert!(title_stage.control_settings.ok);
+    assert!(title_stage.control_settings.home);
+    assert!(!title_stage.control_settings.pause);
+    assert!(!title_stage.control_settings.autoplay);
+    assert_eq!(
+        serde_json::to_value(title_stage).expect("serialize title stage")["audio"],
+        serde_json::Value::Null,
+    );
+    assert!(title_stage.ok_transition.is_some());
 }
 
 #[test]

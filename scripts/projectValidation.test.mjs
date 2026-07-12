@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 
 import { normalizeProjectData } from '../src/store/projectModel.js';
 import { getProjectValidationIssues } from '../src/store/projectValidation.js';
+import {
+  createSilentStoryTitleSettings,
+  isExplicitSilentStoryTitle,
+  isStorySelectionAudioRequired,
+} from '../src/store/storyTitleStage.js';
 
 function buildProject(overrides = {}) {
   return normalizeProjectData({
@@ -323,6 +328,7 @@ test('a story with an explicit silent title stage does not require selection aud
         audio: 's.mp3',
         itemAudio: '',
         itemImage: 'i.png',
+        silentTitleStage: true,
         titleControlSettings: { wheel: true, ok: true, home: true, pause: false, autoplay: false },
       },
     ],
@@ -330,11 +336,41 @@ test('a story with an explicit silent title stage does not require selection aud
 
   const issues = getProjectValidationIssues(project);
   const aboutStory = issues.filter((i) => i.id === 'story-silent-title');
+  assert.equal(isStorySelectionAudioRequired(project.rootEntries[0]), false);
   assert.equal(
     aboutStory.some((issue) => /Audio de sélection à ajouter/.test(issue.text)),
     false,
     `aucun warning audio titre attendu pour un titre explicite silencieux, reçu: ${JSON.stringify(aboutStory)}`,
   );
+});
+
+test('story selection audio is required without an explicit title stage', () => {
+  assert.equal(isStorySelectionAudioRequired({ itemAudio: null }), true);
+  assert.equal(isStorySelectionAudioRequired({
+    itemAudio: null,
+    titleControlSettings: { wheel: true, ok: true },
+  }), true);
+  assert.equal(isExplicitSilentStoryTitle({ itemAudio: null }), false);
+});
+
+test('adding then removing selection audio preserves an explicit silent title stage', () => {
+  const titleControlSettings = createSilentStoryTitleSettings({ wheel: false, home: false });
+  const silentStory = { itemAudio: null, silentTitleStage: true, titleControlSettings };
+  const withAudio = { ...silentStory, itemAudio: 'selection.mp3' };
+  const silentAgain = { ...withAudio, itemAudio: null };
+
+  assert.deepEqual(titleControlSettings, {
+    autoplay: false,
+    ok: true,
+    home: false,
+    pause: false,
+    wheel: false,
+  });
+  assert.equal(isExplicitSilentStoryTitle(silentStory), true);
+  assert.equal(isExplicitSilentStoryTitle(withAudio), false);
+  assert.equal(isStorySelectionAudioRequired(withAudio), false);
+  assert.equal(isExplicitSilentStoryTitle(silentAgain), true);
+  assert.equal(isStorySelectionAudioRequired(silentAgain), false);
 });
 
 function buildProjectWithRef(refOverride) {

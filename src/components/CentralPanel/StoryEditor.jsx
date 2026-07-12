@@ -19,7 +19,11 @@ import {
 import { AfterPlaySection } from './story/AfterPlaySection';
 import { DuringPlaySection } from './story/DuringPlaySection';
 import { NAV_ROOT_LABEL } from './story/storyUtils';
-import { Trash2 } from '../icons/LucideLocal';
+import { Trash2, VolumeX } from '../icons/LucideLocal';
+import {
+  createSilentStoryTitleSettings,
+  isStorySelectionAudioRequired,
+} from '../../store/storyTitleStage';
 import './CentralPanel.css';
 
 // ─── Navigation helpers (used for computed props only) ────────────────────────
@@ -89,6 +93,7 @@ export const StoryEditor = memo(function StoryEditor({
   const inheritedReturnLabel = buildInheritedReturnLabel(
     parentMenu, allMenus, allStories, autoNextEffective && !isLastInMenu,
   );
+  const selectionAudioRequired = isStorySelectionAudioRequired(node);
   const [textImgModal, setTextImgModal] = useState(null);
 
   function handleRegenerate() {
@@ -163,11 +168,23 @@ export const StoryEditor = memo(function StoryEditor({
             <AudioField
               accentLabel
               label="Audio de sélection"
-              description="Énoncé quand l'enfant parcourt les histoires"
+              description={selectionAudioRequired
+                ? "Énoncé quand l'enfant parcourt les histoires"
+                : 'Optionnel — ce titre de sélection peut rester silencieux'}
               file={node.itemAudio}
+              required={selectionAudioRequired}
               ttsTextSuggestion={node.name || ''}
               ttsFilenameHint={`selection-${node.name || 'histoire'}`}
               xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
+              emptyActions={selectionAudioRequired ? [{
+                key: 'silent-title',
+                label: 'Utiliser un écran de sélection silencieux',
+                Icon: VolumeX,
+                onClick: () => onUpdate({
+                  silentTitleStage: true,
+                  titleControlSettings: createSilentStoryTitleSettings(node.titleControlSettings),
+                }),
+              }] : []}
               onPick={(f) => onUpdate({ itemAudio: f })}
               onClear={() => onUpdate({ itemAudio: null })}
             />
