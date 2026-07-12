@@ -72,6 +72,8 @@ export const StoryEditor = memo(function StoryEditor({
   parentMenu = null,
   onUpdate,
   onDelete,
+  afterPlayFocus = null,
+  onAfterPlayFocusConsumed,
 }) {
   const { onExtractAudioEmbeddedImage } = useProjectContext();
 
@@ -203,6 +205,8 @@ export const StoryEditor = memo(function StoryEditor({
         project={project}
         inheritedReturnLabel={inheritedReturnLabel}
         onUpdate={onUpdate}
+        afterPlayFocus={afterPlayFocus}
+        onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
       />
 
       <div className="card card--danger card--danger-compact">

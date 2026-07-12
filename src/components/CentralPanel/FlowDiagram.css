@@ -149,6 +149,11 @@
   border-top-color: var(--warning);
 }
 
+.fd-complete-legend-line--after-end {
+  border-top-style: dashed;
+  border-top-color: var(--cat-night);
+}
+
 .fd-complete-legend-line--reference {
   border-top-style: dotted;
   border-top-color: var(--accent, #8b7cff);
@@ -461,6 +466,24 @@
   pointer-events: none;
 }
 
+/* Cette couche duplique seulement les traits structurels déjà calculés. Elle
+   reste invisible hors survol, laissant les retours au premier plan. */
+.fd-complete-structure-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast), visibility 0s linear var(--dur-fast);
+}
+
+.fd-complete-canvas.is-structure-hovered .fd-complete-structure-overlay {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
 .fd-complete-navigation-edge {
   pointer-events: auto;
   cursor: pointer;
@@ -480,6 +503,10 @@
   stroke-width: 16;
   vector-effect: non-scaling-stroke;
   pointer-events: stroke;
+}
+
+.fd-complete-structure-hitbox {
+  cursor: default;
 }
 
 .fd-complete-line-underlay {
@@ -520,6 +547,10 @@
   box-shadow: none;
 }
 
+.fd-complete-stage.is-viewport-moving .fd-local-end-node {
+  box-shadow: none;
+}
+
 .fd-complete-stage.is-viewport-moving .fd-complete-line,
 .fd-complete-stage.is-viewport-moving .fd-complete-line--end-continuation {
   filter: none;
@@ -536,6 +567,20 @@
   pointer-events: none;
 }
 
+/* Sans modifier la topologie du graphe, on baisse seulement l'opacité des
+   vignettes pendant le survol d'une arête structurelle : le chemin reste
+   visible à travers les cartes. */
+.fd-complete-canvas.is-structure-hovered .fd-complete-placed-node {
+  opacity: 0.34;
+}
+
+.fd-complete-canvas.is-structure-hovered .fd-complete-line--structural,
+.fd-complete-canvas.is-structure-hovered .fd-complete-line--story,
+.fd-complete-canvas.is-structure-hovered .fd-complete-line--story-group {
+  stroke: color-mix(in srgb, var(--text-secondary) 84%, var(--borderLt));
+  stroke-width: 1.9px;
+}
+
 .fd-complete-sibling-group {
   fill: color-mix(in srgb, var(--bg1) 26%, transparent);
   stroke: color-mix(in srgb, var(--borderLt) 44%, transparent);
@@ -547,6 +592,20 @@
   fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 5%, transparent);
   stroke: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 22%, var(--borderLt));
   stroke-dasharray: 5 5;
+}
+
+.fd-complete-sibling-group--stories.is-aggregate {
+  fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 8%, transparent);
+  stroke-width: 1.25px;
+  stroke-dasharray: 3 3;
+}
+
+.fd-complete-sibling-group-label {
+  fill: var(--text-secondary);
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
 .fd-complete-sibling-group--tone-0 {
@@ -577,6 +636,11 @@
   stroke: color-mix(in srgb, #43435a 78%, var(--borderLt));
   stroke-width: 1.2;
   opacity: 0.84;
+}
+
+.fd-complete-line--story-group {
+  stroke: color-mix(in srgb, var(--text-secondary) 82%, var(--borderLt));
+  stroke-width: 1.45px;
 }
 
 .fd-complete-line--return {
@@ -684,6 +748,34 @@
   opacity: 0.72;
 }
 
+/* Violet = sortie effective après une séquence ou un message de fin. */
+.fd-complete-line--after-end {
+  stroke: var(--cat-night);
+  stroke-width: 1.3;
+  stroke-dasharray: 8 4;
+  opacity: 0.82;
+}
+
+.fd-complete-line--after-end.is-related {
+  stroke: color-mix(in srgb, var(--cat-night) 82%, white 18%);
+  stroke-width: 1.65;
+  opacity: 1;
+}
+
+.fd-complete-navigation-edge.is-active .fd-complete-line--after-end {
+  stroke: color-mix(in srgb, var(--cat-night) 82%, white 18%);
+  stroke-width: 2.75;
+  stroke-dasharray: 12 7;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cat-night) 64%, transparent));
+  animation: fd-active-flow 0.8s linear infinite;
+}
+
+:root:not([data-theme="dark"]) .fd-complete-line--after-end.is-related,
+:root:not([data-theme="dark"]) .fd-complete-navigation-edge.is-active .fd-complete-line--after-end {
+  stroke: #5836ad;
+}
+
 .fd-complete-line--sequence.is-related {
   stroke: color-mix(in srgb, #ffd78a 86%, white 14%);
   stroke-width: 1.45;
@@ -769,6 +861,10 @@
   fill: var(--warning-text);
 }
 
+.fd-complete-edge-label--after-end {
+  fill: var(--cat-night);
+}
+
 .fd-complete-placed-node {
   position: absolute;
   transition: opacity 0.12s ease, filter 0.12s ease;
@@ -787,6 +883,63 @@
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--info) 35%, transparent),
     0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+/* Étape virtuelle, mais concrète dans la lecture du parcours : elle représente
+   un message ou un scénario propre à une seule histoire. */
+.fd-local-end-node {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--cat-night) 72%, var(--borderLt));
+  border-radius: 9px;
+  color: color-mix(in srgb, var(--cat-night) 76%, white 24%);
+  background: color-mix(in srgb, var(--cat-night) 17%, var(--bg1));
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--cat-night) 14%, transparent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.fd-local-end-node:hover,
+.fd-local-end-node:focus-visible {
+  border-color: color-mix(in srgb, var(--cat-night) 92%, white 8%);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.fd-local-end-node-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--cat-night) 22%, var(--bg2));
+}
+
+.fd-local-end-node-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+}
+
+.fd-local-end-node.is-navigation-dimmed {
+  opacity: 0.3;
+}
+
+.fd-local-end-node.is-navigation-active {
+  z-index: 4;
+  border-color: color-mix(in srgb, var(--cat-night) 92%, white 8%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat-night) 34%, transparent), 0 8px 20px color-mix(in srgb, var(--cat-night) 18%, transparent);
 }
 
 .fd-complete-root-row {
@@ -1019,7 +1172,26 @@
   justify-content: space-between;
   align-items: flex-start;
   z-index: 2;
+  visibility: hidden;
+  opacity: 0;
   pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity var(--dur-fast),
+    transform var(--dur-fast),
+    visibility 0s linear var(--dur-fast);
+}
+
+/* Les actions contextuelles restent disponibles au pointeur, au clavier et
+   après sélection tactile, sans encombrer le diagramme au repos. */
+.fd-complete-node:hover .fd-complete-node-actions,
+.fd-complete-node:focus-within .fd-complete-node-actions,
+.fd-complete-node.is-selected .fd-complete-node-actions {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  transition-delay: 0s;
 }
 
 .fd-complete-node-action {
@@ -1036,7 +1208,6 @@
   font-size: 14px;
   line-height: 1;
   box-shadow: none;
-  pointer-events: auto;
 }
 
 .fd-complete-node-action:hover {

@@ -26,6 +26,9 @@ import { buildDiagramContextActions } from './diagram/diagramContextMenu';
 import { DiagramZoomControls } from './diagram/DiagramZoomControls';
 import { DiagramLegend } from './diagram/DiagramLegend';
 import { DiagramViewToggles } from './diagram/DiagramViewToggles';
+import { navigationEdgeTouchesNode } from './diagram/navigationPresentation';
+import { presentLocalEndSteps } from './diagram/localEndStepPresentation';
+import { IconMoon, IconStop } from '../TreePanel/TreeIcons';
 
 export function CompleteDiagramTree({
   project,
@@ -36,6 +39,7 @@ export function CompleteDiagramTree({
   onPreview,
   onSimulateZip,
   onSimulateRoot,
+  onOpenLocalEndSettings,
   controlsHost = null,
   showActionsBar = false,
   showHint = false,
@@ -115,6 +119,9 @@ export function CompleteDiagramTree({
     centerInitialViewport,
     stagePointerHandlers,
   } = useDiagramViewport({ onStagePanStart: handleStagePanStart });
+  const setStructureHover = useCallback((hovered) => {
+    canvasRef.current?.classList.toggle('is-structure-hovered', hovered);
+  }, [canvasRef]);
 
   const visibleProject = useMemo(
     () => (focusMode ? buildFocusProject(project, selectedId, END_NODE_ID, projectIndex) : project),
@@ -134,28 +141,42 @@ export function CompleteDiagramTree({
     () => getCompleteLayout(visibleProject, compactMode, { collapsedIds }),
     [visibleProject, compactMode, collapsedIds],
   );
-  const allNavigationEdges = useMemo(() => getCompleteNavigationEdges(visibleProject, layout), [visibleProject, layout]);
+  const structureEdgePaths = useMemo(() => layout.edges.map((edge) => ({
+    ...edge,
+    d: `M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.midY} L ${edge.x2} ${edge.midY} L ${edge.x2} ${edge.y2}`,
+  })), [layout.edges]);
+  const rawNavigationEdges = useMemo(() => getCompleteNavigationEdges(visibleProject, layout), [visibleProject, layout]);
+  const navigationPresentation = useMemo(
+    () => presentLocalEndSteps(layout, rawNavigationEdges),
+    [layout, rawNavigationEdges],
+  );
+  const allNavigationEdges = navigationPresentation.navigationEdges;
+  const localEndNodes = navigationPresentation.localNodes;
   useEffect(() => {
     updateLayoutStats(layout, allNavigationEdges.length);
   }, [allNavigationEdges.length, layout, updateLayoutStats]);
   const navigationEdges = useMemo(() => {
     if (!showReturns) return [];
     if (focusMode) {
-      return allNavigationEdges.filter((edge) => (
-        edge.from === selectedId || edge.to === selectedId
-      ));
+      return allNavigationEdges.filter((edge) => navigationEdgeTouchesNode(edge, selectedId));
     }
     return allNavigationEdges;
   }, [allNavigationEdges, focusMode, selectedId, showReturns]);
   const returnEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'return'), [navigationEdges]);
   const homeEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'home'), [navigationEdges]);
-  const sequenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'sequence'), [navigationEdges]);
+  const afterEndEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'after-end'), [navigationEdges]);
   const referenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'reference'), [navigationEdges]);
-  const nodeLabelById = useMemo(() => new Map(layout.nodes.map((node) => [
-    node.entry.id,
-    node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
-  ])), [layout.nodes]);
-  const nodeById = useMemo(() => new Map(layout.nodes.map((node) => [node.entry.id, node])), [layout.nodes]);
+  const nodeLabelById = useMemo(() => new Map([
+    ...layout.nodes.map((node) => [
+      node.entry.id,
+      node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
+    ]),
+    ...localEndNodes.map((node) => [node.id, node.label]),
+  ]), [layout.nodes, localEndNodes]);
+  const nodeById = useMemo(() => new Map([
+    ...layout.nodes.map((node) => [node.entry.id, node]),
+    ...localEndNodes.map((node) => [node.id, node]),
+  ]), [layout.nodes, localEndNodes]);
   const edgeKey = useCallback((edge) => [
     edge.kind,
     edge.source || 'configured',
@@ -172,10 +193,10 @@ export function CompleteDiagramTree({
   );
   const getNavigationEdgeForNode = useCallback((nodeId) => {
     if (!showReturns || !nodeId) return null;
-    const priority = { sequence: 0, return: 1, reference: 1, home: 2 };
+    const priority = { 'after-end': 0, sequence: 0, return: 1, reference: 1, home: 2 };
     const byPriority = (a, b) => (priority[a.kind] ?? 9) - (priority[b.kind] ?? 9);
     const outgoing = navigationEdges
-      .filter((edge) => edge.from === nodeId)
+      .filter((edge) => navigationEdgeTouchesNode(edge, nodeId))
       .sort(byPriority);
     if (outgoing.length > 0) return outgoing[0];
     const incoming = navigationEdges
@@ -192,6 +213,14 @@ export function CompleteDiagramTree({
     }
     onSelect?.(nodeId);
   }, [edgeKey, getNavigationEdgeForNode, onSelect, showReturns]);
+  const handleOpenLocalEnd = useCallback((storyId) => {
+    onSelectionChange?.(new Set([storyId]));
+    if (onOpenLocalEndSettings) {
+      onOpenLocalEndSettings(storyId);
+      return;
+    }
+    handleSelectNode(storyId);
+  }, [handleSelectNode, onOpenLocalEndSettings, onSelectionChange]);
   const activeNavigationEdgeIds = useMemo(() => {
     if (!activeNavigationEdge) return new Set();
     const ids = new Set([edgeKey(activeNavigationEdge)]);
@@ -205,6 +234,8 @@ export function CompleteDiagramTree({
   const activeNavigationNodeIds = useMemo(() => {
     if (!activeNavigationEdge) return new Set();
     const ids = new Set([activeNavigationEdge.from, activeNavigationEdge.to]);
+    activeNavigationEdge.chainStoryIds?.forEach((nodeId) => ids.add(nodeId));
+    if (activeNavigationEdge.localEndStoryId) ids.add(activeNavigationEdge.localEndStoryId);
     if (activeNavigationEdge.to === END_NODE_ID && activeNavigationEdge.endNodeTargetId) {
       for (const edge of navigationEdges) {
         if (edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId) {
@@ -243,19 +274,30 @@ export function CompleteDiagramTree({
     const to = nodeLabelById.get(edge.to) ?? edge.to;
     if (edge.to === END_NODE_ID) {
       const finalTarget = edge.endNodeTargetId ? (nodeLabelById.get(edge.endNodeTargetId) ?? edge.endNodeTargetId) : null;
+      if (edge.source === 'global-group') {
+        return `${edge.chainStoryIds?.length ?? 0} histoires → message de fin global${finalTarget ? ` → « ${finalTarget} »` : ''}`;
+      }
       return finalTarget
         ? `À la fin de « ${from} » → message de fin → « ${finalTarget} »`
         : `À la fin de « ${from} » → message de fin`;
     }
+    if (edge.from === END_NODE_ID && edge.source === 'global-context-group') {
+      return `Après le message de fin global → reprise contextuelle dans « ${to} » (${edge.chainStoryIds?.length ?? 0} histoires)`;
+    }
     const kindLabel = edge.kind === 'home'
       ? 'Retour Home'
-      : edge.kind === 'sequence'
+      : edge.kind === 'after-end' || edge.kind === 'sequence'
         ? 'Séquence de fin'
         : edge.kind === 'reference'
           ? 'Lien'
           : 'Retour';
     if (edge.kind === 'home') return `Bouton Home pendant « ${from} » → « ${to} »`;
-    if (edge.kind === 'sequence') return `Séquence de fin de « ${from} » → « ${to} »`;
+    if (edge.kind === 'after-end' || edge.kind === 'sequence') {
+      const prefix = edge.source === 'prompt-chain'
+        ? `Parcours de ${edge.chainStoryIds?.length ?? 0} histoires, après le message de fin`
+        : edge.to === END_NODE_ID ? 'Après la lecture → message de fin' : 'Après la séquence ou le message de fin';
+      return `${prefix} : « ${from} » → « ${to} »`;
+    }
     if (edge.kind === 'reference') return `Lien vers un nœud existant : « ${from} » → « ${to} »`;
     return edge.label ? `${edge.label} : ${from} → ${to}` : `${kindLabel} : « ${from} » → « ${to} »`;
   }
@@ -472,23 +514,42 @@ export function CompleteDiagramTree({
           >
             <svg className="fd-complete-lines" width={layout.width} height={layout.height} aria-hidden="true">
               {(layout.groups ?? []).map((group) => (
-                <rect
-                  key={`${group.parentId}-${group.kind}-${group.x}-${group.y}`}
-                  className={`fd-complete-sibling-group fd-complete-sibling-group--${group.kind} fd-complete-sibling-group--tone-${group.tone ?? 0}`}
-                  x={group.x}
-                  y={group.y}
-                  width={group.width}
-                  height={group.height}
-                  rx="12"
-                />
+                <g key={group.id ?? `${group.parentId}-${group.kind}-${group.x}-${group.y}`}>
+                  <rect
+                    className={`fd-complete-sibling-group fd-complete-sibling-group--${group.kind} fd-complete-sibling-group--tone-${group.tone ?? 0} ${group.isAggregate ? 'is-aggregate' : ''}`}
+                    x={group.x}
+                    y={group.y}
+                    width={group.width}
+                    height={group.height}
+                    rx="12"
+                  />
+                  {group.isAggregate ? (
+                    <text
+                      className="fd-complete-sibling-group-label"
+                      x={group.x + 8}
+                      y={group.y + 12}
+                    >
+                      {`${group.storyCount} histoires`}
+                    </text>
+                  ) : null}
+                </g>
               ))}
-              {layout.edges.map((edge) => (
-                <path
-                  key={`${edge.from}-${edge.to}`}
-                  className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'}`}
-                  d={`M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.midY} L ${edge.x2} ${edge.midY} L ${edge.x2} ${edge.y2}`}
-                />
-              ))}
+              {structureEdgePaths.map((edge) => {
+                return (
+                  <g key={edge.id ?? `${edge.from}-${edge.to}`}>
+                    <path
+                      className="fd-complete-line-hitbox fd-complete-structure-hitbox"
+                      d={edge.d}
+                      onPointerEnter={() => setStructureHover(true)}
+                      onPointerLeave={() => setStructureHover(false)}
+                    />
+                    <path
+                      className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'}`}
+                      d={edge.d}
+                    />
+                  </g>
+                );
+              })}
               {navigationEdges.map((edge) => {
                 const id = edgeKey(edge);
                 const isActive = activeNavigationEdgeIds.has(id);
@@ -529,7 +590,7 @@ export function CompleteDiagramTree({
                           />
                         ) : null}
                         <path
-                          className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${selectedId === edge.from || selectedId === edge.to ? 'is-related' : ''}`}
+                          className={`fd-complete-line fd-complete-line--${edge.kind} fd-complete-line--${edge.source || 'configured'} ${navigationEdgeTouchesNode(edge, selectedId) ? 'is-related' : ''}`}
                           d={d}
                         />
                       </>
@@ -539,7 +600,7 @@ export function CompleteDiagramTree({
               })}
               {activeEndNodeContinuationEdge ? (
                 <path
-                  className="fd-complete-line fd-complete-line--return fd-complete-line--end-continuation"
+                  className="fd-complete-line fd-complete-line--after-end fd-complete-line--end-continuation"
                   d={`M ${activeEndNodeContinuationEdge.x1} ${activeEndNodeContinuationEdge.y1} C ${activeEndNodeContinuationEdge.x1} ${activeEndNodeContinuationEdge.c1y} ${activeEndNodeContinuationEdge.x2} ${activeEndNodeContinuationEdge.c2y} ${activeEndNodeContinuationEdge.x2} ${activeEndNodeContinuationEdge.y2}`}
                 />
               ) : null}
@@ -553,6 +614,18 @@ export function CompleteDiagramTree({
                 >
                   {edge.label}
                 </text>
+              ))}
+            </svg>
+
+            {/* Couche de structure activée seulement au survol : elle est rendue
+                après les retours afin que les chemins structurels restent nets. */}
+            <svg className="fd-complete-structure-overlay" width={layout.width} height={layout.height} aria-hidden="true">
+              {structureEdgePaths.map((edge) => (
+                <path
+                  key={edge.id ?? `${edge.from}-${edge.to}`}
+                  className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'}`}
+                  d={edge.d}
+                />
               ))}
             </svg>
 
@@ -584,12 +657,31 @@ export function CompleteDiagramTree({
                 />
               </div>
             ))}
+            {localEndNodes.map((node) => (
+              <button
+                key={node.id}
+                type="button"
+                className={`fd-local-end-node fd-local-end-node--${node.kind} ${activeNavigationNodeIds.has(node.id) ? 'is-navigation-active' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''}`}
+                style={{ left: node.x, top: node.y, width: node.width, height: node.height }}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleOpenLocalEnd(node.storyId);
+                }}
+                title={`Ouvrir les réglages : ${node.label}`}
+              >
+                <span className="fd-local-end-node-icon">
+                  {node.kind === 'sequence' ? <IconStop /> : <IconMoon />}
+                </span>
+                <span className="fd-local-end-node-text">{node.label}</span>
+              </button>
+            ))}
           </div>
         </div>
         <DiagramLegend
           returnEdges={returnEdges}
           homeEdges={homeEdges}
-          sequenceEdges={sequenceEdges}
+          afterEndEdges={afterEndEdges}
           referenceEdges={referenceEdges}
         />
         {dragPointer && draggingId ? (

@@ -49,6 +49,7 @@ export function WorkspaceView({
   const { onSelect } = useProjectActions();
   const { projectType } = project;
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
+  const [afterPlayFocus, setAfterPlayFocus] = useState(null);
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
   const skipIdSyncRef = useRef(false);
@@ -109,6 +110,16 @@ export function WorkspaceView({
       restoreSettings();
     }
   }, [isPlein, restoreSettings]);
+
+  const handleOpenLocalEndSettings = useCallback((storyId) => {
+    setSelectedIds(new Set([storyId]));
+    onSelect(storyId);
+    if (!showSettings) restoreSettings();
+    setAfterPlayFocus({ storyId, requestId: Date.now() });
+  }, [onSelect, restoreSettings, showSettings]);
+  const handleAfterPlayFocusConsumed = useCallback(() => {
+    setAfterPlayFocus(null);
+  }, []);
 
   useEffect(() => {
     if (skipIdSyncRef.current) {
@@ -175,6 +186,8 @@ export function WorkspaceView({
       projectType={projectType}
       allMenus={allMenus}
       projectIndex={projectIndex}
+      afterPlayFocus={afterPlayFocus}
+      onAfterPlayFocusConsumed={handleAfterPlayFocusConsumed}
       header={settingsHeader}
     />
   );
@@ -200,6 +213,7 @@ export function WorkspaceView({
       onPreview={handleSimulateNode}
       onSimulateZip={handleSimulateZip}
       onSimulateRoot={handleSimulateRoot}
+      onOpenLocalEndSettings={handleOpenLocalEndSettings}
     />
   );
 

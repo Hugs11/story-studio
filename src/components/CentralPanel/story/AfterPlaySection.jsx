@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AudioField } from '../AudioField';
 import { Toggle } from '../../common/Toggle';
 import { Tooltip } from '../../common/Tooltip';
@@ -31,7 +31,6 @@ import { StoryDisclosure } from './StoryDisclosure';
 import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/LucideLocal';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
 import { useErrorDialog } from '../../common/Dialog';
-import { pathKey } from '../../../utils/fileUtils';
 
 function destinationHintLabel(label) {
   if (!label) return null;
@@ -122,18 +121,14 @@ export function AfterPlaySection({
   project,
   inheritedReturnLabel,
   onUpdate,
+  afterPlayFocus = null,
+  onAfterPlayFocusConsumed,
 }) {
   const { showConfirmDialog } = useErrorDialog();
   const autoNextEnabled = !!project?.globalOptions?.autoNext;
   const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
   const rawHasPrompt = !!node?.afterPlaybackPromptAudio;
   const hasPrompt = rawHasPrompt && !autoNextEnabled;
-  const usesGlobalEndNodeAudio = !!(
-    hasEndNode
-    && hasPrompt
-    && pathKey(node.afterPlaybackPromptAudio)
-    && pathKey(node.afterPlaybackPromptAudio) === pathKey(project?.nightModeAudio)
-  );
   const afterPlaybackSequence = (node.afterPlaybackSequence ?? []).map(normalizeSequenceStep);
   const afterPlaybackHomeStep = node.afterPlaybackHomeStep
     ? normalizeSequenceStep(node.afterPlaybackHomeStep, 0)
@@ -145,6 +140,10 @@ export function AfterPlaySection({
     ? getEffectiveEndBehavior(node, parentMenu, project, project?.rootEntries ?? [])
     : null;
   const storyNavigation = effectiveEndBehavior?.navigation ?? null;
+  // Même audio ne suffit pas : une histoire peut réutiliser le son global tout
+  // en envoyant vers une autre destination. Le moteur de navigation est la
+  // source de vérité pour qualifier un message comme global importé.
+  const usesGlobalEndNodeAudio = !!storyNavigation?.endNodeReturn?.isImportedPrompt;
   const hasGeneratedEndNode = !!storyNavigation?.endNodeReturn?.isActive;
   const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
   const autoNextApplies = !!autoNextResolution?.applies;
@@ -152,6 +151,19 @@ export function AfterPlaySection({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSequenceEditor, setShowSequenceEditor] = useState(false);
   const [showPromptField, setShowPromptField] = useState(false);
+  const afterPlayRef = useRef(null);
+  const focusRequestId = afterPlayFocus?.requestId;
+
+  useEffect(() => {
+    if (!focusRequestId || afterPlayFocus?.storyId !== node.id) return;
+    setShowAdvanced(true);
+    setShowSequenceEditor(hasSequence);
+    setShowPromptField(hasPrompt);
+    requestAnimationFrame(() => {
+      afterPlayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    onAfterPlayFocusConsumed?.();
+  }, [afterPlayFocus?.storyId, focusRequestId, hasPrompt, hasSequence, node.id, onAfterPlayFocusConsumed]);
 
   const promptControls = node.afterPlaybackPromptControlSettings ?? {};
   const storyControls = node.controlSettings ?? {};
@@ -561,7 +573,7 @@ export function AfterPlaySection({
         </div>
       )}
 
-      <div className="after-play-route">
+      <div className="after-play-route" ref={afterPlayRef}>
         <div className="after-play-route-head">
           <div className="after-play-route-title">Résumé du parcours</div>
           {routeContextText ? (

@@ -23,6 +23,8 @@ export const NodeEditorContent = memo(function NodeEditorContent({
   onDeleteItem,
   onBulkUpdateItems,
   onBulkDeleteItems,
+  afterPlayFocus = null,
+  onAfterPlayFocusConsumed,
 }) {
   const isMultiSelect = selectedIds && selectedIds.size > 1;
   const parentMenuId = !isMultiSelect && (node?.type === 'story' || node?.type === 'menu') ? findParentMenuId(project, node.id, projectIndex) : null;
@@ -84,6 +86,8 @@ export const NodeEditorContent = memo(function NodeEditorContent({
         parentMenu={parentMenu}
         onUpdate={onUpdateItem}
         onDelete={onDeleteItem}
+        afterPlayFocus={afterPlayFocus}
+        onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
       />
     );
   }

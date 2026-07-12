@@ -22,6 +22,8 @@ export function CentralPanel({
   projectType,
   allMenus,
   projectIndex,
+  afterPlayFocus = null,
+  onAfterPlayFocusConsumed,
   header = null,
 }) {
   const {
@@ -133,6 +135,8 @@ export function CentralPanel({
           onDeleteItem={onDeleteItem}
           onBulkUpdateItems={onBulkUpdateItems}
           onBulkDeleteItems={onBulkDeleteItems}
+          afterPlayFocus={afterPlayFocus}
+          onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
         />
       </>
     );
@@ -151,6 +155,8 @@ export function CentralPanel({
         onDeleteMenu={onDeleteMenu}
         onUpdateItem={onUpdateItem}
         onDeleteItem={onDeleteItem}
+        afterPlayFocus={afterPlayFocus}
+        onAfterPlayFocusConsumed={onAfterPlayFocusConsumed}
       />
     );
   }

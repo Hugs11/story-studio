@@ -17,8 +17,8 @@ export function DiagramViewToggles({
         {/* Libellés double : version longue par défaut, version courte sous
             ~500 px de colonne (voir `@container fd-diagram-header` dans
             FlowDiagram.css) pour tenir le bandeau 44 px sur une seule ligne. */}
-        <span className="fd-ctrl-label fd-ctrl-label--full">Afficher les retours</span>
-        <span className="fd-ctrl-label fd-ctrl-label--short">Retours</span>
+        <span className="fd-ctrl-label fd-ctrl-label--full">Afficher les parcours</span>
+        <span className="fd-ctrl-label fd-ctrl-label--short">Parcours</span>
       </label>
       <button
         type="button"
