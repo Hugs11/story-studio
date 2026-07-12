@@ -33,6 +33,8 @@ export function CentralPanel({
     onUpdateNightModeReturn,
     onUpdateNightModeHomeReturn,
     onRemoveEndNode,
+    onSelect,
+    onAttachStoryEndToGlobal,
   } = useProjectActions();
 
   const isMultiSelect = selectedIds && selectedIds.size > 1;
@@ -60,6 +62,9 @@ export function CentralPanel({
         onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
         onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
         onRemove={onRemoveEndNode}
+        project={project}
+        onExamineStory={onSelect}
+        onAttachStory={onAttachStoryEndToGlobal}
       />
     );
   } else if (isMultiSelect) {

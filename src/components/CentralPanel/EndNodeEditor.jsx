@@ -2,6 +2,7 @@ import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
+import { collectEndMessagePresentations } from '../../store/generatedNavigation';
 import './CentralPanel.css';
 
 export function EndNodeEditor({
@@ -19,8 +20,16 @@ export function EndNodeEditor({
   onUpdateNightModeHomeReturn,
   onUpdateEndNodeName,
   onRemove,
+  project = null,
+  onExamineStory,
+  onAttachStory,
 }) {
   const hasAudio = typeof nightModeAudio === 'string' && nightModeAudio.trim().length > 0;
+  const presentations = collectEndMessagePresentations(project);
+  const globalStories = presentations.filter((item) => item.presentationKind === 'global');
+  const localStories = presentations.filter((item) => item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence');
+  const waitingOk = globalStories.filter((item) => item.entry.afterPlaybackPromptControlSettings?.autoplay !== true).length;
+  const autoPlay = globalStories.length - waitingOk;
 
   return (
     <>
@@ -55,6 +64,28 @@ export function EndNodeEditor({
         {!hasAudio && (
           <div className="info-box warn">
             Audio requis pour la génération.
+          </div>
+        )}
+        {hasAudio && (
+          <div className="info-box">
+            {globalStories.length} histoire{globalStories.length > 1 ? 's utilisent' : ' utilise'} le message du pack<br />
+            {waitingOk} attendent OK · {autoPlay} enchaînent automatiquement<br />
+            {localStories.length} fin{localStories.length !== 1 ? 's locales' : ' locale'}
+          </div>
+        )}
+        {localStories.length > 0 && (
+          <div className="end-node-local-list">
+            <span className="field-label">Fins locales</span>
+            {localStories.map((item) => (
+              <div key={item.entry.id} className="end-node-local-list-row">
+                <button type="button" className="link-button" onClick={() => onExamineStory?.(item.entry.id)}>
+                  Examiner {item.entry.name || 'cette histoire'}
+                </button>
+                <button type="button" className="link-button" onClick={() => onAttachStory?.(item.entry.id)}>
+                  Rattacher au message du pack
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

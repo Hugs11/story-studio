@@ -326,7 +326,7 @@ function storyTargetMode(target) {
   return normalized.startsWith('story_play:') ? 'story_play' : 'story';
 }
 
-function collectNavigationTransitions(entries, parentMenu = null, transitions = [], hasEndNode = false, project = null, rootEntries = entries) {
+function collectNavigationTransitions(entries, parentMenu = null, transitions = [], project = null, rootEntries = entries) {
   const projectType = project?.projectType ?? null;
   for (const entry of entries ?? []) {
     if (entry.type === 'story') {
@@ -347,6 +347,8 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         ?? generatedReturnTarget
         ?? inheritedTarget
         ?? (projectType !== 'simple' ? (parentMenu?.id ?? getRuntimeRootDiagramTarget(project)) : null);
+
+      const endPresentation = navigation.endMessage?.presentationKind ?? 'none';
 
       if (hasSequence) {
         const lastStep = sequence[sequence.length - 1];
@@ -383,8 +385,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
           }
         }
       } else if (hasPrompt) {
-        const usesImportedGlobalEnd = hasEndNode && navigation.endNodeReturn.isImportedPrompt;
-        if (usesImportedGlobalEnd) {
+        if (endPresentation === 'global') {
           effectiveReturnTarget = END_NODE_ID;
           transitions.push({
             from: entry.id,
@@ -420,7 +421,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         if (promptHomeTarget && promptHomeTarget !== effectiveReturnTarget) {
           transitions.push({ from: entry.id, to: promptHomeTarget, kind: 'home', source: 'prompt' });
         }
-      } else if (hasEndNode) {
+      } else if (endPresentation === 'global') {
         effectiveReturnTarget = END_NODE_ID;
         transitions.push({
           from: entry.id,
@@ -468,7 +469,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
     }
 
     if (entry.type === 'menu') {
-      collectNavigationTransitions(entry.children ?? [], entry, transitions, hasEndNode, project, rootEntries);
+      collectNavigationTransitions(entry.children ?? [], entry, transitions, project, rootEntries);
     }
   }
 
@@ -480,7 +481,7 @@ export function getCompleteNavigationEdges(project, layout) {
   const nodeVisualHeight = layout.metrics?.nodeVisualHeight ?? layout.metrics?.nodeHeight ?? 0;
   const visualBottom = (node) => node.y + Math.min(node.height, nodeVisualHeight || node.height);
 
-  const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], layout.hasEndNode, project, project.rootEntries ?? [])
+  const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], project, project.rootEntries ?? [])
     .map((edge) => {
       const from = nodeMap.get(edge.from);
       const to = nodeMap.get(edge.to);

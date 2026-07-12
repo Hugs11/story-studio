@@ -28,6 +28,7 @@ import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
 import { basenameNoExt, pathKey } from '../utils/fileUtils';
 import { sanitizeImportedEntries, sanitizeImportedName } from './importedNames';
+import { collectEndMessagePresentations } from './generatedNavigation';
 
 export { sanitizeImportedEntries, sanitizeImportedName };
 
@@ -108,6 +109,28 @@ function applyPromotedMenuDefaultsToChild(child, promotedMenu) {
   const next = rewritePromotedEntryNavigation(child, promotedMenu.id);
   if (next.type === 'story' && !next.returnAfterPlay && promotedMenu.returnAfterPlay) {
     next.returnAfterPlay = rewritePromotedRootTarget(promotedMenu.returnAfterPlay, promotedMenu.id);
+  }
+  return next;
+}
+
+function clearStoryEndPrompt() {
+  return {
+    afterPlaybackPromptAudio: null,
+    afterPlaybackPromptOkTarget: null,
+    afterPlaybackPromptHomeTarget: null,
+    afterPlaybackPromptHomeNone: false,
+    afterPlaybackSequence: [],
+    afterPlaybackHomeStep: null,
+  };
+}
+
+function globalPromptFields(fields = {}) {
+  const next = {};
+  if (Object.hasOwn(fields, 'nightModeAudio')) next.afterPlaybackPromptAudio = fields.nightModeAudio;
+  if (Object.hasOwn(fields, 'nightModeReturn')) next.afterPlaybackPromptOkTarget = fields.nightModeReturn ?? null;
+  if (Object.hasOwn(fields, 'nightModeHomeReturn')) {
+    next.afterPlaybackPromptHomeNone = !fields.nightModeHomeReturn;
+    next.afterPlaybackPromptHomeTarget = fields.nightModeHomeReturn ?? null;
   }
   return next;
 }
@@ -278,6 +301,55 @@ export function useProjectStore() {
 
   const updateGlobalOption = useCallback((key, value) => {
     setProject(p => ({ ...p, globalOptions: { ...p.globalOptions, [key]: value } }));
+  }, [setProject]);
+
+  // Une modification du message global et de ses projections liees est une
+  // mutation unique : undo restaure donc toujours un etat coherent.
+  const updateGlobalEndMessage = useCallback((fields) => {
+    setProject(p => {
+      const projections = collectEndMessagePresentations(p)
+        .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio);
+      let next = { ...p, ...(fields ?? {}) };
+      const promptFields = globalPromptFields(fields);
+      for (const projection of projections) {
+        next = updateEntry(next, projection.entry.id, promptFields);
+      }
+      return next;
+    });
+  }, [setProject]);
+
+  const attachStoryEndToGlobal = useCallback((storyId) => {
+    setProject(p => {
+      const story = findEntryById(p, storyId);
+      if (!story || !p.nightModeAudio) return p;
+      return updateEntry(p, storyId, {
+        afterPlaybackPromptAudio: p.nightModeAudio,
+        afterPlaybackPromptOkTarget: p.nightModeReturn ?? null,
+        afterPlaybackPromptHomeTarget: p.nightModeHomeReturn ?? null,
+        afterPlaybackPromptHomeNone: !p.nightModeHomeReturn,
+        afterPlaybackSequence: [],
+        afterPlaybackHomeStep: null,
+      });
+    });
+  }, [setProject]);
+
+  const removeGlobalEndMessage = useCallback(() => {
+    setProject(p => {
+      const projections = collectEndMessagePresentations(p)
+        .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio);
+      let next = {
+        ...p,
+        nightModeAudio: null,
+        nightModeReturn: null,
+        nightModeHomeReturn: null,
+        globalOptions: { ...p.globalOptions, nightMode: false, endNode: false },
+      };
+      for (const projection of projections) {
+        next = updateEntry(next, projection.entry.id, clearStoryEndPrompt());
+      }
+      return next;
+    });
+    setSelectedId('root');
   }, [setProject]);
 
   // ── Menus ─────────────────────────────────────────────────────────────────
@@ -487,7 +559,7 @@ export function useProjectStore() {
     selectedId, setSelectedId,
     canUndo, undo, canRedo, redo,
     setProjectType, updateStoryAudio,
-    updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption,
+    updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
     addStory, addZip, updateItem, bulkUpdateItems, bulkDeleteItems, deleteItem, replaceZipWithEntries,
     pasteEntriesToMenu, cutPasteEntriesToMenu, duplicateEntry,
