@@ -10,8 +10,8 @@ import { LuniiShell } from './LuniiShell';
 import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
-import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveEndNodeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
-import { classifyPromptHome, END_HOME_FOLLOW_OK, END_HOME_NONE } from '../../store/endMessageHome';
+import { findEntryLocation, getMenuBrowseState, HOME_ACTION, normalizeHomeTarget, resolveEndNodeHomeTarget, resolvePromptHomeAction, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { END_HOME_NONE } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
 const END_NODE_ID = 'end-node';
@@ -214,27 +214,20 @@ export function ProjectSimulator({
   }, [activeStory, currentMenu, navigateAfterStory, navigateToNextStory, navigateToTarget, project]);
 
   const navigatePromptHome = useCallback(() => {
-    const kind = classifyPromptHome(activeStory);
-    // none : aucune transition → retour au début du pack (jamais assimilé à « suit OK »).
-    if (kind === END_HOME_NONE) {
+    const home = resolvePromptHomeAction(activeStory, currentMenu, rootEntries);
+    // none → retour au début du pack ; next-story → sœur suivante ; target → cible explicite.
+    if (home.action === HOME_ACTION.COVER) {
       goToCover();
       return;
     }
-    // follow-ok : Home fait exactement ce que fait OK.
-    if (kind === END_HOME_FOLLOW_OK) {
-      navigatePromptOk();
-      return;
-    }
-    // target : cible Home explicite/contextuelle.
-    const target = normalizeHomeTarget(resolveSequenceTarget(activeStory?.afterPlaybackPromptHomeTarget, currentMenu))
-      ?? resolveStoryHomeTarget(activeStory, currentMenu, project);
-    if (target === 'next_story') {
+    if (home.action === HOME_ACTION.NEXT_STORY) {
       if (navigateToNextStory()) return;
-    } else if (target && navigateToTarget(target)) {
+    } else if (home.action === HOME_ACTION.TARGET && navigateToTarget(home.targetId)) {
       return;
     }
-    navigateHomeFromStory();
-  }, [activeStory, currentMenu, goToCover, navigateHomeFromStory, navigatePromptOk, navigateToNextStory, navigateToTarget, project]);
+    // follow-ok, current_menu, next_story en dernière position, cible non résolue → chemin OK.
+    navigatePromptOk();
+  }, [activeStory, currentMenu, rootEntries, goToCover, navigatePromptOk, navigateToNextStory, navigateToTarget]);
 
   const navigateEndNodeHome = useCallback(() => {
     const home = resolveEndNodeHomeTarget(project, currentMenu);
