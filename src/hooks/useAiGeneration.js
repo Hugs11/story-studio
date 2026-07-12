@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { sanitizeImportedName } from '../store/projectStore';
 import { getImageJobTargetLabel } from '../store/aiJobLabels';
 import { getProjectFilePrefix } from '../utils/projectPrefix';
+import { applyGeneratedAudioToTarget as dispatchGeneratedAudioToTarget } from '../store/generatedAudioTarget';
 
 function getTtsStoryName(text) {
   const normalized = String(text || '').replace(/\s+/g, ' ').trim();
@@ -61,44 +62,7 @@ export function useAiGeneration({
   }
 
   function applyGeneratedAudioToTarget(target, path, job = null) {
-    if (!target || !path) return;
-    switch (target.kind) {
-      case 'root':
-        store.updateRootMedia(target.field, path);
-        return;
-      case 'rootStory':
-        store.updateStoryAudio(path);
-        return;
-      case 'newStory':
-        store.addStory(target.menuId ?? null, path, { name: getTtsStoryName(job?.request?.text) });
-        return;
-      case 'menu':
-        store.updateMenu(target.entryId, { [target.field]: path });
-        return;
-      case 'story':
-        store.updateItem(target.entryId, { [target.field]: path });
-        return;
-      case 'storySequence': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        if (!entry?.afterPlaybackSequence?.length) return;
-        store.updateItem(target.entryId, {
-          afterPlaybackSequence: entry.afterPlaybackSequence.map((step) => (
-            step.id === target.stepId ? { ...step, [target.field]: path } : step
-          )),
-        });
-        return;
-      }
-      case 'storyHomeStep': {
-        const entry = projectIndex.entryById.get(target.entryId);
-        if (!entry?.afterPlaybackHomeStep) return;
-        store.updateItem(target.entryId, {
-          afterPlaybackHomeStep: { ...entry.afterPlaybackHomeStep, [target.field]: path },
-        });
-        return;
-      }
-      default:
-        return;
-    }
+    return dispatchGeneratedAudioToTarget({ target, path, job, store, projectIndex, getStoryName: getTtsStoryName });
   }
 
   async function handleQueueXttsGenerate(job) {

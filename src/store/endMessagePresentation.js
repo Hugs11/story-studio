@@ -33,11 +33,22 @@ export function getPromptControlDifferences(controlSettings = {}) {
   ));
 }
 
+export function getEffectiveEndMessageControlState(controls = {}, home = null) {
+  const autoplay = controls.autoplay === true;
+  const ok = controls.ok !== false;
+  const homeEnabled = controls.home !== false;
+  return {
+    playback: autoplay ? 'autoplay' : (ok ? 'wait-ok' : 'stays'),
+    home: homeEnabled ? (home?.kind === END_HOME_NONE ? 'pack-start' : 'target') : 'disabled',
+  };
+}
+
 // Les cibles ont deja ete resolues par generatedNavigation : `next_story`, les
 // fallbacks de derniere histoire et les trois etats Home y sont donc compares
 // selon le meme contrat que Rust et le simulateur.
 export function classifyEndMessagePresentation({
   entry,
+  active = true,
   globalActive = false,
   globalAudio = null,
   promptOkTargetId = null,
@@ -55,6 +66,18 @@ export function classifyEndMessagePresentation({
   const okMatches = hasPrompt && sameTarget(promptOkTargetId, globalOkTargetId);
   const homeMatches = hasPrompt && endHomesMatch(promptHome, globalHome);
   const controlDifferences = getPromptControlDifferences(entry?.afterPlaybackPromptControlSettings);
+
+  if (!active) {
+    return {
+      presentationKind: END_MESSAGE_NONE,
+      audioMatches: false,
+      okMatches: false,
+      homeMatches: false,
+      controlDifferences,
+      effectiveOk: null,
+      effectiveHome: null,
+    };
+  }
 
   let presentationKind = END_MESSAGE_NONE;
   if (hasSequence) presentationKind = END_MESSAGE_LOCAL_SEQUENCE;

@@ -513,7 +513,18 @@ test('effective end behavior: autoNext suppresses a local prompt', () => {
   assert.equal(behavior.usesEndStep, false);
   assert.equal(behavior.endStepKind, null);
   assert.equal(behavior.navigation.hasPrompt, false);
+  assert.equal(behavior.navigation.endMessage.presentationKind, 'none');
   assert.equal(behavior.finalTargetId, 'story_play:b');
+});
+
+test('autoNext classe aussi une sequence stockee mais inactive comme aucune fin', () => {
+  const a = story('a', { afterPlaybackSequence: [{ id: 's1' }] });
+  const b = story('b');
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [a, b] };
+  const nav = getGeneratedStoryNavigation(a, menu, project([menu], { globalOptions: { autoNext: true } }), [menu]);
+
+  assert.equal(nav.hasSequence, false);
+  assert.equal(nav.endMessage.presentationKind, 'none');
 });
 
 test('effective end behavior: autoNext overrides explicit story return', () => {

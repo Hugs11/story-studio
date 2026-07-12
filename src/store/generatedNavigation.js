@@ -10,7 +10,7 @@ import {
   isStoryPlayNavigationTarget,
   normalizeNavigationTarget,
 } from './navigationTargets.js';
-import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
+import { getGeneratedEndMessageControls, getGeneratedStoryPlayControls } from './generatedPlayback.js';
 import { classifyGlobalEndHome, resolveGlobalEndHome, resolvePromptEndHome, END_HOME_NONE } from './endMessageHome.js';
 import { classifyEndMessagePresentation } from './endMessagePresentation.js';
 
@@ -262,8 +262,9 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       okTargetId: endNodeEffectiveTargetId,
     })
     : { kind: null, targetId: null, effectiveTargetId: null };
-  const endMessage = classifyEndMessagePresentation({
+  const endMessageBase = classifyEndMessagePresentation({
     entry,
+    active: !autoNextEnabled,
     globalActive: usesEndNode || importedNightPrompt,
     globalAudio: project?.nightModeAudio,
     promptOkTargetId: promptOkTarget,
@@ -271,6 +272,12 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     promptHome: promptHomeResolved,
     globalHome: globalHomeResolved,
   });
+  const endMessage = {
+    ...endMessageBase,
+    controls: getGeneratedEndMessageControls(entry, {
+      usePromptControls: hasPrompt && endMessageBase.presentationKind !== 'none',
+    }),
+  };
   const sequence = entry?.afterPlaybackSequence ?? [];
   const sequenceReturnTarget = hasSequence
     ? resolveGeneratedTargetForStory(

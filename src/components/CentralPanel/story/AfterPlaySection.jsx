@@ -33,6 +33,11 @@ import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/L
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
 import { useErrorDialog } from '../../common/Dialog';
 import { useProjectActions } from '../../../store/ProjectActionsContext';
+import { useProjectContext } from '../../../store/ProjectContext';
+import { pickAudio } from '../../../hooks/useFileDialog';
+import { basename } from '../../../utils/fileUtils';
+import { buildLocalEndDraftFields, createLocalEndDraft, selectLocalEndDraftAudio } from '../../../store/localEndDraft';
+import { getEffectiveEndMessageControlState } from '../../../store/endMessagePresentation';
 
 function destinationHintLabel(label) {
   if (!label) return null;
@@ -128,6 +133,7 @@ export function AfterPlaySection({
 }) {
   const { showConfirmDialog } = useErrorDialog();
   const { onSelect, onAttachStoryEndToGlobal } = useProjectActions();
+  const { onImportFile } = useProjectContext();
   const autoNextEnabled = !!project?.globalOptions?.autoNext;
   const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
   const rawHasPrompt = !!node?.afterPlaybackPromptAudio;
@@ -147,6 +153,8 @@ export function AfterPlaySection({
   // en envoyant vers une autre destination. Le moteur de navigation est la
   // source de vérité pour qualifier un message comme global importé.
   const endMessage = storyNavigation?.endMessage ?? { presentationKind: 'none' };
+  const endMessageControls = endMessage.controls ?? {};
+  const endMessageControlState = getEffectiveEndMessageControlState(endMessageControls, endMessage.effectiveHome);
   const usesGlobalEndNodeAudio = endMessage.presentationKind === 'global';
   const hasGeneratedEndNode = usesGlobalEndNodeAudio;
   const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
@@ -276,24 +284,21 @@ export function AfterPlaySection({
   }
 
   function startLocalDraft() {
-    setLocalDraft({
-      audio: project?.nightModeAudio ?? null,
-      okTarget: project?.nightModeReturn ?? null,
-      homeTarget: project?.nightModeHomeReturn ?? null,
-      homeNone: !project?.nightModeHomeReturn,
-    });
+    setLocalDraft(createLocalEndDraft(project));
   }
 
-  function applyLocalDraft() {
+  async function pickLocalDraftAudio() {
+    const source = await pickAudio();
+    if (!source) return;
+    setLocalDraft((draft) => selectLocalEndDraftAudio(draft, source));
+  }
+
+  async function applyLocalDraft() {
     if (!localDraft) return;
-    const fields = {
-      afterPlaybackPromptAudio: localDraft.audio,
-      afterPlaybackPromptOkTarget: localDraft.okTarget,
-      afterPlaybackPromptHomeTarget: localDraft.homeTarget,
-      afterPlaybackPromptHomeNone: localDraft.homeNone,
-      afterPlaybackSequence: [],
-      afterPlaybackHomeStep: null,
-    };
+    const audio = localDraft.audioSource
+      ? (await onImportFile?.(localDraft.audioSource) ?? localDraft.audioSource)
+      : localDraft.audio;
+    const fields = buildLocalEndDraftFields(localDraft, audio);
     const candidate = getGeneratedStoryNavigation(
       { ...node, ...fields }, parentMenu, project, project?.rootEntries ?? [],
     );
@@ -354,16 +359,14 @@ export function AfterPlaySection({
     endContent = localDraft ? (
       <div className="end-simple-settings">
         <div className="sequence-note sequence-note--spaced">Brouillon de fin locale — il ne modifie pas encore cette histoire.</div>
-        <AudioField
-          accentLabel
-          label="Audio de la fin locale"
-          file={localDraft.audio}
-          required={false}
-          ttsFilenameHint={`fin-${node.name || 'histoire'}`}
-          xttsTarget={{ kind: 'story', entryId: node.id, field: 'afterPlaybackPromptAudio' }}
-          onPick={(audio) => setLocalDraft((draft) => ({ ...draft, audio }))}
-          onClear={() => setLocalDraft((draft) => ({ ...draft, audio: null }))}
-        />
+        <div className="field-row">
+          <div style={{ flex: 1 }}>
+            <span className="field-label">Audio de la fin locale</span>
+            <div className="after-play-muted">{localDraft.audio ? basename(localDraft.audio) : 'Aucun audio choisi'}</div>
+          </div>
+          <Button size="sm" onClick={() => void pickLocalDraftAudio()}>Choisir un audio</Button>
+          {localDraft.audio ? <Button size="sm" onClick={() => setLocalDraft((draft) => ({ ...draft, audio: null, audioSource: null }))}>Retirer</Button> : null}
+        </div>
         <div className="sequence-targets">
           <div className="field-row field-row--flush">
             <span className="field-label">Bouton OK</span>
@@ -402,7 +405,7 @@ export function AfterPlaySection({
         <div>
           <div className="end-summary-title">🌙 Utilise le message de fin du pack</div>
           <div className="end-summary-copy">
-            Lecture : {promptControls.autoplay === true ? 'enchaînement automatique' : 'attend OK'} · Accueil → {endMessage.effectiveHome?.kind === 'none' ? 'début du pack' : 'destination configurée'} · Pause {promptControls.pause === false ? 'désactivée' : 'activée'}
+            Lecture : {endMessageControlState.playback === 'autoplay' ? 'enchaînement automatique' : endMessageControlState.playback === 'wait-ok' ? 'attend OK' : 'reste sur le message'} · {endMessageControlState.home === 'disabled' ? 'Accueil désactivé' : endMessageControlState.home === 'pack-start' ? 'Accueil → début du pack' : 'Accueil → destination configurée'} · Pause {endMessageControls.pause === false ? 'désactivée' : 'activée'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>

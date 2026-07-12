@@ -2,6 +2,29 @@ function hasNonEmptyValue(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+export const GENERATED_GLOBAL_END_CONTROLS = Object.freeze({
+  wheel: false,
+  ok: true,
+  home: true,
+  pause: false,
+  autoplay: true,
+});
+
+// Miroir de `night_story_controls` / `prompt_controls_from_settings` Rust.
+// Une projection technique garde ses controles importes ; un message global
+// sans projection emet les controles fixes du night bridge.
+export function getGeneratedEndMessageControls(entry, { usePromptControls = false } = {}) {
+  if (!usePromptControls) return { ...GENERATED_GLOBAL_END_CONTROLS };
+  const controls = entry?.afterPlaybackPromptControlSettings ?? {};
+  return {
+    wheel: controls.wheel ?? GENERATED_GLOBAL_END_CONTROLS.wheel,
+    ok: controls.ok ?? GENERATED_GLOBAL_END_CONTROLS.ok,
+    home: controls.home ?? GENERATED_GLOBAL_END_CONTROLS.home,
+    pause: controls.pause ?? GENERATED_GLOBAL_END_CONTROLS.pause,
+    autoplay: controls.autoplay ?? GENERATED_GLOBAL_END_CONTROLS.autoplay,
+  };
+}
+
 function getStoryPlaySimpleLeafPlayback(entry, parentMenu, project) {
   if (!!project?.globalOptions?.autoNext) return true;
   if (!parentMenu) return false;
