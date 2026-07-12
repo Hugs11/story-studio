@@ -73,6 +73,7 @@ export function DiagramPanel({
   onPreview,
   onSimulateZip,
   onSimulateRoot,
+  onOpenLocalEndSettings,
 }) {
   const [controlsHost, setControlsHost] = useState(null);
 
@@ -97,6 +98,7 @@ export function DiagramPanel({
           onPreview={onPreview}
           onSimulateZip={onSimulateZip}
           onSimulateRoot={onSimulateRoot}
+          onOpenLocalEndSettings={onOpenLocalEndSettings}
           controlsHost={controlsHost}
           showActionsBar={showActionsBar}
           showHint={showHint}

@@ -6,6 +6,8 @@ import {
   resolveGeneratedTargetForStory,
 } from '../../store/generatedNavigation';
 import { canMoveEntryToContainer } from '../tree/treeOperations';
+import { buildGroupedLayoutRows, orderDiagramChildren } from './diagram/storyGroupLayout';
+import { compactNavigationPresentation } from './diagram/navigationPresentation';
 
 export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', ref: 'Lien', 'end-node': 'Message de fin' };
 // Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
@@ -27,15 +29,6 @@ export function clampZoom(value) {
 
 function getNodeChildren(entry) {
   return entry?.type === 'menu' ? (entry.children ?? []) : [];
-}
-
-function chunkArray(items, chunkSize) {
-  if (!items.length || chunkSize <= 0) return [items];
-  const chunks = [];
-  for (let index = 0; index < items.length; index += chunkSize) {
-    chunks.push(items.slice(index, index + chunkSize));
-  }
-  return chunks;
 }
 
 function getRowWidth(blocks, gap) {
@@ -71,7 +64,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
   let rows = [];
   if (children.length > 0) {
     const groupedChildren = [];
-    for (const child of children) {
+    for (const child of orderDiagramChildren(children, isStructuralChild)) {
       const kind = isStructuralChild(child) ? 'structural' : 'story';
       const previous = groupedChildren[groupedChildren.length - 1];
       if (previous?.kind === kind) {
@@ -86,9 +79,17 @@ function buildLayoutBlock(entry, metrics, options = {}) {
       const rowLimit = isRoot
         ? metrics.rootRowLimit
         : (group.kind === 'structural' ? metrics.structureRowLimit : metrics.storyRowLimit);
-      return chunkArray(blocks, rowLimit)
-        .filter((row) => row.length > 0)
-        .map((row) => ({ kind: group.kind, groupIndex, groupSize: group.items.length, blocks: row }));
+      // Une rangée d'histoires se lit très bien comme des liens individuels.
+      // Au-delà, les traits vers les rangées suivantes passent nécessairement
+      // derrière des cartes et suggèrent une fausse dépendance. Le groupe porte
+      // alors la relation avec le dossier, pas chaque vignette séparément.
+      return buildGroupedLayoutRows({
+        blocks,
+        rowLimit,
+        kind: group.kind,
+        groupIndex,
+        groupSize: group.items.length,
+      });
     });
   }
 
@@ -126,8 +127,8 @@ function buildLayoutBlock(entry, metrics, options = {}) {
         x: group.x + cursorX,
         y: group.y + nextRowY,
       })));
-      edges.push(
-        {
+      if (!row.isAggregateStoryGroup) {
+        edges.push({
           from: entry.id,
           to: block.entry.id,
           kind: block.entry.type === 'story' ? 'story' : 'structural',
@@ -135,7 +136,9 @@ function buildLayoutBlock(entry, metrics, options = {}) {
           y1: metrics.nodeHeight,
           x2: cursorX + block.rootCenterX,
           y2: nextRowY,
-        },
+        });
+      }
+      edges.push(
         ...block.edges.map((edge) => ({
           ...edge,
           x1: edge.x1 + cursorX,
@@ -149,14 +152,18 @@ function buildLayoutBlock(entry, metrics, options = {}) {
     if (row.kind === 'story' && row.groupSize > 1) {
       const key = `${entry.id}:${row.groupIndex}`;
       const existing = groupBounds.get(key);
+      const topInset = row.isAggregateStoryGroup ? 20 : 12;
       const next = {
+        id: `stories:${entry.id}:${row.groupIndex}`,
         parentId: entry.id,
         kind: 'stories',
         tone: hashTone(entry.id),
         x: rowStartX,
-        y: nextRowY - 12,
+        y: nextRowY - topInset,
         width: row.width,
-        height: row.height + 24,
+        height: row.height + topInset + 12,
+        storyCount: row.groupSize,
+        isAggregate: row.isAggregateStoryGroup,
       };
       if (existing) {
         const minX = Math.min(existing.x, next.x);
@@ -176,7 +183,21 @@ function buildLayoutBlock(entry, metrics, options = {}) {
     }
     nextRowY += row.height + metrics.rowStackGap;
   }
-  groups.push(...groupBounds.values());
+  const storyGroups = [...groupBounds.values()];
+  for (const group of storyGroups) {
+    if (!group.isAggregate) continue;
+    edges.push({
+      id: `edge:${group.id}`,
+      from: entry.id,
+      to: group.id,
+      kind: 'story-group',
+      x1: nodeX + (nodeWidth / 2),
+      y1: metrics.nodeHeight,
+      x2: group.x + (group.width / 2),
+      y2: group.y,
+    });
+  }
+  groups.push(...storyGroups);
 
   return {
     entry,
@@ -342,9 +363,14 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
           transitions.push({
             from: entry.id,
             to: effectiveReturnTarget,
-            kind: 'sequence',
-            source: configuredReturnTarget ? 'configured' : 'implicit',
+            kind: 'after-end',
+            source: 'sequence',
             label: mode === 'story_home_step' ? 'Fin -> retour' : mode === 'story_play' ? 'Fin -> lecture' : mode === 'story' ? 'Fin -> titre' : 'Fin',
+            localEnd: {
+              kind: 'sequence',
+              stepCount: sequence.length,
+              label: `Scénario de fin · ${sequence.length} étape${sequence.length > 1 ? 's' : ''}`,
+            },
           });
         }
         for (const step of sequence) {
@@ -357,11 +383,34 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
           }
         }
       } else if (hasPrompt) {
+        const usesImportedGlobalEnd = hasEndNode && navigation.endNodeReturn.isImportedPrompt;
+        if (usesImportedGlobalEnd) {
+          effectiveReturnTarget = END_NODE_ID;
+          transitions.push({
+            from: entry.id,
+            to: effectiveReturnTarget,
+            kind: 'after-end',
+            source: 'global-end',
+            parentMenuId: parentMenu?.id ?? null,
+            endNodeTargetId: diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId, project),
+          });
+        } else {
         effectiveReturnTarget = (entry.afterPlaybackPromptOkTarget
           ? resolveStoryDiagramTarget(entry.afterPlaybackPromptOkTarget, entry, parentMenu, rootEntries, fallbackReturnTarget, project)
           : null) ?? fallbackReturnTarget;
         if (effectiveReturnTarget) {
-          transitions.push({ from: entry.id, to: effectiveReturnTarget, kind: 'return', source: entry.afterPlaybackPromptOkTarget ? 'prompt' : 'implicit' });
+          transitions.push({
+            from: entry.id,
+            to: effectiveReturnTarget,
+            kind: 'after-end',
+            source: 'prompt',
+            localEnd: {
+              kind: 'prompt',
+              stepCount: 1,
+              label: 'Message de fin personnalisé',
+            },
+          });
+        }
         }
         const promptHomeTarget = entry.afterPlaybackPromptHomeNone
           ? null
@@ -376,8 +425,8 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         transitions.push({
           from: entry.id,
           to: effectiveReturnTarget,
-          kind: 'return',
-          source: 'configured',
+          kind: 'after-end',
+          source: 'end-node',
           endNodeTargetId: diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId, project),
         });
       } else {
@@ -490,15 +539,32 @@ export function getCompleteNavigationEdges(project, layout) {
         collectContextualEndNodeEdges(project.rootEntries ?? []);
       }
 
-      const endNodeEdges = contextualReturnCount > 0
-        ? [{
-          to: END_NODE_ID,
-          source: 'contextual',
-          label: endNodeReturn?.isDefaultContextual
-            ? `Fin -> destination de chaque histoire (${contextualReturnCount} cible${contextualReturnCount > 1 ? 's' : ''})`
-            : `Fin -> histoire suivante (${contextualReturnCount} cible${contextualReturnCount > 1 ? 's' : ''})`,
-          selfLoop: true,
-        }]
+      const contextualSourceEdges = regularEdges
+        .filter((edge) => edge.to === END_NODE_ID && edge.endNodeTargetId)
+      const globalGroups = new Map();
+      for (const edge of contextualSourceEdges) {
+        if (edge.source !== 'global-end' || !edge.parentMenuId) continue;
+        const group = globalGroups.get(edge.parentMenuId) ?? [];
+        group.push(edge);
+        globalGroups.set(edge.parentMenuId, group);
+      }
+      const groupedGlobalEdges = new Set();
+      const contextualTargets = [];
+      for (const [parentMenuId, edges] of globalGroups) {
+        if (edges.length < 3) continue;
+        edges.forEach((edge) => groupedGlobalEdges.add(edge));
+        contextualTargets.push({
+          to: parentMenuId,
+          source: 'global-context-group',
+          chainStoryIds: edges.map((edge) => edge.from),
+        });
+      }
+      for (const edge of contextualSourceEdges) {
+        if (groupedGlobalEdges.has(edge)) continue;
+        contextualTargets.push({ to: edge.endNodeTargetId, source: 'contextual' });
+      }
+      const endNodeEdges = contextualReturnCount > 0 && contextualTargets.length > 0
+        ? contextualTargets
         : endNodeReturn ? [{
           to: diagramNodeIdFromGeneratedTarget(endNodeReturn?.targetId, project) ?? getRuntimeRootDiagramTarget(project),
           source: endNodeReturn?.isExplicit ? 'configured' : 'implicit',
@@ -518,8 +584,9 @@ export function getCompleteNavigationEdges(project, layout) {
         regularEdges.push({
           from: END_NODE_ID,
           to: edge.to,
-          kind: 'return',
+          kind: 'after-end',
           source: edge.source,
+          chainStoryIds: edge.chainStoryIds,
           label: edge.label,
           x1: ex,
           y1: ey + endNode.height,
@@ -534,7 +601,7 @@ export function getCompleteNavigationEdges(project, layout) {
     }
   }
 
-  return regularEdges;
+  return compactNavigationPresentation(project, regularEdges, layout);
 }
 
 export { canMoveEntryToContainer };

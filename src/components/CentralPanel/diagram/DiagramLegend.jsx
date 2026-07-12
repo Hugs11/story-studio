@@ -1,4 +1,4 @@
-export function DiagramLegend({ returnEdges, homeEdges, sequenceEdges, referenceEdges }) {
+export function DiagramLegend({ returnEdges, homeEdges, afterEndEdges, referenceEdges }) {
   return (
     <div className="fd-stage-legend" aria-label="Légende du diagramme">
       <div className="fd-complete-legend-item">
@@ -17,10 +17,10 @@ export function DiagramLegend({ returnEdges, homeEdges, sequenceEdges, reference
           <span>Retours modifiés</span>
         </div>
       ) : null}
-      {sequenceEdges.length > 0 ? (
+      {afterEndEdges.length > 0 ? (
         <div className="fd-complete-legend-item">
-          <span className="fd-complete-legend-line fd-complete-legend-line--sequence" />
-          <span>Sequences de fin</span>
+          <span className="fd-complete-legend-line fd-complete-legend-line--after-end" />
+          <span>Après une fin</span>
         </div>
       ) : null}
       {referenceEdges.length > 0 ? (
