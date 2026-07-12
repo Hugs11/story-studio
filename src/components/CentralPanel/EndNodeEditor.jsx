@@ -3,6 +3,7 @@ import { AudioField } from './AudioField';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
 import { collectEndMessagePresentations } from '../../store/generatedNavigation';
+import { getEffectiveEndMessageControlState } from '../../store/endMessagePresentation';
 import './CentralPanel.css';
 
 export function EndNodeEditor({
@@ -28,8 +29,13 @@ export function EndNodeEditor({
   const presentations = collectEndMessagePresentations(project);
   const globalStories = presentations.filter((item) => item.presentationKind === 'global');
   const localStories = presentations.filter((item) => item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence');
-  const waitingOk = globalStories.filter((item) => item.entry.afterPlaybackPromptControlSettings?.autoplay !== true).length;
-  const autoPlay = globalStories.length - waitingOk;
+  const controlStates = globalStories.map((item) => getEffectiveEndMessageControlState(
+    item.navigation.endMessage.controls,
+    item.effectiveHome,
+  ));
+  const waitingOk = controlStates.filter((state) => state.playback === 'wait-ok').length;
+  const autoPlay = controlStates.filter((state) => state.playback === 'autoplay').length;
+  const stays = controlStates.filter((state) => state.playback === 'stays').length;
 
   return (
     <>
@@ -69,7 +75,7 @@ export function EndNodeEditor({
         {hasAudio && (
           <div className="info-box">
             {globalStories.length} histoire{globalStories.length > 1 ? 's utilisent' : ' utilise'} le message du pack<br />
-            {waitingOk} attendent OK · {autoPlay} enchaînent automatiquement<br />
+            {waitingOk} attendent OK · {autoPlay} enchaînent automatiquement{stays ? ` · ${stays} restent sur le message` : ''}<br />
             {localStories.length} fin{localStories.length !== 1 ? 's locales' : ' locale'}
           </div>
         )}

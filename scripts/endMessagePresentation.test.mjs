@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {
   classifyEndMessagePresentation,
 } from '../src/store/endMessagePresentation.js';
+import { getGeneratedEndMessageControls } from '../src/store/generatedPlayback.js';
+import { getEffectiveEndMessageControlState } from '../src/store/endMessagePresentation.js';
 
 const globalHome = { kind: 'none', effectiveTargetId: null };
 
@@ -54,4 +56,23 @@ test('sequence, absence de global et absence de comportement ont chacune leur pr
     entry: { afterPlaybackPromptAudio: 'fin.mp3' },
   }).presentationKind, 'local_prompt');
   assert.equal(classifyEndMessagePresentation({ entry: {} }).presentationKind, 'none');
+});
+
+test('les controles effectifs du message global sans projection suivent Rust', () => {
+  assert.deepEqual(getGeneratedEndMessageControls({}), {
+    wheel: false,
+    ok: true,
+    home: true,
+    pause: false,
+    autoplay: true,
+  });
+});
+
+test('le resume distingue attente OK, absence de sortie et Accueil desactive', () => {
+  assert.deepEqual(getEffectiveEndMessageControlState(
+    { autoplay: false, ok: true, home: true }, globalHome,
+  ), { playback: 'wait-ok', home: 'pack-start' });
+  assert.deepEqual(getEffectiveEndMessageControlState(
+    { autoplay: false, ok: false, home: false }, { kind: 'target', effectiveTargetId: 'menu:fin' },
+  ), { playback: 'stays', home: 'disabled' });
 });
