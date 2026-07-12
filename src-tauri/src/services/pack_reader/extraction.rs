@@ -1421,7 +1421,46 @@ mod tests {
             dir.join("out").to_str().expect("utf8"),
         )
         .expect("the editor must be able to correct missing selection audio");
-        let imported_story = &imported["entries"][0];
+        let imported_story = imported["entries"]
+            .as_array()
+            .expect("entries")
+            .iter()
+            .find(|entry| entry["name"].as_str() == Some("Pack editable"))
+            .expect("silent title story");
+        assert!(imported_story["itemAudio"].is_null());
+        assert_eq!(imported_story["silentTitleStage"].as_bool(), Some(true));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn missing_selection_audio_field_is_not_marked_as_explicit_silence() {
+        let dir = temp_dir("missing_selection_audio_field");
+        let zip_path = dir.join("pack.zip");
+        let mut story = editable_story_json();
+        let title_stage = story["stageNodes"]
+            .as_array_mut()
+            .expect("stage nodes")
+            .iter_mut()
+            .find(|stage| stage["uuid"].as_str() == Some("title"))
+            .expect("title stage");
+        title_stage
+            .as_object_mut()
+            .expect("title stage object")
+            .remove("audio");
+        write_story_zip(&zip_path, &story);
+
+        let imported = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect("the editor must be able to correct the malformed title stage");
+        let imported_story = imported["entries"]
+            .as_array()
+            .expect("entries")
+            .iter()
+            .find(|entry| entry["name"].as_str() == Some("Pack editable"))
+            .expect("title story");
         assert!(imported_story["itemAudio"].is_null());
         assert!(imported_story.get("silentTitleStage").is_none());
 

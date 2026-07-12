@@ -43,7 +43,9 @@ export function AudioField({
   ttsFilenameHint = 'tts',
   xttsTarget = null,
   accentLabel = false,
+  emptyBadge = null,
   emptyActions = [],
+  filledActions = [],
 }) {
   const { notifyCutPaste } = useMediaTransfer();
   const {
@@ -263,7 +265,7 @@ export function AudioField({
       >
         {!showFilledState ? (
           <div className="audio-empty-row">
-            <div className={`audio-empty ${!file ? 'is-empty' : ''} ${file && !fileAvailable ? 'is-missing' : ''}`} onClick={handleReplace}>
+            <div className={`audio-empty ${!file ? (required ? 'is-empty' : 'is-silent') : ''} ${file && !fileAvailable ? 'is-missing' : ''}`} onClick={handleReplace}>
               <div className="audio-empty-wave" aria-hidden="true">
                 {WAVE_HEIGHTS.slice(0, 12).map((h, i) => (
                   <span key={i} className="audio-empty-wave-bar" style={{ height: h }} />
@@ -275,6 +277,7 @@ export function AudioField({
                   : (label || 'Cliquer pour importer un fichier audio')}
               </span>
               {!file && required ? <span className="audio-required-badge">Requis</span> : null}
+              {!file && emptyBadge ? <span className="audio-silent-badge">{emptyBadge}</span> : null}
               <span className="audio-empty-plus">+</span>
               <div
                 className={`audio-bar-actions${emptyActions.length ? ' audio-bar-actions--with-extra' : ''}`}
@@ -392,6 +395,21 @@ export function AudioField({
                   </Button>
                 </Tooltip>
               )}
+              {filledActions.map(({ key, label: actionLabel, Icon, onClick }) => (
+                <Tooltip key={key} text={actionLabel}>
+                  <Button
+                    variant="icon"
+                    size="sm"
+                    onClick={() => {
+                      stopPlayback(true);
+                      onClick();
+                    }}
+                    aria-label={actionLabel}
+                  >
+                    <Icon className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
+                  </Button>
+                </Tooltip>
+              ))}
               <Tooltip text="Éditer l'audio">
                 <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio">
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />

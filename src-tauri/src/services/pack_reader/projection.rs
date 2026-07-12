@@ -175,15 +175,25 @@ pub(super) fn walk_story_doc_to_entries(
                 eff_first_id = next;
             }
 
-            let chain_audio = stages
-                .get(eff_first_id)
-                .and_then(|s| resolve_asset(s.get("audio").and_then(|v| v.as_str()), assets))
-                .or_else(|| root_audio.clone());
-            let chain_image = stages
-                .get(eff_first_id)
-                .and_then(|s| resolve_asset(s.get("image").and_then(|v| v.as_str()), assets));
+            let chain_stage = stages.get(eff_first_id).copied();
+            let chain_audio = chain_stage
+                .and_then(|stage| resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets));
+            let chain_image = chain_stage
+                .and_then(|stage| resolve_asset(stage.get("image").and_then(|v| v.as_str()), assets));
 
             let terminal_id = chase_single_chain(eff_first_id, &stages, &actions, &mut visited);
+            let has_distinct_title_stage = terminal_id != eff_first_id;
+            let selection_audio = if has_distinct_title_stage {
+                chain_audio.clone()
+            } else {
+                root_audio.clone()
+            };
+            let title_control_settings = if has_distinct_title_stage {
+                chain_stage.map(stage_controls)
+            } else {
+                None
+            };
+            let title_stage_id = has_distinct_title_stage.then(|| eff_first_id.to_string());
 
             let terminal = stages
                 .get(terminal_id.as_str())
@@ -197,8 +207,10 @@ pub(super) fn walk_story_doc_to_entries(
                     "name": pack_title,
                     "audio": resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets)
                               .or_else(|| chain_audio.clone()),
-                    "itemAudio": chain_audio.clone(),
+                    "itemAudio": selection_audio,
                     "itemImage": chain_image.clone(),
+                    "titleControlSettings": title_control_settings,
+                    "_titleStageId": title_stage_id,
                     "controlSettings": stage_controls(terminal),
                 })],
                 1 => {
@@ -235,16 +247,37 @@ pub(super) fn walk_story_doc_to_entries(
                     } else {
                         None
                     };
+                    let selection_stage = if has_distinct_title_stage {
+                        chain_stage.unwrap_or(terminal)
+                    } else {
+                        terminal
+                    };
+                    let selection_item_audio = if has_distinct_title_stage {
+                        selection_audio.clone()
+                    } else {
+                        resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets)
+                    };
+                    let selection_item_image = if has_distinct_title_stage {
+                        chain_image.clone()
+                    } else {
+                        resolve_asset(terminal.get("image").and_then(|v| v.as_str()), assets)
+                    };
+                    let selection_controls = if has_distinct_title_stage {
+                        title_control_settings.clone()
+                    } else {
+                        Some(stage_controls(terminal))
+                    };
                     vec![serde_json::json!({
                         "id": stage_uuid(terminal).unwrap_or(""),
                         "type": "story",
                         "name": story_name,
                         "audio": story_audio,
-                        "itemAudio": resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets),
-                        "itemImage": resolve_asset(terminal.get("image").and_then(|v| v.as_str()), assets),
-                        "titleControlSettings": stage_controls(terminal),
-                        "titleReturnOnHomeStageId": transition_target_stage_id(terminal.get("homeTransition"), &actions),
-                        "titleReturnOnHomeNone": !has_transition_target(terminal.get("homeTransition"), &actions),
+                        "itemAudio": selection_item_audio,
+                        "itemImage": selection_item_image,
+                        "titleControlSettings": selection_controls,
+                        "_titleStageId": title_stage_id,
+                        "titleReturnOnHomeStageId": transition_target_stage_id(selection_stage.get("homeTransition"), &actions),
+                        "titleReturnOnHomeNone": !has_transition_target(selection_stage.get("homeTransition"), &actions),
                         "returnStageId": detection_opt.as_ref().and_then(|d| d.target_stage_id.clone()),
                         "returnStoryStageId": detection_opt.as_ref().and_then(|d| d.next_story_stage_id.clone()),
                         "returnOnHomeStageId": detection_opt.as_ref().and_then(|d| d.home_stage_id.clone()),
@@ -425,6 +458,9 @@ pub(super) fn walk_story_doc_to_entries(
     };
     let reported_unresolved_transitions_detected = !reported_unresolved_transitions.is_empty();
 
+    mark_explicit_silent_title_stages(&mut entries, &stages);
+    mark_explicit_silent_title_stages(&mut shared_entries, &stages);
+
     let pack_version = doc.get("version").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
     let pack_description = doc
         .get("description")
@@ -453,6 +489,58 @@ pub(super) fn walk_story_doc_to_entries(
         "sharedEntries": shared_entries,
         "entries": entries
     }))
+}
+
+/// Un `audio: null` explicite sur le stage de titre d'un pack importé est une
+/// intention silencieuse déjà présente dans le story.json. Un champ `audio`
+/// absent reste au contraire une donnée incomplète à corriger dans l'éditeur.
+fn mark_explicit_silent_title_stages(
+    entries: &mut [serde_json::Value],
+    stages: &HashMap<&str, &serde_json::Value>,
+) {
+    for entry in entries {
+        let is_story = entry.get("type").and_then(|value| value.as_str()) == Some("story");
+        let has_title_controls = entry
+            .get("titleControlSettings")
+            .is_some_and(|value| !value.is_null());
+        let item_audio_is_empty = entry
+            .get("itemAudio")
+            .is_none_or(serde_json::Value::is_null);
+        let stage_id = entry
+            .get("_titleStageId")
+            .and_then(|value| value.as_str())
+            .or_else(|| {
+                entry
+                    .get("nativeStageId")
+                    .and_then(|value| value.as_str())
+            })
+            .or_else(|| entry.get("id").and_then(|value| value.as_str()))
+            .map(str::to_string);
+        let source_has_explicit_null_audio = stage_id
+            .as_deref()
+            .and_then(|id| stages.get(id).copied())
+            .and_then(|stage| stage.get("audio"))
+            .is_some_and(serde_json::Value::is_null);
+
+        if is_story
+            && has_title_controls
+            && item_audio_is_empty
+            && source_has_explicit_null_audio
+        {
+            entry["silentTitleStage"] = serde_json::Value::Bool(true);
+        }
+
+        if let Some(object) = entry.as_object_mut() {
+            object.remove("_titleStageId");
+        }
+
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            mark_explicit_silent_title_stages(children, stages);
+        }
+    }
 }
 
 fn unresolved_transitions_are_square_one_home_only(
