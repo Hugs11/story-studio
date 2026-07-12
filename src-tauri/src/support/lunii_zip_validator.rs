@@ -365,3 +365,97 @@ fn find_mpeg_sync(bytes: &[u8]) -> Option<usize> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::Write;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::validate_lunii_zip;
+
+    #[test]
+    fn explicit_null_audio_is_valid_but_missing_audio_field_is_not() {
+        let dir = std::env::temp_dir().join(format!(
+            "story_studio_lunii_zip_validator_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("current time")
+                .as_nanos(),
+        ));
+        fs::create_dir_all(&dir).expect("create temp dir");
+
+        let explicit_null_path = dir.join("explicit-null.zip");
+        write_stage_zip(&explicit_null_path, true);
+        let explicit_null_report = validate_lunii_zip(&explicit_null_path.to_string_lossy());
+        for code in [
+            "SNODE_MISSING_AUDIO",
+            "SNODE_INVALID_AUDIO",
+            "MISSING_AUDIO_ASSET",
+        ] {
+            assert!(
+                !explicit_null_report
+                    .issues
+                    .iter()
+                    .any(|issue| issue.code == code),
+                "{code} ne doit pas signaler audio: null: {:?}",
+                explicit_null_report.issues
+            );
+        }
+
+        let missing_audio_path = dir.join("missing-audio.zip");
+        write_stage_zip(&missing_audio_path, false);
+        let missing_audio_report = validate_lunii_zip(&missing_audio_path.to_string_lossy());
+        assert!(
+            missing_audio_report
+                .issues
+                .iter()
+                .any(|issue| issue.code == "SNODE_MISSING_AUDIO"),
+            "audio absent doit rester invalide: {:?}",
+            missing_audio_report.issues
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup temp dir");
+    }
+
+    fn write_stage_zip(path: &std::path::Path, include_audio_field: bool) {
+        let mut stage = serde_json::json!({
+            "uuid": "title",
+            "name": "Titre silencieux",
+            "controlSettings": {
+                "wheel": true,
+                "ok": true,
+                "home": true,
+                "pause": false,
+                "autoplay": false
+            }
+        });
+        if include_audio_field {
+            stage["audio"] = serde_json::Value::Null;
+        }
+        let story = serde_json::json!({
+            "format": "v1",
+            "version": 1,
+            "title": "Test",
+            "stageNodes": [stage],
+            "actionNodes": []
+        });
+
+        let file = fs::File::create(path).expect("create zip");
+        let mut writer = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        writer
+            .start_file("story.json", options)
+            .expect("start story");
+        writer
+            .write_all(
+                serde_json::to_string(&story)
+                    .expect("serialize story")
+                    .as_bytes(),
+            )
+            .expect("write story");
+        writer.finish().expect("finish zip");
+    }
+}

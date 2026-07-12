@@ -230,6 +230,7 @@ export function normalizeStoryEntry(entry = {}) {
     audio: normalizeLocalFilePath(entry.audio),
     itemAudio: normalizeLocalFilePath(entry.itemAudio),
     itemImage: normalizeLocalFilePath(entry.itemImage),
+    silentTitleStage: !!entry.silentTitleStage,
     afterPlaybackPromptAudio: normalizeLocalFilePath(entry.afterPlaybackPromptAudio),
     afterPlaybackPromptControlSettings: normalizeControlSettings(
       { controlSettings: entry.afterPlaybackPromptControlSettings },

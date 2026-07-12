@@ -43,6 +43,7 @@ export function AudioField({
   ttsFilenameHint = 'tts',
   xttsTarget = null,
   accentLabel = false,
+  emptyActions = [],
 }) {
   const { notifyCutPaste } = useMediaTransfer();
   const {
@@ -275,7 +276,10 @@ export function AudioField({
               </span>
               {!file && required ? <span className="audio-required-badge">Requis</span> : null}
               <span className="audio-empty-plus">+</span>
-              <div className="audio-bar-actions" aria-label="Actions audio">
+              <div
+                className={`audio-bar-actions${emptyActions.length ? ' audio-bar-actions--with-extra' : ''}`}
+                aria-label="Actions audio"
+              >
                 <Tooltip text="Enregistrer l'audio">
                   <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio">
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
@@ -288,6 +292,22 @@ export function AudioField({
                     </Button>
                   </Tooltip>
                 )}
+                {emptyActions.map(({ key, label: actionLabel, Icon, onClick }) => (
+                  <Tooltip key={key} text={actionLabel}>
+                    <Button
+                      variant="icon"
+                      size="sm"
+                      onPointerDown={stopButtonEvent}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClick();
+                      }}
+                      aria-label={actionLabel}
+                    >
+                      <Icon className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
+                    </Button>
+                  </Tooltip>
+                ))}
               </div>
               {file && !fileAvailable && onClear && (
                 <Tooltip text="Retirer le lien cassé">

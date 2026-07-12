@@ -171,6 +171,12 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
         .filter(|value| !value.trim().is_empty())
         .unwrap_or("Pack importé");
     let mut project = project_from_imported_entries(&imported, title)?;
+    // L'extraction doit pouvoir ouvrir un pack existant incomplet pour que
+    // l'éditeur le signale et propose l'exception silencieuse. Cette tolérance
+    // ne concerne que le verdict d'import : le projet réellement retourné à
+    // l'UI garde son marqueur à false et la génération reste bloquante.
+    allow_missing_selection_audio_for_import_validation(&mut project.root_entries);
+    allow_missing_selection_audio_for_import_validation(&mut project.shared_entries);
     let root_entry_count = count_project_entries(&project.root_entries);
     let shared_entry_count = count_project_entries(&project.shared_entries);
     let projected_entry_count = root_entry_count + shared_entry_count;
@@ -671,6 +677,21 @@ fn project_from_imported_entries(
             harmonize_loudness: true,
         },
     })
+}
+
+fn allow_missing_selection_audio_for_import_validation(entries: &mut [ProjectEntry]) {
+    for entry in entries {
+        if entry.entry_type == "story"
+            && entry
+                .item_audio
+                .as_deref()
+                .map(str::trim)
+                .is_none_or(str::is_empty)
+        {
+            entry.silent_title_stage = true;
+        }
+        allow_missing_selection_audio_for_import_validation(&mut entry.children);
+    }
 }
 
 fn rewrite_imported_navigation_target(target: Option<String>, wrapper_id: &str) -> Option<String> {
@@ -1374,6 +1395,35 @@ mod tests {
         assert!(report.authoring_editable);
         assert!(!report.read_only_inspectable);
         assert!(!report.uses_graph_projection);
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn pack_with_missing_selection_audio_is_importable_for_editor_correction() {
+        let dir = temp_dir("missing_selection_audio");
+        let zip_path = dir.join("pack.zip");
+        let mut story = editable_story_json();
+        let title_stage = story["stageNodes"]
+            .as_array_mut()
+            .expect("stage nodes")
+            .iter_mut()
+            .find(|stage| stage["uuid"].as_str() == Some("title"))
+            .expect("title stage");
+        title_stage["audio"] = serde_json::Value::Null;
+        write_story_zip(&zip_path, &story);
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("report");
+        assert!(report.authoring_editable, "{}", report.reason);
+
+        let imported = unpack_zip_to_entries(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect("the editor must be able to correct missing selection audio");
+        let imported_story = &imported["entries"][0];
+        assert!(imported_story["itemAudio"].is_null());
+        assert!(imported_story.get("silentTitleStage").is_none());
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

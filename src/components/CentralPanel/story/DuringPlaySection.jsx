@@ -5,14 +5,7 @@ import { encodeMenuNavigationTarget } from '../../../store/navigationTargets';
 import { getGeneratedStoryNavigation } from '../../../store/generatedNavigation';
 import { generatedTargetIdToSelectValue, NavigationTargetSelect } from './storyUtils';
 import { StoryDisclosure } from './StoryDisclosure';
-
-const TITLE_CONTROL_DEFAULTS = {
-  autoplay: false,
-  ok: true,
-  home: true,
-  pause: false,
-  wheel: true,
-};
+import { TITLE_CONTROL_DEFAULTS } from '../../../store/storyTitleStage';
 
 const PLAY_CONTROLS = [
   {

@@ -104,6 +104,36 @@ test('projectToRustExport keeps pack mode unaffected when title is empty', () =>
   assert.equal(rustExport.name, 'Story Studio');
 });
 
+test('projectToRustExport preserves an explicit silent title stage', () => {
+  const rustExport = projectToRustExport(normalizeProjectData({
+    projectName: 'Titre silencieux',
+    packMetadata: { title: 'Titre silencieux', minAge: '3', version: 1 },
+    projectType: 'pack',
+    globalOptions: {},
+    rootEntries: [{
+      id: 'story-silent',
+      type: 'story',
+      name: 'Silencieuse',
+      audio: 'story.mp3',
+      itemAudio: null,
+      itemImage: 'title.png',
+      silentTitleStage: true,
+      titleControlSettings: { autoplay: false, wheel: true, pause: false, ok: true, home: true },
+    }],
+  }));
+
+  const story = rustExport.rootEntries[0];
+  assert.equal(story.itemAudio, null);
+  assert.equal(story.silentTitleStage, true);
+  assert.deepEqual(story.titleControlSettings, {
+    autoplay: false,
+    wheel: true,
+    pause: false,
+    ok: true,
+    home: true,
+  });
+});
+
 test('projectToSerializable and projectToRustExport drop stale sharedEntries', () => {
   const project = normalizeProjectData({
     projectName: 'Partages',
