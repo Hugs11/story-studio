@@ -218,6 +218,23 @@ fn prompt_home_next_story_targets_next_sibling_title() {
 }
 
 #[test]
+fn prompt_home_next_story_on_last_story_falls_back_to_prompt_ok() {
+    let document = build_story_document(&menu_report(vec![
+        plain_story("a", "A"),
+        prompt_story("b", "B", Some("root"), Some("next_story"), false),
+    ]))
+    .expect("document");
+
+    let prompt = stage_by_name(&document, "Fin - B");
+    let ok = prompt.ok_transition.as_ref().expect("prompt ok");
+    let home = prompt.home_transition.as_ref().expect("prompt home");
+    // Dernière sœur : `next_story` non résolu → repli sur la transition OK du prompt (la racine),
+    // jamais le Home de l'histoire. Home et OK pointent donc vers la même transition.
+    assert_eq!(home.action_node, ok.action_node);
+    assert_eq!(home.option_index, ok.option_index);
+}
+
+#[test]
 fn prompt_home_none_emits_no_transition() {
     let document = build_story_document(&menu_report(vec![
         prompt_story("a", "A", Some("root"), None, true),

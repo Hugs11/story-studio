@@ -10,7 +10,13 @@ import {
   normalizeNavigationTarget,
 } from '../../store/navigationTargets.js';
 import { getGeneratedStoryNavigation } from '../../store/generatedNavigation.js';
-import { classifyGlobalEndHome, END_HOME_NONE, END_HOME_TARGET } from '../../store/endMessageHome.js';
+import {
+  classifyGlobalEndHome,
+  classifyPromptHome,
+  END_HOME_FOLLOW_OK,
+  END_HOME_NONE,
+  END_HOME_TARGET,
+} from '../../store/endMessageHome.js';
 
 export function findEntryLocation(entries, targetId, menuPath = []) {
   for (let index = 0; index < (entries?.length ?? 0); index += 1) {
@@ -108,14 +114,56 @@ export function normalizeHomeTarget(target, options = {}) {
 // Cible Home effective du message de fin GLOBAL, pour l'histoire source courante.
 // Miroir du volet Home de `compute_night_bridge_targets` :
 //   global Home vide → `none` (aucune transition, retour au squareOne/couverture) ;
+//   `current_menu`   → repli du message (destination OK) côté Rust, jamais le menu parent ;
 //   cible définie    → cible résolue, `next_story` restant contextuel (résolu par l'appelant).
-// Le repli (dernière histoire, cible non résolue) est le retour OK du message de fin ;
-// il est laissé à l'appelant, seul à connaître l'état 'endnode'.
+// Le repli (dernière histoire, `current_menu`, cible non résolue) est le retour OK du message
+// de fin ; il est laissé à l'appelant, seul à connaître l'état 'endnode'.
 export function resolveEndNodeHomeTarget(project, parentMenu) {
   if (classifyGlobalEndHome(project) === END_HOME_NONE) {
     return { kind: END_HOME_NONE, targetId: null };
   }
-  return { kind: END_HOME_TARGET, targetId: resolveSequenceTarget(project?.nightModeHomeReturn, parentMenu) };
+  const raw = project?.nightModeHomeReturn;
+  // `current_menu` retombe sur `fallback_transition` côté Rust (= destination OK) : targetId
+  // null → l'appelant suit le retour OK du message de fin.
+  const targetId = isCurrentMenuNavigationTarget(raw) ? null : resolveSequenceTarget(raw, parentMenu);
+  return { kind: END_HOME_TARGET, targetId };
+}
+
+// Actions Home résolues purement (testables sans DOM) ; le simulateur les exécute.
+export const HOME_ACTION = Object.freeze({
+  COVER: 'cover', // retour au squareOne / couverture du pack
+  MESSAGE_OK: 'message-ok', // suit la destination OK du message (prompt/fin)
+  NEXT_STORY: 'next-story', // lecture de la sœur suivante
+  TARGET: 'target', // cible explicite résolue (`targetId`)
+});
+
+function hasNextStorySibling(story, parentMenu, rootEntries) {
+  const siblings = parentMenu ? (parentMenu.children ?? []) : (rootEntries ?? []);
+  const index = siblings.findIndex((entry) => entry.id === story?.id);
+  if (index < 0) return false;
+  return siblings.slice(index + 1).some((entry) => entry.type === 'story');
+}
+
+// Volet Home d'un prompt de fin local, résolu comme Rust (`resolve_story_home_transition`) :
+//   homeNone             → COVER (aucune transition → début du pack) ;
+//   sans cible           → MESSAGE_OK (suit OK) ;
+//   `current_menu`       → MESSAGE_OK (repli du message, jamais le menu parent) ;
+//   next_story + sœur    → NEXT_STORY ;
+//   next_story, dernière → MESSAGE_OK (repli sur la destination OK, pas le Home de l'histoire) ;
+//   cible explicite      → TARGET.
+export function resolvePromptHomeAction(story, parentMenu, rootEntries = []) {
+  const kind = classifyPromptHome(story);
+  if (kind === END_HOME_NONE) return { action: HOME_ACTION.COVER };
+  if (kind === END_HOME_FOLLOW_OK) return { action: HOME_ACTION.MESSAGE_OK };
+  const raw = normalizeNavigationTarget(story?.afterPlaybackPromptHomeTarget);
+  if (isCurrentMenuNavigationTarget(raw)) return { action: HOME_ACTION.MESSAGE_OK };
+  if (isNextStoryNavigationTarget(raw)) {
+    return hasNextStorySibling(story, parentMenu, rootEntries)
+      ? { action: HOME_ACTION.NEXT_STORY }
+      : { action: HOME_ACTION.MESSAGE_OK };
+  }
+  const targetId = resolveSequenceTarget(raw, parentMenu);
+  return targetId ? { action: HOME_ACTION.TARGET, targetId } : { action: HOME_ACTION.MESSAGE_OK };
 }
 
 export function resolveSequenceTarget(target, parentMenu) {

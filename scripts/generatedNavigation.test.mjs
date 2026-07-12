@@ -237,6 +237,24 @@ test('mirror resolves prompt Home next_story to the next sibling', () => {
   assert.equal(nav.promptHome.effectiveTargetId, 'story:b');
 });
 
+test('mirror: prompt Home next_story on the last story falls back to the prompt OK target, not the story Home', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a');
+  const b = story('b', {
+    afterPlaybackPromptAudio: 'p.mp3',
+    afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeTarget: 'next_story',
+  });
+  menu.children = [a, b];
+  const p = project([menu]);
+
+  const nav = getGeneratedStoryNavigation(b, menu, p, p.rootEntries);
+
+  assert.equal(nav.promptReturn.targetId, 'root');
+  // Home suit la destination OK du prompt (racine), jamais le menu parent (Home d'histoire).
+  assert.equal(nav.promptHome.effectiveTargetId, 'root');
+});
+
 test('mirror resolves sequence final OK next_story to the next sibling, menu on the last', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a', { afterPlaybackSequence: [{ id: 's1', okTarget: 'next_story' }] });

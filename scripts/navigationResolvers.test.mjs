@@ -1,7 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { resolveEndNodeHomeTarget } from '../src/tabs/EmulatorTab/navigationResolvers.js';
+import {
+  HOME_ACTION,
+  resolveEndNodeHomeTarget,
+  resolvePromptHomeAction,
+} from '../src/tabs/EmulatorTab/navigationResolvers.js';
+
+function story(id, fields = {}) {
+  return { id, type: 'story', name: id.toUpperCase(), ...fields };
+}
+
+function promptStory(id, fields = {}) {
+  return story(id, { afterPlaybackPromptAudio: 'p.mp3', ...fields });
+}
 
 // resolveEndNodeHomeTarget : volet Home du message de fin global, consommé par le
 // ProjectSimulator pour rester à parité avec le ZipSimulator / story.json.
@@ -30,10 +42,12 @@ test('endnode home: explicit target is resolved', () => {
   );
 });
 
-test('endnode home: current_menu resolves against the source parent menu', () => {
+test('endnode home: current_menu falls back to the OK destination (matches Rust), not the parent menu', () => {
+  // Rust résout NavigationTarget::CurrentMenu vers fallback_transition (= destination OK du
+  // message), pas le menu parent. targetId null → l'appelant suit le retour OK.
   assert.deepEqual(
     resolveEndNodeHomeTarget({ nightModeHomeReturn: 'current_menu' }, { id: 'menu-1' }),
-    { kind: 'target', targetId: 'menu-1' },
+    { kind: 'target', targetId: null },
   );
 });
 
@@ -43,4 +57,43 @@ test('endnode home: next_story stays a literal for contextual per-story resoluti
     resolveEndNodeHomeTarget({ nightModeHomeReturn: 'next_story' }, null),
     { kind: 'target', targetId: 'next_story' },
   );
+});
+
+// resolvePromptHomeAction : volet Home d'un prompt local, aligné sur Rust.
+
+test('prompt home action: homeNone returns to the pack start', () => {
+  const a = promptStory('a', { afterPlaybackPromptHomeNone: true });
+  assert.deepEqual(resolvePromptHomeAction(a, null, [a]), { action: HOME_ACTION.COVER });
+});
+
+test('prompt home action: no target follows the prompt OK path', () => {
+  const a = promptStory('a', { afterPlaybackPromptOkTarget: 'root' });
+  assert.deepEqual(resolvePromptHomeAction(a, null, [a]), { action: HOME_ACTION.MESSAGE_OK });
+});
+
+test('prompt home action: explicit target is navigated directly', () => {
+  const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'menu:m1' });
+  assert.deepEqual(resolvePromptHomeAction(a, null, [a]), { action: HOME_ACTION.TARGET, targetId: 'm1' });
+});
+
+test('prompt home action: next_story with a following sibling plays it', () => {
+  const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'next_story' });
+  const b = story('b');
+  assert.deepEqual(resolvePromptHomeAction(a, null, [a, b]), { action: HOME_ACTION.NEXT_STORY });
+});
+
+test('prompt home action: next_story on the LAST story falls back to the prompt OK path (P1)', () => {
+  const a = story('a');
+  const b = promptStory('b', {
+    afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeTarget: 'next_story',
+  });
+  // Dernière sœur : jamais le Home de l'histoire, mais la destination OK du prompt.
+  assert.deepEqual(resolvePromptHomeAction(b, null, [a, b]), { action: HOME_ACTION.MESSAGE_OK });
+});
+
+test('prompt home action: current_menu follows the prompt OK path (P2), not the parent menu', () => {
+  const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'current_menu' });
+  const menu = { id: 'menu-1', type: 'menu', children: [a] };
+  assert.deepEqual(resolvePromptHomeAction(a, menu, []), { action: HOME_ACTION.MESSAGE_OK });
 });
