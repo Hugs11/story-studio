@@ -1,4 +1,4 @@
-export const LEFT_PANEL_MIN_WIDTH = 300;
+export const LEFT_PANEL_MIN_WIDTH = 200;
 
 export function startResize(e, panelClass, cssVar, direction, minWidth = 150, options = {}) {
   e.preventDefault();
@@ -8,6 +8,8 @@ export function startResize(e, panelClass, cssVar, direction, minWidth = 150, op
     ? options.maxWidth
     : () => options.maxWidth ?? window.innerWidth * 0.42;
   let currentWidth = startW;
+
+  options.onStart?.();
 
   const applyWidth = (width) => {
     const maxWidth = Math.max(minWidth, getMaxWidth());
@@ -23,6 +25,7 @@ export function startResize(e, panelClass, cssVar, direction, minWidth = 150, op
   const onUp = () => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
+    options.onEnd?.(currentWidth);
     options.onCommit?.(currentWidth);
   };
   document.addEventListener('mousemove', onMove);

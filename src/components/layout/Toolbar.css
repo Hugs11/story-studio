@@ -142,49 +142,47 @@
 .chrome-panel-pill {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   padding: 3px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--bg0);
+  background: var(--bg1);
 }
 
 .chrome-panel-toggle {
-  width: 34px;
-  height: 26px;
+  width: 38px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: var(--control-text-muted);
+  color: var(--muted);
   cursor: pointer;
   transition:
-    background var(--dur-fast),
-    border-color var(--dur-fast),
-    color var(--dur-fast);
+    background 0.12s,
+    color 0.12s;
 }
 
-.chrome-panel-toggle:hover:not(.is-inert) {
-  color: var(--control-text);
-  background: var(--bg3);
+.chrome-panel-toggle:hover {
+  color: var(--text-secondary);
+  background: var(--bg2);
 }
 
 .chrome-panel-toggle.is-active {
-  color: var(--accent-text);
-  border-color: var(--accent-border);
-  background: var(--accent-dim);
+  color: var(--text);
+  background: var(--bg3);
 }
 
-.chrome-panel-toggle.is-inert {
-  cursor: default;
+.chrome-panel-toggle .chrome-icon {
+  width: 17px;
+  height: 17px;
 }
 
 .chrome-panel-toggle:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
 }
 
 .chrome-pack-options-caret {

@@ -50,18 +50,26 @@ function ToolbarButton({
 }
 
 // Bouton segmenté du pill « Arbre / Réglages / Diagramme ».
-// `inert` : la bascule est bloquée (Réglages seul panneau central) → clic no-op côté
-// hook, on signale seulement l'état verrouillé visuellement.
-function PanelToggle({ id, title, Icon, active, inert = false, onClick }) {
+function PanelToggle({ id, title, Icon, active, onClick }) {
+  function handleKeyDown(event) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const toggles = [...(event.currentTarget.parentElement?.querySelectorAll('.chrome-panel-toggle') ?? [])];
+    const currentIndex = toggles.indexOf(event.currentTarget);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const offset = event.key === 'ArrowRight' ? 1 : -1;
+    toggles[(currentIndex + offset + toggles.length) % toggles.length]?.focus();
+  }
+
   return (
     <Tooltip text={title}>
       <button
         type="button"
         data-toolbar-id={id}
-        className={`chrome-panel-toggle ${active ? 'is-active' : ''} ${inert ? 'is-inert' : ''}`}
+        className={`chrome-panel-toggle ${active ? 'is-active' : ''}`}
         onClick={onClick}
+        onKeyDown={handleKeyDown}
         aria-pressed={active}
-        aria-disabled={inert || undefined}
         aria-label={title}
       >
         <ToolbarIcon Icon={Icon} className="chrome-icon" />
@@ -138,7 +146,7 @@ export function Toolbar({
       </div>
 
       <div className="chrome-toolbar-center">
-        <div className="chrome-panel-pill" role="group" aria-label="Panneaux affichés">
+        <div className="chrome-panel-pill" role="group" aria-label="Panneaux visibles">
           <PanelToggle
             id="toggle-tree"
             title={withShortcut('Afficher/masquer l’arbre', shortcutLabels.toggleTree)}
@@ -151,7 +159,6 @@ export function Toolbar({
             title={withShortcut('Afficher/masquer les réglages', shortcutLabels.toggleSettings)}
             Icon={SlidersHorizontal}
             active={panels.showSettings}
-            inert={panels.showSettings && !panels.showDiagram}
             onClick={onToggleSettings}
           />
           <PanelToggle

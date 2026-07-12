@@ -79,15 +79,68 @@ body {
   background: var(--bg0);
 }
 
-.workspace-diagram-column {
-  flex: 0 0 var(--workspace-diagram-column-width, 470px);
-  min-width: 340px;
-  max-width: 920px;
+/* Le dernier panneau visible reprend toute la place : masquer le diagramme ne
+   doit pas laisser une colonne fantôme à droite des réglages. */
+.workspace--without-diagram .panel-center,
+.workspace--tree-only .panel-left {
+  flex: 1 1 0;
+  max-width: none;
+}
+
+.workspace-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.workspace-empty-state p {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+}
+
+.workspace-empty-state span {
+  font-size: 12px;
+}
+
+.workspace-empty-state-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.workspace-empty-state button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--borderLt);
+  border-radius: 7px;
+  background: var(--bg1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.workspace-empty-state button:hover {
+  background: var(--bg2);
+  color: var(--text);
+}
+
+.workspace-empty-state button:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
+.workspace-diagram {
+  flex: 1 1 340px;
+  min-width: 280px;
   min-height: 0;
   display: flex;
   overflow: hidden;
   background: var(--bg1);
-  border-left: 0.5px solid var(--border);
 }
 
 .workspace-diagram-full {
@@ -98,17 +151,51 @@ body {
   overflow: hidden;
 }
 
-/* Poignée de redimensionnement */
+/* Poignées de redimensionnement : la bande visible fait 7 px, avec une zone
+   de saisie élargie par le pseudo-élément. */
 .resize-handle {
-  width: 5px;
+  width: 7px;
   cursor: col-resize;
-  background: transparent;
+  background: var(--bg0);
   flex-shrink: 0;
   transition: background 0.15s;
   position: relative;
   z-index: 10;
 }
-.resize-handle:hover { background: color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--borderLt);
+  transform: translate(-50%, -50%);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -2px;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible {
+  background: var(--accent-dim);
+}
+
+.resize-handle:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: -1px;
+}
+
+body.workspace-is-resizing,
+body.workspace-is-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
 
 /* Panel gauche — arborescence : largeur fixe (poignée dédiée), jamais rétrécie */
 .panel-left {
@@ -150,33 +237,81 @@ body {
   flex: 1;
 }
 
-/* Panel central — Réglages : colonne extensible, toujours flex, jamais fixe */
+/* Panel central — Réglages : colonne pleine hauteur, à largeur persistée. */
 .panel-center {
-  flex: 1 1 0;
+  flex: 0 0 var(--workspace-settings-panel-width, 800px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg0);
+  background: var(--bg1);
+  min-width: 560px;
+  max-width: 900px;
+}
+
+/* Quand les trois vues sont actives, le diagramme ne peut jamais s'effondrer
+   à zéro. Les largeurs mémorisées restent les cibles sur grand écran ; sous
+   pression, l'arbre puis Réglages se contractent temporairement. */
+.workspace--with-diagram .panel-left {
+  flex: 0 1 var(--col-left);
+  min-width: 200px;
+}
+
+.workspace--with-diagram .panel-center {
+  flex: 0 1 var(--workspace-settings-panel-width, 800px);
   min-width: 400px;
+}
+
+@media (max-width: 900px) {
+  .workspace--with-diagram .panel-left {
+    min-width: 160px;
+  }
+
+  .workspace--with-diagram .panel-center {
+    min-width: 320px;
+  }
+
+  .workspace--with-diagram .workspace-diagram {
+    flex-basis: 280px;
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 700px) {
+  .workspace--with-diagram .panel-left {
+    min-width: 140px;
+  }
+
+  .workspace--with-diagram .panel-center {
+    min-width: 280px;
+  }
+
+  .workspace--with-diagram .workspace-diagram {
+    flex-basis: 220px;
+    min-width: 200px;
+  }
 }
 
 .center-body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  align-items: center;
+  gap: 10px;
+  align-items: stretch;
   min-width: 0;
 }
 
 .center-body > * {
   width: 100%;
-  max-width: min(var(--center-content-max), 100%);
+  max-width: none;
   min-width: 0;
   flex-shrink: 0;
+}
+
+.center-body > :not(.card) {
+  padding: 12px 10px;
 }
 
 /* En-tête réglages : membre central du bandeau uniforme (44 px fixes, fond commun,

@@ -9,7 +9,7 @@
   width: 100%;
 }
 
-/* Cards */
+/* Cards hors colonne Réglages */
 .card {
   background: var(--bg1);
   border: 1px solid var(--border);
@@ -2271,4 +2271,19 @@
   .advanced-toggle-btn {
     align-self: flex-start;
   }
+}
+
+/* Les sections restent ancrées dans la colonne, mais retrouvent une hiérarchie
+   légère : surface discrète, bord fin, sans ombre ni carte flottante. */
+.panel-center .card {
+  background: color-mix(in srgb, var(--bg2) 62%, var(--bg1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: none;
+}
+
+.panel-center .card.card--danger {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
 }
