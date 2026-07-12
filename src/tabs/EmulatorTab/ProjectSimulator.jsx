@@ -10,8 +10,8 @@ import { LuniiShell } from './LuniiShell';
 import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
-import { findEntryLocation, getMenuBrowseState, HOME_ACTION, normalizeHomeTarget, resolveEndNodeHomeTarget, resolvePromptHomeAction, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
-import { END_HOME_NONE } from '../../store/endMessageHome';
+import { findEntryLocation, getMenuBrowseState, HOME_ACTION, resolveEndNodeHomeTarget, resolvePromptHomeAction, resolveStoryHomeTarget } from './navigationResolvers';
+import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
 const END_NODE_ID = 'end-node';
@@ -170,15 +170,12 @@ export function ProjectSimulator({
   }, [currentEntry, currentMenu, entryIdx, isSimple, menuPath, navigateToNextStory, navigateToTarget, project]);
 
   const navigateSequenceOk = useCallback(() => {
-    const step = activeSequence[sequenceIndex];
-    const target = resolveSequenceTarget(step?.okTarget, currentMenu) ?? resolveStoryReturnTarget(activeStory, currentMenu, project);
-    if (target === 'next_story') {
-      if (navigateToNextStory()) return;
-    } else if (target && navigateToTarget(target)) {
-      return;
-    }
+    const behavior = activeStory?.type === 'story'
+      ? getEffectiveEndBehavior(activeStory, currentMenu, project, rootEntries)
+      : null;
+    if (behavior?.finalTargetId && navigateToTarget(behavior.finalTargetId)) return;
     navigateAfterStory();
-  }, [activeSequence, activeStory, currentMenu, navigateAfterStory, navigateToNextStory, navigateToTarget, sequenceIndex]);
+  }, [activeStory, currentMenu, navigateAfterStory, navigateToTarget, project, rootEntries]);
 
   const navigateSequenceHome = useCallback(() => {
     const step = activeSequence[sequenceIndex];
@@ -191,59 +188,57 @@ export function ProjectSimulator({
       setSequenceIndex((index) => index + 1);
       return;
     }
-    const target = step?.homeFollowsOk
-      ? (resolveSequenceTarget(step?.okTarget, currentMenu) ?? resolveStoryReturnTarget(activeStory, currentMenu, project))
-      : (normalizeHomeTarget(resolveSequenceTarget(step?.homeTarget, currentMenu)) ?? resolveStoryHomeTarget(activeStory, currentMenu, project));
-    if (target === 'next_story') {
-      if (navigateToNextStory()) return;
-    } else if (target && navigateToTarget(target)) {
+    if (step?.homeFollowsOk) {
+      navigateSequenceOk();
       return;
     }
+    const fallbackTarget = resolveStoryHomeTarget(activeStory, currentMenu, project);
+    const target = resolveEndHomeTarget(step?.homeTarget, {
+      entry: activeStory,
+      parentMenu: currentMenu,
+      rootEntries,
+      fallbackTargetId: fallbackTarget,
+    });
+    if (target && navigateToTarget(target)) return;
     navigateHomeFromStory();
-  }, [activeSequence, activeStory, currentMenu, goToCover, navigateHomeFromStory, navigateToNextStory, navigateToTarget, project, sequenceIndex]);
+  }, [activeSequence, activeStory, currentMenu, goToCover, navigateHomeFromStory, navigateSequenceOk, navigateToTarget, project, rootEntries, sequenceIndex]);
 
   const navigatePromptOk = useCallback(() => {
-    const target = resolveSequenceTarget(activeStory?.afterPlaybackPromptOkTarget, currentMenu)
-      ?? resolveStoryReturnTarget(activeStory, currentMenu, project);
-    if (target === 'next_story') {
-      if (navigateToNextStory()) return;
-    } else if (target && navigateToTarget(target)) {
-      return;
-    }
+    const navigation = activeStory?.type === 'story'
+      ? getGeneratedStoryNavigation(activeStory, currentMenu, project, rootEntries)
+      : null;
+    if (navigation?.promptReturn.targetId && navigateToTarget(navigation.promptReturn.targetId)) return;
     navigateAfterStory();
-  }, [activeStory, currentMenu, navigateAfterStory, navigateToNextStory, navigateToTarget, project]);
+  }, [activeStory, currentMenu, navigateAfterStory, navigateToTarget, project, rootEntries]);
 
   const navigatePromptHome = useCallback(() => {
     const home = resolvePromptHomeAction(activeStory, currentMenu, rootEntries);
-    // none → retour au début du pack ; next-story → sœur suivante ; target → cible explicite.
+    // none → retour au début du pack ; target → approche/cible explicite résolue.
     if (home.action === HOME_ACTION.COVER) {
       goToCover();
       return;
     }
-    if (home.action === HOME_ACTION.NEXT_STORY) {
-      if (navigateToNextStory()) return;
-    } else if (home.action === HOME_ACTION.TARGET && navigateToTarget(home.targetId)) {
+    if (home.action === HOME_ACTION.TARGET && navigateToTarget(home.targetId)) {
       return;
     }
     // follow-ok, current_menu, next_story en dernière position, cible non résolue → chemin OK.
     navigatePromptOk();
-  }, [activeStory, currentMenu, rootEntries, goToCover, navigatePromptOk, navigateToNextStory, navigateToTarget]);
+  }, [activeStory, currentMenu, rootEntries, goToCover, navigatePromptOk, navigateToTarget]);
 
   const navigateEndNodeHome = useCallback(() => {
-    const home = resolveEndNodeHomeTarget(project, currentMenu);
+    const story = isSimple ? simpleStory : currentEntry;
+    const home = resolveEndNodeHomeTarget(project, currentMenu, story, rootEntries);
     // Home global vide → none → retour au squareOne (et non « suit OK »).
     if (home.kind === END_HOME_NONE) {
       goToCover();
       return;
     }
-    if (home.targetId === 'next_story') {
-      if (navigateToNextStory()) return;
-    } else if (home.targetId && navigateToTarget(home.targetId)) {
+    if (home.targetId && navigateToTarget(home.targetId)) {
       return;
     }
     // Repli canonique (dernière histoire, cible non résolue) = retour OK du message de fin.
     navigateAfterStory();
-  }, [currentMenu, goToCover, navigateAfterStory, navigateToNextStory, navigateToTarget, project]);
+  }, [currentEntry, currentMenu, goToCover, isSimple, navigateAfterStory, navigateToTarget, project, rootEntries, simpleStory]);
 
   const advanceSequence = useCallback(() => {
     if (sequenceIndex + 1 < activeSequence.length) {

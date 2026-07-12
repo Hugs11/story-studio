@@ -1,4 +1,15 @@
-import { normalizeNavigationTarget } from './navigationTargets.js';
+import {
+  NAV_TARGET_NEXT_STORY,
+  decodeNavigationMenuId,
+  decodeNavigationStoryId,
+  encodeStoryNavigationTarget,
+  isCurrentMenuNavigationTarget,
+  isNextStoryNavigationTarget,
+  isRootNavigationTarget,
+  isStoryNavigationTarget,
+  isStoryPlayNavigationTarget,
+  normalizeNavigationTarget,
+} from './navigationTargets.js';
 
 // Sémantique Home d'un message de fin (global ou prompt local), miroir du builder Rust.
 // Trois états distincts que l'UI ne doit jamais confondre : `none` (absence de transition)
@@ -34,4 +45,72 @@ export function resolveEndHome(kind, { okTargetId = null, explicitTargetId = nul
   if (kind === END_HOME_FOLLOW_OK) return { kind, targetId: okTargetId ?? null };
   if (kind === END_HOME_TARGET) return { kind, targetId: explicitTargetId ?? null };
   return { kind: END_HOME_NONE, targetId: null };
+}
+
+function findNextStoryTarget(entry, parentMenu, rootEntries) {
+  if (!entry) return NAV_TARGET_NEXT_STORY;
+  const siblings = parentMenu ? (parentMenu.children ?? []) : (rootEntries ?? []);
+  const index = siblings.findIndex((candidate) => candidate.id === entry.id);
+  if (index < 0) return null;
+  const next = siblings.slice(index + 1).find((candidate) => candidate.type === 'story');
+  return next?.id ? encodeStoryNavigationTarget(next.id) : null;
+}
+
+// Résolution d'une cible Home miroir de `resolve_story_home_transition` Rust :
+// - current_menu est un fallback du message, pas le parent ;
+// - next_story devient l'approche de la sœur suivante, sinon le fallback du message ;
+// - story_play:X revient à l'approche/titre X, jamais à sa lecture directe.
+export function resolveEndHomeTarget(
+  target,
+  { entry = null, parentMenu = null, rootEntries = [], fallbackTargetId = null } = {},
+) {
+  const normalized = normalizeNavigationTarget(target);
+  if (!normalized) return fallbackTargetId ?? null;
+  if (isCurrentMenuNavigationTarget(normalized)) return fallbackTargetId ?? null;
+  if (isNextStoryNavigationTarget(normalized)) {
+    return findNextStoryTarget(entry, parentMenu, rootEntries) ?? fallbackTargetId ?? null;
+  }
+  if (isRootNavigationTarget(normalized)) return 'root';
+  if (isStoryPlayNavigationTarget(normalized)) {
+    return encodeStoryNavigationTarget(decodeNavigationStoryId(normalized));
+  }
+  if (isStoryNavigationTarget(normalized)) return normalized;
+  return decodeNavigationMenuId(normalized);
+}
+
+export function resolvePromptEndHome(
+  entry,
+  { parentMenu = null, rootEntries = [], okTargetId = null } = {},
+) {
+  const kind = classifyPromptHome(entry);
+  if (kind === END_HOME_NONE) {
+    return { kind, targetId: null, effectiveTargetId: null };
+  }
+  if (kind === END_HOME_FOLLOW_OK) {
+    return { kind, targetId: null, effectiveTargetId: okTargetId ?? null };
+  }
+  const targetId = resolveEndHomeTarget(entry?.afterPlaybackPromptHomeTarget, {
+    entry,
+    parentMenu,
+    rootEntries,
+    fallbackTargetId: okTargetId,
+  });
+  return { kind, targetId, effectiveTargetId: targetId };
+}
+
+export function resolveGlobalEndHome(
+  project,
+  { entry = null, parentMenu = null, rootEntries = [], okTargetId = null } = {},
+) {
+  const kind = classifyGlobalEndHome(project);
+  if (kind === END_HOME_NONE) {
+    return { kind, targetId: null, effectiveTargetId: null };
+  }
+  const targetId = resolveEndHomeTarget(project?.nightModeHomeReturn, {
+    entry,
+    parentMenu,
+    rootEntries,
+    fallbackTargetId: okTargetId,
+  });
+  return { kind, targetId, effectiveTargetId: targetId };
 }

@@ -255,6 +255,36 @@ test('mirror: prompt Home next_story on the last story falls back to the prompt 
   assert.equal(nav.promptHome.effectiveTargetId, 'root');
 });
 
+test('mirror: prompt Home current_menu follows prompt OK, not the parent menu', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', {
+    afterPlaybackPromptAudio: 'p.mp3',
+    afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeTarget: 'current_menu',
+  });
+  menu.children = [a];
+  const p = project([menu]);
+
+  const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
+
+  assert.equal(nav.promptReturn.targetId, 'root');
+  assert.equal(nav.promptHome.effectiveTargetId, 'root');
+});
+
+test('mirror: prompt Home story_play targets the story approach, not direct playback', () => {
+  const a = story('a', {
+    afterPlaybackPromptAudio: 'p.mp3',
+    afterPlaybackPromptHomeTarget: 'story_play:b',
+  });
+  const b = story('b');
+  const p = project([a, b]);
+
+  const nav = getGeneratedStoryNavigation(a, null, p, p.rootEntries);
+
+  assert.equal(nav.promptHome.targetId, 'story:b');
+  assert.equal(nav.promptHome.effectiveTargetId, 'story:b');
+});
+
 test('mirror resolves sequence final OK next_story to the next sibling, menu on the last', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a', { afterPlaybackSequence: [{ id: 's1', okTarget: 'next_story' }] });

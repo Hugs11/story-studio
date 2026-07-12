@@ -11,7 +11,7 @@ import {
   normalizeNavigationTarget,
 } from './navigationTargets.js';
 import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
-import { classifyGlobalEndHome, classifyPromptHome, resolveEndHome, END_HOME_NONE } from './endMessageHome.js';
+import { classifyGlobalEndHome, resolvePromptEndHome, END_HOME_NONE } from './endMessageHome.js';
 import { pathKey } from '../utils/fileUtils.js';
 
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
@@ -235,19 +235,9 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       directReturnTarget,
     )
     : null;
-  const promptHomeKind = hasPrompt ? classifyPromptHome(entry) : null;
-  const promptHomeTarget = hasPrompt && entry?.afterPlaybackPromptHomeTarget
-    ? resolveGeneratedTargetForStory(
-      entry.afterPlaybackPromptHomeTarget,
-      entry,
-      parentMenu,
-      rootEntries,
-      promptOkTarget,
-    )
-    : null;
   const promptHomeResolved = hasPrompt
-    ? resolveEndHome(promptHomeKind, { okTargetId: promptOkTarget, explicitTargetId: promptHomeTarget })
-    : { kind: null, targetId: null };
+    ? resolvePromptEndHome(entry, { parentMenu, rootEntries, okTargetId: promptOkTarget })
+    : { kind: null, targetId: null, effectiveTargetId: null };
   const sequence = entry?.afterPlaybackSequence ?? [];
   const sequenceReturnTarget = hasSequence
     ? resolveGeneratedTargetForStory(
@@ -295,9 +285,9 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       // `kind` (none | follow-ok | target) : sémantique canonique des 3 états Home.
       // `targetId` (rétro-compat) = cible explicite seule.
       // `effectiveTargetId` = cible réellement générée (none → null, follow-ok → OK).
-      kind: promptHomeKind,
-      targetId: promptHomeTarget,
-      effectiveTargetId: promptHomeResolved.targetId,
+      kind: promptHomeResolved.kind,
+      targetId: promptHomeResolved.targetId,
+      effectiveTargetId: promptHomeResolved.effectiveTargetId,
       okTargetId: promptOkTarget,
       isConfigured: !!entry?.afterPlaybackPromptHomeTarget,
       isNone: !!entry?.afterPlaybackPromptHomeNone,
