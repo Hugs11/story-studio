@@ -1,4 +1,5 @@
 use super::core::StoryBuilder;
+use super::story::EndNavContext;
 
 use super::super::*;
 use super::transitions::*;
@@ -10,6 +11,7 @@ impl<'a> StoryBuilder<'a> {
         role_prefix: &str,
         play_return_transition: Transition,
         play_home_transition: Transition,
+        nav: EndNavContext<'_>,
     ) -> Result<AfterPlaybackSequenceTransitions, String> {
         let mut stage_ids: Vec<String> = story
             .after_playback_sequence
@@ -41,7 +43,7 @@ impl<'a> StoryBuilder<'a> {
                 None
             } else {
                 Some(self.resolve_story_home_transition(
-                    home_step.home_target.as_deref(),
+                    nav.resolve(home_step.home_target.as_deref()).as_deref(),
                     play_home_transition.clone(),
                 ))
             };
@@ -88,7 +90,7 @@ impl<'a> StoryBuilder<'a> {
             let is_last = index + 1 == story.after_playback_sequence.len();
             let mut next_transition = if is_last {
                 self.resolve_story_return_transition(
-                    step.ok_target.as_deref(),
+                    nav.resolve(step.ok_target.as_deref()).as_deref(),
                     play_return_transition.clone(),
                 )
             } else {
@@ -125,7 +127,7 @@ impl<'a> StoryBuilder<'a> {
                 None
             } else {
                 Some(self.resolve_story_home_transition(
-                    step.home_target.as_deref(),
+                    nav.resolve(step.home_target.as_deref()).as_deref(),
                     play_home_transition.clone(),
                 ))
             };

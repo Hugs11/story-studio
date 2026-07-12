@@ -2,8 +2,26 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use super::super::{CanonicalEntry, Transition};
+use super::super::{resolve_next_story_target, CanonicalEntry, Transition};
 use super::{menu::MenuPrealloc, transitions::transition};
+
+/// Contexte de navigation minimal pour résoudre `next_story` dans les cibles de fin
+/// (prompt et séquence) : la fratrie de l'histoire source et sa position. Il porte la même
+/// résolution `next_story` déjà appliquée aux retours de lecture (`resolve_next_story_target`),
+/// afin que prompt et séquence partagent une règle unique sans brancher dans chaque champ.
+#[derive(Clone, Copy)]
+pub(crate) struct EndNavContext<'a> {
+    pub(crate) siblings: &'a [CanonicalEntry],
+    pub(crate) story_index: usize,
+}
+
+impl EndNavContext<'_> {
+    /// Pré-résout `next_story` → `story:<id>` selon la fratrie ; laisse toute autre cible
+    /// (y compris les cibles importées explicites) inchangée.
+    pub(crate) fn resolve(&self, target: Option<&str>) -> Option<String> {
+        resolve_next_story_target(target, self.siblings, self.story_index)
+    }
+}
 
 pub(crate) struct StoryPrealloc {
     pub(crate) play_stage_id: String,

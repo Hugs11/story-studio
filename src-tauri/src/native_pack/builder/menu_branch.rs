@@ -1,4 +1,5 @@
 use super::core::StoryBuilder;
+use super::story::EndNavContext;
 
 use super::super::*;
 use super::transitions::*;
@@ -127,6 +128,10 @@ impl<'a> StoryBuilder<'a> {
                         night_bridge_return,
                         night_bridge_home,
                         effective_simple_leaf,
+                        EndNavContext {
+                            siblings: &menu.children,
+                            story_index: child_index,
+                        },
                     )?);
                 }
                 CanonicalEntry::Zip(zip) => {
