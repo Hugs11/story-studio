@@ -76,10 +76,13 @@ test('prompt home action: explicit target is navigated directly', () => {
   assert.deepEqual(resolvePromptHomeAction(a, null, [a]), { action: HOME_ACTION.TARGET, targetId: 'm1' });
 });
 
-test('prompt home action: next_story with a following sibling plays it', () => {
+test('prompt home action: next_story with a following sibling targets its approach', () => {
   const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'next_story' });
   const b = story('b');
-  assert.deepEqual(resolvePromptHomeAction(a, null, [a, b]), { action: HOME_ACTION.NEXT_STORY });
+  assert.deepEqual(
+    resolvePromptHomeAction(a, null, [a, b]),
+    { action: HOME_ACTION.TARGET, targetId: 'story:b' },
+  );
 });
 
 test('prompt home action: next_story on the LAST story falls back to the prompt OK path (P1)', () => {
@@ -96,4 +99,28 @@ test('prompt home action: current_menu follows the prompt OK path (P2), not the 
   const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'current_menu' });
   const menu = { id: 'menu-1', type: 'menu', children: [a] };
   assert.deepEqual(resolvePromptHomeAction(a, menu, []), { action: HOME_ACTION.MESSAGE_OK });
+});
+
+test('prompt home action: story_play targets the story approach, not direct playback', () => {
+  const a = promptStory('a', { afterPlaybackPromptHomeTarget: 'story_play:b' });
+  assert.deepEqual(
+    resolvePromptHomeAction(a, null, [a, story('b')]),
+    { action: HOME_ACTION.TARGET, targetId: 'story:b' },
+  );
+});
+
+test('endnode home: next_story resolves to the source story next sibling approach', () => {
+  const a = story('a');
+  const b = story('b');
+  assert.deepEqual(
+    resolveEndNodeHomeTarget({ nightModeHomeReturn: 'next_story' }, null, a, [a, b]),
+    { kind: 'target', targetId: 'story:b' },
+  );
+});
+
+test('endnode home: story_play is normalized to the story approach', () => {
+  assert.deepEqual(
+    resolveEndNodeHomeTarget({ nightModeHomeReturn: 'story_play:b' }, null),
+    { kind: 'target', targetId: 'story:b' },
+  );
 });

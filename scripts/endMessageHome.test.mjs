@@ -8,6 +8,9 @@ import {
   classifyGlobalEndHome,
   classifyPromptHome,
   resolveEndHome,
+  resolveEndHomeTarget,
+  resolveGlobalEndHome,
+  resolvePromptEndHome,
 } from '../src/store/endMessageHome.js';
 
 // --- Message de fin global (nightModeHomeReturn) : 2 états, jamais follow-ok ---
@@ -68,5 +71,43 @@ test('resolveEndHome: target uses its explicit destination', () => {
   assert.deepEqual(
     resolveEndHome(END_HOME_TARGET, { okTargetId: 'root', explicitTargetId: 'menu:m1' }),
     { kind: END_HOME_TARGET, targetId: 'menu:m1' },
+  );
+});
+
+test('effective Home target: current_menu follows the message fallback', () => {
+  const story = { id: 'a', type: 'story', afterPlaybackPromptHomeTarget: 'current_menu' };
+  assert.deepEqual(
+    resolvePromptEndHome(story, { okTargetId: 'root' }),
+    { kind: END_HOME_TARGET, targetId: 'root', effectiveTargetId: 'root' },
+  );
+  assert.deepEqual(
+    resolveGlobalEndHome(
+      { nightModeHomeReturn: 'current_menu' },
+      { entry: story, okTargetId: 'root' },
+    ),
+    { kind: END_HOME_TARGET, targetId: 'root', effectiveTargetId: 'root' },
+  );
+});
+
+test('effective Home target: next_story resolves to the next sibling approach, then falls back', () => {
+  const a = { id: 'a', type: 'story', afterPlaybackPromptHomeTarget: 'next_story' };
+  const b = { id: 'b', type: 'story' };
+  assert.equal(
+    resolvePromptEndHome(a, { rootEntries: [a, b], okTargetId: 'root' }).effectiveTargetId,
+    'story:b',
+  );
+  assert.equal(
+    resolvePromptEndHome(b, { rootEntries: [a, b], okTargetId: 'root' }).effectiveTargetId,
+    'root',
+  );
+});
+
+test('effective Home target: story_play is normalized to the story approach', () => {
+  assert.equal(resolveEndHomeTarget('story_play:b'), 'story:b');
+  const story = { id: 'a', type: 'story', afterPlaybackPromptHomeTarget: 'story_play:b' };
+  assert.equal(resolvePromptEndHome(story).effectiveTargetId, 'story:b');
+  assert.equal(
+    resolveGlobalEndHome({ nightModeHomeReturn: 'story_play:b' }).effectiveTargetId,
+    'story:b',
   );
 });
