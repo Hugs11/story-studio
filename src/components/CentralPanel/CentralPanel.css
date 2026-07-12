@@ -807,6 +807,11 @@
   border-left: 3px solid var(--warning);
 }
 
+.audio-empty.is-silent {
+  border: 1px solid var(--accent-2-border);
+  border-left: 3px solid var(--accent-2);
+}
+
 .audio-required-badge {
   flex-shrink: 0;
   font-size: var(--text-caption);
@@ -817,6 +822,18 @@
   border-radius: var(--radius-sm);
   padding: 1px 6px;
   letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.audio-silent-badge {
+  flex-shrink: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-2-text);
+  background: var(--accent-2-dim);
+  border: 1px solid var(--accent-2-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
   white-space: nowrap;
 }
 

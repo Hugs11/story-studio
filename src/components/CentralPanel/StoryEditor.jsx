@@ -22,6 +22,7 @@ import { NAV_ROOT_LABEL } from './story/storyUtils';
 import { Trash2, VolumeX } from '../icons/LucideLocal';
 import {
   createSilentStoryTitleSettings,
+  isExplicitSilentStoryTitle,
   isStorySelectionAudioRequired,
 } from '../../store/storyTitleStage';
 import './CentralPanel.css';
@@ -93,6 +94,7 @@ export const StoryEditor = memo(function StoryEditor({
   const inheritedReturnLabel = buildInheritedReturnLabel(
     parentMenu, allMenus, allStories, autoNextEffective && !isLastInMenu,
   );
+  const explicitSilentSelection = isExplicitSilentStoryTitle(node);
   const selectionAudioRequired = isStorySelectionAudioRequired(node);
   const [textImgModal, setTextImgModal] = useState(null);
 
@@ -100,6 +102,14 @@ export const StoryEditor = memo(function StoryEditor({
     setTextImgModal({
       defaultText: node.name || '',
       onConfirm: (path) => { onUpdate({ itemImage: path, autoGenerateImage: false }); },
+    });
+  }
+
+  function handleUseSilentSelection() {
+    onUpdate({
+      itemAudio: null,
+      silentTitleStage: true,
+      titleControlSettings: createSilentStoryTitleSettings(node.titleControlSettings),
     });
   }
 
@@ -168,11 +178,12 @@ export const StoryEditor = memo(function StoryEditor({
             <AudioField
               accentLabel
               label="Audio de sélection"
-              description={selectionAudioRequired
-                ? "Énoncé quand l'enfant parcourt les histoires"
-                : 'Optionnel — ce titre de sélection peut rester silencieux'}
+              description={explicitSilentSelection
+                ? 'Optionnel — ce titre de sélection peut rester silencieux'
+                : "Énoncé quand l'enfant parcourt les histoires"}
               file={node.itemAudio}
               required={selectionAudioRequired}
+              emptyBadge={explicitSilentSelection ? 'Écran silencieux' : null}
               ttsTextSuggestion={node.name || ''}
               ttsFilenameHint={`selection-${node.name || 'histoire'}`}
               xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
@@ -180,11 +191,14 @@ export const StoryEditor = memo(function StoryEditor({
                 key: 'silent-title',
                 label: 'Utiliser un écran de sélection silencieux',
                 Icon: VolumeX,
-                onClick: () => onUpdate({
-                  silentTitleStage: true,
-                  titleControlSettings: createSilentStoryTitleSettings(node.titleControlSettings),
-                }),
+                onClick: handleUseSilentSelection,
               }] : []}
+              filledActions={[{
+                key: 'silent-title',
+                label: 'Utiliser un écran de sélection silencieux',
+                Icon: VolumeX,
+                onClick: handleUseSilentSelection,
+              }]}
               onPick={(f) => onUpdate({ itemAudio: f })}
               onClear={() => onUpdate({ itemAudio: null })}
             />
