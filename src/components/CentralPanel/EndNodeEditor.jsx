@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
-import { NAV_TARGET_NEXT_STORY, NavigationTargetSelect } from './story/storyUtils';
+import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
 import './CentralPanel.css';
 
@@ -11,8 +10,6 @@ export function EndNodeEditor({
   nightModeActive,
   nightModeReturn,
   nightModeHomeReturn,
-  nightModeReturnResolvedLabel = null,
-  nightModeHomeReturnResolvedLabel = null,
   projectName,
   allMenus = [],
   allStories = [],
@@ -24,12 +21,6 @@ export function EndNodeEditor({
   onRemove,
 }) {
   const hasAudio = typeof nightModeAudio === 'string' && nightModeAudio.trim().length > 0;
-
-  useEffect(() => {
-    if (!nightModeReturn) {
-      onUpdateNightModeReturn?.(NAV_TARGET_NEXT_STORY);
-    }
-  }, [nightModeReturn, onUpdateNightModeReturn]);
 
   return (
     <>
@@ -87,7 +78,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Identique à après la lecture"
+                emptyLabel="Aucune transition — retour au début du pack"
                 includeStoryPlay={false}
               />
             </div>
@@ -109,12 +100,12 @@ export function EndNodeEditor({
             </div>
             <div className="editor-setting-control">
               <NavigationTargetSelect
-                value={nightModeReturn ?? NAV_TARGET_NEXT_STORY}
+                value={nightModeReturn ?? ''}
                 onChange={(value) => onUpdateNightModeReturn?.(value)}
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                includeDefault={false}
+                emptyLabel="Automatique — retour propre à chaque histoire"
               />
             </div>
           </div>

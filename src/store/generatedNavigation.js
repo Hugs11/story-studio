@@ -11,6 +11,7 @@ import {
   normalizeNavigationTarget,
 } from './navigationTargets.js';
 import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
+import { classifyGlobalEndHome, classifyPromptHome, resolveEndHome, END_HOME_NONE } from './endMessageHome.js';
 import { pathKey } from '../utils/fileUtils.js';
 
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
@@ -234,6 +235,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       directReturnTarget,
     )
     : null;
+  const promptHomeKind = hasPrompt ? classifyPromptHome(entry) : null;
   const promptHomeTarget = hasPrompt && entry?.afterPlaybackPromptHomeTarget
     ? resolveGeneratedTargetForStory(
       entry.afterPlaybackPromptHomeTarget,
@@ -243,6 +245,9 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       promptOkTarget,
     )
     : null;
+  const promptHomeResolved = hasPrompt
+    ? resolveEndHome(promptHomeKind, { okTargetId: promptOkTarget, explicitTargetId: promptHomeTarget })
+    : { kind: null, targetId: null };
   const sequence = entry?.afterPlaybackSequence ?? [];
   const sequenceReturnTarget = hasSequence
     ? resolveGeneratedTargetForStory(
@@ -287,7 +292,12 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       isNightMode: !!project?.globalOptions?.nightMode,
     },
     promptHome: {
+      // `kind` (none | follow-ok | target) : sémantique canonique des 3 états Home.
+      // `targetId` (rétro-compat) = cible explicite seule.
+      // `effectiveTargetId` = cible réellement générée (none → null, follow-ok → OK).
+      kind: promptHomeKind,
       targetId: promptHomeTarget,
+      effectiveTargetId: promptHomeResolved.targetId,
       okTargetId: promptOkTarget,
       isConfigured: !!entry?.afterPlaybackPromptHomeTarget,
       isNone: !!entry?.afterPlaybackPromptHomeNone,
@@ -360,8 +370,10 @@ export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries 
 
 export function getGeneratedEndNodeHomeNavigation(project) {
   if (!hasGeneratedEndNode(project)) return null;
+  // Home global vide = `none` (aucune transition, retour au début du pack) : pas de badge Home
+  // distinct à afficher, et surtout jamais assimilable au retour OK.
+  if (classifyGlobalEndHome(project) === END_HOME_NONE) return null;
   const homeTarget = normalizeNavigationTarget(project?.nightModeHomeReturn);
-  if (!homeTarget) return null;
   const returnTarget = normalizeNavigationTarget(project?.nightModeReturn);
   if (homeTarget === returnTarget) return null;
   return {

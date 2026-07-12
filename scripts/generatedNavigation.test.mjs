@@ -152,6 +152,62 @@ test('local prompt Home is distinct from end-node Home', () => {
   assert.equal(getGeneratedEndNodeHomeNavigation(p).targetId, CONTEXTUAL_NEXT_STORY_TARGET);
 });
 
+test('prompt Home 3 states are exposed distinctly in the mirror (none/follow-ok/target)', () => {
+  const b = story('b');
+
+  // homeNone → aucune transition, jamais assimilée au retour OK
+  const noneStory = story('a', {
+    afterPlaybackPromptAudio: 'prompt.mp3',
+    afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeNone: true,
+  });
+  const noneNav = getGeneratedStoryNavigation(noneStory, null, project([noneStory, b]), [noneStory, b]);
+  assert.equal(noneNav.promptHome.kind, 'none');
+  assert.equal(noneNav.promptHome.effectiveTargetId, null);
+
+  // sans homeTarget ni homeNone → suit la destination OK
+  const followStory = story('a', {
+    afterPlaybackPromptAudio: 'prompt.mp3',
+    afterPlaybackPromptOkTarget: 'root',
+  });
+  const followNav = getGeneratedStoryNavigation(followStory, null, project([followStory, b]), [followStory, b]);
+  assert.equal(followNav.promptHome.kind, 'follow-ok');
+  assert.equal(followNav.promptHome.targetId, null);
+  assert.equal(followNav.promptHome.effectiveTargetId, 'root');
+  assert.equal(followNav.promptHome.effectiveTargetId, followNav.promptReturn.targetId);
+
+  // homeTarget explicite → transition résolue vers la cible
+  const targetStory = story('a', {
+    afterPlaybackPromptAudio: 'prompt.mp3',
+    afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeTarget: 'story:b',
+  });
+  const targetNav = getGeneratedStoryNavigation(targetStory, null, project([targetStory, b]), [targetStory, b]);
+  assert.equal(targetNav.promptHome.kind, 'target');
+  assert.equal(targetNav.promptHome.targetId, 'story:b');
+  assert.equal(targetNav.promptHome.effectiveTargetId, 'story:b');
+});
+
+test('global end Home empty stays none: no distinct home badge, never conflated with OK return', () => {
+  const a = story('a');
+  const withHome = project([a], {
+    nightModeAudio: 'night.mp3',
+    nightModeReturn: 'root',
+    nightModeHomeReturn: 'menu:m1',
+    globalOptions: { nightMode: true },
+  });
+  const emptyHome = project([a], {
+    nightModeAudio: 'night.mp3',
+    nightModeReturn: 'root',
+    globalOptions: { nightMode: true },
+  });
+
+  // Home vide → none → pas de badge Home distinct (retour au début du pack, pas « suit OK »)
+  assert.equal(getGeneratedEndNodeHomeNavigation(emptyHome), null);
+  // Home explicite distinct du retour → badge présent
+  assert.equal(getGeneratedEndNodeHomeNavigation(withHome).targetId, 'm1');
+});
+
 test('imported night prompt keeps the end-node badge (option B)', () => {
   const a = story('a', {
     afterPlaybackPromptAudio: 'night.mp3',

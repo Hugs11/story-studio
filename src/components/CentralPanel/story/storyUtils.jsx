@@ -14,8 +14,6 @@ import {
 } from '../../../store/navigationTargets';
 import { CircleX, FolderOpen, Link2, Music, Play } from '../../icons/LucideLocal';
 
-export { NAV_TARGET_NEXT_STORY };
-
 export const NAV_ROOT_LABEL = 'Menu racine';
 
 export function generatedTargetIdToSelectValue(targetId) {
