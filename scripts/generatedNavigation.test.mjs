@@ -208,6 +208,50 @@ test('global end Home empty stays none: no distinct home badge, never conflated 
   assert.equal(getGeneratedEndNodeHomeNavigation(withHome).targetId, 'm1');
 });
 
+test('mirror resolves prompt OK next_story to the next sibling, menu on the last (aligns with Rust)', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { afterPlaybackPromptAudio: 'p.mp3', afterPlaybackPromptOkTarget: 'next_story' });
+  const b = story('b', { afterPlaybackPromptAudio: 'p.mp3', afterPlaybackPromptOkTarget: 'next_story' });
+  menu.children = [a, b];
+  const p = project([menu]);
+
+  const aNav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
+  const bNav = getGeneratedStoryNavigation(b, menu, p, p.rootEntries);
+
+  assert.equal(aNav.promptReturn.targetId, 'story:b');
+  // Dernière sœur : repli canonique sur le retour de lecture (le menu parent).
+  assert.equal(bNav.promptReturn.targetId, 'menu-1');
+});
+
+test('mirror resolves prompt Home next_story to the next sibling', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { afterPlaybackPromptAudio: 'p.mp3', afterPlaybackPromptHomeTarget: 'next_story' });
+  const b = story('b');
+  menu.children = [a, b];
+  const p = project([menu]);
+
+  const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
+
+  assert.equal(nav.promptHome.kind, 'target');
+  assert.equal(nav.promptHome.targetId, 'story:b');
+  assert.equal(nav.promptHome.effectiveTargetId, 'story:b');
+});
+
+test('mirror resolves sequence final OK next_story to the next sibling, menu on the last', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const a = story('a', { afterPlaybackSequence: [{ id: 's1', okTarget: 'next_story' }] });
+  const b = story('b', { afterPlaybackSequence: [{ id: 's2', okTarget: 'next_story' }] });
+  menu.children = [a, b];
+  const p = project([menu]);
+
+  const aBehavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+  const bBehavior = getEffectiveEndBehavior(b, menu, p, p.rootEntries);
+
+  assert.equal(aBehavior.endStepKind, 'sequence');
+  assert.equal(aBehavior.finalTargetId, 'story:b');
+  assert.equal(bBehavior.finalTargetId, 'menu-1');
+});
+
 test('imported night prompt keeps the end-node badge (option B)', () => {
   const a = story('a', {
     afterPlaybackPromptAudio: 'night.mp3',

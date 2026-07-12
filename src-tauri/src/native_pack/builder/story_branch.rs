@@ -1,4 +1,5 @@
 use super::core::StoryBuilder;
+use super::story::EndNavContext;
 
 use super::super::*;
 use super::transitions::*;
@@ -15,6 +16,7 @@ impl<'a> StoryBuilder<'a> {
         night_bridge_return: Transition,
         night_bridge_home: Option<Transition>,
         simple_leaf_playback: bool,
+        nav: EndNavContext<'_>,
     ) -> Result<String, String> {
         let mut effective_play_home_transition = play_home_transition.clone();
         let title_stage_id = self.next_id();
@@ -57,6 +59,7 @@ impl<'a> StoryBuilder<'a> {
                 play_home_transition
                     .clone()
                     .unwrap_or_else(|| play_return_transition.clone()),
+                nav,
             )?;
             if let Some(home_transition) = sequence_transitions.home {
                 effective_play_home_transition = Some(home_transition);
@@ -66,14 +69,16 @@ impl<'a> StoryBuilder<'a> {
             let prompt_stage_id = self.next_id();
             let prompt_action_id = self.next_id();
             let prompt_ok_transition = self.resolve_story_return_transition(
-                story.after_playback_prompt_ok_target.as_deref(),
+                nav.resolve(story.after_playback_prompt_ok_target.as_deref())
+                    .as_deref(),
                 play_return_transition.clone(),
             );
             let prompt_home_transition = if story.after_playback_prompt_home_none {
                 None
             } else {
                 Some(self.resolve_story_home_transition(
-                    story.after_playback_prompt_home_target.as_deref(),
+                    nav.resolve(story.after_playback_prompt_home_target.as_deref())
+                        .as_deref(),
                     prompt_ok_transition.clone(),
                 ))
             };

@@ -1,4 +1,5 @@
 use super::core::StoryBuilder;
+use super::story::EndNavContext;
 
 use super::super::*;
 use super::transitions::*;
@@ -134,6 +135,10 @@ impl<'a> StoryBuilder<'a> {
                     night_bridge_return,
                     night_bridge_home,
                     auto_next_active,
+                    EndNavContext {
+                        siblings,
+                        story_index: root_index,
+                    },
                 )
             }
             CanonicalEntry::Menu(menu) => self.build_menu_branch(
@@ -286,6 +291,10 @@ impl<'a> StoryBuilder<'a> {
                     night_bridge_return,
                     night_bridge_home,
                     true,
+                    EndNavContext {
+                        siblings,
+                        story_index: shared_index,
+                    },
                 )
             }
             CanonicalEntry::Menu(menu) => self.build_menu_branch(

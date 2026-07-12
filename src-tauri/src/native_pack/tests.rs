@@ -147,6 +147,7 @@ fn resolve_night_return_stage<'a>(
         .expect("night return stage")
 }
 
+mod after_playback_next_story;
 mod compat;
 mod document_builder;
 mod fidelity;
