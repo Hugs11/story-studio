@@ -10,7 +10,8 @@ import { LuniiShell } from './LuniiShell';
 import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
-import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { findEntryLocation, getMenuBrowseState, normalizeHomeTarget, resolveEndNodeHomeTarget, resolveSequenceTarget, resolveStoryHomeTarget, resolveStoryReturnTarget } from './navigationResolvers';
+import { classifyPromptHome, END_HOME_FOLLOW_OK, END_HOME_NONE } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
 const END_NODE_ID = 'end-node';
@@ -81,6 +82,14 @@ export function ProjectSimulator({
       setEntryIdx(0);
     }
   }, [currentEntries, entryIdx, isSimple]);
+
+  // Retour au squareOne / couverture du pack (équivalent du `setStageId(squareOneId)` du
+  // ZipSimulator quand un stage n'a aucune homeTransition).
+  const goToCover = useCallback(() => {
+    setMenuPath([]);
+    setEntryIdx(0);
+    setState('cover');
+  }, []);
 
   const navigateToTarget = useCallback((target) => {
     if (isStoryNavigationTarget(target)) {
@@ -173,7 +182,11 @@ export function ProjectSimulator({
 
   const navigateSequenceHome = useCallback(() => {
     const step = activeSequence[sequenceIndex];
-    if (step?.homeNone) return;
+    // homeNone : aucune transition → retour au début du pack (comme le ZipSimulator).
+    if (step?.homeNone) {
+      goToCover();
+      return;
+    }
     if (step?.homeFollowsOk && sequenceIndex + 1 < activeSequence.length) {
       setSequenceIndex((index) => index + 1);
       return;
@@ -187,7 +200,7 @@ export function ProjectSimulator({
       return;
     }
     navigateHomeFromStory();
-  }, [activeSequence, activeStory, currentMenu, navigateHomeFromStory, navigateToNextStory, navigateToTarget, project, sequenceIndex]);
+  }, [activeSequence, activeStory, currentMenu, goToCover, navigateHomeFromStory, navigateToNextStory, navigateToTarget, project, sequenceIndex]);
 
   const navigatePromptOk = useCallback(() => {
     const target = resolveSequenceTarget(activeStory?.afterPlaybackPromptOkTarget, currentMenu)
@@ -201,9 +214,19 @@ export function ProjectSimulator({
   }, [activeStory, currentMenu, navigateAfterStory, navigateToNextStory, navigateToTarget, project]);
 
   const navigatePromptHome = useCallback(() => {
-    if (activeStory?.afterPlaybackPromptHomeNone) return;
+    const kind = classifyPromptHome(activeStory);
+    // none : aucune transition → retour au début du pack (jamais assimilé à « suit OK »).
+    if (kind === END_HOME_NONE) {
+      goToCover();
+      return;
+    }
+    // follow-ok : Home fait exactement ce que fait OK.
+    if (kind === END_HOME_FOLLOW_OK) {
+      navigatePromptOk();
+      return;
+    }
+    // target : cible Home explicite/contextuelle.
     const target = normalizeHomeTarget(resolveSequenceTarget(activeStory?.afterPlaybackPromptHomeTarget, currentMenu))
-      ?? resolveSequenceTarget(activeStory?.afterPlaybackPromptOkTarget, currentMenu)
       ?? resolveStoryHomeTarget(activeStory, currentMenu, project);
     if (target === 'next_story') {
       if (navigateToNextStory()) return;
@@ -211,7 +234,23 @@ export function ProjectSimulator({
       return;
     }
     navigateHomeFromStory();
-  }, [activeStory, currentMenu, navigateHomeFromStory, navigateToNextStory, navigateToTarget, project]);
+  }, [activeStory, currentMenu, goToCover, navigateHomeFromStory, navigatePromptOk, navigateToNextStory, navigateToTarget, project]);
+
+  const navigateEndNodeHome = useCallback(() => {
+    const home = resolveEndNodeHomeTarget(project, currentMenu);
+    // Home global vide → none → retour au squareOne (et non « suit OK »).
+    if (home.kind === END_HOME_NONE) {
+      goToCover();
+      return;
+    }
+    if (home.targetId === 'next_story') {
+      if (navigateToNextStory()) return;
+    } else if (home.targetId && navigateToTarget(home.targetId)) {
+      return;
+    }
+    // Repli canonique (dernière histoire, cible non résolue) = retour OK du message de fin.
+    navigateAfterStory();
+  }, [currentMenu, goToCover, navigateAfterStory, navigateToNextStory, navigateToTarget, project]);
 
   const advanceSequence = useCallback(() => {
     if (sequenceIndex + 1 < activeSequence.length) {
@@ -592,7 +631,7 @@ export function ProjectSimulator({
       return;
     }
     if (state === 'endnode') {
-      navigateAfterStory();
+      navigateEndNodeHome();
       return;
     }
     if (state === 'postplay') {
@@ -662,11 +701,14 @@ export function ProjectSimulator({
       ? currentEntry?.controlSettings?.ok === false
       : false;
 
+  // Home désactivé uniquement quand le contrôle `home` est explicitement false (comme le
+  // ZipSimulator). `homeNone` ne désactive PAS le bouton : il produit une absence de
+  // transition, gérée en retour au squareOne dans les handlers Home.
   const homeDisabled =
     state === 'sequence'
-      ? activeSequenceStep?.controlSettings?.home === false || !!activeSequenceStep?.homeNone
+      ? activeSequenceStep?.controlSettings?.home === false
       : state === 'postplay'
-      ? activeStory?.afterPlaybackPromptControlSettings?.home === false || !!activeStory?.afterPlaybackPromptHomeNone
+      ? activeStory?.afterPlaybackPromptControlSettings?.home === false
       :
     isSimple && state === 'playing'
       ? simpleStory?.controlSettings?.home === false

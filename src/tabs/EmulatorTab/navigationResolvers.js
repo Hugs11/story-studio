@@ -10,6 +10,7 @@ import {
   normalizeNavigationTarget,
 } from '../../store/navigationTargets.js';
 import { getGeneratedStoryNavigation } from '../../store/generatedNavigation.js';
+import { classifyGlobalEndHome, END_HOME_NONE, END_HOME_TARGET } from '../../store/endMessageHome.js';
 
 export function findEntryLocation(entries, targetId, menuPath = []) {
   for (let index = 0; index < (entries?.length ?? 0); index += 1) {
@@ -102,6 +103,19 @@ export function normalizeHomeTarget(target, options = {}) {
   if (!isStoryPlayNavigationTarget(normalized)) return normalized;
   const storyId = decodeNavigationStoryId(normalized);
   return encodeStoryNavigationTarget(storyId);
+}
+
+// Cible Home effective du message de fin GLOBAL, pour l'histoire source courante.
+// Miroir du volet Home de `compute_night_bridge_targets` :
+//   global Home vide → `none` (aucune transition, retour au squareOne/couverture) ;
+//   cible définie    → cible résolue, `next_story` restant contextuel (résolu par l'appelant).
+// Le repli (dernière histoire, cible non résolue) est le retour OK du message de fin ;
+// il est laissé à l'appelant, seul à connaître l'état 'endnode'.
+export function resolveEndNodeHomeTarget(project, parentMenu) {
+  if (classifyGlobalEndHome(project) === END_HOME_NONE) {
+    return { kind: END_HOME_NONE, targetId: null };
+  }
+  return { kind: END_HOME_TARGET, targetId: resolveSequenceTarget(project?.nightModeHomeReturn, parentMenu) };
 }
 
 export function resolveSequenceTarget(target, parentMenu) {
