@@ -16,6 +16,7 @@ import {
 import {
   getDefaultPackEntryDestination,
   getEffectiveEndBehavior,
+  getGeneratedStoryNavigation,
 } from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
@@ -31,6 +32,7 @@ import { StoryDisclosure } from './StoryDisclosure';
 import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/LucideLocal';
 import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
 import { useErrorDialog } from '../../common/Dialog';
+import { useProjectActions } from '../../../store/ProjectActionsContext';
 
 function destinationHintLabel(label) {
   if (!label) return null;
@@ -125,6 +127,7 @@ export function AfterPlaySection({
   onAfterPlayFocusConsumed,
 }) {
   const { showConfirmDialog } = useErrorDialog();
+  const { onSelect, onAttachStoryEndToGlobal } = useProjectActions();
   const autoNextEnabled = !!project?.globalOptions?.autoNext;
   const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
   const rawHasPrompt = !!node?.afterPlaybackPromptAudio;
@@ -143,14 +146,16 @@ export function AfterPlaySection({
   // Même audio ne suffit pas : une histoire peut réutiliser le son global tout
   // en envoyant vers une autre destination. Le moteur de navigation est la
   // source de vérité pour qualifier un message comme global importé.
-  const usesGlobalEndNodeAudio = !!storyNavigation?.endNodeReturn?.isImportedPrompt;
-  const hasGeneratedEndNode = !!storyNavigation?.endNodeReturn?.isActive;
+  const endMessage = storyNavigation?.endMessage ?? { presentationKind: 'none' };
+  const usesGlobalEndNodeAudio = endMessage.presentationKind === 'global';
+  const hasGeneratedEndNode = usesGlobalEndNodeAudio;
   const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
   const autoNextApplies = !!autoNextResolution?.applies;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSequenceEditor, setShowSequenceEditor] = useState(false);
   const [showPromptField, setShowPromptField] = useState(false);
+  const [localDraft, setLocalDraft] = useState(null);
   const afterPlayRef = useRef(null);
   const focusRequestId = afterPlayFocus?.requestId;
 
@@ -228,6 +233,7 @@ export function AfterPlaySection({
   useEffect(() => {
     setShowSequenceEditor(false);
     setShowPromptField(false);
+    setLocalDraft(null);
     setShowAdvanced(false);
   }, [node?.id]);
 
@@ -267,6 +273,35 @@ export function AfterPlaySection({
     });
     setShowSequenceEditor(true);
     setShowPromptField(false);
+  }
+
+  function startLocalDraft() {
+    setLocalDraft({
+      audio: project?.nightModeAudio ?? null,
+      okTarget: project?.nightModeReturn ?? null,
+      homeTarget: project?.nightModeHomeReturn ?? null,
+      homeNone: !project?.nightModeHomeReturn,
+    });
+  }
+
+  function applyLocalDraft() {
+    if (!localDraft) return;
+    const fields = {
+      afterPlaybackPromptAudio: localDraft.audio,
+      afterPlaybackPromptOkTarget: localDraft.okTarget,
+      afterPlaybackPromptHomeTarget: localDraft.homeTarget,
+      afterPlaybackPromptHomeNone: localDraft.homeNone,
+      afterPlaybackSequence: [],
+      afterPlaybackHomeStep: null,
+    };
+    const candidate = getGeneratedStoryNavigation(
+      { ...node, ...fields }, parentMenu, project, project?.rootEntries ?? [],
+    );
+    // Une destination explicite peut etre equivalente au `next_story` global.
+    // Dans ce cas, il n'existe toujours pas de fin locale a materialiser.
+    if (candidate.endMessage.presentationKind === 'global') return;
+    onUpdate(fields);
+    setLocalDraft(null);
   }
 
   function updateAutoContinuation(enabled) {
@@ -315,7 +350,68 @@ export function AfterPlaySection({
   // ─── Contenu "Message de fin" ────────────────────────────────────────────────
 
   let endContent;
-  if (hasSequence) {
+  if (endMessage.presentationKind === 'global') {
+    endContent = localDraft ? (
+      <div className="end-simple-settings">
+        <div className="sequence-note sequence-note--spaced">Brouillon de fin locale — il ne modifie pas encore cette histoire.</div>
+        <AudioField
+          accentLabel
+          label="Audio de la fin locale"
+          file={localDraft.audio}
+          required={false}
+          ttsFilenameHint={`fin-${node.name || 'histoire'}`}
+          xttsTarget={{ kind: 'story', entryId: node.id, field: 'afterPlaybackPromptAudio' }}
+          onPick={(audio) => setLocalDraft((draft) => ({ ...draft, audio }))}
+          onClear={() => setLocalDraft((draft) => ({ ...draft, audio: null }))}
+        />
+        <div className="sequence-targets">
+          <div className="field-row field-row--flush">
+            <span className="field-label">Bouton OK</span>
+            <NavigationTargetSelect
+              value={localDraft.okTarget ?? ''}
+              onChange={(okTarget) => setLocalDraft((draft) => ({ ...draft, okTarget: okTarget || null }))}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={node.id}
+              emptyLabel="Comme à la fin de l'histoire"
+            />
+          </div>
+          <div className="field-row field-row--flush">
+            <span className="field-label">Bouton Accueil</span>
+            <NavigationTargetSelect
+              value={localDraft.homeNone ? '__none__' : (localDraft.homeTarget ?? '')}
+              onChange={(value) => setLocalDraft((draft) => value === '__none__'
+                ? { ...draft, homeNone: true, homeTarget: null }
+                : { ...draft, homeNone: false, homeTarget: value || null })}
+              allMenus={allMenus}
+              allStories={allStories}
+              currentStoryId={node.id}
+              includeNone
+              includeStoryPlay={false}
+              emptyLabel="Identique au bouton OK"
+            />
+          </div>
+        </div>
+        <div className="end-actions-end">
+          <Button size="sm" onClick={() => setLocalDraft(null)}>Annuler</Button>
+          <Button size="sm" onClick={applyLocalDraft}>Appliquer la fin locale</Button>
+        </div>
+      </div>
+    ) : (
+      <div className="end-summary">
+        <div>
+          <div className="end-summary-title">🌙 Utilise le message de fin du pack</div>
+          <div className="end-summary-copy">
+            Lecture : {promptControls.autoplay === true ? 'enchaînement automatique' : 'attend OK'} · Accueil → {endMessage.effectiveHome?.kind === 'none' ? 'début du pack' : 'destination configurée'} · Pause {promptControls.pause === false ? 'désactivée' : 'activée'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button size="sm" onClick={() => onSelect?.('end-node')}>Modifier le message du pack</Button>
+          <Button size="sm" onClick={startLocalDraft}>Créer une fin locale</Button>
+        </div>
+      </div>
+    );
+  } else if (hasSequence) {
     endContent = (
       <>
         <div className="end-summary">
@@ -331,6 +427,11 @@ export function AfterPlaySection({
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
+            {hasEndNode && (
+              <Button size="sm" onClick={() => onAttachStoryEndToGlobal?.(node.id)}>
+                Rattacher au message du pack
+              </Button>
+            )}
             <Tooltip text={showSequenceEditor ? 'Masquer le scénario' : 'Afficher le scénario'}>
               <button
                 type="button"
@@ -373,7 +474,7 @@ export function AfterPlaySection({
       <>
         <div className="end-field-head">
           <span className="field-label">
-            {usesGlobalEndNodeAudio ? 'Message de fin importé' : 'Message audio de fin'}
+            Message audio de fin
           </span>
           <Tooltip text="Retirer le message audio de fin">
             <button
@@ -409,9 +510,9 @@ export function AfterPlaySection({
         />
         {hasPrompt && (
           <div className="end-simple-settings">
-            {usesGlobalEndNodeAudio && (
+            {hasEndNode && (
               <div className="sequence-note sequence-note--spaced">
-                Ce message vient du message de fin importé. Remplacer l'audio ici personnalisera uniquement cette histoire.
+                Cette histoire utilise une fin locale à la place du message du pack.
               </div>
             )}
             <div className="sequence-controls">
@@ -471,6 +572,11 @@ export function AfterPlaySection({
               </div>
             </div>
             <div className="end-actions-end">
+              {hasEndNode && (
+                <Button size="sm" onClick={() => onAttachStoryEndToGlobal?.(node.id)}>
+                  Rattacher au message du pack
+                </Button>
+              )}
               <Button size="sm" onClick={startSequence}>
                 Convertir en scénario de fin
               </Button>
@@ -603,7 +709,9 @@ export function AfterPlaySection({
         </div>
       </div>
 
-      {showAdvancedControls ? (
+      {endMessage.presentationKind === 'global' ? (
+        <div className="story-advanced-controls">{endContent}</div>
+      ) : showAdvancedControls ? (
         <StoryDisclosure
           open={showAdvanced}
           onToggle={() => setShowAdvanced((v) => !v)}

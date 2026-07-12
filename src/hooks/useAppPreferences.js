@@ -5,6 +5,7 @@ import { saveXttsSettings } from '../store/xttsSettings';
 import { saveVerboseLoggingPref, verboseLevelName } from '../store/loggingPreference';
 import { logger, setLogLevel } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
+import { collectEndMessagePresentations } from '../store/generatedNavigation';
 
 // Grappe « préférences & réglages » extraite d'AppContent : dossier workspace,
 // logging verbeux (+ chemins de log), consolidation projet,
@@ -135,12 +136,17 @@ export function useAppPreferences({
   }
 
   async function handleRemoveEndNode(options = {}) {
+    const presentations = collectEndMessagePresentations(store.project);
+    const globalCount = presentations.filter((item) => item.presentationKind === 'global').length;
+    const localCount = presentations.filter((item) => (
+      item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence'
+    )).length;
     if (!options?.skipConfirm) {
       const confirmed = await showConfirmDialog({
         title: 'Supprimer le message de fin',
         message:
-          "Supprimer le message de fin du pack ?\n\n"
-          + "Les histoires ne joueront plus de message commun à leur conclusion. Le mode nuit sera aussi désactivé.",
+          `Le message sera retiré de ${globalCount} histoire${globalCount > 1 ? 's' : ''}. `
+          + `${localCount} fin${localCount !== 1 ? 's locales seront' : ' locale sera'} conservée${localCount !== 1 ? 's' : ''}.`,
         variant: 'warning',
         okLabel: 'Supprimer',
         okKind: 'danger',
@@ -149,12 +155,7 @@ export function useAppPreferences({
       if (!confirmed) return false;
     }
 
-    store.updateRootMedia('nightModeAudio', null);
-    store.updateRootMedia('nightModeReturn', null);
-    store.updateRootMedia('nightModeHomeReturn', null);
-    store.updateGlobalOption('nightMode', false);
-    store.updateGlobalOption('endNode', false);
-    store.setSelectedId('root');
+    store.removeGlobalEndMessage();
     return true;
   }
 

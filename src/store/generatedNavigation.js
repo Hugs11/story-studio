@@ -11,8 +11,8 @@ import {
   normalizeNavigationTarget,
 } from './navigationTargets.js';
 import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
-import { classifyGlobalEndHome, resolvePromptEndHome, END_HOME_NONE } from './endMessageHome.js';
-import { pathKey } from '../utils/fileUtils.js';
+import { classifyGlobalEndHome, resolveGlobalEndHome, resolvePromptEndHome, END_HOME_NONE } from './endMessageHome.js';
+import { classifyEndMessagePresentation } from './endMessagePresentation.js';
 
 export const CONTEXTUAL_NEXT_STORY_TARGET = '__contextual_next_story__';
 
@@ -160,11 +160,8 @@ export function isCombinedNightStoryBypass(entry, project) {
 
 export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
   if (project?.globalOptions?.autoNext) return false;
-  if (!project?.nightModeAudio || !project?.nightModeReturn || entry?.type !== 'story') return false;
+  if (!project?.nightModeAudio || entry?.type !== 'story') return false;
   if (!entry?.afterPlaybackPromptAudio || (entry?.afterPlaybackSequence?.length ?? 0) > 0) return false;
-  const promptAudio = pathKey(entry.afterPlaybackPromptAudio);
-  const nightAudio = pathKey(project.nightModeAudio);
-  if (!promptAudio || promptAudio !== nightAudio) return false;
   const autoNextFallback = getAutoNextFallbackTarget(entry, parentMenu, project);
   const fallbackTarget = autoNextFallback ?? getStoryFallbackReturnTarget(entry, parentMenu, rootEntries);
   const directReturnTarget = resolveGeneratedTargetForStory(
@@ -188,7 +185,26 @@ export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
     rootEntries,
     directReturnTarget,
   );
-  return !!promptTarget && promptTarget === nightTarget;
+  const promptHome = resolvePromptEndHome(entry, {
+    parentMenu,
+    rootEntries,
+    okTargetId: promptTarget,
+  });
+  const globalHome = resolveGlobalEndHome(project, {
+    entry,
+    parentMenu,
+    rootEntries,
+    okTargetId: nightTarget,
+  });
+  return classifyEndMessagePresentation({
+    entry,
+    globalActive: true,
+    globalAudio: project.nightModeAudio,
+    promptOkTargetId: promptTarget,
+    globalOkTargetId: nightTarget,
+    promptHome,
+    globalHome,
+  }).presentationKind === 'global';
 }
 
 export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntries) {
@@ -238,6 +254,23 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   const promptHomeResolved = hasPrompt
     ? resolvePromptEndHome(entry, { parentMenu, rootEntries, okTargetId: promptOkTarget })
     : { kind: null, targetId: null, effectiveTargetId: null };
+  const globalHomeResolved = (usesEndNode || importedNightPrompt)
+    ? resolveGlobalEndHome(project, {
+      entry,
+      parentMenu,
+      rootEntries,
+      okTargetId: endNodeEffectiveTargetId,
+    })
+    : { kind: null, targetId: null, effectiveTargetId: null };
+  const endMessage = classifyEndMessagePresentation({
+    entry,
+    globalActive: usesEndNode || importedNightPrompt,
+    globalAudio: project?.nightModeAudio,
+    promptOkTargetId: promptOkTarget,
+    globalOkTargetId: endNodeEffectiveTargetId,
+    promptHome: promptHomeResolved,
+    globalHome: globalHomeResolved,
+  });
   const sequence = entry?.afterPlaybackSequence ?? [];
   const sequenceReturnTarget = hasSequence
     ? resolveGeneratedTargetForStory(
@@ -294,6 +327,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       isInactive: entry?.afterPlaybackPromptControlSettings?.home === false,
       isImportedNightPrompt: importedNightPrompt,
     },
+    endMessage,
     promptReturn: {
       targetId: promptOkTarget,
       isConfigured: !!entry?.afterPlaybackPromptOkTarget || importedNightPrompt,
@@ -356,6 +390,25 @@ export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries 
     finalTargetId: autoContinuation ? finalTargetId : null,
     autoContinuation,
   };
+}
+
+// Adaptateur de la classification partagee pour les ecrans agreges (editeur
+// global, listes et operations atomiques). Chaque ligne conserve son parent,
+// indispensable aux retours `next_story` contextuels.
+export function collectEndMessagePresentations(project) {
+  const result = [];
+  const visit = (entries, parentMenu = null) => {
+    for (const entry of entries ?? []) {
+      if (entry?.type === 'story') {
+        const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, project?.rootEntries ?? []);
+        result.push({ entry, parentMenu, navigation, ...navigation.endMessage });
+      } else if (entry?.type === 'menu') {
+        visit(entry.children ?? [], entry);
+      }
+    }
+  };
+  visit(project?.rootEntries ?? []);
+  return result;
 }
 
 export function getGeneratedEndNodeHomeNavigation(project) {

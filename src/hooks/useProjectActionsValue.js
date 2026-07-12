@@ -49,9 +49,10 @@ export function useProjectActionsValue({
     onCutPasteEntries: store.cutPasteEntriesToMenu,
     onAddEndNode: preferences.handleAddEndNode,
     onRemoveEndNode: preferences.handleRemoveEndNode,
-    onUpdateNightModeAudio: (value) => store.updateRootMedia('nightModeAudio', value),
+    onUpdateNightModeAudio: (value) => store.updateGlobalEndMessage({ nightModeAudio: value }),
     onUpdateNightMode: (value) => store.updateGlobalOption('nightMode', value),
-    onUpdateNightModeReturn: (value) => store.updateRootMedia('nightModeReturn', value),
-    onUpdateNightModeHomeReturn: (value) => store.updateRootMedia('nightModeHomeReturn', value),
+    onUpdateNightModeReturn: (value) => store.updateGlobalEndMessage({ nightModeReturn: value }),
+    onUpdateNightModeHomeReturn: (value) => store.updateGlobalEndMessage({ nightModeHomeReturn: value }),
+    onAttachStoryEndToGlobal: store.attachStoryEndToGlobal,
   };
 }

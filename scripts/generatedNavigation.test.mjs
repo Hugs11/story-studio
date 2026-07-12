@@ -304,6 +304,7 @@ test('imported night prompt keeps the end-node badge (option B)', () => {
   const a = story('a', {
     afterPlaybackPromptAudio: 'night.mp3',
     afterPlaybackPromptOkTarget: 'root',
+    afterPlaybackPromptHomeNone: true,
   });
   const p = project([a], {
     nightModeAudio: 'night.mp3',
