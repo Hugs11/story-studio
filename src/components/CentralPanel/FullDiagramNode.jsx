@@ -72,7 +72,10 @@ export function FullDiagramNode({
   childSummary = null,
 }) {
   const compact = compactMode !== 'full';
-  const showThumbnail = !compact || entry.type === 'story' || entry.type === 'root';
+  const showThumbnail = !compact
+    || entry.type === 'story'
+    || entry.type === 'root'
+    || entry.type === 'menu';
   const imagePath = entry?.type === 'zip' ? null : getEntryThumbnailPath(entry, { rootImage, isRoot });
   const zipCoverImage = entry.type === 'zip' ? entry.coverImage ?? null : null;
   const zipPath = entry.type === 'zip' ? entry.zipPath ?? null : null;

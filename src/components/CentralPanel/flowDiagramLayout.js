@@ -1,17 +1,18 @@
-import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from '../../store/navigationTargets';
+import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from '../../store/navigationTargets.js';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
   getGeneratedEndNodeReturnNavigation,
   getGeneratedStoryNavigation,
   resolveGeneratedTargetForStory,
-} from '../../store/generatedNavigation';
-import { canMoveEntryToContainer } from '../tree/treeOperations';
-import { buildGroupedLayoutRows, orderDiagramChildren } from './diagram/storyGroupLayout';
-import { compactNavigationPresentation } from './diagram/navigationPresentation';
+} from '../../store/generatedNavigation.js';
+import { canMoveEntryToContainer } from '../tree/treeOperations.js';
+import { buildGroupedLayoutRows, orderDiagramChildren } from './diagram/storyGroupLayout.js';
+import { compactNavigationPresentation } from './diagram/navigationPresentation.js';
+import { getStoryGroupId } from './diagram/structurePresentation.js';
 
 export const TYPE_LABELS = { root: 'Racine', menu: 'Dossier', story: 'Histoire', zip: 'ZIP', ref: 'Lien', 'end-node': 'Message de fin' };
 // Re-exporte depuis la source unique (useZipCover importe MIME d'ici).
-export { MIME } from '../../utils/mimeTypes';
+export { MIME } from '../../utils/mimeTypes.js';
 const ZOOM_MIN = 0.08;
 const ZOOM_MAX = 1.9;
 export const BUTTON_ZOOM_FACTOR = 1.12;
@@ -22,6 +23,10 @@ const COMPLETE_METRICS = {
   compact: { nodeWidth: 86, rootWidth: 98, nodeHeight: 74, nodeVisualHeight: 62, colGap: 8, rowGap: 78, rowStackGap: 46, padX: 28, padY: 16, navPadBottom: 44, storyRowLimit: 6, structureRowLimit: 3, rootRowLimit: 2 },
   minimal: { nodeWidth: 68, rootWidth: 84, nodeHeight: 58, nodeVisualHeight: 48, colGap: 6, rowGap: 62, rowStackGap: 36, padX: 22, padY: 12, navPadBottom: 38, storyRowLimit: 5, structureRowLimit: 2, rootRowLimit: 2 },
 };
+
+export function getCompleteMetrics(compactMode) {
+  return COMPLETE_METRICS[compactMode] ?? COMPLETE_METRICS.full;
+}
 
 export function clampZoom(value) {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
@@ -89,6 +94,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
         kind: group.kind,
         groupIndex,
         groupSize: group.items.length,
+        itemIds: group.items.map((item) => item.id),
       });
     });
   }
@@ -129,6 +135,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
       })));
       if (!row.isAggregateStoryGroup) {
         edges.push({
+          id: `structure:${entry.id}:${block.entry.id}`,
           from: entry.id,
           to: block.entry.id,
           kind: block.entry.type === 'story' ? 'story' : 'structural',
@@ -154,7 +161,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
       const existing = groupBounds.get(key);
       const topInset = row.isAggregateStoryGroup ? 20 : 12;
       const next = {
-        id: `stories:${entry.id}:${row.groupIndex}`,
+        id: getStoryGroupId(entry.id),
         parentId: entry.id,
         kind: 'stories',
         tone: hashTone(entry.id),
@@ -163,6 +170,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
         width: row.width,
         height: row.height + topInset + 12,
         storyCount: row.groupSize,
+        storyIds: row.itemIds,
         isAggregate: row.isAggregateStoryGroup,
       };
       if (existing) {
@@ -187,14 +195,14 @@ function buildLayoutBlock(entry, metrics, options = {}) {
   for (const group of storyGroups) {
     if (!group.isAggregate) continue;
     edges.push({
-      id: `edge:${group.id}`,
+      id: `structure:${entry.id}:${group.id}`,
       from: entry.id,
       to: group.id,
       kind: 'story-group',
       x1: nodeX + (nodeWidth / 2),
       y1: metrics.nodeHeight,
       x2: group.x + (group.width / 2),
-      y2: group.y,
+      y2: group.y - 9,
     });
   }
   groups.push(...storyGroups);
@@ -213,7 +221,7 @@ function buildLayoutBlock(entry, metrics, options = {}) {
 export const END_NODE_ID = 'end-node';
 
 export function getCompleteLayout(project, compactMode, options = {}) {
-  const metrics = COMPLETE_METRICS[compactMode] ?? COMPLETE_METRICS.full;
+  const metrics = getCompleteMetrics(compactMode);
   const rootBlock = buildLayoutBlock({
     id: 'root',
     type: 'root',
@@ -478,22 +486,29 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
 
 export function getCompleteNavigationEdges(project, layout) {
   const nodeMap = new Map(layout.nodes.map((node) => [node.entry.id, node]));
+  const visibleTargetId = (targetId) => (
+    nodeMap.has(targetId) ? targetId : (layout.hiddenStoryGroupByStoryId?.get(targetId) ?? targetId)
+  );
   const nodeVisualHeight = layout.metrics?.nodeVisualHeight ?? layout.metrics?.nodeHeight ?? 0;
   const visualBottom = (node) => node.y + Math.min(node.height, nodeVisualHeight || node.height);
 
   const regularEdges = collectNavigationTransitions(project.rootEntries ?? [], null, [], project, project.rootEntries ?? [])
     .map((edge) => {
       const from = nodeMap.get(edge.from);
-      const to = nodeMap.get(edge.to);
+      const displayTo = visibleTargetId(edge.to);
+      const to = nodeMap.get(displayTo);
       if (!from || !to) return null;
 
       const selfLoop = edge.from === edge.to;
       const sameRowReturn = edge.kind === 'return' && Math.abs(from.y - to.y) < 1;
       const useRailReturn = sameRowReturn && !selfLoop;
+      const targetIsBelow = to.y > from.y;
       const x1 = selfLoop ? from.x + (from.width * 0.28) : from.x + (from.width / 2);
-      const y1 = (selfLoop || useRailReturn) ? visualBottom(from) : from.y;
+      const y1 = (selfLoop || useRailReturn || (layout.isLevelLayout && targetIsBelow))
+        ? visualBottom(from)
+        : from.y;
       const x2 = selfLoop ? from.x + (from.width * 0.72) : to.x + (to.width / 2);
-      const y2 = visualBottom(to);
+      const y2 = layout.isLevelLayout && targetIsBelow ? to.y : visualBottom(to);
       const verticalDirection = y2 >= y1 ? 1 : -1;
       const controlOffset = selfLoop
         ? Math.max(30, from.height * 0.34)
@@ -504,6 +519,7 @@ export function getCompleteNavigationEdges(project, layout) {
 
       return {
         ...edge,
+        displayTo: displayTo !== edge.to ? displayTo : undefined,
         selfLoop,
         route: useRailReturn ? 'same-row-return' : 'curve',
         x1,
@@ -575,28 +591,37 @@ export function getCompleteNavigationEdges(project, layout) {
       for (const edge of endNodeEdges) {
         if (seenEndNodeTargets.has(edge.to)) continue;
         seenEndNodeTargets.add(edge.to);
-        const returnTarget = edge.selfLoop ? endNode : (nodeMap.get(edge.to) ?? nodeMap.get('root'));
+        const displayTo = visibleTargetId(edge.to);
+        const selfLoop = edge.to === END_NODE_ID;
+        const returnTarget = selfLoop ? endNode : (nodeMap.get(displayTo) ?? nodeMap.get('root'));
         if (!returnTarget) continue;
-        const ex = edge.selfLoop ? endNode.x + endNode.width : endNode.x + endNode.width / 2;
-        const ey = edge.selfLoop ? endNode.y + endNode.height / 2 : endNode.y;
-        const rx = edge.selfLoop ? endNode.x : returnTarget.x + returnTarget.width / 2;
-        const ry = edge.selfLoop ? endNode.y + endNode.height / 2 : returnTarget.y + returnTarget.height;
+        const targetIsBelow = !selfLoop && returnTarget.y > endNode.y;
+        const ex = selfLoop ? endNode.x + endNode.width : endNode.x + endNode.width / 2;
+        const ey = selfLoop
+          ? endNode.y + endNode.height / 2
+          : targetIsBelow ? visualBottom(endNode) : endNode.y;
+        const rx = selfLoop ? endNode.x : returnTarget.x + returnTarget.width / 2;
+        const ry = selfLoop
+          ? endNode.y + endNode.height / 2
+          : targetIsBelow ? returnTarget.y : visualBottom(returnTarget);
+        const verticalDirection = ry >= ey ? 1 : -1;
         const controlOffset = Math.max(80, Math.abs(ey - ry) * 0.4);
         regularEdges.push({
           from: END_NODE_ID,
           to: edge.to,
+          displayTo: displayTo !== edge.to ? displayTo : undefined,
           kind: 'after-end',
           source: edge.source,
           chainStoryIds: edge.chainStoryIds,
           label: edge.label,
           x1: ex,
-          y1: ey + endNode.height,
+          y1: ey,
           x2: rx,
           y2: ry,
-          c1y: edge.selfLoop ? ey + controlOffset : ey + endNode.height + controlOffset,
-          c2y: edge.selfLoop ? ry + controlOffset : ry - controlOffset,
-          labelX: edge.selfLoop ? endNode.x + endNode.width / 2 : undefined,
-          labelY: edge.selfLoop ? endNode.y + endNode.height + 18 : undefined,
+          c1y: selfLoop ? ey + controlOffset : ey + (controlOffset * verticalDirection),
+          c2y: selfLoop ? ry + controlOffset : ry - (controlOffset * verticalDirection),
+          labelX: selfLoop ? endNode.x + endNode.width / 2 : undefined,
+          labelY: selfLoop ? endNode.y + endNode.height + 18 : undefined,
         });
       }
     }

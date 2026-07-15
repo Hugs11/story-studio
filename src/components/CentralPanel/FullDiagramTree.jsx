@@ -8,7 +8,7 @@ import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import {
   BUTTON_ZOOM_FACTOR,
-  getCompleteLayout,
+  getCompleteMetrics,
   getCompleteNavigationEdges,
   END_NODE_ID,
   TYPE_LABELS,
@@ -26,8 +26,17 @@ import { buildDiagramContextActions } from './diagram/diagramContextMenu';
 import { DiagramZoomControls } from './diagram/DiagramZoomControls';
 import { DiagramLegend } from './diagram/DiagramLegend';
 import { DiagramViewToggles } from './diagram/DiagramViewToggles';
-import { navigationEdgeTouchesNode } from './diagram/navigationPresentation';
+import {
+  buildNavigationNodeRoles,
+  collectActiveNavigationPathEdges,
+  navigationEdgeTouchesNode,
+} from './diagram/navigationPresentation';
 import { presentLocalEndSteps } from './diagram/localEndStepPresentation';
+import { buildStructureFocus, getStructureEdgeId, toggleExclusiveStoryGroup } from './diagram/structurePresentation';
+import { getStructureLevelLayout } from './diagram/structureLevelLayout';
+import { StructureFocusBar } from './diagram/StructureFocusBar';
+import { StructureLevelSummaryNode } from './diagram/StructureLevelSummaryNode';
+import { StructureDiagramLayer } from './diagram/StructureDiagramLayer';
 import { IconMoon, IconStop } from '../TreePanel/TreeIcons';
 
 export function CompleteDiagramTree({
@@ -36,6 +45,8 @@ export function CompleteDiagramTree({
   selectedId,
   selectedIds,
   onSelectionChange,
+  expandedStoryGroupId = null,
+  onExpandedStoryGroupIdChange,
   onPreview,
   onSimulateZip,
   onSimulateRoot,
@@ -76,7 +87,10 @@ export function CompleteDiagramTree({
   const [navigationTooltip, setNavigationTooltip] = useState(null);
   const [focusMode, setFocusMode] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
+  const [hoveredStructureEdgeId, setHoveredStructureEdgeId] = useState(null);
+  const [pinnedStructureEdgeId, setPinnedStructureEdgeId] = useState(null);
   const activeNavigationEdgeIdRef = useRef(null);
+  const activeStructureEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
 
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, nodeId, nodeType }
@@ -94,6 +108,9 @@ export function CompleteDiagramTree({
     setShowReturns(checked);
     write(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, checked ? 'true' : 'false');
   }, []);
+  const handleToggleStoryGroup = useCallback((groupId) => {
+    onExpandedStoryGroupIdChange?.(toggleExclusiveStoryGroup(expandedStoryGroupId, groupId));
+  }, [expandedStoryGroupId, onExpandedStoryGroupIdChange]);
 
   // Le pan du fond sert a naviguer dans le canvas, pas a changer le modele de
   // selection : on conserve la selection globale (l'arbre controle refleterait
@@ -103,6 +120,7 @@ export function CompleteDiagramTree({
     setHoveredNavigationEdgeId(null);
     setPinnedNavigationEdgeId(null);
     setNavigationTooltip(null);
+    setHoveredStructureEdgeId(null);
   }, []);
 
   const {
@@ -119,10 +137,6 @@ export function CompleteDiagramTree({
     centerInitialViewport,
     stagePointerHandlers,
   } = useDiagramViewport({ onStagePanStart: handleStagePanStart });
-  const setStructureHover = useCallback((hovered) => {
-    canvasRef.current?.classList.toggle('is-structure-hovered', hovered);
-  }, [canvasRef]);
-
   const visibleProject = useMemo(
     () => (focusMode ? buildFocusProject(project, selectedId, END_NODE_ID, projectIndex) : project),
     [focusMode, project, projectIndex, selectedId],
@@ -137,15 +151,19 @@ export function CompleteDiagramTree({
     if (entry?.type === 'menu') return selectedId;
     return findParentMenuId(project, selectedId, projectIndex) ?? null;
   }, [project, projectIndex, selectedId]);
-  const layout = useMemo(
-    () => getCompleteLayout(visibleProject, compactMode, { collapsedIds }),
-    [visibleProject, compactMode, collapsedIds],
-  );
+  const layout = useMemo(() => getStructureLevelLayout(visibleProject, getCompleteMetrics(compactMode), {
+    collapsedIds,
+    expandedStoryGroupIds: expandedStoryGroupId ? new Set([expandedStoryGroupId]) : new Set(),
+  }), [visibleProject, compactMode, collapsedIds, expandedStoryGroupId]);
   const structureEdgePaths = useMemo(() => layout.edges.map((edge) => ({
     ...edge,
+    id: getStructureEdgeId(edge),
     d: `M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.midY} L ${edge.x2} ${edge.midY} L ${edge.x2} ${edge.y2}`,
   })), [layout.edges]);
-  const rawNavigationEdges = useMemo(() => getCompleteNavigationEdges(visibleProject, layout), [visibleProject, layout]);
+  const rawNavigationEdges = useMemo(
+    () => getCompleteNavigationEdges(visibleProject, layout),
+    [visibleProject, layout],
+  );
   const navigationPresentation = useMemo(
     () => presentLocalEndSteps(layout, rawNavigationEdges),
     [layout, rawNavigationEdges],
@@ -167,16 +185,51 @@ export function CompleteDiagramTree({
   const afterEndEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'after-end'), [navigationEdges]);
   const referenceEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'reference'), [navigationEdges]);
   const nodeLabelById = useMemo(() => new Map([
+    ...(projectIndex?.entryById ? [...projectIndex.entryById].map(([id, entry]) => [
+      id,
+      entry.name || TYPE_LABELS[entry.type] || id,
+    ]) : []),
     ...layout.nodes.map((node) => [
       node.entry.id,
       node.entry.name || TYPE_LABELS[node.entry.type] || node.entry.id,
     ]),
     ...localEndNodes.map((node) => [node.id, node.label]),
-  ]), [layout.nodes, localEndNodes]);
+    ...(layout.groups ?? []).map((group) => [group.id, `${group.storyCount} histoires`]),
+  ]), [layout.groups, layout.nodes, localEndNodes, projectIndex]);
   const nodeById = useMemo(() => new Map([
     ...layout.nodes.map((node) => [node.entry.id, node]),
     ...localEndNodes.map((node) => [node.id, node]),
   ]), [layout.nodes, localEndNodes]);
+  const activeStructureEdgeId = hoveredStructureEdgeId ?? pinnedStructureEdgeId;
+  const structureFocus = useMemo(
+    () => buildStructureFocus(layout.edges, activeStructureEdgeId, nodeLabelById),
+    [activeStructureEdgeId, layout.edges, nodeLabelById],
+  );
+  const activeStructureNodeIds = useMemo(() => {
+    if (!structureFocus) return new Set();
+    const ids = new Set(structureFocus.pathNodeIds);
+    const activeGroup = (layout.groups ?? []).find((group) => group.id === structureFocus.activeEdge.to);
+    activeGroup?.storyIds?.forEach((storyId) => ids.add(storyId));
+    return ids;
+  }, [layout.groups, structureFocus]);
+  const hasActiveStructureEdge = !!structureFocus;
+  const handleStructurePointerEnter = useCallback((edgeId) => {
+    setHoveredStructureEdgeId(edgeId);
+    setHoveredNavigationEdgeId(null);
+    setPinnedNavigationEdgeId(null);
+    setNavigationTooltip(null);
+  }, []);
+  const handleStructurePointerLeave = useCallback(() => {
+    setHoveredStructureEdgeId(null);
+  }, []);
+  const handleStructureClick = useCallback((event, edgeId) => {
+    event.stopPropagation();
+    setPinnedStructureEdgeId((current) => (current === edgeId ? null : edgeId));
+    setHoveredStructureEdgeId(null);
+    setPinnedNavigationEdgeId(null);
+    setHoveredNavigationEdgeId(null);
+    setNavigationTooltip(null);
+  }, []);
   const edgeKey = useCallback((edge) => [
     edge.kind,
     edge.source || 'configured',
@@ -221,43 +274,36 @@ export function CompleteDiagramTree({
     }
     handleSelectNode(storyId);
   }, [handleSelectNode, onOpenLocalEndSettings, onSelectionChange]);
-  const activeNavigationEdgeIds = useMemo(() => {
-    if (!activeNavigationEdge) return new Set();
-    const ids = new Set([edgeKey(activeNavigationEdge)]);
-    if (activeNavigationEdge.to === END_NODE_ID) {
-      for (const edge of navigationEdges) {
-        if (edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId) ids.add(edgeKey(edge));
-      }
-    }
-    return ids;
-  }, [activeNavigationEdge, edgeKey, navigationEdges]);
-  const activeNavigationNodeIds = useMemo(() => {
-    if (!activeNavigationEdge) return new Set();
-    const ids = new Set([activeNavigationEdge.from, activeNavigationEdge.to]);
-    activeNavigationEdge.chainStoryIds?.forEach((nodeId) => ids.add(nodeId));
-    if (activeNavigationEdge.localEndStoryId) ids.add(activeNavigationEdge.localEndStoryId);
-    if (activeNavigationEdge.to === END_NODE_ID && activeNavigationEdge.endNodeTargetId) {
-      for (const edge of navigationEdges) {
-        if (edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId) {
-          ids.add(edge.from);
-          ids.add(edge.to);
-        }
-      }
-      ids.add(activeNavigationEdge.endNodeTargetId);
-    }
-    return ids;
-  }, [activeNavigationEdge, navigationEdges]);
+  const activeNavigationPathEdges = useMemo(
+    () => collectActiveNavigationPathEdges(activeNavigationEdge, navigationEdges, END_NODE_ID),
+    [activeNavigationEdge, navigationEdges],
+  );
+  const activeNavigationEdgeIds = useMemo(
+    () => new Set(activeNavigationPathEdges.map(edgeKey)),
+    [activeNavigationPathEdges, edgeKey],
+  );
+  const activeNavigationNodeRoles = useMemo(
+    () => buildNavigationNodeRoles(activeNavigationEdge, navigationEdges, END_NODE_ID),
+    [activeNavigationEdge, navigationEdges],
+  );
+  const activeNavigationNodeIds = activeNavigationNodeRoles.activeNodeIds;
+  const activeNavigationMemberNodeIds = activeNavigationNodeRoles.memberNodeIds;
   const hasActiveNavigationEdge = !!activeNavigationEdge;
   const activeEndNodeContinuationEdge = useMemo(() => {
     if (!activeNavigationEdge || activeNavigationEdge.to !== END_NODE_ID || !activeNavigationEdge.endNodeTargetId) return null;
     if (navigationEdges.some((edge) => edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId)) return null;
     const from = nodeById.get(END_NODE_ID);
-    const to = nodeById.get(activeNavigationEdge.endNodeTargetId);
+    const displayTargetId = layout.hiddenStoryGroupByStoryId?.get(activeNavigationEdge.endNodeTargetId)
+      ?? activeNavigationEdge.endNodeTargetId;
+    const to = nodeById.get(displayTargetId);
     if (!from || !to) return null;
     const x1 = from.x + (from.width / 2);
-    const y1 = from.y;
     const x2 = to.x + (to.width / 2);
-    const y2 = to.y + to.height;
+    const nodeVisualHeight = layout.metrics?.nodeVisualHeight ?? layout.metrics?.nodeHeight;
+    const visualBottom = (node) => node.y + Math.min(node.height, nodeVisualHeight ?? node.height);
+    const targetIsBelow = to.y > from.y;
+    const y1 = targetIsBelow ? visualBottom(from) : from.y;
+    const y2 = targetIsBelow ? to.y : visualBottom(to);
     const verticalDirection = y2 >= y1 ? 1 : -1;
     const controlOffset = Math.max(80, Math.abs(x2 - x1) * 0.2, Math.abs(y2 - y1) * 0.34);
     return {
@@ -268,10 +314,32 @@ export function CompleteDiagramTree({
       c1y: y1 + (controlOffset * verticalDirection),
       c2y: y2 - (controlOffset * verticalDirection),
     };
-  }, [activeNavigationEdge, navigationEdges, nodeById]);
+  }, [activeNavigationEdge, layout.hiddenStoryGroupByStoryId, navigationEdges, nodeById]);
   function describeNavigationEdge(edge) {
+    const pathEdges = collectActiveNavigationPathEdges(edge, navigationEdges, END_NODE_ID);
+    if (edge.localEndStoryId) {
+      const exitEdge = pathEdges.find((pathEdge) => pathEdge.localEndLeg === 'exit');
+      const localNodeId = pathEdges.find((pathEdge) => pathEdge.localEndLeg === 'start')?.to
+        ?? exitEdge?.from;
+      const source = nodeLabelById.get(edge.localEndStoryId) ?? edge.localEndStoryId;
+      const localStep = nodeLabelById.get(localNodeId) ?? 'message ou scénario de fin';
+      const targetId = exitEdge?.displayTo ?? exitEdge?.to;
+      const target = nodeLabelById.get(targetId) ?? targetId;
+      return `À la fin de « ${source} » → « ${localStep} » → « ${target} »`;
+    }
+    const incomingEndEdge = pathEdges.find((pathEdge) => pathEdge.to === END_NODE_ID);
+    if (edge.from === END_NODE_ID && incomingEndEdge) {
+      const source = nodeLabelById.get(incomingEndEdge.from) ?? incomingEndEdge.from;
+      const targetId = edge.displayTo ?? edge.to;
+      const target = nodeLabelById.get(targetId) ?? targetId;
+      if (incomingEndEdge.source === 'global-group') {
+        return `${incomingEndEdge.chainStoryIds?.length ?? 0} histoires → message de fin global → « ${target} »`;
+      }
+      return `À la fin de « ${source} » → message de fin → « ${target} »`;
+    }
     const from = nodeLabelById.get(edge.from) ?? edge.from;
-    const to = nodeLabelById.get(edge.to) ?? edge.to;
+    const targetId = edge.displayTo ?? edge.to;
+    const to = nodeLabelById.get(targetId) ?? targetId;
     if (edge.to === END_NODE_ID) {
       const finalTarget = edge.endNodeTargetId ? (nodeLabelById.get(edge.endNodeTargetId) ?? edge.endNodeTargetId) : null;
       if (edge.source === 'global-group') {
@@ -313,7 +381,7 @@ export function CompleteDiagramTree({
   }
   useEffect(() => {
     resetInitialCenter();
-  }, [project, focusMode, collapsedIds, resetInitialCenter]);
+  }, [project, focusMode, collapsedIds, expandedStoryGroupId, resetInitialCenter]);
 
   useLayoutEffect(() => {
     centerInitialViewport(layout);
@@ -337,8 +405,18 @@ export function CompleteDiagramTree({
   }, [edgeKey, hoveredNavigationEdgeId, navigationEdges, pinnedNavigationEdgeId]);
 
   useEffect(() => {
+    const edgeIds = new Set(layout.edges.map(getStructureEdgeId));
+    if (pinnedStructureEdgeId && !edgeIds.has(pinnedStructureEdgeId)) setPinnedStructureEdgeId(null);
+    if (hoveredStructureEdgeId && !edgeIds.has(hoveredStructureEdgeId)) setHoveredStructureEdgeId(null);
+  }, [hoveredStructureEdgeId, layout.edges, pinnedStructureEdgeId]);
+
+  useEffect(() => {
     activeNavigationEdgeIdRef.current = activeNavigationEdgeId;
   }, [activeNavigationEdgeId]);
+
+  useEffect(() => {
+    activeStructureEdgeIdRef.current = activeStructureEdgeId;
+  }, [activeStructureEdgeId]);
 
   const {
     draggingId,
@@ -392,10 +470,12 @@ export function CompleteDiagramTree({
       if (isModalSurfaceOpen()) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
-      if (e.key === 'Escape' && activeNavigationEdgeIdRef.current) {
+      if (e.key === 'Escape' && (activeNavigationEdgeIdRef.current || activeStructureEdgeIdRef.current)) {
         setHoveredNavigationEdgeId(null);
         setPinnedNavigationEdgeId(null);
         setNavigationTooltip(null);
+        setHoveredStructureEdgeId(null);
+        setPinnedStructureEdgeId(null);
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -464,6 +544,8 @@ export function CompleteDiagramTree({
       onFocusModeToggle={() => setFocusMode((current) => !current)}
       hasCollapsedNodes={collapsedIds.size > 0}
       onOpenAll={() => setCollapsedIds(new Set())}
+      hasExpandedStoryGroups={!!expandedStoryGroupId}
+      onRegroupStories={() => onExpandedStoryGroupIdChange?.(null)}
     />
   );
 
@@ -499,11 +581,19 @@ export function CompleteDiagramTree({
           onZoomIn={() => handleZoom(BUTTON_ZOOM_FACTOR)}
           onZoomOut={() => handleZoom(1 / BUTTON_ZOOM_FACTOR)}
         />
+        <StructureFocusBar
+          focus={structureFocus}
+          pinned={!!pinnedStructureEdgeId}
+          onClear={() => {
+            setHoveredStructureEdgeId(null);
+            setPinnedStructureEdgeId(null);
+          }}
+        />
 
         <div className="fd-complete-viewport">
           <div
             ref={canvasRef}
-            className={`fd-complete-canvas fd-complete-canvas--${compactMode}`}
+            className={`fd-complete-canvas fd-complete-canvas--${compactMode} is-level-mode ${hasActiveStructureEdge ? 'is-structure-focused' : ''}`}
             style={{
               '--fd-node-width': `${layout.metrics.nodeWidth}px`,
               '--fd-node-root-width': `${layout.metrics.rootWidth}px`,
@@ -513,43 +603,15 @@ export function CompleteDiagramTree({
             }}
           >
             <svg className="fd-complete-lines" width={layout.width} height={layout.height} aria-hidden="true">
-              {(layout.groups ?? []).map((group) => (
-                <g key={group.id ?? `${group.parentId}-${group.kind}-${group.x}-${group.y}`}>
-                  <rect
-                    className={`fd-complete-sibling-group fd-complete-sibling-group--${group.kind} fd-complete-sibling-group--tone-${group.tone ?? 0} ${group.isAggregate ? 'is-aggregate' : ''}`}
-                    x={group.x}
-                    y={group.y}
-                    width={group.width}
-                    height={group.height}
-                    rx="12"
-                  />
-                  {group.isAggregate ? (
-                    <text
-                      className="fd-complete-sibling-group-label"
-                      x={group.x + 8}
-                      y={group.y + 12}
-                    >
-                      {`${group.storyCount} histoires`}
-                    </text>
-                  ) : null}
-                </g>
-              ))}
-              {structureEdgePaths.map((edge) => {
-                return (
-                  <g key={edge.id ?? `${edge.from}-${edge.to}`}>
-                    <path
-                      className="fd-complete-line-hitbox fd-complete-structure-hitbox"
-                      d={edge.d}
-                      onPointerEnter={() => setStructureHover(true)}
-                      onPointerLeave={() => setStructureHover(false)}
-                    />
-                    <path
-                      className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'}`}
-                      d={edge.d}
-                    />
-                  </g>
-                );
-              })}
+              <StructureDiagramLayer
+                layout={layout}
+                structureEdgePaths={structureEdgePaths}
+                structureFocus={structureFocus}
+                hasActiveStructureEdge={hasActiveStructureEdge}
+                onEdgeEnter={handleStructurePointerEnter}
+                onEdgeLeave={handleStructurePointerLeave}
+                onEdgeClick={handleStructureClick}
+              />
               {navigationEdges.map((edge) => {
                 const id = edgeKey(edge);
                 const isActive = activeNavigationEdgeIds.has(id);
@@ -563,6 +625,8 @@ export function CompleteDiagramTree({
                     key={id}
                     className={`fd-complete-navigation-edge ${isActive ? 'is-active' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
                     onPointerEnter={(event) => {
+                      setHoveredStructureEdgeId(null);
+                      setPinnedStructureEdgeId(null);
                       setHoveredNavigationEdgeId(id);
                       updateNavigationTooltip(event, edge);
                     }}
@@ -574,6 +638,8 @@ export function CompleteDiagramTree({
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
+                      setHoveredStructureEdgeId(null);
+                      setPinnedStructureEdgeId(null);
                       setPinnedNavigationEdgeId((current) => (current === id ? null : id));
                     }}
                   >
@@ -617,24 +683,32 @@ export function CompleteDiagramTree({
               ))}
             </svg>
 
-            {/* Couche de structure activée seulement au survol : elle est rendue
-                après les retours afin que les chemins structurels restent nets. */}
-            <svg className="fd-complete-structure-overlay" width={layout.width} height={layout.height} aria-hidden="true">
-              {structureEdgePaths.map((edge) => (
+            {/* Le chemin structurel actif repasse au-dessus des parcours. */}
+            <svg className={`fd-complete-structure-overlay ${hasActiveStructureEdge ? 'is-visible' : ''}`} width={layout.width} height={layout.height} aria-hidden="true">
+              {structureFocus?.pathEdges.map((pathEdge) => structureEdgePaths.find((edge) => edge.id === getStructureEdgeId(pathEdge))).filter(Boolean).map((edge) => (
                 <path
-                  key={edge.id ?? `${edge.from}-${edge.to}`}
-                  className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'}`}
+                  key={`overlay-${edge.id}`}
+                  className={`fd-complete-line fd-complete-line--${edge.kind || 'structural'} ${edge.id === structureFocus.activeEdgeId ? 'is-structure-active' : 'is-structure-path'}`}
                   d={edge.d}
                 />
               ))}
             </svg>
 
-            {layout.nodes.map((node) => (
-              <div
-                key={node.entry.id}
-                className={`fd-complete-placed-node ${activeNavigationNodeIds.has(node.entry.id) ? 'is-navigation-active' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''}`}
-                style={{ left: node.x, top: node.y, width: node.width }}
-              >
+            {layout.nodes.map((node) => {
+              const isNavigationActive = activeNavigationNodeIds.has(node.entry.id);
+              const isNavigationMember = activeNavigationMemberNodeIds.has(node.entry.id);
+              return (
+                <div
+                  key={node.entry.id}
+                  className={`fd-complete-placed-node ${isNavigationActive ? 'is-navigation-active' : isNavigationMember ? 'is-navigation-member' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''} ${activeStructureNodeIds.has(node.entry.id) ? 'is-structure-active' : structureFocus?.siblingNodeIds.has(node.entry.id) ? 'is-structure-sibling' : hasActiveStructureEdge ? 'is-structure-dimmed' : ''}`}
+                  style={{ left: node.x, top: node.y, width: node.width }}
+                >
+                {node.entry.type === 'story-group' ? (
+                  <StructureLevelSummaryNode
+                    entry={node.entry}
+                    onExpand={handleToggleStoryGroup}
+                  />
+                ) : (
                 <FullDiagramNode
                   entry={node.entry}
                   compactMode={compactMode}
@@ -655,8 +729,10 @@ export function CompleteDiagramTree({
                   isCollapsed={collapsedIds.has(node.entry.id)}
                   childSummary={childSummaryById.get(node.entry.id) ?? null}
                 />
-              </div>
-            ))}
+                )}
+                </div>
+              );
+            })}
             {localEndNodes.map((node) => (
               <button
                 key={node.id}
