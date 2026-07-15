@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FilePen, FilePlus, FolderOpen, Save } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, House, Save } from '../icons/LucideLocal';
 import './ProjectMenuPopover.css';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
@@ -92,9 +92,9 @@ export function ProjectMenuPopover({
               <span>{saveState === 'ok' ? 'Enregistré' : 'Fichier et enregistrement'}</span>
             </div>
             <ProjectMenuItem onClick={() => handleAction(onNewProject)}>
-              <ToolbarIcon Icon={FilePlus} />
+              <ToolbarIcon Icon={House} />
               <span>
-                <strong>Nouveau projet</strong>
+                <strong>Retour à l’accueil</strong>
                 <small>{shortcutLabels.newProject}</small>
               </span>
             </ProjectMenuItem>

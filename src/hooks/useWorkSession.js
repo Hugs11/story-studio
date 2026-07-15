@@ -131,7 +131,7 @@ export function useWorkSession({
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
   // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
-  // d'écriture. Partagé par « Nouveau projet » et les funnels d'entrée éditeur.
+  // d'écriture. Partagé par « Retour à l’accueil » et les funnels d'entrée éditeur.
   async function prepareNewWorkSession(type) {
     let workspaceDir;
     if (useWorkspaceForNewProjects) {
@@ -170,7 +170,7 @@ export function useWorkSession({
     });
   }
 
-  // Retour à l'accueil (« Nouveau projet ») : ferme la session sans toucher au
+  // Retour à l'accueil : ferme la session sans toucher au
   // store ni au dossier (le nettoyage éventuel est un appel séparé).
   function resetWorkSession() {
     ephemeralSavedSnapshotRef.current = null;

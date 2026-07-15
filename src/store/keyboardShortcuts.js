@@ -22,7 +22,7 @@ export const SHORTCUT_SCOPES = [
 // - description : sous-titre court (optionnel)
 export const SHORTCUT_DEFINITIONS = [
   // ── Général ────────────────────────────────────────────────────────────────
-  { id: 'newProject',       scope: 'general', label: 'Nouveau projet',                     defaultShortcut: { ctrl: true, key: 'n', code: 'KeyN' } },
+  { id: 'newProject',       scope: 'general', label: 'Retour à l’accueil',                  defaultShortcut: { ctrl: true, key: 'n', code: 'KeyN' } },
   { id: 'openProject',      scope: 'general', label: 'Ouvrir un projet',                   defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
   { id: 'saveProject',      scope: 'general', label: 'Enregistrer le projet',              defaultShortcut: { ctrl: true, key: 's', code: 'KeyS' } },
   { id: 'saveAs',           scope: 'general', label: 'Enregistrer sous',                    defaultShortcut: { ctrl: true, shift: true, key: 's', code: 'KeyS' } },
