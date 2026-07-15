@@ -12,6 +12,15 @@ function finitePositive(value) {
 
 export function getWheelZoomFactor(event, viewportHeight = 800) {
   let delta = Number(event?.deltaY);
+  // Certains pilotes de pavé tactile Windows exposent le pincement synthétique
+  // sur l'axe X, ou encore via l'ancien wheelDelta alors que deltaY reste nul.
+  if ((!Number.isFinite(delta) || delta === 0) && event?.ctrlKey) {
+    delta = Number(event?.deltaX);
+  }
+  if (!Number.isFinite(delta) || delta === 0) {
+    const legacyDelta = Number(event?.wheelDeltaY ?? event?.wheelDelta);
+    if (Number.isFinite(legacyDelta) && legacyDelta !== 0) delta = -legacyDelta;
+  }
   if (!Number.isFinite(delta) || delta === 0) return 1;
 
   if (event?.deltaMode === 1) delta *= LINE_HEIGHT_PX;

@@ -19,6 +19,13 @@ document.addEventListener('pointerdown', () => {
   document.documentElement.removeAttribute('data-keyboard-navigation');
 }, true);
 
+// WebView2 doit autoriser le signal Ctrl+wheel pour exposer le pincement du
+// trackpad au diagramme. On neutralise ici son action native afin qu'il ne
+// zoome jamais l'interface entière ; le viewport du diagramme le consomme.
+window.addEventListener('wheel', event => {
+  if (event.ctrlKey) event.preventDefault();
+}, { passive: false, capture: true });
+
 // Désactiver le menu contextuel du navigateur (sauf dans les champs de texte)
 document.addEventListener('contextmenu', e => {
   if (!e.target.matches('input, textarea')) e.preventDefault();

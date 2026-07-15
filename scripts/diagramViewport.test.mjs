@@ -14,6 +14,8 @@ test('le trackpad et le pincement zooment dans les deux directions', () => {
   assert.ok(getWheelZoomFactor({ deltaY: 10, deltaMode: 0 }) < 1);
   assert.ok(getWheelZoomFactor({ deltaY: -4, deltaMode: 0, ctrlKey: true }) > 1.04);
   assert.ok(getWheelZoomFactor({ deltaY: 4, deltaMode: 0, ctrlKey: true }) < 0.96);
+  assert.ok(getWheelZoomFactor({ deltaY: 0, deltaX: -4, deltaMode: 0, ctrlKey: true }) > 1.04);
+  assert.ok(getWheelZoomFactor({ deltaY: 0, wheelDeltaY: 120, deltaMode: 0 }) > 1);
 });
 
 test('une molette conserve un pas modéré et normalise deltaMode', () => {
