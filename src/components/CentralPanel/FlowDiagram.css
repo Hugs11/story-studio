@@ -917,17 +917,6 @@
   stroke-dasharray: 2 6;
 }
 
-.fd-level-band--after-reading text {
-  fill: color-mix(in srgb, var(--text-muted) 72%, transparent);
-}
-
-.fd-level-band .fd-level-band-secondary {
-  fill: var(--text-muted);
-  font-size: 8px;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.02em;
-}
-
 .fd-complete-sibling-group--tone-0 {
   --fd-sibling-tone: var(--info);
 }

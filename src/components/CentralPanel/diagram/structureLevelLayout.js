@@ -102,8 +102,6 @@ export function getStructureLevelLayout(project, metrics, options = {}) {
     bands.push({
       depth: 'end',
       kind: 'after-reading',
-      label: 'FIN',
-      secondaryLabel: 'Après la lecture',
       y: endNodeY - 18,
       height: endNodeHeight + 34,
     });
