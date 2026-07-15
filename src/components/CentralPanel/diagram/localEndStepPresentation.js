@@ -46,7 +46,7 @@ function curveBetween(from, to, layout) {
   const x1 = from.x + (from.width / 2);
   const y1 = fromBelow ? visualBottom(from, layout.metrics) : from.y;
   const x2 = to.x + (to.width / 2);
-  const y2 = fromBelow ? to.y : to.y + to.height;
+  const y2 = fromBelow ? to.y : visualBottom(to, layout.metrics);
   const direction = y2 >= y1 ? 1 : -1;
   const controlOffset = Math.max(28, Math.abs(x2 - x1) * 0.16, Math.abs(y2 - y1) * 0.36);
 
@@ -84,7 +84,7 @@ export function presentLocalEndSteps(layout, navigationEdges) {
     }
 
     const source = realNodes.get(edge.from);
-    const target = realNodes.get(edge.to);
+    const target = realNodes.get(edge.displayTo ?? edge.to);
     if (!source || !target) {
       expandedEdges.push(edge);
       continue;

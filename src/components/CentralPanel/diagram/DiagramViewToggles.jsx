@@ -5,6 +5,8 @@ export function DiagramViewToggles({
   onFocusModeToggle,
   hasCollapsedNodes,
   onOpenAll,
+  hasExpandedStoryGroups,
+  onRegroupStories,
 }) {
   return (
     <div className="fd-complete-viewbar" aria-label="Modes du diagramme">
@@ -17,8 +19,8 @@ export function DiagramViewToggles({
         {/* Libellés double : version longue par défaut, version courte sous
             ~500 px de colonne (voir `@container fd-diagram-header` dans
             FlowDiagram.css) pour tenir le bandeau 44 px sur une seule ligne. */}
-        <span className="fd-ctrl-label fd-ctrl-label--full">Afficher les parcours</span>
-        <span className="fd-ctrl-label fd-ctrl-label--short">Parcours</span>
+        <span className="fd-ctrl-label fd-ctrl-label--full">Afficher les retours</span>
+        <span className="fd-ctrl-label fd-ctrl-label--short">Retours</span>
       </label>
       <button
         type="button"
@@ -36,6 +38,16 @@ export function DiagramViewToggles({
         >
           <span className="fd-ctrl-label fd-ctrl-label--full">Tout ouvrir</span>
           <span className="fd-ctrl-label fd-ctrl-label--short">Tout</span>
+        </button>
+      ) : null}
+      {hasExpandedStoryGroups ? (
+        <button
+          type="button"
+          className="fd-complete-clear-collapse"
+          onClick={onRegroupStories}
+        >
+          <span className="fd-ctrl-label fd-ctrl-label--full">Regrouper les histoires</span>
+          <span className="fd-ctrl-label fd-ctrl-label--short">Regrouper</span>
         </button>
       ) : null}
     </div>

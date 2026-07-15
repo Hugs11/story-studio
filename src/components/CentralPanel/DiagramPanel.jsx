@@ -64,6 +64,8 @@ export function DiagramPanel({
   selectedId = 'root',
   selectedIds,
   onSelectionChange,
+  expandedStoryGroupId = null,
+  onExpandedStoryGroupIdChange,
   variant = 'plein',
   showActionsBar = false,
   showHint = false,
@@ -95,6 +97,8 @@ export function DiagramPanel({
           selectedId={selectedId}
           selectedIds={selectedIds}
           onSelectionChange={onSelectionChange}
+          expandedStoryGroupId={expandedStoryGroupId}
+          onExpandedStoryGroupIdChange={onExpandedStoryGroupIdChange}
           onPreview={onPreview}
           onSimulateZip={onSimulateZip}
           onSimulateRoot={onSimulateRoot}

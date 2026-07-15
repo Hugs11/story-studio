@@ -28,6 +28,7 @@ test('une fin locale devient une carte entre son histoire et sa destination', ()
     ['story', 'local-end:story', 'start'],
     ['local-end:story', 'menu', 'exit'],
   ]);
+  assert.equal(result.navigationEdges[1].y2, layout.nodes[0].y + layout.metrics.nodeVisualHeight);
 });
 
 test('un retour ordinaire reste une arête unique', () => {

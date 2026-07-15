@@ -52,6 +52,7 @@ export function WorkspaceView({
   const [afterPlayFocus, setAfterPlayFocus] = useState(null);
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
+  const [expandedDiagramStoryGroupId, setExpandedDiagramStoryGroupId] = useState(null);
   const skipIdSyncRef = useRef(false);
 
   const {
@@ -204,6 +205,8 @@ export function WorkspaceView({
       selectedId={selectedId}
       selectedIds={selectedIds}
       onSelectionChange={handleDiagramSelectionChange}
+      expandedStoryGroupId={expandedDiagramStoryGroupId}
+      onExpandedStoryGroupIdChange={setExpandedDiagramStoryGroupId}
       variant={variant}
       showActionsBar={showDiagram && !showTree}
       showHint={showDiagram && !showSettings}

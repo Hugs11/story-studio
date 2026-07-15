@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildNavigationNodeRoles,
+  collectActiveNavigationPathEdges,
   compactNavigationPresentation,
   navigationEdgeTouchesNode,
 } from '../src/components/CentralPanel/diagram/navigationPresentation.js';
@@ -99,4 +101,63 @@ test('un message global partagé est regroupé par dossier avant de rejoindre so
   assert.equal(presented[0].from, 'menu');
   assert.equal(presented[0].source, 'global-group');
   assert.deepEqual(presented[0].chainStoryIds, ['one', 'two', 'three']);
+});
+
+test('les histoires d’un retour regroupé sont des membres, pas des extrémités actives', () => {
+  const roles = buildNavigationNodeRoles({
+    from: 'menu',
+    to: 'end-node',
+    chainStoryIds: ['one', 'two', 'three'],
+  });
+
+  assert.deepEqual([...roles.activeNodeIds], ['menu', 'end-node']);
+  assert.deepEqual([...roles.memberNodeIds], ['one', 'two', 'three']);
+});
+
+test('les deux segments d’une fin locale forment un seul trajet actif', () => {
+  const edges = [
+    {
+      from: 'story-a',
+      to: 'local-end:story-a',
+      kind: 'after-end',
+      localEndLeg: 'start',
+      localEndStoryId: 'story-a',
+    },
+    {
+      from: 'local-end:story-a',
+      to: 'story-b',
+      kind: 'after-end',
+      localEndLeg: 'exit',
+      localEndStoryId: 'story-a',
+    },
+  ];
+
+  assert.deepEqual(collectActiveNavigationPathEdges(edges[0], edges), edges);
+  assert.deepEqual(collectActiveNavigationPathEdges(edges[1], edges), edges);
+
+  const roles = buildNavigationNodeRoles(edges[0], edges);
+  assert.deepEqual([...roles.activeNodeIds], ['story-a', 'local-end:story-a', 'story-b']);
+  assert.deepEqual([...roles.memberNodeIds], []);
+});
+
+test('les deux côtés du message global forment un seul trajet actif', () => {
+  const edges = [
+    {
+      from: 'story-a',
+      to: 'end-node',
+      kind: 'after-end',
+      endNodeTargetId: 'story-b',
+    },
+    {
+      from: 'end-node',
+      to: 'story-b',
+      kind: 'after-end',
+    },
+  ];
+
+  assert.deepEqual(collectActiveNavigationPathEdges(edges[0], edges), edges);
+  assert.deepEqual(collectActiveNavigationPathEdges(edges[1], edges), edges);
+
+  const roles = buildNavigationNodeRoles(edges[1], edges);
+  assert.deepEqual([...roles.activeNodeIds], ['story-a', 'end-node', 'story-b']);
 });

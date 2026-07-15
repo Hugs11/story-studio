@@ -321,6 +321,108 @@
   background: var(--bg3);
 }
 
+.fd-complete-toggle:has(input:disabled) {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.fd-structure-focus-bar {
+  position: absolute;
+  z-index: 9;
+  top: 10px;
+  left: 50%;
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 5px 10px;
+  width: min(620px, calc(100% - 140px));
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 46%, var(--borderLt));
+  border-radius: 10px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.fd-structure-focus-bar.is-pinned {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--accent-2));
+}
+
+.fd-structure-focus-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.fd-structure-focus-depth {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: color-mix(in srgb, var(--accent-2) 72%, white 28%);
+  background: color-mix(in srgb, var(--accent-2) 16%, var(--bg2));
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+}
+
+.fd-structure-focus-relation {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fd-structure-focus-breadcrumb {
+  grid-column: 1 / 3;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 9px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fd-structure-focus-hint {
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.fd-structure-focus-clear {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.fd-structure-focus-clear:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+@container fd-diagram-header (max-width: 720px) {
+  .fd-structure-focus-bar {
+    top: 50px;
+    width: calc(100% - 24px);
+  }
+}
+
 .fd-complete-mode-btn.is-active {
   color: var(--text);
   border-color: var(--borderLt);
@@ -466,8 +568,8 @@
   pointer-events: none;
 }
 
-/* Cette couche duplique seulement les traits structurels déjà calculés. Elle
-   reste invisible hors survol, laissant les retours au premier plan. */
+/* Cette couche ne duplique que le chemin structurel actif afin qu'il reste
+   lisible au-dessus des parcours. */
 .fd-complete-structure-overlay {
   position: absolute;
   inset: 0;
@@ -478,7 +580,7 @@
   transition: opacity var(--dur-fast), visibility 0s linear var(--dur-fast);
 }
 
-.fd-complete-canvas.is-structure-hovered .fd-complete-structure-overlay {
+.fd-complete-structure-overlay.is-visible {
   visibility: visible;
   opacity: 1;
   transition-delay: 0s;
@@ -506,7 +608,41 @@
 }
 
 .fd-complete-structure-hitbox {
-  cursor: default;
+  cursor: pointer;
+}
+
+.fd-complete-structure-edge {
+  transition: opacity 0.12s ease;
+}
+
+.fd-complete-structure-edge.is-dimmed {
+  opacity: 0.08;
+}
+
+.fd-complete-structure-edge.is-sibling {
+  opacity: 0.58;
+}
+
+.fd-complete-structure-edge.is-path .fd-complete-line {
+  stroke: color-mix(in srgb, var(--accent-2) 72%, var(--text-secondary));
+  stroke-width: 2.25px;
+}
+
+.fd-complete-structure-edge.is-active .fd-complete-line,
+.fd-complete-line.is-structure-active {
+  stroke: color-mix(in srgb, var(--accent) 82%, white 18%);
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.fd-complete-line.is-structure-path {
+  stroke: color-mix(in srgb, var(--accent-2) 72%, var(--text-secondary));
+  stroke-width: 2.25px;
+}
+
+.fd-complete-canvas.is-structure-focused .fd-complete-navigation-edge,
+.fd-complete-canvas.is-structure-focused .fd-complete-edge-label {
+  opacity: 0.06;
 }
 
 .fd-complete-line-underlay {
@@ -567,18 +703,22 @@
   pointer-events: none;
 }
 
-/* Sans modifier la topologie du graphe, on baisse seulement l'opacité des
-   vignettes pendant le survol d'une arête structurelle : le chemin reste
-   visible à travers les cartes. */
-.fd-complete-canvas.is-structure-hovered .fd-complete-placed-node {
-  opacity: 0.34;
+.fd-complete-placed-node.is-structure-dimmed {
+  opacity: 0.12;
 }
 
-.fd-complete-canvas.is-structure-hovered .fd-complete-line--structural,
-.fd-complete-canvas.is-structure-hovered .fd-complete-line--story,
-.fd-complete-canvas.is-structure-hovered .fd-complete-line--story-group {
-  stroke: color-mix(in srgb, var(--text-secondary) 84%, var(--borderLt));
-  stroke-width: 1.9px;
+.fd-complete-placed-node.is-structure-sibling {
+  opacity: 0.7;
+}
+
+.fd-complete-placed-node.is-structure-active {
+  z-index: 4;
+  opacity: 1;
+}
+
+.fd-complete-placed-node.is-structure-active .fd-complete-node {
+  border-color: color-mix(in srgb, var(--accent-2) 62%, var(--accent));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-2) 28%, transparent);
 }
 
 .fd-complete-sibling-group {
@@ -606,6 +746,77 @@
   font-weight: var(--weight-bold);
   letter-spacing: 0.02em;
   pointer-events: none;
+}
+
+.fd-complete-sibling-group-wrap {
+  transition: opacity 0.12s ease;
+}
+
+.fd-complete-sibling-group-wrap.is-interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.fd-complete-sibling-group-wrap.is-structure-dimmed {
+  opacity: 0.08;
+}
+
+.fd-complete-sibling-group-wrap.is-structure-sibling {
+  opacity: 0.62;
+}
+
+.fd-complete-sibling-group-wrap.is-structure-active .fd-complete-sibling-group {
+  stroke: color-mix(in srgb, var(--accent) 76%, white 24%);
+  stroke-width: 2px;
+}
+
+.fd-complete-sibling-group-header {
+  fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 22%, var(--bg2));
+  stroke: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 54%, var(--borderLt));
+  stroke-width: 1.25px;
+  vector-effect: non-scaling-stroke;
+}
+
+.fd-complete-sibling-group-port {
+  fill: color-mix(in srgb, var(--fd-sibling-tone, var(--info)) 76%, white 24%);
+  stroke: var(--bg0);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.fd-level-band rect {
+  fill: color-mix(in srgb, var(--bg2) 34%, transparent);
+  stroke: color-mix(in srgb, var(--borderLt) 38%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.fd-level-band:nth-child(even) rect {
+  fill: color-mix(in srgb, var(--accent-2) 3%, transparent);
+}
+
+.fd-level-band text {
+  fill: var(--text-secondary);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.fd-level-band--after-reading rect {
+  fill: transparent;
+  stroke: color-mix(in srgb, var(--text-muted) 20%, transparent);
+  stroke-dasharray: 2 6;
+}
+
+.fd-level-band--after-reading text {
+  fill: color-mix(in srgb, var(--text-muted) 72%, transparent);
+}
+
+.fd-level-band .fd-level-band-secondary {
+  fill: var(--text-muted);
+  font-size: 8px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
 }
 
 .fd-complete-sibling-group--tone-0 {
@@ -878,6 +1089,11 @@
   z-index: 3;
 }
 
+.fd-complete-placed-node.is-navigation-member {
+  z-index: 2;
+  opacity: 0.86;
+}
+
 .fd-complete-placed-node.is-navigation-active .fd-complete-node {
   border-color: color-mix(in srgb, var(--info) 74%, var(--accent) 26%);
   box-shadow:
@@ -1115,6 +1331,13 @@
   box-shadow: 0 0 0 2px var(--accent-border);
 }
 
+/* La sélection éditoriale reste prioritaire sur les mises en évidence de
+   structure et de navigation, qui peuvent concerner plusieurs cartes. */
+.fd-complete-placed-node .fd-complete-node.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-border);
+}
+
 .fd-complete-node.is-drop-target,
 .fd-complete-node.is-drop-over {
   border-color: #5eb2ff;
@@ -1127,6 +1350,64 @@
   width: var(--fd-node-root-width);
   border-color: var(--accent);
   border-width: 1.5px;
+}
+
+.fd-structure-summary-node {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  min-height: 82px;
+  padding: 10px;
+  border-color: color-mix(in srgb, var(--accent-2) 52%, var(--borderLt));
+  color: var(--text);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-2) 14%, var(--bg2)), var(--bg2));
+}
+
+.fd-structure-summary-node:hover,
+.fd-structure-summary-node:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--accent-2));
+  transform: translateY(-1px);
+}
+
+.fd-structure-summary-icon {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: color-mix(in srgb, var(--accent-2) 72%, white 28%);
+}
+
+.fd-structure-summary-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.fd-structure-summary-count {
+  align-self: end;
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.fd-structure-summary-label {
+  grid-column: 2;
+  align-self: start;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.fd-structure-summary-action {
+  grid-column: 1 / 3;
+  justify-self: center;
+  margin-top: 5px;
+  color: color-mix(in srgb, var(--accent) 74%, var(--text));
+  font-size: 8px;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .fd-complete-node--menu {
@@ -1306,12 +1587,29 @@
 
 .fd-complete-node--end-node .fd-complete-node-thumb,
 .fd-complete-node--end-node .fd-complete-node-placeholder {
-  background: color-mix(in srgb, var(--cat-night) 16%, var(--bg2));
-  color: var(--cat-night);
+  height: 28px;
+  background: color-mix(in srgb, var(--cat-night) 6%, var(--bg2));
+  color: color-mix(in srgb, var(--cat-night) 64%, var(--text-secondary));
 }
 
 .fd-complete-node--end-node {
-  border-color: color-mix(in srgb, var(--cat-night) 46%, var(--borderLt));
+  width: 100%;
+  border-color: color-mix(in srgb, var(--cat-night) 20%, var(--borderLt));
+  border-radius: var(--radius-md);
+}
+
+.fd-complete-node--end-node .fd-complete-node-placeholder svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fd-complete-node--end-node .fd-complete-node-label {
+  padding: 3px 5px;
+  background: color-mix(in srgb, var(--cat-night) 3%, var(--bg2));
+}
+
+.fd-complete-node--end-node .fd-complete-node-name {
+  font-size: 9px;
 }
 
 .fd-complete-node-label {
@@ -1369,111 +1667,111 @@
   white-space: nowrap;
 }
 
-.fd-complete-inner--compact {
+.fd-complete-canvas--compact {
   --fd-node-width: 86px;
   --fd-node-root-width: 98px;
   --fd-connector-v: 14px;
   gap: 16px;
 }
 
-.fd-complete-inner--compact .fd-complete-root-entries {
+.fd-complete-canvas--compact .fd-complete-root-entries {
   gap: 28px;
 }
 
-.fd-complete-inner--compact .fd-complete-node-thumb {
+.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-thumb {
   height: 42px;
 }
 
-.fd-complete-inner--compact .fd-complete-drop-indicator,
-.fd-complete-inner--minimal .fd-complete-drop-indicator {
+.fd-complete-canvas--compact .fd-complete-drop-indicator,
+.fd-complete-canvas--minimal .fd-complete-drop-indicator {
   font-size: 9px;
   padding: 3px 6px;
 }
 
-.fd-complete-inner--compact .fd-complete-node-placeholder {
+.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder {
   opacity: 0.75;
 }
 
-.fd-complete-inner--compact .fd-complete-node-placeholder svg {
+.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder svg {
   width: 22px;
   height: 22px;
 }
 
-.fd-complete-inner--compact .fd-complete-node-icon,
-.fd-complete-inner--compact .fd-complete-node-icon svg {
+.fd-complete-canvas--compact .fd-complete-node-icon,
+.fd-complete-canvas--compact .fd-complete-node-icon svg {
   width: 11px;
   height: 11px;
 }
 
-.fd-complete-inner--compact .fd-complete-node-name {
+.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-name {
   font-size: 9px;
 }
 
-.fd-complete-inner--compact .fd-complete-children-row {
+.fd-complete-canvas--compact .fd-complete-children-row {
   gap: 10px;
 }
 
-.fd-complete-inner--minimal {
+.fd-complete-canvas--minimal {
   --fd-node-width: 68px;
   --fd-node-root-width: 84px;
   --fd-connector-v: 10px;
   gap: 12px;
 }
 
-.fd-complete-inner--minimal .fd-complete-root-entries {
+.fd-complete-canvas--minimal .fd-complete-root-entries {
   gap: 14px;
 }
 
-.fd-complete-inner--minimal .fd-complete-root-entries > .fd-complete-branch {
+.fd-complete-canvas--minimal .fd-complete-root-entries > .fd-complete-branch {
   width: var(--fd-node-width);
   flex-basis: var(--fd-node-width);
 }
 
-.fd-complete-inner--minimal .fd-complete-root-entries > .fd-complete-branch::before {
+.fd-complete-canvas--minimal .fd-complete-root-entries > .fd-complete-branch::before {
   top: calc(-1 * var(--fd-connector-v));
   height: var(--fd-connector-v);
 }
 
-.fd-complete-inner--minimal .fd-complete-branch {
+.fd-complete-canvas--minimal .fd-complete-branch {
   gap: 8px;
 }
 
-.fd-complete-inner--minimal .fd-complete-branch-children {
+.fd-complete-canvas--minimal .fd-complete-branch-children {
   gap: 8px;
 }
 
-.fd-complete-inner--minimal .fd-complete-children-row {
+.fd-complete-canvas--minimal .fd-complete-children-row {
   gap: 8px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node {
+.fd-complete-canvas--minimal .fd-complete-node {
   border-radius: 10px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-thumb {
+.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-thumb {
   height: 30px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-placeholder {
+.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder {
   opacity: 0.85;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-placeholder svg {
+.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder svg {
   width: 18px;
   height: 18px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-label {
+.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-label {
   padding: 4px 5px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-icon,
-.fd-complete-inner--minimal .fd-complete-node-icon svg {
+.fd-complete-canvas--minimal .fd-complete-node-icon,
+.fd-complete-canvas--minimal .fd-complete-node-icon svg {
   width: 10px;
   height: 10px;
 }
 
-.fd-complete-inner--minimal .fd-complete-node-name {
+.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-name {
   font-size: 8px;
 }
 
