@@ -779,27 +779,47 @@
 .audio-empty {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   min-height: 42px;
-  padding: 5px 7px;
+  padding: 0;
   background: var(--bg2);
   border-radius: var(--radius-md);
   border: 1px solid var(--borderLt);
   margin-bottom: 6px;
-  cursor: pointer;
+  cursor: default;
   min-width: 0;
+  overflow: hidden;
   transition: background 0.12s, border-color 0.12s;
 }
 
-.audio-empty:hover {
-  background: var(--control-bg-hover);
-  border-color: var(--borderLt);
+.audio-empty-import {
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
 }
 
-.audio-empty:focus-visible {
+.audio-empty-import:hover {
+  background: var(--control-bg-hover);
+}
+
+.audio-empty-import:focus-visible {
   outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
   box-shadow: var(--ring);
+}
+
+.audio-empty > .audio-bar-actions {
+  align-self: stretch;
+  margin-left: 0;
+  padding-right: 6px;
 }
 
 .audio-empty.is-empty {

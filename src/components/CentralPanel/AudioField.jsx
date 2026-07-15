@@ -265,20 +265,32 @@ export function AudioField({
       >
         {!showFilledState ? (
           <div className="audio-empty-row">
-            <div className={`audio-empty ${!file ? (required ? 'is-empty' : 'is-silent') : ''} ${file && !fileAvailable ? 'is-missing' : ''}`} onClick={handleReplace}>
-              <div className="audio-empty-wave" aria-hidden="true">
-                {WAVE_HEIGHTS.slice(0, 12).map((h, i) => (
-                  <span key={i} className="audio-empty-wave-bar" style={{ height: h }} />
-                ))}
+            <div className={`audio-empty ${!file ? (required ? 'is-empty' : 'is-silent') : ''} ${file && !fileAvailable ? 'is-missing' : ''}`}>
+              <div
+                className="audio-empty-import"
+                role="button"
+                tabIndex={0}
+                onClick={handleReplace}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  void handleReplace();
+                }}
+              >
+                <div className="audio-empty-wave" aria-hidden="true">
+                  {WAVE_HEIGHTS.slice(0, 12).map((h, i) => (
+                    <span key={i} className="audio-empty-wave-bar" style={{ height: h }} />
+                  ))}
+                </div>
+                <span className="audio-empty-text">
+                  {file && !fileAvailable
+                    ? 'Fichier audio introuvable — cliquer pour en choisir un autre'
+                    : (label || 'Cliquer pour importer un fichier audio')}
+                </span>
+                {!file && required ? <span className="audio-required-badge">Requis</span> : null}
+                {!file && emptyBadge ? <span className="audio-silent-badge">{emptyBadge}</span> : null}
+                <span className="audio-empty-plus">+</span>
               </div>
-              <span className="audio-empty-text">
-                {file && !fileAvailable
-                  ? 'Fichier audio introuvable — cliquer pour en choisir un autre'
-                  : (label || 'Cliquer pour importer un fichier audio')}
-              </span>
-              {!file && required ? <span className="audio-required-badge">Requis</span> : null}
-              {!file && emptyBadge ? <span className="audio-silent-badge">{emptyBadge}</span> : null}
-              <span className="audio-empty-plus">+</span>
               <div
                 className={`audio-bar-actions${emptyActions.length ? ' audio-bar-actions--with-extra' : ''}`}
                 aria-label="Actions audio"
