@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from '../icons/LucideLocal';
+import { Search, X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import './FlowDiagram.css';
@@ -23,6 +23,7 @@ function IconButton({ label, onClick, active = false, children }) {
 function DiagramPanelHeader({
   variant,
   onClose,
+  onSearch,
   controlsHostRef,
 }) {
   const isFull = variant === 'plein';
@@ -34,6 +35,9 @@ function DiagramPanelHeader({
       </div>
       <div className="fd-panel-view-controls" ref={controlsHostRef} />
       <div className="fd-panel-window-controls">
+        <IconButton label="Rechercher dans le diagramme (Ctrl+F)" onClick={onSearch}>
+          <Search aria-hidden="true" />
+        </IconButton>
         <IconButton label="Fermer le diagramme" onClick={onClose}>
           <X aria-hidden="true" />
         </IconButton>
@@ -48,7 +52,10 @@ export function DiagramPanel({
   projectIndex,
   selectedId = 'root',
   selectedIds,
+  onSelectNode,
   onSelectionChange,
+  selectionRevealRequest,
+  searchFocusTrigger = 0,
   expandedStoryGroupId = null,
   onExpandedStoryGroupIdChange,
   variant = 'plein',
@@ -61,6 +68,7 @@ export function DiagramPanel({
   onOpenLocalEndSettings,
 }) {
   const [controlsHost, setControlsHost] = useState(null);
+  const [localSearchFocusTrigger, setLocalSearchFocusTrigger] = useState(0);
 
   if (project?.projectType !== 'pack' && project?.projectType !== 'simple') return null;
 
@@ -69,6 +77,9 @@ export function DiagramPanel({
       <DiagramPanelHeader
         variant={variant}
         onClose={onClose}
+        onSearch={() => {
+          setLocalSearchFocusTrigger((value) => value + 1);
+        }}
         controlsHostRef={setControlsHost}
       />
       <div className="fd-panel-body">
@@ -77,7 +88,10 @@ export function DiagramPanel({
           projectIndex={projectIndex}
           selectedId={selectedId}
           selectedIds={selectedIds}
+          onSelectNode={onSelectNode}
           onSelectionChange={onSelectionChange}
+          selectionRevealRequest={selectionRevealRequest}
+          searchFocusTrigger={`${searchFocusTrigger}:${localSearchFocusTrigger}`}
           expandedStoryGroupId={expandedStoryGroupId}
           onExpandedStoryGroupIdChange={onExpandedStoryGroupIdChange}
           onPreview={onPreview}

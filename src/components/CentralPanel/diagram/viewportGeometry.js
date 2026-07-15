@@ -72,6 +72,23 @@ export function preserveViewportCenter(camera, previousSize, nextSize) {
   };
 }
 
+export function centerDiagramNode({ containerWidth, containerHeight, zoom, node }) {
+  const width = finitePositive(containerWidth);
+  const height = finitePositive(containerHeight);
+  const currentZoom = finitePositive(zoom);
+  const nodeWidth = finitePositive(node?.width);
+  const nodeHeight = finitePositive(node?.height);
+  const nodeX = Number(node?.x);
+  const nodeY = Number(node?.y);
+  if (!width || !height || !currentZoom || !nodeWidth || !nodeHeight
+    || !Number.isFinite(nodeX) || !Number.isFinite(nodeY)) return null;
+
+  return {
+    x: Math.round((width / 2) - ((nodeX + (nodeWidth / 2)) * currentZoom)),
+    y: Math.round((height / 2) - ((nodeY + (nodeHeight / 2)) * currentZoom)),
+  };
+}
+
 export function getDiagramViewportLayoutKey(layout, context = {}) {
   const nodes = (layout?.nodes ?? []).map((node) => [
     node.entry?.id,

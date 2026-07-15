@@ -38,6 +38,7 @@ export function TreePanel({
   onAddEndNode, onRemoveEndNode, onSimulateNode,
   pathAudit, validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
+  selectionRevealRequest = null,
   showNavigationBadges = true,
   showTreeGuides = true,
 }) {
@@ -159,6 +160,53 @@ export function TreePanel({
     searchInputRef,
     visibleIds,
   } = useTreeSearch({ projectIndex, projectType, treeSearchFocusTrigger });
+
+  const lastRevealRequestRef = useRef(null);
+  useEffect(() => {
+    const requestId = selectionRevealRequest?.requestId;
+    const targetId = selectionRevealRequest?.id;
+    if (!requestId || !targetId || lastRevealRequestRef.current === requestId) return undefined;
+
+    if (visibleIds && targetId !== 'root' && targetId !== END_NODE_ID && !visibleIds.has(targetId)) {
+      setSearchTerm('');
+      setSearchActive(false);
+    }
+
+    if (targetId !== 'root' && targetId !== END_NODE_ID) {
+      setCollapsedIds((current) => {
+        const next = new Set(current);
+        let changed = false;
+        let parentId = getParentId(targetId);
+        while (parentId != null) {
+          changed = next.delete(parentId) || changed;
+          parentId = getParentId(parentId);
+        }
+        return changed ? next : current;
+      });
+    }
+
+    let frameId = null;
+    let attempts = 0;
+    const reveal = () => {
+      const host = treeScrollRef.current;
+      const target = host
+        ? [...host.querySelectorAll('[data-tree-node-id]')]
+          .find((node) => node.dataset.treeNodeId === String(targetId))
+        : null;
+      if (target) {
+        lastRevealRequestRef.current = requestId;
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      attempts += 1;
+      if (attempts < 3) frameId = requestAnimationFrame(reveal);
+      else lastRevealRequestRef.current = requestId;
+    };
+    frameId = requestAnimationFrame(reveal);
+    return () => {
+      if (frameId != null) cancelAnimationFrame(frameId);
+    };
+  }, [getParentId, selectionRevealRequest, setSearchActive, setSearchTerm, visibleIds]);
 
   const {
     clipboardRef,
@@ -351,6 +399,7 @@ export function TreePanel({
             ref={treeScrollRef}
             className={`tree${showTreeGuides ? '' : ' tree--no-guides'}`}
             tabIndex={0}
+            onPointerDownCapture={() => treeScrollRef.current?.focus({ preventScroll: true })}
             onKeyDown={handleKeyDown}
             onContextMenu={(e) => handleContextMenu(e, 'root', 'root-bg')}
             onPointerLeave={clearHoverScope}
