@@ -12,6 +12,14 @@ export function toggleExclusiveStoryGroup(currentGroupId, requestedGroupId) {
   return currentGroupId === requestedGroupId ? null : requestedGroupId;
 }
 
+export function getFolderCollapseIntent({ entryId, expandedStoryGroupId, isCollapsed }) {
+  const regroupStories = expandedStoryGroupId === getStoryGroupId(entryId);
+  return {
+    regroupStories,
+    toggleFolder: !regroupStories || isCollapsed,
+  };
+}
+
 function getChildren(entry) {
   if (entry.type === 'root' || entry.type === 'menu') return entry.children ?? [];
   return [];

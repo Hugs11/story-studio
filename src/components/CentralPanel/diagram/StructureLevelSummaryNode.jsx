@@ -1,4 +1,4 @@
-import { IconStory } from '../../TreePanel/TreeIcons';
+import { SquareStack } from '../../icons/LucideLocal';
 
 export function StructureLevelSummaryNode({ entry, onExpand }) {
   return (
@@ -10,12 +10,16 @@ export function StructureLevelSummaryNode({ entry, onExpand }) {
         event.stopPropagation();
         onExpand?.(entry.id);
       }}
-      title={`Ouvrir ce dossier et afficher ses ${entry.storyCount} histoires`}
+      title={`Déplier ce dossier et afficher ses ${entry.storyCount} histoires`}
     >
-      <span className="fd-structure-summary-icon"><IconStory /></span>
-      <span className="fd-structure-summary-count">{entry.storyCount}</span>
-      <span className="fd-structure-summary-label">histoires</span>
-      <span className="fd-structure-summary-action">Ouvrir</span>
+      <span className="fd-structure-summary-visual" aria-hidden="true">
+        <SquareStack className="fd-structure-summary-icon" />
+        <span className="fd-structure-summary-meta">
+          <span className="fd-structure-summary-count">{entry.storyCount}</span>
+          <span className="fd-structure-summary-label">histoires</span>
+        </span>
+      </span>
+      <span className="fd-structure-summary-action">Déplier</span>
     </button>
   );
 }

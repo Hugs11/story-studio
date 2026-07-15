@@ -94,8 +94,8 @@ export function getStructureLevelLayout(project, metrics, options = {}) {
   let endNodeX = null;
   let endNodeY = null;
   if (hasEndNode) {
-    const endNodeWidth = Math.max(64, Math.round(metrics.nodeWidth * 0.78));
-    const endNodeHeight = 50;
+    const endNodeWidth = metrics.rootWidth;
+    const endNodeHeight = metrics.nodeHeight;
     const endBandGap = Math.max(28, metrics.rowGap * 0.38);
     endNodeY = height + endBandGap;
     endNodeX = Math.round((width - endNodeWidth) / 2);

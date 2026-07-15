@@ -63,7 +63,6 @@ export function WorkspaceView({
     toggleTree,
     toggleSettings,
     toggleDiagram,
-    maximizeDiagram,
     restoreSettings,
     closeDiagram,
     settingsPanelWidth,
@@ -193,8 +192,8 @@ export function WorkspaceView({
     />
   );
 
-  // `key={variant}` : remonte le diagramme au passage plein↔colonne (Agrandir/Réduire)
-  // pour le re-centrer sur la nouvelle largeur. `variant` suit
+  // `key={variant}` : remonte le diagramme au passage plein↔colonne via la
+  // bascule Réglages, pour le re-centrer sur la nouvelle largeur. `variant` suit
   // `showSettings`, pas `showTree` — donc pas de re-fit au simple masquage de l'arbre.
   const renderDiagramPanel = (variant) => (
     <DiagramPanel
@@ -210,8 +209,6 @@ export function WorkspaceView({
       variant={variant}
       showActionsBar={showDiagram && !showTree}
       showHint={showDiagram && !showSettings}
-      onMaximize={maximizeDiagram}
-      onMinimize={restoreSettings}
       onClose={closeDiagram}
       onPreview={handleSimulateNode}
       onSimulateZip={handleSimulateZip}

@@ -69,6 +69,7 @@ export function FullDiagramNode({
   isRoot = false,
   rootImage,
   isCollapsed = false,
+  hasExpandedStoryGroup = false,
   childSummary = null,
 }) {
   const compact = compactMode !== 'full';
@@ -92,6 +93,11 @@ export function FullDiagramNode({
   const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
   const isCut = cutIds?.has(entry.id);
   const canCollapse = entry.type === 'menu' && childSummary?.total > 0;
+  const collapseLabel = isCollapsed
+    ? 'Déplier ce dossier'
+    : hasExpandedStoryGroup
+      ? 'Regrouper les histoires'
+      : 'Replier ce dossier';
   const dropLabel = isDropTarget
     ? (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
     : null;
@@ -138,11 +144,11 @@ export function FullDiagramNode({
     >
       <div className="fd-complete-node-actions">
         {canCollapse ? (
-          <Tooltip text={isCollapsed ? 'Deplier ce dossier' : 'Replier ce dossier'}>
+          <Tooltip text={collapseLabel}>
             <button
               type="button"
               className="fd-complete-node-action fd-complete-node-action--collapse"
-              aria-label={isCollapsed ? 'Deplier ce dossier' : 'Replier ce dossier'}
+              aria-label={collapseLabel}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
@@ -169,18 +175,27 @@ export function FullDiagramNode({
         </Tooltip>
       </div>
       <div className="fd-complete-node-thumb">
-        {url
-          ? <img src={url} alt="" loading="lazy" decoding="async" />
-          : (
-            <span className={`fd-complete-node-placeholder ${entry.type === 'menu' ? 'fd-complete-node-placeholder--menu' : ''}`}>
-              {entry.type === 'menu' ? null : <DiagramNodeTypeIcon entry={entry} />}
+        {entry.type === 'end-node' ? (
+          <span
+            className={`fd-complete-node-end-visual fd-complete-node-end-visual--${entry.icon === 'moon' ? 'night' : 'stop'}`}
+            aria-hidden="true"
+          >
+            <DiagramNodeTypeIcon entry={entry} />
+          </span>
+        ) : (
+          <>
+            <span className="fd-complete-node-type-rail" aria-hidden="true">
+              <DiagramNodeTypeIcon entry={entry} />
             </span>
-          )}
+            {url
+              ? <img src={url} alt="" loading="lazy" decoding="async" />
+              : <span className={`fd-complete-node-placeholder ${entry.type === 'menu' ? 'fd-complete-node-placeholder--menu' : ''}`} aria-hidden="true" />}
+          </>
+        )}
         {sequenceCount > 0 ? <span className="fd-complete-end-badge">Fin x{sequenceCount}</span> : null}
         {dropLabel ? <div className="fd-complete-drop-indicator">{dropLabel}</div> : null}
       </div>
       <div className="fd-complete-node-label">
-        <span className="fd-complete-node-icon"><DiagramNodeTypeIcon entry={entry} /></span>
         <div className="fd-complete-node-texts">
           <span className="fd-complete-node-name">{entry.type === 'ref' ? (entry.label?.trim() || 'Lien') : (entry.name || '(sans nom)')}</span>
           {!compact && isCollapsed && childSummary ? (

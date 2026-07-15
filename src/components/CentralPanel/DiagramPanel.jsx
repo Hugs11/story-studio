@@ -1,9 +1,5 @@
 import { useState } from 'react';
-import {
-  Maximize2,
-  Minimize2,
-  X,
-} from '../icons/LucideLocal';
+import { X } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { CompleteDiagramTree } from './FullDiagramTree';
 import './FlowDiagram.css';
@@ -26,8 +22,6 @@ function IconButton({ label, onClick, active = false, children }) {
 
 function DiagramPanelHeader({
   variant,
-  onMaximize,
-  onMinimize,
   onClose,
   controlsHostRef,
 }) {
@@ -40,15 +34,6 @@ function DiagramPanelHeader({
       </div>
       <div className="fd-panel-view-controls" ref={controlsHostRef} />
       <div className="fd-panel-window-controls">
-        {isFull ? (
-          <IconButton label="Réduire le diagramme" onClick={onMinimize}>
-            <Minimize2 aria-hidden="true" />
-          </IconButton>
-        ) : (
-          <IconButton label="Agrandir le diagramme" onClick={onMaximize}>
-            <Maximize2 aria-hidden="true" />
-          </IconButton>
-        )}
         <IconButton label="Fermer le diagramme" onClick={onClose}>
           <X aria-hidden="true" />
         </IconButton>
@@ -69,8 +54,6 @@ export function DiagramPanel({
   variant = 'plein',
   showActionsBar = false,
   showHint = false,
-  onMaximize,
-  onMinimize,
   onClose,
   onPreview,
   onSimulateZip,
@@ -85,8 +68,6 @@ export function DiagramPanel({
     <div className="fd-panel" data-project-type={projectType}>
       <DiagramPanelHeader
         variant={variant}
-        onMaximize={onMaximize}
-        onMinimize={onMinimize}
         onClose={onClose}
         controlsHostRef={setControlsHost}
       />
