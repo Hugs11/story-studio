@@ -2296,6 +2296,123 @@
   }
 }
 
+/* La colonne Réglages peut être étroite même dans une fenêtre large. Cette
+   passe répond donc à sa largeur réelle : la hiérarchie de lecture se centre,
+   tandis que les libellés et contenus de formulaire restent ancrés à gauche. */
+@container settings-panel (max-width: 760px) {
+  .card-title-row {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .card-title-row .card-title,
+  .card-title-row .card-copy--inline {
+    width: 100%;
+    flex: 0 1 auto;
+    text-align: center;
+  }
+
+  .center-body > .card > .card-title {
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .center-body > .card > .field-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 7px;
+  }
+
+  .center-body > .card > .field-row > .field-label {
+    width: 100%;
+    min-width: 0;
+    flex: 1 0 100% !important;
+  }
+
+  .center-body > .card > .field-row > .navigation-target-select {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 100%;
+  }
+
+  .editor-setting-row,
+  .editor-setting-row.is-action-row,
+  .editor-setting-row.is-toggle-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 9px;
+  }
+
+  .editor-setting-row.is-note-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .editor-setting-control {
+    justify-content: stretch;
+  }
+
+  .editor-setting-actions,
+  .multiselect-color-dots {
+    justify-content: center;
+  }
+
+  .end-node-setting-copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .end-node-setting-copy .editor-setting-desc {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .editor-setting-row.end-node-toggle-row {
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .end-node-toggle-row .end-node-setting-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .end-summary {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .after-play-route-head {
+    align-items: center;
+    text-align: center;
+  }
+
+  .card--danger-compact .card-danger-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .card--danger-compact .card-danger-title {
+    text-align: center;
+  }
+
+  .card--danger-compact .card-danger-desc {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: 0;
+    text-align: left;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Les sections restent ancrées dans la colonne, mais retrouvent une hiérarchie
    légère : surface discrète, bord fin, sans ombre ni carte flottante. */
 .panel-center .card {
