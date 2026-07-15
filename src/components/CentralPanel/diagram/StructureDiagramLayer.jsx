@@ -12,7 +12,7 @@ export function StructureDiagramLayer({
       {(layout.bands ?? []).map((band) => (
         <g key={`level-${band.depth}`} className={`fd-level-band ${band.kind ? `fd-level-band--${band.kind}` : ''}`}>
           <rect x="2" y={band.y} width={Math.max(0, layout.width - 4)} height={band.height} rx="12" />
-          <text x="12" y={band.y + 17}>{band.label}</text>
+          {band.label ? <text x="12" y={band.y + 17}>{band.label}</text> : null}
           {band.secondaryLabel ? (
             <text className="fd-level-band-secondary" x="12" y={band.y + 32}>{band.secondaryLabel}</text>
           ) : null}

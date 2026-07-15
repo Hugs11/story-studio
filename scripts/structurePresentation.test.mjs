@@ -179,7 +179,7 @@ test('le message de fin reste visible dans une bande dédiée hors des niveaux s
   assert.equal(endNode.width, metrics.rootWidth);
   assert.equal(endNode.height, metrics.nodeHeight);
   assert.equal(layout.bands.at(-1).kind, 'after-reading');
-  assert.equal(layout.bands.at(-1).label, 'FIN');
+  assert.equal(layout.bands.at(-1).label, undefined);
 });
 
 test('le retour du message de fin rejoint les bords visuels sans les dépasser', () => {
