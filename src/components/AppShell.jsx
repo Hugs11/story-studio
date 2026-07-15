@@ -4,11 +4,12 @@ import { ProjectContext } from '../store/ProjectContext';
 import { ProjectActionsContext } from '../store/ProjectActionsContext';
 import { TitleBar } from './layout/TitleBar';
 import { Toolbar } from './layout/Toolbar';
-import { BottomWorkspacePanel } from './BottomWorkspacePanel/BottomWorkspacePanel';
 import { AppModals } from './AppModals';
 import { renderDeferred } from './renderDeferred';
 
 const WorkspaceView = lazy(() => import('../workspace/WorkspaceView').then((module) => ({ default: module.WorkspaceView })));
+const BottomWorkspacePanel = lazy(() => import('./BottomWorkspacePanel/BottomWorkspacePanel')
+  .then((module) => ({ default: module.BottomWorkspacePanel })));
 
 // Shell présentational d'`AppContent`. Composant pur :
 // aucune logique métier, uniquement le rendu du chrome (providers, `.app`,
@@ -113,7 +114,7 @@ export function AppShell({
               diagramView={workspace.diagramView}
             />,
           )}
-          {projectType !== null && bottomPanel.open && (
+          {projectType !== null && bottomPanel.open && renderDeferred(
             <BottomWorkspacePanel
               activeTab={bottomPanel.activeTab}
               onActiveTabChange={bottomPanel.onActiveTabChange}
