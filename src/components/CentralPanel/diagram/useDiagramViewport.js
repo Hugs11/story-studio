@@ -162,8 +162,19 @@ export function useDiagramViewport({
     if (!node) return undefined;
 
     function handleWheel(event) {
-      event.preventDefault();
       const rect = node.getBoundingClientRect();
+      const path = event.composedPath?.() ?? [];
+      const isInside = path.includes(node) || (
+        Number.isFinite(event.clientX)
+        && Number.isFinite(event.clientY)
+        && event.clientX >= rect.left
+        && event.clientX <= rect.right
+        && event.clientY >= rect.top
+        && event.clientY <= rect.bottom
+      );
+      if (!isInside) return;
+
+      event.preventDefault();
       const scaleFactor = getWheelZoomFactor(event, node.clientHeight);
       if (perfEnabledRef.current) {
         const perf = viewportPerfRef.current;
@@ -173,8 +184,11 @@ export function useDiagramViewport({
       handleZoom(scaleFactor, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
 
-    node.addEventListener('wheel', handleWheel, { passive: false });
-    return () => node.removeEventListener('wheel', handleWheel);
+    // Capture au niveau fenêtre : WebView2 peut envoyer le pincement trackpad à
+    // une couche interne du diagramme, voire laisser un composant l'intercepter
+    // avant la remontée vers le stage.
+    window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+    return () => window.removeEventListener('wheel', handleWheel, true);
   }, [handleZoom]);
 
   const updateLayoutStats = useCallback((layout, navigationEdgeCount) => {

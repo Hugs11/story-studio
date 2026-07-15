@@ -20,7 +20,8 @@
         "resizable": true,
         "maximizable": true,
         "maximized": true,
-        "decorations": false
+        "decorations": false,
+        "zoomHotkeysEnabled": true
       }
     ],
     "security": {
