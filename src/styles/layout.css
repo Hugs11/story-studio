@@ -151,39 +151,28 @@ body {
   overflow: hidden;
 }
 
-/* Poignées de redimensionnement : la bande visible fait 7 px, avec une zone
-   de saisie élargie par le pseudo-élément. */
+/* Frontière redimensionnable entre panneaux : un seul trait visible à côté de
+   la barre de défilement. La zone de saisie s'étend dans le panneau de droite
+   pour ne jamais recouvrir la scrollbar du panneau situé à gauche. */
 .resize-handle {
-  width: 7px;
+  width: 1px;
   cursor: col-resize;
-  background: var(--bg0);
+  background: var(--border);
   flex-shrink: 0;
   transition: background 0.15s;
   position: relative;
   z-index: 10;
 }
 
-.resize-handle::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 26px;
-  border-radius: 2px;
-  background: var(--borderLt);
-  transform: translate(-50%, -50%);
-}
-
 .resize-handle::after {
   content: '';
   position: absolute;
-  inset: 0 -2px;
+  inset: 0 -8px 0 0;
 }
 
 .resize-handle:hover,
 .resize-handle:focus-visible {
-  background: var(--accent-dim);
+  background: var(--accent-border);
 }
 
 .resize-handle:focus-visible {
@@ -195,6 +184,10 @@ body.workspace-is-resizing,
 body.workspace-is-resizing * {
   cursor: col-resize !important;
   user-select: none !important;
+}
+
+body.workspace-is-resizing .resize-handle {
+  background: var(--accent-border);
 }
 
 /* Panel gauche — arborescence : largeur fixe (poignée dédiée), jamais rétrécie */
@@ -244,7 +237,7 @@ body.workspace-is-resizing * {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg1);
-  min-width: 560px;
+  min-width: 400px;
   max-width: 900px;
   container: settings-panel / inline-size;
 }
