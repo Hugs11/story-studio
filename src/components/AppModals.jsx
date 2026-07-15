@@ -84,11 +84,10 @@ export function AppModals({
   saveProgress,
   saveAsProgress,
   triageRequest,
-  // toast + enregistrement + média
+  // toast + enregistrement
   importNotice,
   setImportNotice,
   onToolbarRecordSaved,
-  onMediaCreated,
 }) {
   return (
     <>
@@ -106,7 +105,6 @@ export function AppModals({
           workspaceDir={workspaceDir}
           projectName={projectName}
           onSaved={onToolbarRecordSaved}
-          onDiscarded={onMediaCreated}
           onClose={() => modals.close('record')}
         />
       )}

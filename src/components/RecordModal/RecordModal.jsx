@@ -3,19 +3,16 @@ import { invoke } from '@tauri-apps/api/core';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Mic } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
-import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
 import './RecordModal.css';
 
 const COUNTDOWN_SECONDS = 3;
 
-export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved, onClose, onDiscarded }) {
-  const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving | saved
+export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved, onClose }) {
+  const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving | error
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(null);
-  const [savedPath, setSavedPath] = useState(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [recordingName, setRecordingName] = useState(() => {
     const prefix = sanitizeProjectPrefix(projectName);
     const stamp = Date.now();
@@ -26,7 +23,9 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
   const chunksRef = useRef([]);
   const blobRef = useRef(null);
   const audioRef = useRef(null);
+  const previewUrlRef = useRef(null);
   const timerRef = useRef(null);
+  const closedRef = useRef(false);
 
   // Countdown → démarrage enregistrement
   useEffect(() => {
@@ -46,27 +45,53 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
     return () => clearInterval(timerRef.current);
   }, [phase]);
 
-  useEffect(() => () => {
-    audioRef.current?.pause();
-    audioRef.current = null;
+  useEffect(() => {
+    // React StrictMode simule un démontage/remontage en développement : chaque
+    // montage doit réarmer explicitement la demande micro.
+    closedRef.current = false;
+    return () => {
+      closedRef.current = true;
+      releaseRecording();
+      stopPreview();
+    };
   }, []);
 
+  // Pendant l'écriture, Escape reste capturé par cette modale mais ne la ferme
+  // pas : il ne doit pas atteindre une surface située dessous.
   useEscapeKey(true, handleClose);
 
   function handleClose() {
+    if (phase === 'saving') return;
+    closedRef.current = true;
+    releaseRecording();
     stopPreview();
-    if (phase === 'saved' && savedPath) onDiscarded?.(savedPath);
     onClose?.();
   }
 
+  function releaseRecording() {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    recorder.onstop = null;
+    if (recorder.state !== 'inactive') recorder.stop();
+    recorder.stream?.getTracks().forEach(track => track.stop());
+    mediaRecorderRef.current = null;
+  }
+
   async function startRecording() {
+    let stream = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (closedRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
+        if (mediaRecorderRef.current === mr) mediaRecorderRef.current = null;
+        if (closedRef.current) return;
         blobRef.current = new Blob(chunksRef.current, { type: 'audio/webm' });
         setPhase('preview');
       };
@@ -74,6 +99,8 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       mediaRecorderRef.current = mr;
       setPhase('recording');
     } catch (e) {
+      stream?.getTracks().forEach(track => track.stop());
+      if (closedRef.current) return;
       setError(`Impossible d'accéder au micro : ${e.message}`);
       setPhase('error');
     }
@@ -85,10 +112,14 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
 
   function playPreview() {
     if (!blobRef.current) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    stopPreview();
     const url = URL.createObjectURL(blobRef.current);
     const a = new Audio(url);
-    a.onended = () => URL.revokeObjectURL(url);
+    previewUrlRef.current = url;
+    a.onended = () => {
+      if (previewUrlRef.current === url) previewUrlRef.current = null;
+      URL.revokeObjectURL(url);
+    };
     a.play();
     audioRef.current = a;
   }
@@ -96,12 +127,15 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
   function stopPreview() {
     audioRef.current?.pause();
     audioRef.current = null;
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
   }
 
   function retry() {
     stopPreview();
     blobRef.current = null;
-    setSavedPath(null);
     setDuration(0);
     setCountdown(COUNTDOWN_SECONDS);
     setPhase('countdown');
@@ -116,27 +150,11 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       const arrayBuffer = await blobRef.current.arrayBuffer();
       const data = Array.from(new Uint8Array(arrayBuffer));
       const path = await invoke('save_recording', { savePath, workspaceDir, filename, data });
-      setSavedPath(path);
-      setPhase('saved');
+      onSaved?.(path);
     } catch (e) {
       setError(`Écriture du fichier impossible : ${e}`);
       setPhase('error');
     }
-  }
-
-  function useSavedRecording() {
-    if (!savedPath) return;
-    stopPreview();
-    onSaved?.(savedPath);
-  }
-
-  function handleDeleted(result = {}) {
-    const path = savedPath;
-    setShowDeleteDialog(false);
-    setSavedPath(null);
-    stopPreview();
-    if (path && !result.diskDeleted) onDiscarded?.(path);
-    onClose?.();
   }
 
   function formatDuration(s) {
@@ -148,7 +166,7 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
       <div className="modal-box record-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>Enregistrement audio</span>
-          <Button variant="icon" className="modal-close" onClick={handleClose}>×</Button>
+          <Button variant="icon" className="modal-close" onClick={handleClose} disabled={phase === 'saving'}>×</Button>
         </div>
 
         <div className="record-body">
@@ -196,37 +214,14 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
             <div className="record-hint">Écriture du fichier…</div>
           )}
 
-          {phase === 'saved' && (
-            <>
-              <div className="record-preview-icon">
-                <Mic className="record-preview-icon-svg" strokeWidth={2} absoluteStrokeWidth />
-              </div>
-              <div className="record-hint">Audio enregistré.</div>
-              <div className="record-saved-copy">Tu peux l'utiliser maintenant ou le supprimer.</div>
-              <div className="record-actions">
-                <Button onClick={playPreview}>▶ Écouter</Button>
-                <Button variant="danger" onClick={() => setShowDeleteDialog(true)}>Supprimer</Button>
-                <Button variant="primary" onClick={useSavedRecording}>✓ Utiliser</Button>
-              </div>
-            </>
-          )}
-
           {phase === 'error' && (
             <>
               <div className="record-hint" style={{ color: '#E24B4A' }}>{error}</div>
-              <Button onClick={onClose}>Fermer</Button>
+              <Button onClick={handleClose}>Fermer</Button>
             </>
           )}
         </div>
       </div>
-      {showDeleteDialog && savedPath && (
-        <DeleteAudioDialog
-          file={savedPath}
-          workspaceDir={workspaceDir}
-          onDeleted={handleDeleted}
-          onClose={() => setShowDeleteDialog(false)}
-        />
-      )}
     </div>
   );
 }
