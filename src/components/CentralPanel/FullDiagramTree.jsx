@@ -20,6 +20,7 @@ import {
 import { FullDiagramNode } from './FullDiagramNode.jsx';
 import { StructureActionsBar } from '../structure/StructureActionsBar.jsx';
 import { useDiagramViewport } from './diagram/useDiagramViewport';
+import { getDiagramViewportLayoutKey } from './diagram/viewportGeometry.js';
 import { useDiagramNodeDrag } from './diagram/useDiagramNodeDrag';
 import { useDiagramClipboard } from './diagram/useDiagramClipboard';
 import { buildDiagramContextActions } from './diagram/diagramContextMenu';
@@ -32,7 +33,13 @@ import {
   navigationEdgeTouchesNode,
 } from './diagram/navigationPresentation';
 import { presentLocalEndSteps } from './diagram/localEndStepPresentation';
-import { buildStructureFocus, getStructureEdgeId, toggleExclusiveStoryGroup } from './diagram/structurePresentation';
+import {
+  buildStructureFocus,
+  getFolderCollapseIntent,
+  getStoryGroupId,
+  getStructureEdgeId,
+  toggleExclusiveStoryGroup,
+} from './diagram/structurePresentation';
 import { getStructureLevelLayout } from './diagram/structureLevelLayout';
 import { StructureFocusBar } from './diagram/StructureFocusBar';
 import { StructureLevelSummaryNode } from './diagram/StructureLevelSummaryNode';
@@ -95,14 +102,26 @@ export function CompleteDiagramTree({
 
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, nodeId, nodeType }
 
+  useEffect(() => {
+    if (!selectedId && focusMode) setFocusMode(false);
+  }, [focusMode, selectedId]);
+
   const toggleCollapse = useCallback((entryId) => {
+    const intent = getFolderCollapseIntent({
+      entryId,
+      expandedStoryGroupId,
+      isCollapsed: collapsedIds.has(entryId),
+    });
+    if (intent.regroupStories) onExpandedStoryGroupIdChange?.(null);
+    if (!intent.toggleFolder) return;
+
     setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(entryId)) next.delete(entryId);
       else next.add(entryId);
       return next;
     });
-  }, []);
+  }, [collapsedIds, expandedStoryGroupId, onExpandedStoryGroupIdChange]);
 
   const handleShowReturnsChange = useCallback((checked) => {
     setShowReturns(checked);
@@ -132,9 +151,8 @@ export function CompleteDiagramTree({
     compactMode,
     isPanning,
     handleZoom,
-    resetInitialCenter,
     updateLayoutStats,
-    centerInitialViewport,
+    fitViewportToLayout,
     stagePointerHandlers,
   } = useDiagramViewport({ onStagePanStart: handleStagePanStart });
   const visibleProject = useMemo(
@@ -155,6 +173,13 @@ export function CompleteDiagramTree({
     collapsedIds,
     expandedStoryGroupIds: expandedStoryGroupId ? new Set([expandedStoryGroupId]) : new Set(),
   }), [visibleProject, compactMode, collapsedIds, expandedStoryGroupId]);
+  const viewportLayoutKey = useMemo(() => getDiagramViewportLayoutKey(layout, {
+    compactMode,
+    focusMode,
+    selectedId,
+    collapsedIds,
+    expandedStoryGroupId,
+  }), [collapsedIds, compactMode, expandedStoryGroupId, focusMode, layout, selectedId]);
   const structureEdgePaths = useMemo(() => layout.edges.map((edge) => ({
     ...edge,
     id: getStructureEdgeId(edge),
@@ -175,11 +200,8 @@ export function CompleteDiagramTree({
   }, [allNavigationEdges.length, layout, updateLayoutStats]);
   const navigationEdges = useMemo(() => {
     if (!showReturns) return [];
-    if (focusMode) {
-      return allNavigationEdges.filter((edge) => navigationEdgeTouchesNode(edge, selectedId));
-    }
     return allNavigationEdges;
-  }, [allNavigationEdges, focusMode, selectedId, showReturns]);
+  }, [allNavigationEdges, showReturns]);
   const returnEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'return'), [navigationEdges]);
   const homeEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'home'), [navigationEdges]);
   const afterEndEdges = useMemo(() => navigationEdges.filter((edge) => edge.kind === 'after-end'), [navigationEdges]);
@@ -379,13 +401,9 @@ export function CompleteDiagramTree({
       top: event.clientY - rect.top + 12,
     });
   }
-  useEffect(() => {
-    resetInitialCenter();
-  }, [project, focusMode, collapsedIds, expandedStoryGroupId, resetInitialCenter]);
-
   useLayoutEffect(() => {
-    centerInitialViewport(layout);
-  }, [centerInitialViewport, layout]);
+    fitViewportToLayout(layout, viewportLayoutKey);
+  }, [fitViewportToLayout, layout, viewportLayoutKey]);
 
   useEffect(() => {
     if (!showReturns) {
@@ -542,6 +560,7 @@ export function CompleteDiagramTree({
       onShowReturnsChange={handleShowReturnsChange}
       focusMode={focusMode}
       onFocusModeToggle={() => setFocusMode((current) => !current)}
+      canFocusBranch={!!selectedId}
       hasCollapsedNodes={collapsedIds.size > 0}
       onOpenAll={() => setCollapsedIds(new Set())}
       hasExpandedStoryGroups={!!expandedStoryGroupId}
@@ -727,6 +746,7 @@ export function CompleteDiagramTree({
                   isRoot={node.entry.id === 'root'}
                   rootImage={project.rootImage}
                   isCollapsed={collapsedIds.has(node.entry.id)}
+                  hasExpandedStoryGroup={expandedStoryGroupId === getStoryGroupId(node.entry.id)}
                   childSummary={childSummaryById.get(node.entry.id) ?? null}
                 />
                 )}

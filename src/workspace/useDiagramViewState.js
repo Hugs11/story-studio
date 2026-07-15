@@ -66,12 +66,7 @@ export function useDiagramViewState() {
     setShowDiagram(!showDiagram);
   }, [setShowDiagram, showDiagram]);
 
-  // Agrandir : diagramme pleine largeur (masque les Réglages).
-  const maximizeDiagram = useCallback(() => {
-    setShowSettings(false);
-  }, [setShowSettings]);
-
-  // Réduire : réaffiche les Réglages à côté du diagramme.
+  // Réaffiche les Réglages quand une action du diagramme doit ouvrir l'éditeur.
   const restoreSettings = useCallback(() => {
     setShowSettings(true);
   }, [setShowSettings]);
@@ -110,7 +105,6 @@ export function useDiagramViewState() {
     toggleTree,
     toggleSettings,
     toggleDiagram,
-    maximizeDiagram,
     restoreSettings,
     closeDiagram,
     // largeurs

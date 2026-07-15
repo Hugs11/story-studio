@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { read } from '../../../store/persistentSettings';
 import { logger } from '../../../utils/logger';
-import { WHEEL_ZOOM_SENSITIVITY, clampZoom } from '../flowDiagramLayout';
+import { clampZoom } from '../flowDiagramLayout';
+import { fitDiagramViewport, getWheelZoomFactor, preserveViewportCenter } from './viewportGeometry.js';
 
 const DIAGRAM_PERF_KEY = 'storyStudio.diagramPerf';
 
@@ -22,7 +23,9 @@ export function useDiagramViewport({
   const viewportPerfRef = useRef({ wheelEvents: 0, transformFrames: 0, maxWheelDelay: 0, lastWheelAt: 0, lastLogAt: 0 });
   const layoutStatsRef = useRef({ nodes: 0, structureEdges: 0, navigationEdges: 0, groups: 0, width: 0, height: 0 });
   const panStateRef = useRef({ active: false, pointerId: null, startX: 0, startY: 0, cameraX: 0, cameraY: 0 });
-  const didInitialCenterRef = useRef(false);
+  const hasViewportRef = useRef(false);
+  const lastFittedLayoutKeyRef = useRef(null);
+  const previousContainerSizeRef = useRef({ width: 0, height: 0 });
   const zoomRef = useRef(1);
   const cameraRef = useRef({ x: 0, y: 0 });
   const [containerWidth, setContainerWidth] = useState(0);
@@ -34,10 +37,6 @@ export function useDiagramViewport({
     if (containerWidth > 0 && containerWidth < 1400) return 'compact';
     return 'full';
   }, [containerWidth]);
-
-  const resetInitialCenter = useCallback(() => {
-    didInitialCenterRef.current = false;
-  }, []);
 
   const markViewportMoving = useCallback((kind) => {
     const stage = containerRef.current;
@@ -120,6 +119,16 @@ export function useDiagramViewport({
     return () => observer.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    const previousSize = previousContainerSizeRef.current;
+    const nextSize = { width: containerWidth, height: containerHeight };
+    if (hasViewportRef.current && previousSize.width && previousSize.height) {
+      cameraRef.current = preserveViewportCenter(cameraRef.current, previousSize, nextSize);
+      scheduleViewportTransform(true);
+    }
+    previousContainerSizeRef.current = nextSize;
+  }, [containerHeight, containerWidth, scheduleViewportTransform]);
+
   const handleZoom = useCallback((scaleFactor, focusPoint = null) => {
     const node = containerRef.current;
     const currentZoom = zoomRef.current || 1;
@@ -139,7 +148,7 @@ export function useDiagramViewport({
 
     zoomRef.current = nextZoom;
     cameraRef.current = nextCamera;
-    didInitialCenterRef.current = true;
+    hasViewportRef.current = true;
     scheduleViewportTransform(false, 'zoom');
   }, [scheduleViewportTransform]);
 
@@ -150,7 +159,7 @@ export function useDiagramViewport({
     function handleWheel(event) {
       event.preventDefault();
       const rect = node.getBoundingClientRect();
-      const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
+      const scaleFactor = getWheelZoomFactor(event, node.clientHeight);
       if (perfEnabledRef.current) {
         const perf = viewportPerfRef.current;
         perf.wheelEvents += 1;
@@ -177,14 +186,20 @@ export function useDiagramViewport({
     }
   }, []);
 
-  const centerInitialViewport = useCallback((layout) => {
-    if (didInitialCenterRef.current || !containerWidth || !containerHeight) return;
-    const currentZoom = zoomRef.current;
-    const targetX = Math.round((containerWidth - (layout.width * currentZoom)) / 2);
-    const targetY = Math.round(Math.max(40, (containerHeight - (layout.height * currentZoom)) / 6));
-    cameraRef.current = { x: targetX, y: targetY };
+  const fitViewportToLayout = useCallback((layout, layoutKey) => {
+    if (lastFittedLayoutKeyRef.current === layoutKey) return;
+    const fitted = fitDiagramViewport({
+      containerWidth,
+      containerHeight,
+      layoutWidth: layout?.width,
+      layoutHeight: layout?.height,
+    });
+    if (!fitted) return;
+    zoomRef.current = fitted.zoom;
+    cameraRef.current = fitted.camera;
     scheduleViewportTransform(true);
-    didInitialCenterRef.current = true;
+    hasViewportRef.current = true;
+    lastFittedLayoutKeyRef.current = layoutKey;
   }, [containerWidth, containerHeight, scheduleViewportTransform]);
 
   useEffect(() => () => {
@@ -255,9 +270,8 @@ export function useDiagramViewport({
     compactMode,
     isPanning,
     handleZoom,
-    resetInitialCenter,
     updateLayoutStats,
-    centerInitialViewport,
+    fitViewportToLayout,
     stagePointerHandlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,

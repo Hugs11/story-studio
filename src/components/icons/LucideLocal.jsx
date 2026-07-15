@@ -166,6 +166,12 @@ const squareNode = [
   ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }],
 ];
 
+const squareStackNode = [
+  ['path', { d: 'M4 10c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2' }],
+  ['path', { d: 'M10 16c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2' }],
+  ['rect', { width: '8', height: '8', x: '14', y: '14', rx: '2' }],
+];
+
 const skipBackNode = [
   ['polygon', { points: '19 20 9 12 19 4 19 20' }],
   ['line', { x1: '5', y1: '19', x2: '5', y2: '5' }],
@@ -192,6 +198,19 @@ const cropNode = [
 const rotateCcwNode = [
   ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }],
   ['path', { d: 'M3 3v5h5' }],
+];
+
+const iterationCcwNode = [
+  ['polyline', { points: '9 10 4 15 9 20' }],
+  ['path', { d: 'M20 4v7a4 4 0 0 1-4 4H4' }],
+];
+
+const focusNode = [
+  ['circle', { cx: '12', cy: '12', r: '3' }],
+  ['path', { d: 'M3 7V5a2 2 0 0 1 2-2h2' }],
+  ['path', { d: 'M17 3h2a2 2 0 0 1 2 2v2' }],
+  ['path', { d: 'M21 17v2a2 2 0 0 1-2 2h-2' }],
+  ['path', { d: 'M7 21H5a2 2 0 0 1-2-2v-2' }],
 ];
 
 const chevronRightNode = [
@@ -409,11 +428,14 @@ export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
 export const CircleStop = createLocalLucideIcon(circleStopNode);
 export const Square = createLocalLucideIcon(squareNode);
+export const SquareStack = createLocalLucideIcon(squareStackNode);
 export const SkipBack = createLocalLucideIcon(skipBackNode);
 export const SkipForward = createLocalLucideIcon(skipForwardNode);
 export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
+export const IterationCcw = createLocalLucideIcon(iterationCcwNode);
+export const Focus = createLocalLucideIcon(focusNode);
 export const ChevronRight = createLocalLucideIcon(chevronRightNode);
 export const ChevronLeft = createLocalLucideIcon(chevronLeftNode);
 export const ChevronDown = createLocalLucideIcon(chevronDownNode);

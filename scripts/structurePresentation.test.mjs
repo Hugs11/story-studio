@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildStructureFocus,
   buildStructureProjection,
+  getFolderCollapseIntent,
   getStoryGroupId,
   toggleExclusiveStoryGroup,
 } from '../src/components/CentralPanel/diagram/structurePresentation.js';
@@ -88,6 +89,39 @@ test('ouvrir un groupe ferme le précédent et un second clic le referme', () =>
   assert.equal(toggleExclusiveStoryGroup(groupB, groupB), null);
 });
 
+test('le premier repli du dossier regroupe ses histoires avant de masquer ses enfants', () => {
+  const groupId = getStoryGroupId('menu-a');
+
+  assert.deepEqual(getFolderCollapseIntent({
+    entryId: 'menu-a',
+    expandedStoryGroupId: groupId,
+    isCollapsed: false,
+  }), {
+    regroupStories: true,
+    toggleFolder: false,
+  });
+
+  assert.deepEqual(getFolderCollapseIntent({
+    entryId: 'menu-a',
+    expandedStoryGroupId: null,
+    isCollapsed: false,
+  }), {
+    regroupStories: false,
+    toggleFolder: true,
+  });
+});
+
+test('rouvrir un dossier dans l ancien état incohérent restaure aussi le regroupement', () => {
+  assert.deepEqual(getFolderCollapseIntent({
+    entryId: 'menu-a',
+    expandedStoryGroupId: getStoryGroupId('menu-a'),
+    isCollapsed: true,
+  }), {
+    regroupStories: true,
+    toggleFolder: true,
+  });
+});
+
 test('le layout Niveaux donne le même Y aux nœuds de même profondeur', () => {
   const layout = getStructureLevelLayout(project(), metrics);
   const depthTwo = layout.nodes.filter((node) => node.depth === 2);
@@ -142,8 +176,8 @@ test('le message de fin reste visible dans une bande dédiée hors des niveaux s
   assert.equal(layout.hasEndNode, true);
   assert.equal(endNode.entry.name, 'Bonne nuit');
   assert.equal(endNode.depth, null);
-  assert.ok(endNode.width < metrics.nodeWidth);
-  assert.ok(endNode.height < metrics.nodeHeight);
+  assert.equal(endNode.width, metrics.rootWidth);
+  assert.equal(endNode.height, metrics.nodeHeight);
   assert.equal(layout.bands.at(-1).kind, 'after-reading');
   assert.equal(layout.bands.at(-1).label, 'FIN');
 });

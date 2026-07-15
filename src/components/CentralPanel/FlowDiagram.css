@@ -62,7 +62,10 @@
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
-  margin-left: auto;
+  height: 20px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
 }
 
 .fd-panel-icon-btn {
@@ -231,18 +234,18 @@
   display: inline-flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 /* Compactage des libellés des contrôles de vue : version longue par défaut, version
-   courte quand la colonne diagramme devient étroite, pour garder les 3 contrôles
+   courte quand la colonne diagramme devient étroite, pour garder les contrôles
    présents sur une seule ligne de 44 px plutôt que de les tronquer. */
 .fd-ctrl-label--short {
   display: none;
 }
 
-.fd-complete-toggle .fd-ctrl-label {
+.fd-diagram-option .fd-ctrl-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -274,56 +277,62 @@
   flex-basis: 24px;
 }
 
-.fd-complete-mode-btn,
-.fd-complete-clear-collapse {
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  padding: 0 9px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.fd-complete-toggle {
+.fd-diagram-option {
   height: 28px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0 9px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--bg2) 72%, transparent);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
   cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
 }
 
-.fd-complete-toggle input {
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  accent-color: var(--info);
+.fd-diagram-option svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  stroke-width: 2;
 }
 
-.fd-complete-toggle:has(input:checked) {
-  color: var(--text);
-  background: var(--info-bg);
+.fd-diagram-option:hover:not(:disabled) {
+  background: var(--bg2);
+  color: var(--text-secondary);
 }
 
-.fd-complete-mode-btn:hover,
-.fd-complete-clear-collapse:hover {
-  color: var(--text);
+.fd-diagram-option.is-active {
+  border-color: var(--borderLt);
   background: var(--bg3);
+  color: var(--text);
 }
 
-.fd-complete-toggle:has(input:disabled) {
+.fd-diagram-option:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.fd-diagram-option:disabled {
   opacity: 0.42;
   cursor: default;
+}
+
+@container fd-diagram-header (max-width: 420px) {
+  .fd-diagram-option .fd-ctrl-label {
+    display: none;
+  }
+
+  .fd-diagram-option {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+  }
 }
 
 .fd-structure-focus-bar {
@@ -421,20 +430,6 @@
     top: 50px;
     width: calc(100% - 24px);
   }
-}
-
-.fd-complete-mode-btn.is-active {
-  color: var(--text);
-  border-color: var(--borderLt);
-  background: var(--bg3);
-}
-
-.fd-complete-mode-btn:focus-visible,
-.fd-complete-clear-collapse:focus-visible,
-.fd-complete-toggle:focus-within {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
 }
 
 .fd-stage-legend {
@@ -1353,61 +1348,72 @@
 }
 
 .fd-structure-summary-node {
-  display: grid;
-  grid-template-columns: 26px 1fr;
-  grid-template-rows: 1fr auto;
-  align-items: center;
-  min-height: 82px;
-  padding: 10px;
-  border-color: color-mix(in srgb, var(--accent-2) 52%, var(--borderLt));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  border-color: var(--borderLt);
   color: var(--text);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-2) 14%, var(--bg2)), var(--bg2));
+  background: var(--bg2);
 }
 
 .fd-structure-summary-node:hover,
 .fd-structure-summary-node:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 58%, var(--accent-2));
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--text-secondary) 36%, var(--borderLt));
+}
+
+.fd-structure-summary-visual {
+  width: 100%;
+  height: 60px;
+  flex: 0 0 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg3) 38%, var(--bg2));
 }
 
 .fd-structure-summary-icon {
-  grid-row: 1 / 3;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  color: color-mix(in srgb, var(--accent-2) 72%, white 28%);
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  stroke-width: 1.8;
 }
 
-.fd-structure-summary-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.fd-structure-summary-count {
-  align-self: end;
-  font-size: 18px;
-  font-weight: var(--weight-bold);
+.fd-structure-summary-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   line-height: 1;
 }
 
+.fd-structure-summary-count {
+  font-size: 16px;
+  font-weight: var(--weight-bold);
+}
+
 .fd-structure-summary-label {
-  grid-column: 2;
-  align-self: start;
   color: var(--text-secondary);
   font-size: 9px;
 }
 
 .fd-structure-summary-action {
-  grid-column: 1 / 3;
-  justify-self: center;
-  margin-top: 5px;
-  color: color-mix(in srgb, var(--accent) 74%, var(--text));
-  font-size: 8px;
-  font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border-top: 0.5px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--bg2);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  text-align: left;
+}
+
+.fd-structure-summary-node:hover .fd-structure-summary-action {
+  color: var(--text);
 }
 
 .fd-complete-node--menu {
@@ -1419,6 +1425,7 @@
 }
 
 .fd-complete-node-thumb {
+  --fd-type-rail-width: 26px;
   width: 100%;
   height: 60px;
   overflow: hidden;
@@ -1427,6 +1434,24 @@
   align-items: center;
   justify-content: center;
   position: relative;
+}
+
+.fd-complete-node-type-rail {
+  width: var(--fd-type-rail-width);
+  height: 100%;
+  flex: 0 0 var(--fd-type-rail-width);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--text-secondary) 78%, var(--muted));
+  background: color-mix(in srgb, var(--bg3) 78%, var(--bg2));
+  border-right: 1px solid color-mix(in srgb, var(--borderLt) 72%, transparent);
+}
+
+.fd-complete-node-type-rail svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
 }
 
 .fd-complete-end-badge {
@@ -1540,8 +1565,10 @@
 }
 
 .fd-complete-node-thumb img {
-  width: 100%;
+  width: calc(100% - var(--fd-type-rail-width));
   height: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
   object-fit: cover;
   display: block;
 }
@@ -1566,50 +1593,43 @@
 }
 
 .fd-complete-node-placeholder {
+  min-width: 0;
+  height: 100%;
+  flex: 1 1 auto;
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.5;
-}
-
-.fd-complete-node-placeholder svg {
-  width: 26px;
-  height: 26px;
+  background: color-mix(in srgb, var(--bg2) 88%, var(--bg0));
 }
 
 .fd-complete-node-placeholder--menu {
-  width: 100%;
-  height: 100%;
   background: rgba(0, 0, 0, 0.18);
-  opacity: 1;
 }
 
-.fd-complete-node--end-node .fd-complete-node-thumb,
-.fd-complete-node--end-node .fd-complete-node-placeholder {
-  height: 28px;
+.fd-complete-node-end-visual {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: color-mix(in srgb, var(--cat-night) 6%, var(--bg2));
   color: color-mix(in srgb, var(--cat-night) 64%, var(--text-secondary));
+}
+
+.fd-complete-node-end-visual svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 1.8;
 }
 
 .fd-complete-node--end-node {
   width: 100%;
   border-color: color-mix(in srgb, var(--cat-night) 20%, var(--borderLt));
-  border-radius: var(--radius-md);
-}
-
-.fd-complete-node--end-node .fd-complete-node-placeholder svg {
-  width: 16px;
-  height: 16px;
 }
 
 .fd-complete-node--end-node .fd-complete-node-label {
-  padding: 3px 5px;
   background: color-mix(in srgb, var(--cat-night) 3%, var(--bg2));
-}
-
-.fd-complete-node--end-node .fd-complete-node-name {
-  font-size: 9px;
 }
 
 .fd-complete-node-label {
@@ -1619,21 +1639,6 @@
   gap: 4px;
   border-top: 0.5px solid var(--border);
   background: var(--bg2);
-}
-
-.fd-complete-node-icon {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fd-complete-node-icon svg {
-  width: 12px;
-  height: 12px;
 }
 
 .fd-complete-node-texts {
@@ -1678,7 +1683,8 @@
   gap: 28px;
 }
 
-.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-thumb {
+.fd-complete-canvas--compact .fd-complete-node .fd-complete-node-thumb {
+  --fd-type-rail-width: 22px;
   height: 42px;
 }
 
@@ -1688,22 +1694,37 @@
   padding: 3px 6px;
 }
 
-.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder {
-  opacity: 0.75;
+.fd-complete-canvas--compact .fd-complete-node .fd-complete-node-type-rail svg {
+  width: 16px;
+  height: 16px;
 }
 
-.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder svg {
-  width: 22px;
-  height: 22px;
+.fd-complete-canvas--compact .fd-complete-node-end-visual svg {
+  width: 24px;
+  height: 24px;
 }
 
-.fd-complete-canvas--compact .fd-complete-node-icon,
-.fd-complete-canvas--compact .fd-complete-node-icon svg {
-  width: 11px;
-  height: 11px;
+.fd-complete-canvas--compact .fd-complete-node .fd-complete-node-name {
+  font-size: 9px;
 }
 
-.fd-complete-canvas--compact .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-name {
+.fd-complete-canvas--compact .fd-structure-summary-visual {
+  height: 42px;
+  flex-basis: 42px;
+  gap: 5px;
+}
+
+.fd-complete-canvas--compact .fd-structure-summary-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+
+.fd-complete-canvas--compact .fd-structure-summary-count {
+  font-size: 14px;
+}
+
+.fd-complete-canvas--compact .fd-structure-summary-action {
   font-size: 9px;
 }
 
@@ -1748,30 +1769,51 @@
   border-radius: 10px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-thumb {
+.fd-complete-canvas--minimal .fd-complete-node .fd-complete-node-thumb {
+  --fd-type-rail-width: 18px;
   height: 30px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder {
-  opacity: 0.85;
+.fd-complete-canvas--minimal .fd-complete-node .fd-complete-node-type-rail svg {
+  width: 14px;
+  height: 14px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-placeholder svg {
+.fd-complete-canvas--minimal .fd-complete-node-end-visual svg {
   width: 18px;
   height: 18px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-label {
+.fd-complete-canvas--minimal .fd-complete-node .fd-complete-node-label {
   padding: 4px 5px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node-icon,
-.fd-complete-canvas--minimal .fd-complete-node-icon svg {
-  width: 10px;
-  height: 10px;
+.fd-complete-canvas--minimal .fd-complete-node .fd-complete-node-name {
+  font-size: 8px;
 }
 
-.fd-complete-canvas--minimal .fd-complete-node:not(.fd-complete-node--end-node) .fd-complete-node-name {
+.fd-complete-canvas--minimal .fd-structure-summary-visual {
+  height: 30px;
+  flex-basis: 30px;
+  gap: 4px;
+}
+
+.fd-complete-canvas--minimal .fd-structure-summary-icon {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+
+.fd-complete-canvas--minimal .fd-structure-summary-count {
+  font-size: 11px;
+}
+
+.fd-complete-canvas--minimal .fd-structure-summary-label {
+  font-size: 7px;
+}
+
+.fd-complete-canvas--minimal .fd-structure-summary-action {
+  padding: 4px 5px;
   font-size: 8px;
 }
 

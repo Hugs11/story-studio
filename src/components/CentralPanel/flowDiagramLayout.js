@@ -266,7 +266,7 @@ export function getCompleteLayout(project, compactMode, options = {}) {
   const canvasHeight = rootBlock.height + metrics.padY * 2 + metrics.navPadBottom;
 
   if (hasEndNode) {
-    const endNodeWidth = metrics.nodeWidth;
+    const endNodeWidth = metrics.rootWidth;
     const endNodeX = Math.round((canvasWidth - endNodeWidth) / 2);
     const endNodeY = canvasHeight + metrics.rowGap;
     positionedNodes.push({
