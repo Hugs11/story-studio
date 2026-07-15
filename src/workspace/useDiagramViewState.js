@@ -3,7 +3,7 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import { KEYS } from '../store/persistentSettings';
 import { LEFT_PANEL_MIN_WIDTH } from '../components/structure/panelResize';
 
-export const SETTINGS_PANEL_WIDTH_MIN = 560;
+export const SETTINGS_PANEL_WIDTH_MIN = 400;
 export const SETTINGS_PANEL_WIDTH_MAX = 900;
 export const SETTINGS_PANEL_WIDTH_DEFAULT = 800;
 export const TREE_PANEL_WIDTH_DEFAULT = 320;
