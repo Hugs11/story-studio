@@ -1,7 +1,7 @@
 import { logger } from '../utils/logger';
 import { bumpPackVersion } from '../utils/packConvention';
 
-// Grappe « cycle de vie du projet » extraite d'AppContent : nouveau projet
+// Grappe « cycle de vie du projet » extraite d'AppContent : retour à l'accueil
 // (reset vers l'accueil, PAS de session), choix du type (création de
 // la session éphémère) et atterrissage depuis les funnels « Modifier un pack »
 // (éditable) / « Simuler » (non éditable). Orchestre useWorkSession + la garde de
@@ -35,7 +35,7 @@ export function useProjectLifecycle({
   setImportNotice,
   showErrorDialog,
 }) {
-  // Nouveau projet : PAS de nouvelle session, c'est un reset vers l'accueil. Nettoyage
+  // Retour à l'accueil : PAS de nouvelle session, c'est un reset. Nettoyage
   // complet mémoire + session + jobs ; après quoi projectType est null → ModeSelector.
   async function handleNewProject() {
     const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
