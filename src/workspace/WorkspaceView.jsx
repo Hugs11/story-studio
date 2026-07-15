@@ -44,6 +44,7 @@ export function WorkspaceView({
   projectIndex,
   treeSearchFocusTrigger,
   onFocusTreeSearch,
+  diagramSearchFocusTrigger,
   diagramView,
 }) {
   const { onSelect } = useProjectActions();
@@ -53,7 +54,10 @@ export function WorkspaceView({
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
   const [expandedDiagramStoryGroupId, setExpandedDiagramStoryGroupId] = useState(null);
+  const [treeRevealRequest, setTreeRevealRequest] = useState(null);
+  const [diagramRevealRequest, setDiagramRevealRequest] = useState(null);
   const skipIdSyncRef = useRef(false);
+  const revealRequestIdRef = useRef(0);
 
   const {
     showTree,
@@ -111,12 +115,22 @@ export function WorkspaceView({
     }
   }, [isPlein, restoreSettings]);
 
+  const handleTreeNodeSelect = useCallback((id) => {
+    onSelect(id);
+    setDiagramRevealRequest({ id, requestId: ++revealRequestIdRef.current });
+  }, [onSelect]);
+
+  const handleDiagramNodeSelect = useCallback((id) => {
+    onSelect(id);
+    setTreeRevealRequest({ id, requestId: ++revealRequestIdRef.current });
+  }, [onSelect]);
+
   const handleOpenLocalEndSettings = useCallback((storyId) => {
     setSelectedIds(new Set([storyId]));
-    onSelect(storyId);
+    handleDiagramNodeSelect(storyId);
     if (!showSettings) restoreSettings();
     setAfterPlayFocus({ storyId, requestId: Date.now() });
-  }, [onSelect, restoreSettings, showSettings]);
+  }, [handleDiagramNodeSelect, restoreSettings, showSettings]);
   const handleAfterPlayFocusConsumed = useCallback(() => {
     setAfterPlayFocus(null);
   }, []);
@@ -156,6 +170,8 @@ export function WorkspaceView({
       pathAudit={pathAudit}
       validationIssues={validationIssues}
       treeSearchFocusTrigger={treeSearchFocusTrigger}
+      selectionRevealRequest={treeRevealRequest}
+      onSelectNode={handleTreeNodeSelect}
       onSelectionChange={handleTreeSelectionChange}
       onFocusTreeSearch={onFocusTreeSearch}
       onSimulateNode={handleSimulateNode}
@@ -203,7 +219,10 @@ export function WorkspaceView({
       projectIndex={projectIndex}
       selectedId={selectedId}
       selectedIds={selectedIds}
+      onSelectNode={handleDiagramNodeSelect}
       onSelectionChange={handleDiagramSelectionChange}
+      selectionRevealRequest={diagramRevealRequest}
+      searchFocusTrigger={diagramSearchFocusTrigger}
       expandedStoryGroupId={expandedDiagramStoryGroupId}
       onExpandedStoryGroupIdChange={setExpandedDiagramStoryGroupId}
       variant={variant}

@@ -27,6 +27,7 @@ import { buildDiagramContextActions } from './diagram/diagramContextMenu';
 import { DiagramZoomControls } from './diagram/DiagramZoomControls';
 import { DiagramLegend } from './diagram/DiagramLegend';
 import { DiagramViewToggles } from './diagram/DiagramViewToggles';
+import { DiagramSearch } from './diagram/DiagramSearch';
 import {
   buildNavigationNodeRoles,
   collectActiveNavigationPathEdges,
@@ -51,7 +52,10 @@ export function CompleteDiagramTree({
   projectIndex,
   selectedId,
   selectedIds,
+  onSelectNode,
   onSelectionChange,
+  selectionRevealRequest = null,
+  searchFocusTrigger = 0,
   expandedStoryGroupId = null,
   onExpandedStoryGroupIdChange,
   onPreview,
@@ -63,7 +67,7 @@ export function CompleteDiagramTree({
   showHint = false,
 }) {
   const {
-    onSelect,
+    onSelect: defaultOnSelect,
     onMoveToMenu,
     onImportFolder,
     onImportPodcast,
@@ -96,9 +100,11 @@ export function CompleteDiagramTree({
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [hoveredStructureEdgeId, setHoveredStructureEdgeId] = useState(null);
   const [pinnedStructureEdgeId, setPinnedStructureEdgeId] = useState(null);
+  const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
   const activeNavigationEdgeIdRef = useRef(null);
   const activeStructureEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
+  const selectNode = onSelectNode ?? defaultOnSelect;
 
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, nodeId, nodeType }
 
@@ -153,6 +159,7 @@ export function CompleteDiagramTree({
     handleZoom,
     updateLayoutStats,
     fitViewportToLayout,
+    centerViewportOnNode,
     stagePointerHandlers,
   } = useDiagramViewport({ onStagePanStart: handleStagePanStart });
   const visibleProject = useMemo(
@@ -222,6 +229,28 @@ export function CompleteDiagramTree({
     ...layout.nodes.map((node) => [node.entry.id, node]),
     ...localEndNodes.map((node) => [node.id, node]),
   ]), [layout.nodes, localEndNodes]);
+  const queueRevealNode = useCallback((nodeId) => {
+    if (!nodeId) return;
+    setPendingRevealNodeId(nodeId);
+    if (nodeId === 'root' || nodeId === END_NODE_ID) return;
+    setCollapsedIds((current) => {
+      const next = new Set(current);
+      let changed = false;
+      let parentId = projectIndex.parentMenuById.get(nodeId) ?? null;
+      while (parentId != null) {
+        changed = next.delete(parentId) || changed;
+        parentId = projectIndex.parentMenuById.get(parentId) ?? null;
+      }
+      return changed ? next : current;
+    });
+  }, [projectIndex]);
+  const lastSelectionRevealRequestRef = useRef(null);
+  useEffect(() => {
+    const requestId = selectionRevealRequest?.requestId;
+    if (!requestId || lastSelectionRevealRequestRef.current === requestId) return;
+    lastSelectionRevealRequestRef.current = requestId;
+    queueRevealNode(selectionRevealRequest.id);
+  }, [queueRevealNode, selectionRevealRequest]);
   const activeStructureEdgeId = hoveredStructureEdgeId ?? pinnedStructureEdgeId;
   const structureFocus = useMemo(
     () => buildStructureFocus(layout.edges, activeStructureEdgeId, nodeLabelById),
@@ -286,8 +315,13 @@ export function CompleteDiagramTree({
       setHoveredNavigationEdgeId(null);
       setNavigationTooltip(null);
     }
-    onSelect?.(nodeId);
-  }, [edgeKey, getNavigationEdgeForNode, onSelect, showReturns]);
+    selectNode?.(nodeId);
+  }, [edgeKey, getNavigationEdgeForNode, selectNode, showReturns]);
+  const handleSearchChoose = useCallback((nodeId) => {
+    onSelectionChange?.(new Set([nodeId]));
+    queueRevealNode(nodeId);
+    handleSelectNode(nodeId);
+  }, [handleSelectNode, onSelectionChange, queueRevealNode]);
   const handleOpenLocalEnd = useCallback((storyId) => {
     onSelectionChange?.(new Set([storyId]));
     if (onOpenLocalEndSettings) {
@@ -405,6 +439,26 @@ export function CompleteDiagramTree({
     fitViewportToLayout(layout, viewportLayoutKey);
   }, [fitViewportToLayout, layout, viewportLayoutKey]);
 
+  useLayoutEffect(() => {
+    if (!pendingRevealNodeId) return;
+    const hiddenGroupId = layout.hiddenStoryGroupByStoryId?.get(pendingRevealNodeId) ?? null;
+    if (hiddenGroupId && expandedStoryGroupId !== hiddenGroupId) {
+      onExpandedStoryGroupIdChange?.(hiddenGroupId);
+      return;
+    }
+    const targetNode = nodeById.get(pendingRevealNodeId);
+    if (targetNode && centerViewportOnNode(targetNode)) {
+      setPendingRevealNodeId(null);
+    }
+  }, [
+    centerViewportOnNode,
+    expandedStoryGroupId,
+    layout.hiddenStoryGroupByStoryId,
+    nodeById,
+    onExpandedStoryGroupIdChange,
+    pendingRevealNodeId,
+  ]);
+
   useEffect(() => {
     if (!showReturns) {
       setHoveredNavigationEdgeId(null);
@@ -446,7 +500,7 @@ export function CompleteDiagramTree({
     projectIndex,
     selectedIds,
     onMoveToMenu,
-    onSelect,
+    onSelect: selectNode,
     onSelectionChange,
     onDragSelect: handleSelectNode,
   });
@@ -574,8 +628,15 @@ export function CompleteDiagramTree({
       <div
         ref={containerRef}
         className={`fd-complete-stage ${isPanning ? 'is-panning' : ''}`}
+        tabIndex={0}
         {...stagePointerHandlers}
       >
+        <DiagramSearch
+          project={project}
+          projectIndex={projectIndex}
+          focusTrigger={searchFocusTrigger}
+          onChoose={handleSearchChoose}
+        />
         {showActionsBar ? (
         <div className="fd-complete-topbar">
           <StructureActionsBar

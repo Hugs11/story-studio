@@ -157,6 +157,7 @@ function AppContent() {
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
   const shortcutActionsRef = useRef({});
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
+  const [diagramSearchFocusTrigger, setDiagramSearchFocusTrigger] = useState(0);
   // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
   const savedSnapshotRef = useRef(null);
 
@@ -606,6 +607,7 @@ function AppContent() {
     modals,
     diagramView,
     setTreeSearchFocusTrigger,
+    setDiagramSearchFocusTrigger,
     handleNewProject,
     handleLoad,
     handleAddStory,
@@ -826,6 +828,7 @@ function AppContent() {
       projectIndex,
       treeSearchFocusTrigger,
       onFocusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
+      diagramSearchFocusTrigger,
       diagramView,
     },
     bottomPanel: {

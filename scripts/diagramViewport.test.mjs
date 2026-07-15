@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  centerDiagramNode,
   fitDiagramViewport,
   getDiagramViewportLayoutKey,
   getWheelZoomFactor,
@@ -48,6 +49,21 @@ test('un redimensionnement de panneau conserve le même centre visuel', () => {
     { width: 1000, height: 700 },
     { width: 800, height: 760 },
   ), { x: 0, y: 110 });
+});
+
+test('le centrage place le milieu du nœud au milieu du viewport au zoom courant', () => {
+  assert.deepEqual(centerDiagramNode({
+    containerWidth: 1000,
+    containerHeight: 700,
+    zoom: 0.5,
+    node: { x: 1200, y: 600, width: 200, height: 100 },
+  }), { x: -150, y: 25 });
+  assert.equal(centerDiagramNode({
+    containerWidth: 0,
+    containerHeight: 700,
+    zoom: 1,
+    node: { x: 0, y: 0, width: 100, height: 100 },
+  }), null);
 });
 
 test('la clé de cadrage change avec la géométrie, le focus et les replis', () => {

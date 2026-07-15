@@ -111,6 +111,7 @@ export function AppShell({
               projectIndex={workspace.projectIndex}
               treeSearchFocusTrigger={workspace.treeSearchFocusTrigger}
               onFocusTreeSearch={workspace.onFocusTreeSearch}
+              diagramSearchFocusTrigger={workspace.diagramSearchFocusTrigger}
               diagramView={workspace.diagramView}
             />,
           )}

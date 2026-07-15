@@ -43,6 +43,8 @@ export function StructurePanel({
   pathAudit,
   validationIssues,
   treeSearchFocusTrigger,
+  selectionRevealRequest,
+  onSelectNode,
   onSelectionChange,
   onFocusTreeSearch,
   onSimulateNode,
@@ -137,8 +139,9 @@ export function StructurePanel({
         showTreeGuides={showTreeGuides}
         selectedId={selectedId}
         selectedIds={selectedIds}
-        onSelect={onSelect}
+        onSelect={onSelectNode ?? onSelect}
         onSelectionChange={onSelectionChange}
+        selectionRevealRequest={selectionRevealRequest}
         onReorder={onReorder}
         onMoveToMenu={onMoveToMenu}
         onAddMenu={onAddMenu}

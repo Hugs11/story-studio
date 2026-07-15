@@ -2,7 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { read } from '../../../store/persistentSettings';
 import { logger } from '../../../utils/logger';
 import { clampZoom } from '../flowDiagramLayout';
-import { fitDiagramViewport, getWheelZoomFactor, preserveViewportCenter } from './viewportGeometry.js';
+import {
+  centerDiagramNode,
+  fitDiagramViewport,
+  getWheelZoomFactor,
+  preserveViewportCenter,
+} from './viewportGeometry.js';
 
 const DIAGRAM_PERF_KEY = 'storyStudio.diagramPerf';
 
@@ -202,6 +207,20 @@ export function useDiagramViewport({
     lastFittedLayoutKeyRef.current = layoutKey;
   }, [containerWidth, containerHeight, scheduleViewportTransform]);
 
+  const centerViewportOnNode = useCallback((node) => {
+    const camera = centerDiagramNode({
+      containerWidth,
+      containerHeight,
+      zoom: zoomRef.current,
+      node,
+    });
+    if (!camera) return false;
+    cameraRef.current = camera;
+    hasViewportRef.current = true;
+    scheduleViewportTransform(true, 'pan');
+    return true;
+  }, [containerHeight, containerWidth, scheduleViewportTransform]);
+
   useEffect(() => () => {
     if (viewportFrameRef.current != null) {
       cancelAnimationFrame(viewportFrameRef.current);
@@ -224,10 +243,11 @@ export function useDiagramViewport({
 
   const handlePointerDown = useCallback((event) => {
     if (event.button !== 0) return;
-    if (event.target.closest?.('.fd-complete-node, .fd-complete-zoom, .fd-complete-topbar')) return;
-    onStagePanStart?.();
     const node = containerRef.current;
     if (!node) return;
+    node.focus({ preventScroll: true });
+    if (event.target.closest?.('.fd-complete-node, .fd-complete-zoom, .fd-complete-topbar, .fd-diagram-search')) return;
+    onStagePanStart?.();
     panStateRef.current = {
       active: true,
       pointerId: event.pointerId,
@@ -272,6 +292,7 @@ export function useDiagramViewport({
     handleZoom,
     updateLayoutStats,
     fitViewportToLayout,
+    centerViewportOnNode,
     stagePointerHandlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,

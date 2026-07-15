@@ -150,6 +150,7 @@ function TreeNodeInner({
         insertClass,
         showDropInside ? 'drop-target' : '',
       ].filter(Boolean).join(' ')}
+      data-tree-node-id={id}
       {...(type === 'story' || type === 'menu' || type === 'root'
         ? { 'data-media-node-id': id, 'data-media-node-type': type }
         : {})}
