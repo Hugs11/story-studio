@@ -246,6 +246,7 @@ body.workspace-is-resizing * {
   background: var(--bg1);
   min-width: 560px;
   max-width: 900px;
+  container: settings-panel / inline-size;
 }
 
 /* Quand les trois vues sont actives, le diagramme ne peut jamais s'effondrer
