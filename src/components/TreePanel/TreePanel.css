@@ -149,7 +149,7 @@
   outline: none;
 }
 
-.tree-item:focus-visible {
+:root[data-keyboard-navigation] .tree-item:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: -2px;
   box-shadow: var(--ring);

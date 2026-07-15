@@ -274,8 +274,8 @@
   outline: none;
 }
 
-.media-tile:focus-visible,
-.me-list-row:focus-visible {
+:root[data-keyboard-navigation] .media-tile:focus-visible,
+:root[data-keyboard-navigation] .me-list-row:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--focus-ring-soft);
