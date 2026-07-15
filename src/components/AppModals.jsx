@@ -4,14 +4,19 @@ import { SaveProgressModal } from './common/SaveProgressModal';
 import { GenerateProgressModal } from './GenerateModal/GenerateProgressModal';
 import { ImportNoticeToast } from './common/ImportNoticeToast';
 import { CreditsModal } from './common/CreditsModal';
-import { AggregatePacksFunnel } from './AggregatePacks/AggregatePacksFunnel';
 import { SessionMediaTriageModal } from './SessionMediaTriage/SessionMediaTriageModal';
-import { CommunityPackCheckerFunnel } from './CommunityPackChecker/CommunityPackCheckerFunnel';
-import { EditPackFunnel } from './EditPack/EditPackFunnel';
-import { PodcastImportFunnel } from './PodcastImport/PodcastImportFunnel';
-import { YoutubeImportFunnel } from './YoutubeImport/YoutubeImportFunnel';
 
 const OptionsTab = lazy(() => import('../tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
+const AggregatePacksFunnel = lazy(() => import('./AggregatePacks/AggregatePacksFunnel')
+  .then((module) => ({ default: module.AggregatePacksFunnel })));
+const CommunityPackCheckerFunnel = lazy(() => import('./CommunityPackChecker/CommunityPackCheckerFunnel')
+  .then((module) => ({ default: module.CommunityPackCheckerFunnel })));
+const EditPackFunnel = lazy(() => import('./EditPack/EditPackFunnel')
+  .then((module) => ({ default: module.EditPackFunnel })));
+const PodcastImportFunnel = lazy(() => import('./PodcastImport/PodcastImportFunnel')
+  .then((module) => ({ default: module.PodcastImportFunnel })));
+const YoutubeImportFunnel = lazy(() => import('./YoutubeImport/YoutubeImportFunnel')
+  .then((module) => ({ default: module.YoutubeImportFunnel })));
 const SDGenerateModal = lazy(() => import('./SDGenerateModal/SDGenerateModal').then((module) => ({ default: module.SDGenerateModal })));
 const RecordModal = lazy(() => import('./RecordModal/RecordModal').then((module) => ({ default: module.RecordModal })));
 const GenerateVoiceModal = lazy(() => import('./GenerateVoiceModal/GenerateVoiceModal')
@@ -127,7 +132,7 @@ export function AppModals({
         />,
       )}
 
-      {modals.isOpen('editPack') && (
+      {modals.isOpen('editPack') && renderDeferred(
         <EditPackFunnel
           onClose={() => modals.close('editPack')}
           onLand={onLandEditablePack}
@@ -135,14 +140,14 @@ export function AppModals({
         />
       )}
 
-      {modals.isOpen('podcastFunnel') && (
+      {modals.isOpen('podcastFunnel') && renderDeferred(
         <PodcastImportFunnel
           onClose={() => modals.close('podcastFunnel')}
           onImport={onPodcastFunnelImport}
         />
       )}
 
-      {youtubeFunnelMode && (
+      {youtubeFunnelMode && renderDeferred(
         <YoutubeImportFunnel
           mode={youtubeFunnelMode}
           onClose={() => setYoutubeFunnelMode(null)}
@@ -150,13 +155,13 @@ export function AppModals({
         />
       )}
 
-      {modals.isOpen('aggregatePacks') && (
+      {modals.isOpen('aggregatePacks') && renderDeferred(
         <AggregatePacksFunnel
           onClose={() => modals.close('aggregatePacks')}
         />
       )}
 
-      {modals.isOpen('packChecker') && (
+      {modals.isOpen('packChecker') && renderDeferred(
         <CommunityPackCheckerFunnel
           onClose={() => modals.close('packChecker')}
         />
