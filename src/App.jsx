@@ -735,7 +735,6 @@ function AppContent() {
     importNotice,
     setImportNotice,
     onToolbarRecordSaved: handleToolbarRecordSaved,
-    onMediaCreated: handleMediaCreated,
   };
 
   // Groupes de props du shell présentational. Aucune logique métier :
