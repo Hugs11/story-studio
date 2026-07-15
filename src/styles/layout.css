@@ -797,3 +797,10 @@ textarea:focus {
 ::placeholder {
   color: var(--muted);
 }
+
+/* `:focus-visible` natif peut s'activer sur le dernier contrôle cliqué dès
+   qu'un raccourci ou une flèche est pressé. Sans parcours Tab actif, on garde
+   l'état de sélection mais pas cet ancien contour de focus. */
+:root:not([data-keyboard-navigation]) :focus-visible:not(input):not(select):not(textarea):not([contenteditable='true']) {
+  outline: none !important;
+}

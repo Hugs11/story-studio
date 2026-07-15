@@ -1425,7 +1425,7 @@
   border-color: var(--borderLt);
 }
 
-.fd-complete-node:focus-visible {
+:root[data-keyboard-navigation] .fd-complete-node:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
   box-shadow: var(--ring);
