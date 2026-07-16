@@ -16,7 +16,6 @@ import {
 import {
   getDefaultPackEntryDestination,
   getEffectiveEndBehavior,
-  getGeneratedStoryNavigation,
 } from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
@@ -36,7 +35,12 @@ import { useProjectActions } from '../../../store/ProjectActionsContext';
 import { useProjectContext } from '../../../store/ProjectContext';
 import { pickAudio } from '../../../hooks/useFileDialog';
 import { basename } from '../../../utils/fileUtils';
-import { buildLocalEndDraftFields, createLocalEndDraft, selectLocalEndDraftAudio } from '../../../store/localEndDraft';
+import {
+  createLocalEndDraft,
+  getLocalEndDraftApplicability,
+  materializeLocalEndDraftFields,
+  selectLocalEndDraftAudio,
+} from '../../../store/localEndDraft';
 
 function destinationHintLabel(label) {
   if (!label) return null;
@@ -234,6 +238,14 @@ export function AfterPlaySection({
   const advancedDescription = hasEndNode
       ? 'Par défaut, cette histoire utilise le message de fin du pack.'
       : 'Options rarement nécessaires pour personnaliser la fin de cette histoire.';
+  const localDraftApplicability = localDraft
+    ? getLocalEndDraftApplicability({
+      draft: localDraft,
+      entry: node,
+      parentMenu,
+      project,
+    })
+    : null;
 
   useEffect(() => {
     setShowSequenceEditor(false);
@@ -291,17 +303,15 @@ export function AfterPlaySection({
   }
 
   async function applyLocalDraft() {
-    if (!localDraft) return;
-    const audio = localDraft.audioSource
-      ? (await onImportFile?.(localDraft.audioSource) ?? localDraft.audioSource)
-      : localDraft.audio;
-    const fields = buildLocalEndDraftFields(localDraft, audio);
-    const candidate = getGeneratedStoryNavigation(
-      { ...node, ...fields }, parentMenu, project, project?.rootEntries ?? [],
-    );
-    // Une destination explicite peut etre equivalente au `next_story` global.
-    // Dans ce cas, il n'existe toujours pas de fin locale a materialiser.
-    if (candidate.endMessage.presentationKind === 'global') return;
+    if (!localDraft || !localDraftApplicability?.applicable) return;
+    const fields = await materializeLocalEndDraftFields({
+      draft: localDraft,
+      entry: node,
+      parentMenu,
+      project,
+      importFile: onImportFile,
+    });
+    if (!fields) return;
     onUpdate(fields);
     setLocalDraft(null);
   }
@@ -392,9 +402,20 @@ export function AfterPlaySection({
             />
           </div>
         </div>
+        {!localDraftApplicability?.applicable ? (
+          <div className="after-play-muted" role="status">
+            Choisissez un audio ou une destination différente de la fin globale.
+          </div>
+        ) : null}
         <div className="end-actions-end">
           <Button size="sm" onClick={() => setLocalDraft(null)}>Annuler</Button>
-          <Button size="sm" onClick={applyLocalDraft}>Appliquer la fin locale</Button>
+          <Button
+            size="sm"
+            onClick={applyLocalDraft}
+            disabled={!localDraftApplicability?.applicable}
+          >
+            Appliquer la fin locale
+          </Button>
         </div>
       </div>
     ) : (
