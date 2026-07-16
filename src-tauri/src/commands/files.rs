@@ -297,6 +297,23 @@ pub async fn commit_audio_preview(
 }
 
 #[tauri::command]
+pub async fn discard_audio_preview(preview_path: String) -> Result<(), String> {
+    let preview_for_log = preview_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        project_files::discard_audio_preview(&preview_path).inspect_err(|error| {
+            log::warn!(
+                target: "audio_preview",
+                "discard rejected for '{}': {}",
+                preview_for_log,
+                error
+            );
+        })
+    })
+    .await
+    .map_err(|error| format!("Tâche abandonnée : {}", error))?
+}
+
+#[tauri::command]
 pub async fn restore_audio_original(
     input_path: String,
     save_path: Option<String>,

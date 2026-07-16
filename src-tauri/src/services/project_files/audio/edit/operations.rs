@@ -303,8 +303,11 @@ pub fn restore_audio_original(
 pub fn preview_audio_edit(request: AudioEditRequest<'_>) -> Result<String, String> {
     let input = validate_existing_file_path(request.input_path, "Fichier audio")?;
     let source = audio_edit_source_for(&input);
-    let output =
-        std::env::temp_dir().join(format!("story_studio_audio_preview_{}.wav", now_millis()));
+    let output = std::env::temp_dir().join(format!(
+        "{}{}.wav",
+        AUDIO_PREVIEW_PREFIX,
+        uuid::Uuid::new_v4()
+    ));
     let ffmpeg = get_ffmpeg_path()?;
     run_ffmpeg_audio_edit(FfmpegAudioEditRequest {
         ffmpeg: &ffmpeg,
@@ -322,8 +325,25 @@ pub fn commit_audio_preview(
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
 ) -> Result<TrimAudioResult, String> {
+    commit_audio_preview_in(
+        input_path,
+        preview_path,
+        save_path,
+        workspace_dir,
+        &std::env::temp_dir(),
+    )
+}
+
+pub(crate) fn commit_audio_preview_in(
+    input_path: &str,
+    preview_path: &str,
+    save_path: Option<&str>,
+    workspace_dir: Option<&str>,
+    preview_temp_root: &Path,
+) -> Result<TrimAudioResult, String> {
     let input = validate_existing_file_path(input_path, "Fichier audio")?;
-    let preview = validate_existing_file_path(preview_path, "Aperçu audio")?;
+    let preview = validate_managed_audio_preview_in(Path::new(preview_path), preview_temp_root)?
+        .ok_or_else(|| "Aperçu audio introuvable.".to_string())?;
     let input_ext = input
         .extension()
         .and_then(|e| e.to_str())
@@ -416,11 +436,20 @@ pub fn commit_audio_preview(
         },
     )?;
 
-    Ok(TrimAudioResult {
+    let result = TrimAudioResult {
         output_path: path_for_frontend(&final_path.to_string_lossy()),
         path_changed,
         original_path: Some(path_for_frontend(&original_path.to_string_lossy())),
-    })
+    };
+    if let Err(error) = discard_audio_preview_in(&preview, preview_temp_root) {
+        log::warn!(
+            target: "audio_preview",
+            "commit succeeded but preview cleanup failed for '{}': {}",
+            preview.display(),
+            error
+        );
+    }
+    Ok(result)
 }
 
 pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult, String> {

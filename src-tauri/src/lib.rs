@@ -30,13 +30,15 @@ fn cleanup_temp_image_dir(dir_name: &str) {
 }
 
 fn cleanup_temp_images() {
+    let max_age = std::time::Duration::from_secs(24 * 3600);
     for dir_name in [
         support::temp::TEMP_IMAGES_DIR,
         support::temp::LEGACY_TEMP_IMAGES_DIR,
     ] {
         cleanup_temp_image_dir(dir_name);
     }
-    support::temp::cleanup_orphan_session_workspaces(std::time::Duration::from_secs(24 * 3600));
+    services::project_files::cleanup_old_audio_previews(max_age);
+    support::temp::cleanup_orphan_session_workspaces(max_age);
 }
 
 fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
@@ -100,6 +102,7 @@ pub fn run() {
             commands::files::preview_audio_edit,
             commands::files::apply_audio_edit,
             commands::files::commit_audio_preview,
+            commands::files::discard_audio_preview,
             commands::files::restore_audio_original,
             commands::files::validate_lunii_zip_cmd,
             commands::files::scan_unused_project_files,

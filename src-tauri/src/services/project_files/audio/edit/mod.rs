@@ -299,6 +299,13 @@ pub(crate) fn filter_number(value: f64) -> String {
 
 mod ffmpeg;
 mod operations;
+mod preview;
 
 pub(crate) use ffmpeg::*;
 pub use operations::*;
+pub use preview::{cleanup_old_audio_previews, discard_audio_preview};
+pub(crate) use preview::{
+    discard_audio_preview_in, validate_managed_audio_preview_in, AUDIO_PREVIEW_PREFIX,
+};
+#[cfg(test)]
+pub(crate) use preview::cleanup_old_audio_previews_in;
