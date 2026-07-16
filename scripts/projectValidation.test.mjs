@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { normalizeProjectData } from '../src/store/projectModel.js';
 import { getProjectValidationIssues } from '../src/store/projectValidation.js';
 import {
+  createSilentStoryTitleUpdate,
+  createStorySelectionAudioUpdate,
   createSilentStoryTitleSettings,
   isExplicitSilentStoryTitle,
   isStorySelectionAudioRequired,
@@ -353,11 +355,11 @@ test('story selection audio is required without an explicit title stage', () => 
   assert.equal(isExplicitSilentStoryTitle({ itemAudio: null }), false);
 });
 
-test('adding then removing selection audio preserves an explicit silent title stage', () => {
+test('the advanced silent-selection toggle and audio updates remain mutually exclusive', () => {
   const titleControlSettings = createSilentStoryTitleSettings({ wheel: false, home: false });
-  const silentStory = { itemAudio: null, silentTitleStage: true, titleControlSettings };
-  const withAudio = { ...silentStory, itemAudio: 'selection.mp3' };
-  const silentAgain = { ...withAudio, itemAudio: null };
+  const silentStory = createSilentStoryTitleUpdate(titleControlSettings);
+  const withAudio = { ...silentStory, ...createStorySelectionAudioUpdate('selection.mp3') };
+  const clearedAudio = { ...withAudio, ...createStorySelectionAudioUpdate(null) };
 
   assert.deepEqual(titleControlSettings, {
     autoplay: false,
@@ -369,8 +371,9 @@ test('adding then removing selection audio preserves an explicit silent title st
   assert.equal(isExplicitSilentStoryTitle(silentStory), true);
   assert.equal(isExplicitSilentStoryTitle(withAudio), false);
   assert.equal(isStorySelectionAudioRequired(withAudio), false);
-  assert.equal(isExplicitSilentStoryTitle(silentAgain), true);
-  assert.equal(isStorySelectionAudioRequired(silentAgain), false);
+  assert.equal(withAudio.silentTitleStage, false);
+  assert.equal(isExplicitSilentStoryTitle(clearedAudio), false);
+  assert.equal(isStorySelectionAudioRequired(clearedAudio), true);
 });
 
 function buildProjectWithRef(refOverride) {

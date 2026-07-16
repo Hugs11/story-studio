@@ -680,12 +680,6 @@
   border-left: 1px solid var(--border);
 }
 
-/* Reserve la place de l'action discrète supplémentaire avant que le texte
-   extensible du champ ne prenne tout l'espace disponible. */
-.audio-bar-actions--with-extra {
-  min-width: 90px;
-}
-
 .audio-clear-btn {
   flex-shrink: 0;
   width: 28px;

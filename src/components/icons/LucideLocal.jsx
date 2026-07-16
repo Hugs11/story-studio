@@ -271,12 +271,6 @@ const musicNode = [
   ['circle', { cx: '18', cy: '16', r: '3' }],
 ];
 
-const volumeXNode = [
-  ['path', { d: 'M11 5 6 9H2v6h4l5 4z' }],
-  ['path', { d: 'm16 9 5 5' }],
-  ['path', { d: 'm21 9-5 5' }],
-];
-
 const imageNode = [
   ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', ry: '2' }],
   ['circle', { cx: '9', cy: '9', r: '2' }],
@@ -447,7 +441,6 @@ export const Copy = createLocalLucideIcon(copyNode);
 export const ClipboardPaste = createLocalLucideIcon(clipboardPasteNode);
 export const Trash2 = createLocalLucideIcon(trash2Node);
 export const Music = createLocalLucideIcon(musicNode);
-export const VolumeX = createLocalLucideIcon(volumeXNode);
 export const Image = createLocalLucideIcon(imageNode);
 export const Moon = createLocalLucideIcon(moonNode);
 export const House = createLocalLucideIcon(houseNode);

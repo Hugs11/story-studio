@@ -5,7 +5,11 @@ import { encodeMenuNavigationTarget } from '../../../store/navigationTargets';
 import { getGeneratedStoryNavigation } from '../../../store/generatedNavigation';
 import { generatedTargetIdToSelectValue, NavigationTargetSelect } from './storyUtils';
 import { StoryDisclosure } from './StoryDisclosure';
-import { TITLE_CONTROL_DEFAULTS } from '../../../store/storyTitleStage';
+import {
+  createSilentStoryTitleUpdate,
+  isExplicitSilentStoryTitle,
+  TITLE_CONTROL_DEFAULTS,
+} from '../../../store/storyTitleStage';
 
 const PLAY_CONTROLS = [
   {
@@ -35,6 +39,7 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
   const parentMenuTarget = parentMenu?.id ? encodeMenuNavigationTarget(parentMenu.id) : null;
   const pauseEnabled = controls.pause ?? PLAY_CONTROLS[0].def;
   const homeEnabled = controls.home ?? true;
+  const silentSelectionEnabled = isExplicitSilentStoryTitle(node);
   const effectiveHomeSelectValue = navigation.storyHome.effectiveTargetId
     ? generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId)
     : null;
@@ -138,6 +143,21 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
                 />
               </label>
             ))}
+            <label className="sequence-control">
+              <Tooltip
+                text="Ne joue aucun audio de sélection avant le lancement de l'histoire."
+                placement="above"
+              >
+                <span style={{ flex: 1 }}>Écran de sélection silencieux</span>
+              </Tooltip>
+              <Toggle
+                on={silentSelectionEnabled}
+                onChange={(enabled) => onUpdate(enabled
+                  ? createSilentStoryTitleUpdate(node.titleControlSettings)
+                  : { silentTitleStage: false })}
+                ariaLabel="Écran de sélection silencieux"
+              />
+            </label>
           </div>
         </div>
       </StoryDisclosure>
