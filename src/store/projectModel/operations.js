@@ -224,11 +224,11 @@ export function clearMediaReferences(project, path) {
   return normalizeBaseProject(next);
 }
 
-export function removeEntry(project, entryId) {
+function removeEntry(project, entryId) {
   return updateProjectRootEntries(project, removeEntryTree(project.rootEntries ?? [], entryId));
 }
 
-export function removeEntries(project, entryIds) {
+function removeEntries(project, entryIds) {
   const ids = new Set([...entryIds].filter((id) => id && id !== 'root'));
   if (ids.size === 0) return project;
   return updateProjectRootEntries(project, removeEntriesTree(project.rootEntries ?? [], ids));

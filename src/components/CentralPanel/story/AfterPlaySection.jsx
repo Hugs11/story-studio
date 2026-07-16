@@ -493,7 +493,6 @@ export function AfterPlaySection({
           </div>
         )}
         <AudioField
-          accentLabel
           label={promptAudioLabel}
           description={promptAudioDescription}
           file={node.afterPlaybackPromptAudio}

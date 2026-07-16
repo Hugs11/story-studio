@@ -145,7 +145,6 @@ export const StoryEditor = memo(function StoryEditor({
               <span className="media-col-subtitle">Image affichée dans le menu de sélection</span>
             </div>
             <ImageField
-              accentLabel
               fieldId={`${node.id}:itemImage`}
               file={node.itemImage}
               extraActions={[
@@ -168,7 +167,6 @@ export const StoryEditor = memo(function StoryEditor({
               <span className="media-col-subtitle">Audio de sélection puis lecture de l'histoire</span>
             </div>
             <AudioField
-              accentLabel
               label="Audio de sélection"
               description={explicitSilentSelection
                 ? 'Optionnel — ce titre de sélection peut rester silencieux'
@@ -183,7 +181,6 @@ export const StoryEditor = memo(function StoryEditor({
               onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
             />
             <AudioField
-              accentLabel
               label="Histoire complète"
               description="Écoutée quand l'enfant valide son choix"
               file={node.audio}

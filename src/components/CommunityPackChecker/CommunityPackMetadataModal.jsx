@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../common/Button';
 import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/LucideLocal';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { generateConventionName, parseConventionName } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
 import './CommunityPackMetadataModal.css';
@@ -86,6 +87,7 @@ export function CommunityPackMetadataModal({
   const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
   const customAge = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
   const canSubmit = normalized.title.length > 0 && !busy;
+  useEscapeKey(!busy, onCancel);
 
   useEffect(() => {
     const currentUuid = String(report?.packUuid || '').trim();
@@ -120,7 +122,14 @@ export function CommunityPackMetadataModal({
   }
 
   return (
-    <div className="checker-meta-overlay" onMouseDown={onCancel}>
+    <div
+      className="checker-meta-overlay"
+      data-modal-surface=""
+      role="dialog"
+      aria-modal="true"
+      aria-label="Correction des métadonnées"
+      onMouseDown={onCancel}
+    >
       <div className="checker-meta-modal" onMouseDown={(event) => event.stopPropagation()}>
         <header className="checker-meta-header">
           <span className="checker-meta-header-icon"><FilePen className="checker-icon" aria-hidden="true" /></span>

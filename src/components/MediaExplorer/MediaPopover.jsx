@@ -29,7 +29,7 @@ function tagStyle(name) {
   return { background: `hsl(${Math.round(tagHue(name))},55%,45%)`, color: '#fff' };
 }
 
-export function PopoverAudioPlayer({ path, name }) {
+function PopoverAudioPlayer({ path, name }) {
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(null);
@@ -142,7 +142,7 @@ function TagEditor({ path, itemTags, allProjectTags, onAddMediaTag, onRemoveMedi
 }
 
 export function MediaPopover({
-  item, anchorRect, getMeta, onSelectNode, onOpenAiQueue, onClose,
+  item, anchorRect, getMeta, onSelectNode, onClose,
   itemTags = [], allProjectTags = [], onAddMediaTag, onRemoveMediaTag, onSplit,
 }) {
   const popRef = useRef(null);

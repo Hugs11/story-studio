@@ -2,7 +2,7 @@ function hasNonEmptyValue(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export const GENERATED_GLOBAL_END_CONTROLS = Object.freeze({
+const GENERATED_GLOBAL_END_CONTROLS = Object.freeze({
   wheel: false,
   ok: true,
   home: true,

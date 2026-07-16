@@ -13,7 +13,7 @@ export function formatDate(ts) {
   return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
-export function tagHue(name) {
+function tagHue(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = ((h * 31) + name.charCodeAt(i)) >>> 0;
   return (h * 137.5) % 360;

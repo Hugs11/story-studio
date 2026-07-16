@@ -50,7 +50,6 @@ export function AppModals({
   projectName,
   appVersion,
   xttsSettings,
-  sdSettings,
   canGenerate,
   canGenerateStoryTts,
   modalExportFolder,
@@ -191,7 +190,6 @@ export function AppModals({
       {/* SD — modale de génération */}
       {sdGenerate.open && renderDeferred(
         <SDGenerateModal
-          sdSettings={sdSettings}
           onGenerate={onSDGenerate}
           currentImagePath={sdGenerate.context?.currentImagePath ?? null}
           currentImageLabel={sdGenerate.context?.currentImageLabel ?? null}

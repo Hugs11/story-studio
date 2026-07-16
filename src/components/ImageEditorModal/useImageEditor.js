@@ -45,7 +45,7 @@ export function containFit(img) {
  * hue                 : degrés [0,360]
  * sepia               : % [0,100]
  */
-export function buildFilter({ brightness = 0, contrast = 0, saturation = 0, grayscale = false, hue = 0, sepia = 0, blur = 0, invert = false, thickness = 0 }) {
+function buildFilter({ brightness = 0, contrast = 0, saturation = 0, grayscale = false, hue = 0, sepia = 0, blur = 0, invert = false, thickness = 0 }) {
   const parts = [];
   // Trick morphologique : blur étale les bords, contrast re-binarise → traits plus épais
   if (thickness > 0) {

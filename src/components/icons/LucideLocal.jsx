@@ -133,14 +133,6 @@ const slidersHorizontalNode = [
   ['path', { d: 'M8 12H3' }],
 ];
 
-const listTodoNode = [
-  ['path', { d: 'M13 5h8' }],
-  ['path', { d: 'M13 12h8' }],
-  ['path', { d: 'M13 19h8' }],
-  ['path', { d: 'm3 17 2 2 4-4' }],
-  ['rect', { x: '3', y: '4', width: '6', height: '6', rx: '1' }],
-];
-
 const swatchBookNode = [
   ['path', { d: 'M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z' }],
   ['path', { d: 'M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7' }],
@@ -344,20 +336,6 @@ const xNode = [
   ['path', { d: 'm6 6 12 12' }],
 ];
 
-const maximize2Node = [
-  ['path', { d: 'M15 3h6v6' }],
-  ['path', { d: 'm21 3-7 7' }],
-  ['path', { d: 'm3 21 7-7' }],
-  ['path', { d: 'M9 21H3v-6' }],
-];
-
-const minimize2Node = [
-  ['path', { d: 'm14 10 7-7' }],
-  ['path', { d: 'M20 10h-6V4' }],
-  ['path', { d: 'm3 21 7-7' }],
-  ['path', { d: 'M4 14h6v6' }],
-];
-
 const triangleAlertNode = [
   ['path', { d: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3' }],
   ['path', { d: 'M12 9v4' }],
@@ -416,7 +394,6 @@ export const Upload = createLocalLucideIcon(uploadNode);
 export const FolderPlus = createLocalLucideIcon(folderPlusNode);
 export const Package = createLocalLucideIcon(packageNode);
 export const SlidersHorizontal = createLocalLucideIcon(slidersHorizontalNode);
-export const ListTodo = createLocalLucideIcon(listTodoNode);
 export const SwatchBook = createLocalLucideIcon(swatchBookNode);
 export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
@@ -454,8 +431,6 @@ export const CircleCheck = createLocalLucideIcon(circleCheckNode);
 export const CircleX = createLocalLucideIcon(circleXNode);
 export const Check = createLocalLucideIcon(checkNode);
 export const X = createLocalLucideIcon(xNode);
-export const Maximize2 = createLocalLucideIcon(maximize2Node);
-export const Minimize2 = createLocalLucideIcon(minimize2Node);
 export const TriangleAlert = createLocalLucideIcon(triangleAlertNode);
 export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);

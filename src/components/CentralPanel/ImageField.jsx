@@ -45,7 +45,6 @@ export function ImageField({
   extraActions = [],
   compact = false,
   align = 'center',
-  accentLabel = false,
   fieldId = null,
   formatHint = 'Format recommandé : 320 × 240 px',
   badge = null,

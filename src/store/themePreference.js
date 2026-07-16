@@ -28,7 +28,7 @@ function getSystemTheme() {
   return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
 }
 
-export function resolveThemePreference(value) {
+function resolveThemePreference(value) {
   return value === 'dark' || value === 'light' ? value : getSystemTheme();
 }
 

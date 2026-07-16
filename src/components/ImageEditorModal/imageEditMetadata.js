@@ -5,7 +5,7 @@ const METADATA_DIR = '.story-studio-image-edits';
 const METADATA_SUFFIX = '.edit.json';
 const METADATA_VERSION = 1;
 
-export function imageEditMetadataPath(imagePath) {
+function imageEditMetadataPath(imagePath) {
   if (!imagePath) return null;
   const normalized = String(imagePath);
   const splitIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));

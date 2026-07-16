@@ -12,7 +12,7 @@ import { TagSection } from './TagSection';
 import { UsageBadge } from './UsageBadge';
 
 export function MediaTile({
-  item, view, getMeta, markForProbe, onSelectNode, onOpenAiQueue,
+  item, view, getMeta, markForProbe,
   index, isPopoverOpen, onActivate, onNavigate,
   itemTags, allProjectTags, onAddMediaTag, onRemoveMediaTag,
   mediaTags, onDeleteRequest, onAssemble, onSplit,

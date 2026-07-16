@@ -13,10 +13,10 @@ export const COLUMNS = [
   { id: 'tags',  label: 'Tags',       defaultWidth: 120 },
 ];
 
-export const DEFAULT_COL_WIDTHS = Object.fromEntries(COLUMNS.map((c) => [c.id, c.defaultWidth]));
+const DEFAULT_COL_WIDTHS = Object.fromEntries(COLUMNS.map((c) => [c.id, c.defaultWidth]));
 const OLD_COL_IDS = ['name', 'usage', 'size', 'dim', 'fmt', 'path', 'tags'];
 
-export function loadColWidths() {
+function loadColWidths() {
   const saved = read(KEYS.MEDIA_EXPLORER_COL_WIDTHS, { parse: JSON.parse });
   if (saved && !Array.isArray(saved)) {
     return { ...DEFAULT_COL_WIDTHS, ...Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, Math.max(40, Number(v))])) };
@@ -29,7 +29,7 @@ export function loadColWidths() {
   return { ...DEFAULT_COL_WIDTHS };
 }
 
-export function loadVisibleCols() {
+function loadVisibleCols() {
   const saved = read(KEYS.MEDIA_EXPLORER_VISIBLE_COLS, { parse: JSON.parse });
   if (Array.isArray(saved)) {
     const valid = new Set(COLUMNS.map((c) => c.id));

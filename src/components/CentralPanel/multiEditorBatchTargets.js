@@ -1,11 +1,11 @@
-export function isTextImageBatchTarget(node) {
+function isTextImageBatchTarget(node) {
   if (!node) return false;
   if (node.type === 'story') return true;
   if (node.type === 'menu') return !node.autoBlackImage;
   return false;
 }
 
-export function blocksTextImageBatchAction(node) {
+function blocksTextImageBatchAction(node) {
   if (!node) return false;
   if (node.type === 'zip') return false;
   if (node.type === 'menu') return !!node.autoBlackImage;

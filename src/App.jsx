@@ -706,7 +706,6 @@ function AppContent() {
     projectName: effectiveProjectFilePrefix,
     appVersion,
     xttsSettings,
-    sdSettings: sdStore.sdSettings,
     canGenerate,
     canGenerateStoryTts,
     modalExportFolder,
@@ -822,7 +821,6 @@ function AppContent() {
       sessionRecoveries,
       onRecoverSession: handleRecoverSession,
       onIgnoreSessionRecovery: handleIgnoreSessionRecovery,
-      pathAudit,
       validationIssues,
       allMenus,
       projectIndex,
@@ -844,7 +842,6 @@ function AppContent() {
       onImportStories: () => handleAddStory(),
       onImportMedia: handleImportMediaLibrary,
       onImportMediaFolder: handleImportMediaLibraryFolder,
-      onOpenAiQueue: handleOpenAiQueue,
       onRegenerateImage: handleRegenerateImageJob,
       onClearAiDone: () => {
         sdStore.clearDone();
@@ -879,7 +876,7 @@ function AppContent() {
       aiQueueHasResults: bottomWorkspace.aiQueueHasResults,
       onOpenMedia: () => bottomWorkspace.openTab('media'),
       onOpenRenderQueue: () => bottomWorkspace.openTab('queue'),
-      onOpenAiQueue: () => bottomWorkspace.openTab('ai'),
+      onOpenAiQueue: handleOpenAiQueue,
       appVersion,
     },
   };

@@ -22,7 +22,6 @@ const DEFAULT_PARAMS = {
 };
 
 export function SDGenerateModal({
-  sdSettings,
   onGenerate,
   onClose,
   currentImagePath = null,

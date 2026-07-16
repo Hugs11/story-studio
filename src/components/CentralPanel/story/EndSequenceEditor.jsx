@@ -154,7 +154,6 @@ export function EndSequenceEditor({
               </div>
 
               <AudioField
-                accentLabel
                 label={`Audio — étape ${index + 1}`}
                 file={step.audio}
                 ttsTextSuggestion={step.name || node.name || ''}
@@ -286,7 +285,6 @@ export function EndSequenceEditor({
             />
           </div>
           <AudioField
-            accentLabel
             label="Audio joué quand l'enfant appuie sur Accueil"
             file={homeStep.audio}
             ttsTextSuggestion={homeStep.name || node.name || ''}
@@ -296,7 +294,6 @@ export function EndSequenceEditor({
             onClear={() => updateHomeStep({ audio: null })}
           />
           <ImageField
-            accentLabel
             fieldId={`${node.id}:homeStep:image`}
             label="Image affichée pendant la réaction Accueil"
             file={homeStep.image}

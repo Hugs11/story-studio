@@ -13,7 +13,7 @@ export const LEVELS_GAMMA_MAX = 9.99;
  * Vrai quand les niveaux n'ont aucun effet → la passe pixel est sautée
  * (perf + évite un getImageData inutile pour les images non retouchées).
  */
-export function isLevelsNeutral({ levelsBlack = 0, levelsWhite = 255, levelsGamma = 1 } = {}) {
+function isLevelsNeutral({ levelsBlack = 0, levelsWhite = 255, levelsGamma = 1 } = {}) {
   return levelsBlack <= 0 && levelsWhite >= 255 && Math.abs(levelsGamma - 1) < 1e-3;
 }
 
@@ -26,7 +26,7 @@ export function isLevelsNeutral({ levelsBlack = 0, levelsWhite = 255, levelsGamm
  * Garde-fous : white >= black + 1 (évite division par zéro / inversion),
  * gamma borné [0.1, 9.99].
  */
-export function buildLevelsLUT(black, white, gamma) {
+function buildLevelsLUT(black, white, gamma) {
   const lo = Math.max(0, Math.min(255, Math.round(Number(black) || 0)));
   const hi = Math.max(lo + 1, Math.min(255, Math.round(Number(white) || 255)));
   const g = Math.max(LEVELS_GAMMA_MIN, Math.min(LEVELS_GAMMA_MAX, Number(gamma) || 1));

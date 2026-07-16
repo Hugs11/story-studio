@@ -105,7 +105,6 @@ export function AppShell({
               sessionRecoveries={workspace.sessionRecoveries}
               onRecoverSession={workspace.onRecoverSession}
               onIgnoreSessionRecovery={workspace.onIgnoreSessionRecovery}
-              pathAudit={workspace.pathAudit}
               validationIssues={workspace.validationIssues}
               allMenus={workspace.allMenus}
               projectIndex={workspace.projectIndex}
@@ -128,7 +127,6 @@ export function AppShell({
               onImportStories={bottomPanel.onImportStories}
               onImportMedia={bottomPanel.onImportMedia}
               onImportMediaFolder={bottomPanel.onImportMediaFolder}
-              onOpenAiQueue={bottomPanel.onOpenAiQueue}
               onRegenerateImage={bottomPanel.onRegenerateImage}
               onClearAiDone={bottomPanel.onClearAiDone}
               onRemoveImageJob={bottomPanel.onRemoveImageJob}
