@@ -2,23 +2,29 @@
   display: flex;
   align-items: stretch;
   min-height: var(--titlebar-height);
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg0);
   border-bottom: 1px solid var(--border);
 }
 
 .chrome-titlebar-left {
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   min-width: 0;
+  overflow: hidden;
   padding-left: 10px;
   gap: 10px;
 }
 
 .chrome-titlebar-identity {
-  display: inline-flex;
+  flex: 0 1 auto;
+  display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
   padding: 0 4px;
 }
 
@@ -30,6 +36,7 @@
   height: 16px;
   overflow: hidden;
   border-radius: 4px;
+  flex: 0 0 16px;
 }
 
 .chrome-app-mark-img {
@@ -40,11 +47,13 @@
 }
 
 .chrome-titlebar-brand {
+  flex: 0 0 auto;
   font-family: var(--font-display);
   font-size: 13.5px;
   font-weight: var(--weight-semibold);
   color: var(--text);
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .chrome-titlebar-chevron {
@@ -54,6 +63,7 @@
   color: var(--muted);
   width: 10px;
   height: 10px;
+  flex: 0 0 10px;
 }
 
 .chrome-titlebar-chevron-icon {
@@ -63,7 +73,24 @@
   flex-shrink: 0;
 }
 
+.tooltip-wrap.chrome-titlebar-project-tip,
+.tooltip-wrap.chrome-titlebar-pack-tip {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tooltip-wrap.chrome-titlebar-project-tip {
+  flex: 1 1 auto;
+}
+
+.tooltip-wrap.chrome-titlebar-pack-tip {
+  flex: 0 1 auto;
+}
+
 .chrome-titlebar-project {
+  display: block;
+  min-width: 0;
+  width: 100%;
   color: var(--text);
   opacity: 0.85;
   font-size: 13px;
@@ -74,6 +101,7 @@
 }
 
 .chrome-titlebar-pack-recap {
+  width: 100%;
   height: 28px;
   max-width: min(36vw, 360px);
   display: inline-flex;
@@ -149,6 +177,7 @@
 }
 
 .chrome-titlebar-status {
+  flex: 0 0 7px;
   width: 7px;
   height: 7px;
   border-radius: 999px;
@@ -165,11 +194,12 @@
 }
 
 .chrome-titlebar-spacer {
-  flex: 1;
-  min-width: 20px;
+  flex: 1 1 40px;
+  min-width: 12px;
 }
 
 .chrome-window-controls {
+  flex: 0 0 auto;
   display: flex;
   align-items: stretch;
   margin-left: auto;
@@ -207,7 +237,11 @@
   color: #fff3f3;
 }
 
-@media (max-width: 900px)  {
+@media (max-width: 1000px) {
+  .chrome-titlebar-left {
+    gap: 7px;
+  }
+
   .chrome-titlebar-project {
     max-width: 28vw;
   }
@@ -218,5 +252,48 @@
 
   .chrome-titlebar-pack-meta {
     display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .chrome-titlebar-left {
+    padding-left: 7px;
+    gap: 5px;
+  }
+
+  .chrome-titlebar-identity {
+    gap: 5px;
+    padding-inline: 2px;
+  }
+
+  .chrome-titlebar-project {
+    max-width: 22vw;
+  }
+
+  .chrome-titlebar-pack-recap {
+    max-width: 24vw;
+    padding-inline: 6px;
+  }
+
+  .chrome-titlebar-pack-thumb {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .chrome-titlebar-project {
+    max-width: 120px;
+  }
+
+  .chrome-titlebar-pack-recap {
+    max-width: 140px;
+  }
+
+  .chrome-titlebar-pack-chevron {
+    display: none;
+  }
+
+  .chrome-window-btn {
+    width: 44px;
   }
 }

@@ -3,7 +3,6 @@ import { TreePanel } from '../TreePanel/TreePanel';
 import { TreeDisplayPopover } from '../TreePanel/TreeDisplayPopover';
 import { Tooltip } from '../common/Tooltip';
 import { Search } from '../icons/LucideLocal';
-import { LuniiIcon } from '../icons/LuniiIcon';
 import { KEYS } from '../../store/persistentSettings';
 import { useProjectActions } from '../../store/ProjectActionsContext';
 import { usePersistentState } from '../../hooks/usePersistentState';
@@ -90,6 +89,7 @@ export function StructurePanel({
             onGenerateStoryTts={onGenerateStoryTts}
             canRecord={canRecord}
             canGenerateStoryTts={canGenerateStoryTts}
+            onLaunchSimulator={onSimulateRoot}
             trailing={(
               <>
                 <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">
@@ -103,16 +103,6 @@ export function StructurePanel({
                     }}
                   >
                     <Search className="tree-display-trigger-icon" strokeWidth={2.15} absoluteStrokeWidth />
-                  </button>
-                </Tooltip>
-                <Tooltip text="Lancer le simulateur" placement="below">
-                  <button
-                    type="button"
-                    className="tree-display-trigger"
-                    aria-label="Lancer le simulateur"
-                    onClick={onSimulateRoot}
-                  >
-                    <LuniiIcon className="tree-display-trigger-icon tree-display-trigger-icon--lunii" />
                   </button>
                 </Tooltip>
                 <TreeDisplayPopover

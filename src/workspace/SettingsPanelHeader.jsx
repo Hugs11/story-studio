@@ -77,7 +77,7 @@ export function SettingsPanelHeader({
       </div>
       <div className="settings-panel-header-main">
         <div className="settings-panel-header-title" title={data.title}>{data.title}</div>
-        <div className="settings-panel-header-badge">{data.badge}</div>
+        <div className="settings-panel-header-badge" title={data.badge}>{data.badge}</div>
       </div>
       {onClose ? (
         <button
