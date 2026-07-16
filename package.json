@@ -1,7 +1,7 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Open-source Windows editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
@@ -35,6 +35,7 @@
     "knip": "knip",
     "audit:css": "node scripts/audit-unused-css.mjs",
     "convert:legacy-project": "node scripts/convert-legacy-project.mjs",
+    "check:version": "node scripts/checkVersionConsistency.mjs",
     "check:blank-lines": "node scripts/check-blank-lines.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
