@@ -261,16 +261,6 @@
   white-space: nowrap;
 }
 
-.menu-destination-help {
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--muted);
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-}
-
 .field-label {
   font-size: 12px;
   font-weight: var(--weight-medium);
