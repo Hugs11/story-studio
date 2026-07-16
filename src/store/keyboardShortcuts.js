@@ -121,6 +121,12 @@ function normalizeShortcut(shortcut) {
   };
 }
 
+function normalizeStoredShortcut(shortcut) {
+  if (!shortcut || typeof shortcut !== 'object' || Array.isArray(shortcut)) return null;
+  const normalized = normalizeShortcut(shortcut);
+  return normalized.code || normalized.key ? normalized : null;
+}
+
 function keyLabelFromCode(code, key) {
   if (code?.startsWith('Key')) return code.slice(3).toUpperCase();
   if (code?.startsWith('Digit')) return code.slice(5);
@@ -186,7 +192,8 @@ export function loadKeyboardShortcuts() {
   return Object.fromEntries(
     EDITABLE_DEFINITIONS.map((definition) => [
       definition.id,
-      normalizeShortcut(migrated?.[definition.id] ?? definition.defaultShortcut),
+      normalizeStoredShortcut(migrated?.[definition.id])
+        ?? normalizeShortcut(definition.defaultShortcut),
     ]),
   );
 }
@@ -195,42 +202,97 @@ export function loadKeyboardShortcuts() {
 // devient les 3 bascules de panneaux (toggleTree/toggleSettings/toggleDiagram sur
 // Ctrl+1/2/3) et tabOptions déménage sur Ctrl+Maj+O. Migre le blob persisté pour
 // éviter des ids morts et un conflit Ctrl+3 invisible entre tabOptions et toggleDiagram.
+//
+// Correspondance sémantique des vraies personnalisations : tabEdit devient
+// toggleSettings (surface la plus proche de l'ancien espace d'édition) et
+// tabDiagram devient toggleDiagram. Une nouvelle clé valide gagne toujours ;
+// une valeur legacy qui était un ancien défaut laisse les nouveaux Ctrl+1/2/3.
 function migratePanelToggleShortcuts(shortcuts) {
-  const next = { ...shortcuts };
-  let changed = false;
+  const isShortcutRecord = !!shortcuts && typeof shortcuts === 'object' && !Array.isArray(shortcuts);
+  const next = isShortcutRecord ? { ...shortcuts } : {};
+  let changed = !isShortcutRecord;
+  const legacyValues = {
+    tabEdit: normalizeStoredShortcut(next.tabEdit),
+    tabDiagram: normalizeStoredShortcut(next.tabDiagram),
+  };
 
-  // 1. Ids morts du modèle onglets.
-  for (const deadId of ['tabEdit', 'tabDiagram']) {
-    if (deadId in next) {
-      delete next[deadId];
-      changed = true;
-    }
-  }
-
-  // 2. Nouvelles bascules : créer avec leur défaut si absentes (les alias Numpad
-  //    restent gérés par findShortcutAction tant que la combinaison est le défaut).
-  for (const id of ['toggleTree', 'toggleSettings', 'toggleDiagram']) {
-    if (next[id] == null) {
-      const definition = SHORTCUT_DEFINITIONS.find((d) => d.id === id);
-      next[id] = normalizeShortcut(definition.defaultShortcut);
-      changed = true;
-    }
-  }
-
-  // 3. tabOptions déménage vers Ctrl+Maj+O UNIQUEMENT si sa valeur stockée est un
+  // 1. tabOptions déménage vers Ctrl+Maj+O UNIQUEMENT si sa valeur stockée est un
   //    ancien défaut connu (Ctrl+3 ou Ctrl+4 legacy avant la migration
   //    simulateur). Une vraie personnalisation utilisateur est conservée.
   const legacyOptionsDefaults = [
     { ctrl: true, key: '3', code: 'Digit3' },
     { ctrl: true, key: '4', code: 'Digit4' },
   ];
-  if (next.tabOptions != null
-    && legacyOptionsDefaults.some((legacy) => shortcutEquals(next.tabOptions, legacy))) {
-    next.tabOptions = normalizeShortcut({ ctrl: true, shift: true, key: 'o', code: 'KeyO' });
+  if ('tabOptions' in next) {
+    const storedOptions = normalizeStoredShortcut(next.tabOptions);
+    if (!storedOptions
+      || legacyOptionsDefaults.some((legacy) => shortcutEquals(storedOptions, legacy))) {
+      next.tabOptions = normalizeShortcut({ ctrl: true, shift: true, key: 'o', code: 'KeyO' });
+      changed = true;
+    }
+  }
+
+  // 2. toggleTree n'a pas d'équivalent legacy. Les alias Numpad restent gérés
+  //    par findShortcutAction tant que la combinaison est le défaut.
+  if (!normalizeStoredShortcut(next.toggleTree)) {
+    next.toggleTree = normalizeShortcut(
+      SHORTCUT_DEFINITIONS.find((definition) => definition.id === 'toggleTree').defaultShortcut,
+    );
+    changed = true;
+  }
+
+  // 3. Capture effectuée, les ids legacy peuvent maintenant être supprimés.
+  for (const legacyId of ['tabEdit', 'tabDiagram']) {
+    if (legacyId in next) {
+      delete next[legacyId];
+      changed = true;
+    }
+  }
+
+  const mappings = [
+    {
+      legacyId: 'tabEdit',
+      targetId: 'toggleSettings',
+      legacyDefaults: [{ ctrl: true, key: '1', code: 'Digit1' }],
+    },
+    {
+      legacyId: 'tabDiagram',
+      targetId: 'toggleDiagram',
+      legacyDefaults: [
+        { ctrl: true, key: '2', code: 'Digit2' },
+        { ctrl: true, key: '3', code: 'Digit3' },
+      ],
+    },
+  ];
+  for (const { legacyId, targetId, legacyDefaults } of mappings) {
+    // Une nouvelle clé valide, même personnalisée, est la source de vérité.
+    if (normalizeStoredShortcut(next[targetId])) continue;
+    const definition = SHORTCUT_DEFINITIONS.find((item) => item.id === targetId);
+    const fallback = normalizeShortcut(definition.defaultShortcut);
+    const legacy = legacyValues[legacyId];
+    const isLegacyCustomization = !!legacy
+      && !legacyDefaults.some((oldDefault) => shortcutEquals(legacy, oldDefault));
+    // Ne pas introduire une collision silencieuse : la personnalisation legacy
+    // n'est copiée que si aucune autre action générale effective ne l'utilise.
+    next[targetId] = isLegacyCustomization
+      && !hasGeneralShortcutConflict(next, targetId, legacy)
+      ? legacy
+      : fallback;
     changed = true;
   }
 
   return { shortcuts: next, changed };
+}
+
+function hasGeneralShortcutConflict(shortcuts, actionId, shortcut) {
+  return EDITABLE_DEFINITIONS.some((definition) => {
+    if (definition.scope !== 'general' || definition.id === actionId) return false;
+    const effective = normalizeStoredShortcut(shortcuts?.[definition.id])
+      ?? normalizeShortcut(definition.defaultShortcut);
+    if (shortcutEquals(effective, shortcut)) return true;
+    return shortcutEquals(effective, definition.defaultShortcut)
+      && (definition.aliases ?? []).some((alias) => shortcutEquals(alias, shortcut));
+  });
 }
 
 export function saveKeyboardShortcuts(shortcuts) {
