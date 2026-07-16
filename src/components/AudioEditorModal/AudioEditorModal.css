@@ -371,6 +371,12 @@
   white-space: pre-wrap;
 }
 
+.audio-editor-preview-status {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
 /* ── Footer ───────────────────────────────────────────────────── */
 
 .audio-editor-footer {
