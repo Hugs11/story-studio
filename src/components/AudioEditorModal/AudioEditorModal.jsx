@@ -90,6 +90,8 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     setCutFadeSec,
     applyMode,
     isApplying,
+    isBlockingAction,
+    isPreviewPending,
     fadeMax,
     outputFadeMax,
     cutFadeMax,
@@ -97,6 +99,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
     initialEditRef,
     undoStagedEdit,
     regenerateFadePreview,
+    scheduleFadePreview,
     handleRestoreOriginal,
     handleStageAction,
     handleApply,
@@ -155,11 +158,11 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   const canOperate = !isLoading && !isApplying && trimEnd > trimStart + 0.01;
   const canCut = canOperate && trimDuration < duration - 0.01;
 
-  useEscapeKey(!isApplying, onCancel);
+  useEscapeKey(!isBlockingAction, onCancel);
 
   // reason: ces 5 deps changent en pratique TOUJOURS EN GROUPE -- chaque
-  // mutation de stagedEdit / cutMarkers / previewPath passe par
-  // regenerateFadePreview ou handleStageAction qui appelle
+  // mutation de stagedEdit / cutMarkers / previewPath passe par la
+  // coordination d'aperçus ou handleStageAction qui appelle
   // invoke('preview_audio_edit', ...) -> setPreviewPath(newPath) -> audioUrl
   // change. Le re-decode audio est donc inherent au workflow (le user
   // bouge un fade -> ffmpeg regenere un preview -> waveform recharge).
@@ -328,20 +331,20 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       if (region.id === 'audio-fade-in-region') {
         const nextFade = parseFloat(Math.max(0, Math.min(end, dur / 2, 10)).toFixed(3));
         setFadeInSec(nextFade);
-        void regenerateFadePreview({ fadeInSec: nextFade });
+        scheduleFadePreview({ fadeInSec: nextFade });
         return;
       }
       if (region.id === 'audio-fade-out-region') {
         const nextFade = parseFloat(Math.max(0, Math.min(dur - start, dur / 2, 10)).toFixed(3));
         setFadeOutSec(nextFade);
-        void regenerateFadePreview({ fadeOutSec: nextFade });
+        scheduleFadePreview({ fadeOutSec: nextFade });
         return;
       }
       if (region.id === 'audio-cut-region') {
         const nextFade = parseFloat(Math.max(0, Math.min(end - start, 5, end)).toFixed(3));
         const normalizedFade = nextFade <= 0.06 ? 0 : nextFade;
         setCutFadeSec(normalizedFade);
-        void regenerateFadePreview({ cutFadeSec: normalizedFade }, 'cut');
+        scheduleFadePreview({ cutFadeSec: normalizedFade }, 'cut');
         return;
       }
       if (region.id !== 'audio-selection-region') return;
@@ -480,11 +483,11 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
   }
 
   return (
-    <div className="modal-overlay" onClick={isApplying ? undefined : onCancel}>
+    <div className="modal-overlay" onClick={isBlockingAction ? undefined : onCancel}>
       <div className="modal-box audio-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>Éditer l'audio — {filename}</span>
-          <Button variant="icon" className="modal-close" onClick={onCancel} disabled={isApplying}>×</Button>
+          <Button variant="icon" className="modal-close" onClick={onCancel} disabled={isBlockingAction}>×</Button>
         </div>
 
         <div className="audio-editor-body">
@@ -512,7 +515,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             fadeInSec={fadeInSec}
             fadeOutSec={fadeOutSec}
             fadeMax={fadeMax}
-            isApplying={isApplying}
+            isApplying={isBlockingAction}
             isLoading={isLoading}
             isPlaying={isPlaying}
             canOperate={canOperate}
@@ -565,7 +568,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
           {editInfo?.original_available && (
             <div className="audio-editor-restore-row">
               <Tooltip text="Restaurer le fichier avant édition">
-                <Button size="sm" className="audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isApplying}>
+                <Button size="sm" className="audio-editor-restore-btn" onClick={handleRestoreOriginal} disabled={isBlockingAction}>
                   <RotateCcw />
                   Restaurer l'original
                 </Button>
@@ -573,14 +576,26 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
             </div>
           )}
 
+          {isPreviewPending && (
+            <div className="audio-editor-preview-status">Génération de l'aperçu audio…</div>
+          )}
           {error && <div className="audio-editor-error">{error}</div>}
         </div>
 
         <div className="audio-editor-footer">
-          <Button onClick={onCancel} disabled={isApplying}>Annuler</Button>
-          <Tooltip text={canValidate ? 'Valider les modifications' : 'Aucune modification à valider'} placement="above">
+          <Button onClick={onCancel} disabled={isBlockingAction}>Annuler</Button>
+          <Tooltip
+            text={isPreviewPending
+              ? "L'aperçu du dernier réglage est en cours"
+              : canValidate
+                ? 'Valider les modifications'
+                : 'Aucune modification à valider'}
+            placement="above"
+          >
             <Button variant="primary" onClick={handleApply} disabled={!canValidate}>
-              {applyMode === 'trim' || applyMode === 'cut'
+              {isPreviewPending
+                ? "Génération de l'aperçu…"
+                : applyMode === 'trim' || applyMode === 'cut'
                 ? 'Application…'
                 : canValidate
                   ? 'Valider les modifications'
