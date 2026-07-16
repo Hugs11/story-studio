@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { KEYS } from '../store/persistentSettings';
 import { LEFT_PANEL_MIN_WIDTH } from '../components/structure/panelResize';
@@ -25,32 +25,38 @@ const BOOL_CODEC = Object.freeze({
 });
 
 function widthCodec(min, max, fallback) {
-  return {
+  return Object.freeze({
     decode: (value) => clampNumber(value, min, max, fallback),
     encode: (value) => String(clampNumber(value, min, max, fallback)),
-  };
+  });
 }
+
+const SETTINGS_PANEL_WIDTH_CODEC = widthCodec(
+  SETTINGS_PANEL_WIDTH_MIN,
+  SETTINGS_PANEL_WIDTH_MAX,
+  SETTINGS_PANEL_WIDTH_DEFAULT,
+);
+const TREE_PANEL_WIDTH_CODEC = widthCodec(
+  LEFT_PANEL_MIN_WIDTH,
+  getTreePanelMaxWidth(),
+  TREE_PANEL_WIDTH_DEFAULT,
+);
 
 // Modèle « 3 bascules » : trois booléens indépendants. Les anciens états de vue
 // sont des dérivés de lecture ; les trois panneaux peuvent être masqués.
 export function useDiagramViewState() {
-  const treeWidthCodec = useMemo(() => ({
-    decode: (value) => clampNumber(value, LEFT_PANEL_MIN_WIDTH, getTreePanelMaxWidth(), TREE_PANEL_WIDTH_DEFAULT),
-    encode: (value) => String(clampNumber(value, LEFT_PANEL_MIN_WIDTH, getTreePanelMaxWidth(), TREE_PANEL_WIDTH_DEFAULT)),
-  }), []);
-
   const [showTree, setShowTree] = usePersistentState(KEYS.DIAGRAM_SHOW_TREE, true, BOOL_CODEC);
   const [showSettings, setShowSettings] = usePersistentState(KEYS.DIAGRAM_SHOW_SETTINGS, true, BOOL_CODEC);
   const [showDiagram, setShowDiagram] = usePersistentState(KEYS.DIAGRAM_SHOW_DIAGRAM, false, BOOL_CODEC);
   const [settingsPanelWidth, setStoredSettingsPanelWidth] = usePersistentState(
     KEYS.SETTINGS_PANEL_WIDTH,
     SETTINGS_PANEL_WIDTH_DEFAULT,
-    widthCodec(SETTINGS_PANEL_WIDTH_MIN, SETTINGS_PANEL_WIDTH_MAX, SETTINGS_PANEL_WIDTH_DEFAULT),
+    SETTINGS_PANEL_WIDTH_CODEC,
   );
   const [treePanelWidth, setStoredTreePanelWidth] = usePersistentState(
     KEYS.TREE_PANEL_WIDTH,
     TREE_PANEL_WIDTH_DEFAULT,
-    treeWidthCodec,
+    TREE_PANEL_WIDTH_CODEC,
   );
 
   // L'arbre est libre : aucune contrainte d'invariant.
