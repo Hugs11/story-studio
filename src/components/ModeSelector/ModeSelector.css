@@ -267,14 +267,35 @@
   background: var(--bg2);
 }
 
-.mode-projects-list .tooltip-wrap {
+.mode-projects-list > .tooltip-wrap {
   display: flex;
   width: 100%;
 }
 
-.mode-projects-list .tooltip-wrap > .mode-proj-row {
+.mode-projects-list > .tooltip-wrap > .mode-proj-row {
   flex: 1;
   min-width: 0;
+}
+
+.mode-proj-row--recovery {
+  display: flex;
+  gap: 5px;
+  padding: 0;
+}
+
+.mode-proj-open {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  padding: 11px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
 }
 
 /* Vignette : vraie cover du pack (rendu existant conservé) */
@@ -342,6 +363,8 @@
 .mode-proj-dismiss {
   width: 26px;
   height: 26px;
+  padding: 0;
+  border: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -350,6 +373,13 @@
   background: transparent;
   cursor: pointer;
   transition: color 0.12s, background 0.12s;
+}
+
+.mode-proj-dismiss-tooltip {
+  width: auto;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-right: 8px;
 }
 
 .mode-proj-dismiss:hover {
@@ -366,6 +396,7 @@
 .mode-tile:focus-visible,
 .mode-ghost-button:focus-visible,
 .mode-proj-row:focus-visible,
+.mode-proj-open:focus-visible,
 .mode-proj-dismiss:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
