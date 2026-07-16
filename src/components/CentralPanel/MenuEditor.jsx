@@ -6,6 +6,7 @@ import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { Trash2 } from '../icons/LucideLocal';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
+import { formatFrenchCount } from '../../utils/frenchText.js';
 import './CentralPanel.css';
 
 const MENU_BEHAVIOR_CONTROLS = [
@@ -63,7 +64,11 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
             placeholder="Nom du dossier"
           />
           <span className="menu-count">
-            {node.children?.length ?? node.items?.length ?? 0} élément(s)
+            {formatFrenchCount(
+              node.children?.length ?? node.items?.length ?? 0,
+              'élément',
+              'éléments',
+            )}
           </span>
         </div>
         <div className="card-sep" />

@@ -11,11 +11,8 @@ import {
   resetKeyboardShortcutsForScope,
   shortcutFromEvent,
 } from '../../store/keyboardShortcuts';
+import { normalizeFrenchSearchText } from '../../utils/frenchText.js';
 import './KeyboardShortcutsModal.css';
-
-function normalizeFilter(value) {
-  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
 
 function matchesQuery(definition, shortcut, query) {
   if (!query) return true;
@@ -23,8 +20,8 @@ function matchesQuery(definition, shortcut, query) {
     definition.label,
     definition.scope,
     formatShortcut(shortcut),
-  ].filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  return haystack.includes(query);
+  ].filter(Boolean).join(' ');
+  return normalizeFrenchSearchText(haystack).includes(query);
 }
 
 export function KeyboardShortcutsModal({
@@ -36,7 +33,10 @@ export function KeyboardShortcutsModal({
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
 
-  const normalizedQuery = useMemo(() => normalizeFilter(query.trim()), [query]);
+  const normalizedQuery = useMemo(
+    () => normalizeFrenchSearchText(query).trim(),
+    [query],
+  );
 
   const sections = useMemo(() => SHORTCUT_SCOPES.map((scope) => {
     const items = SHORTCUT_DEFINITIONS.filter((d) => d.scope === scope.id)

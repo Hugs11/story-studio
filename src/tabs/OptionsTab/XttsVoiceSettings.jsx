@@ -1,13 +1,14 @@
 import { Button } from '../../components/common/Button';
 import { Toggle } from '../../components/common/Toggle';
+import { formatFrenchCount } from '../../utils/frenchText.js';
 
 const LANGUAGE_OPTIONS = [
-  { value: 'fr', label: 'Francais' },
+  { value: 'fr', label: 'Français' },
   { value: 'en', label: 'English' },
-  { value: 'es', label: 'Espanol' },
+  { value: 'es', label: 'Español' },
   { value: 'de', label: 'Deutsch' },
   { value: 'it', label: 'Italiano' },
-  { value: 'pt', label: 'Portugues' },
+  { value: 'pt', label: 'Português' },
 ];
 
 export function XttsVoiceSettings({
@@ -50,7 +51,7 @@ export function XttsVoiceSettings({
         </label>
 
         <label className="xtts-label">
-          Langue par defaut
+          Langue par défaut
           <select
             className="xtts-input"
             value={xttsSettings.language}
@@ -65,7 +66,7 @@ export function XttsVoiceSettings({
 
       <div className="opts-row opts-row--pt">
         <div className="opts-row-info">
-          <div className="opts-row-label">Demarrer XTTS automatiquement si le serveur est arrete</div>
+          <div className="opts-row-label">Démarrer XTTS automatiquement si le serveur est arrêté</div>
           <div className="opts-row-sub">
             Story Studio lancera `server.py` depuis ton dossier XTTS si besoin.
           </div>
@@ -89,8 +90,12 @@ export function XttsVoiceSettings({
         </Button>
         <span className="opts-row-sub">
           {favoriteVoices.length > 0
-            ? `${favoriteVoices.length} voix favorite(s) affichee(s) dans le modal.`
-            : 'Aucune favorite : toutes les voix XTTS detectees seront proposees.'}
+            ? `${formatFrenchCount(
+              favoriteVoices.length,
+              'voix favorite affichée dans la modale',
+              'voix favorites affichées dans la modale',
+            )}.`
+            : 'Aucune voix favorite : toutes les voix XTTS détectées seront proposées.'}
         </span>
       </div>
 
@@ -113,7 +118,7 @@ export function XttsVoiceSettings({
           <div>
             <div className="opts-row-label">Voix favorites</div>
             <div className="opts-row-sub">
-              Coche uniquement les voix que tu veux voir dans le modal de generation.
+              Coche uniquement les voix que tu veux voir dans la modale de génération.
             </div>
           </div>
           <Button onClick={clearXttsFavorites} disabled={favoriteVoices.length === 0}>
@@ -127,7 +132,7 @@ export function XttsVoiceSettings({
           </div>
         ) : xttsVoices.length === 0 ? (
           <div className="xtts-voices-empty">
-            Aucune voix retournee par XTTS.
+            Aucune voix retournée par XTTS.
           </div>
         ) : (
           <div className="xtts-voice-list">

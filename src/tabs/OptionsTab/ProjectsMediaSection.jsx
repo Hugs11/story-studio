@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/common/Button';
 import { Toggle } from '../../components/common/Toggle';
+import { formatFrenchCount } from '../../utils/frenchText.js';
 
 export function ProjectsMediaSection({
   className,
@@ -76,8 +77,18 @@ export function ProjectsMediaSection({
       </div>
       {consolidationResult && (
         <div className={`info-box info-box--spaced ${consolidationResult.errors?.length ? 'warn' : ''}`}>
-          Projet consolidé : {consolidationResult.copiedCount} média(s) copié(s)
-          {consolidationResult.errors?.length ? `, ${consolidationResult.errors.length} fichier(s) manquant(s).` : '.'}
+          Projet consolidé : {formatFrenchCount(
+            consolidationResult.copiedCount,
+            'média copié',
+            'médias copiés',
+          )}
+          {consolidationResult.errors?.length
+            ? `, ${formatFrenchCount(
+              consolidationResult.errors.length,
+              'fichier manquant',
+              'fichiers manquants',
+            )}.`
+            : '.'}
         </div>
       )}
     </section>
