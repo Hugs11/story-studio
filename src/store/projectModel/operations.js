@@ -297,3 +297,10 @@ export function moveEntryToContainer(project, entryId, toContainerId) {
   const moved = appendEntryToTree(withoutEntry, toContainerId, movedEntry);
   return updateProjectRootEntries(project, moved);
 }
+
+export function moveEntriesToContainer(project, entryIds, toContainerId) {
+  return entryIds.reduce(
+    (current, entryId) => moveEntryToContainer(current, entryId, toContainerId),
+    project,
+  );
+}

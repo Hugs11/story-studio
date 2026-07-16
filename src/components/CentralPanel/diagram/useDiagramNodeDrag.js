@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findParentMenuId } from '../../../store/projectModel';
+import { filterTopLevelSelectedIds } from '../../tree/treeOperations';
 import { DRAG_START_DISTANCE, canMoveEntryToContainer } from '../flowDiagramLayout';
 
 export function useDiagramNodeDrag({
@@ -101,18 +102,24 @@ export function useDiagramNodeDrag({
       const targetContainerId = dragOverContainerIdRef.current;
       if (activeId && targetContainerId !== undefined) {
         const currentSelectedIds = selectedIdsRef.current;
-        const idsToMove = (currentSelectedIds?.has(activeId) && currentSelectedIds?.size > 1)
-          ? [...currentSelectedIds]
-          : [activeId];
         const snapshot = projectRef.current;
         const snapshotIndex = projectIndexRef.current;
-        for (const id of idsToMove) {
-          if (canMoveEntryToContainer(snapshot, snapshotIndex, id, targetContainerId)) {
-            const fromContainerId = findParentMenuId(snapshot, id, snapshotIndex);
-            onMoveToMenuRef.current?.(id, fromContainerId, targetContainerId);
-          }
+        const orderedCandidates = (currentSelectedIds?.has(activeId) && currentSelectedIds?.size > 1)
+          ? snapshotIndex.flatEntries
+            .map((flatEntry) => flatEntry.id)
+            .filter((id) => currentSelectedIds.has(id))
+          : [activeId];
+        const getParentId = (id) => findParentMenuId(snapshot, id, snapshotIndex) ?? null;
+        const idsToMove = filterTopLevelSelectedIds(orderedCandidates, getParentId);
+        const isValidPlan = idsToMove.length > 0 && idsToMove.every((id) => (
+          canMoveEntryToContainer(snapshot, snapshotIndex, id, targetContainerId)
+        ));
+
+        if (isValidPlan) {
+          onMoveToMenuRef.current?.(idsToMove, null, targetContainerId);
+          const nextSelectedId = snapshotIndex.entryById.has(activeId) ? activeId : idsToMove[0];
+          onSelectRef.current?.(nextSelectedId);
         }
-        onSelectRef.current?.(activeId);
       }
       clearDragState();
       event.preventDefault();

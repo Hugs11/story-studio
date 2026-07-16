@@ -3,7 +3,7 @@ import { deepCloneEntry, findEntryById, findParentMenuId } from '../../../store/
 import { audioClipboard, imageClipboard } from '../../../store/fieldClipboard';
 import { useSharedClipboard } from '../../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../../store/MediaTransferContext';
-import { hasSelectedAncestor } from '../../tree/treeOperations';
+import { filterTopLevelSelectedIds } from '../../tree/treeOperations';
 import { END_NODE_ID } from '../flowDiagramLayout';
 
 export function useDiagramClipboard({
@@ -26,9 +26,8 @@ export function useDiagramClipboard({
     const ids = (nodeId && !selectedIds?.has(nodeId))
       ? [nodeId]
       : [...(selectedIds ?? [])].filter((id) => id !== 'root' && id !== END_NODE_ID);
-    const idSet = new Set(ids);
     const getParentId = (id) => findParentMenuId(project, id, projectIndex) ?? null;
-    return ids.filter((id) => !hasSelectedAncestor(id, idSet, getParentId));
+    return filterTopLevelSelectedIds(ids, getParentId);
   }, [project, projectIndex, selectedIds]);
 
   const getPasteTargetId = useCallback((nodeId) => {

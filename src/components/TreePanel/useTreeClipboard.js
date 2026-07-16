@@ -4,7 +4,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { useSharedClipboard } from '../../hooks/useSharedClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { pickAudio } from '../../hooks/useFileDialog';
-import { hasSelectedAncestor } from '../tree/treeOperations';
+import { filterTopLevelSelectedIds } from '../tree/treeOperations';
 import { END_NODE_ID } from './treePanelConstants';
 
 // Presse-papiers de l'arbre : copier/couper/coller d'entries (partagé avec le
@@ -28,8 +28,7 @@ export function useTreeClipboard({
 
   function getTopLevelSelected() {
     const ids = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
-    const idSet = new Set(ids);
-    return ids.filter((id) => !hasSelectedAncestor(id, idSet, getParentId));
+    return filterTopLevelSelectedIds(ids, getParentId);
   }
 
   function getPasteTargetId(nodeId) {
@@ -105,7 +104,7 @@ export function useTreeClipboard({
       return;
     }
 
-    const toDelete = [...selectedIds].filter((id) => id !== 'root' && id !== END_NODE_ID);
+    const toDelete = getTopLevelSelected();
     if (toDelete.length === 0) return;
     onBulkDeleteItems?.(toDelete);
     onSelectionChange?.(new Set(['root']));
