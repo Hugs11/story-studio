@@ -13,6 +13,7 @@ import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
+import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
 
 /**
@@ -498,7 +499,7 @@ export function useImportSession({
         title: isYoutube ? 'Import YouTube' : 'Import du podcast',
         message: failures === total
           ? `Aucune ${itemLabel} n'a pu être importée. Vérifie ta connexion ou l'adresse ${isYoutube ? 'YouTube' : 'du flux'}.`
-          : `${failures} ${itemLabel}(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
+          : `${formatFrenchCount(failures, itemLabel, `${itemLabel}s`)} sur ${total} n'ont pas pu être ${isYoutube ? 'importées' : 'importés'}. Les autres ont bien été ${isYoutube ? 'ajoutées' : 'ajoutés'}.`,
         variant: failures === total ? 'warning' : 'info',
       });
     }

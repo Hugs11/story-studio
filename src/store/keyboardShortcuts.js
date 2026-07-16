@@ -48,16 +48,16 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'redo',             scope: 'general', label: 'Rétablir',                            defaultShortcut: { ctrl: true, shift: true, key: 'z', code: 'KeyZ' } },
 
   // ── Arbre du projet ───────────────────────────────────────────────────────
-  { id: 'treeCopy',   scope: 'tree', label: 'Copier le(s) nœud(s)',          defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
-  { id: 'treeCut',    scope: 'tree', label: 'Couper le(s) nœud(s)',          defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'treeCopy',   scope: 'tree', label: 'Copier la sélection',            defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
+  { id: 'treeCut',    scope: 'tree', label: 'Couper la sélection',            defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
   { id: 'treePaste',  scope: 'tree', label: 'Coller',                         defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
-  { id: 'treeDelete', scope: 'tree', label: 'Supprimer le(s) nœud(s)',       defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+  { id: 'treeDelete', scope: 'tree', label: 'Supprimer la sélection',         defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
 
   // ── Diagramme ─────────────────────────────────────────────────────────────
-  { id: 'diagramCopy',   scope: 'diagram', label: 'Copier le(s) nœud(s)',     defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
-  { id: 'diagramCut',    scope: 'diagram', label: 'Couper le(s) nœud(s)',     defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'diagramCopy',   scope: 'diagram', label: 'Copier la sélection',       defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
+  { id: 'diagramCut',    scope: 'diagram', label: 'Couper la sélection',       defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
   { id: 'diagramPaste',  scope: 'diagram', label: 'Coller',                    defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
-  { id: 'diagramDelete', scope: 'diagram', label: 'Supprimer le(s) nœud(s)',  defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+  { id: 'diagramDelete', scope: 'diagram', label: 'Supprimer la sélection',    defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
 
   // ── Panneau Médias ────────────────────────────────────────────────────────
   { id: 'mediaSearch', scope: 'mediaPanel', label: 'Rechercher dans les médias', defaultShortcut: { ctrl: true, shift: true, key: 'f', code: 'KeyF' } },
@@ -82,10 +82,10 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'audioUndo',          scope: 'audioEditor', label: 'Annuler la modification',          defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
   { id: 'audioZoomIn',        scope: 'audioEditor', label: 'Zoomer autour du curseur',         defaultShortcut: { ctrl: true, key: '+', code: 'Equal' }, aliases: [{ ctrl: true, key: '=', code: 'Equal' }, { ctrl: true, key: '+', code: 'NumpadAdd' }] },
   { id: 'audioZoomOut',       scope: 'audioEditor', label: 'Dézoomer autour du curseur',       defaultShortcut: { ctrl: true, key: '-', code: 'Minus' }, aliases: [{ ctrl: true, key: '-', code: 'NumpadSubtract' }] },
-  { id: 'audioClose',         scope: 'audioEditor', label: 'Fermer l\'éditeur audio',          defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer un modal.' },
+  { id: 'audioClose',         scope: 'audioEditor', label: 'Fermer l\'éditeur audio',          defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer une modale.' },
 
   // ── Éditeur d'image ───────────────────────────────────────────────────────
-  { id: 'imageClose', scope: 'imageEditor', label: 'Fermer l\'éditeur d\'image', defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer un modal.' },
+  { id: 'imageClose', scope: 'imageEditor', label: 'Fermer l\'éditeur d\'image', defaultShortcut: { key: 'Escape', code: 'Escape' }, readOnly: true, readOnlyReason: 'Convention universelle pour fermer une modale.' },
 
   // ── Navigation standard (a11y, lecture seule) ─────────────────────────────
   { id: 'a11yNextItem',     scope: 'a11y', label: 'Élément suivant (arbre, listbox, menu)',    defaultShortcut: { key: 'ArrowDown', code: 'ArrowDown' }, readOnly: true, readOnlyReason: 'Standard ARIA — non modifiable.' },

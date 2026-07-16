@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { sanitizeImportedName } from '../store/projectStore';
 import { basename } from '../utils/fileUtils';
+import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
 import { useImportSession } from './useImportSession';
 import { useOsFileDrop } from './useOsFileDrop';
@@ -24,14 +25,14 @@ const MEDIA_FUNNEL_COPY = {
     coverFilePrefix: 'podcast',
     logPrefix: 'podcast-funnel',
     allFailedMessage: "Aucun épisode n'a pu être importé. Vérifie ta connexion ou l'adresse du flux RSS.",
-    someFailedNotice: (failures, total) => `${failures} épisode(s) sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
+    someFailedNotice: (failures, total) => `${formatFrenchCount(failures, 'épisode', 'épisodes')} sur ${total} n'ont pas pu être importés. Les autres ont bien été ajoutés.`,
   },
   youtube: {
     defaultTitle: 'YouTube',
     coverFilePrefix: 'youtube',
     logPrefix: 'youtube-funnel',
     allFailedMessage: "Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.",
-    someFailedNotice: (failures, total) => `${failures} vidéo(s) sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
+    someFailedNotice: (failures, total) => `${formatFrenchCount(failures, 'vidéo', 'vidéos')} sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
   },
 };
 

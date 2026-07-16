@@ -5,6 +5,7 @@ import { saveXttsSettings } from '../store/xttsSettings';
 import { saveVerboseLoggingPref, verboseLevelName } from '../store/loggingPreference';
 import { logger, setLogLevel } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
+import { formatFrenchCount } from '../utils/frenchText.js';
 import { collectEndMessagePresentations } from '../store/generatedNavigation';
 
 // Grappe « préférences & réglages » extraite d'AppContent : dossier workspace,
@@ -101,8 +102,14 @@ export function useAppPreferences({
       const result = await consolidateProject(store.project, store.savePath, destinationDir, (step) => {
         setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
       });
-      const summary = `${result.copiedCount} fichier(s) copié(s)`;
-      const warnings = result.errors.length > 0 ? `, ${result.errors.length} erreur(s)` : '';
+      const summary = formatFrenchCount(
+        result.copiedCount,
+        'fichier copié',
+        'fichiers copiés',
+      );
+      const warnings = result.errors.length > 0
+        ? `, ${formatFrenchCount(result.errors.length, 'erreur', 'erreurs')}`
+        : '';
       setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, `${summary}${warnings}`], complete: true } : null);
       setTimeout(() => setSaveProgress(null), 2200);
       if (result.path && result.project) {

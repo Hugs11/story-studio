@@ -14,6 +14,7 @@ import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
 import { buildTransferPromptSignature } from '../store/projectHelpers';
 import { getProjectFilePrefix } from '../utils/projectPrefix';
+import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
 
 export function useMediaTransferHandlers({
@@ -150,9 +151,15 @@ export function useMediaTransferHandlers({
     }
 
     const sample = candidates.slice(0, 5).map((candidate) => `• ${candidate.filename}`).join('\n');
-    const suffix = candidates.length > 5 ? `\n• …et ${candidates.length - 5} autre(s)` : '';
+    const suffix = candidates.length > 5
+      ? `\n• …et ${formatFrenchCount(candidates.length - 5, 'autre', 'autres')}`
+      : '';
     const confirmed = skipPrompt || (await ask(
-        `${candidates.length} fichier(s) déjà liés au projet sont encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nLes copier dans fichiers-importes/ et mettre à jour le projet ?`,
+        `${formatFrenchCount(
+          candidates.length,
+          'fichier déjà lié au projet est',
+          'fichiers déjà liés au projet sont',
+        )} encore hors de l’emplacement de travail.\n\n${sample}${suffix}\n\nLes copier dans fichiers-importes/ et mettre à jour le projet ?`,
         {
           title: 'Transférer les fichiers existants ?',
           kind: 'warning',

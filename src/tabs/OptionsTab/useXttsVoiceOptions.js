@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { formatFrenchCount } from '../../utils/frenchText.js';
 
 export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   const [xttsProbe, setXttsProbe] = useState({ state: 'idle', message: '' });
@@ -30,18 +31,20 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   }, []);
 
   async function testXtts() {
-    setXttsProbe({ state: 'loading', message: 'Connexion a XTTS en cours…' });
+    setXttsProbe({ state: 'loading', message: 'Connexion à XTTS en cours…' });
     setXttsLogs([`Test XTTS depuis ${xttsSettings.serverUrl}`]);
     try {
       const status = await invoke('xtts_get_status', { settings: xttsSettings });
       const voices = status.voices || [];
       setXttsVoices(voices);
       setXttsVoicesLoaded(true);
-      const voicesLabel = voices.length === 0
-        ? 'aucune voix detectee'
-        : `${voices.length} voix detectee(s)`;
+      const voicesLabel = formatFrenchCount(
+        voices.length,
+        'voix détectée',
+        'voix détectées',
+      );
       const deviceLabel = status.device === 'cuda' ? 'GPU CUDA' : status.device === 'cpu' ? 'CPU' : 'device inconnu';
-      setXttsProbe({ state: 'ok', message: `Serveur pret sur ${deviceLabel} • ${voicesLabel}` });
+      setXttsProbe({ state: 'ok', message: `Serveur prêt sur ${deviceLabel} • ${voicesLabel}` });
     } catch (e) {
       setXttsProbe({ state: 'error', message: String(e) });
     }

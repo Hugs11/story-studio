@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { hasVisibleEndNode } from '../../../store/generatedNavigation';
 import { Search } from '../../icons/LucideLocal';
 import { END_NODE_ID } from '../flowDiagramLayout';
+import { filterDiagramSearchCandidates } from './diagramSearchFilter.js';
 
 const TYPE_LABELS = {
   menu: 'Dossier',
@@ -9,13 +10,6 @@ const TYPE_LABELS = {
   zip: 'Pack importé',
   ref: 'Lien',
 };
-
-function normalizeSearchText(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('fr-FR');
-}
 
 export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose }) {
   const [active, setActive] = useState(false);
@@ -43,13 +37,10 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
     }] : []),
   ], [project, projectIndex.flatEntries]);
 
-  const results = useMemo(() => {
-    const normalizedTerm = normalizeSearchText(term.trim());
-    if (!normalizedTerm) return [];
-    return candidates
-      .filter((candidate) => normalizeSearchText(candidate.label).includes(normalizedTerm))
-      .slice(0, 12);
-  }, [candidates, term]);
+  const results = useMemo(
+    () => filterDiagramSearchCandidates(candidates, term),
+    [candidates, term],
+  );
 
   useEffect(() => {
     if (previousFocusTriggerRef.current === focusTrigger) return;

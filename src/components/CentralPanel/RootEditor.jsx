@@ -7,6 +7,7 @@ import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal
 import { Info } from '../icons/LucideLocal';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
+import { formatFrenchCount } from '../../utils/frenchText.js';
 import './CentralPanel.css';
 import './RootEditor.css';
 
@@ -150,7 +151,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
               />
             </div>
             <span className="root-entry-count">
-              {node.rootEntries?.length ?? 0} élément(s)
+              {formatFrenchCount(node.rootEntries?.length ?? 0, 'élément', 'éléments')}
             </span>
           </div>
         ) : null}

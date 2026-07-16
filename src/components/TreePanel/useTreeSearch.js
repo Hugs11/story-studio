@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { buildVisibleTreeSearchIds } from './treeSearch.js';
 
 // Recherche dans l'arbre : filtre par nom (+ ancêtres pour garder le chemin
 // visible) et prise de focus du champ déclenchée depuis l'extérieur.
@@ -8,25 +9,11 @@ export function useTreeSearch({ projectIndex, projectType, treeSearchFocusTrigge
   const searchInputRef = useRef(null);
   const pendingFocusRef = useRef(false);
 
-  const visibleIds = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term || projectType !== 'pack') return null;
-    const matching = new Set();
-    for (const flatEntry of projectIndex.flatEntries) {
-      if (flatEntry.entry.name?.toLowerCase().includes(term)) {
-        matching.add(flatEntry.entry.id);
-      }
-    }
-    const visible = new Set(matching);
-    for (const id of matching) {
-      let parentId = projectIndex.parentMenuById.get(id);
-      while (parentId != null) {
-        visible.add(parentId);
-        parentId = projectIndex.parentMenuById.get(parentId);
-      }
-    }
-    return visible;
-  }, [searchTerm, projectIndex, projectType]);
+  const visibleIds = useMemo(() => buildVisibleTreeSearchIds({
+    projectIndex,
+    projectType,
+    searchTerm,
+  }), [searchTerm, projectIndex, projectType]);
 
   useEffect(() => {
     if (treeSearchFocusTrigger > 0) {
