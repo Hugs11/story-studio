@@ -7,11 +7,137 @@ import {
   isProjectWorthAutosaving,
   selectStaleAutosaveBackups,
 } from '../src/store/autosaveDecision.js';
+import {
+  acceptEphemeralSnapshotSeed,
+  beginEphemeralSnapshotSeed,
+  createEphemeralSnapshotSeedState,
+  finishEphemeralSnapshotSeed,
+  resetEphemeralSnapshotSeedState,
+} from '../src/store/ephemeralSnapshotSeed.js';
 import { shouldAbortEphemeralPromotion } from '../src/store/projectHelpers.js';
 
 function snapshot(value) {
   return JSON.stringify(value);
 }
+
+const EPHEMERAL_PATH = 'D:/temp/story_studio_session_1_2/.session-recovery.mbah';
+
+function beginSeed(state, value, path = EPHEMERAL_PATH) {
+  return beginEphemeralSnapshotSeed(state, {
+    sessionMode: 'ephemeral',
+    path,
+    snapshot: snapshot(value),
+  });
+}
+
+test('ephemeral snapshot seed starts only one write while the first is pending', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const first = beginSeed(state, { version: 1 });
+  const second = beginSeed(state, { version: 2 });
+
+  assert.ok(first);
+  assert.equal(second, null);
+  assert.equal(state.inFlight, first);
+  assert.equal(first.snapshot, '{"version":1}');
+});
+
+test('ephemeral snapshot seed accepts the current write and remembers its snapshot', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const write = beginSeed(state, { version: 1 });
+
+  assert.equal(acceptEphemeralSnapshotSeed(state, write, {
+    sessionMode: 'ephemeral',
+    path: EPHEMERAL_PATH,
+  }), true);
+  assert.equal(state.seeded, true);
+  assert.equal(state.savedSnapshot, '{"version":1}');
+  finishEphemeralSnapshotSeed(state, write);
+  assert.equal(state.inFlight, null);
+});
+
+test('ephemeral snapshot seed releases a failed write so it can be retried', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const failed = beginSeed(state, { version: 1 });
+
+  finishEphemeralSnapshotSeed(state, failed);
+  const retry = beginSeed(state, { version: 2 });
+
+  assert.ok(retry);
+  assert.notEqual(retry.token, failed.token);
+});
+
+test('ephemeral snapshot seed ignores a success after the snapshot path changed', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const write = beginSeed(state, { version: 1 });
+
+  assert.equal(acceptEphemeralSnapshotSeed(state, write, {
+    sessionMode: 'ephemeral',
+    path: 'D:/temp/other/.session-recovery.mbah',
+  }), false);
+  finishEphemeralSnapshotSeed(state, write);
+  assert.equal(state.seeded, false);
+  assert.equal(state.savedSnapshot, null);
+});
+
+test('an old seed cannot mark or clear a newer session seed', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const oldWrite = beginSeed(state, { session: 'old' });
+  resetEphemeralSnapshotSeedState(state);
+  const newWrite = beginSeed(state, { session: 'new' }, 'D:/temp/new/.session-recovery.mbah');
+
+  assert.equal(acceptEphemeralSnapshotSeed(state, oldWrite, {
+    sessionMode: 'ephemeral',
+    path: EPHEMERAL_PATH,
+  }), false);
+  finishEphemeralSnapshotSeed(state, oldWrite);
+  assert.equal(state.inFlight, newWrite);
+  assert.equal(state.seeded, false);
+  assert.equal(state.savedSnapshot, null);
+});
+
+test('a completed seed prevents another initial seed in the same session', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const write = beginSeed(state, { version: 1 });
+  acceptEphemeralSnapshotSeed(state, write, {
+    sessionMode: 'ephemeral',
+    path: EPHEMERAL_PATH,
+  });
+  finishEphemeralSnapshotSeed(state, write);
+
+  assert.equal(beginSeed(state, { version: 2 }), null);
+});
+
+test('periodic autosave can take over after the initial ephemeral seed', () => {
+  const state = createEphemeralSnapshotSeedState();
+  const initial = beginSeed(state, { version: 1 });
+  acceptEphemeralSnapshotSeed(state, initial, {
+    sessionMode: 'ephemeral',
+    path: EPHEMERAL_PATH,
+  });
+  finishEphemeralSnapshotSeed(state, initial);
+
+  const unchanged = decideAutosaveAction({
+    currentSnapshot: '{"version":1}',
+    savedSnapshot: null,
+    isDirty: true,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: EPHEMERAL_PATH,
+    lastEphemeralSnapshot: state.savedSnapshot,
+  });
+  const changed = decideAutosaveAction({
+    currentSnapshot: '{"version":2}',
+    savedSnapshot: null,
+    isDirty: true,
+    workspaceDir: 'D:/temp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: EPHEMERAL_PATH,
+    lastEphemeralSnapshot: state.savedSnapshot,
+  });
+
+  assert.equal(unchanged.kind, AUTOSAVE_ACTIONS.SKIP_UNCHANGED);
+  assert.equal(changed.kind, AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL);
+});
 
 test('decideAutosaveAction skips when the snapshot matches the last saved one', () => {
   const project = { rootEntries: [{ id: 'a', type: 'story', name: 'A' }] };

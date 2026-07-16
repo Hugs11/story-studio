@@ -7,6 +7,13 @@ import {
   loadProjectFromPath,
 } from '../store/projectIO';
 import { isProjectWorthAutosaving } from '../store/autosaveDecision';
+import {
+  acceptEphemeralSnapshotSeed,
+  beginEphemeralSnapshotSeed,
+  createEphemeralSnapshotSeedState,
+  finishEphemeralSnapshotSeed,
+  resetEphemeralSnapshotSeedState,
+} from '../store/ephemeralSnapshotSeed';
 import { logger } from '../utils/logger';
 
 const SESSION_RECOVERY_FILE = '.session-recovery.mbah';
@@ -51,9 +58,7 @@ export function useWorkSession({
   // courante, pas celle du rendu où la fermeture a été créée.
   const sessionWorkspaceDirRef = useRef('');
   const ephemeralSnapshotPathRef = useRef(null);
-  const ephemeralSavedSnapshotRef = useRef(null);
-  // One-shot : a-t-on déjà écrit le snapshot anti-crash pour cette session ?
-  const ephemeralSnapshotSeededRef = useRef(false);
+  const ephemeralSnapshotSeedStateRef = useRef(createEphemeralSnapshotSeedState());
 
   // Reprises après crash : snapshots orphelins proposés comme projets sur l'accueil.
   useEffect(() => {
@@ -98,9 +103,6 @@ export function useWorkSession({
     ephemeralSnapshotPathRef.current = sessionMode === 'ephemeral' && sessionWorkspaceDir
       ? joinLocalPath(sessionWorkspaceDir, SESSION_RECOVERY_FILE)
       : null;
-    if (sessionMode !== 'ephemeral') {
-      ephemeralSavedSnapshotRef.current = null;
-    }
   }, [sessionMode, sessionWorkspaceDir]);
 
   // Filet anti-crash : écrit le snapshot éphémère dès le premier contenu de la
@@ -109,30 +111,39 @@ export function useWorkSession({
   // par session ; le périodique prend le relais ensuite.
   useEffect(() => {
     if (sessionMode !== 'ephemeral') return;
-    if (ephemeralSnapshotSeededRef.current) return;
     if (!ephemeralSnapshotPathRef.current) return;
     // Même critère que saveProject(autosave) : n'écrire que si le projet a un
     // contenu réel (sinon saveProject jette « projet vide »). Évite de griller
     // le one-shot sur l'état vierge avant l'atterrissage du contenu.
     if (!isProjectWorthAutosaving(store.project, mediaLibraryPathsRef.current, mediaLibraryCountRef.current)) return;
-    const seeded = JSON.stringify(store.project);
-    autoSaveEphemeralProject(store.project, sessionWorkspaceDir, ephemeralSnapshotPathRef.current, {
+    const write = beginEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, {
+      sessionMode,
+      path: ephemeralSnapshotPathRef.current,
+      snapshot: JSON.stringify(store.project),
+    });
+    if (!write) return;
+    autoSaveEphemeralProject(store.project, sessionWorkspaceDir, write.path, {
       mediaTags: mediaTagsRef.current,
       mediaLibraryPaths: mediaLibraryPathsRef.current,
       totalMediaCount: mediaLibraryCountRef.current,
     })
       .then(() => {
-        // One-shot marqué seulement après écriture réussie.
-        ephemeralSnapshotSeededRef.current = true;
-        ephemeralSavedSnapshotRef.current = seeded;
+        acceptEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, write, {
+          sessionMode: sessionModeRef.current,
+          path: ephemeralSnapshotPathRef.current,
+        });
       })
-      .catch((error) => { logger.error('session:seed-snapshot-error', error); });
+      .catch((error) => { logger.error('session:seed-snapshot-error', error); })
+      .finally(() => {
+        finishEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, write);
+      });
   }, [sessionMode, sessionWorkspaceDir, store.project]);
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
   // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
   // d'écriture. Partagé par « Retour à l’accueil » et les funnels d'entrée éditeur.
   async function prepareNewWorkSession(type) {
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     let workspaceDir;
     if (useWorkspaceForNewProjects) {
       const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
@@ -151,8 +162,6 @@ export function useWorkSession({
       workspaceDir = sessionDir;
     }
     autoSavePathRef.current = null;
-    ephemeralSavedSnapshotRef.current = null;
-    ephemeralSnapshotSeededRef.current = false;
     setAutoSavedPath(null);
     importedPackPendingMetaRef.current = false;
     store.setSavePath(null);
@@ -173,7 +182,7 @@ export function useWorkSession({
   // Retour à l'accueil : ferme la session sans toucher au
   // store ni au dossier (le nettoyage éventuel est un appel séparé).
   function resetWorkSession() {
-    ephemeralSavedSnapshotRef.current = null;
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     setSessionMode(null);
     setSessionWorkspaceDir('');
     setWorkspaceDirState(configuredWorkspaceDir);
@@ -182,6 +191,7 @@ export function useWorkSession({
   // Échec d'un atterrissage de funnel : nettoie la session tout juste créée
   // (jamais le workspace réel), vide le projet et revient à l'accueil.
   function abandonWorkSession(sessionDir) {
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     if (!useWorkspaceForNewProjects && sessionDir) {
       invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
     }
@@ -211,6 +221,7 @@ export function useWorkSession({
   // session éphémère en cours (sauf cleanupSession=false quand des transferts de
   // médias ont échoué : la session reste récupérable). Bascule en mode projet.
   function promoteSessionToProject({ workspaceDir = null, cleanupSession = true } = {}) {
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     if (cleanupSession !== false && sessionModeRef.current === 'ephemeral' && sessionWorkspaceDirRef.current) {
       invoke('cleanup_session_workspace', { path: sessionWorkspaceDirRef.current }).catch((error) => {
         logger.warn('session:cleanup-error', error);
@@ -229,6 +240,7 @@ export function useWorkSession({
   // Passage en mode projet après chargement d'un `.mbah` existant (pas de
   // promotion : la session précédente a été nettoyée avant remplacement).
   async function enterProjectMode() {
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     const realWorkspace = configuredWorkspaceDir || await getWorkspaceDir();
     setSessionMode('project');
     setSessionWorkspaceDir('');
@@ -237,6 +249,7 @@ export function useWorkSession({
 
   async function handleRecoverSession(recovery) {
     if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
+    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     try {
       const result = await loadProjectFromPath(recovery.snapshotPath);
       store.loadProject(result.data);
@@ -252,9 +265,11 @@ export function useWorkSession({
       setSessionWorkspaceDir(recovery.sessionDir);
       setWorkspaceDirState(recovery.sessionDir);
       workspaceDirRef.current = recovery.sessionDir;
-      ephemeralSavedSnapshotRef.current = JSON.stringify(result.data);
       // Snapshot déjà sur disque : ne pas le réécrire immédiatement (le périodique suffit).
-      ephemeralSnapshotSeededRef.current = true;
+      resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current, {
+        seeded: true,
+        savedSnapshot: JSON.stringify(result.data),
+      });
       sdStore.clearDone();
       xttsStore.clearDone();
       setSessionRecoveries((prev) => prev.filter((item) => item.sessionDir !== recovery.sessionDir));
@@ -284,7 +299,7 @@ export function useWorkSession({
     sessionRecoveries,
     sessionModeRef,
     ephemeralSnapshotPathRef,
-    ephemeralSavedSnapshotRef,
+    ephemeralSnapshotSeedStateRef,
     prepareNewWorkSession,
     cleanupEphemeralSession,
     resetWorkSession,

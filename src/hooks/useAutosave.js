@@ -13,7 +13,7 @@ export function useAutosave({
   workspaceDirRef,
   autoSavePathRef,
   ephemeralSnapshotPathRef,
-  ephemeralSavedSnapshotRef,
+  ephemeralSnapshotSeedStateRef,
   sessionModeRef,
   isSavingRef,
   mediaTagsRef,
@@ -28,6 +28,8 @@ export function useAutosave({
     const interval = setInterval(async () => {
       const current = JSON.stringify(projectRef.current);
       const sessionMode = sessionModeRef?.current ?? 'project';
+      const ephemeralSeedState = ephemeralSnapshotSeedStateRef?.current ?? null;
+      const ephemeralSessionToken = ephemeralSeedState?.sessionToken ?? null;
       const workspaceDir = workspaceDirRef.current
         || (sessionMode === 'ephemeral' ? '' : await getWorkspaceDir().catch(() => ''))
         || null;
@@ -41,7 +43,7 @@ export function useAutosave({
         autoSavePath: autoSavePathRef.current,
         sessionMode,
         ephemeralSnapshotPath: ephemeralSnapshotPathRef?.current ?? null,
-        lastEphemeralSnapshot: ephemeralSavedSnapshotRef?.current ?? null,
+        lastEphemeralSnapshot: ephemeralSeedState?.savedSnapshot ?? null,
       });
       switch (action.kind) {
         case AUTOSAVE_ACTIONS.SKIP_EMPTY:
@@ -66,7 +68,12 @@ export function useAutosave({
             mediaLibraryPaths: mediaLibraryPathsRef.current,
             totalMediaCount: mediaLibraryCountRef.current,
           });
-          if (ephemeralSavedSnapshotRef) ephemeralSavedSnapshotRef.current = current;
+          if (ephemeralSeedState
+            && ephemeralSeedState.sessionToken === ephemeralSessionToken
+            && sessionModeRef?.current === 'ephemeral'
+            && ephemeralSnapshotPathRef?.current === action.path) {
+            ephemeralSeedState.savedSnapshot = current;
+          }
         } else if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EXISTING) {
           await saveProject(projectRef.current, action.path, null, {
             autosave: true,
