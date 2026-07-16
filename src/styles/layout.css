@@ -143,14 +143,6 @@ body {
   background: var(--bg1);
 }
 
-.workspace-diagram-full {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-}
-
 /* Frontière redimensionnable entre panneaux : un seul trait visible à côté de
    la barre de défilement. La zone de saisie s'étend dans le panneau de droite
    pour ne jamais recouvrir la scrollbar du panneau situé à gauche. */

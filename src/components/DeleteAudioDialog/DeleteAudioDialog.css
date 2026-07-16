@@ -40,21 +40,6 @@
   margin-top: 2px;
 }
 
-.delete-remember {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px 2px;
-}
-
-.delete-remember input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
 .delete-dialog-footer {
   padding: 10px 20px 14px;
   display: flex;

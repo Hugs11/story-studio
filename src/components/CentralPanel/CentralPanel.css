@@ -249,12 +249,6 @@
   margin-bottom: 0;
 }
 
-.field-hint {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
 .menu-count {
   font-size: 11px;
   color: var(--muted);
@@ -560,14 +554,6 @@
   box-shadow:
     0 0 0 2px var(--bg2),
     0 0 0 4px color-mix(in srgb, var(--accent-2) 24%, transparent);
-}
-
-.play-arrow {
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 4px 0 4px 7px;
-  border-color: transparent transparent transparent currentColor;
 }
 
 .play-icon {
@@ -1199,13 +1185,6 @@
 
 .during-play-card {
   container-type: inline-size;
-}
-
-.during-play-help {
-  margin: -3px 0 10px;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-  line-height: 1.35;
 }
 
 .during-play-stack {
@@ -1904,7 +1883,6 @@
   color: var(--text);
 }
 
-.sequence-help,
 .sequence-next-note {
   margin-top: 2px;
   font-size: var(--text-body);
@@ -1917,42 +1895,6 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--bg1) 58%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-}
-
-.advanced-toggle-row {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--borderLt) 55%, transparent);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.advanced-toggle-copy {
-  min-width: 0;
-}
-
-.advanced-toggle-desc {
-  margin-top: 2px;
-  font-size: var(--text-body);
-  color: var(--text-secondary);
-  line-height: 1.35;
-}
-
-.advanced-toggle-btn {
-  flex-shrink: 0;
-  min-height: 28px;
-  padding: 0 12px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.advanced-toggle-btn.is-active {
-  background: var(--control-bg-active);
-  border-color: var(--borderLt);
-  color: var(--control-text);
 }
 
 .sequence-note {
@@ -2280,14 +2222,6 @@
     justify-content: flex-start;
   }
 
-  .media-row {
-    flex-direction: column;
-  }
-
-  .media-status-row {
-    align-items: stretch;
-  }
-
   .native-graph-toolbar {
     grid-template-columns: 1fr 1fr;
   }
@@ -2298,9 +2232,6 @@
     justify-self: stretch;
   }
 
-  .advanced-toggle-row {
-    align-items: flex-start;
-  }
 }
 
 @media (max-width: 480px) {
@@ -2326,14 +2257,6 @@
     min-width: 36px;
   }
 
-  .advanced-toggle-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .advanced-toggle-btn {
-    align-self: flex-start;
-  }
 }
 
 /* La colonne Réglages peut être étroite même dans une fenêtre large. Cette
