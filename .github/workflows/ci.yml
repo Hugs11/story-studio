@@ -45,6 +45,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check version consistency
+        run: npm run check:version
+
+      - name: Lint frontend and scripts
+        run: npm run lint
+
+      - name: JavaScript tests
+        run: node --test scripts/*.test.mjs
+
       - name: Build frontend
         run: npm run build
 

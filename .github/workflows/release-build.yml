@@ -38,6 +38,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check version consistency
+        run: npm run check:version
+
+      - name: Verify release tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
+          if ("v$packageVersion" -ne $env:RELEASE_TAG) {
+            throw "Release tag $env:RELEASE_TAG does not match package version $packageVersion."
+          }
+
       - name: Build Tauri app
         run: npm run tauri build
 
