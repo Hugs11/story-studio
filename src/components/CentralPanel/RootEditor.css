@@ -240,6 +240,14 @@
     gap: 3px;
   }
 
+  .root-image-sync-copy .during-play-control-title {
+    flex: 1 1 auto;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
   .root-image-split-layout {
     grid-template-columns: 1fr;
   }

@@ -964,6 +964,15 @@
   line-height: 1.4;
 }
 
+.end-summary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
 .end-simple-settings {
   display: grid;
   gap: 10px;
@@ -1402,6 +1411,11 @@
   justify-content: space-between;
   gap: 16px;
   padding: 11px 15px;
+  min-width: 0;
+}
+
+.story-advanced-copy {
+  min-width: 0;
 }
 
 .story-advanced-controls {
@@ -1412,6 +1426,7 @@
   font-size: var(--text-control);
   font-weight: var(--weight-semibold);
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .story-advanced-desc {
@@ -1419,6 +1434,7 @@
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .story-end-mode {
@@ -1963,7 +1979,27 @@
 .end-actions-end {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 8px;
+}
+
+.end-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.end-local-audio-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.end-local-audio-row > div:first-child {
+  flex: 1 1 220px;
+  min-width: min(220px, 100%);
 }
 
 /* Icône pause dessinée (deux barres) dans le bouton play du champ audio */
@@ -2414,6 +2450,51 @@
     text-align: left;
     opacity: 1;
     transform: none;
+  }
+}
+
+@container settings-panel (max-width: 600px) {
+  .story-advanced-controls {
+    padding: 10px;
+  }
+
+  .story-advanced-controls > div {
+    min-width: 0;
+  }
+
+  .end-add-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .end-add-actions > .tooltip-wrap,
+  .end-add-actions .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .end-add-actions .btn,
+  .end-summary-actions .btn,
+  .end-local-audio-row > .btn,
+  .end-actions-end .btn {
+    white-space: normal;
+  }
+
+  .end-summary-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .end-local-audio-row > .btn {
+    flex: 1 1 160px;
+  }
+
+  .end-actions-end {
+    justify-content: stretch;
+  }
+
+  .end-actions-end .btn {
+    flex: 1 1 180px;
   }
 }
 

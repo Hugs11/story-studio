@@ -356,7 +356,7 @@ export function AfterPlaySection({
     endContent = localDraft ? (
       <div className="end-simple-settings">
         <div className="sequence-note sequence-note--spaced">Brouillon de fin locale — il ne modifie pas encore cette histoire.</div>
-        <div className="field-row">
+        <div className="field-row end-local-audio-row">
           <div style={{ flex: 1 }}>
             <span className="field-label">Audio de la fin locale</span>
             <div className="after-play-muted">{localDraft.audio ? basename(localDraft.audio) : 'Aucun audio choisi'}</div>
@@ -398,7 +398,7 @@ export function AfterPlaySection({
         </div>
       </div>
     ) : (
-      <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
+      <div className="end-add-actions">
         <Tooltip text={addPromptTooltip} placement="above">
           <Button size="sm" onClick={startLocalDraft}>
             Ajouter un audio de fin
@@ -426,7 +426,7 @@ export function AfterPlaySection({
               Séquence jouée après la fin de l'histoire, avant la destination suivante.
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="end-summary-actions">
             {hasEndNode && (
               <Button size="sm" onClick={() => onAttachStoryEndToGlobal?.(node.id)}>
                 Rattacher au message du pack
@@ -587,7 +587,7 @@ export function AfterPlaySection({
     );
   } else {
     endContent = (
-      <div style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
+      <div className="end-add-actions">
         <Tooltip text={addPromptTooltip} placement="above">
           <Button size="sm" onClick={() => setShowPromptField(true)}>
             Ajouter un audio de fin
