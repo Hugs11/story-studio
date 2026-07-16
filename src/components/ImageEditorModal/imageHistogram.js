@@ -3,7 +3,7 @@
 // les curseurs agissent). Les niveaux ne changent pas cette source, seulement
 // le mapping → l'histogramme ne se recalcule pas à chaque tick des curseurs.
 
-export const HISTOGRAM_BINS = 256;
+const HISTOGRAM_BINS = 256;
 
 /**
  * Histogramme de luminance perceptuelle (Rec.601 : 0.299 R + 0.587 V + 0.114 B).

@@ -23,7 +23,7 @@ import { logger } from '../utils/logger';
  * « Modifier un pack » (session éphémère). Retourne `null` si le pack ne
  * contient aucune entrée.
  */
-export function projectFromUnpackResult({
+function projectFromUnpackResult({
   baseProject,
   menuId = null,
   itemId = null,

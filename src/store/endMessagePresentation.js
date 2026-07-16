@@ -4,10 +4,10 @@ import { END_HOME_NONE } from './endMessageHome.js';
 // Classification de presentation du message de fin. Les donnees importees ne
 // contiennent pas de marqueur de provenance : cette fonction decrit seulement
 // le comportement effectif et garde les surfaces UI synchronisees.
-export const END_MESSAGE_GLOBAL = 'global';
-export const END_MESSAGE_LOCAL_PROMPT = 'local_prompt';
-export const END_MESSAGE_LOCAL_SEQUENCE = 'local_sequence';
-export const END_MESSAGE_NONE = 'none';
+const END_MESSAGE_GLOBAL = 'global';
+const END_MESSAGE_LOCAL_PROMPT = 'local_prompt';
+const END_MESSAGE_LOCAL_SEQUENCE = 'local_sequence';
+const END_MESSAGE_NONE = 'none';
 
 const PROMPT_CONTROL_DEFAULTS = {
   autoplay: true,
@@ -21,13 +21,13 @@ function sameTarget(left, right) {
   return (left ?? null) === (right ?? null);
 }
 
-export function endHomesMatch(promptHome, globalHome) {
+function endHomesMatch(promptHome, globalHome) {
   if (promptHome?.kind !== globalHome?.kind) return false;
   if (promptHome?.kind === END_HOME_NONE) return true;
   return sameTarget(promptHome?.effectiveTargetId, globalHome?.effectiveTargetId);
 }
 
-export function getPromptControlDifferences(controlSettings = {}) {
+function getPromptControlDifferences(controlSettings = {}) {
   return Object.keys(PROMPT_CONTROL_DEFAULTS).filter((key) => (
     (controlSettings?.[key] ?? PROMPT_CONTROL_DEFAULTS[key]) !== PROMPT_CONTROL_DEFAULTS[key]
   ));

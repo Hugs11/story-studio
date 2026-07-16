@@ -46,7 +46,6 @@ export function MediaExplorer({
   onImportStories,
   onImportMedia,
   onImportMediaFolder,
-  onOpenAiQueue,
   onSelectNode,
   mediaTags = {},
   onAddMediaTag,
@@ -614,8 +613,6 @@ export function MediaExplorer({
         onBackgroundContextMenu={handleBgContextMenu}
         getMeta={getMeta}
         markForProbe={markForProbe}
-        onSelectNode={onSelectNode}
-        onOpenAiQueue={onOpenAiQueue}
         activePopover={activePopover}
         onActivate={openPopoverAt}
         onNavigate={handleNavigate}
@@ -643,7 +640,6 @@ export function MediaExplorer({
           anchorRect={activePopover.rect}
           getMeta={getMeta}
           onSelectNode={onSelectNode}
-          onOpenAiQueue={onOpenAiQueue}
           onClose={() => setActivePopover(null)}
           itemTags={mediaTags?.[sortedVisible[activePopover.idx]?.path] ?? []}
           allProjectTags={allTags}

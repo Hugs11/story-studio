@@ -73,7 +73,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
           <span className="media-col-subtitle">Titre audio — entendu dans le menu principal</span>
         </div>
         <AudioField
-          accentLabel
           label="Titre audio"
           description="Entendu dans le menu principal"
           file={node.rootAudio}
@@ -187,7 +186,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                   </span>
                 </div>
                 <ImageField
-                  accentLabel
                   fieldId="root:coverImage"
                   file={node.rootImage}
                   badge="Lunii + Catalogue"
@@ -237,7 +235,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                     </div>
                     <ImageField
                       align="start"
-                      accentLabel
                       fieldId="root:rootImage"
                       file={node.rootImage}
                       badge="Lunii · 320×240"
@@ -262,7 +259,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
                     </div>
                     <ImageField
                       align="start"
-                      accentLabel
                       fieldId="root:thumbnailImage"
                       file={node.thumbnailImage}
                       badge="Catalogue · taille libre"

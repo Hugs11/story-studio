@@ -19,7 +19,7 @@ const VARIANT_CLASS = {
   'danger-outline': 'btn-danger-outline',
 };
 
-export function buttonClassName({ variant = 'secondary', size = 'md', className = '' } = {}) {
+function buttonClassName({ variant = 'secondary', size = 'md', className = '' } = {}) {
   const classes = [];
   if (variant === 'icon') {
     classes.push('btn', 'btn-icon');

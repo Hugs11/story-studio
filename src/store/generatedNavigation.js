@@ -41,7 +41,7 @@ export function getDefaultPackEntryDestination(project) {
   };
 }
 
-export function resolveNavigationTargetId(target, parentMenu = null) {
+function resolveNavigationTargetId(target, parentMenu = null) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return null;
   if (isCurrentMenuNavigationTarget(normalized)) return parentMenu?.id ?? null;
@@ -109,7 +109,7 @@ function getAutoNextFallbackTarget(entry, parentMenu, project) {
   return parentMenu?.id ?? 'root';
 }
 
-export function getAutoNextResolution(entry, parentMenu, project, rootEntries = []) {
+function getAutoNextResolution(entry, parentMenu, project, rootEntries = []) {
   const enabled = !!project?.globalOptions?.autoNext;
   const applies = !!(enabled && entry?.type === 'story');
   const nextStory = applies ? findNextStorySibling(entry, parentMenu, rootEntries) : null;
@@ -158,7 +158,7 @@ export function isCombinedNightStoryBypass(entry, project) {
   );
 }
 
-export function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
+function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
   if (project?.globalOptions?.autoNext) return false;
   if (!project?.nightModeAudio || entry?.type !== 'story') return false;
   if (!entry?.afterPlaybackPromptAudio || (entry?.afterPlaybackSequence?.length ?? 0) > 0) return false;

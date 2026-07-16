@@ -40,7 +40,6 @@ export function StructurePanel({
   selectedId,
   selectedIds,
   projectIndex,
-  pathAudit,
   validationIssues,
   treeSearchFocusTrigger,
   selectionRevealRequest,
@@ -162,7 +161,6 @@ export function StructurePanel({
         onAddEndNode={onAddEndNode}
         onRemoveEndNode={onRemoveEndNode}
         onSimulateNode={onSimulateNode}
-        pathAudit={pathAudit}
         validationIssues={validationIssues}
         projectIndex={projectIndex}
         treeSearchFocusTrigger={treeSearchFocusTrigger}

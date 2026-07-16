@@ -63,7 +63,7 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
   };
 }
 
-export function isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack = false } = {}) {
+function isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack = false } = {}) {
   const localProjectName = String(project?.projectName || '').trim();
   return menuId == null
     && (project?.rootEntries ?? []).length <= 1

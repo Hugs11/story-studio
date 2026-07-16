@@ -1,11 +1,7 @@
-export const STORY_GROUP_PREFIX = 'story-group:';
+const STORY_GROUP_PREFIX = 'story-group:';
 
 export function getStoryGroupId(parentId) {
   return `${STORY_GROUP_PREFIX}${parentId}`;
-}
-
-export function isStoryGroupId(entryId) {
-  return String(entryId ?? '').startsWith(STORY_GROUP_PREFIX);
 }
 
 export function toggleExclusiveStoryGroup(currentGroupId, requestedGroupId) {

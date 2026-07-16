@@ -9,8 +9,8 @@ import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUt
 // - Les projections de packs importés peuvent exposer `entries`; la normalisation
 //   les mappe vers `rootEntries` ou `children`.
 // - Les anciens `rootItems` / `menus` ne servent qu'à la migration.
-export const PROJECT_SCHEMA_VERSION = 3;
-export const SILENCE_MODES = Object.freeze(['off', 'add', 'normalize']);
+const PROJECT_SCHEMA_VERSION = 3;
+const SILENCE_MODES = Object.freeze(['off', 'add', 'normalize']);
 
 export const DEFAULT_PACK_METADATA = Object.freeze({
   title: '',

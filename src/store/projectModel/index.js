@@ -185,7 +185,7 @@ export function visitProjectEntries(project, visitor, projectIndex = null) {
 }
 
 // Ids de l'entrée + tout son sous-arbre (ce qui disparaît si on la supprime).
-export function collectEntrySubtreeIds(entry) {
+function collectEntrySubtreeIds(entry) {
   const ids = new Set();
   const walk = (node) => {
     if (!node?.id) return;

@@ -182,7 +182,6 @@ export const NativeGraphEditor = memo(function NativeGraphEditor({ graph, onChan
                 </div>
                 <ImageField
                   compact
-                  accentLabel
                   fieldId={`stage:${stageId(selectedStage)}:image`}
                   file={selectedStage.image}
                   onPick={(file) => updateSelectedStage({ image: file })}

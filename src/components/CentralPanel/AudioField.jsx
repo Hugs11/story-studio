@@ -42,7 +42,6 @@ export function AudioField({
   ttsTextSuggestion = '',
   ttsFilenameHint = 'tts',
   xttsTarget = null,
-  accentLabel = false,
   emptyBadge = null,
 }) {
   const { notifyCutPaste } = useMediaTransfer();

@@ -39,7 +39,7 @@ export function collectMissingMedia(project, statusByPath = {}) {
   return [...byPath.values()].sort((a, b) => a.fileName.localeCompare(b.fileName, 'fr'));
 }
 
-export function normalizeReplacementMap(replacements = {}) {
+function normalizeReplacementMap(replacements = {}) {
   if (replacements instanceof Map) {
     return new Map(
       [...replacements.entries()]

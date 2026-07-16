@@ -2,7 +2,7 @@
 // rapport : formatteurs de mesures, construction des lignes audio/image, et
 // predicats de conformite. Garde l'export texte independant de tout JSX.
 
-export function formatNumber(value, digits = 1) {
+function formatNumber(value, digits = 1) {
   return typeof value === 'number' ? value.toFixed(digits).replace('.', ',') : null;
 }
 

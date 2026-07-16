@@ -36,7 +36,7 @@ export function TreePanel({
   onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
   onAddEndNode, onRemoveEndNode, onSimulateNode,
-  pathAudit, validationIssues: validationIssuesProp, projectIndex,
+  validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
   selectionRevealRequest = null,
   showNavigationBadges = true,

@@ -1,4 +1,4 @@
-export const OPTION_GROUPS = [
+const OPTION_GROUPS = [
   {
     label: 'Général',
     items: [

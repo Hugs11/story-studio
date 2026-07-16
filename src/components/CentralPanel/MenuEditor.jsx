@@ -92,7 +92,6 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
         {node.autoBlackImage ? (
           <>
             <AudioField
-              accentLabel
               label="Audio de sélection"
               description={isImportedContinuation ? 'Optionnel pour cette continuation' : "Invite l'enfant à choisir une histoire"}
               file={node.audio}
@@ -112,7 +111,6 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
                 <span className="media-col-subtitle">Image de menu (320×240)</span>
               </div>
               <ImageField
-                accentLabel
                 fieldId={`${node.id}:image`}
                 file={node.image}
                 extraActions={[
@@ -136,9 +134,8 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
                   {isImportedContinuation ? 'Audio de sélection — optionnel pour cette continuation' : "Audio de sélection — invite l'enfant à choisir une histoire"}
                 </span>
               </div>
-              <AudioField
-                accentLabel
-                label="Audio de sélection"
+                <AudioField
+                  label="Audio de sélection"
                 description={isImportedContinuation ? 'Optionnel pour cette continuation' : "Invite l'enfant à choisir une histoire"}
                 file={node.audio}
                 required={!isImportedContinuation}

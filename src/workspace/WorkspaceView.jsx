@@ -38,7 +38,6 @@ export function WorkspaceView({
   sessionRecoveries = [],
   onRecoverSession,
   onIgnoreSessionRecovery,
-  pathAudit,
   validationIssues,
   allMenus,
   projectIndex,
@@ -167,7 +166,6 @@ export function WorkspaceView({
       selectedId={selectedId}
       selectedIds={selectedIds}
       projectIndex={projectIndex}
-      pathAudit={pathAudit}
       validationIssues={validationIssues}
       treeSearchFocusTrigger={treeSearchFocusTrigger}
       selectionRevealRequest={treeRevealRequest}

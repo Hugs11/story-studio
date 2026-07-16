@@ -27,7 +27,6 @@ export function BottomWorkspacePanel({
   onImportStories,
   onImportMedia,
   onImportMediaFolder,
-  onOpenAiQueue,
   onRegenerateImage,
   onClearAiDone,
   onRemoveImageJob,
@@ -130,7 +129,6 @@ export function BottomWorkspacePanel({
             onImportStories={onImportStories}
             onImportMedia={onImportMedia}
             onImportMediaFolder={onImportMediaFolder}
-            onOpenAiQueue={onOpenAiQueue}
             onSelectNode={onSelectNode}
             mediaTags={mediaTags}
             onAddMediaTag={onAddMediaTag}
