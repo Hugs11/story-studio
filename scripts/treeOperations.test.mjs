@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildProjectIndex } from '../src/store/projectModel/index.js';
+import { moveEntryToContainer } from '../src/store/projectModel/operations.js';
 import {
   TREE_COLOR_PALETTE,
   canMoveEntryToContainer,
   containsMenu,
   countDescendants,
+  filterTopLevelSelectedIds,
   hasSelectedAncestor,
   resolveDropContainerId,
   resolveDropTargetForNode,
@@ -72,6 +74,118 @@ test('hasSelectedAncestor walks parent chain until it hits the candidate set', (
   assert.equal(hasSelectedAncestor('story-1', new Set(['menu-a']), getParentId), true);
   assert.equal(hasSelectedAncestor('story-1', new Set(['menu-c']), getParentId), false);
   assert.equal(hasSelectedAncestor('menu-a', new Set(['menu-a']), getParentId), false); // self n'est pas un ancetre
+});
+
+test('filterTopLevelSelectedIds removes a selected child when its parent is selected', () => {
+  const getParentId = (id) => new Map([
+    ['child', 'parent'],
+    ['parent', null],
+  ]).get(id) ?? null;
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['parent', 'child'], getParentId),
+    ['parent'],
+  );
+});
+
+test('filterTopLevelSelectedIds handles several selected ancestor levels', () => {
+  const getParentId = (id) => new Map([
+    ['child', 'parent'],
+    ['parent', 'grand-parent'],
+    ['grand-parent', null],
+  ]).get(id) ?? null;
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['grand-parent', 'parent', 'child'], getParentId),
+    ['grand-parent'],
+  );
+});
+
+test('filterTopLevelSelectedIds keeps independent branches in input order', () => {
+  const getParentId = (id) => new Map([
+    ['branch-a', 'root-a'],
+    ['branch-b', 'root-b'],
+  ]).get(id) ?? null;
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['branch-b', 'branch-a'], getParentId),
+    ['branch-b', 'branch-a'],
+  );
+});
+
+test('filterTopLevelSelectedIds keeps selected siblings in input order', () => {
+  const getParentId = (id) => new Map([
+    ['sibling-a', 'parent'],
+    ['sibling-b', 'parent'],
+  ]).get(id) ?? null;
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['sibling-b', 'sibling-a'], getParentId),
+    ['sibling-b', 'sibling-a'],
+  );
+});
+
+test('filterTopLevelSelectedIds handles child-before-parent input order', () => {
+  const getParentId = (id) => (id === 'child' ? 'parent' : null);
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['child', 'parent'], getParentId),
+    ['parent'],
+  );
+});
+
+test('filterTopLevelSelectedIds tolerates an unknown parent', () => {
+  const getParentId = (id) => (id === 'child' ? 'missing-parent' : null);
+  assert.deepEqual(
+    filterTopLevelSelectedIds(['child'], getParentId),
+    ['child'],
+  );
+});
+
+test('filterTopLevelSelectedIds leaves root exclusion to entry consumers', () => {
+  const selectedIds = new Set(['root', 'parent', 'child']);
+  const getParentId = (id) => (id === 'child' ? 'parent' : null);
+  const entryIds = [...selectedIds].filter((id) => id !== 'root');
+  assert.deepEqual(
+    filterTopLevelSelectedIds(entryIds, getParentId),
+    ['parent'],
+  );
+});
+
+test('filterTopLevelSelectedIds does not mutate its array or Set inputs', () => {
+  const ids = ['parent', 'child'];
+  const selectedIds = new Set(ids);
+  const getParentId = (id) => (id === 'child' ? 'parent' : null);
+
+  filterTopLevelSelectedIds(ids, getParentId);
+  filterTopLevelSelectedIds(selectedIds, getParentId);
+
+  assert.deepEqual(ids, ['parent', 'child']);
+  assert.deepEqual([...selectedIds], ['parent', 'child']);
+});
+
+test('a filtered bulk move keeps a selected child inside its selected parent', () => {
+  const moveProject = {
+    rootEntries: [
+      {
+        id: 'parent',
+        type: 'menu',
+        name: 'Parent',
+        children: [
+          { id: 'child', type: 'story', name: 'Child' },
+        ],
+      },
+      { id: 'target', type: 'menu', name: 'Target', children: [] },
+    ],
+  };
+  const index = buildProjectIndex(moveProject);
+  const idsToMove = filterTopLevelSelectedIds(
+    ['parent', 'child'],
+    (id) => index.parentMenuById.get(id) ?? null,
+  );
+  const movedProject = idsToMove.reduce(
+    (current, id) => moveEntryToContainer(current, id, 'target'),
+    moveProject,
+  );
+  const target = movedProject.rootEntries.find((entry) => entry.id === 'target');
+
+  assert.deepEqual(target.children.map((entry) => entry.id), ['parent']);
+  assert.deepEqual(target.children[0].children.map((entry) => entry.id), ['child']);
 });
 
 test('resolveDropTargetForNode returns null for non-target nodes (perf-critical)', () => {

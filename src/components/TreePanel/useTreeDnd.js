@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import {
-  hasSelectedAncestor,
+  filterTopLevelSelectedIds,
   wouldCreateMenuCycle,
 } from '../tree/treeOperations';
 
@@ -118,7 +118,6 @@ export function useTreeDnd({
     if (!over || active.id === over.id) return;
     const activeEntry = getEntry(active.id);
     if (!activeEntry) return;
-    const fromContainerId = getParentId(active.id);
 
     let targetContainerId;
     let anchorId;
@@ -142,16 +141,28 @@ export function useTreeDnd({
       insertPosition = finalDropInfo.position;
     }
 
-    if (wouldCreateMenuCycle(activeEntry, targetContainerId, projectIndex)) return;
+    const candidateIds = selectedIds.size > 1 && selectedIds.has(active.id)
+      ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
+      : [active.id];
+    const idsToMove = filterTopLevelSelectedIds(candidateIds, getParentId).filter((id) => {
+      const entry = getEntry(id);
+      return entry && !wouldCreateMenuCycle(entry, targetContainerId, projectIndex);
+    });
+    if (idsToMove.length === 0) return;
+
+    const moveIdSet = new Set(idsToMove);
+    const fromContainerId = getParentId(idsToMove[0]);
+    const allFromSameContainer = idsToMove.every((id) => getParentId(id) === fromContainerId);
 
     // Same-container reorder
-    if (fromContainerId === targetContainerId) {
-      if (!anchorId) return;
+    if (allFromSameContainer && fromContainerId === targetContainerId) {
+      if (!anchorId || moveIdSet.has(anchorId)) return;
       const items = getContainerEntries(fromContainerId);
-      const isMulti = selectedIds.size > 1 && selectedIds.has(active.id) && !selectedIds.has(anchorId);
+      const isMulti = idsToMove.length > 1;
       if (isMulti) {
-        const selectedInOrder = items.filter((item) => selectedIds.has(item.id));
-        const rest = items.filter((item) => !selectedIds.has(item.id));
+        const selectedInOrder = items.filter((item) => moveIdSet.has(item.id));
+        if (selectedInOrder.length !== idsToMove.length) return;
+        const rest = items.filter((item) => !moveIdSet.has(item.id));
         const anchorIdx = rest.findIndex((item) => item.id === anchorId);
         if (anchorIdx === -1) return;
         const insertIdx = insertPosition === 'after' ? anchorIdx + 1 : anchorIdx;
@@ -161,7 +172,7 @@ export function useTreeDnd({
           ...rest.slice(insertIdx),
         ]);
       } else {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const oldIndex = items.findIndex((item) => item.id === idsToMove[0]);
         const anchorIndex = items.findIndex((item) => item.id === anchorId);
         if (oldIndex === -1 || anchorIndex === -1 || oldIndex === anchorIndex) return;
         onReorder(fromContainerId, arrayMove(items, oldIndex, anchorIndex));
@@ -170,28 +181,17 @@ export function useTreeDnd({
     }
 
     // Cross-container move
-    const candidateIds = selectedIds.size > 1 && selectedIds.has(active.id)
-      ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
-      : [active.id];
-    const candidateSet = new Set(candidateIds);
-    const idsToMove = candidateIds.filter((id) => {
-      if (id === 'root') return false;
-      const entry = getEntry(id);
-      if (!entry) return false;
-      if (wouldCreateMenuCycle(entry, targetContainerId, projectIndex)) return false;
-      if (hasSelectedAncestor(id, candidateSet, getParentId)) return false;
-      return true;
-    });
-
-    for (const id of idsToMove) {
-      const useAnchor = idsToMove.length === 1 && anchorId && insertPosition !== 'inside';
+    const useAnchor = idsToMove.length === 1 && anchorId && insertPosition !== 'inside';
+    if (idsToMove.length === 1) {
       onMoveToMenu(
-        id,
-        getParentId(id),
+        idsToMove[0],
+        getParentId(idsToMove[0]),
         targetContainerId,
         useAnchor ? anchorId : null,
         useAnchor ? insertPosition : 'inside',
       );
+    } else {
+      onMoveToMenu(idsToMove, null, targetContainerId);
     }
   }, [
     computeDropInfo,

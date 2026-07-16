@@ -12,7 +12,7 @@ import {
   findParentMenuId,
   insertEntryAfter,
   moveEntryNextTo,
-  moveEntryToContainer,
+  moveEntriesToContainer,
   normalizeProjectData,
   removeEntryCascadingRefs,
   removeEntriesCascadingRefs,
@@ -470,11 +470,13 @@ export function useProjectStore() {
     setProject(p => reorderTopLevelMenus(p, newMenus));
   }, [setProject]);
 
-  const moveItemToMenu = useCallback((itemId, fromMenuId, toMenuId, anchorId = null, insertPosition = 'inside') => {
-    if (anchorId && insertPosition !== 'inside') {
-      setProject(p => moveEntryNextTo(p, itemId, anchorId, insertPosition));
+  const moveItemToMenu = useCallback((itemIdOrIds, fromMenuId, toMenuId, anchorId = null, insertPosition = 'inside') => {
+    const itemIds = Array.isArray(itemIdOrIds) ? itemIdOrIds : [itemIdOrIds];
+    if (itemIds.length === 0) return;
+    if (itemIds.length === 1 && anchorId && insertPosition !== 'inside') {
+      setProject(p => moveEntryNextTo(p, itemIds[0], anchorId, insertPosition));
     } else {
-      setProject(p => moveEntryToContainer(p, itemId, toMenuId));
+      setProject(p => moveEntriesToContainer(p, itemIds, toMenuId));
     }
   }, [setProject]);
 

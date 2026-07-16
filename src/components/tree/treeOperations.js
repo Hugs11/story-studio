@@ -6,12 +6,23 @@ export const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '
 // Vrai si entryId a un ancetre dans le set candidateIds (selection multiple).
 // getParentId(entryId) retourne l'id parent ou null.
 export function hasSelectedAncestor(entryId, candidateIds, getParentId) {
+  const visitedIds = new Set([entryId]);
   let parentId = getParentId(entryId);
-  while (parentId != null) {
+  while (parentId != null && !visitedIds.has(parentId)) {
     if (candidateIds.has(parentId)) return true;
+    visitedIds.add(parentId);
     parentId = getParentId(parentId);
   }
   return false;
+}
+
+// Conserve uniquement les racines des sous-arbres sélectionnés, dans l'ordre
+// fourni par le consommateur. Root et les nœuds virtuels restent exclus par
+// les consommateurs, qui connaissent leurs règles propres.
+export function filterTopLevelSelectedIds(ids, getParentId) {
+  const orderedIds = [...(ids ?? [])];
+  const candidateIds = new Set(orderedIds);
+  return orderedIds.filter((id) => !hasSelectedAncestor(id, candidateIds, getParentId));
 }
 
 // Compte recursif des descendants d'une entree (menu ou autre). Une feuille -> 0.
