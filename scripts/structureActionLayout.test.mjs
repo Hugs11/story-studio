@@ -29,13 +29,23 @@ test('wide panel and floating bar keep every action direct', () => {
   });
   const floating = partitionStructureActions(actions, {
     variant: 'floating',
-    inlineSize: 100,
+    inlineSize: STRUCTURE_ACTIONS_COMPACT_WIDTH,
   });
 
   assert.deepEqual(widePanel.directActions, actions);
   assert.deepEqual(widePanel.overflowActions, []);
   assert.deepEqual(floating.directActions, actions);
   assert.deepEqual(floating.overflowActions, []);
+});
+
+test('narrow floating bar keeps primary actions direct and moves secondary actions to overflow', () => {
+  const layout = partitionStructureActions(actions, {
+    variant: 'floating',
+    inlineSize: STRUCTURE_ACTIONS_COMPACT_WIDTH - 1,
+  });
+
+  assert.deepEqual(layout.directActions.map(({ id }) => id), ['import', 'folder']);
+  assert.deepEqual(layout.overflowActions.map(({ id }) => id), ['podcast', 'simulator']);
 });
 
 test('unmeasured panel starts compact to avoid an overflow flash', () => {
@@ -46,4 +56,14 @@ test('unmeasured panel starts compact to avoid an overflow flash', () => {
 
   assert.deepEqual(layout.directActions.map(({ id }) => id), ['import', 'folder']);
   assert.deepEqual(layout.overflowActions.map(({ id }) => id), ['podcast', 'simulator']);
+});
+
+test('unmeasured floating bar starts expanded so its parent can expose the available width', () => {
+  const layout = partitionStructureActions(actions, {
+    variant: 'floating',
+    inlineSize: null,
+  });
+
+  assert.deepEqual(layout.directActions, actions);
+  assert.deepEqual(layout.overflowActions, []);
 });

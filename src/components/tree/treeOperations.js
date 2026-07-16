@@ -25,6 +25,14 @@ export function filterTopLevelSelectedIds(ids, getParentId) {
   return orderedIds.filter((id) => !hasSelectedAncestor(id, candidateIds, getParentId));
 }
 
+// Construit un plan de déplacement atomique : si une seule des racines
+// sélectionnées est invalide pour la cible, aucun élément ne doit bouger.
+export function buildTopLevelMovePlan(ids, getParentId, canMoveId) {
+  const topLevelIds = filterTopLevelSelectedIds(ids, getParentId);
+  if (topLevelIds.length === 0 || !topLevelIds.every((id) => canMoveId(id))) return [];
+  return topLevelIds;
+}
+
 // Compte recursif des descendants d'une entree (menu ou autre). Une feuille -> 0.
 export function countDescendants(entry) {
   if (entry?.type !== 'menu') return 0;

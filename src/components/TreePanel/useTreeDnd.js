@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import {
-  filterTopLevelSelectedIds,
+  buildTopLevelMovePlan,
   wouldCreateMenuCycle,
 } from '../tree/treeOperations';
 
@@ -144,7 +144,7 @@ export function useTreeDnd({
     const candidateIds = selectedIds.size > 1 && selectedIds.has(active.id)
       ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
       : [active.id];
-    const idsToMove = filterTopLevelSelectedIds(candidateIds, getParentId).filter((id) => {
+    const idsToMove = buildTopLevelMovePlan(candidateIds, getParentId, (id) => {
       const entry = getEntry(id);
       return entry && !wouldCreateMenuCycle(entry, targetContainerId, projectIndex);
     });
