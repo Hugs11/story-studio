@@ -4,8 +4,9 @@ export function partitionStructureActions(actions, {
   variant = 'floating',
   inlineSize = null,
 } = {}) {
-  const compact = variant === 'panel'
-    && (!Number.isFinite(inlineSize) || inlineSize < STRUCTURE_ACTIONS_COMPACT_WIDTH);
+  const compact = Number.isFinite(inlineSize)
+    ? inlineSize < STRUCTURE_ACTIONS_COMPACT_WIDTH
+    : variant === 'panel';
 
   if (!compact) {
     return {

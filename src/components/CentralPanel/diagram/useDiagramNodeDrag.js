@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findParentMenuId } from '../../../store/projectModel';
-import { filterTopLevelSelectedIds } from '../../tree/treeOperations';
+import { buildTopLevelMovePlan } from '../../tree/treeOperations';
 import { DRAG_START_DISTANCE, canMoveEntryToContainer } from '../flowDiagramLayout';
 
 export function useDiagramNodeDrag({
@@ -110,12 +110,11 @@ export function useDiagramNodeDrag({
             .filter((id) => currentSelectedIds.has(id))
           : [activeId];
         const getParentId = (id) => findParentMenuId(snapshot, id, snapshotIndex) ?? null;
-        const idsToMove = filterTopLevelSelectedIds(orderedCandidates, getParentId);
-        const isValidPlan = idsToMove.length > 0 && idsToMove.every((id) => (
+        const idsToMove = buildTopLevelMovePlan(orderedCandidates, getParentId, (id) => (
           canMoveEntryToContainer(snapshot, snapshotIndex, id, targetContainerId)
         ));
 
-        if (isValidPlan) {
+        if (idsToMove.length > 0) {
           onMoveToMenuRef.current?.(idsToMove, null, targetContainerId);
           const nextSelectedId = snapshotIndex.entryById.has(activeId) ? activeId : idsToMove[0];
           onSelectRef.current?.(nextSelectedId);

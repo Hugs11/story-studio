@@ -154,6 +154,7 @@ export function CompleteDiagramTree({
     zoomValueRef,
     zoomRef,
     cameraRef,
+    containerWidth,
     compactMode,
     isPanning,
     handleZoom,
@@ -652,6 +653,7 @@ export function CompleteDiagramTree({
             canGenerateStoryTts={canGenerateStoryTts}
             onLaunchSimulator={onSimulateRoot}
             showLabel
+            availableInlineSize={containerWidth}
           />
         </div>
         ) : null}

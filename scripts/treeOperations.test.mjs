@@ -5,6 +5,7 @@ import { buildProjectIndex } from '../src/store/projectModel/index.js';
 import { moveEntryToContainer } from '../src/store/projectModel/operations.js';
 import {
   TREE_COLOR_PALETTE,
+  buildTopLevelMovePlan,
   canMoveEntryToContainer,
   containsMenu,
   countDescendants,
@@ -157,6 +158,34 @@ test('filterTopLevelSelectedIds does not mutate its array or Set inputs', () => 
 
   assert.deepEqual(ids, ['parent', 'child']);
   assert.deepEqual([...selectedIds], ['parent', 'child']);
+});
+
+test('buildTopLevelMovePlan aborts the whole selection when one branch would create a cycle', () => {
+  const index = buildProjectIndex(project);
+  const getParentId = (id) => index.parentMenuById.get(id) ?? null;
+  const canMoveId = (id) => {
+    const entry = index.entryById.get(id);
+    return entry && !wouldCreateMenuCycle(entry, 'menu-b', index);
+  };
+
+  assert.deepEqual(
+    buildTopLevelMovePlan(['menu-a', 'menu-c'], getParentId, canMoveId),
+    [],
+  );
+});
+
+test('buildTopLevelMovePlan preserves the ordered selection when every branch is valid', () => {
+  const index = buildProjectIndex(project);
+  const getParentId = (id) => index.parentMenuById.get(id) ?? null;
+
+  assert.deepEqual(
+    buildTopLevelMovePlan(
+      ['menu-a', 'menu-c'],
+      getParentId,
+      (id) => index.entryById.has(id),
+    ),
+    ['menu-a', 'menu-c'],
+  );
 });
 
 test('a filtered bulk move keeps a selected child inside its selected parent', () => {

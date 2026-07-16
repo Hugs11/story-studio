@@ -55,15 +55,18 @@ export function StructureActionsBar({
   canLaunchSimulator = true,
   showLabel = false,
   trailing = null,
+  availableInlineSize = null,
 }) {
   const barRef = useRef(null);
-  const [inlineSize, setInlineSize] = useState(null);
+  const [measuredInlineSize, setMeasuredInlineSize] = useState(null);
+  const hasAvailableInlineSize = Number.isFinite(availableInlineSize);
 
   useLayoutEffect(() => {
+    if (hasAvailableInlineSize) return undefined;
     const bar = barRef.current;
-    if (!bar || variant !== 'panel') return undefined;
+    if (!bar) return undefined;
 
-    const update = () => setInlineSize(Math.round(bar.getBoundingClientRect().width));
+    const update = () => setMeasuredInlineSize(Math.round(bar.getBoundingClientRect().width));
     update();
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', update);
@@ -73,7 +76,7 @@ export function StructureActionsBar({
     const observer = new ResizeObserver(update);
     observer.observe(bar);
     return () => observer.disconnect();
-  }, [variant]);
+  }, [hasAvailableInlineSize, variant]);
 
   const actions = [
     {
@@ -143,7 +146,7 @@ export function StructureActionsBar({
   ];
   const { directActions, overflowActions } = partitionStructureActions(actions, {
     variant,
-    inlineSize,
+    inlineSize: hasAvailableInlineSize ? availableInlineSize : measuredInlineSize,
   });
 
   return (
