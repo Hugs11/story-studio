@@ -454,3 +454,154 @@ fn restore_audio_original_does_not_delete_unexpected_external_original() {
     fs::remove_dir_all(workspace).expect("cleanup workspace");
     fs::remove_dir_all(outside).expect("cleanup outside");
 }
+
+fn isolated_preview_root(name: &str) -> PathBuf {
+    let root = temp_project_dir(&format!("audio_preview_{name}"));
+    fs::create_dir_all(&root).expect("create isolated preview root");
+    root
+}
+
+fn managed_preview_path(root: &Path, suffix: &str) -> PathBuf {
+    root.join(format!("{}{}.wav", AUDIO_PREVIEW_PREFIX, suffix))
+}
+
+#[test]
+fn managed_audio_preview_recognizes_only_direct_regular_wav_files() {
+    let root = isolated_preview_root("recognize");
+    let preview = managed_preview_path(&root, "valid");
+    write_temp_file(&preview, b"preview");
+
+    let validated =
+        validate_managed_audio_preview_in(&preview, &root).expect("validate managed preview");
+    assert_eq!(
+        validated.expect("existing managed preview"),
+        fs::canonicalize(&preview).expect("canonical preview")
+    );
+
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn managed_audio_preview_rejects_outside_similar_prefix_and_wrong_extension() {
+    let root = isolated_preview_root("reject");
+    let outside = temp_project_dir("audio_preview_outside");
+    fs::create_dir_all(&outside).expect("create outside dir");
+
+    let outside_preview = managed_preview_path(&outside, "outside");
+    write_temp_file(&outside_preview, b"outside");
+    assert!(validate_managed_audio_preview_in(&outside_preview, &root)
+        .unwrap_err()
+        .contains("hors"));
+
+    let similar = root.join("story_studio_audio_previews_similar.wav");
+    write_temp_file(&similar, b"similar");
+    assert!(validate_managed_audio_preview_in(&similar, &root).is_err());
+
+    let wrong_extension = root.join(format!("{}wrong.mp3", AUDIO_PREVIEW_PREFIX));
+    write_temp_file(&wrong_extension, b"wrong");
+    assert!(validate_managed_audio_preview_in(&wrong_extension, &root).is_err());
+
+    fs::remove_dir_all(root).expect("cleanup root");
+    fs::remove_dir_all(outside).expect("cleanup outside");
+}
+
+#[test]
+fn managed_audio_preview_rejects_subdirectories_and_symlinks() {
+    let root = isolated_preview_root("nested");
+    let nested = root.join("nested");
+    fs::create_dir_all(&nested).expect("create nested dir");
+    let nested_preview = managed_preview_path(&nested, "nested");
+    write_temp_file(&nested_preview, b"nested");
+    assert!(validate_managed_audio_preview_in(&nested_preview, &root).is_err());
+
+    let target = managed_preview_path(&root, "target");
+    let link = managed_preview_path(&root, "link");
+    write_temp_file(&target, b"target");
+    #[cfg(windows)]
+    let symlink_result = std::os::windows::fs::symlink_file(&target, &link);
+    #[cfg(unix)]
+    let symlink_result = std::os::unix::fs::symlink(&target, &link);
+    if symlink_result.is_ok() {
+        assert!(validate_managed_audio_preview_in(&link, &root)
+            .unwrap_err()
+            .contains("symbolique"));
+    }
+
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn discard_audio_preview_is_scoped_and_idempotent() {
+    let root = isolated_preview_root("discard");
+    let preview = managed_preview_path(&root, "discard");
+    write_temp_file(&preview, b"preview");
+
+    discard_audio_preview_in(&preview, &root).expect("discard managed preview");
+    assert!(!preview.exists());
+    discard_audio_preview_in(&preview, &root).expect("discard already absent preview");
+
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn commit_audio_preview_removes_managed_preview_after_success() {
+    let Ok(ffmpeg) = get_ffmpeg_path() else {
+        return;
+    };
+    let workspace = temp_workspace_with_dirs("commit_preview_cleanup");
+    let root = isolated_preview_root("commit");
+    let input = workspace.join("fichiers-importes").join("source.wav");
+    let preview = managed_preview_path(&root, "commit");
+    run_ffmpeg_make_silence(&ffmpeg, 0.1, &input).expect("create input wav");
+    run_ffmpeg_make_silence(&ffmpeg, 0.05, &preview).expect("create preview wav");
+
+    commit_audio_preview_in(
+        input.to_str().unwrap(),
+        preview.to_str().unwrap(),
+        None,
+        Some(workspace.to_str().unwrap()),
+        &root,
+    )
+    .expect("commit preview");
+
+    assert!(!preview.exists(), "committed preview should be removed");
+    fs::remove_dir_all(workspace).expect("cleanup workspace");
+    fs::remove_dir_all(root).expect("cleanup preview root");
+}
+
+#[test]
+fn cleanup_old_audio_previews_preserves_recent_and_foreign_files() {
+    let root = isolated_preview_root("cleanup");
+    let old = managed_preview_path(&root, "old");
+    let recent = managed_preview_path(&root, "recent");
+    let foreign = root.join("unrelated.wav");
+    write_temp_file(&old, b"old");
+    write_temp_file(&recent, b"recent");
+    write_temp_file(&foreign, b"foreign");
+
+    let old_time = std::time::SystemTime::now()
+        .checked_sub(std::time::Duration::from_secs(48 * 3600))
+        .expect("old timestamp");
+    let old_file = fs::OpenOptions::new()
+        .write(true)
+        .open(&old)
+        .expect("open old preview");
+    old_file
+        .set_times(fs::FileTimes::new().set_modified(old_time))
+        .expect("set old timestamp");
+
+    let report = cleanup_old_audio_previews_in(
+        &root,
+        std::time::Duration::from_secs(24 * 3600),
+        std::time::SystemTime::now(),
+    )
+    .expect("cleanup old previews");
+
+    assert_eq!(report.removed, 1);
+    assert_eq!(report.errors, 0);
+    assert!(!old.exists());
+    assert!(recent.exists());
+    assert!(foreign.exists());
+
+    fs::remove_dir_all(root).expect("cleanup");
+}
