@@ -96,7 +96,7 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
           {showProjectMeta ? (
             <>
               <span className="chrome-titlebar-chevron"><ChevronIcon /></span>
-              <Tooltip text={projectTooltip}>
+              <Tooltip text={projectTooltip} className="chrome-titlebar-project-tip">
                 <span className="chrome-titlebar-project">{displayProjectName}</span>
               </Tooltip>
               {showSaveIndicator && (
@@ -109,12 +109,14 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
         </div>
         {showProjectMeta && packMetadata ? (
           <>
-            <span className="chrome-titlebar-chevron" aria-hidden="true"><ChevronIcon /></span>
-            <Tooltip text={packTooltip}>
+            <span className="chrome-titlebar-chevron chrome-titlebar-pack-chevron" aria-hidden="true"><ChevronIcon /></span>
+            <Tooltip text={packTooltip} className="chrome-titlebar-pack-tip">
               <button
+                type="button"
                 className="chrome-titlebar-pack-recap"
                 onClick={onOpenPackMetadata}
                 disabled={!onOpenPackMetadata}
+                aria-label={packTooltip}
               >
               <span className="chrome-titlebar-pack-thumb">
                 {packCoverUrl ? <img src={packCoverUrl} alt="" /> : <ImageIcon className="chrome-icon" strokeWidth={1.8} absoluteStrokeWidth />}
@@ -133,19 +135,19 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
 
       <div className="chrome-window-controls">
         {onOpenCredits ? (
-          <button className="chrome-window-btn" onClick={onOpenCredits} title="À propos">
+          <button type="button" className="chrome-window-btn" onClick={onOpenCredits} title="À propos">
             <HelpIcon />
           </button>
         ) : null}
         {currentWindow ? (
           <>
-            <button className="chrome-window-btn" onClick={() => currentWindow.minimize()} title="Réduire">
+            <button type="button" className="chrome-window-btn" onClick={() => currentWindow.minimize()} title="Réduire">
               <MinimizeIcon />
             </button>
-            <button className="chrome-window-btn" onClick={handleToggleMaximize} title="Agrandir ou restaurer" disabled={isMaximizing}>
+            <button type="button" className="chrome-window-btn" onClick={handleToggleMaximize} title="Agrandir ou restaurer" disabled={isMaximizing}>
               <MaximizeIcon />
             </button>
-            <button className="chrome-window-btn chrome-window-btn-close" onClick={() => currentWindow.close()} title="Fermer">
+            <button type="button" className="chrome-window-btn chrome-window-btn-close" onClick={() => currentWindow.close()} title="Fermer">
               <CloseIcon />
             </button>
           </>

@@ -69,6 +69,7 @@ body {
   overflow: hidden;
   min-width: 0;
   position: relative;
+  container: workspace-shell / inline-size;
 }
 
 .workspace--home {
@@ -190,6 +191,7 @@ body.workspace-is-resizing .resize-handle {
   display: flex;
   flex-direction: column;
   min-width: var(--col-left-min);
+  container: structure-panel / inline-size;
 }
 
 /* En-tête arbre : membre gauche du bandeau uniforme (44 px fixes, fond commun,
@@ -247,7 +249,16 @@ body.workspace-is-resizing .resize-handle {
   min-width: 400px;
 }
 
-@media (max-width: 900px) {
+.workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+  flex: 0 1 var(--col-left);
+  min-width: 200px;
+}
+
+.workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+  min-width: 360px;
+}
+
+@container workspace-shell (max-width: 900px) {
   .workspace--with-diagram .panel-left {
     min-width: 160px;
   }
@@ -260,20 +271,43 @@ body.workspace-is-resizing .resize-handle {
     flex-basis: 280px;
     min-width: 240px;
   }
+
+  .workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+    min-width: 160px;
+  }
+
+  .workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+    min-width: 320px;
+  }
 }
 
-@media (max-width: 700px) {
+@container workspace-shell (max-width: 700px) {
   .workspace--with-diagram .panel-left {
     min-width: 140px;
   }
 
   .workspace--with-diagram .panel-center {
-    min-width: 280px;
+    min-width: 240px;
   }
 
   .workspace--with-diagram .workspace-diagram {
     flex-basis: 220px;
-    min-width: 200px;
+    min-width: 190px;
+  }
+
+  .workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+    min-width: 140px;
+  }
+
+  .workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+    min-width: 240px;
+  }
+}
+
+@container structure-panel (max-width: 180px) {
+  .panel-left-header {
+    padding-inline: 4px;
+    gap: 3px;
   }
 }
 

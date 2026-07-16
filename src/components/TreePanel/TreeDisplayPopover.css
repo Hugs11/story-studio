@@ -42,16 +42,9 @@
   height: 16px;
 }
 
-.tree-display-trigger-icon--lunii {
-  display: block;
-  object-fit: contain;
-}
-
 .tree-display-popover {
-  position: absolute;
-  z-index: 260;
-  top: calc(100% + 10px);
-  right: 0;
+  position: fixed;
+  z-index: 1200;
   width: 248px;
   padding: 10px;
   border: 1px solid var(--borderLt);
@@ -65,7 +58,7 @@
 .tree-display-popover::before {
   content: '';
   position: absolute;
-  right: 8px;
+  left: var(--tree-display-arrow-left, 228px);
   top: -7px;
   width: 12px;
   height: 12px;
@@ -73,7 +66,15 @@
   border-right: 0;
   border-bottom: 0;
   background: var(--bg1);
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.tree-display-popover.is-above::before {
+  top: auto;
+  bottom: -7px;
+  border: 1px solid var(--borderLt);
+  border-left: 0;
+  border-top: 0;
 }
 
 @keyframes tree-display-popover-in {

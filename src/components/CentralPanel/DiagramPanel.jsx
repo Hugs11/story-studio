@@ -30,7 +30,7 @@ function DiagramPanelHeader({
 
   return (
     <div className="fd-panel-header">
-      <div className="fd-panel-title">
+      <div className="fd-panel-title" title={isFull ? 'Diagramme complet du pack' : 'Diagramme'}>
         {isFull ? 'Diagramme complet du pack' : 'Diagramme'}
       </div>
       <div className="fd-panel-view-controls" ref={controlsHostRef} />
