@@ -44,8 +44,6 @@ export function AudioField({
   xttsTarget = null,
   accentLabel = false,
   emptyBadge = null,
-  emptyActions = [],
-  filledActions = [],
 }) {
   const { notifyCutPaste } = useMediaTransfer();
   const {
@@ -291,10 +289,7 @@ export function AudioField({
                 {!file && emptyBadge ? <span className="audio-silent-badge">{emptyBadge}</span> : null}
                 <span className="audio-empty-plus">+</span>
               </div>
-              <div
-                className={`audio-bar-actions${emptyActions.length ? ' audio-bar-actions--with-extra' : ''}`}
-                aria-label="Actions audio"
-              >
+              <div className="audio-bar-actions" aria-label="Actions audio">
                 <Tooltip text="Enregistrer l'audio">
                   <Button variant="icon" size="sm" onPointerDown={stopButtonEvent} onClick={(e) => { e.stopPropagation(); handleMic(); }} aria-label="Enregistrer l'audio">
                     <Mic className="mic-btn-icon" strokeWidth={2} absoluteStrokeWidth />
@@ -307,22 +302,6 @@ export function AudioField({
                     </Button>
                   </Tooltip>
                 )}
-                {emptyActions.map(({ key, label: actionLabel, Icon, onClick }) => (
-                  <Tooltip key={key} text={actionLabel}>
-                    <Button
-                      variant="icon"
-                      size="sm"
-                      onPointerDown={stopButtonEvent}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                      }}
-                      aria-label={actionLabel}
-                    >
-                      <Icon className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                    </Button>
-                  </Tooltip>
-                ))}
               </div>
               {file && !fileAvailable && onClear && (
                 <Tooltip text="Retirer le lien cassé">
@@ -407,21 +386,6 @@ export function AudioField({
                   </Button>
                 </Tooltip>
               )}
-              {filledActions.map(({ key, label: actionLabel, Icon, onClick }) => (
-                <Tooltip key={key} text={actionLabel}>
-                  <Button
-                    variant="icon"
-                    size="sm"
-                    onClick={() => {
-                      stopPlayback(true);
-                      onClick();
-                    }}
-                    aria-label={actionLabel}
-                  >
-                    <Icon className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
-                  </Button>
-                </Tooltip>
-              ))}
               <Tooltip text="Éditer l'audio">
                 <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio">
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />

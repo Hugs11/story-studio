@@ -24,3 +24,18 @@ export function isStorySelectionAudioRequired(entry) {
 export function createSilentStoryTitleSettings(currentSettings) {
   return { ...TITLE_CONTROL_DEFAULTS, ...currentSettings };
 }
+
+export function createSilentStoryTitleUpdate(currentSettings) {
+  return {
+    itemAudio: null,
+    silentTitleStage: true,
+    titleControlSettings: createSilentStoryTitleSettings(currentSettings),
+  };
+}
+
+export function createStorySelectionAudioUpdate(itemAudio) {
+  return {
+    itemAudio: itemAudio || null,
+    silentTitleStage: false,
+  };
+}

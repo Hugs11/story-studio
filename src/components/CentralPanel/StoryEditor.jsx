@@ -19,9 +19,9 @@ import {
 import { AfterPlaySection } from './story/AfterPlaySection';
 import { DuringPlaySection } from './story/DuringPlaySection';
 import { NAV_ROOT_LABEL } from './story/storyUtils';
-import { Trash2, VolumeX } from '../icons/LucideLocal';
+import { Trash2 } from '../icons/LucideLocal';
 import {
-  createSilentStoryTitleSettings,
+  createStorySelectionAudioUpdate,
   isExplicitSilentStoryTitle,
   isStorySelectionAudioRequired,
 } from '../../store/storyTitleStage';
@@ -105,14 +105,6 @@ export const StoryEditor = memo(function StoryEditor({
     });
   }
 
-  function handleUseSilentSelection() {
-    onUpdate({
-      itemAudio: null,
-      silentTitleStage: true,
-      titleControlSettings: createSilentStoryTitleSettings(node.titleControlSettings),
-    });
-  }
-
   async function handleStoryAudioPick(path) {
     const autoName = basename(path)
       .replace(/\.(mp3|ogg|wav|m4a|webm)$/i, '')
@@ -187,20 +179,8 @@ export const StoryEditor = memo(function StoryEditor({
               ttsTextSuggestion={node.name || ''}
               ttsFilenameHint={`selection-${node.name || 'histoire'}`}
               xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
-              emptyActions={selectionAudioRequired ? [{
-                key: 'silent-title',
-                label: 'Utiliser un écran de sélection silencieux',
-                Icon: VolumeX,
-                onClick: handleUseSilentSelection,
-              }] : []}
-              filledActions={[{
-                key: 'silent-title',
-                label: 'Utiliser un écran de sélection silencieux',
-                Icon: VolumeX,
-                onClick: handleUseSilentSelection,
-              }]}
-              onPick={(f) => onUpdate({ itemAudio: f })}
-              onClear={() => onUpdate({ itemAudio: null })}
+              onPick={(f) => onUpdate(createStorySelectionAudioUpdate(f))}
+              onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
             />
             <AudioField
               accentLabel
