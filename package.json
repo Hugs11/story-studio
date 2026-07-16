@@ -33,6 +33,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "knip": "knip",
+    "audit:css": "node scripts/audit-unused-css.mjs",
     "convert:legacy-project": "node scripts/convert-legacy-project.mjs",
     "check:blank-lines": "node scripts/check-blank-lines.mjs",
     "tauri": "tauri",
@@ -62,6 +63,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.7.0",
     "knip": "^6.23.0",
+    "purgecss": "^8.0.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "vite": "^8.0.10"
   },

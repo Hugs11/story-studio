@@ -167,13 +167,6 @@
   padding: 1px 5px;
 }
 
-.keyboard-shortcuts-fixed-note {
-  margin-top: -6px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--muted);
-}
-
 .keyboard-shortcut-keys {
   display: flex;
   gap: 4px;

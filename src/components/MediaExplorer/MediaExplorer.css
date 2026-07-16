@@ -315,24 +315,6 @@
   flex-shrink: 0;
 }
 
-/* Origin badge — top-left */
-.media-origin-badge {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 1px 5px;
-  border-radius: 3px;
-  line-height: 14px;
-  pointer-events: none;
-}
-.origin-ai  { background: oklch(0.78 0.13 295 / 0.18); color: oklch(0.78 0.13 295); border: 0.5px solid oklch(0.78 0.13 295 / 0.4); }
-.origin-imp { background: oklch(0.74 0.12 245 / 0.18); color: oklch(0.74 0.12 245); border: 0.5px solid oklch(0.74 0.12 245 / 0.4); }
-.origin-rec { background: oklch(0.72 0.14 20  / 0.18); color: oklch(0.72 0.14 20);  border: 0.5px solid oklch(0.72 0.14 20  / 0.4); }
-.origin-lib { background: rgba(100,100,140,0.15);       color: var(--muted); border: 0.5px solid rgba(100,100,140,0.3); }
-
 /* Duration badge — bottom-left (grid view only) */
 .media-duration-badge {
   position: absolute;

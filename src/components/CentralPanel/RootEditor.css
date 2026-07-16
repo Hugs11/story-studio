@@ -252,14 +252,6 @@
     grid-template-columns: 1fr;
   }
 
-  .root-name-row {
-    flex-direction: column;
-  }
-
-  .root-convention-btn {
-    min-width: 0;
-    min-height: 36px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -305,20 +297,4 @@
     grid-template-columns: 1fr;
   }
 
-  .root-name-row {
-    flex-direction: column;
-  }
-
-  .root-convention-btn {
-    min-width: 0;
-    min-height: 36px;
-  }
-
-  .name-gen-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .name-gen-grid label {
-    text-align: left;
-  }
 }
