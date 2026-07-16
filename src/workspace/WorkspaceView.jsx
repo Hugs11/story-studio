@@ -17,6 +17,10 @@ import {
   TREE_PANEL_WIDTH_DEFAULT,
 } from './useDiagramViewState';
 import { SettingsPanelHeader } from './SettingsPanelHeader';
+import {
+  getPendingInternalSelectedId,
+  resolveWorkspaceSelectionSync,
+} from './selectionSync';
 import { WorkspaceEmptyState } from './WorkspaceEmptyState';
 
 export function WorkspaceView({
@@ -55,8 +59,11 @@ export function WorkspaceView({
   const [expandedDiagramStoryGroupId, setExpandedDiagramStoryGroupId] = useState(null);
   const [treeRevealRequest, setTreeRevealRequest] = useState(null);
   const [diagramRevealRequest, setDiagramRevealRequest] = useState(null);
-  const skipIdSyncRef = useRef(false);
+  const selectedIdRef = useRef(selectedId);
+  const selectedIdsRef = useRef(selectedIds);
+  const pendingInternalSelectedIdRef = useRef(null);
   const revealRequestIdRef = useRef(0);
+  selectedIdRef.current = selectedId;
 
   const {
     showTree,
@@ -99,47 +106,63 @@ export function WorkspaceView({
     onSimulateConsumed?.();
   }, [pendingSimulateZipPath, projectType, handleSimulateZip, onSimulateConsumed]);
 
-  const handleTreeSelectionChange = useCallback((ids) => {
-    skipIdSyncRef.current = true;
-    setSelectedIds(ids);
+  const commitSelectionChange = useCallback((ids) => {
+    pendingInternalSelectedIdRef.current = null;
+    const nextIds = ids?.size > 0 ? ids : new Set([selectedIdRef.current]);
+    selectedIdsRef.current = nextIds;
+    setSelectedIds(nextIds);
   }, []);
 
+  const handleTreeSelectionChange = commitSelectionChange;
+
   const handleDiagramSelectionChange = useCallback((ids) => {
-    skipIdSyncRef.current = true;
-    setSelectedIds(ids);
+    commitSelectionChange(ids);
     // En « plein » (diagramme seul), une sélection venue du diagramme réaffiche les
     // réglages pour éditer l'élément cliqué.
     if (isPlein && ids?.size > 0) {
       restoreSettings();
     }
-  }, [isPlein, restoreSettings]);
+  }, [commitSelectionChange, isPlein, restoreSettings]);
 
   const handleTreeNodeSelect = useCallback((id) => {
+    pendingInternalSelectedIdRef.current = getPendingInternalSelectedId({
+      currentSelectedId: selectedIdRef.current,
+      nextSelectedId: id,
+    });
     onSelect(id);
     setDiagramRevealRequest({ id, requestId: ++revealRequestIdRef.current });
   }, [onSelect]);
 
   const handleDiagramNodeSelect = useCallback((id) => {
+    pendingInternalSelectedIdRef.current = getPendingInternalSelectedId({
+      currentSelectedId: selectedIdRef.current,
+      nextSelectedId: id,
+    });
     onSelect(id);
     setTreeRevealRequest({ id, requestId: ++revealRequestIdRef.current });
   }, [onSelect]);
 
   const handleOpenLocalEndSettings = useCallback((storyId) => {
-    setSelectedIds(new Set([storyId]));
+    commitSelectionChange(new Set([storyId]));
     handleDiagramNodeSelect(storyId);
     if (!showSettings) restoreSettings();
     setAfterPlayFocus({ storyId, requestId: Date.now() });
-  }, [handleDiagramNodeSelect, restoreSettings, showSettings]);
+  }, [commitSelectionChange, handleDiagramNodeSelect, restoreSettings, showSettings]);
   const handleAfterPlayFocusConsumed = useCallback(() => {
     setAfterPlayFocus(null);
   }, []);
 
   useEffect(() => {
-    if (skipIdSyncRef.current) {
-      skipIdSyncRef.current = false;
-      return;
+    const sync = resolveWorkspaceSelectionSync({
+      selectedId,
+      selectedIds: selectedIdsRef.current,
+      pendingInternalSelectedId: pendingInternalSelectedIdRef.current,
+    });
+    pendingInternalSelectedIdRef.current = sync.pendingInternalSelectedId;
+    if (!sync.preserveSelection) {
+      selectedIdsRef.current = sync.selectedIds;
+      setSelectedIds(sync.selectedIds);
     }
-    setSelectedIds(new Set([selectedId]));
   }, [selectedId]);
 
   const style = {
