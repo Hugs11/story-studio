@@ -206,39 +206,39 @@ export function ModeSelector({
               <div className="mode-projects-eyebrow">Projets récents</div>
               <div className="mode-projects-list">
                 {visibleRecoveries.map((recovery, index) => (
-                  <button
-                    type="button"
-                    className="mode-proj-row"
+                  <div
+                    className="mode-proj-row mode-proj-row--recovery"
                     key={recovery.sessionDir || recovery.snapshotPath}
-                    onClick={() => onRecoverSession?.(recovery)}
                   >
-                    <ProjectThumb
-                      project={recovery}
-                      index={index}
-                    />
-                    <span className="mode-proj-copy">
-                      <span className="mode-proj-name">{recovery.projectName || 'Projet récupérable'}</span>
-                      <span className="mode-proj-sub">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
-                    </span>
-                    <Tooltip text="Ignorer cette reprise" placement="above">
-                      <span
+                    <button
+                      type="button"
+                      className="mode-proj-open"
+                      onClick={() => onRecoverSession?.(recovery)}
+                    >
+                      <ProjectThumb
+                        project={recovery}
+                        index={index}
+                      />
+                      <span className="mode-proj-copy">
+                        <span className="mode-proj-name">{recovery.projectName || 'Projet récupérable'}</span>
+                        <span className="mode-proj-sub">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
+                      </span>
+                    </button>
+                    <Tooltip
+                      text="Ignorer cette reprise"
+                      placement="above"
+                      className="mode-proj-dismiss-tooltip"
+                    >
+                      <button
+                        type="button"
                         className="mode-proj-dismiss"
-                        role="button"
-                        tabIndex={0}
                         aria-label="Ignorer cette reprise"
-                        onClick={(e) => { e.stopPropagation(); onIgnoreSessionRecovery?.(recovery); }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onIgnoreSessionRecovery?.(recovery);
-                          }
-                        }}
+                        onClick={() => onIgnoreSessionRecovery?.(recovery)}
                       >
                         <X className="mode-proj-dismiss-icon" strokeWidth={2} />
-                      </span>
+                      </button>
                     </Tooltip>
-                  </button>
+                  </div>
                 ))}
 
                 {visibleRecentProjects.map((project, index) => (

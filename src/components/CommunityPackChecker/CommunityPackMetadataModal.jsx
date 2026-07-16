@@ -4,6 +4,7 @@ import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/Lucide
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { generateConventionName, parseConventionName } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
+import { useErrorDialog } from '../common/Dialog';
 import './CommunityPackMetadataModal.css';
 
 const AGE_CHIPS = ['2', '3', '6', '9', '12'];
@@ -79,27 +80,61 @@ export function CommunityPackMetadataModal({
   onSubmit,
 }) {
   const [draft, setDraft] = useState(() => defaultDraft(report));
-  const promptedUuidRef = useRef('');
+  const [uuidPromptOpen, setUuidPromptOpen] = useState(false);
+  const uuidPromptRequestRef = useRef(null);
+  const currentReportRef = useRef(report);
+  currentReportRef.current = report;
+  const { showConfirmDialog } = useErrorDialog();
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
   const exportName = useMemo(() => generateConventionName(normalized), [normalized]);
   const tokens = useMemo(() => filenameTokens(exportName), [exportName]);
   const issues = useMemo(() => titleIssues(report), [report]);
   const currentAge = String(draft.minAge || '3').replace(/\D/g, '') || '3';
   const customAge = AGE_CHIPS.includes(currentAge) ? '' : currentAge;
-  const canSubmit = normalized.title.length > 0 && !busy;
-  useEscapeKey(!busy, onCancel);
+  const canSubmit = normalized.title.length > 0 && !busy && !uuidPromptOpen;
+  useEscapeKey(!busy && !uuidPromptOpen, onCancel);
 
   useEffect(() => {
     const currentUuid = String(report?.packUuid || '').trim();
-    if (!currentUuid || promptedUuidRef.current === currentUuid) return;
-    promptedUuidRef.current = currentUuid;
-    const wantsNewUuid = window.confirm(
-      "Ce pack va être corrigé dans une nouvelle archive. Veux-tu générer un nouvel UUID maintenant ?",
-    );
-    if (wantsNewUuid) {
-      setDraft((current) => ({ ...current, uuid: generateUuid() }));
+    if (!currentUuid) {
+      uuidPromptRequestRef.current = null;
+      setUuidPromptOpen(false);
+      return undefined;
     }
-  }, [report?.packUuid]);
+
+    let request = uuidPromptRequestRef.current;
+    // StrictMode rejoue l'effet : la même promesse est réutilisée pour ne pas
+    // rouvrir le dialogue tout en laissant la seconde exécution traiter le choix.
+    if (!request || request.uuid !== currentUuid) {
+      request = {
+        uuid: currentUuid,
+        report,
+        promise: showConfirmDialog({
+          title: 'Générer un nouvel UUID ?',
+          message:
+            'La correction crée une nouvelle archive. Un nouvel UUID permet de '
+            + "l'identifier comme un pack distinct.",
+          variant: 'warning',
+          okLabel: 'Générer un nouvel UUID',
+          cancelLabel: "Conserver l'UUID actuel",
+        }),
+      };
+      uuidPromptRequestRef.current = request;
+    }
+
+    let cancelled = false;
+    setUuidPromptOpen(true);
+    request.promise.then((wantsNewUuid) => {
+      if (cancelled || uuidPromptRequestRef.current !== request) return;
+      setUuidPromptOpen(false);
+      if (!wantsNewUuid || currentReportRef.current !== request.report) return;
+      setDraft((current) => ({ ...current, uuid: generateUuid() }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [report?.packUuid, showConfirmDialog]);
 
   function updateField(field, value) {
     setDraft((current) => ({
@@ -172,7 +207,12 @@ export function CommunityPackMetadataModal({
           <section className="checker-meta-form">
             <label>
               <span>Titre du pack</span>
-              <input value={draft.title || ''} onChange={(event) => updateField('title', event.target.value)} placeholder="Titre du pack" />
+              <input
+                autoFocus
+                value={draft.title || ''}
+                onChange={(event) => updateField('title', event.target.value)}
+                placeholder="Titre du pack"
+              />
             </label>
 
             <label>
