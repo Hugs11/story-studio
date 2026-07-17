@@ -39,6 +39,8 @@ export function TreePanel({
   validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
   selectionRevealRequest = null,
+  hoveredNodeId = null,
+  onNodeHoverChange,
   showNavigationBadges = true,
   showTreeGuides = true,
 }) {
@@ -317,6 +319,7 @@ export function TreePanel({
               label={entry.type === 'ref' ? buildRefDisplay(entry, projectIndex.entryById).label : entry.name}
               level={level}
               selected={selectedIds.has(entry.id)}
+              hovered={hoveredNodeId === entry.id}
               cut={cutIds.has(entry.id)}
               color={entry.treeColor}
               isAncestor={ancestorIds.has(entry.id)}
@@ -340,6 +343,7 @@ export function TreePanel({
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
+              onNodeHoverChange={onNodeHoverChange}
               hoverGuideScopeIds={guideScopeIdsById.get(entry.id)}
               hoverGuideLevel={hoverGuide?.level ?? null}
               hoverScopeEnabled={sortable && entry.type === 'menu'}
@@ -402,7 +406,10 @@ export function TreePanel({
             onPointerDownCapture={() => treeScrollRef.current?.focus({ preventScroll: true })}
             onKeyDown={handleKeyDown}
             onContextMenu={(e) => handleContextMenu(e, 'root', 'root-bg')}
-            onPointerLeave={clearHoverScope}
+            onPointerLeave={() => {
+              clearHoverScope();
+              if (hoveredNodeId) onNodeHoverChange?.(hoveredNodeId, false);
+            }}
             style={{ outline: 'none' }}
             data-media-node-id="root"
             data-media-node-type="root"
@@ -415,6 +422,7 @@ export function TreePanel({
                 : (project.projectName || 'Mon histoire')}
               level={0}
               selected={selectedIds.has('root')}
+              hovered={hoveredNodeId === 'root'}
               color={project.treeColor}
               dragging={!!activeId}
               containerDroppableId="container:root"
@@ -429,6 +437,7 @@ export function TreePanel({
               suppressSortAnimation={suppressSortAnimation}
               onSelect={handleNodeSelect}
               onContextMenu={handleContextMenu}
+              onNodeHoverChange={onNodeHoverChange}
             />
 
             {projectType === 'pack' ? renderEntries(rootEntries, 1, null) : null}
@@ -446,11 +455,13 @@ export function TreePanel({
                   label={`${project.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`}
                   level={0}
                   selected={selectedIds.has(END_NODE_ID)}
+                  hovered={hoveredNodeId === END_NODE_ID}
                   dragging={false}
                   navigationBadges={showNavigationBadgeColumn ? endNodeNavigationBadges : EMPTY_BADGES}
                   showNavigationBadgeColumn={showNavigationBadgeColumn}
                   onSelect={handleNodeSelect}
                   onContextMenu={handleContextMenu}
+                  onNodeHoverChange={onNodeHoverChange}
                 />
               </div>
             ) : null}

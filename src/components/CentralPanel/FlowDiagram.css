@@ -1240,6 +1240,13 @@
   border-color: var(--borderLt);
 }
 
+.fd-complete-node.is-linked-hover:not(.is-selected) {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 8px 18px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 :root[data-keyboard-navigation] .fd-complete-node:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
@@ -1400,7 +1407,7 @@
   left: 6px;
   right: 6px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-start;
   z-index: 2;
   visibility: hidden;
@@ -1453,9 +1460,26 @@
   box-shadow: var(--ring);
 }
 
-.fd-complete-node-action--collapse {
-  font-size: 17px;
-  font-weight: var(--weight-bold);
+.fd-complete-node > .fd-complete-node-regroup-wrap {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+}
+
+.fd-complete-node:has(.fd-complete-node-regroup-wrap) .fd-complete-node-actions {
+  right: 40px;
+}
+
+.fd-complete-node-action--regroup {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fd-complete-node-action--regroup svg {
+  width: 16px;
+  height: 16px;
 }
 
 .fd-complete-drag-ghost {

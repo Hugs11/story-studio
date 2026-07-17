@@ -55,9 +55,11 @@ export function DiagramPanel({
   onSelectNode,
   onSelectionChange,
   selectionRevealRequest,
+  hoveredNodeId = null,
+  onNodeHoverChange,
   searchFocusTrigger = 0,
-  expandedStoryGroupId = null,
-  onExpandedStoryGroupIdChange,
+  expandedStoryGroupIds = new Set(),
+  onExpandedStoryGroupIdsChange,
   variant = 'plein',
   showActionsBar = false,
   showHint = false,
@@ -91,9 +93,11 @@ export function DiagramPanel({
           onSelectNode={onSelectNode}
           onSelectionChange={onSelectionChange}
           selectionRevealRequest={selectionRevealRequest}
+          hoveredNodeId={hoveredNodeId}
+          onNodeHoverChange={onNodeHoverChange}
           searchFocusTrigger={`${searchFocusTrigger}:${localSearchFocusTrigger}`}
-          expandedStoryGroupId={expandedStoryGroupId}
-          onExpandedStoryGroupIdChange={onExpandedStoryGroupIdChange}
+          expandedStoryGroupIds={expandedStoryGroupIds}
+          onExpandedStoryGroupIdsChange={onExpandedStoryGroupIdsChange}
           onPreview={onPreview}
           onSimulateZip={onSimulateZip}
           onSimulateRoot={onSimulateRoot}

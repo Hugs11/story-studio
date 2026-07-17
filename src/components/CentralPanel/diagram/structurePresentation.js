@@ -4,16 +4,11 @@ export function getStoryGroupId(parentId) {
   return `${STORY_GROUP_PREFIX}${parentId}`;
 }
 
-export function toggleExclusiveStoryGroup(currentGroupId, requestedGroupId) {
-  return currentGroupId === requestedGroupId ? null : requestedGroupId;
-}
-
-export function getFolderCollapseIntent({ entryId, expandedStoryGroupId, isCollapsed }) {
-  const regroupStories = expandedStoryGroupId === getStoryGroupId(entryId);
-  return {
-    regroupStories,
-    toggleFolder: !regroupStories || isCollapsed,
-  };
+export function toggleStoryGroup(currentGroupIds, requestedGroupId) {
+  const nextGroupIds = new Set(currentGroupIds ?? []);
+  if (nextGroupIds.has(requestedGroupId)) nextGroupIds.delete(requestedGroupId);
+  else nextGroupIds.add(requestedGroupId);
+  return nextGroupIds;
 }
 
 function getChildren(entry) {
@@ -29,8 +24,6 @@ function projectEntry(entry, depth, options) {
     parentId: options.parentId ?? null,
     children: [],
   };
-  if (options.collapsedIds?.has(entry.id)) return projected;
-
   const children = getChildren(entry);
   const containers = children.filter((child) => child.type === 'menu' || child.type === 'zip');
   const otherLeaves = children.filter((child) => child.type !== 'menu' && child.type !== 'zip' && child.type !== 'story');
@@ -84,7 +77,6 @@ export function buildStructureProjection(project, options = {}) {
       : (project.rootName || 'Menu racine'),
     children: project.rootEntries ?? [],
   }, 0, {
-    collapsedIds: options.collapsedIds ?? new Set(),
     expandedStoryGroupIds: options.expandedStoryGroupIds ?? new Set(),
     parentId: null,
   });

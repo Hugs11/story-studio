@@ -20,7 +20,7 @@ export function DiagramLegend({ returnEdges, homeEdges, afterEndEdges, reference
       {afterEndEdges.length > 0 ? (
         <div className="fd-complete-legend-item">
           <span className="fd-complete-legend-line fd-complete-legend-line--after-end" />
-          <span>Après une fin</span>
+          <span>Retours</span>
         </div>
       ) : null}
       {referenceEdges.length > 0 ? (

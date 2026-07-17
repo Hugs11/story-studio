@@ -42,6 +42,8 @@ export function StructurePanel({
   validationIssues,
   treeSearchFocusTrigger,
   selectionRevealRequest,
+  hoveredNodeId,
+  onNodeHoverChange,
   onSelectNode,
   onSelectionChange,
   onFocusTreeSearch,
@@ -131,6 +133,8 @@ export function StructurePanel({
         onSelect={onSelectNode ?? onSelect}
         onSelectionChange={onSelectionChange}
         selectionRevealRequest={selectionRevealRequest}
+        hoveredNodeId={hoveredNodeId}
+        onNodeHoverChange={onNodeHoverChange}
         onReorder={onReorder}
         onMoveToMenu={onMoveToMenu}
         onAddMenu={onAddMenu}
