@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { presentLocalEndSteps } from '../src/components/CentralPanel/diagram/localEndStepPresentation.js';
+import { presentLocalEndSteps } from '../src/components/diagram/diagram/localEndStepPresentation.js';
 
 const layout = {
   width: 420,

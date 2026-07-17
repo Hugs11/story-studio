@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toggleDiagramSelection } from '../src/components/CentralPanel/diagram/diagramSelection.js';
+import { toggleDiagramSelection } from '../src/components/diagram/diagram/diagramSelection.js';
 
 test('toggleDiagramSelection ajoute un noeud a la multi et le rend actif', () => {
   const { next, nextSelectedId } = toggleDiagramSelection({

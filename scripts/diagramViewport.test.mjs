@@ -7,7 +7,7 @@ import {
   getDiagramViewportLayoutKey,
   getWheelZoomFactor,
   preserveViewportCenter,
-} from '../src/components/CentralPanel/diagram/viewportGeometry.js';
+} from '../src/components/diagram/diagram/viewportGeometry.js';
 
 test('le trackpad et le pincement zooment dans les deux directions', () => {
   assert.ok(getWheelZoomFactor({ deltaY: -10, deltaMode: 0 }) > 1);

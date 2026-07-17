@@ -25,7 +25,7 @@ import {
   isExplicitSilentStoryTitle,
   isStorySelectionAudioRequired,
 } from '../../store/storyTitleStage';
-import './CentralPanel.css';
+import './EditorPanel.css';
 
 // ─── Navigation helpers (used for computed props only) ────────────────────────
 

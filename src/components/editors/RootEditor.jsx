@@ -8,7 +8,7 @@ import { Info } from '../icons/LucideLocal';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { formatFrenchCount } from '../../utils/frenchText.js';
-import './CentralPanel.css';
+import './EditorPanel.css';
 import './RootEditor.css';
 
 export const RootEditor = memo(function RootEditor({ node, projectType, onUpdateRoot, onUpdateMedia, onUpdateStoryAudio }) {

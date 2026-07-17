@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Trash2 } from '../icons/LucideLocal';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { refTargetEntryId } from '../../store/navigationTargets';
-import './CentralPanel.css';
+import './EditorPanel.css';
 
 // Éditeur d'un nœud `ref` (« → nœud existant ») : change la cible, la présentation
 // (↪ continuer / ↩ revenir) ou supprime le lien. La cible n'est jamais affectée.

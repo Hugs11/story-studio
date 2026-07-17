@@ -50,6 +50,7 @@ export function StructurePanel({
   onSimulateNode,
   onSimulateZip,
   onSimulateRoot,
+  headerDragHandleProps = {},
 }) {
   const {
     onSelect, onReorder, onMoveToMenu,
@@ -76,9 +77,9 @@ export function StructurePanel({
   }, [projectIndex, projectType, selectedId]);
 
   return (
-    <div className="panel-left">
+    <div className="structure-panel">
       {projectType === 'pack' ? (
-        <div className="panel-left-header panel-left-header--actions">
+        <div className="structure-panel-header structure-panel-header--actions" {...headerDragHandleProps}>
           <StructureActionsBar
             variant="panel"
             targetMenuId={structureActionTargetMenuId}
@@ -121,7 +122,7 @@ export function StructurePanel({
         </div>
       ) : null}
       {projectType === 'pack' ? null : (
-        <div className="panel-left-header panel-left-header--empty" aria-hidden="true" />
+        <div className="structure-panel-header structure-panel-header--empty" {...headerDragHandleProps} />
       )}
       <TreePanel
         project={project}

@@ -8,7 +8,7 @@ import {
   IconStop,
   IconStory,
 } from '../components/TreePanel/TreeIcons';
-import { END_NODE_ID, TYPE_LABELS } from '../components/CentralPanel/flowDiagramLayout';
+import { END_NODE_ID, TYPE_LABELS } from '../components/diagram/flowDiagramLayout';
 
 function NodeTypeIcon({ type, icon }) {
   if (type === 'root') return <IconHouse />;
@@ -67,11 +67,12 @@ export function SettingsPanelHeader({
   selectedIds,
   project,
   onClose = null,
+  dragHandleProps = {},
 }) {
   const data = getHeaderData({ node, selectedId, selectedIds, project });
 
   return (
-    <div className="settings-panel-header">
+    <div className="settings-panel-header" {...dragHandleProps}>
       <div className="settings-panel-header-icon" aria-hidden="true">
         {data.type === 'multi' ? <IconArrowRight /> : <NodeTypeIcon type={data.type} icon={data.icon} />}
       </div>

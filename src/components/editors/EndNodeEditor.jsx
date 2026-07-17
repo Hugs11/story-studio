@@ -4,7 +4,7 @@ import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
 import { collectEndMessagePresentations } from '../../store/generatedNavigation';
 import { getEffectiveEndMessageControlState } from '../../store/endMessagePresentation';
-import './CentralPanel.css';
+import './EditorPanel.css';
 
 export function EndNodeEditor({
   endNodeName = 'Message de fin',

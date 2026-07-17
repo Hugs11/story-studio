@@ -6,9 +6,9 @@ import {
   buildStructureProjection,
   getStoryGroupId,
   toggleStoryGroup,
-} from '../src/components/CentralPanel/diagram/structurePresentation.js';
-import { getStructureLevelLayout } from '../src/components/CentralPanel/diagram/structureLevelLayout.js';
-import { getCompleteNavigationEdges } from '../src/components/CentralPanel/flowDiagramLayout.js';
+} from '../src/components/diagram/diagram/structurePresentation.js';
+import { getStructureLevelLayout } from '../src/components/diagram/diagram/structureLevelLayout.js';
+import { getCompleteNavigationEdges } from '../src/components/diagram/flowDiagramLayout.js';
 
 const metrics = {
   nodeWidth: 100,

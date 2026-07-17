@@ -2,13 +2,14 @@ import { Children, cloneElement, isValidElement, useLayoutEffect, useRef, useSta
 import { createPortal } from 'react-dom';
 import './Tooltip.css';
 
-export function Tooltip({ text, children, placement = 'below', wrap = false, className = '', style }) {
+export function Tooltip({ text, children, placement = 'below', wrap = false, className = '', style, disabled = false }) {
   const [pos, setPos] = useState(null);
   const timerRef = useRef(null);
   const wrapRef = useRef(null);
   const bubbleRef = useRef(null);
 
   function handleEnter() {
+    if (disabled) return;
     timerRef.current = setTimeout(() => {
       if (wrapRef.current) {
         const rect = wrapRef.current.getBoundingClientRect();
@@ -28,6 +29,12 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
     clearTimeout(timerRef.current);
     setPos(null);
   }
+
+  useLayoutEffect(() => {
+    if (!disabled) return;
+    clearTimeout(timerRef.current);
+    setPos(null);
+  }, [disabled]);
 
   useLayoutEffect(() => {
     if (!pos || !bubbleRef.current) return;
@@ -59,7 +66,7 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
   return (
     <div className={`tooltip-wrap${className ? ` ${className}` : ''}`} style={style} ref={wrapRef} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {renderChildrenWithoutNativeTitle()}
-      {pos && createPortal(
+      {!disabled && pos && createPortal(
         <div
           ref={bubbleRef}
           className={`tooltip-bubble${pos.placement === 'above' ? ' is-above' : ''}${wrap ? ' is-wrap' : ''}`}

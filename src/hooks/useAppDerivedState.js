@@ -6,7 +6,7 @@ import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { isTtsAvailable } from '../store/xttsSettings';
 import { getShortcutLabelMap } from '../store/keyboardShortcuts';
 import { getProjectFilePrefix } from '../utils/projectPrefix';
-import { END_NODE_ID } from '../components/CentralPanel/flowDiagramLayout';
+import { END_NODE_ID } from '../components/diagram/flowDiagramLayout';
 
 // Modèle de lecture du shell : sélection courante, validation, libellé de
 // statut, dirty state, capacités toolbar, labels de
@@ -26,7 +26,7 @@ export function useAppDerivedState({
   missingMedia,
   missingMediaSignature,
   dismissedMissingMediaSignature,
-  diagramView,
+  workspaceViewState,
   savedSnapshotRef,
   workspaceDirRef,
   keyboardShortcuts,
@@ -64,9 +64,9 @@ export function useAppDerivedState({
     return entry?.name || '(sans nom)';
   }, [projectIndex, projectType, store.project, store.selectedId]);
   const activePanelsLabel = [
-    diagramView.showTree && 'arbre',
-    diagramView.showSettings && 'réglages',
-    diagramView.showDiagram && 'diagramme',
+    workspaceViewState.showTree && 'arbre',
+    workspaceViewState.showSettings && 'réglages',
+    workspaceViewState.showDiagram && 'diagramme',
   ].filter(Boolean).join(' + ');
   const statusText = projectType === null
     ? 'Choisis un type de projet'

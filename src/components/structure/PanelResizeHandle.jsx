@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { startResize } from './panelResize';
+import { getKeyboardResizeDelta, startResize } from './panelResize';
 
 const KEYBOARD_STEP = 16;
 
@@ -38,9 +38,9 @@ export function PanelResizeHandle({
   const handleKeyDown = useCallback((event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    const delta = event.key === 'ArrowRight' ? KEYBOARD_STEP : -KEYBOARD_STEP;
+    const delta = getKeyboardResizeDelta(event.key, direction, KEYBOARD_STEP);
     applyWidth(value + delta);
-  }, [applyWidth, value]);
+  }, [applyWidth, direction, value]);
 
   const handleDoubleClick = useCallback(() => {
     applyWidth(defaultValue);

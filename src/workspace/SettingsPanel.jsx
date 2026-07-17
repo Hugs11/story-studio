@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { NodeEditorContent } from './NodeEditorContent';
-import { EndNodeEditor } from './EndNodeEditor';
-import { END_NODE_ID } from '../TreePanel/TreePanel';
-import { collectAllStories } from '../../store/projectModel';
-import { useProjectActions } from '../../store/ProjectActionsContext';
-import './CentralPanel.css';
+import { NodeEditorContent } from '../components/editors/NodeEditorContent';
+import { EndNodeEditor } from '../components/editors/EndNodeEditor';
+import { END_NODE_ID } from '../components/TreePanel/TreePanel';
+import { collectAllStories } from '../store/projectModel';
+import { useProjectActions } from '../store/ProjectActionsContext';
+import '../components/editors/EditorPanel.css';
 
-export function CentralPanel({
+export function SettingsPanel({
   node,
   selectedId,
   selectedIds,
@@ -115,9 +115,9 @@ export function CentralPanel({
   }
 
   return (
-    <div className="panel-center">
+    <div className="settings-panel">
       {header}
-      <div className="center-body">
+      <div className="settings-panel-body">
         {content}
       </div>
     </div>

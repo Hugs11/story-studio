@@ -37,6 +37,7 @@ export const KEYS = Object.freeze({
   DIAGRAM_SHOW_TREE: 'diagramShowTree',
   DIAGRAM_SHOW_SETTINGS: 'diagramShowSettings',
   DIAGRAM_SHOW_DIAGRAM: 'diagramShowDiagram',
+  WORKSPACE_PANEL_ORDER: 'workspacePanelOrder',
   SETTINGS_PANEL_WIDTH: 'settingsPanelWidth',
   TREE_PANEL_WIDTH: 'treePanelWidth',
   FLOW_DIAGRAM_SHOW_RETURNS: 'fd_show_returns',
@@ -89,7 +90,7 @@ export function runSettingsMigrations() {
 
   // Vague 2 : la machine « ferme/colonne/plein » + slot gauche est remplacée par
   // 3 bascules de panneaux indépendantes (showTree/showSettings/showDiagram, dont
-  // les défauts sont fournis par useDiagramViewState). La vue n'est pas une donnée
+  // les défauts sont fournis par useWorkspaceViewState). La vue n'est pas une donnée
   // projet : on purge simplement les clés de l'ancien modèle, sans migrer de valeur.
   remove('diagramViewState');
   remove('diagramLastOpenState');
