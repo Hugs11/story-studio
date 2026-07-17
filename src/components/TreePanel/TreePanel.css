@@ -235,6 +235,16 @@
   background: transparent;
 }
 
+/* Le même état est piloté par le diagramme lorsque les deux vues sont
+   ouvertes : il reproduit le survol local sans simuler une sélection. */
+.tree-item.is-linked-hover:not(.active) .tree-item-body {
+  background: var(--tree-scope-hover-bg);
+}
+
+.tree-item.is-linked-hover:not(.active) .ti-icon {
+  color: color-mix(in srgb, var(--accent) 72%, var(--muted));
+}
+
 /* ── Selection state ─────────────────────────────────────────────────────── */
 .tree-item.active {
   background: var(--accent-dim);
@@ -277,6 +287,14 @@
 .tree-item.is-colored.active .tree-item-body {
   background: transparent;
   box-shadow: none;
+}
+
+.tree-item.is-colored.is-linked-hover:not(.active) {
+  background: color-mix(in srgb, var(--tree-node-color) 40%, var(--accent-dim));
+}
+
+.tree-item.is-colored.is-linked-hover:not(.active) .tree-item-body {
+  background: transparent;
 }
 
 .tree-item.active .ti-icon {

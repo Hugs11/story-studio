@@ -13,10 +13,7 @@ import {
   END_NODE_ID,
   TYPE_LABELS,
 } from './flowDiagramLayout';
-import {
-  buildChildSummaryMap,
-  buildFocusProject,
-} from './fullDiagramFocus.js';
+import { buildFocusProject } from './fullDiagramFocus.js';
 import { FullDiagramNode } from './FullDiagramNode.jsx';
 import { StructureActionsBar } from '../structure/StructureActionsBar.jsx';
 import { useDiagramViewport } from './diagram/useDiagramViewport';
@@ -31,15 +28,15 @@ import { DiagramSearch } from './diagram/DiagramSearch';
 import {
   buildNavigationNodeRoles,
   collectActiveNavigationPathEdges,
+  findPrimaryStoryNavigationEdge,
   navigationEdgeTouchesNode,
 } from './diagram/navigationPresentation';
 import { presentLocalEndSteps } from './diagram/localEndStepPresentation';
 import {
   buildStructureFocus,
-  getFolderCollapseIntent,
   getStoryGroupId,
   getStructureEdgeId,
-  toggleExclusiveStoryGroup,
+  toggleStoryGroup,
 } from './diagram/structurePresentation';
 import { getStructureLevelLayout } from './diagram/structureLevelLayout';
 import { StructureFocusBar } from './diagram/StructureFocusBar';
@@ -55,9 +52,11 @@ export function CompleteDiagramTree({
   onSelectNode,
   onSelectionChange,
   selectionRevealRequest = null,
+  hoveredNodeId = null,
+  onNodeHoverChange,
   searchFocusTrigger = 0,
-  expandedStoryGroupId = null,
-  onExpandedStoryGroupIdChange,
+  expandedStoryGroupIds = new Set(),
+  onExpandedStoryGroupIdsChange,
   onPreview,
   onSimulateZip,
   onSimulateRoot,
@@ -97,7 +96,6 @@ export function CompleteDiagramTree({
   const [pinnedNavigationEdgeId, setPinnedNavigationEdgeId] = useState(null);
   const [navigationTooltip, setNavigationTooltip] = useState(null);
   const [focusMode, setFocusMode] = useState(false);
-  const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [hoveredStructureEdgeId, setHoveredStructureEdgeId] = useState(null);
   const [pinnedStructureEdgeId, setPinnedStructureEdgeId] = useState(null);
   const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
@@ -112,30 +110,19 @@ export function CompleteDiagramTree({
     if (!selectedId && focusMode) setFocusMode(false);
   }, [focusMode, selectedId]);
 
-  const toggleCollapse = useCallback((entryId) => {
-    const intent = getFolderCollapseIntent({
-      entryId,
-      expandedStoryGroupId,
-      isCollapsed: collapsedIds.has(entryId),
-    });
-    if (intent.regroupStories) onExpandedStoryGroupIdChange?.(null);
-    if (!intent.toggleFolder) return;
-
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(entryId)) next.delete(entryId);
-      else next.add(entryId);
-      return next;
-    });
-  }, [collapsedIds, expandedStoryGroupId, onExpandedStoryGroupIdChange]);
+  const handleRegroupStories = useCallback((entryId) => {
+    onExpandedStoryGroupIdsChange?.(
+      toggleStoryGroup(expandedStoryGroupIds, getStoryGroupId(entryId)),
+    );
+  }, [expandedStoryGroupIds, onExpandedStoryGroupIdsChange]);
 
   const handleShowReturnsChange = useCallback((checked) => {
     setShowReturns(checked);
     write(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, checked ? 'true' : 'false');
   }, []);
   const handleToggleStoryGroup = useCallback((groupId) => {
-    onExpandedStoryGroupIdChange?.(toggleExclusiveStoryGroup(expandedStoryGroupId, groupId));
-  }, [expandedStoryGroupId, onExpandedStoryGroupIdChange]);
+    onExpandedStoryGroupIdsChange?.(toggleStoryGroup(expandedStoryGroupIds, groupId));
+  }, [expandedStoryGroupIds, onExpandedStoryGroupIdsChange]);
 
   // Le pan du fond sert a naviguer dans le canvas, pas a changer le modele de
   // selection : on conserve la selection globale (l'arbre controle refleterait
@@ -167,10 +154,6 @@ export function CompleteDiagramTree({
     () => (focusMode ? buildFocusProject(project, selectedId, END_NODE_ID, projectIndex) : project),
     [focusMode, project, projectIndex, selectedId],
   );
-  const childSummaryById = useMemo(
-    () => buildChildSummaryMap(project.rootEntries ?? []),
-    [project.rootEntries],
-  );
   const structureActionTargetMenuId = useMemo(() => {
     if (!selectedId || selectedId === 'root' || selectedId === END_NODE_ID) return null;
     const entry = findEntryById(project, selectedId, projectIndex);
@@ -178,16 +161,14 @@ export function CompleteDiagramTree({
     return findParentMenuId(project, selectedId, projectIndex) ?? null;
   }, [project, projectIndex, selectedId]);
   const layout = useMemo(() => getStructureLevelLayout(visibleProject, getCompleteMetrics(compactMode), {
-    collapsedIds,
-    expandedStoryGroupIds: expandedStoryGroupId ? new Set([expandedStoryGroupId]) : new Set(),
-  }), [visibleProject, compactMode, collapsedIds, expandedStoryGroupId]);
+    expandedStoryGroupIds,
+  }), [visibleProject, compactMode, expandedStoryGroupIds]);
   const viewportLayoutKey = useMemo(() => getDiagramViewportLayoutKey(layout, {
     compactMode,
     focusMode,
     selectedId,
-    collapsedIds,
-    expandedStoryGroupId,
-  }), [collapsedIds, compactMode, expandedStoryGroupId, focusMode, layout, selectedId]);
+    expandedStoryGroupIds,
+  }), [compactMode, expandedStoryGroupIds, focusMode, layout, selectedId]);
   const structureEdgePaths = useMemo(() => layout.edges.map((edge) => ({
     ...edge,
     id: getStructureEdgeId(edge),
@@ -233,18 +214,7 @@ export function CompleteDiagramTree({
   const queueRevealNode = useCallback((nodeId) => {
     if (!nodeId) return;
     setPendingRevealNodeId(nodeId);
-    if (nodeId === 'root' || nodeId === END_NODE_ID) return;
-    setCollapsedIds((current) => {
-      const next = new Set(current);
-      let changed = false;
-      let parentId = projectIndex.parentMenuById.get(nodeId) ?? null;
-      while (parentId != null) {
-        changed = next.delete(parentId) || changed;
-        parentId = projectIndex.parentMenuById.get(parentId) ?? null;
-      }
-      return changed ? next : current;
-    });
-  }, [projectIndex]);
+  }, []);
   const lastSelectionRevealRequestRef = useRef(null);
   useEffect(() => {
     const requestId = selectionRevealRequest?.requestId;
@@ -287,37 +257,28 @@ export function CompleteDiagramTree({
     edge.source || 'configured',
     edge.from,
     edge.to,
+    edge.contextualStoryId || '',
     edge.label || '',
     Math.round(edge.x1),
     Math.round(edge.y1),
   ].join(':'), []);
-  const activeNavigationEdgeId = hoveredNavigationEdgeId ?? pinnedNavigationEdgeId;
+  const selectedStoryNavigationEdge = useMemo(
+    () => findPrimaryStoryNavigationEdge(selectedId, navigationEdges),
+    [navigationEdges, selectedId],
+  );
+  const interactiveNavigationEdgeId = hoveredNavigationEdgeId ?? pinnedNavigationEdgeId;
+  const activeNavigationEdgeId = interactiveNavigationEdgeId
+    ?? (selectedStoryNavigationEdge ? edgeKey(selectedStoryNavigationEdge) : null);
   const activeNavigationEdge = useMemo(
     () => navigationEdges.find((edge) => edgeKey(edge) === activeNavigationEdgeId) ?? null,
     [activeNavigationEdgeId, edgeKey, navigationEdges],
   );
-  const getNavigationEdgeForNode = useCallback((nodeId) => {
-    if (!showReturns || !nodeId) return null;
-    const priority = { 'after-end': 0, sequence: 0, return: 1, reference: 1, home: 2 };
-    const byPriority = (a, b) => (priority[a.kind] ?? 9) - (priority[b.kind] ?? 9);
-    const outgoing = navigationEdges
-      .filter((edge) => navigationEdgeTouchesNode(edge, nodeId))
-      .sort(byPriority);
-    if (outgoing.length > 0) return outgoing[0];
-    const incoming = navigationEdges
-      .filter((edge) => edge.to === nodeId || edge.endNodeTargetId === nodeId)
-      .sort(byPriority);
-    return incoming[0] ?? null;
-  }, [navigationEdges, showReturns]);
   const handleSelectNode = useCallback((nodeId) => {
-    if (showReturns) {
-      const edge = getNavigationEdgeForNode(nodeId);
-      setPinnedNavigationEdgeId(edge ? edgeKey(edge) : null);
-      setHoveredNavigationEdgeId(null);
-      setNavigationTooltip(null);
-    }
+    setPinnedNavigationEdgeId(null);
+    setHoveredNavigationEdgeId(null);
+    setNavigationTooltip(null);
     selectNode?.(nodeId);
-  }, [edgeKey, getNavigationEdgeForNode, selectNode, showReturns]);
+  }, [selectNode]);
   const handleSearchChoose = useCallback((nodeId) => {
     onSelectionChange?.(new Set([nodeId]));
     queueRevealNode(nodeId);
@@ -345,7 +306,7 @@ export function CompleteDiagramTree({
   );
   const activeNavigationNodeIds = activeNavigationNodeRoles.activeNodeIds;
   const activeNavigationMemberNodeIds = activeNavigationNodeRoles.memberNodeIds;
-  const hasActiveNavigationEdge = !!activeNavigationEdge;
+  const shouldDimNavigation = !!interactiveNavigationEdgeId;
   const activeEndNodeContinuationEdge = useMemo(() => {
     if (!activeNavigationEdge || activeNavigationEdge.to !== END_NODE_ID || !activeNavigationEdge.endNodeTargetId) return null;
     if (navigationEdges.some((edge) => edge.from === END_NODE_ID && edge.to === activeNavigationEdge.endNodeTargetId)) return null;
@@ -389,9 +350,6 @@ export function CompleteDiagramTree({
       const source = nodeLabelById.get(incomingEndEdge.from) ?? incomingEndEdge.from;
       const targetId = edge.displayTo ?? edge.to;
       const target = nodeLabelById.get(targetId) ?? targetId;
-      if (incomingEndEdge.source === 'global-group') {
-        return `${incomingEndEdge.chainStoryIds?.length ?? 0} histoires → message de fin global → « ${target} »`;
-      }
       return `À la fin de « ${source} » → message de fin → « ${target} »`;
     }
     const from = nodeLabelById.get(edge.from) ?? edge.from;
@@ -399,15 +357,9 @@ export function CompleteDiagramTree({
     const to = nodeLabelById.get(targetId) ?? targetId;
     if (edge.to === END_NODE_ID) {
       const finalTarget = edge.endNodeTargetId ? (nodeLabelById.get(edge.endNodeTargetId) ?? edge.endNodeTargetId) : null;
-      if (edge.source === 'global-group') {
-        return `${edge.chainStoryIds?.length ?? 0} histoires → message de fin global${finalTarget ? ` → « ${finalTarget} »` : ''}`;
-      }
       return finalTarget
         ? `À la fin de « ${from} » → message de fin → « ${finalTarget} »`
         : `À la fin de « ${from} » → message de fin`;
-    }
-    if (edge.from === END_NODE_ID && edge.source === 'global-context-group') {
-      return `Après le message de fin global → reprise contextuelle dans « ${to} » (${edge.chainStoryIds?.length ?? 0} histoires)`;
     }
     const kindLabel = edge.kind === 'home'
       ? 'Retour Home'
@@ -443,8 +395,8 @@ export function CompleteDiagramTree({
   useLayoutEffect(() => {
     if (!pendingRevealNodeId) return;
     const hiddenGroupId = layout.hiddenStoryGroupByStoryId?.get(pendingRevealNodeId) ?? null;
-    if (hiddenGroupId && expandedStoryGroupId !== hiddenGroupId) {
-      onExpandedStoryGroupIdChange?.(hiddenGroupId);
+    if (hiddenGroupId && !expandedStoryGroupIds.has(hiddenGroupId)) {
+      onExpandedStoryGroupIdsChange?.(toggleStoryGroup(expandedStoryGroupIds, hiddenGroupId));
       return;
     }
     const targetNode = nodeById.get(pendingRevealNodeId);
@@ -453,10 +405,10 @@ export function CompleteDiagramTree({
     }
   }, [
     centerViewportOnNode,
-    expandedStoryGroupId,
+    expandedStoryGroupIds,
     layout.hiddenStoryGroupByStoryId,
     nodeById,
-    onExpandedStoryGroupIdChange,
+    onExpandedStoryGroupIdsChange,
     pendingRevealNodeId,
   ]);
 
@@ -484,8 +436,8 @@ export function CompleteDiagramTree({
   }, [hoveredStructureEdgeId, layout.edges, pinnedStructureEdgeId]);
 
   useEffect(() => {
-    activeNavigationEdgeIdRef.current = activeNavigationEdgeId;
-  }, [activeNavigationEdgeId]);
+    activeNavigationEdgeIdRef.current = interactiveNavigationEdgeId;
+  }, [interactiveNavigationEdgeId]);
 
   useEffect(() => {
     activeStructureEdgeIdRef.current = activeStructureEdgeId;
@@ -616,10 +568,8 @@ export function CompleteDiagramTree({
       focusMode={focusMode}
       onFocusModeToggle={() => setFocusMode((current) => !current)}
       canFocusBranch={!!selectedId}
-      hasCollapsedNodes={collapsedIds.size > 0}
-      onOpenAll={() => setCollapsedIds(new Set())}
-      hasExpandedStoryGroups={!!expandedStoryGroupId}
-      onRegroupStories={() => onExpandedStoryGroupIdChange?.(null)}
+      hasExpandedStoryGroups={expandedStoryGroupIds.size > 0}
+      onCollapseAllStories={() => onExpandedStoryGroupIdsChange?.(new Set())}
     />
   );
 
@@ -697,7 +647,7 @@ export function CompleteDiagramTree({
               {navigationEdges.map((edge) => {
                 const id = edgeKey(edge);
                 const isActive = activeNavigationEdgeIds.has(id);
-                const isDimmed = hasActiveNavigationEdge && !isActive;
+                const isDimmed = shouldDimNavigation && !isActive;
                 const d = edge.route === 'same-row-return'
                   ? `M ${edge.x1} ${edge.y1} L ${edge.x1} ${edge.railY} L ${edge.x2} ${edge.railY} L ${edge.x2} ${edge.y2}`
                   : `M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.c1y} ${edge.x2} ${edge.c2y} ${edge.x2} ${edge.y2}`;
@@ -755,7 +705,7 @@ export function CompleteDiagramTree({
               {navigationEdges.filter((edge) => edge.label).map((edge) => (
                 <text
                   key={`label-${edgeKey(edge)}`}
-                  className={`fd-complete-edge-label fd-complete-edge-label--${edge.kind} ${activeNavigationEdgeIds.has(edgeKey(edge)) ? 'is-active' : hasActiveNavigationEdge ? 'is-dimmed' : ''}`}
+                  className={`fd-complete-edge-label fd-complete-edge-label--${edge.kind} ${activeNavigationEdgeIds.has(edgeKey(edge)) ? 'is-active' : shouldDimNavigation ? 'is-dimmed' : ''}`}
                   x={edge.labelX}
                   y={edge.labelY}
                   textAnchor="middle"
@@ -782,7 +732,7 @@ export function CompleteDiagramTree({
               return (
                 <div
                   key={node.entry.id}
-                  className={`fd-complete-placed-node ${isNavigationActive ? 'is-navigation-active' : isNavigationMember ? 'is-navigation-member' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''} ${activeStructureNodeIds.has(node.entry.id) ? 'is-structure-active' : structureFocus?.siblingNodeIds.has(node.entry.id) ? 'is-structure-sibling' : hasActiveStructureEdge ? 'is-structure-dimmed' : ''}`}
+                  className={`fd-complete-placed-node ${isNavigationActive ? 'is-navigation-active' : isNavigationMember ? 'is-navigation-member' : shouldDimNavigation ? 'is-navigation-dimmed' : ''} ${activeStructureNodeIds.has(node.entry.id) ? 'is-structure-active' : structureFocus?.siblingNodeIds.has(node.entry.id) ? 'is-structure-sibling' : hasActiveStructureEdge ? 'is-structure-dimmed' : ''}`}
                   style={{ left: node.x, top: node.y, width: node.width }}
                 >
                 {node.entry.type === 'story-group' ? (
@@ -796,6 +746,7 @@ export function CompleteDiagramTree({
                   compactMode={compactMode}
                   selectedId={selectedId}
                   selectedIds={selectedIds}
+                  hovered={hoveredNodeId === node.entry.id}
                   cutIds={cutIds}
                   draggingId={draggingId}
                   dragOverContainerId={dragOverContainerId}
@@ -804,13 +755,12 @@ export function CompleteDiagramTree({
                   onContextMenu={handleContextMenu}
                   onPreview={onPreview}
                   onDragPointerDown={handleDragPointerDown}
-                  onToggleCollapse={toggleCollapse}
+                  onRegroupStories={handleRegroupStories}
+                  onNodeHoverChange={onNodeHoverChange}
                   viewportRootRef={containerRef}
                   isRoot={node.entry.id === 'root'}
                   rootImage={project.rootImage}
-                  isCollapsed={collapsedIds.has(node.entry.id)}
-                  hasExpandedStoryGroup={expandedStoryGroupId === getStoryGroupId(node.entry.id)}
-                  childSummary={childSummaryById.get(node.entry.id) ?? null}
+                  hasExpandedStoryGroup={expandedStoryGroupIds.has(getStoryGroupId(node.entry.id))}
                 />
                 )}
                 </div>
@@ -820,7 +770,7 @@ export function CompleteDiagramTree({
               <button
                 key={node.id}
                 type="button"
-                className={`fd-local-end-node fd-local-end-node--${node.kind} ${activeNavigationNodeIds.has(node.id) ? 'is-navigation-active' : hasActiveNavigationEdge ? 'is-navigation-dimmed' : ''}`}
+                className={`fd-local-end-node fd-local-end-node--${node.kind} ${activeNavigationNodeIds.has(node.id) ? 'is-navigation-active' : shouldDimNavigation ? 'is-navigation-dimmed' : ''}`}
                 style={{ left: node.x, top: node.y, width: node.width, height: node.height }}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {

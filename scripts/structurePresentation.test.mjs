@@ -4,9 +4,8 @@ import assert from 'node:assert/strict';
 import {
   buildStructureFocus,
   buildStructureProjection,
-  getFolderCollapseIntent,
   getStoryGroupId,
-  toggleExclusiveStoryGroup,
+  toggleStoryGroup,
 } from '../src/components/CentralPanel/diagram/structurePresentation.js';
 import { getStructureLevelLayout } from '../src/components/CentralPanel/diagram/structureLevelLayout.js';
 import { getCompleteNavigationEdges } from '../src/components/CentralPanel/flowDiagramLayout.js';
@@ -80,46 +79,50 @@ test('un dossier avec une seule histoire reste fermé jusqu’à son ouverture',
   assert.equal(opened.children[0].children[0].entry.type, 'story');
 });
 
-test('ouvrir un groupe ferme le précédent et un second clic le referme', () => {
+test('plusieurs groupes peuvent rester ouverts et un second clic referme seulement le groupe ciblé', () => {
   const groupA = getStoryGroupId('menu-a');
   const groupB = getStoryGroupId('menu-b');
+  const initial = new Set();
 
-  assert.equal(toggleExclusiveStoryGroup(null, groupA), groupA);
-  assert.equal(toggleExclusiveStoryGroup(groupA, groupB), groupB);
-  assert.equal(toggleExclusiveStoryGroup(groupB, groupB), null);
+  const withA = toggleStoryGroup(initial, groupA);
+  const withBoth = toggleStoryGroup(withA, groupB);
+  const withBOnly = toggleStoryGroup(withBoth, groupA);
+
+  assert.deepEqual([...withA], [groupA]);
+  assert.deepEqual([...withBoth], [groupA, groupB]);
+  assert.deepEqual([...withBOnly], [groupB]);
+  assert.equal(initial.size, 0);
 });
 
-test('le premier repli du dossier regroupe ses histoires avant de masquer ses enfants', () => {
-  const groupId = getStoryGroupId('menu-a');
-
-  assert.deepEqual(getFolderCollapseIntent({
-    entryId: 'menu-a',
-    expandedStoryGroupId: groupId,
-    isCollapsed: false,
-  }), {
-    regroupStories: true,
-    toggleFolder: false,
+test('la projection conserve simultanément les histoires de plusieurs dossiers dépliés', () => {
+  const twoFolderProject = {
+    rootName: 'Racine',
+    rootEntries: [
+      {
+        id: 'menu-a',
+        type: 'menu',
+        name: 'Dossier A',
+        children: [{ id: 'story-a', type: 'story', name: 'Histoire A' }],
+      },
+      {
+        id: 'menu-b',
+        type: 'menu',
+        name: 'Dossier B',
+        children: [{ id: 'story-b', type: 'story', name: 'Histoire B' }],
+      },
+    ],
+  };
+  const projection = buildStructureProjection(twoFolderProject, {
+    expandedStoryGroupIds: new Set([
+      getStoryGroupId('menu-a'),
+      getStoryGroupId('menu-b'),
+    ]),
   });
 
-  assert.deepEqual(getFolderCollapseIntent({
-    entryId: 'menu-a',
-    expandedStoryGroupId: null,
-    isCollapsed: false,
-  }), {
-    regroupStories: false,
-    toggleFolder: true,
-  });
-});
-
-test('rouvrir un dossier dans l ancien état incohérent restaure aussi le regroupement', () => {
-  assert.deepEqual(getFolderCollapseIntent({
-    entryId: 'menu-a',
-    expandedStoryGroupId: getStoryGroupId('menu-a'),
-    isCollapsed: true,
-  }), {
-    regroupStories: true,
-    toggleFolder: true,
-  });
+  assert.deepEqual(
+    projection.children.map((menu) => menu.children.map((child) => child.entry.id)),
+    [['story-a'], ['story-b']],
+  );
 });
 
 test('le layout Niveaux donne le même Y aux nœuds de même profondeur', () => {
@@ -156,12 +159,6 @@ test('quatorze histoires restent synthétiques puis se déploient sur un seul ni
   assert.equal(expandedStories.length, 14);
   assert.equal(new Set(expandedStories.map((node) => node.y)).size, 1);
   assert.ok(expanded.width > aggregated.width);
-});
-
-test('un dossier replié coupe sa projection sous le niveau du dossier', () => {
-  const projection = buildStructureProjection(project(), { collapsedIds: new Set(['menu-a']) });
-
-  assert.equal(projection.children[0].children.length, 0);
 });
 
 test('le message de fin reste visible dans une bande dédiée hors des niveaux structurels', () => {

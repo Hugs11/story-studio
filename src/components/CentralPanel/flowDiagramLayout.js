@@ -123,6 +123,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
             to: effectiveReturnTarget,
             kind: 'after-end',
             source: 'global-end',
+            contextualStoryId: entry.id,
             parentMenuId: parentMenu?.id ?? null,
             endNodeTargetId: diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId, project),
           });
@@ -159,6 +160,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
           to: effectiveReturnTarget,
           kind: 'after-end',
           source: 'end-node',
+          contextualStoryId: entry.id,
           endNodeTargetId: diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId, project),
         });
       } else {
@@ -184,7 +186,10 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
       const homeTarget = entry.returnOnHome
         ? resolveStoryDiagramTarget(entry.returnOnHome, entry, parentMenu, rootEntries, effectiveReturnTarget, project)
         : null;
-      if (homeTarget && homeTarget !== effectiveReturnTarget) {
+      // Une carte story fusionne son stage de sélection et son stage de lecture.
+      // Un Home play → sélection de cette même story est donc interne à la carte :
+      // dessiner une boucle suggérerait à tort une navigation ou une fin locale.
+      if (homeTarget && homeTarget !== entry.id && homeTarget !== effectiveReturnTarget) {
         transitions.push({ from: entry.id, to: homeTarget, kind: 'home', source: 'configured' });
       }
       continue;
@@ -262,48 +267,17 @@ export function getCompleteNavigationEdges(project, layout) {
     const endNode = nodeMap.get(END_NODE_ID);
     if (endNode) {
       const endNodeReturn = getGeneratedEndNodeReturnNavigation(project);
-      let contextualReturnCount = 0;
-      if (endNodeReturn?.isContextual) {
-        const collectContextualEndNodeEdges = (entries, parentMenu = null) => {
-          for (const entry of entries ?? []) {
-            if (entry.type === 'story') {
-              const navigation = getGeneratedStoryNavigation(entry, parentMenu, project, project.rootEntries ?? []);
-              if (!navigation.usesEndNode || !navigation.endNodeReturn.effectiveTargetId) continue;
-              const to = diagramNodeIdFromGeneratedTarget(navigation.endNodeReturn.effectiveTargetId, project);
-              if (to) contextualReturnCount += 1;
-            } else if (entry.type === 'menu') {
-              collectContextualEndNodeEdges(entry.children ?? [], entry);
-            }
-          }
-        };
-        collectContextualEndNodeEdges(project.rootEntries ?? []);
-      }
-
       const contextualSourceEdges = regularEdges
-        .filter((edge) => edge.to === END_NODE_ID && edge.endNodeTargetId)
-      const globalGroups = new Map();
-      for (const edge of contextualSourceEdges) {
-        if (edge.source !== 'global-end' || !edge.parentMenuId) continue;
-        const group = globalGroups.get(edge.parentMenuId) ?? [];
-        group.push(edge);
-        globalGroups.set(edge.parentMenuId, group);
-      }
-      const groupedGlobalEdges = new Set();
-      const contextualTargets = [];
-      for (const [parentMenuId, edges] of globalGroups) {
-        if (edges.length < 3) continue;
-        edges.forEach((edge) => groupedGlobalEdges.add(edge));
-        contextualTargets.push({
-          to: parentMenuId,
-          source: 'global-context-group',
-          chainStoryIds: edges.map((edge) => edge.from),
-        });
-      }
-      for (const edge of contextualSourceEdges) {
-        if (groupedGlobalEdges.has(edge)) continue;
-        contextualTargets.push({ to: edge.endNodeTargetId, source: 'contextual' });
-      }
-      const endNodeEdges = contextualReturnCount > 0 && contextualTargets.length > 0
+        .filter((edge) => edge.to === END_NODE_ID && edge.endNodeTargetId);
+      const contextualTargets = contextualSourceEdges.map((edge) => ({
+        to: edge.endNodeTargetId,
+        source: 'contextual',
+        contextualStoryId: edge.contextualStoryId ?? edge.from,
+      }));
+      // Une reprise `next_story` dépend de l'histoire qui a atteint le message
+      // de fin. Si cette histoire est cachée dans un dossier replié, aucun
+      // raccourci synthétique ne peut représenter fidèlement son trajet.
+      const endNodeEdges = endNodeReturn?.isContextual
         ? contextualTargets
         : endNodeReturn ? [{
           to: diagramNodeIdFromGeneratedTarget(endNodeReturn?.targetId, project) ?? getRuntimeRootDiagramTarget(project),
@@ -312,8 +286,9 @@ export function getCompleteNavigationEdges(project, layout) {
 
       const seenEndNodeTargets = new Set();
       for (const edge of endNodeEdges) {
-        if (seenEndNodeTargets.has(edge.to)) continue;
-        seenEndNodeTargets.add(edge.to);
+        const routeKey = edge.contextualStoryId ? `${edge.contextualStoryId}\u0000${edge.to}` : edge.to;
+        if (seenEndNodeTargets.has(routeKey)) continue;
+        seenEndNodeTargets.add(routeKey);
         const displayTo = visibleTargetId(edge.to);
         const selfLoop = edge.to === END_NODE_ID;
         const returnTarget = selfLoop ? endNode : (nodeMap.get(displayTo) ?? nodeMap.get('root'));
@@ -335,6 +310,7 @@ export function getCompleteNavigationEdges(project, layout) {
           displayTo: displayTo !== edge.to ? displayTo : undefined,
           kind: 'after-end',
           source: edge.source,
+          contextualStoryId: edge.contextualStoryId,
           chainStoryIds: edge.chainStoryIds,
           label: edge.label,
           x1: ex,
@@ -350,7 +326,7 @@ export function getCompleteNavigationEdges(project, layout) {
     }
   }
 
-  return compactNavigationPresentation(project, regularEdges, layout);
+  return compactNavigationPresentation(project, regularEdges);
 }
 
 export { canMoveEntryToContainer };

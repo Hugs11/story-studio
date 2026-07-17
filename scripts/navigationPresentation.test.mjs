@@ -5,6 +5,7 @@ import {
   buildNavigationNodeRoles,
   collectActiveNavigationPathEdges,
   compactNavigationPresentation,
+  findPrimaryStoryNavigationEdge,
   navigationEdgeTouchesNode,
 } from '../src/components/CentralPanel/diagram/navigationPresentation.js';
 
@@ -12,7 +13,7 @@ function story(id) {
   return { id, type: 'story' };
 }
 
-test('une playlist avec message de fin garde seulement sa sortie réelle', () => {
+test('une playlist avec messages de fin garde chaque sortie visible', () => {
   const project = {
     rootEntries: [{
       id: 'menu',
@@ -28,14 +29,11 @@ test('une playlist avec message de fin garde seulement sa sortie réelle', () =>
 
   const presented = compactNavigationPresentation(project, edges);
 
-  assert.equal(presented.length, 1);
-  assert.deepEqual(presented[0], {
-    from: 'three',
-    to: 'menu',
-    kind: 'after-end',
-    source: 'prompt-chain',
-    chainStoryIds: ['one', 'two', 'three'],
-  });
+  assert.deepEqual(presented, [
+    { from: 'one', to: 'two', kind: 'after-end', source: 'prompt' },
+    { from: 'two', to: 'three', kind: 'after-end', source: 'prompt' },
+    { from: 'three', to: 'menu', kind: 'after-end', source: 'prompt' },
+  ]);
   assert.equal(navigationEdgeTouchesNode(presented[0], 'one'), true);
 });
 
@@ -70,7 +68,7 @@ test('une séquence de fin utilise la même sémantique de sortie', () => {
   }]);
 });
 
-test('un message global partagé est regroupé par dossier avant de rejoindre son nœud', () => {
+test('un message global partagé conserve les parcours individuels visibles', () => {
   const project = {
     rootEntries: [{
       id: 'menu',
@@ -78,29 +76,26 @@ test('un message global partagé est regroupé par dossier avant de rejoindre so
       children: [story('one'), story('two'), story('three')],
     }],
   };
-  const layout = {
-    metrics: { nodeVisualHeight: 62 },
-    nodes: [
-      { entry: { id: 'menu' }, x: 100, y: 20, width: 86, height: 74 },
-      { entry: { id: 'one' }, x: 20, y: 160, width: 86, height: 74 },
-      { entry: { id: 'two' }, x: 120, y: 160, width: 86, height: 74 },
-      { entry: { id: 'three' }, x: 220, y: 160, width: 86, height: 74 },
-      { entry: { id: 'end-node' }, x: 120, y: 300, width: 86, height: 74 },
-    ],
-  };
-  const edges = ['one', 'two', 'three'].map((from) => ({
+  const edges = ['one', 'two', 'three'].map((from, index) => ({
     from,
     to: 'end-node',
     kind: 'after-end',
     source: 'global-end',
+    contextualStoryId: from,
+    endNodeTargetId: ['two', 'three', 'one'][index],
   }));
 
-  const presented = compactNavigationPresentation(project, edges, layout);
+  const presented = compactNavigationPresentation(project, edges);
 
-  assert.equal(presented.length, 1);
-  assert.equal(presented[0].from, 'menu');
-  assert.equal(presented[0].source, 'global-group');
-  assert.deepEqual(presented[0].chainStoryIds, ['one', 'two', 'three']);
+  assert.deepEqual(presented, edges);
+  assert.equal(presented.some((edge) => edge.source === 'global-group'), false);
+});
+
+test('la sélection d’une histoire choisit son trajet de fin avant son Home', () => {
+  const homeEdge = { from: 'one', to: 'menu', kind: 'home' };
+  const endEdge = { from: 'one', to: 'end-node', kind: 'after-end' };
+
+  assert.equal(findPrimaryStoryNavigationEdge('one', [homeEdge, endEdge]), endEdge);
 });
 
 test('les histoires d’un retour regroupé sont des membres, pas des extrémités actives', () => {
@@ -160,4 +155,57 @@ test('les deux côtés du message global forment un seul trajet actif', () => {
 
   const roles = buildNavigationNodeRoles(edges[1], edges);
   assert.deepEqual([...roles.activeNodeIds], ['story-a', 'end-node', 'story-b']);
+});
+
+test('deux reprises contextuelles identiques restent deux trajets indépendants', () => {
+  const storyAIn = {
+    from: 'story-a',
+    to: 'end-node',
+    kind: 'after-end',
+    contextualStoryId: 'story-a',
+    endNodeTargetId: 'story-c',
+  };
+  const storyBIn = {
+    from: 'story-b',
+    to: 'end-node',
+    kind: 'after-end',
+    contextualStoryId: 'story-b',
+    endNodeTargetId: 'story-c',
+  };
+  const storyAOut = {
+    from: 'end-node',
+    to: 'story-c',
+    kind: 'after-end',
+    contextualStoryId: 'story-a',
+  };
+  const storyBOut = {
+    from: 'end-node',
+    to: 'story-c',
+    kind: 'after-end',
+    contextualStoryId: 'story-b',
+  };
+  const edges = [storyAIn, storyBIn, storyAOut, storyBOut];
+
+  assert.deepEqual(collectActiveNavigationPathEdges(storyAIn, edges), [storyAIn, storyAOut]);
+  assert.equal(navigationEdgeTouchesNode(storyAOut, 'story-a'), true);
+});
+
+test('une histoire sélectionnée anime aussi la sortie globale non contextuelle', () => {
+  const incoming = {
+    from: 'story-a',
+    to: 'end-node',
+    kind: 'after-end',
+    contextualStoryId: 'story-a',
+    endNodeTargetId: 'menu',
+  };
+  const sharedOutgoing = {
+    from: 'end-node',
+    to: 'menu',
+    kind: 'after-end',
+  };
+
+  assert.deepEqual(
+    collectActiveNavigationPathEdges(incoming, [incoming, sharedOutgoing]),
+    [incoming, sharedOutgoing],
+  );
 });

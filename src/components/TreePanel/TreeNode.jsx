@@ -35,6 +35,7 @@ function TreeNodeInner({
   label,
   level,
   selected,
+  hovered,
   cut,
   isAncestor,
   isActiveScope,
@@ -50,6 +51,7 @@ function TreeNodeInner({
   color,
   onSelect,
   onContextMenu,
+  onNodeHoverChange,
   hoverGuideScopeIds,
   hoverGuideLevel,
   hoverScopeEnabled,
@@ -142,6 +144,7 @@ function TreeNodeInner({
         'tree-item',
         `tree-item--${type}`,
         selected ? 'active' : '',
+        hovered ? 'is-linked-hover' : '',
         color ? 'is-colored' : '',
         isAncestor && !selected ? 'ancestor-sel' : '',
         isActiveScope && !selected ? 'active-scope' : '',
@@ -156,8 +159,12 @@ function TreeNodeInner({
         : {})}
       onClick={(e) => onSelect(id, e)}
       onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, id, type); } : undefined}
-      onPointerEnter={handlePointerHover}
+      onPointerEnter={(event) => {
+        handlePointerHover?.(event);
+        if (!dragging) onNodeHoverChange?.(id, true);
+      }}
       onPointerMove={handlePointerHover}
+      onPointerLeave={() => onNodeHoverChange?.(id, false)}
     >
       <span className="tree-depth-guides" aria-hidden="true" />
       <span className="tree-active-branch-guide" aria-hidden="true" />
@@ -213,6 +220,7 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.label === next.label
   && prev.level === next.level
   && prev.selected === next.selected
+  && prev.hovered === next.hovered
   && prev.cut === next.cut
   && prev.isAncestor === next.isAncestor
   && prev.isActiveScope === next.isActiveScope
@@ -228,6 +236,7 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.color === next.color
   && prev.onSelect === next.onSelect
   && prev.onContextMenu === next.onContextMenu
+  && prev.onNodeHoverChange === next.onNodeHoverChange
   && prev.hoverGuideScopeIds === next.hoverGuideScopeIds
   && prev.hoverGuideLevel === next.hoverGuideLevel
   && prev.hoverScopeEnabled === next.hoverScopeEnabled

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
 import { Tooltip } from '../common/Tooltip';
-import { Eye } from '../icons/LucideLocal';
+import { ChevronDown, Eye } from '../icons/LucideLocal';
 import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID } from './flowDiagramLayout';
 import { toggleDiagramSelection } from './diagram/diagramSelection';
@@ -56,6 +56,7 @@ export function FullDiagramNode({
   compactMode = 'full',
   selectedId,
   selectedIds,
+  hovered = false,
   cutIds,
   draggingId = null,
   dragOverContainerId = undefined,
@@ -64,13 +65,12 @@ export function FullDiagramNode({
   onContextMenu,
   onPreview,
   onDragPointerDown,
-  onToggleCollapse,
+  onRegroupStories,
+  onNodeHoverChange,
   viewportRootRef,
   isRoot = false,
   rootImage,
-  isCollapsed = false,
   hasExpandedStoryGroup = false,
-  childSummary = null,
 }) {
   const compact = compactMode !== 'full';
   const showThumbnail = !compact
@@ -92,12 +92,8 @@ export function FullDiagramNode({
   const isDragging = draggingId === entry.id;
   const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
   const isCut = cutIds?.has(entry.id);
-  const canCollapse = entry.type === 'menu' && childSummary?.total > 0;
-  const collapseLabel = isCollapsed
-    ? 'Déplier ce dossier'
-    : hasExpandedStoryGroup
-      ? 'Regrouper les histoires'
-      : 'Replier ce dossier';
+  const canRegroupStories = (entry.type === 'menu' || entry.type === 'root') && hasExpandedStoryGroup;
+  const collapseLabel = 'Replier les histoires';
   const dropLabel = isDropTarget
     ? (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
     : null;
@@ -124,11 +120,13 @@ export function FullDiagramNode({
       ref={nodeRef}
       role="button"
       tabIndex={0}
-      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''}`}
+      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${hovered ? 'is-linked-hover' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''}`}
       style={isCut ? { opacity: 0.4 } : undefined}
       data-fd-drop-container={containerId === undefined ? undefined : (containerId === null ? 'root' : containerId)}
       {...((entry.type === 'story' || entry.type === 'menu' || entry.type === 'root') ? { 'data-media-node-id': entry.id, 'data-media-node-type': entry.type } : {})}
       onPointerDown={(!isRoot && entry.type !== 'end-node') ? (event) => onDragPointerDown?.(event, entry.id) : undefined}
+      onPointerEnter={() => onNodeHoverChange?.(entry.id, true)}
+      onPointerLeave={() => onNodeHoverChange?.(entry.id, false)}
       onClick={handleClick}
       onContextMenu={(e) => onContextMenu?.(e, entry.id, entry.type)}
       onKeyDown={(event) => {
@@ -142,23 +140,23 @@ export function FullDiagramNode({
       }}
       title={entry.name || '(sans nom)'}
     >
+      {canRegroupStories ? (
+        <Tooltip text={collapseLabel} className="fd-complete-node-regroup-wrap">
+          <button
+            type="button"
+            className="fd-complete-node-action fd-complete-node-action--regroup"
+            aria-label={collapseLabel}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRegroupStories?.(entry.id);
+            }}
+          >
+            <ChevronDown />
+          </button>
+        </Tooltip>
+      ) : null}
       <div className="fd-complete-node-actions">
-        {canCollapse ? (
-          <Tooltip text={collapseLabel}>
-            <button
-              type="button"
-              className="fd-complete-node-action fd-complete-node-action--collapse"
-              aria-label={collapseLabel}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleCollapse?.(entry.id);
-              }}
-            >
-              {isCollapsed ? '+' : '−'}
-            </button>
-          </Tooltip>
-        ) : null}
         <Tooltip text="Simuler depuis ce point">
           <button
             type="button"
@@ -198,11 +196,6 @@ export function FullDiagramNode({
       <div className="fd-complete-node-label">
         <div className="fd-complete-node-texts">
           <span className="fd-complete-node-name">{entry.type === 'ref' ? (entry.label?.trim() || 'Lien') : (entry.name || '(sans nom)')}</span>
-          {!compact && isCollapsed && childSummary ? (
-            <span className="fd-complete-node-kind">
-              {`${childSummary.descendants} element${childSummary.descendants > 1 ? 's' : ''} masques`}
-            </span>
-          ) : null}
         </div>
       </div>
     </div>

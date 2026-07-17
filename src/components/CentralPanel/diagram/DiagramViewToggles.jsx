@@ -1,4 +1,4 @@
-import { Focus, FolderOpen, IterationCcw, SquareStack } from '../../icons/LucideLocal';
+import { Focus, IterationCcw, SquareStack } from '../../icons/LucideLocal';
 
 export function DiagramViewToggles({
   showReturns,
@@ -6,10 +6,8 @@ export function DiagramViewToggles({
   focusMode,
   onFocusModeToggle,
   canFocusBranch,
-  hasCollapsedNodes,
-  onOpenAll,
   hasExpandedStoryGroups,
-  onRegroupStories,
+  onCollapseAllStories,
 }) {
   return (
     <div className="fd-complete-viewbar" aria-label="Modes du diagramme">
@@ -37,30 +35,17 @@ export function DiagramViewToggles({
         <span className="fd-ctrl-label fd-ctrl-label--full">Focus branche</span>
         <span className="fd-ctrl-label fd-ctrl-label--short">Focus</span>
       </button>
-      {hasCollapsedNodes ? (
-        <button
-          type="button"
-          className="fd-diagram-option"
-          aria-label="Déplier tous les dossiers"
-          title="Déplier tous les dossiers"
-          onClick={onOpenAll}
-        >
-          <FolderOpen />
-          <span className="fd-ctrl-label fd-ctrl-label--full">Tout déplier</span>
-          <span className="fd-ctrl-label fd-ctrl-label--short">Tout</span>
-        </button>
-      ) : null}
       {hasExpandedStoryGroups ? (
         <button
           type="button"
           className="fd-diagram-option"
-          aria-label="Regrouper les histoires"
-          title="Regrouper les histoires"
-          onClick={onRegroupStories}
+          aria-label="Tout replier"
+          title="Replier tous les dossiers d’histoires"
+          onClick={onCollapseAllStories}
         >
           <SquareStack />
-          <span className="fd-ctrl-label fd-ctrl-label--full">Regrouper les histoires</span>
-          <span className="fd-ctrl-label fd-ctrl-label--short">Regrouper</span>
+          <span className="fd-ctrl-label fd-ctrl-label--full">Tout replier</span>
+          <span className="fd-ctrl-label fd-ctrl-label--short">Replier</span>
         </button>
       ) : null}
     </div>

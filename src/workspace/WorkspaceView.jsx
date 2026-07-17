@@ -56,7 +56,8 @@ export function WorkspaceView({
   const [afterPlayFocus, setAfterPlayFocus] = useState(null);
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
-  const [expandedDiagramStoryGroupId, setExpandedDiagramStoryGroupId] = useState(null);
+  const [expandedDiagramStoryGroupIds, setExpandedDiagramStoryGroupIds] = useState(() => new Set());
+  const [hoveredStructureNodeId, setHoveredStructureNodeId] = useState(null);
   const [treeRevealRequest, setTreeRevealRequest] = useState(null);
   const [diagramRevealRequest, setDiagramRevealRequest] = useState(null);
   const selectedIdRef = useRef(selectedId);
@@ -64,6 +65,14 @@ export function WorkspaceView({
   const pendingInternalSelectedIdRef = useRef(null);
   const revealRequestIdRef = useRef(0);
   selectedIdRef.current = selectedId;
+
+  // WorkspaceView reste monté derrière l'accueil. Sans remise à zéro ici, les
+  // groupes ouverts dans le projet précédent peuvent se rouvrir dans un pack
+  // fraîchement extrait lorsque celui-ci réutilise les mêmes ids importés.
+  useEffect(() => {
+    if (projectType !== null) return;
+    setExpandedDiagramStoryGroupIds((current) => (current.size > 0 ? new Set() : current));
+  }, [projectType]);
 
   const {
     showTree,
@@ -80,6 +89,17 @@ export function WorkspaceView({
     treePanelWidth,
     setTreePanelWidth,
   } = diagramView;
+
+  useEffect(() => {
+    setHoveredStructureNodeId(null);
+  }, [projectType, showDiagram, showTree]);
+
+  const handleStructureNodeHoverChange = useCallback((nodeId, isHovered) => {
+    setHoveredStructureNodeId((current) => {
+      if (isHovered) return nodeId;
+      return current === nodeId ? null : current;
+    });
+  }, []);
 
   const handleSimulateNode = useCallback((nodeId) => {
     setSimulatorZipPath(null);
@@ -192,6 +212,8 @@ export function WorkspaceView({
       validationIssues={validationIssues}
       treeSearchFocusTrigger={treeSearchFocusTrigger}
       selectionRevealRequest={treeRevealRequest}
+      hoveredNodeId={hoveredStructureNodeId}
+      onNodeHoverChange={handleStructureNodeHoverChange}
       onSelectNode={handleTreeNodeSelect}
       onSelectionChange={handleTreeSelectionChange}
       onFocusTreeSearch={onFocusTreeSearch}
@@ -243,9 +265,11 @@ export function WorkspaceView({
       onSelectNode={handleDiagramNodeSelect}
       onSelectionChange={handleDiagramSelectionChange}
       selectionRevealRequest={diagramRevealRequest}
+      hoveredNodeId={hoveredStructureNodeId}
+      onNodeHoverChange={handleStructureNodeHoverChange}
       searchFocusTrigger={diagramSearchFocusTrigger}
-      expandedStoryGroupId={expandedDiagramStoryGroupId}
-      onExpandedStoryGroupIdChange={setExpandedDiagramStoryGroupId}
+      expandedStoryGroupIds={expandedDiagramStoryGroupIds}
+      onExpandedStoryGroupIdsChange={setExpandedDiagramStoryGroupIds}
       variant={variant}
       showActionsBar={showDiagram && !showTree}
       showHint={showDiagram && !showSettings}

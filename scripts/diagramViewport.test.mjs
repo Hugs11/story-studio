@@ -68,7 +68,7 @@ test('le centrage place le milieu du nœud au milieu du viewport au zoom courant
   }), null);
 });
 
-test('la clé de cadrage change avec la géométrie, le focus et les replis', () => {
+test('la clé de cadrage change avec la géométrie, le focus et les histoires dépliées', () => {
   const layout = {
     width: 500,
     height: 300,
@@ -76,8 +76,11 @@ test('la clé de cadrage change avec la géométrie, le focus et les replis', ()
   };
   const base = getDiagramViewportLayoutKey(layout, { compactMode: 'full' });
   const focused = getDiagramViewportLayoutKey(layout, { compactMode: 'full', focusMode: true, selectedId: 'root' });
-  const collapsed = getDiagramViewportLayoutKey(layout, { compactMode: 'full', collapsedIds: new Set(['menu-a']) });
+  const expandedStories = getDiagramViewportLayoutKey(layout, {
+    compactMode: 'full',
+    expandedStoryGroupIds: new Set(['story-group:menu-b', 'story-group:menu-a']),
+  });
 
   assert.notEqual(focused, base);
-  assert.notEqual(collapsed, base);
+  assert.notEqual(expandedStories, base);
 });

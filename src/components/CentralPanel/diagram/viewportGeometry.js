@@ -106,12 +106,11 @@ export function getDiagramViewportLayoutKey(layout, context = {}) {
     Math.round(node.width),
     Math.round(node.height),
   ].join(':')).join('|');
-  const collapsedIds = [...(context.collapsedIds ?? [])].sort().join(',');
+  const expandedStoryGroupIds = [...(context.expandedStoryGroupIds ?? [])].sort().join(',');
   return [
     context.compactMode ?? '',
     context.focusMode ? `focus:${context.selectedId ?? ''}` : 'all',
-    `collapsed:${collapsedIds}`,
-    `stories:${context.expandedStoryGroupId ?? ''}`,
+    `stories:${expandedStoryGroupIds}`,
     `${Math.round(layout?.width ?? 0)}x${Math.round(layout?.height ?? 0)}`,
     nodes,
   ].join(';');
