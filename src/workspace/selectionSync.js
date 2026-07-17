@@ -6,6 +6,14 @@ export function getPendingInternalSelectedId({
   return nextSelectedId;
 }
 
+export function buildSimulatorSelectionSync(activeNodeId, requestId) {
+  if (!activeNodeId || !requestId) return null;
+  return {
+    selectedIds: new Set([activeNodeId]),
+    revealRequest: { id: activeNodeId, requestId },
+  };
+}
+
 export function resolveWorkspaceSelectionSync({
   selectedId,
   selectedIds,
