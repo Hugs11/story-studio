@@ -7,7 +7,7 @@ import {
   compactNavigationPresentation,
   findPrimaryStoryNavigationEdge,
   navigationEdgeTouchesNode,
-} from '../src/components/CentralPanel/diagram/navigationPresentation.js';
+} from '../src/components/diagram/diagram/navigationPresentation.js';
 
 function story(id) {
   return { id, type: 'story' };

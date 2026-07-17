@@ -12,7 +12,7 @@ export function resolveStructureSearchTarget({ projectType, treeVisible, diagram
 function getActiveStructureSurface() {
   const activeElement = document.activeElement;
   if (activeElement?.closest?.('.fd-panel')) return 'diagram';
-  if (activeElement?.closest?.('.panel-left')) return 'tree';
+  if (activeElement?.closest?.('.structure-panel')) return 'tree';
   return null;
 }
 
@@ -28,7 +28,7 @@ export function useAppShortcutActions({
   shortcutActionsRef,
   store,
   modals,
-  diagramView,
+  workspaceViewState,
   setTreeSearchFocusTrigger,
   setDiagramSearchFocusTrigger,
   handleNewProject,
@@ -48,15 +48,15 @@ export function useAppShortcutActions({
     addFolder: () => store.addMenu(),
     openPackOptions: () => modals.open('packOptions'),
     openPreferences: () => modals.open('prefs'),
-    toggleTree: diagramView.toggleTree,
-    toggleSettings: diagramView.toggleSettings,
-    toggleDiagram: diagramView.toggleDiagram,
+    toggleTree: workspaceViewState.toggleTree,
+    toggleSettings: workspaceViewState.toggleSettings,
+    toggleDiagram: workspaceViewState.toggleDiagram,
     generate: handleGenerate,
     focusTreeSearch: () => {
       const target = resolveStructureSearchTarget({
         projectType,
-        treeVisible: diagramView.treeVisible,
-        diagramVisible: diagramView.showDiagram,
+        treeVisible: workspaceViewState.treeVisible,
+        diagramVisible: workspaceViewState.showDiagram,
         activeSurface: getActiveStructureSurface(),
       });
       if (target === 'tree') {
@@ -69,7 +69,7 @@ export function useAppShortcutActions({
     undo: store.undo,
     redo: store.redo,
     projectActionsVisible: projectType !== null,
-    treeSearchVisible: (projectType === 'pack' && diagramView.treeVisible) || diagramView.showDiagram,
+    treeSearchVisible: (projectType === 'pack' && workspaceViewState.treeVisible) || workspaceViewState.showDiagram,
     canImportStories,
     canAddFolder,
     canGenerate,

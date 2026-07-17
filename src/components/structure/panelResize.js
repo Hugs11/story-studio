@@ -1,5 +1,15 @@
 export const LEFT_PANEL_MIN_WIDTH = 200;
 
+export function getKeyboardResizeDelta(key, direction, step = 16) {
+  if (key !== 'ArrowLeft' && key !== 'ArrowRight') return 0;
+  const visualDelta = key === 'ArrowRight' ? step : -step;
+  return visualDelta * direction;
+}
+
+export function getPointerResizeDelta(currentX, startX, direction) {
+  return direction === 1 ? currentX - startX : startX - currentX;
+}
+
 export function startResize(e, panelClass, cssVar, direction, minWidth = 150, options = {}) {
   e.preventDefault();
   const startX = e.clientX;
@@ -19,7 +29,7 @@ export function startResize(e, panelClass, cssVar, direction, minWidth = 150, op
   };
 
   const onMove = ev => {
-    const delta = direction === 1 ? ev.clientX - startX : startX - ev.clientX;
+    const delta = getPointerResizeDelta(ev.clientX, startX, direction);
     applyWidth(startW + delta);
   };
   const onUp = () => {

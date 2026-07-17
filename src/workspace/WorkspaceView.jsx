@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { CentralPanel } from '../components/CentralPanel/CentralPanel';
-import { DiagramPanel } from '../components/CentralPanel/DiagramPanel';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { DiagramPanel } from '../components/diagram/DiagramPanel';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { StructurePanel } from '../components/structure/StructurePanel';
@@ -15,7 +14,15 @@ import {
   SETTINGS_PANEL_WIDTH_MAX,
   SETTINGS_PANEL_WIDTH_MIN,
   TREE_PANEL_WIDTH_DEFAULT,
-} from './useDiagramViewState';
+} from './useWorkspaceViewState';
+import {
+  getFlexibleWorkspacePanelId,
+  getVisibleWorkspacePanelOrder,
+  getWorkspaceResizeBoundaries,
+  WORKSPACE_PANEL_IDS,
+} from './panelLayout';
+import { PanelSortContext, SortablePanelItem } from './PanelSortContext';
+import { SettingsPanel } from './SettingsPanel';
 import { SettingsPanelHeader } from './SettingsPanelHeader';
 import {
   buildSimulatorSelectionSync,
@@ -49,7 +56,7 @@ export function WorkspaceView({
   treeSearchFocusTrigger,
   onFocusTreeSearch,
   diagramSearchFocusTrigger,
-  diagramView,
+  workspaceViewState,
 }) {
   const { onSelect } = useProjectActions();
   const { projectType } = project;
@@ -79,17 +86,19 @@ export function WorkspaceView({
     showTree,
     showSettings,
     showDiagram,
+    panelOrder,
     isPlein,
     toggleTree,
     toggleSettings,
     toggleDiagram,
     restoreSettings,
     closeDiagram,
+    movePanel,
     settingsPanelWidth,
     setSettingsPanelWidth,
     treePanelWidth,
     setTreePanelWidth,
-  } = diagramView;
+  } = workspaceViewState;
 
   useEffect(() => {
     setHoveredStructureNodeId(null);
@@ -204,19 +213,7 @@ export function WorkspaceView({
     '--workspace-settings-panel-width': `${settingsPanelWidth}px`,
   };
 
-  // Réglages = colonne centrale dockée : son en-tête est systématique dès que
-  // Réglages est visible, avec un fermeur utilisable dans tous les états.
-  const settingsHeader = (
-    <SettingsPanelHeader
-      node={node}
-      selectedId={selectedId}
-      selectedIds={selectedIds}
-      project={project}
-      onClose={toggleSettings}
-    />
-  );
-
-  const renderStructurePanel = () => (
+  const renderStructurePanel = (headerDragHandleProps) => (
     <StructurePanel
       project={project}
       projectType={projectType}
@@ -234,24 +231,12 @@ export function WorkspaceView({
       onSimulateNode={handleSimulateNode}
       onSimulateZip={handleSimulateZip}
       onSimulateRoot={handleSimulateRoot}
+      headerDragHandleProps={headerDragHandleProps}
     />
   );
 
-  const renderTreeResizeHandle = () => (
-    <PanelResizeHandle
-      ariaLabel="Redimensionner l’arbre"
-      panelClass=".panel-left"
-      cssVar="--col-left"
-      minWidth={LEFT_PANEL_MIN_WIDTH}
-      maxWidth={getTreePanelMaxWidth}
-      value={treePanelWidth}
-      defaultValue={TREE_PANEL_WIDTH_DEFAULT}
-      onResize={setTreePanelWidth}
-    />
-  );
-
-  const renderCentralPanel = () => (
-    <CentralPanel
+  const renderSettingsPanel = (headerDragHandleProps) => (
+    <SettingsPanel
       node={node}
       selectedId={selectedId}
       selectedIds={selectedIds}
@@ -261,16 +246,25 @@ export function WorkspaceView({
       projectIndex={projectIndex}
       afterPlayFocus={afterPlayFocus}
       onAfterPlayFocusConsumed={handleAfterPlayFocusConsumed}
-      header={settingsHeader}
+      header={(
+        <SettingsPanelHeader
+          node={node}
+          selectedId={selectedId}
+          selectedIds={selectedIds}
+          project={project}
+          onClose={toggleSettings}
+          dragHandleProps={headerDragHandleProps}
+        />
+      )}
     />
   );
 
-  // `key={variant}` : remonte le diagramme au passage plein↔colonne via la
-  // bascule Réglages, pour le re-centrer sur la nouvelle largeur. `variant` suit
-  // `showSettings`, pas `showTree` — donc pas de re-fit au simple masquage de l'arbre.
-  const renderDiagramPanel = (variant) => (
+  // La clé remonte le diagramme au passage plein↔colonne et après réorganisation,
+  // afin de le re-centrer sur sa nouvelle largeur. Les groupes ouverts restent
+  // contrôlés par WorkspaceView et survivent donc au remontage.
+  const renderDiagramPanel = (variant, headerDragHandleProps, orderKey) => (
     <DiagramPanel
-      key={variant}
+      key={`${variant}:${orderKey}`}
       project={project}
       projectType={projectType}
       projectIndex={projectIndex}
@@ -292,19 +286,7 @@ export function WorkspaceView({
       onSimulateZip={handleSimulateZip}
       onSimulateRoot={handleSimulateRoot}
       onOpenLocalEndSettings={handleOpenLocalEndSettings}
-    />
-  );
-
-  const renderSettingsResizeHandle = () => (
-    <PanelResizeHandle
-      ariaLabel="Redimensionner les réglages"
-      panelClass=".panel-center"
-      cssVar="--workspace-settings-panel-width"
-      minWidth={SETTINGS_PANEL_WIDTH_MIN}
-      maxWidth={SETTINGS_PANEL_WIDTH_MAX}
-      value={settingsPanelWidth}
-      defaultValue={SETTINGS_PANEL_WIDTH_DEFAULT}
-      onResize={setSettingsPanelWidth}
+      headerDragHandleProps={headerDragHandleProps}
     />
   );
 
@@ -332,16 +314,63 @@ export function WorkspaceView({
     );
   }
 
-  // Composition « 3 bascules » : arbre (fixe) · réglages (colonne plafonnée) ·
-  // diagramme (flex). Chaque poignée déplace la frontière qu'elle matérialise.
+  const visibility = {
+    [WORKSPACE_PANEL_IDS.STRUCTURE]: showTree,
+    [WORKSPACE_PANEL_IDS.SETTINGS]: showSettings,
+    [WORKSPACE_PANEL_IDS.DIAGRAM]: showDiagram,
+  };
+  const visiblePanelOrder = getVisibleWorkspacePanelOrder(panelOrder, visibility);
+  const resizeBoundaries = getWorkspaceResizeBoundaries(visiblePanelOrder);
+  const resizeBoundaryByPair = new Map(resizeBoundaries.map((boundary) => [boundary.id, boundary]));
+  const flexiblePanelId = getFlexibleWorkspacePanelId(visiblePanelOrder);
+  const orderKey = panelOrder.join('-');
+
+  const renderResizeHandle = (boundary) => {
+    const settingsConfig = {
+      ariaLabel: 'Redimensionner les réglages',
+      panelClass: '.workspace-panel-slot--settings',
+      cssVar: '--workspace-settings-panel-width',
+      minWidth: SETTINGS_PANEL_WIDTH_MIN,
+      maxWidth: SETTINGS_PANEL_WIDTH_MAX,
+      value: settingsPanelWidth,
+      defaultValue: SETTINGS_PANEL_WIDTH_DEFAULT,
+      onResize: setSettingsPanelWidth,
+    };
+    const structureConfig = {
+      ariaLabel: 'Redimensionner l’arbre',
+      panelClass: '.workspace-panel-slot--structure',
+      cssVar: '--col-left',
+      minWidth: LEFT_PANEL_MIN_WIDTH,
+      maxWidth: getTreePanelMaxWidth,
+      value: treePanelWidth,
+      defaultValue: TREE_PANEL_WIDTH_DEFAULT,
+      onResize: setTreePanelWidth,
+    };
+    const config = boundary.resizedPanelId === WORKSPACE_PANEL_IDS.STRUCTURE
+      ? structureConfig
+      : settingsConfig;
+    return <PanelResizeHandle {...config} direction={boundary.direction} />;
+  };
+
+  const renderPanelContent = (panelId, headerDragHandleProps) => {
+    if (panelId === WORKSPACE_PANEL_IDS.STRUCTURE) {
+      return renderStructurePanel(headerDragHandleProps);
+    }
+    if (panelId === WORKSPACE_PANEL_IDS.SETTINGS) {
+      return renderSettingsPanel(headerDragHandleProps);
+    }
+    return renderDiagramPanel(isPlein ? 'plein' : 'colonne', headerDragHandleProps, orderKey);
+  };
+
+  // Composition pilotée par les identités : l'ordre visuel ne donne aucun rôle
+  // métier aux panneaux. Les frontières sont recalculées pour chaque permutation.
   const workspaceClass = [
     'workspace',
     isPlein ? 'workspace--diagram-full' : '',
     showDiagram ? 'workspace--with-diagram' : '',
     !showDiagram ? 'workspace--without-diagram' : '',
-    !showDiagram && !showSettings && showTree ? 'workspace--tree-only' : '',
   ].filter(Boolean).join(' ');
-  const hasVisiblePanel = showTree || showSettings || showDiagram;
+  const hasVisiblePanel = visiblePanelOrder.length > 0;
 
   return (
     <div className="screen visible">
@@ -354,18 +383,31 @@ export function WorkspaceView({
           />
         ) : null}
 
-        {showTree ? renderStructurePanel() : null}
-
-        {showTree && (showSettings || showDiagram) ? renderTreeResizeHandle() : null}
-
-        {showSettings ? renderCentralPanel() : null}
-
-        {showSettings && showDiagram ? renderSettingsResizeHandle() : null}
-
-        {showDiagram ? (
-          <div className="workspace-diagram">
-            {renderDiagramPanel(isPlein ? 'plein' : 'colonne')}
-          </div>
+        {hasVisiblePanel ? (
+          <PanelSortContext items={visiblePanelOrder} onMove={movePanel}>
+            {visiblePanelOrder.map((panelId, index) => {
+              const nextPanelId = visiblePanelOrder[index + 1];
+              const boundary = nextPanelId
+                ? resizeBoundaryByPair.get(`${panelId}-${nextPanelId}`)
+                : null;
+              return (
+                <Fragment key={panelId}>
+                  <SortablePanelItem
+                    id={panelId}
+                    activation="header"
+                    className={[
+                      'workspace-panel-slot',
+                      `workspace-panel-slot--${panelId}`,
+                      panelId === flexiblePanelId ? 'is-flexible' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {({ dragHandleProps }) => renderPanelContent(panelId, dragHandleProps)}
+                  </SortablePanelItem>
+                  {boundary ? renderResizeHandle(boundary) : null}
+                </Fragment>
+              );
+            })}
+          </PanelSortContext>
         ) : null}
 
         <FloatingSimulator

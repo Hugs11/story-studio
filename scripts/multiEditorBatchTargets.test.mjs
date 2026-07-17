@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   canShowTextImageBatchAction,
   getTextImageBatchTargets,
-} from '../src/components/CentralPanel/multiEditorBatchTargets.js';
+} from '../src/components/editors/multiEditorBatchTargets.js';
 
 test('text image batch action is available for stories and menus with images', () => {
   const nodes = [

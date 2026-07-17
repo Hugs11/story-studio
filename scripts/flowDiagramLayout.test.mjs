@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getCompleteNavigationEdges } from '../src/components/CentralPanel/flowDiagramLayout.js';
-import { getStoryGroupId } from '../src/components/CentralPanel/diagram/structurePresentation.js';
-import { getStructureLevelLayout } from '../src/components/CentralPanel/diagram/structureLevelLayout.js';
-import { buildGroupedLayoutRows, orderDiagramChildren } from '../src/components/CentralPanel/diagram/storyGroupLayout.js';
+import { getCompleteNavigationEdges } from '../src/components/diagram/flowDiagramLayout.js';
+import { getStoryGroupId } from '../src/components/diagram/diagram/structurePresentation.js';
+import { getStructureLevelLayout } from '../src/components/diagram/diagram/structureLevelLayout.js';
+import { buildGroupedLayoutRows, orderDiagramChildren } from '../src/components/diagram/diagram/storyGroupLayout.js';
 
 const diagramMetrics = {
   nodeWidth: 100,

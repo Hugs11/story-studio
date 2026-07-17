@@ -80,14 +80,6 @@ body {
   background: var(--bg0);
 }
 
-/* Le dernier panneau visible reprend toute la place : masquer le diagramme ne
-   doit pas laisser une colonne fantôme à droite des réglages. */
-.workspace--without-diagram .panel-center,
-.workspace--tree-only .panel-left {
-  flex: 1 1 0;
-  max-width: none;
-}
-
 .workspace-empty-state {
   flex: 1;
   display: flex;
@@ -135,13 +127,23 @@ body {
   outline-offset: 2px;
 }
 
-.workspace-diagram {
-  flex: 1 1 340px;
-  min-width: 280px;
+.workspace-panel-slot {
+  min-width: 0;
   min-height: 0;
   display: flex;
   overflow: hidden;
+  position: relative;
+}
+
+.workspace-panel-slot--diagram {
+  flex: 1 1 340px;
+  min-width: 280px;
   background: var(--bg1);
+}
+
+.workspace-panel-slot.is-panel-dragging,
+.chrome-panel-sortable.is-panel-dragging {
+  opacity: 0.86;
 }
 
 /* Frontière redimensionnable entre panneaux : un seul trait visible à côté de
@@ -183,23 +185,40 @@ body.workspace-is-resizing .resize-handle {
   background: var(--accent-border);
 }
 
-/* Panel gauche — arborescence : largeur fixe (poignée dédiée), jamais rétrécie */
-.panel-left {
+body.workspace-is-reordering,
+body.workspace-is-reordering * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+[data-panel-drag-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* Arbre : largeur persistée, indépendante de sa position dans la rangée. */
+.workspace-panel-slot--structure {
   flex: 0 0 var(--col-left);
-  background: var(--bg1);
-  border-right: 0.5px solid var(--border);
-  display: flex;
-  flex-direction: column;
   min-width: var(--col-left-min);
+  overflow: visible;
   container: structure-panel / inline-size;
 }
 
-/* En-tête arbre : membre gauche du bandeau uniforme (44 px fixes, fond commun,
+.structure-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* En-tête Arbre : membre du bandeau uniforme (44 px fixes, fond commun,
    nowrap) — aligné sur `.settings-panel-header` et `.fd-panel-header`. Pas
    d'`overflow: hidden` ici : le `TreeDisplayPopover` (bouton œil) s'ouvre sous le
    header en enfant positionné et serait tronqué ; la hauteur fixe suffit à empêcher
    toute croissance verticale. */
-.panel-left-header {
+.structure-panel-header {
   height: 44px;
   flex: 0 0 44px;
   padding: 4px 8px;
@@ -212,106 +231,118 @@ body.workspace-is-resizing .resize-handle {
   background: color-mix(in srgb, var(--bg1) 88%, var(--bg2));
 }
 
-.panel-left-header--actions {
+.structure-panel-header--actions {
   justify-content: flex-start;
 }
 
-.panel-left-header--empty {
+.structure-panel-header--empty {
   padding: 0;
 }
 
-.panel-left-header > span:not(.structure-actions-trailing) {
+.structure-panel-header > span:not(.structure-actions-trailing) {
   flex: 1;
 }
 
-/* Panel central — Réglages : colonne pleine hauteur, à largeur persistée. */
-.panel-center {
+/* Réglages : largeur persistée, sans rôle « central » implicite. */
+.workspace-panel-slot--settings {
   flex: 0 0 var(--workspace-settings-panel-width, 800px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg1);
   min-width: 400px;
   max-width: 900px;
   container: settings-panel / inline-size;
 }
 
+.settings-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg1);
+}
+
 /* Quand les trois vues sont actives, le diagramme ne peut jamais s'effondrer
    à zéro. Les largeurs mémorisées restent les cibles sur grand écran ; sous
    pression, l'arbre puis Réglages se contractent temporairement. */
-.workspace--with-diagram .panel-left {
+.workspace--with-diagram .workspace-panel-slot--structure {
   flex: 0 1 var(--col-left);
   min-width: 200px;
 }
 
-.workspace--with-diagram .panel-center {
+.workspace--with-diagram .workspace-panel-slot--settings {
   flex: 0 1 var(--workspace-settings-panel-width, 800px);
   min-width: 400px;
 }
 
-.workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+.workspace--without-diagram .workspace-panel-slot--structure {
   flex: 0 1 var(--col-left);
   min-width: 200px;
 }
 
-.workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+.workspace--without-diagram .workspace-panel-slot--settings {
   min-width: 360px;
 }
 
+/* Sans Diagramme, le dernier panneau visible absorbe l'espace restant. */
+.workspace--without-diagram .workspace-panel-slot.is-flexible {
+  flex-grow: 1;
+  max-width: none;
+}
+
 @container workspace-shell (max-width: 900px) {
-  .workspace--with-diagram .panel-left {
+  .workspace--with-diagram .workspace-panel-slot--structure {
     min-width: 160px;
   }
 
-  .workspace--with-diagram .panel-center {
+  .workspace--with-diagram .workspace-panel-slot--settings {
     min-width: 320px;
   }
 
-  .workspace--with-diagram .workspace-diagram {
+  .workspace--with-diagram .workspace-panel-slot--diagram {
     flex-basis: 280px;
     min-width: 240px;
   }
 
-  .workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+  .workspace--without-diagram .workspace-panel-slot--structure {
     min-width: 160px;
   }
 
-  .workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+  .workspace--without-diagram .workspace-panel-slot--settings {
     min-width: 320px;
   }
 }
 
 @container workspace-shell (max-width: 700px) {
-  .workspace--with-diagram .panel-left {
+  .workspace--with-diagram .workspace-panel-slot--structure {
     min-width: 140px;
   }
 
-  .workspace--with-diagram .panel-center {
+  .workspace--with-diagram .workspace-panel-slot--settings {
     min-width: 240px;
   }
 
-  .workspace--with-diagram .workspace-diagram {
+  .workspace--with-diagram .workspace-panel-slot--diagram {
     flex-basis: 220px;
     min-width: 190px;
   }
 
-  .workspace--without-diagram:not(.workspace--tree-only) .panel-left {
+  .workspace--without-diagram .workspace-panel-slot--structure {
     min-width: 140px;
   }
 
-  .workspace--without-diagram:not(.workspace--tree-only) .panel-center {
+  .workspace--without-diagram .workspace-panel-slot--settings {
     min-width: 240px;
   }
 }
 
 @container structure-panel (max-width: 180px) {
-  .panel-left-header {
+  .structure-panel-header {
     padding-inline: 4px;
     gap: 3px;
   }
 }
 
-.center-body {
+.settings-panel-body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -323,19 +354,19 @@ body.workspace-is-resizing .resize-handle {
   min-width: 0;
 }
 
-.center-body > * {
+.settings-panel-body > * {
   width: 100%;
   max-width: none;
   min-width: 0;
   flex-shrink: 0;
 }
 
-.center-body > :not(.card) {
+.settings-panel-body > :not(.card) {
   padding: 12px 10px;
 }
 
-/* En-tête réglages : membre central du bandeau uniforme (44 px fixes, fond commun,
-   nowrap) — aligné sur `.panel-left-header` et `.fd-panel-header`. */
+/* En-tête Réglages : membre du bandeau uniforme (44 px fixes, fond commun,
+   nowrap) — aligné sur `.structure-panel-header` et `.fd-panel-header`. */
 .settings-panel-header {
   height: 44px;
   flex: 0 0 44px;

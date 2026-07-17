@@ -11,7 +11,7 @@ import {
 } from '../src/components/TreePanel/treeSearch.js';
 import {
   filterDiagramSearchCandidates,
-} from '../src/components/CentralPanel/diagram/diagramSearchFilter.js';
+} from '../src/components/diagram/diagram/diagramSearchFilter.js';
 
 const SEARCH_CASES = [
   ['ecole', 'École', true],

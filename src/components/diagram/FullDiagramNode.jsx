@@ -9,7 +9,7 @@ import { ChevronDown, Eye } from '../icons/LucideLocal';
 import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
 import { END_NODE_ID } from './flowDiagramLayout';
 import { toggleDiagramSelection } from './diagram/diagramSelection';
-import { useZipCover } from './useZipCover.js';
+import { useZipCover } from '../editors/useZipCover.js';
 
 function DiagramNodeTypeIcon({ entry }) {
   if (entry.type === 'root') return <IconHouse />;

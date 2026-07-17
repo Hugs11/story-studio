@@ -5,7 +5,7 @@
 }
 
 /* Contenu : occupe toute la largeur disponible */
-.center-body > * {
+.settings-panel-body > * {
   width: 100%;
 }
 
@@ -2278,24 +2278,24 @@
     text-align: center;
   }
 
-  .center-body > .card > .card-title {
+  .settings-panel-body > .card > .card-title {
     margin-bottom: 12px;
     text-align: center;
   }
 
-  .center-body > .card > .field-row {
+  .settings-panel-body > .card > .field-row {
     flex-wrap: wrap;
     align-items: stretch;
     gap: 7px;
   }
 
-  .center-body > .card > .field-row > .field-label {
+  .settings-panel-body > .card > .field-row > .field-label {
     width: 100%;
     min-width: 0;
     flex: 1 0 100% !important;
   }
 
-  .center-body > .card > .field-row > .navigation-target-select {
+  .settings-panel-body > .card > .field-row > .navigation-target-select {
     width: 100%;
     min-width: 0 !important;
     max-width: none !important;
@@ -2423,7 +2423,7 @@
 
 /* Les sections restent ancrées dans la colonne, mais retrouvent une hiérarchie
    légère : surface discrète, bord fin, sans ombre ni carte flottante. */
-.panel-center .card {
+.settings-panel .card {
   background: color-mix(in srgb, var(--bg2) 62%, var(--bg1));
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2431,7 +2431,7 @@
   box-shadow: none;
 }
 
-.panel-center .card.card--danger {
+.settings-panel .card.card--danger {
   background: var(--danger-bg);
   border-color: var(--danger-border);
 }

@@ -17,8 +17,8 @@
   color: var(--text);
 }
 
-/* En-tête diagramme : membre droit du bandeau uniforme (44 px fixes, fond commun,
-   nowrap) — aligné sur `.panel-left-header` et `.settings-panel-header`. Le bandeau
+/* En-tête diagramme : membre du bandeau uniforme (44 px fixes, fond commun,
+   nowrap) — aligné sur `.structure-panel-header` et `.settings-panel-header`. Le bandeau
    ne doit jamais passer sur deux lignes : titre et contrôles ellipsent/compactent,
    ils ne poussent pas la hauteur. */
 .fd-panel-header {

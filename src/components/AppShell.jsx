@@ -65,6 +65,8 @@ export function AppShell({
           onSaveProject={toolbar.onSaveProject}
           onSaveProjectAs={toolbar.onSaveProjectAs}
           panels={toolbar.panels}
+          panelOrder={toolbar.panelOrder}
+          onMovePanel={toolbar.onMovePanel}
           onToggleTree={toolbar.onToggleTree}
           onToggleSettings={toolbar.onToggleSettings}
           onToggleDiagram={toolbar.onToggleDiagram}
@@ -111,7 +113,7 @@ export function AppShell({
               treeSearchFocusTrigger={workspace.treeSearchFocusTrigger}
               onFocusTreeSearch={workspace.onFocusTreeSearch}
               diagramSearchFocusTrigger={workspace.diagramSearchFocusTrigger}
-              diagramView={workspace.diagramView}
+              workspaceViewState={workspace.workspaceViewState}
             />,
           )}
           {projectType !== null && bottomPanel.open && renderDeferred(

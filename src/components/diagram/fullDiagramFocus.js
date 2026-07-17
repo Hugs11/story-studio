@@ -3,32 +3,6 @@
 // pour reduire la surface de FullDiagramTree.jsx et permettre un test futur.
 
 import { findEntryPath } from '../../store/projectModel';
-import { countDescendants } from '../tree/treeOperations.js';
-
-function summarizeEntryList(children) {
-  return {
-    total: children.length,
-    stories: children.filter((child) => child.type === 'story').length,
-    containers: children.filter((child) => child.type === 'menu' || child.type === 'zip').length,
-    descendants: children.reduce((count, child) => count + 1 + countDescendants(child), 0),
-  };
-}
-
-function summarizeChildren(entry) {
-  const children = entry?.type === 'menu' ? (entry.children ?? []) : [];
-  return summarizeEntryList(children);
-}
-
-export function buildChildSummaryMap(entries, map = new Map(), includeRoot = true) {
-  if (includeRoot) map.set('root', summarizeEntryList(entries ?? []));
-  for (const entry of entries ?? []) {
-    if (entry.type === 'menu') {
-      map.set(entry.id, summarizeChildren(entry));
-      buildChildSummaryMap(entry.children ?? [], map, false);
-    }
-  }
-  return map;
-}
 
 function cloneFocusedPath(path, index = 0) {
   const entry = path[index];

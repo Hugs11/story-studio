@@ -2,7 +2,7 @@ import { pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
 import { Button } from '../common/Button';
 import { useZipCover } from './useZipCover.js';
-import './CentralPanel.css';
+import './EditorPanel.css';
 import './ImageField.css';
 
 function ZipCover({ zipPath, coverImage }) {

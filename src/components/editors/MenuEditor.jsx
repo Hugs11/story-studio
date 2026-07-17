@@ -7,7 +7,7 @@ import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal
 import { Trash2 } from '../icons/LucideLocal';
 import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { formatFrenchCount } from '../../utils/frenchText.js';
-import './CentralPanel.css';
+import './EditorPanel.css';
 
 const MENU_BEHAVIOR_CONTROLS = [
   {

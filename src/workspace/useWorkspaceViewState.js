@@ -2,6 +2,11 @@ import { useCallback } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { KEYS } from '../store/persistentSettings';
 import { LEFT_PANEL_MIN_WIDTH } from '../components/structure/panelResize';
+import {
+  DEFAULT_WORKSPACE_PANEL_ORDER,
+  reorderWorkspacePanels,
+  WORKSPACE_PANEL_ORDER_CODEC,
+} from './panelLayout';
 
 export const SETTINGS_PANEL_WIDTH_MIN = 400;
 export const SETTINGS_PANEL_WIDTH_MAX = 900;
@@ -44,10 +49,15 @@ const TREE_PANEL_WIDTH_CODEC = widthCodec(
 
 // Modèle « 3 bascules » : trois booléens indépendants. Les anciens états de vue
 // sont des dérivés de lecture ; les trois panneaux peuvent être masqués.
-export function useDiagramViewState() {
+export function useWorkspaceViewState() {
   const [showTree, setShowTree] = usePersistentState(KEYS.DIAGRAM_SHOW_TREE, true, BOOL_CODEC);
   const [showSettings, setShowSettings] = usePersistentState(KEYS.DIAGRAM_SHOW_SETTINGS, true, BOOL_CODEC);
   const [showDiagram, setShowDiagram] = usePersistentState(KEYS.DIAGRAM_SHOW_DIAGRAM, false, BOOL_CODEC);
+  const [panelOrder, setPanelOrder] = usePersistentState(
+    KEYS.WORKSPACE_PANEL_ORDER,
+    [...DEFAULT_WORKSPACE_PANEL_ORDER],
+    WORKSPACE_PANEL_ORDER_CODEC,
+  );
   const [settingsPanelWidth, setStoredSettingsPanelWidth] = usePersistentState(
     KEYS.SETTINGS_PANEL_WIDTH,
     SETTINGS_PANEL_WIDTH_DEFAULT,
@@ -81,6 +91,10 @@ export function useDiagramViewState() {
     setShowDiagram(false);
   }, [setShowDiagram]);
 
+  const movePanel = useCallback((activeId, overId) => {
+    setPanelOrder((current) => reorderWorkspacePanels(current, activeId, overId));
+  }, [setPanelOrder]);
+
   const setSettingsPanelWidth = useCallback((width) => {
     setStoredSettingsPanelWidth(clampNumber(
       width,
@@ -104,6 +118,7 @@ export function useDiagramViewState() {
     showTree,
     showSettings,
     showDiagram,
+    panelOrder,
     // dérivé de lecture : le diagramme est seul quand Réglages est masqué.
     isPlein: showDiagram && !showSettings,
     treeVisible: showTree,
@@ -113,6 +128,7 @@ export function useDiagramViewState() {
     toggleDiagram,
     restoreSettings,
     closeDiagram,
+    movePanel,
     // largeurs
     settingsPanelWidth,
     setSettingsPanelWidth,

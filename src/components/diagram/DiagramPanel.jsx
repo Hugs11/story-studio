@@ -25,11 +25,12 @@ function DiagramPanelHeader({
   onClose,
   onSearch,
   controlsHostRef,
+  dragHandleProps,
 }) {
   const isFull = variant === 'plein';
 
   return (
-    <div className="fd-panel-header">
+    <div className="fd-panel-header" {...dragHandleProps}>
       <div className="fd-panel-title" title={isFull ? 'Diagramme complet du pack' : 'Diagramme'}>
         {isFull ? 'Diagramme complet du pack' : 'Diagramme'}
       </div>
@@ -68,6 +69,7 @@ export function DiagramPanel({
   onSimulateZip,
   onSimulateRoot,
   onOpenLocalEndSettings,
+  headerDragHandleProps = {},
 }) {
   const [controlsHost, setControlsHost] = useState(null);
   const [localSearchFocusTrigger, setLocalSearchFocusTrigger] = useState(0);
@@ -83,6 +85,7 @@ export function DiagramPanel({
           setLocalSearchFocusTrigger((value) => value + 1);
         }}
         controlsHostRef={setControlsHost}
+        dragHandleProps={headerDragHandleProps}
       />
       <div className="fd-panel-body">
         <CompleteDiagramTree

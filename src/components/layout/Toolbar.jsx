@@ -11,6 +11,8 @@ import { DEFAULT_SHORTCUT_LABELS } from '../../store/keyboardShortcuts';
 import { ValidationPill } from './ValidationPill';
 import { PackOptionsPopover } from './PackOptionsPopover';
 import { ProjectMenuPopover } from './ProjectMenuPopover';
+import { PanelSortContext, SortablePanelItem } from '../../workspace/PanelSortContext';
+import { DEFAULT_WORKSPACE_PANEL_ORDER, WORKSPACE_PANEL_IDS } from '../../workspace/panelLayout';
 import './Toolbar.css';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
@@ -50,20 +52,37 @@ function ToolbarButton({
 }
 
 // Bouton segmenté du pill « Arbre / Réglages / Diagramme ».
-function PanelToggle({ id, title, Icon, active, onClick }) {
+function PanelToggle({ id, panelId, panelOrder, title, Icon, active, onClick, onMovePanel, dragHandleProps = {}, isDragging = false }) {
+  const {
+    ref: dragHandleRef,
+    ...sortableProps
+  } = dragHandleProps;
+
   function handleKeyDown(event) {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    const toggles = [...(event.currentTarget.parentElement?.querySelectorAll('.chrome-panel-toggle') ?? [])];
-    const currentIndex = toggles.indexOf(event.currentTarget);
-    if (currentIndex < 0) return;
-    event.preventDefault();
-    const offset = event.key === 'ArrowRight' ? 1 : -1;
-    toggles[(currentIndex + offset + toggles.length) % toggles.length]?.focus();
+    if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      const currentIndex = panelOrder.indexOf(panelId);
+      const offset = event.key === 'ArrowRight' ? 1 : -1;
+      const targetId = panelOrder[currentIndex + offset];
+      if (!targetId) return;
+      event.preventDefault();
+      onMovePanel?.(panelId, targetId);
+      return;
+    }
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const toggles = [...(event.currentTarget.closest('.chrome-panel-pill')?.querySelectorAll('.chrome-panel-toggle') ?? [])];
+      const currentIndex = toggles.indexOf(event.currentTarget);
+      if (currentIndex < 0) return;
+      event.preventDefault();
+      const offset = event.key === 'ArrowRight' ? 1 : -1;
+      toggles[(currentIndex + offset + toggles.length) % toggles.length]?.focus();
+    }
   }
 
   return (
-    <Tooltip text={title}>
+    <Tooltip text={title} disabled={isDragging}>
       <button
+        ref={dragHandleRef}
+        {...sortableProps}
         type="button"
         data-toolbar-id={id}
         className={`chrome-panel-toggle ${active ? 'is-active' : ''}`}
@@ -71,6 +90,7 @@ function PanelToggle({ id, title, Icon, active, onClick }) {
         onKeyDown={handleKeyDown}
         aria-pressed={active}
         aria-label={title}
+        aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
       >
         <ToolbarIcon Icon={Icon} className="chrome-icon" />
       </button>
@@ -88,6 +108,8 @@ export function Toolbar({
   onSaveProject,
   onSaveProjectAs,
   panels = { showTree: true, showSettings: true, showDiagram: false },
+  panelOrder = DEFAULT_WORKSPACE_PANEL_ORDER,
+  onMovePanel,
   onToggleTree,
   onToggleSettings,
   onToggleDiagram,
@@ -146,29 +168,50 @@ export function Toolbar({
       </div>
 
       <div className="chrome-toolbar-center">
-        <div className="chrome-panel-pill" role="group" aria-label="Panneaux visibles">
-          <PanelToggle
-            id="toggle-tree"
-            title={withShortcut('Afficher/masquer l’arbre', shortcutLabels.toggleTree)}
-            Icon={PanelLeft}
-            active={panels.showTree}
-            onClick={onToggleTree}
-          />
-          <PanelToggle
-            id="toggle-settings"
-            title={withShortcut('Afficher/masquer les réglages', shortcutLabels.toggleSettings)}
-            Icon={SlidersHorizontal}
-            active={panels.showSettings}
-            onClick={onToggleSettings}
-          />
-          <PanelToggle
-            id="toggle-diagram"
-            title={withShortcut('Afficher/masquer le diagramme', shortcutLabels.toggleDiagram)}
-            Icon={Network}
-            active={panels.showDiagram}
-            onClick={onToggleDiagram}
-          />
-        </div>
+        <PanelSortContext items={panelOrder} onMove={onMovePanel}>
+          <div className="chrome-panel-pill" role="group" aria-label="Panneaux visibles et réorganisables">
+            {panelOrder.map((panelId) => {
+              const panel = {
+                [WORKSPACE_PANEL_IDS.STRUCTURE]: {
+                  id: 'toggle-tree',
+                  title: withShortcut('Afficher/masquer l’arbre', shortcutLabels.toggleTree),
+                  Icon: PanelLeft,
+                  active: panels.showTree,
+                  onClick: onToggleTree,
+                },
+                [WORKSPACE_PANEL_IDS.SETTINGS]: {
+                  id: 'toggle-settings',
+                  title: withShortcut('Afficher/masquer les réglages', shortcutLabels.toggleSettings),
+                  Icon: SlidersHorizontal,
+                  active: panels.showSettings,
+                  onClick: onToggleSettings,
+                },
+                [WORKSPACE_PANEL_IDS.DIAGRAM]: {
+                  id: 'toggle-diagram',
+                  title: withShortcut('Afficher/masquer le diagramme', shortcutLabels.toggleDiagram),
+                  Icon: Network,
+                  active: panels.showDiagram,
+                  onClick: onToggleDiagram,
+                },
+              }[panelId];
+              if (!panel) return null;
+              return (
+                <SortablePanelItem key={panelId} id={panelId} className="chrome-panel-sortable">
+                  {({ dragHandleProps, isDragging }) => (
+                    <PanelToggle
+                      {...panel}
+                      panelId={panelId}
+                      panelOrder={panelOrder}
+                      onMovePanel={onMovePanel}
+                      dragHandleProps={dragHandleProps}
+                      isDragging={isDragging}
+                    />
+                  )}
+                </SortablePanelItem>
+              );
+            })}
+          </div>
+        </PanelSortContext>
       </div>
 
       <div className="chrome-toolbar-right">

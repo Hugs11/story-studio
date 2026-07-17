@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { MIME } from './flowDiagramLayout';
+import { MIME } from '../diagram/flowDiagramLayout';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
 export function useZipCover(zipPath, coverImage) {

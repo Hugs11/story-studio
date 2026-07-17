@@ -39,7 +39,7 @@ import { useWindowCloseGuard } from './hooks/useWindowCloseGuard';
 import { useWorkSession } from './hooks/useWorkSession';
 import { useSDJobs } from './hooks/useSDJobs';
 import { useXttsJobs } from './hooks/useXttsJobs';
-import { useDiagramViewState } from './workspace/useDiagramViewState';
+import { useWorkspaceViewState } from './workspace/useWorkspaceViewState';
 import { getProjectFilePrefix } from './utils/projectPrefix';
 import './styles/variables.css';
 import './styles/layout.css';
@@ -87,7 +87,7 @@ function AppContent() {
   const sdStore = useSdStore();
   const xttsStore = useXttsStore();
   useRenderQueueExecutor({ jobs: renderQueue.jobs, updateJob: renderQueue.updateJob, appendLog: renderQueue.appendLog });
-  const diagramView = useDiagramViewState();
+  const workspaceViewState = useWorkspaceViewState();
   // Consolidation des booléens d'ouverture de modales/overlays. Les flags
   // qui portent une donnée restent des useState dédiés (toolbarTtsTargetMenuId,
   // youtubeFunnelMode, pendingSimulateZip).
@@ -570,7 +570,7 @@ function AppContent() {
     missingMedia,
     missingMediaSignature,
     dismissedMissingMediaSignature,
-    diagramView,
+    workspaceViewState,
     savedSnapshotRef,
     workspaceDirRef,
     keyboardShortcuts,
@@ -605,7 +605,7 @@ function AppContent() {
     shortcutActionsRef,
     store,
     modals,
-    diagramView,
+    workspaceViewState,
     setTreeSearchFocusTrigger,
     setDiagramSearchFocusTrigger,
     handleNewProject,
@@ -778,13 +778,15 @@ function AppContent() {
       onSaveProject: handleSave,
       onSaveProjectAs: handleSaveProjectAs,
       panels: {
-        showTree: diagramView.showTree,
-        showSettings: diagramView.showSettings,
-        showDiagram: diagramView.showDiagram,
+        showTree: workspaceViewState.showTree,
+        showSettings: workspaceViewState.showSettings,
+        showDiagram: workspaceViewState.showDiagram,
       },
-      onToggleTree: diagramView.toggleTree,
-      onToggleSettings: diagramView.toggleSettings,
-      onToggleDiagram: diagramView.toggleDiagram,
+      panelOrder: workspaceViewState.panelOrder,
+      onMovePanel: workspaceViewState.movePanel,
+      onToggleTree: workspaceViewState.toggleTree,
+      onToggleSettings: workspaceViewState.toggleSettings,
+      onToggleDiagram: workspaceViewState.toggleDiagram,
       packOptionsOpen: modals.isOpen('packOptions'),
       onPackOptionsOpenChange: (open) => modals.set('packOptions', open),
       projectType: store.project.projectType,
@@ -799,7 +801,7 @@ function AppContent() {
       onSelectIssue: (id) => {
         if (!id) return;
         store.setSelectedId(id);
-        if (!diagramView.showSettings) diagramView.restoreSettings();
+        if (!workspaceViewState.showSettings) workspaceViewState.restoreSettings();
       },
     } : null,
     workspace: {
@@ -827,7 +829,7 @@ function AppContent() {
       treeSearchFocusTrigger,
       onFocusTreeSearch: () => setTreeSearchFocusTrigger((n) => n + 1),
       diagramSearchFocusTrigger,
-      diagramView,
+      workspaceViewState,
     },
     bottomPanel: {
       open: bottomWorkspace.open,
@@ -853,7 +855,7 @@ function AppContent() {
       getImageUsage: getImageJobUsage,
       onSelectNode: (id) => {
         store.setSelectedId(id);
-        if (!diagramView.showSettings) diagramView.restoreSettings();
+        if (!workspaceViewState.showSettings) workspaceViewState.restoreSettings();
       },
       renderQueue,
       mediaTags: store.mediaTags,
