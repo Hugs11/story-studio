@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildSimulatorSelectionSync,
   getPendingInternalSelectedId,
   resolveWorkspaceSelectionSync,
 } from '../src/workspace/selectionSync.js';
@@ -92,6 +93,13 @@ test('root et le message de fin restent des singletons externes valides', () => 
 
   assert.deepEqual([...rootResult.selectedIds], ['root']);
   assert.deepEqual([...endResult.selectedIds], ['end-node']);
+});
+
+test('le suivi du simulateur sélectionne et révèle immédiatement le message de fin', () => {
+  const result = buildSimulatorSelectionSync('end-node', 42);
+
+  assert.deepEqual([...result.selectedIds], ['end-node']);
+  assert.deepEqual(result.revealRequest, { id: 'end-node', requestId: 42 });
 });
 
 test('deux changements externes successifs ne reutilisent aucune attente', () => {

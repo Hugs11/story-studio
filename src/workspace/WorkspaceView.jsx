@@ -18,6 +18,7 @@ import {
 } from './useDiagramViewState';
 import { SettingsPanelHeader } from './SettingsPanelHeader';
 import {
+  buildSimulatorSelectionSync,
   getPendingInternalSelectedId,
   resolveWorkspaceSelectionSync,
 } from './selectionSync';
@@ -161,6 +162,19 @@ export function WorkspaceView({
     onSelect(id);
     setTreeRevealRequest({ id, requestId: ++revealRequestIdRef.current });
   }, [onSelect]);
+
+  const handleSimulatorActiveNodeChange = useCallback((id) => {
+    const sync = buildSimulatorSelectionSync(id, ++revealRequestIdRef.current);
+    if (!sync) return;
+    commitSelectionChange(sync.selectedIds);
+    pendingInternalSelectedIdRef.current = getPendingInternalSelectedId({
+      currentSelectedId: selectedIdRef.current,
+      nextSelectedId: id,
+    });
+    onSelect(id);
+    setTreeRevealRequest(sync.revealRequest);
+    setDiagramRevealRequest(sync.revealRequest);
+  }, [commitSelectionChange, onSelect]);
 
   const handleOpenLocalEndSettings = useCallback((storyId) => {
     commitSelectionChange(new Set([storyId]));
@@ -359,7 +373,7 @@ export function WorkspaceView({
           anchorId={simulatorAnchorId}
           zipPath={simulatorZipPath}
           hostSelector=".workspace"
-          onActiveNodeChange={onSelect}
+          onActiveNodeChange={handleSimulatorActiveNodeChange}
           onClose={handleCloseSimulator}
         />
       </div>
