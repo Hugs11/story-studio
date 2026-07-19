@@ -876,13 +876,16 @@
   background: var(--bg0);
 }
 
-.media-assembly-toast {
+.media-tool-result {
   position: fixed;
   right: 18px;
   bottom: 58px;
   z-index: 10020;
-  max-width: min(420px, calc(100vw - 36px));
-  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(520px, calc(100vw - 36px));
+  padding: 12px;
   border-radius: 7px;
   border: 0.5px solid color-mix(in srgb, var(--success) 35%, transparent);
   background: color-mix(in srgb, var(--bg1) 82%, var(--success));
@@ -890,6 +893,23 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.media-tool-result-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.media-tool-result-copy small {
+  color: var(--text-secondary);
+}
+
+.media-tool-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 /* Pills scrollables dans la colonne gauche */

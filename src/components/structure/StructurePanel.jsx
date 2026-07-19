@@ -58,7 +58,7 @@ export function StructurePanel({
     onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord, canGenerateStoryTts,
     onDeleteMenu, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
     onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate, onPasteEntries, onCutPasteEntries,
-    onAddEndNode, onRemoveEndNode,
+    onAddEndNode, onRemoveEndNode, onOpenMediaAudioTool,
   } = useProjectActions();
   const handleSetNodeColor = useStructureNodeColor();
   const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);
@@ -156,6 +156,7 @@ export function StructurePanel({
         onAddEndNode={onAddEndNode}
         onRemoveEndNode={onRemoveEndNode}
         onSimulateNode={onSimulateNode}
+        onOpenMediaAudioTool={onOpenMediaAudioTool}
         validationIssues={validationIssues}
         projectIndex={projectIndex}
         treeSearchFocusTrigger={treeSearchFocusTrigger}

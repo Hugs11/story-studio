@@ -36,6 +36,7 @@ export function TreePanel({
   onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
   onAddEndNode, onRemoveEndNode, onSimulateNode,
+  onOpenMediaAudioTool,
   validationIssues: validationIssuesProp, projectIndex,
   treeSearchFocusTrigger = 0,
   selectionRevealRequest = null,
@@ -518,6 +519,7 @@ export function TreePanel({
             onBulkDeleteItems,
             onBulkUpdateItems,
             onSetNodeColor,
+            onOpenMediaAudioTool,
             closeContextMenu: () => setCtxMenu(null),
           })}
         />

@@ -2,6 +2,7 @@ import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
+import { resolveAudioStoriesInProjectOrder } from '../../store/mediaToolContext';
 import { END_NODE_ID } from './treePanelConstants';
 import {
   IconArrowUpLeft,
@@ -55,6 +56,7 @@ export function buildTreeContextActions({
   onBulkDeleteItems,
   onBulkUpdateItems,
   onSetNodeColor,
+  onOpenMediaAudioTool,
   closeContextMenu,
 }) {
   const isRootCtx = nodeType === 'root' || nodeType === 'root-bg';
@@ -147,6 +149,43 @@ export function buildTreeContextActions({
         label: imageClipboard.getEntry()?.mode === 'cut' ? "Déplacer l'image ici" : "Coller l'image ici",
         fn: () => handlePasteMedia(nodeId, nodeType, 'image'),
       });
+    }
+
+    const selectedForAudio = !isRootCtx && selectedIds.has(nodeId) && selectedIds.size > 1
+      ? [...selectedIds]
+      : [nodeId];
+    const audioContext = resolveAudioStoriesInProjectOrder(project, selectedForAudio);
+    if (onOpenMediaAudioTool && audioContext.valid) {
+      actions.push('sep');
+      if (audioContext.stories.length === 1) {
+        actions.push({
+          icon: <IconScissors />,
+          label: 'Extraire ou découper l’audio dans Médias…',
+          fn: () => {
+            closeContextMenu();
+            onOpenMediaAudioTool({
+              origin: 'tree',
+              tool: 'split',
+              mode: 'extract',
+              entryIds: audioContext.entryIds,
+            });
+          },
+        });
+      } else {
+        actions.push({
+          icon: <IconStory />,
+          label: 'Assembler leurs audios dans Médias…',
+          fn: () => {
+            closeContextMenu();
+            onOpenMediaAudioTool({
+              origin: 'tree',
+              tool: 'assemble',
+              mode: 'assemble',
+              entryIds: audioContext.entryIds,
+            });
+          },
+        });
+      }
     }
 
     if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip' || nodeType === 'ref') {
