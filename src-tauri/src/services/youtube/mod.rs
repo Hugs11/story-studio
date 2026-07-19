@@ -22,6 +22,9 @@ mod provision;
 pub struct YoutubeVideo {
     pub id: String,
     pub selection_key: String,
+    /// Position absolue dans la source, utilisée pour garder un ordre stable
+    /// lorsque la sélection couvre plusieurs pages.
+    pub source_index: usize,
     pub title: String,
     pub audio_url: String,
     pub duration: Option<String>,
@@ -35,8 +38,10 @@ pub struct YoutubeList {
     pub title: String,
     pub image_url: Option<String>,
     pub videos: Vec<YoutubeVideo>,
-    /// `true` si la liste dépasse le plafond (chaîne énorme) : l'UI avertit.
-    pub truncated: bool,
+    pub page: usize,
+    pub page_size: usize,
+    /// Déterminé en demandant une entrée sentinelle après la page courante.
+    pub has_next: bool,
 }
 
 pub use download::download_audio;
@@ -45,7 +50,9 @@ pub(crate) use provision::update_ytdlp as update_ytdlp_binary;
 
 #[cfg(test)]
 mod tests {
-    use super::metadata::{format_duration, parse_list_json, validate_youtube_url};
+    use super::metadata::{
+        format_duration, normalize_listing_url, page_window, parse_list_json, validate_youtube_url,
+    };
 
     #[test]
     fn accepts_youtube_hosts_only() {
@@ -75,17 +82,18 @@ mod tests {
             "duration": 90.0,
             "thumbnail": "https://i.ytimg.com/vi/vid123/hqdefault.jpg"
         });
-        let list = parse_list_json(json, 400);
+        let list = parse_list_json(json, 1, 400);
         assert_eq!(list.title, "Une vidéo");
         assert_eq!(list.videos.len(), 1);
         assert_eq!(list.videos[0].id, "vid123");
         assert_eq!(list.videos[0].selection_key, "vid123#1");
+        assert_eq!(list.videos[0].source_index, 1);
         assert_eq!(
             list.videos[0].audio_url,
             "https://www.youtube.com/watch?v=vid123"
         );
         assert_eq!(list.videos[0].duration.as_deref(), Some("1:30"));
-        assert!(!list.truncated);
+        assert!(!list.has_next);
     }
 
     #[test]
@@ -101,7 +109,7 @@ mod tests {
                 { "title": "Cassée" }
             ]
         });
-        let list = parse_list_json(json, 400);
+        let list = parse_list_json(json, 1, 400);
         assert_eq!(list.title, "Ma playlist");
         assert_eq!(list.videos.len(), 2);
         assert_eq!(
@@ -115,18 +123,18 @@ mod tests {
     }
 
     #[test]
-    fn flags_truncated_when_limit_exceeded() {
+    fn reports_next_page_when_page_size_is_exceeded() {
         let entries: Vec<_> = (0..4)
             .map(|i| serde_json::json!({ "id": format!("id{i}"), "title": format!("v{i}") }))
             .collect();
         let json = serde_json::json!({ "title": "Grosse chaîne", "entries": entries });
-        let list = parse_list_json(json, 3);
+        let list = parse_list_json(json, 1, 3);
         assert_eq!(list.videos.len(), 3);
-        assert!(list.truncated);
+        assert!(list.has_next);
     }
 
     #[test]
-    fn exact_limit_is_not_truncated_and_empty_ids_get_unique_keys() {
+    fn exact_page_has_no_next_and_empty_ids_get_unique_keys() {
         let entries: Vec<_> = (0..3)
             .map(|i| {
                 serde_json::json!({
@@ -136,10 +144,82 @@ mod tests {
             })
             .collect();
         let json = serde_json::json!({ "title": "Pile", "entries": entries });
-        let list = parse_list_json(json, 3);
+        let list = parse_list_json(json, 1, 3);
         assert_eq!(list.videos.len(), 3);
-        assert!(!list.truncated);
+        assert!(!list.has_next);
         assert_eq!(list.videos[0].selection_key, "video-1");
         assert_eq!(list.videos[1].selection_key, "video-2");
+    }
+
+    #[test]
+    fn second_page_uses_absolute_indices_for_selection_keys() {
+        let entries: Vec<_> = (0..3)
+            .map(|i| serde_json::json!({ "id": format!("id{i}"), "title": format!("v{i}") }))
+            .collect();
+        let json = serde_json::json!({ "title": "Page suivante", "entries": entries });
+        let list = parse_list_json(json, 2, 400);
+        assert_eq!(list.page, 2);
+        assert_eq!(list.page_size, 400);
+        assert_eq!(list.videos[0].source_index, 401);
+        assert_eq!(list.videos[0].selection_key, "id0#401");
+        assert_eq!(list.videos[2].selection_key, "id2#403");
+    }
+
+    #[test]
+    fn channel_media_tab_uses_channel_name_as_list_title() {
+        let json = serde_json::json!({
+            "title": "Exemple - Videos",
+            "channel": "Exemple",
+            "webpage_url": "https://www.youtube.com/@example/videos",
+            "entries": [{ "id": "id1", "title": "Vidéo" }]
+        });
+        let list = parse_list_json(json, 1, 400);
+        assert_eq!(list.title, "Exemple");
+    }
+
+    #[test]
+    fn computes_inclusive_ytdlp_page_window_with_sentinel() {
+        assert_eq!(page_window(1, 400), Ok((1, 401)));
+        assert_eq!(page_window(2, 400), Ok((401, 801)));
+        assert!(page_window(0, 400).is_err());
+        assert!(page_window(1, 0).is_err());
+    }
+
+    #[test]
+    fn normalizes_bare_channel_urls_to_videos_tab() {
+        assert_eq!(
+            normalize_listing_url("https://www.youtube.com/@example").unwrap(),
+            "https://www.youtube.com/@example/videos"
+        );
+        assert_eq!(
+            normalize_listing_url("https://youtube.com/channel/UC123?si=share").unwrap(),
+            "https://youtube.com/playlist?list=UU123"
+        );
+        assert_eq!(
+            normalize_listing_url("https://youtube.com/@example/featured").unwrap(),
+            "https://youtube.com/@example/videos"
+        );
+    }
+
+    #[test]
+    fn topic_channel_id_uses_its_uploads_playlist() {
+        assert_eq!(
+            normalize_listing_url("https://www.youtube.com/channel/UCSfN2aeHSOJAF7ijtDu9ndQ")
+                .unwrap(),
+            "https://www.youtube.com/playlist?list=UUSfN2aeHSOJAF7ijtDu9ndQ"
+        );
+    }
+
+    #[test]
+    fn preserves_explicit_tabs_playlists_and_video_urls() {
+        for url in [
+            "https://www.youtube.com/@example/videos",
+            "https://www.youtube.com/@example/shorts",
+            "https://www.youtube.com/@example/streams",
+            "https://www.youtube.com/playlist?list=PL123",
+            "https://youtu.be/abc123",
+        ] {
+            assert_eq!(normalize_listing_url(url).unwrap(), url);
+        }
     }
 }

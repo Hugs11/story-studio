@@ -25,6 +25,7 @@ pub async fn fetch_youtube_list(
     app: AppHandle,
     url: String,
     ytdlp_path: Option<String>,
+    page: Option<usize>,
 ) -> Result<YoutubeList, String> {
     let home = youtube_home(&app)?;
     let custom = empty_to_none(ytdlp_path);
@@ -33,7 +34,7 @@ pub async fn fetch_youtube_list(
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
-        youtube::fetch_list(&home, custom.as_deref(), &url, &emit)
+        youtube::fetch_list(&home, custom.as_deref(), &url, page.unwrap_or(1), &emit)
             .inspect_err(|err| log::error!(target: "youtube", "fetch_youtube_list failed: {}", err))
     })
     .await
