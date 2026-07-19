@@ -192,14 +192,14 @@ export function ImageField({
               <button className="overlay-btn" onClick={e => { e.stopPropagation(); handlePick(); }}>Remplacer</button>
               <button className="overlay-btn" onClick={handleEdit}>Éditer</button>
               {onClear && (
-                <button className="overlay-btn overlay-btn-danger" onClick={e => { e.stopPropagation(); onClear(); }}>Supprimer</button>
+                <button className="overlay-btn overlay-btn-danger" onClick={e => { e.stopPropagation(); onClear(); }}>Retirer</button>
               )}
             </div>
           </div>
         ) : (
           <div className="image-overlay">
             {(file && !fileAvailable) && onClear ? (
-              <button className="overlay-btn overlay-btn-danger" onClick={e => { e.stopPropagation(); onClear(); }}>Supprimer</button>
+              <button className="overlay-btn overlay-btn-danger" onClick={e => { e.stopPropagation(); onClear(); }}>Retirer</button>
             ) : (
               <span>Choisir</span>
             )}

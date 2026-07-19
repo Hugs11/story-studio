@@ -23,6 +23,7 @@ import {
   ZIPS_EXTRAITS,
 } from './workspaceDirs';
 import { chooseCompatibleProjectPath, workspaceFallbackForProjectRelativePath } from './projectPathCompatibility';
+import { reconcileMediaLibraryPaths } from './mediaLibrary';
 
 const PROJECT_OPEN_KEYS = [KEYS.LAST_OPEN_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const PROJECT_SAVE_KEYS = [KEYS.LAST_SAVE_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
@@ -479,13 +480,18 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   const projectWithImages = options.autosave
     ? projectToSerializable(normalizeProjectData(projectForPath))
     : await persistTempImages(projectForPath, path, resolvedWs);
+  const catalogPathsForSave = options.autosave
+    ? (options.mediaLibraryPaths ?? [])
+    : (options.mediaLibraryPaths ?? []).filter((mediaPath) => !isTempImage(mediaPath));
+  const reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
   const projectToSave = {
     ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, mbahDir)),
     // Tags are still keyed by media path. Keys are relativized in .mbah files
     // to survive project-folder moves; content-hash tags would be a future
     // migration if we need to track renamed files inside the workspace.
     mediaTags: relativizeTagKeys(options.mediaTags ?? {}, mbahDir),
-    mediaLibraryPaths: (options.mediaLibraryPaths ?? []).map((p) => toProjectRelative(p, mbahDir)),
+    mediaLibraryPaths: reconciledMediaLibraryPaths
+      .map((p) => toProjectRelative(p, mbahDir)),
   };
   const workspaceBackupDir = resolvedWs
     ? joinPath(resolvedWs, SAUVEGARDES, VERSIONS_SECURITE)
@@ -499,7 +505,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   }
   onProgress?.('Projet enregistré');
   // Return the project with absolute paths for in-memory use
-  return { path, project: projectWithImages };
+  return { path, project: projectWithImages, mediaLibraryPaths: reconciledMediaLibraryPaths };
 }
 
 export async function saveProjectAs(project, currentSavePath, onProgress = null, mediaTags = {}, options = {}, mediaLibraryPaths = []) {
@@ -527,16 +533,19 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
   onProgress?.('Décollage vers la lune...');
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
   const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
+  const catalogPathsForSave = mediaLibraryPaths.filter((mediaPath) => !isTempImage(mediaPath));
+  const reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
   const projectToSave = {
     ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, newProjectDir)),
     mediaTags: relativizeTagKeys(mediaTags, newProjectDir),
-    mediaLibraryPaths: mediaLibraryPaths.map((p) => toProjectRelative(p, newProjectDir)),
+    mediaLibraryPaths: reconciledMediaLibraryPaths
+      .map((p) => toProjectRelative(p, newProjectDir)),
   };
   await writeProjectFileAtomic(newPath, JSON.stringify(projectToSave, null, 2));
   saveProjectDir(PROJECT_SAVE_KEYS[0], newPath);
 
   onProgress?.('Projet enregistré');
-  return { path: newPath, project: projectWithImages };
+  return { path: newPath, project: projectWithImages, mediaLibraryPaths: reconciledMediaLibraryPaths };
 }
 
 export async function loadProject() {
@@ -562,7 +571,13 @@ export async function loadProjectFromPath(path) {
     : [];
   const withAbsolutePaths = await resolveLoadedProjectPaths(rawData, mbahDir, workspaceDir, compatibilityCache);
   const migrated = migrateProjectData(withAbsolutePaths, { savePath: path });
-  return { data: normalizeProjectData(migrated), path, mediaTags, mediaLibraryPaths };
+  const data = normalizeProjectData(migrated);
+  return {
+    data,
+    path,
+    mediaTags,
+    mediaLibraryPaths: reconcileMediaLibraryPaths(data, mediaLibraryPaths),
+  };
 }
 
 export function getExtractedZipsDir(workspaceDir) {

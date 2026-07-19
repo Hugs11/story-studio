@@ -39,6 +39,8 @@ export function BottomWorkspacePanel({
   onAddMediaTag,
   onRemoveMediaTag,
   onDeleteMedia,
+  onMediaCatalogChanged,
+  workspaceDir = '',
   savePath,
   projectName = '',
   onMediaCreated,
@@ -134,6 +136,8 @@ export function BottomWorkspacePanel({
             onAddMediaTag={onAddMediaTag}
             onRemoveMediaTag={onRemoveMediaTag}
             onDeleteMedia={onDeleteMedia}
+            onMediaCatalogChanged={onMediaCatalogChanged}
+            workspaceDir={workspaceDir}
             savePath={savePath}
             projectName={projectName}
             onMediaCreated={onMediaCreated}

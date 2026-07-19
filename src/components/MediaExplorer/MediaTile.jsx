@@ -74,7 +74,14 @@ export function MediaTile({
     ] : []),
     ...(onDeleteRequest ? [
       'sep',
-      { icon: <Trash2 />, label: contextItems.length > 1 ? `Supprimer ${contextItems.length} fichiers` : 'Supprimer', fn: () => onDeleteRequest(contextItems), danger: true },
+      {
+        icon: <Trash2 />,
+        label: contextItems.length > 1
+          ? `Retirer ${contextItems.length} fichiers de la médiathèque`
+          : 'Retirer de la médiathèque',
+        fn: () => onDeleteRequest(contextItems),
+        danger: true,
+      },
     ] : []),
     ...(hasTagActions ? [
       'sep',

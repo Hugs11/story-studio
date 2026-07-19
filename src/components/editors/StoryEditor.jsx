@@ -230,7 +230,7 @@ export const StoryEditor = memo(function StoryEditor({
           </button>
           <span className="card-danger-title">Supprimer cette histoire</span>
           <p className="card-danger-desc">
-            L'histoire est retirée du pack avec son audio, son image et ses transitions. Les fichiers audio et image restent disponibles dans la médiathèque pour être réutilisés.
+            L'histoire et ses transitions sont retirées du pack. Ses fichiers restent dans la médiathèque, sans être supprimés du disque.
           </p>
         </div>
       </div>

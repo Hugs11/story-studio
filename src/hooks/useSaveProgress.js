@@ -12,6 +12,7 @@ export function useSaveProgress({
   store,
   workspaceDirRef,
   mediaLibraryPathsRef,
+  setMediaLibraryPaths,
   autoSaveEnabled,
   autoSaveBackupLimit,
   savedSnapshotRef,
@@ -27,15 +28,23 @@ export function useSaveProgress({
   const [saveAsProgress, setSaveAsProgress] = useState(null);
 
   const persistProjectSnapshot = useCallback(async (project, savePath) => {
-    const result = await saveProject(project, savePath);
+    const result = await saveProject(project, savePath, null, {
+      mediaTags: store.mediaTags,
+      mediaLibraryPaths: mediaLibraryPathsRef.current,
+      workspaceDir: workspaceDirRef.current,
+    });
     if (!result?.path) return null;
     store.syncProjectWithoutHistory(result.project);
     store.setSavePath(result.path);
+    if (result.mediaLibraryPaths) {
+      setMediaLibraryPaths(result.mediaLibraryPaths);
+      mediaLibraryPathsRef.current = result.mediaLibraryPaths;
+    }
     savedSnapshotRef.current = JSON.stringify(result.project);
     setSaveToast('ok');
     setTimeout(() => setSaveToast(null), 2000);
     return result.path;
-  }, [savedSnapshotRef, setSaveToast, store]);
+  }, [mediaLibraryPathsRef, savedSnapshotRef, setMediaLibraryPaths, setSaveToast, store, workspaceDirRef]);
 
   const handleSaveProject = useCallback(async ({
     silent = false,
@@ -87,6 +96,10 @@ export function useSaveProgress({
         }
         store.syncProjectWithoutHistory(result.project);
         store.setSavePath(result.path);
+        if (result.mediaLibraryPaths) {
+          setMediaLibraryPaths(result.mediaLibraryPaths);
+          mediaLibraryPathsRef.current = result.mediaLibraryPaths;
+        }
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
         await onProjectSaved?.(result);
@@ -118,6 +131,7 @@ export function useSaveProgress({
     mediaLibraryPathsRef,
     savedSnapshotRef,
     setRecentProjects,
+    setMediaLibraryPaths,
     setSaveToast,
     store,
     workspaceDirRef,
@@ -183,6 +197,10 @@ export function useSaveProgress({
         }
         store.syncProjectWithoutHistory(result.project);
         store.setSavePath(result.path);
+        if (result.mediaLibraryPaths) {
+          setMediaLibraryPaths(result.mediaLibraryPaths);
+          mediaLibraryPathsRef.current = result.mediaLibraryPaths;
+        }
         setRecentProjects(rememberRecentProject(result.project, result.path));
         savedSnapshotRef.current = JSON.stringify(result.project);
         await onProjectSaved?.(result, {
@@ -211,6 +229,7 @@ export function useSaveProgress({
     onProjectSaved,
     savedSnapshotRef,
     setRecentProjects,
+    setMediaLibraryPaths,
     setSaveToast,
     sessionModeRef,
     store,
