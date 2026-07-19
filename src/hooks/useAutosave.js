@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { autoSaveEphemeralProject, autoSaveNewProject, getWorkspaceDir, saveProject } from '../store/projectIO';
-import { isProjectDirty } from '../store/projectHelpers';
-import { AUTOSAVE_ACTIONS, decideAutosaveAction } from '../store/autosaveDecision';
+import { createWorkSnapshot } from '../store/projectHelpers';
+import { AUTOSAVE_ACTIONS, decideAutosaveAction, isProjectWorthAutosaving } from '../store/autosaveDecision';
 import { logger } from '../utils/logger';
 
 export function useAutosave({
@@ -12,6 +12,7 @@ export function useAutosave({
   savePathRef,
   workspaceDirRef,
   autoSavePathRef,
+  autoSaveSnapshotRef,
   ephemeralSnapshotPathRef,
   ephemeralSnapshotSeedStateRef,
   sessionModeRef,
@@ -26,7 +27,10 @@ export function useAutosave({
   useEffect(() => {
     if (!enabled) return undefined;
     const interval = setInterval(async () => {
-      const current = JSON.stringify(projectRef.current);
+      const project = projectRef.current;
+      const mediaLibraryPaths = mediaLibraryPathsRef.current;
+      const mediaTags = mediaTagsRef.current;
+      const current = createWorkSnapshot(project, mediaLibraryPaths, mediaTags);
       const sessionMode = sessionModeRef?.current ?? 'project';
       const ephemeralSeedState = ephemeralSnapshotSeedStateRef?.current ?? null;
       const ephemeralSessionToken = ephemeralSeedState?.sessionToken ?? null;
@@ -36,8 +40,11 @@ export function useAutosave({
       const action = decideAutosaveAction({
         isSaving: isSavingRef.current,
         currentSnapshot: current,
-        savedSnapshot: savedSnapshotRef.current,
-        isDirty: isProjectDirty(projectRef.current),
+        savedSnapshot: savePathRef.current
+          ? savedSnapshotRef.current
+          : autoSaveSnapshotRef.current,
+        isDirty: isProjectWorthAutosaving(project, mediaLibraryPaths, mediaLibraryCountRef.current)
+          || Object.keys(mediaTags ?? {}).length > 0,
         savePath: savePathRef.current,
         workspaceDir,
         autoSavePath: autoSavePathRef.current,
@@ -63,9 +70,9 @@ export function useAutosave({
       // store.savePath, so that recording/generation paths are never derived from the autosave file.
       try {
         if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL) {
-          await autoSaveEphemeralProject(projectRef.current, action.workspaceDir, action.path, {
-            mediaTags: mediaTagsRef.current,
-            mediaLibraryPaths: mediaLibraryPathsRef.current,
+          await autoSaveEphemeralProject(project, action.workspaceDir, action.path, {
+            mediaTags,
+            mediaLibraryPaths,
             totalMediaCount: mediaLibraryCountRef.current,
           });
           if (ephemeralSeedState
@@ -75,25 +82,29 @@ export function useAutosave({
             ephemeralSeedState.savedSnapshot = current;
           }
         } else if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EXISTING) {
-          await saveProject(projectRef.current, action.path, null, {
+          await saveProject(project, action.path, null, {
             autosave: true,
             backupLimit,
-            mediaTags: mediaTagsRef.current,
-            mediaLibraryPaths: mediaLibraryPathsRef.current,
+            mediaTags,
+            mediaLibraryPaths,
             totalMediaCount: mediaLibraryCountRef.current,
           });
-          savedSnapshotRef.current = current;
+          autoSaveSnapshotRef.current = current;
           setAutoSavedPath(action.path);
         } else {
-          const result = await autoSaveNewProject(projectRef.current, action.workspaceDir, {
+          const result = await autoSaveNewProject(project, action.workspaceDir, {
             backupLimit,
-            mediaTags: mediaTagsRef.current,
-            mediaLibraryPaths: mediaLibraryPathsRef.current,
+            mediaTags,
+            mediaLibraryPaths,
             totalMediaCount: mediaLibraryCountRef.current,
           });
           if (!result?.path) return;
           autoSavePathRef.current = result.path;
-          savedSnapshotRef.current = JSON.stringify(result.project);
+          autoSaveSnapshotRef.current = createWorkSnapshot(
+            result.project,
+            result.mediaLibraryPaths ?? mediaLibraryPaths,
+            mediaTags,
+          );
           setAutoSavedPath(result.path);
         }
         if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL) return;

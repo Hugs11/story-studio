@@ -238,8 +238,12 @@ export function getAssemblyReplacementEligibility(project, entryIds) {
     const nextStory = resolved.stories[index + 1];
     const parent = parentId == null ? null : resolved.projectIndex.entryById.get(parentId);
     const behavior = getEffectiveEndBehavior(story, parent, project, project?.rootEntries ?? []);
+    const explicitRootMatchesRootDefault = parentId == null
+      && story.returnAfterPlay === 'root'
+      && behavior.finalTargetId === 'root';
     const hasAmbiguousReturn = !!story.returnAfterPlay
-      && behavior.finalTargetId !== `story_play:${nextStory.id}`;
+      && behavior.finalTargetId !== `story_play:${nextStory.id}`
+      && !explicitRootMatchesRootDefault;
     const hasStoryHomeOverride = !!story.returnOnHome || !!story.returnOnHomeNone;
     if (behavior.usesEndStep || hasAmbiguousReturn || hasStoryHomeOverride) {
       return {

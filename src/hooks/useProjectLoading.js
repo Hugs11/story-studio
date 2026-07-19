@@ -8,34 +8,8 @@ import {
 } from '../store/projectIO';
 import { sanitizeImportedName } from '../store/projectStore';
 import { visitProjectEntries } from '../store/projectModel';
+import { createWorkSnapshot } from '../store/projectHelpers';
 import { logger } from '../utils/logger';
-
-async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog, isProjectDirty) {
-  const unchanged = savedSnapshot === null
-    ? !isProjectDirty(project)
-    : JSON.stringify(project) === savedSnapshot;
-  if (unchanged) return true;
-  const choice = await showChoiceDialog({
-    title: 'Projet non enregistré',
-    message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
-    variant: 'warning',
-    cancelValue: 'cancel',
-    actions: [
-      { value: 'cancel', label: 'Annuler', autoFocus: true },
-      { value: 'discard', label: 'Quitter sans enregistrer', kind: 'danger-outline' },
-      { value: 'save', label: 'Enregistrer comme projet', kind: 'primary' },
-    ],
-  });
-  if (choice === 'save') {
-    try {
-      const savedPath = await onSave?.();
-      return !!savedPath;
-    } catch {
-      return false;
-    }
-  }
-  return choice === 'discard';
-}
 
 export function useProjectLoading({
   store,
@@ -45,11 +19,11 @@ export function useProjectLoading({
   setRecentProjects,
   savedSnapshotRef,
   autoSavePathRef,
+  autoSaveSnapshotRef,
   setAutoSavedPath,
+  confirmSaveBeforeLeaveCurrent,
   handleSaveProject,
   showErrorDialog,
-  isProjectDirty,
-  showChoiceDialog,
   onProjectLoaded = null,
   onBeforeProjectReplaced = null,
 }) {
@@ -61,8 +35,13 @@ export function useProjectLoading({
     store.setSavePath(result.path);
     setMediaLibraryPaths(result.mediaLibraryPaths ?? []);
     setRecentProjects(rememberRecentProject(result.data, result.path));
-    savedSnapshotRef.current = JSON.stringify(result.data);
+    savedSnapshotRef.current = createWorkSnapshot(
+      result.data,
+      result.mediaLibraryPaths ?? [],
+      result.mediaTags ?? {},
+    );
     autoSavePathRef.current = null;
+    autoSaveSnapshotRef.current = null;
     setAutoSavedPath(null);
     await onProjectLoaded?.(result);
     sdStore.clearDone();
@@ -91,6 +70,7 @@ export function useProjectLoading({
     }
   }, [
     autoSavePathRef,
+    autoSaveSnapshotRef,
     savedSnapshotRef,
     sdStore,
     setAutoSavedPath,
@@ -102,29 +82,17 @@ export function useProjectLoading({
   ]);
 
   const handleLoad = useCallback(async () => {
-    const canContinue = await askSaveBeforeLeave(
-      store.project,
-      savedSnapshotRef.current,
-      handleSaveProject,
-      showChoiceDialog,
-      isProjectDirty,
-    );
+    const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return;
     const result = await loadProject();
     if (result) {
       await onBeforeProjectReplaced?.();
       await applyLoadedProject(result);
     }
-  }, [applyLoadedProject, handleSaveProject, isProjectDirty, onBeforeProjectReplaced, savedSnapshotRef, showChoiceDialog, store.project]);
+  }, [applyLoadedProject, confirmSaveBeforeLeaveCurrent, handleSaveProject, onBeforeProjectReplaced]);
 
   const handleLoadRecent = useCallback(async (path) => {
-    const canContinue = await askSaveBeforeLeave(
-      store.project,
-      savedSnapshotRef.current,
-      handleSaveProject,
-      showChoiceDialog,
-      isProjectDirty,
-    );
+    const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return;
     try {
       const result = await loadProjectFromPath(path);
@@ -140,14 +108,11 @@ export function useProjectLoading({
     }
   }, [
     applyLoadedProject,
+    confirmSaveBeforeLeaveCurrent,
     handleSaveProject,
-    isProjectDirty,
     onBeforeProjectReplaced,
-    savedSnapshotRef,
     setRecentProjects,
     showErrorDialog,
-    showChoiceDialog,
-    store.project,
   ]);
 
   return { applyLoadedProject, handleLoad, handleLoadRecent };

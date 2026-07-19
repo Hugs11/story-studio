@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { getLastExportDir } from './useFileDialog';
 import { useProjectDerivedData } from './useProjectDerivedData';
-import { isProjectDirty } from '../store/projectHelpers';
+import { hasUnsavedWork } from '../store/projectHelpers';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { isTtsAvailable } from '../store/xttsSettings';
 import { getShortcutLabelMap } from '../store/keyboardShortcuts';
@@ -28,6 +28,7 @@ export function useAppDerivedState({
   dismissedMissingMediaSignature,
   workspaceViewState,
   savedSnapshotRef,
+  mediaLibraryPaths,
   workspaceDirRef,
   keyboardShortcuts,
   xttsSettings,
@@ -71,9 +72,12 @@ export function useAppDerivedState({
   const statusText = projectType === null
     ? 'Choisis un type de projet'
     : `Sélection : ${selectedStatusName} — panneaux : ${activePanelsLabel}`;
-  const projectDirty = savedSnapshotRef.current === null
-    ? isProjectDirty(store.project)
-    : JSON.stringify(store.project) !== savedSnapshotRef.current;
+  const projectDirty = hasUnsavedWork({
+    project: store.project,
+    mediaLibraryPaths,
+    mediaTags: store.mediaTags,
+    savedSnapshot: savedSnapshotRef.current,
+  });
   const titleBarName = store.project.projectName?.trim() || null;
   const canImportStories = store.project.projectType === 'pack';
   const canAddFolder = canImportStories;

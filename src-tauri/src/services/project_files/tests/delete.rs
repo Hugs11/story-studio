@@ -14,6 +14,50 @@ fn delete_workspace_media_file_accepts_images_generees() {
 }
 
 #[test]
+fn delete_workspace_media_file_removes_only_the_target_image_sidecar() {
+    let workspace = temp_workspace_with_dirs("delete_image_sidecars");
+    let images = workspace.join("images-generees");
+    let source = workspace.join("fichiers-importes").join("source.png");
+    let first = images.join("first-edited.png");
+    let second = images.join("second-edited.png");
+    let dot_folder = images.join(IMAGE_EDIT_DIR);
+    let first_sidecar = dot_folder.join("first-edited.png.edit.json");
+    let second_sidecar = dot_folder.join("second-edited.png.edit.json");
+    write_temp_file(&source, b"source");
+    write_temp_file(&first, b"first");
+    write_temp_file(&second, b"second");
+    write_temp_file(
+        &first_sidecar,
+        format!(r#"{{"sourcePath":"{}"}}"#, source.display()).as_bytes(),
+    );
+    write_temp_file(&second_sidecar, b"{}");
+
+    delete_workspace_media_file(first.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+        .expect("first delete should succeed");
+
+    assert!(!first_sidecar.exists(), "target sidecar removed");
+    assert!(second_sidecar.exists(), "unrelated sidecar preserved");
+    assert!(dot_folder.exists(), "non-empty dot folder preserved");
+    assert!(
+        source.exists(),
+        "source image must never be cascade-deleted"
+    );
+
+    delete_workspace_media_file(second.to_str().unwrap(), workspace.to_str().unwrap(), &[])
+        .expect("second delete should succeed");
+    assert!(
+        !dot_folder.exists(),
+        "empty image sidecar folder cleaned up"
+    );
+    assert!(
+        source.exists(),
+        "source image remains after every derived deletion"
+    );
+
+    fs::remove_dir_all(workspace).expect("cleanup");
+}
+
+#[test]
 fn delete_workspace_media_file_accepts_fichiers_importes() {
     let workspace = temp_workspace_with_dirs("delete_imports");
     let target = workspace.join("fichiers-importes").join("audio.mp3");

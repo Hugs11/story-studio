@@ -137,6 +137,26 @@ test('ordinary consecutive stories are replaceable while an explicit divergent r
   assert.equal(getAssemblyReplacementEligibility(divergent, ['a', 'b']).code, 'ambiguous-navigation');
 });
 
+test('root stories created by audio imports remain replaceable when their explicit root return matches the default', () => {
+  const value = project([
+    story('podcast-1', { returnAfterPlay: 'root' }),
+    story('podcast-2', { returnAfterPlay: 'root' }),
+  ]);
+  const request = requestFor(value, ['podcast-2', 'podcast-1']);
+  const eligibility = getAssemblyReplacementEligibility(value, request.entryIds);
+
+  assert.equal(eligibility.valid, true);
+  assert.deepEqual(getMediaToolProjectActions({
+    request,
+    result: {
+      createdPaths: ['assembled.flac'],
+      inputPaths: request.sourcePaths,
+    },
+    contextValidation: { valid: true },
+    replacementEligibility: eligibility,
+  }), ['replace-stories-with-assembly']);
+});
+
 test('a changed source signature invalidates the contextual request', () => {
   const value = project([story('a')]);
   const request = requestFor(value, ['a']);

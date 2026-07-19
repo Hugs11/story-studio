@@ -24,6 +24,12 @@ import {
 } from './workspaceDirs';
 import { chooseCompatibleProjectPath, workspaceFallbackForProjectRelativePath } from './projectPathCompatibility';
 import { reconcileMediaLibraryPaths } from './mediaLibrary';
+import {
+  imageEditMetadataPath,
+  readImageEditMetadata,
+  withImageEditSourcePath,
+  writeImageEditMetadata,
+} from './imageEditMetadata';
 
 const PROJECT_OPEN_KEYS = [KEYS.LAST_OPEN_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
 const PROJECT_SAVE_KEYS = [KEYS.LAST_SAVE_PROJECT_DIR, KEYS.LAST_PROJECT_DIR];
@@ -431,17 +437,14 @@ async function persistTempImages(project, projectPath, workspaceDir = null) {
 
   const resolvedWs = workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   const baseDir = resolvedWs || getProjectDir(projectPath);
-  const targetDir = joinPath(baseDir, IMAGES_GENEREES);
-  await mkdir(targetDir, { recursive: true });
-
   const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(basenameNoExt(projectPath));
   for (const ref of tempRefs) {
-    const src = ref.path;
-    const filename = basename(src);
-    const prefixedName = prefix ? `${prefix}__${filename}` : filename;
-    const dst = await uniquePathInDir(targetDir, prefixedName);
-    await copyFile(src, dst);
-    ref.obj[ref.key] = dst;
+    ref.obj[ref.key] = await copyMediaToWorkspace(
+      ref.path,
+      baseDir,
+      IMAGES_GENEREES,
+      prefix,
+    );
   }
 
   return updated;
@@ -465,7 +468,9 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     path = /\.mbah$/i.test(chosenPath) ? chosenPath : `${chosenPath}.mbah`;
   }
 
-  if (options.autosave && !isProjectWorthAutosaving(project, options.mediaLibraryPaths ?? [], options.totalMediaCount ?? 0)) {
+  if (options.autosave
+    && !isProjectWorthAutosaving(project, options.mediaLibraryPaths ?? [], options.totalMediaCount ?? 0)
+    && Object.keys(options.mediaTags ?? {}).length === 0) {
     throw new Error('Autosave annulée : le projet courant semble vide.');
   }
 
@@ -691,17 +696,87 @@ export async function autoSaveEphemeralProject(project, sessionWorkspaceDir, sna
   });
 }
 
-export async function copyMediaToWorkspace(sourcePath, workspaceDir, category = FICHIERS_IMPORTES, projectName = '') {
-  if (!hasPath(sourcePath)) return sourcePath;
-  const baseDir = workspaceDir || await getWorkspaceDir();
+async function copyPlainMediaToWorkspace(sourcePath, baseDir, category, projectName) {
   const safeCategory = MANAGED_PROJECT_DIRS.includes(category) ? category : FICHIERS_IMPORTES;
   const targetDir = joinPath(baseDir, safeCategory);
   await mkdir(targetDir, { recursive: true });
-  if (isManagedWorkspacePath(sourcePath, baseDir)) return sourcePath;
+  if (isManagedWorkspacePath(sourcePath, baseDir)) return { path: sourcePath, copied: false };
   const prefix = sanitizeProjectPrefix(projectName);
   const originalName = basename(sourcePath);
   const targetName = prefix ? `${prefix}__${originalName}` : originalName;
   const dest = await uniquePathInDir(targetDir, targetName);
   await copyFile(sourcePath, dest);
-  return dest;
+  return { path: dest, copied: true };
+}
+
+async function cleanupIncompleteImageArtifact(imagePath, dependencyPath = null) {
+  const metadataPath = imageEditMetadataPath(imagePath);
+  await Promise.all([
+    remove(imagePath).catch(() => {}),
+    metadataPath ? remove(metadataPath).catch(() => {}) : Promise.resolve(),
+    dependencyPath ? remove(dependencyPath).catch(() => {}) : Promise.resolve(),
+  ]);
+  if (metadataPath) await remove(dirname(metadataPath)).catch(() => {});
+}
+
+// Copie atomiquement le média édité, son sidecar et la source nécessaire à une
+// réédition. Le sidecar est réécrit vers la copie durable de cette source.
+export async function copyMediaToWorkspace(
+  sourcePath,
+  workspaceDir,
+  category = FICHIERS_IMPORTES,
+  projectName = '',
+  { artifactCopies = null, knownCopies = null } = {},
+) {
+  if (!hasPath(sourcePath)) return sourcePath;
+  const baseDir = workspaceDir || await getWorkspaceDir();
+  if (isManagedWorkspacePath(sourcePath, baseDir)) return sourcePath;
+  const cachedMain = knownCopies?.get(pathKey(sourcePath));
+  if (cachedMain) return cachedMain;
+
+  const imageCopy = await copyPlainMediaToWorkspace(sourcePath, baseDir, category, projectName);
+  let copiedDependency = null;
+  let dependencyCopyRecord = null;
+  try {
+    const sourceMetadataPath = imageEditMetadataPath(sourcePath);
+    if (!sourceMetadataPath || !(await exists(sourceMetadataPath))) {
+      knownCopies?.set(pathKey(sourcePath), imageCopy.path);
+      return imageCopy.path;
+    }
+    const metadata = await readImageEditMetadata(sourcePath, { strict: true });
+
+    let durableSourcePath;
+    if (pathKey(metadata.sourcePath) === pathKey(sourcePath)) {
+      durableSourcePath = imageCopy.path;
+    } else {
+      durableSourcePath = knownCopies?.get(pathKey(metadata.sourcePath));
+      if (!durableSourcePath) {
+        const dependencyCopy = await copyPlainMediaToWorkspace(
+          metadata.sourcePath,
+          baseDir,
+          FICHIERS_IMPORTES,
+          projectName,
+        );
+        durableSourcePath = dependencyCopy.path;
+        if (dependencyCopy.copied) {
+          copiedDependency = dependencyCopy.path;
+          dependencyCopyRecord = { from: metadata.sourcePath, to: dependencyCopy.path };
+        }
+      }
+    }
+    await writeImageEditMetadata(
+      imageCopy.path,
+      withImageEditSourcePath(metadata, durableSourcePath),
+      { strict: true },
+    );
+    knownCopies?.set(pathKey(sourcePath), imageCopy.path);
+    if (dependencyCopyRecord) {
+      knownCopies?.set(pathKey(dependencyCopyRecord.from), dependencyCopyRecord.to);
+      artifactCopies?.push(dependencyCopyRecord);
+    }
+    return imageCopy.path;
+  } catch (error) {
+    await cleanupIncompleteImageArtifact(imageCopy.path, copiedDependency);
+    throw error;
+  }
 }

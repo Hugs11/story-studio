@@ -7,6 +7,7 @@ import {
   loadProjectFromPath,
 } from '../store/projectIO';
 import { isProjectWorthAutosaving } from '../store/autosaveDecision';
+import { createWorkSnapshot } from '../store/projectHelpers';
 import {
   acceptEphemeralSnapshotSeed,
   beginEphemeralSnapshotSeed,
@@ -42,11 +43,13 @@ export function useWorkSession({
   workspaceDirRef,
   savedSnapshotRef,
   autoSavePathRef,
+  autoSaveSnapshotRef,
   setAutoSavedPath,
   setMediaLibraryPaths,
-  mediaTagsRef,
-  mediaLibraryPathsRef,
   mediaLibraryCountRef,
+  mediaLibraryPaths,
+  mediaTags,
+  currentWorkSnapshot,
   importedPackPendingMetaRef,
 }) {
   const [sessionMode, setSessionMode] = useState(null); // null | 'ephemeral' | 'project'
@@ -59,6 +62,7 @@ export function useWorkSession({
   const sessionWorkspaceDirRef = useRef('');
   const ephemeralSnapshotPathRef = useRef(null);
   const ephemeralSnapshotSeedStateRef = useRef(createEphemeralSnapshotSeedState());
+  const snapshotWriteChainRef = useRef(Promise.resolve());
 
   // Reprises après crash : snapshots orphelins proposés comme projets sur l'accueil.
   useEffect(() => {
@@ -105,39 +109,50 @@ export function useWorkSession({
       : null;
   }, [sessionMode, sessionWorkspaceDir]);
 
-  // Filet anti-crash : écrit le snapshot éphémère dès le premier contenu de la
-  // session (atterrissage d'un pack importé, podcast/YouTube, ou 1er édit d'un
-  // nouveau projet), sans attendre la tick d'autosave (5 min). Une seule fois
-  // par session ; le périodique prend le relais ensuite.
+  // Filet anti-crash : sérialise immédiatement chaque nouvelle signature de
+  // travail (projet + catalogue + tags), sans attendre la tick d'autosave.
   useEffect(() => {
     if (sessionMode !== 'ephemeral') return;
-    if (!ephemeralSnapshotPathRef.current) return;
+    const snapshotPath = joinLocalPath(sessionWorkspaceDir, SESSION_RECOVERY_FILE);
+    if (!snapshotPath) return;
     // Même critère que saveProject(autosave) : n'écrire que si le projet a un
-    // contenu réel (sinon saveProject jette « projet vide »). Évite de griller
-    // le one-shot sur l'état vierge avant l'atterrissage du contenu.
-    if (!isProjectWorthAutosaving(store.project, mediaLibraryPathsRef.current, mediaLibraryCountRef.current)) return;
-    const write = beginEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, {
-      sessionMode,
-      path: ephemeralSnapshotPathRef.current,
-      snapshot: JSON.stringify(store.project),
-    });
-    if (!write) return;
-    autoSaveEphemeralProject(store.project, sessionWorkspaceDir, write.path, {
-      mediaTags: mediaTagsRef.current,
-      mediaLibraryPaths: mediaLibraryPathsRef.current,
-      totalMediaCount: mediaLibraryCountRef.current,
-    })
-      .then(() => {
-        acceptEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, write, {
-          sessionMode: sessionModeRef.current,
-          path: ephemeralSnapshotPathRef.current,
+    // contenu réel (sinon saveProject jette « projet vide »).
+    if (!isProjectWorthAutosaving(store.project, mediaLibraryPaths, mediaLibraryCountRef.current)
+      && Object.keys(mediaTags ?? {}).length === 0) return;
+    const sessionToken = ephemeralSnapshotSeedStateRef.current.sessionToken;
+    const capturedProject = store.project;
+    const capturedPaths = mediaLibraryPaths;
+    const capturedTags = mediaTags;
+    snapshotWriteChainRef.current = snapshotWriteChainRef.current
+      .catch(() => {})
+      .then(async () => {
+        const state = ephemeralSnapshotSeedStateRef.current;
+        if (state.sessionToken !== sessionToken
+          || sessionModeRef.current !== 'ephemeral'
+          || ephemeralSnapshotPathRef.current !== snapshotPath) return;
+        const write = beginEphemeralSnapshotSeed(state, {
+          sessionMode: 'ephemeral',
+          path: snapshotPath,
+          snapshot: currentWorkSnapshot,
         });
-      })
-      .catch((error) => { logger.error('session:seed-snapshot-error', error); })
-      .finally(() => {
-        finishEphemeralSnapshotSeed(ephemeralSnapshotSeedStateRef.current, write);
+        if (!write) return;
+        try {
+          await autoSaveEphemeralProject(capturedProject, sessionWorkspaceDir, write.path, {
+            mediaTags: capturedTags,
+            mediaLibraryPaths: capturedPaths,
+            totalMediaCount: mediaLibraryCountRef.current,
+          });
+          acceptEphemeralSnapshotSeed(state, write, {
+            sessionMode: sessionModeRef.current,
+            path: ephemeralSnapshotPathRef.current,
+          });
+        } catch (error) {
+          logger.error('session:seed-snapshot-error', error);
+        } finally {
+          finishEphemeralSnapshotSeed(state, write);
+        }
       });
-  }, [sessionMode, sessionWorkspaceDir, store.project]);
+  }, [currentWorkSnapshot, mediaLibraryPaths, mediaTags, sessionMode, sessionWorkspaceDir, store.project]);
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
   // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
@@ -162,6 +177,7 @@ export function useWorkSession({
       workspaceDir = sessionDir;
     }
     autoSavePathRef.current = null;
+    autoSaveSnapshotRef.current = null;
     setAutoSavedPath(null);
     importedPackPendingMetaRef.current = false;
     store.setSavePath(null);
@@ -258,6 +274,7 @@ export function useWorkSession({
       setMediaLibraryPaths(result.mediaLibraryPaths ?? []);
       savedSnapshotRef.current = null;
       autoSavePathRef.current = null;
+      autoSaveSnapshotRef.current = null;
       setAutoSavedPath(null);
       sessionModeRef.current = 'ephemeral';
       sessionWorkspaceDirRef.current = recovery.sessionDir;
@@ -265,10 +282,14 @@ export function useWorkSession({
       setSessionWorkspaceDir(recovery.sessionDir);
       setWorkspaceDirState(recovery.sessionDir);
       workspaceDirRef.current = recovery.sessionDir;
-      // Snapshot déjà sur disque : ne pas le réécrire immédiatement (le périodique suffit).
+      // Snapshot déjà sur disque : la signature unifiée évite une réécriture immédiate.
       resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current, {
         seeded: true,
-        savedSnapshot: JSON.stringify(result.data),
+        savedSnapshot: createWorkSnapshot(
+          result.data,
+          result.mediaLibraryPaths ?? [],
+          result.mediaTags ?? {},
+        ),
       });
       sdStore.clearDone();
       xttsStore.clearDone();

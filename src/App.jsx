@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProjectStore } from './store/projectStore';
 import { ensureWorkspaceDir } from './store/projectIO';
 import { buildProjectIndex } from './store/projectModel';
-import { isProjectDirty } from './store/projectHelpers';
+import { createWorkSnapshot, hasUnsavedWork } from './store/projectHelpers';
 import { useSdStore } from './store/sdStore';
 import { useXttsStore } from './store/xttsStore';
 import { useRenderQueueStore } from './store/renderQueueStore';
@@ -49,14 +49,10 @@ import './components/RenderQueuePanel/RenderQueuePanel.css';
 
 // Retourne true si on peut continuer (sauvegardé ou confirmé non-sauvegardé),
 // false si l'utilisateur a annulé ou si la sauvegarde n'a pas abouti.
-// savedSnapshot : JSON.stringify du projet au moment du dernier save/load, ou null si projet vierge
-async function askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog) {
-  // Si on a un snapshot, comparer pour détecter les vraies modifications
-  // Si pas de snapshot (projet vierge), vérifier si le projet a du contenu
-  const unchanged = savedSnapshot === null
-    ? !isProjectDirty(project)
-    : JSON.stringify(project) === savedSnapshot;
-  if (unchanged) return true;
+// savedSnapshot : signature projet + catalogue Médias au dernier save/load,
+// ou null si le travail n'a jamais été enregistré.
+async function askSaveBeforeLeave(work, savedSnapshot, onSave, showChoiceDialog) {
+  if (!hasUnsavedWork({ ...work, savedSnapshot })) return true;
   const choice = await showChoiceDialog({
     title: 'Projet non enregistré',
     message: "Ton travail n'est pas enregistré et sera définitivement perdu.",
@@ -157,10 +153,11 @@ function AppContent() {
   const persistProjectSnapshotRef = useRef(null);
   const mediaCatalogChangedRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
+  const autoSaveSnapshotRef = useRef(null); // signature du dernier autosave sans sauvegarde manuelle
   const shortcutActionsRef = useRef({});
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
   const [diagramSearchFocusTrigger, setDiagramSearchFocusTrigger] = useState(0);
-  // null = projet vierge (jamais sauvegardé/chargé) ; sinon JSON du projet au dernier save/load
+  // null = travail jamais sauvegardé/chargé ; sinon signature projet + catalogue Médias
   const savedSnapshotRef = useRef(null);
 
   projectRef.current = store.project;
@@ -199,6 +196,7 @@ function AppContent() {
     mediaLibraryCountRef,
     renderQueue,
   });
+  const currentWorkSnapshot = createWorkSnapshot(store.project, mediaLibraryPaths, store.mediaTags);
 
   // Machine à sessions (éphémère/projet, reprises après crash, snapshot
   // anti-crash) : toutes les transitions et le nettoyage du dossier de session
@@ -230,11 +228,13 @@ function AppContent() {
     workspaceDirRef,
     savedSnapshotRef,
     autoSavePathRef,
+    autoSaveSnapshotRef,
     setAutoSavedPath,
     setMediaLibraryPaths,
-    mediaTagsRef,
-    mediaLibraryPathsRef,
     mediaLibraryCountRef,
+    mediaLibraryPaths,
+    mediaTags: store.mediaTags,
+    currentWorkSnapshot,
     importedPackPendingMetaRef,
   });
 
@@ -250,16 +250,20 @@ function AppContent() {
     return () => { cancelled = true; };
   }, []);
 
-  const askSaveBeforeLeaveCurrent = useCallback(async (project, savedSnapshot, onSave) => {
-    const canLeave = await askSaveBeforeLeave(project, savedSnapshot, onSave, showChoiceDialog);
+  const confirmSaveBeforeLeaveCurrent = useCallback((onSave) => askSaveBeforeLeave({
+    project: projectRef.current,
+    mediaLibraryPaths: mediaLibraryPathsRef.current,
+    mediaTags: mediaTagsRef.current,
+  }, savedSnapshotRef.current, onSave, showChoiceDialog), [showChoiceDialog]);
+
+  const askSaveBeforeLeaveCurrent = useCallback(async (onSave) => {
+    const canLeave = await confirmSaveBeforeLeaveCurrent(onSave);
     if (canLeave) await cleanupEphemeralSession();
     return canLeave;
-  }, [cleanupEphemeralSession, showChoiceDialog]);
+  }, [cleanupEphemeralSession, confirmSaveBeforeLeaveCurrent]);
 
   useWindowCloseGuard({
     askSaveBeforeLeave: askSaveBeforeLeaveCurrent,
-    projectRef,
-    savedSnapshotRef,
     saveHandlerRef,
   });
 
@@ -271,6 +275,7 @@ function AppContent() {
     savePathRef,
     workspaceDirRef,
     autoSavePathRef,
+    autoSaveSnapshotRef,
     ephemeralSnapshotPathRef,
     ephemeralSnapshotSeedStateRef,
     sessionModeRef,
@@ -387,6 +392,7 @@ function AppContent() {
     autoSaveEnabled,
     autoSaveBackupLimit,
     savedSnapshotRef,
+    autoSaveSnapshotRef,
     sessionModeRef,
     isSavingRef,
     setSaveToast,
@@ -424,11 +430,11 @@ function AppContent() {
     setRecentProjects,
     savedSnapshotRef,
     autoSavePathRef,
+    autoSaveSnapshotRef,
     setAutoSavedPath,
-    handleSave,
+    confirmSaveBeforeLeaveCurrent,
+    handleSaveProject: handleSave,
     showErrorDialog,
-    isProjectDirty,
-    showChoiceDialog,
     onProjectLoaded: enterProjectMode,
     onBeforeProjectReplaced: cleanupEphemeralSession,
   });
@@ -511,6 +517,7 @@ function AppContent() {
     unpackZipIntoBlankProject,
     savedSnapshotRef,
     autoSavePathRef,
+    autoSaveSnapshotRef,
     importedPackPendingMetaRef,
     setMediaLibraryPaths,
     setAutoSavedPath,
@@ -586,6 +593,7 @@ function AppContent() {
     dismissedMissingMediaSignature,
     workspaceViewState,
     savedSnapshotRef,
+    mediaLibraryPaths,
     workspaceDirRef,
     keyboardShortcuts,
     xttsSettings,

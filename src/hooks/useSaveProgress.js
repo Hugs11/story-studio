@@ -5,7 +5,7 @@ import {
   saveProject,
   saveProjectAs,
 } from '../store/projectIO';
-import { shouldAbortEphemeralPromotion } from '../store/projectHelpers';
+import { createWorkSnapshot, shouldAbortEphemeralPromotion } from '../store/projectHelpers';
 import { logger } from '../utils/logger';
 
 export function useSaveProgress({
@@ -16,6 +16,7 @@ export function useSaveProgress({
   autoSaveEnabled,
   autoSaveBackupLimit,
   savedSnapshotRef,
+  autoSaveSnapshotRef,
   sessionModeRef = null,
   isSavingRef,
   setSaveToast,
@@ -40,11 +41,16 @@ export function useSaveProgress({
       setMediaLibraryPaths(result.mediaLibraryPaths);
       mediaLibraryPathsRef.current = result.mediaLibraryPaths;
     }
-    savedSnapshotRef.current = JSON.stringify(result.project);
+    savedSnapshotRef.current = createWorkSnapshot(
+      result.project,
+      result.mediaLibraryPaths ?? mediaLibraryPathsRef.current,
+      store.mediaTags,
+    );
+    autoSaveSnapshotRef.current = null;
     setSaveToast('ok');
     setTimeout(() => setSaveToast(null), 2000);
     return result.path;
-  }, [mediaLibraryPathsRef, savedSnapshotRef, setMediaLibraryPaths, setSaveToast, store, workspaceDirRef]);
+  }, [autoSaveSnapshotRef, mediaLibraryPathsRef, savedSnapshotRef, setMediaLibraryPaths, setSaveToast, store, workspaceDirRef]);
 
   const handleSaveProject = useCallback(async ({
     silent = false,
@@ -101,7 +107,12 @@ export function useSaveProgress({
           mediaLibraryPathsRef.current = result.mediaLibraryPaths;
         }
         setRecentProjects(rememberRecentProject(result.project, result.path));
-        savedSnapshotRef.current = JSON.stringify(result.project);
+        savedSnapshotRef.current = createWorkSnapshot(
+          result.project,
+          result.mediaLibraryPaths ?? mediaLibraryPathsToSave,
+          mediaTagsToSave,
+        );
+        autoSaveSnapshotRef.current = null;
         await onProjectSaved?.(result);
         if (!silent) {
           setSaveProgress(prev => prev ? { ...prev, complete: true } : null);
@@ -126,6 +137,7 @@ export function useSaveProgress({
   }, [
     autoSaveBackupLimit,
     autoSaveEnabled,
+    autoSaveSnapshotRef,
     isSavingRef,
     maybeOfferTransferIntoProject,
     mediaLibraryPathsRef,
@@ -161,6 +173,8 @@ export function useSaveProgress({
         return null;
       }
       if (result?.path) {
+        let finalMediaTags = store.mediaTags;
+        let finalMediaLibraryPaths = result.mediaLibraryPaths ?? mediaLibraryPathsRef.current;
         const transferResult = await maybeOfferTransferIntoProject(result.project, result.path, {
           copyEnabled: true,
           skipPrompt: isEphemeralSession,
@@ -188,12 +202,15 @@ export function useSaveProgress({
             transferCopies: transferResult.copies ?? [],
           });
         }
+        finalMediaTags = triageResult.mediaTags ?? finalMediaTags;
+        finalMediaLibraryPaths = triageResult.mediaLibraryPaths ?? finalMediaLibraryPaths;
         if (transferResult.changed || triageResult.changed) {
           result = await saveProject(transferResult.project, result.path, onProgress, {
-            mediaTags: triageResult.mediaTags ?? store.mediaTags,
-            mediaLibraryPaths: triageResult.mediaLibraryPaths ?? mediaLibraryPathsRef.current,
+            mediaTags: finalMediaTags,
+            mediaLibraryPaths: finalMediaLibraryPaths,
             workspaceDir: targetWorkspaceDir,
           });
+          finalMediaLibraryPaths = result.mediaLibraryPaths ?? finalMediaLibraryPaths;
         }
         store.syncProjectWithoutHistory(result.project);
         store.setSavePath(result.path);
@@ -202,7 +219,12 @@ export function useSaveProgress({
           mediaLibraryPathsRef.current = result.mediaLibraryPaths;
         }
         setRecentProjects(rememberRecentProject(result.project, result.path));
-        savedSnapshotRef.current = JSON.stringify(result.project);
+        savedSnapshotRef.current = createWorkSnapshot(
+          result.project,
+          finalMediaLibraryPaths,
+          finalMediaTags,
+        );
+        autoSaveSnapshotRef.current = null;
         await onProjectSaved?.(result, {
           promote: true,
           workspaceDir: targetWorkspaceDir,
@@ -224,6 +246,7 @@ export function useSaveProgress({
       return null;
     }
   }, [
+    autoSaveSnapshotRef,
     mediaLibraryPathsRef,
     maybeOfferTransferIntoProject,
     onProjectSaved,

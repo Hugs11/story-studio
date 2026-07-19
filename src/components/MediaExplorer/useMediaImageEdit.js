@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { readImageEditMetadata } from '../ImageEditorModal/imageEditMetadata';
+import { readImageEditMetadata } from '../../store/imageEditMetadata';
 import { getEditedImageTags } from '../../store/mediaLibrary';
 import { pathKey } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';

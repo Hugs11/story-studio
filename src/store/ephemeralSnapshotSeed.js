@@ -29,7 +29,7 @@ export function beginEphemeralSnapshotSeed(state, {
   path,
   snapshot,
 } = {}) {
-  if (sessionMode !== 'ephemeral' || !path || state.seeded || state.inFlight) return null;
+  if (sessionMode !== 'ephemeral' || !path || state.inFlight || state.savedSnapshot === snapshot) return null;
   const write = {
     token: {},
     sessionToken: state.sessionToken,

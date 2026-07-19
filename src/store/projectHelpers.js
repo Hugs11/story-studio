@@ -1,5 +1,6 @@
 import { visitProjectEntries } from './projectModel/index.js';
 import { isOriginalBackup } from '../utils/mediaConventions.js';
+import { pathKey } from '../utils/fileUtils.js';
 
 export function classifyOsDroppedFiles(paths) {
   const ext = (p) => (String(p).split('.').pop() || '').toLowerCase();
@@ -17,12 +18,67 @@ export function classifyOsDroppedFiles(paths) {
 
 // Retourne true si le projet a du contenu (= mérite d'être sauvegardé)
 export function isProjectDirty(project) {
+  if (!project) return false;
   if (project.projectType !== null) return true;
   let hasEntries = false;
   visitProjectEntries(project, (entry) => {
     if (entry.type === 'story' || entry.type === 'zip' || entry.type === 'menu') hasEntries = true;
   });
   return !!project.projectName || !!project.rootAudio || !!project.rootImage || hasEntries;
+}
+
+function canonicalMediaLibraryPaths(paths) {
+  const byKey = new Map();
+  for (const path of Array.isArray(paths) ? paths : []) {
+    if (typeof path !== 'string' || !path.trim()) continue;
+    const key = pathKey(path);
+    if (!byKey.has(key)) byKey.set(key, path);
+  }
+  return [...byKey.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key]) => key);
+}
+
+function canonicalMediaTags(mediaTags) {
+  const tagsByPath = new Map();
+  for (const [path, tags] of Object.entries(mediaTags && typeof mediaTags === 'object' ? mediaTags : {})) {
+    if (typeof path !== 'string' || !path.trim()) continue;
+    const key = pathKey(path);
+    const merged = tagsByPath.get(key) ?? new Set();
+    for (const tag of Array.isArray(tags) ? tags : []) {
+      if (typeof tag === 'string') merged.add(tag);
+    }
+    tagsByPath.set(key, merged);
+  }
+  return Object.fromEntries(
+    [...tagsByPath.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([path, tags]) => [path, [...tags].sort()]),
+  );
+}
+
+// Signature de l'ensemble du travail persistant. Le catalogue Médias et ses
+// tags font partie du document au même titre que l'arbre du projet.
+export function createWorkSnapshot(project, mediaLibraryPaths = [], mediaTags = {}) {
+  return JSON.stringify({
+    project,
+    mediaLibraryPaths: canonicalMediaLibraryPaths(mediaLibraryPaths),
+    mediaTags: canonicalMediaTags(mediaTags),
+  });
+}
+
+export function hasUnsavedWork({
+  project,
+  mediaLibraryPaths = [],
+  mediaTags = {},
+  savedSnapshot = null,
+} = {}) {
+  if (savedSnapshot !== null) {
+    return createWorkSnapshot(project, mediaLibraryPaths, mediaTags) !== savedSnapshot;
+  }
+  return isProjectDirty(project)
+    || canonicalMediaLibraryPaths(mediaLibraryPaths).length > 0
+    || Object.keys(canonicalMediaTags(mediaTags)).length > 0;
 }
 
 export function hasExplicitExportPackName(project) {
