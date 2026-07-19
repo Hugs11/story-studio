@@ -222,7 +222,7 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
             {(() => {
               const count = node.children?.length ?? node.items?.length ?? 0;
               return count > 0
-                ? `Les ${count} élément${count > 1 ? 's' : ''} qu'il contient ${count > 1 ? 'seront déplacés' : 'sera déplacé'} à la racine.`
+                ? `Le dossier et les ${count} élément${count > 1 ? 's' : ''} qu'il contient seront retirés du projet. Leurs médias resteront dans la médiathèque.`
                 : 'Le dossier sera retiré du projet.';
             })()}
           </p>

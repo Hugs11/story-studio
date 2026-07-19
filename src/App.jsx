@@ -154,6 +154,7 @@ function AppContent() {
   const saveAsHandlerRef = useRef(null);
   const isSavingRef = useRef(false);
   const persistProjectSnapshotRef = useRef(null);
+  const mediaCatalogChangedRef = useRef(null);
   const autoSavePathRef = useRef(null); // path of last autosave for never-manually-saved projects
   const shortcutActionsRef = useRef({});
   const [treeSearchFocusTrigger, setTreeSearchFocusTrigger] = useState(0);
@@ -177,7 +178,7 @@ function AppContent() {
     addPathsToMediaLibrary,
     handleMediaCreated,
     handleDeleteMedia,
-  } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef });
+  } = useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef, mediaCatalogChangedRef });
 
   // Modèle du panneau bas + bottombar : état ouvert/onglet (persistés), ouverture auto
   // depuis la file de rendu, compteurs médias/IA. Appelé APRÈS useMediaLibraryPaths
@@ -374,6 +375,7 @@ function AppContent() {
     store,
     workspaceDirRef,
     mediaLibraryPathsRef,
+    setMediaLibraryPaths,
     autoSaveEnabled,
     autoSaveBackupLimit,
     savedSnapshotRef,
@@ -399,6 +401,10 @@ function AppContent() {
         cleanupSession: options.cleanupSession,
       });
     },
+  });
+  useSyncedRef(mediaCatalogChangedRef, () => {
+    if (!savePathRef.current) return;
+    setTimeout(() => handleSaveProject({ silent: true }), 0);
   });
   useSyncedRef(persistProjectSnapshotRef, persistProjectSnapshot);
 
@@ -862,6 +868,11 @@ function AppContent() {
       onAddMediaTag: store.addMediaTag,
       onRemoveMediaTag: store.removeMediaTag,
       onDeleteMedia: handleDeleteMedia,
+      onMediaCatalogChanged: () => {
+        if (!savePathRef.current) return;
+        setTimeout(() => handleSaveProject({ silent: true }), 0);
+      },
+      workspaceDir,
       savePath: store.savePath,
       projectName: effectiveProjectFilePrefix,
       onMediaCreated: handleMediaCreated,

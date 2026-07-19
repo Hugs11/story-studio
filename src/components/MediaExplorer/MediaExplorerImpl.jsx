@@ -11,6 +11,7 @@ import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
+import { isDeletableWorkspaceMediaPath } from '../../store/workspaceDirs';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { MediaExplorerContent } from './MediaExplorerContent';
@@ -51,6 +52,8 @@ export function MediaExplorer({
   onAddMediaTag,
   onRemoveMediaTag,
   onDeleteMedia,
+  onMediaCatalogChanged,
+  workspaceDir = '',
   savePath,
   projectName = '',
   onMediaCreated,
@@ -294,6 +297,7 @@ export function MediaExplorer({
       const items = visibleSelectedRef.current;
       if (!items.length) return;
       e.preventDefault();
+      setDeleteDisk(false);
       setDeleteConfirm({ items });
     }
     const el = containerRef.current;
@@ -311,24 +315,39 @@ export function MediaExplorer({
   async function confirmDelete() {
     if (!deleteConfirm) return;
     const items = deleteConfirm.items;
+    if (items.some((item) => item.projectUsedCount > 0)) return;
     setDeleteConfirm(null);
     const diskErrors = [];
+    const blockedItems = [];
+    let removedCount = 0;
     for (const item of items) {
       const result = await onDeleteMedia(item, { deleteFromDisk: deleteDisk });
+      if (result?.removed) removedCount += 1;
+      if (result?.blocked) {
+        blockedItems.push(item.name || item.path);
+      }
       if (deleteDisk && result?.diskError) {
         diskErrors.push(`• ${item.name || item.path}\n  ${result.diskError}`);
       }
     }
-    if (diskErrors.length > 0) {
-      const header = diskErrors.length === 1
-        ? "Suppression disque refusée pour ce fichier :"
-        : `Suppression disque refusée pour ${diskErrors.length} fichiers :`;
+    if (diskErrors.length > 0 || blockedItems.length > 0) {
+      const sections = [];
+      if (blockedItems.length > 0) {
+        sections.push(`Médias encore utilisés :\n${blockedItems.map((name) => `• ${name}`).join('\n')}`);
+      }
+      if (diskErrors.length > 0) {
+        const header = diskErrors.length === 1
+          ? 'Suppression disque refusée pour ce fichier :'
+          : `Suppression disque refusée pour ${diskErrors.length} fichiers :`;
+        sections.push(`${header}\n${diskErrors.join('\n\n')}`);
+      }
       showErrorDialog({
-        title: 'Suppression disque refusée',
-        message: `${header}\n\n${diskErrors.join('\n\n')}\n\nLes références projet ont été retirées, mais les fichiers d'origine restent sur le disque (hors workspace géré par Story Studio).`,
+        title: 'Retrait incomplet',
+        message: `${sections.join('\n\n')}\n\nLes fichiers concernés sont restés intacts dans la médiathèque et sur le disque.`,
         variant: 'warning',
       });
     }
+    if (removedCount > 0) onMediaCatalogChanged?.();
   }
 
 
@@ -659,7 +678,6 @@ export function MediaExplorer({
           projectName={projectName}
           onClose={() => setAssemblyOpen(false)}
           onCreated={handleAudioAssemblyCreated}
-          onDeleteMedia={onDeleteMedia}
         />
       )}
       {splitterItem && (
@@ -694,7 +712,7 @@ export function MediaExplorer({
               ...(selectedAudioItems.length >= 2 ? [
                 { icon: <Link2 />, label: `Assembler ${selectedAudioItems.length} sons`, fn: () => { setBgCtxMenu(null); setAssemblyOpen(true); } },
               ] : []),
-              ...(onDeleteMedia ? [{ icon: <Trash2 />, label: `Supprimer ${selectedCount} fichier${selectedCount > 1 ? 's' : ''}`, fn: () => { setBgCtxMenu(null); handleDeleteRequest(visibleSelectedItems); }, danger: true }] : []),
+              ...(onDeleteMedia ? [{ icon: <Trash2 />, label: `Retirer ${selectedCount} fichier${selectedCount > 1 ? 's' : ''} de la médiathèque`, fn: () => { setBgCtxMenu(null); handleDeleteRequest(visibleSelectedItems); }, danger: true }] : []),
             ] : []),
           ]}
         />
@@ -702,8 +720,11 @@ export function MediaExplorer({
       <MediaDeleteDialog
         items={deleteConfirm?.items}
         deleteDisk={deleteDisk}
+        canDeleteFromDisk={!!deleteConfirm?.items?.length && deleteConfirm.items.every((item) => (
+          isDeletableWorkspaceMediaPath(item.path, workspaceDir)
+        ))}
         onDeleteDiskChange={setDeleteDisk}
-        onCancel={() => setDeleteConfirm(null)}
+        onCancel={() => { setDeleteConfirm(null); setDeleteDisk(false); }}
         onConfirm={confirmDelete}
       />
       {osDropHover && (

@@ -4,7 +4,6 @@ import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
 import { basename } from '../../utils/fileUtils';
 import { useProjectContext } from '../../store/ProjectContext';
 import { KEYS, read, write } from '../../store/persistentSettings';
-import { useErrorDialog } from '../common/Dialog';
 import { Button } from '../common/Button';
 import './AudioAssemblyModal.css';
 
@@ -40,10 +39,8 @@ export function AudioAssemblyModal({
   projectName = '',
   onClose,
   onCreated,
-  onDeleteMedia,
 }) {
   const { workspaceDir } = useProjectContext();
-  const { showErrorDialog } = useErrorDialog();
   const initialItems = useMemo(
     () => items.map((item) => ({
       id: item.id || item.path,
@@ -60,8 +57,6 @@ export function AudioAssemblyModal({
   );
   const [addSilence, setAddSilence] = useState(() => savedOpts.addSilence ?? false);
   const [silenceSec, setSilenceSec] = useState(() => savedOpts.silenceSec ?? '0.5');
-  const [deleteOriginals, setDeleteOriginals] = useState(() => savedOpts.deleteOriginals ?? false);
-  const [deleteDisk, setDeleteDisk] = useState(() => !!savedOpts.deleteOriginals && !!savedOpts.deleteDisk);
 
   function saveOpts(patch) {
     const current = read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {};
@@ -187,31 +182,7 @@ export function AudioAssemblyModal({
         silenceBetweenSec: silence,
         workspaceDir: workspaceDir || null,
       });
-      const diskErrors = [];
-      if (deleteOriginals && onDeleteMedia) {
-        for (const item of orderedItems) {
-          let result;
-          try {
-            result = await onDeleteMedia({ path: item.path, name: item.name, inProject: true }, { deleteFromDisk: deleteDisk });
-          } catch {
-            result = null;
-          }
-          if (deleteDisk && result?.diskError) {
-            diskErrors.push(`• ${item.name || item.path}\n  ${result.diskError}`);
-          }
-        }
-      }
       onCreated?.(outputPath);
-      if (diskErrors.length > 0) {
-        const header = diskErrors.length === 1
-          ? "Le fichier assemblé a été créé, mais la suppression disque a été refusée pour :"
-          : `Le fichier assemblé a été créé, mais la suppression disque a été refusée pour ${diskErrors.length} fichiers :`;
-        showErrorDialog({
-          title: 'Suppression disque refusée',
-          message: `${header}\n\n${diskErrors.join('\n\n')}\n\nLes références projet ont été retirées, mais les fichiers d'origine restent sur le disque (hors workspace géré par Story Studio).`,
-          variant: 'warning',
-        });
-      }
     } catch (e) {
       setError(readableError(e));
     } finally {
@@ -289,32 +260,9 @@ export function AudioAssemblyModal({
                 <span>secondes</span>
               </label>
             )}
-            <label className="audio-assembly-check">
-              <input
-                type="checkbox"
-                checked={deleteOriginals}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setDeleteOriginals(checked);
-                  if (!checked) setDeleteDisk(false);
-                  saveOpts({ deleteOriginals: checked, ...(checked ? {} : { deleteDisk: false }) });
-                }}
-                disabled={submitting}
-              />
-              <span>Supprimer les fichiers originaux du projet</span>
-            </label>
-            <label className="audio-assembly-check" style={{ opacity: deleteOriginals ? 1 : 0.4 }}>
-              <input
-                type="checkbox"
-                checked={deleteDisk}
-                onChange={(e) => {
-                  setDeleteDisk(e.target.checked);
-                  saveOpts({ deleteDisk: e.target.checked });
-                }}
-                disabled={submitting || !deleteOriginals}
-              />
-              <span>Supprimer aussi du disque dur</span>
-            </label>
+            <div className="audio-assembly-note">
+              Les fichiers sources restent dans la médiathèque. Ils pourront ensuite être retirés ou supprimés depuis l’onglet Médias.
+            </div>
           </section>
 
           <section className="audio-assembly-section">

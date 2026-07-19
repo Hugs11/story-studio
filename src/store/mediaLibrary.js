@@ -1,6 +1,6 @@
-import { visitProjectEntries } from './projectModel/index.js';
+import { visitProjectEntries, walkProjectMediaReferences } from './projectModel/index.js';
 import { isOriginalBackup } from '../utils/mediaConventions.js';
-import { basename, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
+import { basename, pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -40,6 +40,9 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
   const existing = map.get(key);
   const usage = { label, source, field, ...(entryId ? { entryId } : {}) };
   if (existing) {
+    // Le catalogue durable indique seulement que Story Studio connaît le fichier.
+    // Ce n'est pas un usage supplémentaire et il ne doit donc pas gonfler les badges.
+    if (options.catalogOnly) return;
     existing.usages.push(usage);
     existing.usedCount = existing.usages.length;
     if (isProjectRef) {
@@ -57,12 +60,81 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
     source,
     field,
     origin: detectOrigin(path, source),
-    usages: [usage],
-    usedCount: 1,
+    usages: options.catalogOnly ? [] : [usage],
+    usedCount: options.catalogOnly ? 0 : 1,
     projectUsedCount: isProjectRef ? 1 : 0,
     inProject: isProjectRef,
     exists: statusByPath[path] !== false && statusByPath[checkedPath] !== false,
   });
+}
+
+function collectProjectMediaPaths(project) {
+  const paths = [];
+  const seen = new Set();
+  for (const reference of walkProjectMediaReferences(project)) {
+    if (!hasPath(reference?.path)) continue;
+    const key = pathKey(reference.path);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    paths.push(reference.path);
+  }
+  return paths;
+}
+
+export function mergeMediaLibraryPaths(...pathGroups) {
+  const paths = [];
+  const seen = new Set();
+  for (const group of pathGroups) {
+    for (const path of group ?? []) {
+      if (!hasPath(path)) continue;
+      const key = pathKey(path);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      paths.push(path);
+    }
+  }
+  return paths;
+}
+
+export function reconcileMediaLibraryPaths(project, mediaLibraryPaths = []) {
+  return mergeMediaLibraryPaths(mediaLibraryPaths, collectProjectMediaPaths(project));
+}
+
+export async function executeMediaDeletion({
+  item,
+  deleteFromDisk = false,
+  deleteDisk,
+  commitRemoval,
+}) {
+  if (!item?.path) {
+    return { removed: false, blocked: false, diskDeleted: false, diskError: null };
+  }
+  if (item.inProject || item.projectUsedCount > 0) {
+    return {
+      removed: false,
+      blocked: true,
+      diskDeleted: false,
+      diskError: null,
+      usedCount: item.projectUsedCount || 1,
+    };
+  }
+
+  if (deleteFromDisk) {
+    try {
+      await deleteDisk?.();
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      return { removed: false, blocked: false, diskDeleted: false, diskError: message };
+    }
+  }
+
+  commitRemoval?.();
+  return {
+    removed: true,
+    blocked: false,
+    diskDeleted: deleteFromDisk,
+    diskError: null,
+  };
 }
 
 export function collectMediaLibrary({ project, statusByPath = {}, sdJobs = [], xttsJobs = [], extraPaths = [] }) {
@@ -110,7 +182,10 @@ export function collectMediaLibrary({ project, statusByPath = {}, sdJobs = [], x
     }
   }
   for (const path of extraPaths) {
-    addMedia(map, path, 'Bibliothèque média', 'Explorateur', 'library', statusByPath, false, null, { allowOriginalBackup: true });
+    addMedia(map, path, 'Bibliothèque média', 'Explorateur', 'library', statusByPath, false, null, {
+      allowOriginalBackup: true,
+      catalogOnly: true,
+    });
   }
 
   return [...map.values()].sort((a, b) => {

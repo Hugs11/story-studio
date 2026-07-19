@@ -15,7 +15,6 @@ import { RecordModal } from '../RecordModal/RecordModal';
 const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal')
   .then((m) => ({ default: m.AudioEditorModal })));
 import { GenerateVoiceModal } from '../GenerateVoiceModal/GenerateVoiceModal';
-import { DeleteAudioDialog } from '../DeleteAudioDialog/DeleteAudioDialog';
 import { Mic, Copy, Scissors, FolderOpen, FolderInput, ClipboardPaste, Play, Speech } from '../icons/LucideLocal';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
@@ -63,7 +62,6 @@ export function AudioField({
   const [savingGeneratedAudio, setSavingGeneratedAudio] = useState(false);
   const [generatedAudioSavePath, setGeneratedAudioSavePath] = useState(null);
   const [pendingGeneratedSource, setPendingGeneratedSource] = useState(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAudioEditor, setShowAudioEditor] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -360,15 +358,15 @@ export function AudioField({
             </span>
 
             {onClear && (
-              <Tooltip text="Supprimer">
+              <Tooltip text="Retirer de ce champ">
                 <button
                   className="audio-clear-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     stopPlayback(true);
-                    setShowDeleteDialog(true);
+                    onClear();
                   }}
-                  aria-label="Retirer l'audio"
+                  aria-label="Retirer l'audio de ce champ"
                 >×</button>
               </Tooltip>
             )}
@@ -494,16 +492,6 @@ export function AudioField({
           onUpdateXttsSettings={onUpdateXttsSettings}
           onQueueGenerate={onQueueXttsGenerate}
           onClose={() => setShowTts(false)}
-        />
-      )}
-
-      {/* Dialog de suppression */}
-      {showDeleteDialog && onClear && (
-        <DeleteAudioDialog
-          file={file}
-          workspaceDir={workspaceDir}
-          onDeleted={() => { setShowDeleteDialog(false); onClear(); }}
-          onClose={() => setShowDeleteDialog(false)}
         />
       )}
 

@@ -141,6 +141,8 @@ export function AppShell({
               onAddMediaTag={bottomPanel.onAddMediaTag}
               onRemoveMediaTag={bottomPanel.onRemoveMediaTag}
               onDeleteMedia={bottomPanel.onDeleteMedia}
+              onMediaCatalogChanged={bottomPanel.onMediaCatalogChanged}
+              workspaceDir={bottomPanel.workspaceDir}
               savePath={bottomPanel.savePath}
               projectName={bottomPanel.projectName}
               onMediaCreated={bottomPanel.onMediaCreated}
