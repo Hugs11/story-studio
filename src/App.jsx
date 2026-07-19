@@ -24,6 +24,7 @@ import { useAutosave } from './hooks/useAutosave';
 import { useBottomWorkspacePanelModel } from './hooks/useBottomWorkspacePanelModel';
 import { useMediaImport } from './hooks/useMediaImport';
 import { useMediaLibraryPaths } from './hooks/useMediaLibraryPaths';
+import { useMediaToolBridge } from './hooks/useMediaToolBridge';
 import { useMediaTransferHandlers } from './hooks/useMediaTransferHandlers';
 import { useMissingMediaRelink } from './hooks/useMissingMediaRelink';
 import { useOptionsTabProps } from './hooks/useOptionsTabProps';
@@ -330,6 +331,13 @@ function AppContent() {
   });
 
   const projectMutations = useProjectMutations({ store });
+  const mediaToolBridge = useMediaToolBridge({
+    project: store.project,
+    statusByPath: pathAudit,
+    openMediaTab: () => bottomWorkspace.openTab('media'),
+    mutations: projectMutations,
+    showErrorDialog,
+  });
 
   const {
     maybeCopyToProject,
@@ -649,6 +657,7 @@ function AppContent() {
     setYoutubeFunnelMode,
     canRecord,
     canGenerateStoryTts,
+    onOpenMediaAudioTool: mediaToolBridge.openMediaAudioTool,
   });
 
   const optionsTabProps = useOptionsTabProps({
@@ -840,8 +849,14 @@ function AppContent() {
     bottomPanel: {
       open: bottomWorkspace.open,
       activeTab: bottomWorkspace.activeTab,
-      onActiveTabChange: bottomWorkspace.setActiveTab,
-      onClose: bottomWorkspace.close,
+      onActiveTabChange: (tab) => {
+        if (tab !== 'media') mediaToolBridge.invalidateRequest();
+        bottomWorkspace.setActiveTab(tab);
+      },
+      onClose: () => {
+        mediaToolBridge.invalidateRequest();
+        bottomWorkspace.close();
+      },
       project: store.project,
       pathAudit,
       sdJobs: sdStore.jobs,
@@ -876,6 +891,11 @@ function AppContent() {
       savePath: store.savePath,
       projectName: effectiveProjectFilePrefix,
       onMediaCreated: handleMediaCreated,
+      mediaToolRequest: mediaToolBridge.activeRequest,
+      onAcknowledgeMediaToolRequest: mediaToolBridge.acknowledgeRequest,
+      onInvalidateMediaToolRequest: mediaToolBridge.invalidateRequest,
+      onValidateMediaToolRequest: mediaToolBridge.validateRequest,
+      onApplyMediaToolProjectAction: mediaToolBridge.applyProjectAction,
     },
     appModalsProps,
     bottomBar: {
@@ -887,7 +907,10 @@ function AppContent() {
       renderQueueHasResults: renderQueue.hasResults,
       aiQueueActiveCount: bottomWorkspace.aiQueueActiveCount,
       aiQueueHasResults: bottomWorkspace.aiQueueHasResults,
-      onOpenMedia: () => bottomWorkspace.openTab('media'),
+      onOpenMedia: () => {
+        mediaToolBridge.invalidateRequest();
+        bottomWorkspace.openTab('media');
+      },
       onOpenRenderQueue: () => bottomWorkspace.openTab('queue'),
       onOpenAiQueue: handleOpenAiQueue,
       appVersion,

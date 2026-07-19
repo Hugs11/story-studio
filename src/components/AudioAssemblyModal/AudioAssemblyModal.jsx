@@ -39,6 +39,7 @@ export function AudioAssemblyModal({
   projectName = '',
   onClose,
   onCreated,
+  contextRequest = null,
 }) {
   const { workspaceDir } = useProjectContext();
   const initialItems = useMemo(
@@ -182,7 +183,7 @@ export function AudioAssemblyModal({
         silenceBetweenSec: silence,
         workspaceDir: workspaceDir || null,
       });
-      onCreated?.(outputPath);
+      onCreated?.(outputPath, { inputPaths });
     } catch (e) {
       setError(readableError(e));
     } finally {
@@ -200,8 +201,12 @@ export function AudioAssemblyModal({
 
         <div className="audio-assembly-body">
           <div className="audio-assembly-intro">
+            {contextRequest ? (
+              <strong>Depuis {contextRequest.storyNames.length} histoires sélectionnées</strong>
+            ) : null}
             <span>Crée une piste audio unique à partir des fichiers sélectionnés.</span>
             <span>Les fichiers originaux ne seront pas modifiés.</span>
+            {contextRequest ? <span>Le projet ne sera pas modifié automatiquement.</span> : null}
           </div>
 
           {ignoredCount > 0 && (

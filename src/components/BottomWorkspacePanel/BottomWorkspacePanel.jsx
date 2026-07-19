@@ -44,6 +44,11 @@ export function BottomWorkspacePanel({
   savePath,
   projectName = '',
   onMediaCreated,
+  mediaToolRequest,
+  onAcknowledgeMediaToolRequest,
+  onInvalidateMediaToolRequest,
+  onValidateMediaToolRequest,
+  onApplyMediaToolProjectAction,
 }) {
   const [height, setHeight] = useState(loadHeight);
   const dragRef = useRef(null);
@@ -141,6 +146,11 @@ export function BottomWorkspacePanel({
             savePath={savePath}
             projectName={projectName}
             onMediaCreated={onMediaCreated}
+            mediaToolRequest={mediaToolRequest}
+            onAcknowledgeMediaToolRequest={onAcknowledgeMediaToolRequest}
+            onInvalidateMediaToolRequest={onInvalidateMediaToolRequest}
+            onValidateMediaToolRequest={onValidateMediaToolRequest}
+            onApplyMediaToolProjectAction={onApplyMediaToolProjectAction}
           />
         ) : activeTab === 'queue' ? (
           <RenderQueuePanel

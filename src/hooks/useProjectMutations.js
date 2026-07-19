@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-// Grappe « mutations projet » extraite d'AppContent : les 11 wrappers fins qui
+// Grappe « mutations projet » extraite d'AppContent : wrappers fins qui
 // adaptent les mutations du store à la signature attendue par les
 // surfaces d'édition (arbre, réglages, diagramme), consommés via ProjectActionsContext.
 // Déplacement pur — mêmes noms, mêmes gardes (`if (menuId)`, `typeof id === 'string'`),
@@ -69,6 +69,14 @@ export function useProjectMutations({ store }) {
     if (resolvedId) store.deleteItem(resolvedId);
   }, [store.deleteItem, store.selectedId]);
 
+  const handleReplaceStoryWithAudioParts = useCallback((options) => (
+    store.replaceStoryAudioParts(options)
+  ), [store.replaceStoryAudioParts]);
+
+  const handleReplaceStoriesWithAssembledStory = useCallback((options) => (
+    store.replaceStoriesWithAssembly(options)
+  ), [store.replaceStoriesWithAssembly]);
+
   return {
     handleUpdateRoot,
     handleAddMenu,
@@ -81,5 +89,7 @@ export function useProjectMutations({ store }) {
     handleBulkUpdateItems,
     handleBulkDeleteItems,
     handleDeleteItem,
+    handleReplaceStoryWithAudioParts,
+    handleReplaceStoriesWithAssembledStory,
   };
 }

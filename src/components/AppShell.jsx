@@ -146,6 +146,11 @@ export function AppShell({
               savePath={bottomPanel.savePath}
               projectName={bottomPanel.projectName}
               onMediaCreated={bottomPanel.onMediaCreated}
+              mediaToolRequest={bottomPanel.mediaToolRequest}
+              onAcknowledgeMediaToolRequest={bottomPanel.onAcknowledgeMediaToolRequest}
+              onInvalidateMediaToolRequest={bottomPanel.onInvalidateMediaToolRequest}
+              onValidateMediaToolRequest={bottomPanel.onValidateMediaToolRequest}
+              onApplyMediaToolProjectAction={bottomPanel.onApplyMediaToolProjectAction}
             />
           )}
         </div>

@@ -20,6 +20,8 @@ import {
   reorderRootVisibleEntries,
   reorderTopLevelMenus,
   replaceEntryWithEntries,
+  replaceStoriesWithAssembledStory,
+  replaceStoryWithAudioParts,
   shallowCloneEntry,
   updateEntry,
   updateProjectRootEntries,
@@ -431,6 +433,22 @@ export function useProjectStore() {
     setSelectedId('root');
   }, [setProject]);
 
+  const replaceStoryAudioParts = useCallback((options) => {
+    const outcome = replaceStoryWithAudioParts(project, options);
+    if (!outcome.ok) return outcome;
+    setProject(outcome.project);
+    setSelectedId(outcome.retainedId);
+    return outcome;
+  }, [project, setProject]);
+
+  const replaceStoriesWithAssembly = useCallback((options) => {
+    const outcome = replaceStoriesWithAssembledStory(project, options);
+    if (!outcome.ok) return outcome;
+    setProject(outcome.project);
+    setSelectedId(outcome.retainedId);
+    return outcome;
+  }, [project, setProject]);
+
   // Remplace un ZIP par des entrées éditables (story/menu) issues de l'extraction
   const replaceZipWithEntries = useCallback((menuId, itemId, entries) => {
     setProject(p => replaceEntryWithEntries(p, menuId, itemId, entries));
@@ -512,6 +530,7 @@ export function useProjectStore() {
     updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
     addStory, addZip, updateItem, bulkUpdateItems, bulkDeleteItems, deleteItem, replaceZipWithEntries,
+    replaceStoryAudioParts, replaceStoriesWithAssembly,
     pasteEntriesToMenu, cutPasteEntriesToMenu, duplicateEntry,
     removeMediaReferences,
     reorderMenuItems, reorderRootItems, reorderMenus, moveItemToMenu,

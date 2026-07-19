@@ -195,6 +195,7 @@ export function MediaTile({
       <div
         ref={durationRef}
         data-tile-idx={index}
+        data-media-id={item.id}
         className={`${className}${item.exists ? '' : ' is-missing'}${isPopoverOpen ? ' is-popover-active' : ''}${isSelected ? ' is-selected' : ''}`}
         role="button"
         aria-selected={isSelected}

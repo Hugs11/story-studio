@@ -90,6 +90,7 @@ export function CompleteDiagramTree({
     onDuplicate,
     onAddEndNode,
     onRemoveEndNode,
+    onOpenMediaAudioTool,
   } = useProjectActions();
   const [showReturns, setShowReturns] = useState(() => read(KEYS.FLOW_DIAGRAM_SHOW_RETURNS, { defaultValue: 'true' }) !== 'false');
   const [hoveredNavigationEdgeId, setHoveredNavigationEdgeId] = useState(null);
@@ -551,6 +552,7 @@ export function CompleteDiagramTree({
       onDuplicate,
       onAddEndNode,
       onRemoveEndNode,
+      onOpenMediaAudioTool,
       getTopLevelSelected,
       handleCopy,
       handleCut,

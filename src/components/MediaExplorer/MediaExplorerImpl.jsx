@@ -12,12 +12,17 @@ import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { isDeletableWorkspaceMediaPath } from '../../store/workspaceDirs';
+import {
+  getAssemblyReplacementEligibility,
+  getMediaToolProjectActions,
+} from '../../store/mediaToolContext';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import { MediaExplorerContent } from './MediaExplorerContent';
 import { MediaPopover } from './MediaPopover';
 import { MediaDeleteDialog } from './MediaDeleteDialog';
 import { MediaSelectionBar } from './MediaSelectionBar';
+import { MediaToolResultBanner } from './MediaToolResultBanner';
 import { pathKey } from '../../utils/fileUtils';
 import { cleanPath, tagStyle } from './helpers';
 import { COLUMNS, colsToGrid, useColumnWidths } from './useColumnWidths';
@@ -57,6 +62,11 @@ export function MediaExplorer({
   savePath,
   projectName = '',
   onMediaCreated,
+  mediaToolRequest = null,
+  onAcknowledgeMediaToolRequest,
+  onInvalidateMediaToolRequest,
+  onValidateMediaToolRequest,
+  onApplyMediaToolProjectAction,
 }) {
   const { showErrorDialog } = useErrorDialog();
   const { activeDropZone, dropOnNode } = useMediaTransfer();
@@ -71,9 +81,14 @@ export function MediaExplorer({
   const [bulkTag, setBulkTag] = useState('');
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
+  const [assemblyItems, setAssemblyItems] = useState([]);
+  const [assemblyRequest, setAssemblyRequest] = useState(null);
   const [splitterItem, setSplitterItem] = useState(null);
-  const [assemblyToast, setAssemblyToast] = useState('');
-  const [pendingSelectPath, setPendingSelectPath] = useState('');
+  const [splitterRequest, setSplitterRequest] = useState(null);
+  const [toolResult, setToolResult] = useState(null);
+  const [busyProjectAction, setBusyProjectAction] = useState('');
+  const [pendingSelectPaths, setPendingSelectPaths] = useState([]);
+  const [pendingRevealMediaId, setPendingRevealMediaId] = useState('');
   const { getMeta, markForProbe } = useMediaMetadata();
 
   const [bgCtxMenu, setBgCtxMenu] = useState(null);
@@ -146,6 +161,54 @@ export function MediaExplorer({
     () => collectMediaLibrary({ project, statusByPath, sdJobs, xttsJobs, extraPaths }),
     [project, statusByPath, sdJobs, xttsJobs, extraPaths],
   );
+
+  useEffect(() => {
+    if (!mediaToolRequest || mediaToolRequest.status !== 'pending') return;
+    const validation = onValidateMediaToolRequest?.(mediaToolRequest);
+    if (validation && !validation.valid) {
+      onInvalidateMediaToolRequest?.(mediaToolRequest.requestId);
+      return;
+    }
+    const catalogItems = mediaToolRequest.sourcePaths.map((sourcePath) => (
+      items.find((candidate) => pathKey(candidate.path) === pathKey(sourcePath)) ?? null
+    ));
+    if (catalogItems.some((item) => !item)) return;
+    const requestedItems = catalogItems.map((item, index) => ({
+      ...item,
+      id: mediaToolRequest.entryIds[index],
+    }));
+
+    setToolResult(null);
+    setActivePopover(null);
+    setQuery('');
+    setActiveFilters(new Set(['audio']));
+    setActiveTags(new Set());
+    setSelectedIds(new Set(catalogItems.map((item) => item.id)));
+    setPendingRevealMediaId(catalogItems[0]?.id ?? '');
+    if (mediaToolRequest.tool === 'split') {
+      setAssemblyOpen(false);
+      setAssemblyItems([]);
+      setAssemblyRequest(null);
+      setSplitterRequest(mediaToolRequest);
+      setSplitterItem({
+        ...requestedItems[0],
+        durationSecs: getMeta(requestedItems[0].path)?.duration_secs,
+      });
+    } else {
+      setSplitterItem(null);
+      setSplitterRequest(null);
+      setAssemblyRequest(mediaToolRequest);
+      setAssemblyItems(requestedItems);
+      setAssemblyOpen(true);
+    }
+    onAcknowledgeMediaToolRequest?.(mediaToolRequest.requestId);
+  }, [
+    items,
+    mediaToolRequest,
+    onAcknowledgeMediaToolRequest,
+    onInvalidateMediaToolRequest,
+    onValidateMediaToolRequest,
+  ]);
 
   // All tags that appear on at least one item in the library
   const allTags = useMemo(() => {
@@ -261,21 +324,29 @@ export function MediaExplorer({
   }, [items]);
 
   useEffect(() => {
-    if (!pendingSelectPath) return;
-    const key = pathKey(pendingSelectPath);
-    const item = items.find((candidate) => pathKey(candidate.path) === key);
-    if (!item) return;
+    if (pendingSelectPaths.length === 0) return;
+    const keys = new Set(pendingSelectPaths.map(pathKey));
+    const createdItems = items.filter((candidate) => keys.has(pathKey(candidate.path)));
+    if (createdItems.length !== keys.size) return;
     setActiveFilters(new Set(['audio']));
     setActiveTags(new Set());
-    setSelectedIds(new Set([item.id]));
-    setPendingSelectPath('');
-  }, [items, pendingSelectPath]);
+    setQuery('');
+    setActivePopover(null);
+    setSelectedIds(new Set(createdItems.map((item) => item.id)));
+    setPendingRevealMediaId(createdItems[0]?.id ?? '');
+    setPendingSelectPaths([]);
+  }, [items, pendingSelectPaths]);
 
   useEffect(() => {
-    if (!assemblyToast) return undefined;
-    const timer = setTimeout(() => setAssemblyToast(''), 4200);
-    return () => clearTimeout(timer);
-  }, [assemblyToast]);
+    if (!pendingRevealMediaId) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const mediaElement = [...(containerRef.current?.querySelectorAll('[data-media-id]') ?? [])]
+        .find((element) => element.dataset.mediaId === pendingRevealMediaId);
+      mediaElement?.scrollIntoView({ block: 'nearest' });
+      setPendingRevealMediaId('');
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pendingRevealMediaId, view]);
 
   // Remove stale active tags when allTags shrinks
   useEffect(() => {
@@ -445,15 +516,37 @@ export function MediaExplorer({
     setBgCtxMenu({ x: e.clientX, y: e.clientY });
   }
 
-  function handleAudioAssemblyCreated(path) {
+  function openAudioAssembly() {
+    onInvalidateMediaToolRequest?.();
+    setToolResult(null);
+    setAssemblyRequest(null);
+    setAssemblyItems(selectedAudioItems);
+    setAssemblyOpen(true);
+  }
+
+  function handleAudioAssemblyCreated(path, metadata = {}) {
+    const request = assemblyRequest;
     onMediaCreated?.(path);
-    setPendingSelectPath(path);
+    setPendingSelectPaths([path]);
     setAssemblyOpen(false);
-    setAssemblyToast(`Audio assemblé créé : ${basename(cleanPath(path))}`);
+    setAssemblyItems([]);
+    setAssemblyRequest(null);
+    setToolResult({
+      request,
+      tool: 'assemble',
+      mode: 'assemble',
+      createdPaths: [path],
+      inputPaths: metadata.inputPaths ?? [],
+      failures: [],
+      message: `Audio assemblé créé : ${basename(cleanPath(path))}`,
+    });
   }
 
   function openAudioSplitter(item) {
     if (!item || item.kind !== 'audio' || !item.exists) return;
+    onInvalidateMediaToolRequest?.();
+    setToolResult(null);
+    setSplitterRequest(null);
     setActivePopover(null);
     setSplitterItem({
       ...item,
@@ -461,8 +554,11 @@ export function MediaExplorer({
     });
   }
 
-  function handleAudioSplitCreated(paths, failures = []) {
+  function handleAudioSplitCreated(paths, failures = [], metadata = {}) {
     const createdPaths = paths.filter(Boolean);
+    const request = splitterRequest
+      ? { ...splitterRequest, mode: metadata.mode ?? splitterRequest.mode }
+      : null;
     const sourcePath = splitterItem?.path;
     const sourceTags = sourcePath ? (mediaTags?.[sourcePath] ?? []) : [];
     const tagsToCopy = new Set([...sourceTags, 'découpe']);
@@ -472,11 +568,22 @@ export function MediaExplorer({
         for (const tag of tagsToCopy) onAddMediaTag(path, tag);
       }
     }
-    if (createdPaths[0]) setPendingSelectPath(createdPaths[0]);
+    if (createdPaths.length > 0) setPendingSelectPaths(createdPaths);
     setSplitterItem(null);
-    setAssemblyToast(createdPaths.length === 1
-      ? `Extrait audio créé : ${basename(cleanPath(createdPaths[0]))}`
-      : `${createdPaths.length} extraits audio créés`);
+    setSplitterRequest(null);
+    setToolResult({
+      request,
+      tool: 'split',
+      mode: metadata.mode ?? 'extract',
+      createdPaths,
+      failures,
+      segments: metadata.segments ?? [],
+      durationSec: metadata.durationSec,
+      coverage: metadata.coverage,
+      message: createdPaths.length === 1
+        ? `Extrait audio créé : ${basename(cleanPath(createdPaths[0]))}`
+        : `${createdPaths.length} extraits audio créés`,
+    });
 
     if (failures.length > 0) {
       const details = failures
@@ -488,6 +595,55 @@ export function MediaExplorer({
         variant: 'warning',
       });
     }
+  }
+
+  const contextualValidation = toolResult?.request
+    ? onValidateMediaToolRequest?.(toolResult.request) ?? { valid: false, reason: 'Le contexte projet n’est plus disponible.' }
+    : { valid: false, reason: '' };
+  const assemblyEligibility = toolResult?.request?.tool === 'assemble'
+    ? getAssemblyReplacementEligibility(project, toolResult.request.entryIds)
+    : null;
+  const availableProjectActions = getMediaToolProjectActions({
+    request: toolResult?.request,
+    result: toolResult,
+    contextValidation: contextualValidation,
+    replacementEligibility: assemblyEligibility,
+  });
+  let unavailableProjectActionReason = '';
+  if (toolResult?.request && availableProjectActions.length === 0) {
+    if (!contextualValidation.valid) unavailableProjectActionReason = contextualValidation.reason;
+    else if (toolResult.request.tool === 'assemble' && !assemblyEligibility?.valid) unavailableProjectActionReason = assemblyEligibility?.reason;
+    else if (toolResult.request.tool === 'assemble') unavailableProjectActionReason = 'L’ordre d’assemblage ne correspond plus à l’ordre des histoires.';
+    else if (toolResult.request.mode === 'full-split' && !toolResult.coverage?.valid) unavailableProjectActionReason = toolResult.coverage?.reason;
+    else if (toolResult.failures?.length) unavailableProjectActionReason = 'Toutes les parties requises n’ont pas pu être créées.';
+  }
+
+  function finishMediaToolResult() {
+    if (toolResult?.request) onInvalidateMediaToolRequest?.(toolResult.request.requestId);
+    setToolResult(null);
+    setBusyProjectAction('');
+  }
+
+  function applyMediaToolProjectAction(action) {
+    if (!toolResult?.request || busyProjectAction) return;
+    setBusyProjectAction(action);
+    const outcome = onApplyMediaToolProjectAction?.({
+      request: toolResult.request,
+      action,
+      result: toolResult,
+    });
+    if (!outcome?.ok) {
+      setBusyProjectAction('');
+      setToolResult((current) => current ? { ...current, actionError: outcome?.reason || 'La modification du projet a échoué.' } : current);
+      return;
+    }
+    setBusyProjectAction('');
+    setToolResult((current) => current ? {
+      ...current,
+      request: null,
+      projectApplied: true,
+      message: 'La modification a été appliquée en une seule opération annulable.',
+    } : current);
   }
 
   const viewSwitch = (
@@ -603,7 +759,7 @@ export function MediaExplorer({
         selectedAudioItems={selectedAudioItems}
         onCopyAudio={() => copySelectedAudio('copy')}
         onCutAudio={() => copySelectedAudio('cut')}
-        onOpenAssembly={() => setAssemblyOpen(true)}
+        onOpenAssembly={openAudioAssembly}
         onAddMediaTag={onAddMediaTag}
         bulkTag={bulkTag}
         onBulkTagChange={setBulkTag}
@@ -642,7 +798,7 @@ export function MediaExplorer({
         onDeleteMedia={onDeleteMedia}
         onDeleteRequest={handleDeleteRequest}
         selectedAudioItems={selectedAudioItems}
-        onOpenAssembly={() => setAssemblyOpen(true)}
+        onOpenAssembly={openAudioAssembly}
         onOpenSplitter={openAudioSplitter}
         selectedIds={selectedIds}
         selectedItems={visibleSelectedItems}
@@ -669,14 +825,20 @@ export function MediaExplorer({
       )}
       {assemblyOpen && (
         <AudioAssemblyModal
-          items={selectedAudioItems.map((item) => ({
+          items={assemblyItems.map((item) => ({
             ...item,
             durationSecs: getMeta(item.path)?.duration_secs,
           }))}
-          ignoredCount={selectedNonAudioCount}
+          ignoredCount={assemblyRequest ? 0 : selectedNonAudioCount}
           savePath={savePath}
           projectName={projectName}
-          onClose={() => setAssemblyOpen(false)}
+          contextRequest={assemblyRequest}
+          onClose={() => {
+            if (assemblyRequest) onInvalidateMediaToolRequest?.(assemblyRequest.requestId);
+            setAssemblyOpen(false);
+            setAssemblyItems([]);
+            setAssemblyRequest(null);
+          }}
           onCreated={handleAudioAssemblyCreated}
         />
       )}
@@ -685,16 +847,24 @@ export function MediaExplorer({
           <AudioSplitterModal
             item={splitterItem}
             savePath={savePath}
-            onClose={() => setSplitterItem(null)}
+            contextRequest={splitterRequest}
+            onClose={() => {
+              if (splitterRequest) onInvalidateMediaToolRequest?.(splitterRequest.requestId);
+              setSplitterItem(null);
+              setSplitterRequest(null);
+            }}
             onCreated={handleAudioSplitCreated}
           />
         </Suspense>
       )}
-      {assemblyToast && (
-        <div className="media-assembly-toast" role="status">
-          {assemblyToast}
-        </div>
-      )}
+      <MediaToolResultBanner
+        result={toolResult}
+        projectActions={availableProjectActions}
+        unavailableReason={toolResult?.actionError || unavailableProjectActionReason}
+        busyAction={busyProjectAction}
+        onProjectAction={applyMediaToolProjectAction}
+        onFinish={finishMediaToolResult}
+      />
       {bgCtxMenu && (
         <ContextMenu
           x={bgCtxMenu.x}
@@ -710,7 +880,7 @@ export function MediaExplorer({
                 { icon: <Scissors />, label: `Couper ${selectedAudioItems.length} son${selectedAudioItems.length > 1 ? 's' : ''}`, fn: () => { setBgCtxMenu(null); copySelectedAudio('cut'); } },
               ] : []),
               ...(selectedAudioItems.length >= 2 ? [
-                { icon: <Link2 />, label: `Assembler ${selectedAudioItems.length} sons`, fn: () => { setBgCtxMenu(null); setAssemblyOpen(true); } },
+                { icon: <Link2 />, label: `Assembler ${selectedAudioItems.length} sons`, fn: () => { setBgCtxMenu(null); openAudioAssembly(); } },
               ] : []),
               ...(onDeleteMedia ? [{ icon: <Trash2 />, label: `Retirer ${selectedCount} fichier${selectedCount > 1 ? 's' : ''} de la médiathèque`, fn: () => { setBgCtxMenu(null); handleDeleteRequest(visibleSelectedItems); }, danger: true }] : []),
             ] : []),

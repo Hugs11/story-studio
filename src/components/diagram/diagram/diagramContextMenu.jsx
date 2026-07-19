@@ -3,6 +3,7 @@ import { audioClipboard, imageClipboard } from '../../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../../tree/treeOperations';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../../icons/LucideLocal';
 import { END_NODE_ID } from '../flowDiagramLayout';
+import { resolveAudioStoriesInProjectOrder } from '../../../store/mediaToolContext';
 
 function setNodeColor({ nodeId, nodeType, color, onUpdateMedia, onUpdateMenu, onUpdateItem }) {
   const fields = { treeColor: color };
@@ -37,6 +38,7 @@ export function buildDiagramContextActions({
   onDuplicate,
   onAddEndNode,
   onRemoveEndNode,
+  onOpenMediaAudioTool,
   getTopLevelSelected,
   handleCopy,
   handleCut,
@@ -112,6 +114,43 @@ export function buildDiagramContextActions({
       label: imageClipboard.getEntry()?.mode === 'cut' ? "Déplacer l'image ici" : "Coller l'image ici",
       fn: () => handlePasteMedia(nodeId, nodeType, 'image'),
     });
+  }
+
+  const selectedForAudio = selectedIds?.has(nodeId) && selectedIds?.size > 1
+    ? [...selectedIds]
+    : [nodeId];
+  const audioContext = resolveAudioStoriesInProjectOrder(project, selectedForAudio);
+  if (onOpenMediaAudioTool && audioContext.valid) {
+    actions.push('sep');
+    if (audioContext.stories.length === 1) {
+      actions.push({
+        icon: <Scissors />,
+        label: 'Extraire ou découper l’audio dans Médias…',
+        fn: () => {
+          closeContextMenu();
+          onOpenMediaAudioTool({
+            origin: 'diagram',
+            tool: 'split',
+            mode: 'extract',
+            entryIds: audioContext.entryIds,
+          });
+        },
+      });
+    } else {
+      actions.push({
+        icon: <Music />,
+        label: 'Assembler leurs audios dans Médias…',
+        fn: () => {
+          closeContextMenu();
+          onOpenMediaAudioTool({
+            origin: 'diagram',
+            tool: 'assemble',
+            mode: 'assemble',
+            entryIds: audioContext.entryIds,
+          });
+        },
+      });
+    }
   }
 
   if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip' || nodeType === 'ref') {

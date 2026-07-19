@@ -17,6 +17,7 @@ export function useProjectActionsValue({
   setYoutubeFunnelMode,
   canRecord,
   canGenerateStoryTts,
+  onOpenMediaAudioTool,
 }) {
   return {
     onSelect: store.setSelectedId,
@@ -54,5 +55,6 @@ export function useProjectActionsValue({
     onUpdateNightModeReturn: (value) => store.updateGlobalEndMessage({ nightModeReturn: value }),
     onUpdateNightModeHomeReturn: (value) => store.updateGlobalEndMessage({ nightModeHomeReturn: value }),
     onAttachStoryEndToGlobal: store.attachStoryEndToGlobal,
+    onOpenMediaAudioTool,
   };
 }
