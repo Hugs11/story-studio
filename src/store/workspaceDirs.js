@@ -2,6 +2,8 @@
 // Utiliser ces constantes au lieu de strings hardcodés pour éviter
 // les drift entre fichiers (`projectIO`, hooks d'import, médiathèque, etc.).
 
+import { basenameNoExt, joinPath } from '../utils/fileUtils.js';
+
 export const FICHIERS_IMPORTES = 'fichiers-importes';
 const ENREGISTREMENTS = 'enregistrements';
 const VOIX_GENEREES = 'voix-generees';
@@ -10,6 +12,25 @@ export const ZIPS_EXTRAITS = 'zips-extraits';
 export const EXPORTS = 'exports';
 export const SAUVEGARDES = 'sauvegardes';
 export const VERSIONS_SECURITE = 'versions-securite';
+
+export function buildEditedImageFileName(sourcePath, collisionIndex = 1) {
+  const rawStem = basenameNoExt(sourcePath)
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/[. ]+$/g, '');
+  const sourceStem = rawStem.replace(/_modifie(?:_\d+)?$/i, '') || 'image';
+  const collisionSuffix = collisionIndex > 1 ? `_${collisionIndex}` : '';
+  return `${sourceStem}_modifie${collisionSuffix}.png`;
+}
+
+export function buildEditedImageDestination(workspaceDir, sourcePath, collisionIndex = 1) {
+  if (!workspaceDir?.trim()) return null;
+  return joinPath(
+    workspaceDir,
+    IMAGES_GENEREES,
+    buildEditedImageFileName(sourcePath, collisionIndex),
+  );
+}
 
 // Dossiers que `delete_workspace_media_file` et `isManagedProjectPath` reconnaissent
 // comme « médias gérés par l'app ». `zips-extraits/` est exclu (extractions ZIP

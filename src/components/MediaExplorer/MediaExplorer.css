@@ -18,6 +18,24 @@
   position: relative;
 }
 
+.media-success-toast {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: min(480px, calc(100% - 28px));
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, var(--success, #4caf78) 48%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--success, #4caf78) 15%, var(--bg1));
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
 .media-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

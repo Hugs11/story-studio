@@ -2,6 +2,23 @@ import { visitProjectEntries, walkProjectMediaReferences } from './projectModel/
 import { isOriginalBackup } from '../utils/mediaConventions.js';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
 
+const EDITED_IMAGE_TAG = 'modifiée';
+
+function getMediaTagsForPath(mediaTags, path) {
+  if (!mediaTags || !path) return [];
+  const key = pathKey(path);
+  const matchingEntry = Object.entries(mediaTags)
+    .find(([tagPath]) => pathKey(tagPath) === key);
+  return matchingEntry?.[1] ?? [];
+}
+
+export function getEditedImageTags(mediaTags, sourcePath) {
+  return [...new Set([
+    ...getMediaTagsForPath(mediaTags, sourcePath),
+    EDITED_IMAGE_TAG,
+  ])];
+}
+
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }

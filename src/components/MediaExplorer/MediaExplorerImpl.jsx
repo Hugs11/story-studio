@@ -26,10 +26,13 @@ import { MediaToolResultBanner } from './MediaToolResultBanner';
 import { pathKey } from '../../utils/fileUtils';
 import { cleanPath, tagStyle } from './helpers';
 import { COLUMNS, colsToGrid, useColumnWidths } from './useColumnWidths';
+import { useMediaImageEdit } from './useMediaImageEdit';
 import './MediaExplorer.css';
 
 const AudioSplitterModal = lazy(() => import('../AudioSplitterModal/AudioSplitterModal')
   .then((m) => ({ default: m.AudioSplitterModal })));
+const ImageEditorModal = lazy(() => import('../ImageEditorModal/ImageEditorModal')
+  .then((m) => ({ default: m.ImageEditorModal })));
 
 const FILTERS = [
   { id: 'all', label: 'Tout' },
@@ -94,6 +97,18 @@ export function MediaExplorer({
   const [bgCtxMenu, setBgCtxMenu] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteDisk, setDeleteDisk] = useState(false);
+
+  const imageEdit = useMediaImageEdit({
+    workspaceDir,
+    mediaTags,
+    onAddMediaTag,
+    onMediaCreated,
+    onCreated: (path) => {
+      setPendingSelectPaths([path]);
+      setActivePopover(null);
+    },
+    showErrorDialog,
+  });
 
   const { colWidths, colWidthsRef, visibleCols, setColWidths, toggleCol } = useColumnWidths({
     sortCol,
@@ -328,7 +343,12 @@ export function MediaExplorer({
     const keys = new Set(pendingSelectPaths.map(pathKey));
     const createdItems = items.filter((candidate) => keys.has(pathKey(candidate.path)));
     if (createdItems.length !== keys.size) return;
-    setActiveFilters(new Set(['audio']));
+    const createdKind = createdItems.every((item) => item.kind === createdItems[0]?.kind)
+      ? createdItems[0]?.kind
+      : null;
+    setActiveFilters(new Set(
+      createdKind === 'image' || createdKind === 'audio' ? [createdKind] : [],
+    ));
     setActiveTags(new Set());
     setQuery('');
     setActivePopover(null);
@@ -800,6 +820,10 @@ export function MediaExplorer({
         selectedAudioItems={selectedAudioItems}
         onOpenAssembly={openAudioAssembly}
         onOpenSplitter={openAudioSplitter}
+        onEditImage={(item) => {
+          setActivePopover(null);
+          void imageEdit.openImageEditor(item);
+        }}
         selectedIds={selectedIds}
         selectedItems={visibleSelectedItems}
         onSelectItem={handleSelectItem}
@@ -821,6 +845,10 @@ export function MediaExplorer({
           onAddMediaTag={onAddMediaTag}
           onRemoveMediaTag={onRemoveMediaTag}
           onSplit={() => openAudioSplitter(sortedVisible[activePopover.idx])}
+          onEditImage={(item) => {
+            setActivePopover(null);
+            void imageEdit.openImageEditor(item);
+          }}
         />
       )}
       {assemblyOpen && (
@@ -854,6 +882,23 @@ export function MediaExplorer({
               setSplitterRequest(null);
             }}
             onCreated={handleAudioSplitCreated}
+          />
+        </Suspense>
+      )}
+      {imageEdit.editSession && (
+        <Suspense fallback={null}>
+          <ImageEditorModal
+            sourcePath={imageEdit.editSession.sourcePath}
+            outputNameSourcePath={imageEdit.editSession.item.path}
+            initialTransform={imageEdit.editSession.initialTransform}
+            initialFilters={imageEdit.editSession.initialFilters}
+            title="Modifier une image"
+            confirmLabel="Enregistrer comme nouveau média"
+            workspaceDir={imageEdit.editSession.workspaceDir}
+            requireManagedOutput
+            forceExport
+            onConfirm={imageEdit.handleImageEditorConfirm}
+            onCancel={imageEdit.closeImageEditor}
           />
         </Suspense>
       )}
@@ -897,6 +942,11 @@ export function MediaExplorer({
         onCancel={() => { setDeleteConfirm(null); setDeleteDisk(false); }}
         onConfirm={confirmDelete}
       />
+      {imageEdit.notice && (
+        <div className="media-success-toast" role="status" aria-live="polite">
+          {imageEdit.notice}
+        </div>
+      )}
       {osDropHover && (
         <div className="media-os-drop-overlay">
           Déposer pour importer dans les médias

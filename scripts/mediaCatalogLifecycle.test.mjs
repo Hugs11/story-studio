@@ -4,13 +4,18 @@ import assert from 'node:assert/strict';
 import {
   collectMediaLibrary,
   executeMediaDeletion,
+  getEditedImageTags,
   reconcileMediaLibraryPaths,
 } from '../src/store/mediaLibrary.js';
 import {
   removeEntryCascadingRefs,
   updateEntry,
 } from '../src/store/projectModel/operations.js';
-import { isDeletableWorkspaceMediaPath } from '../src/store/workspaceDirs.js';
+import {
+  buildEditedImageDestination,
+  buildEditedImageFileName,
+  isDeletableWorkspaceMediaPath,
+} from '../src/store/workspaceDirs.js';
 import { pathKey } from '../src/utils/fileUtils.js';
 
 function projectWith(entries) {
@@ -163,4 +168,46 @@ test('disk deletion eligibility is limited to deletable workspace media folders'
     workspace,
   ), false);
   assert.equal(isDeletableWorkspaceMediaPath('D:/external/test.mp3', workspace), false);
+});
+
+test('edited image names stay readable and resolve collisions without changing the source stem', () => {
+  assert.equal(buildEditedImageFileName('C:/photos/La forêt.png'), 'La forêt_modifie.png');
+  assert.equal(buildEditedImageFileName('C:/photos/La forêt.png', 2), 'La forêt_modifie_2.png');
+  assert.equal(buildEditedImageFileName('C:/photos/La forêt_modifie_7.png'), 'La forêt_modifie.png');
+  assert.equal(
+    buildEditedImageDestination('C:/workspace', 'D:/sources/La forêt.png', 3),
+    'C:/workspace/images-generees/La forêt_modifie_3.png',
+  );
+});
+
+test('an edited image copies source tags case-insensitively and adds its distinctive tag', () => {
+  const sourcePath = 'C:\\Images\\Source.PNG';
+  const mediaTags = { 'c:/images/source.png': ['couverture', 'favori'] };
+
+  const result = getEditedImageTags(mediaTags, sourcePath);
+
+  assert.deepEqual(result, ['couverture', 'favori', 'modifiée']);
+  assert.deepEqual(mediaTags, { 'c:/images/source.png': ['couverture', 'favori'] });
+});
+
+test('one reusable edited image keeps a single catalog entry across several placeholders', () => {
+  const derivative = 'C:/workspace/images-generees/visuel_modifie.png';
+  const emptyProject = projectWith([]);
+  const [unused] = collectMediaLibrary({ project: emptyProject, extraPaths: [derivative] });
+  assert.equal(unused.inProject, false);
+  assert.equal(unused.usedCount, 0);
+
+  const usedTwice = projectWith([
+    { id: 'story-a', type: 'story', name: 'A', itemImage: derivative },
+    { id: 'story-b', type: 'story', name: 'B', itemImage: derivative },
+  ]);
+  const [shared] = collectMediaLibrary({ project: usedTwice, extraPaths: [derivative] });
+  assert.equal(shared.path, derivative);
+  assert.equal(shared.projectUsedCount, 2);
+  assert.equal(shared.usages.length, 2);
+
+  const firstRemoved = updateEntry(usedTwice, 'story-a', { itemImage: null });
+  const [remaining] = collectMediaLibrary({ project: firstRemoved, extraPaths: [derivative] });
+  assert.equal(remaining.projectUsedCount, 1);
+  assert.equal(pathKey(remaining.path), pathKey(derivative));
 });

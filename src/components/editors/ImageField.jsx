@@ -50,7 +50,15 @@ export function ImageField({
   badge = null,
 }) {
   const { notifyCutPaste } = useMediaTransfer();
-  const { pathAudit, sdSettings, sdJobs, onOpenSDGenerate, onRemoveSdResult, onImportFile } = useProjectContext();
+  const {
+    pathAudit,
+    sdSettings,
+    sdJobs,
+    workspaceDir,
+    onOpenSDGenerate,
+    onRemoveSdResult,
+    onImportFile,
+  } = useProjectContext();
   const aiEnabled = sdSettings?.aiImageGen && !!onOpenSDGenerate;
   const previewUrl = useLocalFile(file);
   const filename = file ? basename(file) : null;
@@ -61,6 +69,7 @@ export function ImageField({
   const [editorInitialFilters, setEditorInitialFilters] = useState(null);
   const [ctxMenu, setCtxMenu] = useState(null);
   const autoAppliedSdResultsRef = useRef(new Set());
+  const editorRequestIdRef = useRef(0);
   const fileAvailable = !!file && pathAudit[file] !== false;
   const showFilledState = !!file && fileAvailable;
   const isGeneratingForField = useMemo(
@@ -89,6 +98,7 @@ export function ImageField({
   async function handlePick() {
     const picked = await pickImage();
     if (!picked) return;
+    editorRequestIdRef.current += 1;
     setEditorSource(picked);
     setEditorInitialTransform(null);
     setEditorInitialFilters(null);
@@ -96,7 +106,9 @@ export function ImageField({
   }
 
   async function openEditor(path) {
+    const requestId = ++editorRequestIdRef.current;
     const metadata = await readImageEditMetadata(path);
+    if (requestId !== editorRequestIdRef.current) return;
     setEditorSource(metadata?.sourcePath || path);
     setEditorInitialTransform(metadata?.transform ?? null);
     setEditorInitialFilters(metadata?.filters ?? null);
@@ -110,6 +122,7 @@ export function ImageField({
   }
 
   async function handleEditorConfirm(editedPath, editMetadata = null) {
+    editorRequestIdRef.current += 1;
     setEditorOpen(false);
     setEditorSource(null);
     setEditorInitialTransform(null);
@@ -123,6 +136,7 @@ export function ImageField({
   }
 
   function handleEditorCancel() {
+    editorRequestIdRef.current += 1;
     setEditorOpen(false);
     setEditorSource(null);
     setEditorInitialTransform(null);
@@ -147,15 +161,32 @@ export function ImageField({
   }
 
   const dropRef = useRef(null);
-  const openEditorRef = useRef(null);
-  openEditorRef.current = openEditor;
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
 
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
-    function onMediaDrop(e) { openEditorRef.current(e.detail.path); }
+    async function onMediaDrop(e) {
+      const path = e.detail?.path;
+      if (!path) return;
+      const requestId = ++editorRequestIdRef.current;
+      const metadata = await readImageEditMetadata(path);
+      if (requestId !== editorRequestIdRef.current) return;
+      if (metadata) {
+        onPickRef.current?.(path);
+        return;
+      }
+      setEditorSource(path);
+      setEditorInitialTransform(null);
+      setEditorInitialFilters(null);
+      setEditorOpen(true);
+    }
     el.addEventListener('media-drop', onMediaDrop);
-    return () => el.removeEventListener('media-drop', onMediaDrop);
+    return () => {
+      editorRequestIdRef.current += 1;
+      el.removeEventListener('media-drop', onMediaDrop);
+    };
   }, []);
 
   return (
@@ -258,6 +289,8 @@ export function ImageField({
             sourcePath={editorSource}
             initialTransform={editorInitialTransform}
             initialFilters={editorInitialFilters}
+            workspaceDir={workspaceDir}
+            forceExport
             onConfirm={handleEditorConfirm}
             onCancel={handleEditorCancel}
           />

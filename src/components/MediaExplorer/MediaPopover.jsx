@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { Button } from '../common/Button';
-import { Scissors } from '../icons/LucideLocal';
+import { FilePen, Scissors } from '../icons/LucideLocal';
 import './MediaPopover.css';
 
 function fmt(secs) {
@@ -143,7 +143,7 @@ function TagEditor({ path, itemTags, allProjectTags, onAddMediaTag, onRemoveMedi
 
 export function MediaPopover({
   item, anchorRect, getMeta, onSelectNode, onClose,
-  itemTags = [], allProjectTags = [], onAddMediaTag, onRemoveMediaTag, onSplit,
+  itemTags = [], allProjectTags = [], onAddMediaTag, onRemoveMediaTag, onSplit, onEditImage,
 }) {
   const popRef = useRef(null);
   const imageUrl = useLocalFile(item.kind === 'image' ? item.path : null);
@@ -208,6 +208,18 @@ export function MediaPopover({
           </div>
           {meta?.width ? (
             <div className="mp-meta-row">{meta.width} × {meta.height} px</div>
+          ) : null}
+          {item.exists && onEditImage ? (
+            <Button
+              className="mp-action-btn"
+              onClick={() => {
+                onClose();
+                onEditImage(item);
+              }}
+            >
+              <FilePen width={14} height={14} strokeWidth={2} absoluteStrokeWidth />
+              Modifier l’image…
+            </Button>
           ) : null}
         </>
       )}

@@ -49,7 +49,19 @@ function serializeError(error) {
   return String(error);
 }
 
-export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTransform, initialFilters }) {
+export function ImageEditorModal({
+  sourcePath,
+  onConfirm,
+  onCancel,
+  initialTransform,
+  initialFilters,
+  title = "Recadrer et ajuster l'image",
+  confirmLabel = 'Utiliser cette image',
+  workspaceDir = '',
+  requireManagedOutput = false,
+  outputNameSourcePath = sourcePath,
+  forceExport = false,
+}) {
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const objectUrlRef = useRef(null);
@@ -79,6 +91,10 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
       png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
       webp: 'image/webp', bmp: 'image/bmp', gif: 'image/gif',
     };
+    if (ext === 'gif') {
+      setLoadError('Le format GIF n’est pas pris en charge par l’éditeur d’image.');
+      return undefined;
+    }
     const mime = mimeMap[ext] || 'image/png';
 
     readFile(sourcePath)
@@ -197,18 +213,26 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
   }
 
   async function handleConfirm() {
-    if (!isDirtyRef.current) {
+    if (!forceExport && !isDirtyRef.current) {
       onConfirm(sourcePath, { transform, filters });
       return;
     }
     setSaving(true);
     try {
-      const finalPath = await exportEditedImage({ image: imgRef.current, transform, filters, sourcePath });
+      const finalPath = await exportEditedImage({
+        image: imgRef.current,
+        transform,
+        filters,
+        sourcePath,
+        outputNameSourcePath,
+        workspaceDir,
+        requireManagedOutput,
+      });
       logger.info('image-editor:image-saved', { sourcePath, finalPath });
       onConfirm(finalPath, { sourcePath, transform, filters });
     } catch (err) {
       logger.error('image-editor:save-error', err);
-      setLoadError("L'export de l'image a echoue.");
+      setLoadError(err?.userMessage || "L’export de l’image a échoué.");
       setSaving(false);
     }
   }
@@ -217,7 +241,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
     <div className="modal-overlay">
       <div className="image-editor-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Recadrer et ajuster l'image</span>
+          <span>{title}</span>
           <Button variant="icon" className="modal-close" onClick={onCancel}>×</Button>
         </div>
 
@@ -312,7 +336,7 @@ export function ImageEditorModal({ sourcePath, onConfirm, onCancel, initialTrans
         <div className="modal-footer">
           <Button onClick={onCancel}>Annuler</Button>
           <Button variant="primary" onClick={handleConfirm} disabled={!imgLoaded || saving}>
-            {saving ? 'Enregistrement…' : 'Utiliser cette image'}
+            {saving ? 'Enregistrement…' : confirmLabel}
           </Button>
         </div>
       </div>

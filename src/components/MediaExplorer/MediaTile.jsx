@@ -4,7 +4,7 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { mediaDrag } from '../../store/dragState';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
-import { Copy, FolderOpen, Link2, Scissors, Trash2 } from '../icons/LucideLocal';
+import { Copy, FilePen, FolderOpen, Link2, Scissors, Trash2 } from '../icons/LucideLocal';
 import { cleanPath, formatDate, getMetaDisplay, kindLabel, tagStyle } from './helpers';
 import { useAudioDuration } from './useAudioDuration';
 import { MediaThumb } from './MediaThumb';
@@ -15,7 +15,7 @@ export function MediaTile({
   item, view, getMeta, markForProbe,
   index, isPopoverOpen, onActivate, onNavigate,
   itemTags, allProjectTags, onAddMediaTag, onRemoveMediaTag,
-  mediaTags, onDeleteRequest, onAssemble, onSplit,
+  mediaTags, onDeleteRequest, onAssemble, onSplit, onEditImage,
   isSelected, selectedItems, selectedAudioItems, onSelect, onContextMenuSelect,
   visibleCols, dropOnNode,
 }) {
@@ -71,6 +71,10 @@ export function MediaTile({
     ...(onSplit && item.kind === 'audio' && item.exists ? [
       'sep',
       { icon: <Scissors />, label: 'Découper un audio', fn: () => onSplit(item) },
+    ] : []),
+    ...(onEditImage && item.kind === 'image' && item.exists ? [
+      'sep',
+      { icon: <FilePen />, label: 'Modifier l’image…', fn: () => onEditImage(item) },
     ] : []),
     ...(onDeleteRequest ? [
       'sep',

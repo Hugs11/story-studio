@@ -1,19 +1,67 @@
 // Export PNG 320x240 d'une edition d'image vers le filesystem Tauri.
 // Extrait de ImageEditorModal.jsx : isole le pipeline canvas -> blob -> fichier
-// temp -> copie eventuelle dans le workspace.
+// vers un emplacement géré du workspace effectif, ou vers le cache temporaire
+// pour les anciens contextes qui n'ont pas besoin d'un média autonome durable.
 
-import { writeFile, mkdir, copyFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeFile, mkdir, remove, exists } from '@tauri-apps/plugin-fs';
 import { join, tempDir } from '@tauri-apps/api/path';
 import { logger } from '../../utils/logger';
 import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
-import { KEYS, read } from '../../store/persistentSettings';
+import {
+  buildEditedImageDestination,
+  buildEditedImageFileName,
+  IMAGES_GENEREES,
+} from '../../store/workspaceDirs';
+import { joinPath } from '../../utils/fileUtils';
 import { renderFrame, CANVAS_W, CANVAS_H } from './useImageEditor';
-import { writeImageEditMetadata } from './imageEditMetadata';
+import { imageEditMetadataPath, writeImageEditMetadata } from './imageEditMetadata';
 
-// Rend l'image dans un canvas offscreen 320x240, ecrit le PNG en cache temp,
-// puis essaie de copier dans <workspace>/images-generees si workspace defini.
-// Retourne le chemin final absolu.
-export async function exportEditedImage({ image, transform, filters, sourcePath }) {
+const MAX_FILENAME_ATTEMPTS = 10_000;
+
+function isAlreadyExistsError(error) {
+  const message = String(error?.message ?? error).toLowerCase();
+  return message.includes('already exists')
+    || message.includes('file exists')
+    || message.includes('os error 80')
+    || message.includes('os error 183');
+}
+
+async function writeUniqueImage({ directory, sourcePath, bytes, managedWorkspace }) {
+  for (let collisionIndex = 1; collisionIndex <= MAX_FILENAME_ATTEMPTS; collisionIndex += 1) {
+    const candidate = managedWorkspace
+      ? buildEditedImageDestination(managedWorkspace, sourcePath, collisionIndex)
+      : joinPath(directory, buildEditedImageFileName(sourcePath, collisionIndex));
+    if (await exists(candidate)) continue;
+    try {
+      await writeFile(candidate, bytes, { createNew: true });
+      return candidate;
+    } catch (error) {
+      if (isAlreadyExistsError(error)) continue;
+      throw error;
+    }
+  }
+  throw new Error('Impossible de trouver un nom disponible pour l’image modifiée.');
+}
+
+async function cleanupIncompleteExport(imagePath) {
+  const metadataPath = imageEditMetadataPath(imagePath);
+  await Promise.all([
+    remove(imagePath).catch(() => {}),
+    metadataPath ? remove(metadataPath).catch(() => {}) : Promise.resolve(),
+  ]);
+}
+
+// Rend l'image dans un canvas offscreen 320x240, écrit le PNG et son sidecar,
+// puis retourne seulement un chemin entièrement finalisé.
+export async function exportEditedImage({
+  image,
+  transform,
+  filters,
+  sourcePath,
+  outputNameSourcePath = sourcePath,
+  workspaceDir = '',
+  requireManagedOutput = false,
+}) {
   const offscreen = document.createElement('canvas');
   offscreen.width = CANVAS_W;
   offscreen.height = CANVAS_H;
@@ -24,28 +72,33 @@ export async function exportEditedImage({ image, transform, filters, sourcePath 
   const buffer = await blob.arrayBuffer();
   const bytes = new Uint8Array(buffer);
 
-  const filename = `edited_${Date.now()}.png`;
-  await mkdir(TEMP_IMAGES_DIR, { baseDir: BaseDirectory.Temp, recursive: true });
-  const tempRelPath = `${TEMP_IMAGES_DIR}/${filename}`;
-  await writeFile(tempRelPath, bytes, { baseDir: BaseDirectory.Temp });
-  const tmp = await tempDir();
-  const tempAbsPath = await join(tmp, tempRelPath);
-
-  let finalPath = tempAbsPath;
-  const workspaceDir = read(KEYS.WORKSPACE_DIR);
-  if (workspaceDir) {
-    try {
-      const destDir = `${workspaceDir}/images-generees`;
-      await mkdir(destDir, { recursive: true });
-      const destPath = `${destDir}/${filename}`;
-      await copyFile(tempAbsPath, destPath);
-      finalPath = destPath;
-    } catch {
-      // fallback : on garde tempAbsPath, l'erreur n'est pas bloquante.
-      logger.warn?.('image-editor:workspace-copy-failed');
-    }
+  const managedWorkspace = workspaceDir?.trim();
+  if (requireManagedOutput && !managedWorkspace) {
+    const error = new Error('Aucun workspace géré n’est disponible pour enregistrer ce nouveau média.');
+    error.userMessage = 'Aucun dossier de projet durable n’est disponible. L’image n’a pas été créée.';
+    throw error;
   }
 
-  await writeImageEditMetadata(finalPath, { sourcePath, transform, filters });
-  return finalPath;
+  let directory;
+  if (managedWorkspace) {
+    directory = joinPath(managedWorkspace, IMAGES_GENEREES);
+  } else {
+    directory = await join(await tempDir(), TEMP_IMAGES_DIR);
+  }
+  await mkdir(directory, { recursive: true });
+
+  const finalPath = await writeUniqueImage({
+    directory,
+    sourcePath: outputNameSourcePath,
+    bytes,
+    managedWorkspace,
+  });
+  try {
+    await writeImageEditMetadata(finalPath, { sourcePath, transform, filters }, { strict: true });
+    return finalPath;
+  } catch (error) {
+    await cleanupIncompleteExport(finalPath);
+    logger.warn('image-editor:incomplete-export-cleaned', finalPath);
+    throw error;
+  }
 }
