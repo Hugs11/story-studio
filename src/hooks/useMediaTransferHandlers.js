@@ -173,13 +173,21 @@ export function useMediaTransferHandlers({
       return { project, changed: false, copies: [] };
     }
 
+    const artifactCopies = [];
+    const knownCopies = new Map();
     const transferResult = await transferProjectFilesToProject(
       project,
       savePath,
       async (sourcePath) => {
         const targetWorkspace = targetWorkspaceDir || workspaceDir || await getWorkspaceDir();
         if (!targetWorkspaceDir && !workspaceDir) setWorkspaceDirState(targetWorkspace);
-        return copyMediaToWorkspace(sourcePath, targetWorkspace, FICHIERS_IMPORTES, getProjectFilePrefix(store.project, savePathRef.current));
+        return copyMediaToWorkspace(
+          sourcePath,
+          targetWorkspace,
+          FICHIERS_IMPORTES,
+          getProjectFilePrefix(store.project, savePathRef.current),
+          { artifactCopies, knownCopies },
+        );
       },
       pathAudit,
     );
@@ -200,7 +208,7 @@ export function useMediaTransferHandlers({
     return {
       project: transferResult.project,
       changed: transferResult.copiedCount > 0,
-      copies: transferResult.copies,
+      copies: [...transferResult.copies, ...artifactCopies],
       errors: transferResult.errors,
     };
   }, [

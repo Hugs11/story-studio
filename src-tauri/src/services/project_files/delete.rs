@@ -100,6 +100,8 @@ pub(crate) const DELETABLE_WORKSPACE_DIRS: [&str; 4] = [
     "images-generees",
 ];
 
+pub(crate) const IMAGE_EDIT_DIR: &str = ".story-studio-image-edits";
+
 pub fn delete_workspace_media_file(
     path: &str,
     workspace_dir: &str,
@@ -142,6 +144,7 @@ pub fn delete_workspace_media_file(
                 &managed_canonical,
                 preserve_paths,
             );
+            cascade_delete_image_edit_artifacts(&target_canonical, &managed_canonical);
             return Ok(());
         }
     }
@@ -151,6 +154,30 @@ pub fn delete_workspace_media_file(
         DELETABLE_WORKSPACE_DIRS.join(", workspace/"),
         target_canonical.display()
     ))
+}
+
+/// Supprime uniquement le sidecar de l'image ciblée. Le `sourcePath` qu'il
+/// contient n'est jamais suivi ni supprimé : l'original reste un média autonome.
+fn cascade_delete_image_edit_artifacts(target: &Path, managed_canonical: &Path) {
+    let Some(parent) = target.parent() else {
+        return;
+    };
+    if !parent.starts_with(managed_canonical) {
+        return;
+    }
+    let Some(file_name) = target.file_name().and_then(OsStr::to_str) else {
+        return;
+    };
+
+    let dot_folder = parent.join(IMAGE_EDIT_DIR);
+    if let Ok(dot_canonical) = fs::canonicalize(&dot_folder) {
+        if !dot_canonical.starts_with(managed_canonical) {
+            return;
+        }
+        let sidecar = dot_canonical.join(format!("{}.edit.json", file_name));
+        let _ = fs::remove_file(sidecar);
+        let _ = fs::remove_dir(dot_canonical);
+    }
 }
 
 /// Après suppression d'un média édité, nettoie les artefacts liés :

@@ -17,6 +17,10 @@ import {
   isDeletableWorkspaceMediaPath,
 } from '../src/store/workspaceDirs.js';
 import { pathKey } from '../src/utils/fileUtils.js';
+import {
+  imageEditMetadataPath,
+  withImageEditSourcePath,
+} from '../src/store/imageEditMetadata.js';
 
 function projectWith(entries) {
   return {
@@ -27,6 +31,27 @@ function projectWith(entries) {
     globalOptions: {},
   };
 }
+
+test('edited image sidecars stay beside their image and can be rewritten to a durable source', () => {
+  const imagePath = 'C:\\session\\images-generees\\episode__cover-modifiee.png';
+  const durableSource = 'C:\\workspace\\fichiers-importes\\episode__cover.png';
+
+  assert.equal(
+    imageEditMetadataPath(imagePath),
+    'C:\\session\\images-generees/.story-studio-image-edits/episode__cover-modifiee.png.edit.json',
+  );
+  assert.deepEqual(withImageEditSourcePath({
+    version: 1,
+    sourcePath: 'C:\\session\\fichiers-importes\\cover.png',
+    transform: { scale: 1.2 },
+    filters: { brightness: 10 },
+  }, durableSource), {
+    version: 1,
+    sourcePath: durableSource,
+    transform: { scale: 1.2 },
+    filters: { brightness: 10 },
+  });
+});
 
 test('a deleted imported story leaves its audio visible as unused', () => {
   const audio = 'C:/workspace/fichiers-importes/test__histoire.mp3';

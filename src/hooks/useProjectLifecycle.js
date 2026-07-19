@@ -25,6 +25,7 @@ export function useProjectLifecycle({
   unpackZipIntoBlankProject,
   savedSnapshotRef,
   autoSavePathRef,
+  autoSaveSnapshotRef,
   importedPackPendingMetaRef,
   setMediaLibraryPaths,
   setAutoSavedPath,
@@ -38,12 +39,13 @@ export function useProjectLifecycle({
   // Retour à l'accueil : PAS de nouvelle session, c'est un reset. Nettoyage
   // complet mémoire + session + jobs ; après quoi projectType est null → ModeSelector.
   async function handleNewProject() {
-    const canContinue = await askSaveBeforeLeaveCurrent(store.project, savedSnapshotRef.current, handleSave);
+    const canContinue = await askSaveBeforeLeaveCurrent(handleSave);
     if (!canContinue) return;
     store.resetProject();
     setMediaLibraryPaths([]);
     savedSnapshotRef.current = null;
     autoSavePathRef.current = null;
+    autoSaveSnapshotRef.current = null;
     setAutoSavedPath(null);
     resetWorkSession();
     sdStore.clearDone();

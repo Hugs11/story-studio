@@ -56,9 +56,20 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
       while (pending.length > 0) {
         const failed = [];
         for (const path of pending) {
+          if (replacements.has(pathKey(path))) continue;
           try {
-            const dest = await copyMediaToWorkspace(path, targetWorkspaceDir, FICHIERS_IMPORTES, projectName);
+            const artifactCopies = [];
+            const dest = await copyMediaToWorkspace(
+              path,
+              targetWorkspaceDir,
+              FICHIERS_IMPORTES,
+              projectName,
+              { artifactCopies },
+            );
             replacements.set(pathKey(path), dest);
+            for (const copy of artifactCopies) {
+              replacements.set(pathKey(copy.from), copy.to);
+            }
           } catch (error) {
             failed.push({ path, error: String(error) });
           }

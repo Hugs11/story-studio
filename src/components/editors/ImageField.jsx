@@ -6,7 +6,7 @@ import { pickImage } from '../../hooks/useFileDialog';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { useProjectContext } from '../../store/ProjectContext';
 import { basename, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
-import { readImageEditMetadata, writeImageEditMetadata } from '../ImageEditorModal/imageEditMetadata';
+import { readImageEditMetadata, writeImageEditMetadata } from '../../store/imageEditMetadata';
 // reason: lazy() pour sortir ImageEditorModal (~3 KB gz) + canvas/PNG export
 // du chunk partage. Charge uniquement quand l'utilisateur edite une image.
 const ImageEditorModal = lazy(() => import('../ImageEditorModal/ImageEditorModal')

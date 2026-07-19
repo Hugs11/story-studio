@@ -14,7 +14,11 @@ import {
   finishEphemeralSnapshotSeed,
   resetEphemeralSnapshotSeedState,
 } from '../src/store/ephemeralSnapshotSeed.js';
-import { shouldAbortEphemeralPromotion } from '../src/store/projectHelpers.js';
+import {
+  createWorkSnapshot,
+  hasUnsavedWork,
+  shouldAbortEphemeralPromotion,
+} from '../src/store/projectHelpers.js';
 
 function snapshot(value) {
   return JSON.stringify(value);
@@ -95,7 +99,7 @@ test('an old seed cannot mark or clear a newer session seed', () => {
   assert.equal(state.savedSnapshot, null);
 });
 
-test('a completed seed prevents another initial seed in the same session', () => {
+test('a completed seed skips an unchanged snapshot and accepts a later catalog mutation', () => {
   const state = createEphemeralSnapshotSeedState();
   const write = beginSeed(state, { version: 1 });
   acceptEphemeralSnapshotSeed(state, write, {
@@ -104,7 +108,41 @@ test('a completed seed prevents another initial seed in the same session', () =>
   });
   finishEphemeralSnapshotSeed(state, write);
 
-  assert.equal(beginSeed(state, { version: 2 }), null);
+  assert.equal(beginSeed(state, { version: 1 }), null);
+  assert.ok(beginSeed(state, { version: 2 }));
+});
+
+test('work snapshots include the media catalog and tags independently of the project tree', () => {
+  const project = { projectType: null, projectName: '', rootEntries: [] };
+  const savedSnapshot = createWorkSnapshot(project, [], {});
+
+  assert.equal(hasUnsavedWork({ project, savedSnapshot }), false);
+  assert.equal(hasUnsavedWork({
+    project,
+    mediaLibraryPaths: ['C:\\media\\episode.mp3'],
+  }), true);
+  assert.equal(hasUnsavedWork({
+    project,
+    mediaLibraryPaths: ['C:\\media\\episode.mp3'],
+    savedSnapshot,
+  }), true);
+  assert.equal(hasUnsavedWork({
+    project,
+    mediaTags: { 'C:\\media\\episode.mp3': ['podcast'] },
+    savedSnapshot,
+  }), true);
+});
+
+test('work snapshots canonicalize media ordering and Windows path casing', () => {
+  const project = { projectType: null, projectName: '', rootEntries: [] };
+  const first = createWorkSnapshot(project, ['C:\\B.mp3', 'c:\\a.mp3'], {
+    'C:\\B.mp3': ['voix', 'brut'],
+  });
+  const second = createWorkSnapshot(project, ['C:\\A.mp3', 'c:\\b.mp3'], {
+    'c:\\b.mp3': ['brut', 'voix'],
+  });
+
+  assert.equal(first, second);
 });
 
 test('periodic autosave can take over after the initial ephemeral seed', () => {

@@ -14,7 +14,7 @@ import {
 } from '../../store/workspaceDirs';
 import { joinPath } from '../../utils/fileUtils';
 import { renderFrame, CANVAS_W, CANVAS_H } from './useImageEditor';
-import { imageEditMetadataPath, writeImageEditMetadata } from './imageEditMetadata';
+import { imageEditMetadataPath, writeImageEditMetadata } from '../../store/imageEditMetadata';
 
 const MAX_FILENAME_ATTEMPTS = 10_000;
 
