@@ -5,7 +5,7 @@ const METADATA_DIR = '.story-studio-image-edits';
 const METADATA_SUFFIX = '.edit.json';
 const METADATA_VERSION = 1;
 
-function imageEditMetadataPath(imagePath) {
+export function imageEditMetadataPath(imagePath) {
   if (!imagePath) return null;
   const normalized = String(imagePath);
   const splitIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
@@ -30,7 +30,7 @@ export async function readImageEditMetadata(imagePath) {
   }
 }
 
-export async function writeImageEditMetadata(imagePath, metadata) {
+export async function writeImageEditMetadata(imagePath, metadata, { strict = false } = {}) {
   const metadataPath = imageEditMetadataPath(imagePath);
   if (!metadataPath || !metadata?.sourcePath) return;
 
@@ -46,5 +46,6 @@ export async function writeImageEditMetadata(imagePath, metadata) {
     await writeFile(metadataPath, new TextEncoder().encode(JSON.stringify(payload, null, 2)));
   } catch (error) {
     logger.warn('image-editor:metadata-write-failed', error);
+    if (strict) throw error;
   }
 }

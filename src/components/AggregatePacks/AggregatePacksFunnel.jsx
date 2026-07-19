@@ -609,7 +609,10 @@ export function AggregatePacksFunnel({ onClose }) {
               <FunnelToolButton icon={<Sparkles />} accent="violet" variant="solid" onClick={() => setTextImageOpen(true)}>
                 Générer une image-titre
               </FunnelToolButton>
-              <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={() => setImageEditorOpen(true)} disabled={!rootImage}>
+              <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={async () => {
+                await ensureSessionDir();
+                setImageEditorOpen(true);
+              }} disabled={!rootImage}>
                 Retouche image
               </FunnelToolButton>
               <div className="aggregate-inline-note">320 × 240 · recadrage automatique à la génération.</div>
@@ -694,6 +697,8 @@ export function AggregatePacksFunnel({ onClose }) {
         <Suspense fallback={null}>
           <ImageEditorModal
             sourcePath={rootImage}
+            workspaceDir={sessionDirRef.current || ''}
+            forceExport
             onConfirm={(path) => {
               if (path) setRootImage(path);
               setImageEditorOpen(false);
