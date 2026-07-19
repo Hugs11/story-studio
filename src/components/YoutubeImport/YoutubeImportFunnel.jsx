@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
@@ -9,7 +9,15 @@ import {
   FunnelShell,
   FunnelStepper,
 } from '../funnels';
-import { Check, Info, Search, TriangleAlert, Youtube } from '../icons/LucideLocal';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Search,
+  TriangleAlert,
+  Youtube,
+} from '../icons/LucideLocal';
 import { KEYS, read as readSetting, write as writeSetting } from '../../store/persistentSettings';
 import './YoutubeImportFunnel.css';
 
@@ -43,12 +51,16 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
   // cgu | collect | loading (provisioning + listing) | importing | error
   const [phase, setPhase] = useState(cguAccepted ? 'collect' : 'cgu');
   const [list, setList] = useState(null);
-  const [selected, setSelected] = useState(() => new Set());
+  // La valeur complète est conservée afin que l'import couvre toutes les
+  // pages sélectionnées, pas seulement celle qui est affichée.
+  const [selected, setSelected] = useState(() => new Map());
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [importError, setImportError] = useState('');
   const [progress, setProgress] = useState(null);
   const [logMessage, setLogMessage] = useState('');
+  const pageCacheRef = useRef(new Map());
+  const listingBusyRef = useRef(false);
 
   const busy = phase === 'loading' || phase === 'importing';
 
@@ -75,51 +87,80 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
     setPhase('collect');
   }
 
-  async function handleLoadList(event) {
-    event?.preventDefault();
+  async function loadPage(targetPage, { initial = false } = {}) {
     const trimmed = url.trim();
-    if (!trimmed || busy) return;
+    if (!trimmed || busy || listingBusyRef.current || targetPage < 1) return;
+    const cached = initial ? null : pageCacheRef.current.get(targetPage);
+    if (cached) {
+      setError('');
+      setLogMessage('');
+      setList(cached);
+      setQuery('');
+      setStep(1);
+      return;
+    }
+    listingBusyRef.current = true;
     setError('');
     setLogMessage('');
     setPhase('loading');
     try {
-      const result = await invoke('fetch_youtube_list', { url: trimmed, ytdlpPath: ytDlpPath });
+      const result = await invoke('fetch_youtube_list', {
+        url: trimmed,
+        ytdlpPath: ytDlpPath,
+        page: targetPage,
+      });
+      pageCacheRef.current.set(targetPage, result);
       setList(result);
-      setSelected(new Set());
       setQuery('');
       setStep(1);
       setPhase('collect');
     } catch (err) {
       setError(String(err?.message ?? err));
       setPhase('collect');
-      setStep(0);
+      setStep(initial ? 0 : 1);
+    } finally {
+      listingBusyRef.current = false;
     }
   }
 
-  function toggleVideo(id) {
+  async function handleLoadList(event) {
+    event?.preventDefault();
+    if (!url.trim() || busy) return;
+    pageCacheRef.current.clear();
+    setList(null);
+    setSelected(new Map());
+    await loadPage(1, { initial: true });
+  }
+
+  function toggleVideo(video) {
+    const key = video.selectionKey || video.id || video.audioUrl;
     setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const next = new Map(current);
+      if (next.has(key)) next.delete(key);
+      else next.set(key, video);
       return next;
     });
   }
 
   function selectAllVisible() {
     setSelected((current) => {
-      const next = new Set(current);
-      for (const video of visibleVideos) next.add(video.selectionKey || video.id || video.audioUrl);
+      const next = new Map(current);
+      for (const video of visibleVideos) {
+        next.set(video.selectionKey || video.id || video.audioUrl, video);
+      }
       return next;
     });
   }
 
   function clearSelection() {
-    setSelected(new Set());
+    setSelected(new Map());
   }
 
   async function handleImport() {
     if (selected.size === 0 || busy) return;
-    const chosen = videos.filter((video) => selected.has(video.selectionKey || video.id || video.audioUrl));
+    const chosen = [...selected.values()].sort(
+      (left, right) => (left.sourceIndex ?? 0) - (right.sourceIndex ?? 0),
+    );
     setError('');
     setImportError('');
     setLogMessage('');
@@ -136,6 +177,10 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
   }
 
   const canOpenVideos = !!list;
+  const currentPage = list?.page ?? 1;
+  const pageSize = list?.pageSize ?? 400;
+  const firstVisibleIndex = ((currentPage - 1) * pageSize) + 1;
+  const lastVisibleIndex = firstVisibleIndex + Math.max(videos.length - 1, 0);
   const overCap = selected.size > SELECTION_SOFT_CAP;
   const primaryDisabled = step === 0 ? !url.trim() : selected.size === 0;
   const primaryLabel = step === 0
@@ -255,27 +300,27 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
             icon={<Youtube />}
             title={list?.title || 'YouTube'}
             description="Sélectionne les vidéos à importer dans le pack."
-            trailing={<span className="funnel-badge">{videos.length} vidéo{videos.length > 1 ? 's' : ''}</span>}
+            trailing={(
+              <span className="funnel-badge">
+                {videos.length > 0
+                  ? `${firstVisibleIndex}–${lastVisibleIndex}`
+                  : 'Aucune vidéo'}
+              </span>
+            )}
           />
-          {list?.truncated && (
-            <div className="youtube-funnel-notice" role="status">
-              <TriangleAlert />
-              <span>Cette source est volumineuse : seules les {videos.length} premières vidéos sont affichées.</span>
-            </div>
-          )}
           <div className="youtube-funnel-toolbar">
             <label className="youtube-funnel-field youtube-funnel-field--filter">
               <Search />
               <input
                 type="text"
-                placeholder="Filtrer les vidéos…"
+                placeholder="Filtrer cette page…"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-            </label>
+              </label>
             <div className="youtube-funnel-bulk">
               <button type="button" className="youtube-funnel-seg" onClick={selectAllVisible}>
-                Tout sélectionner
+                Sélectionner les visibles
               </button>
               <button type="button" className="youtube-funnel-seg" onClick={clearSelection} disabled={selected.size === 0}>
                 Tout désélectionner
@@ -305,7 +350,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
                     key={videoKey}
                     className={`youtube-funnel-row${checked ? ' is-selected' : ''}`}
                     aria-pressed={checked}
-                    onClick={() => toggleVideo(videoKey)}
+                    onClick={() => toggleVideo(video)}
                   >
                     <span className="youtube-funnel-check">{checked ? <Check /> : null}</span>
                     <span className="youtube-funnel-row-main">
@@ -317,6 +362,27 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
               })
             )}
           </div>
+          <nav className="youtube-funnel-pagination" aria-label="Pages de vidéos YouTube">
+            <button
+              type="button"
+              className="youtube-funnel-page-btn"
+              onClick={() => loadPage(currentPage - 1)}
+              disabled={currentPage <= 1 || busy}
+            >
+              <ChevronLeft />
+              <span>Précédente</span>
+            </button>
+            <span className="youtube-funnel-page-label">Page {currentPage}</span>
+            <button
+              type="button"
+              className="youtube-funnel-page-btn"
+              onClick={() => loadPage(currentPage + 1)}
+              disabled={!list?.hasNext || busy}
+            >
+              <span>Suivante</span>
+              <ChevronRight />
+            </button>
+          </nav>
           {error && <div className="funnel-error" role="alert">{error}</div>}
         </div>
       )}

@@ -13,9 +13,9 @@ use super::provision::ensure_ytdlp;
 use super::{YoutubeList, YoutubeVideo};
 use crate::support::ffmpeg::apply_no_window;
 
-/// Plafond de vidéos listées. Au-delà, l'UI
-/// avertit que la liste est tronquée.
-const MAX_LIST_ENTRIES: usize = 400;
+/// Taille fixe d'une page. La borne protège chaque appel sans imposer de
+/// plafond global : l'UI peut demander autant de pages que nécessaire.
+pub(super) const LIST_PAGE_SIZE: usize = 400;
 const LIST_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Valide qu'une URL est bien une URL YouTube (HTTP/HTTPS sur un domaine YouTube).
@@ -42,12 +42,14 @@ pub fn fetch_list(
     home: &Path,
     custom: Option<&str>,
     url: &str,
+    page: usize,
     emit: &dyn Fn(&str),
 ) -> Result<YoutubeList, String> {
-    validate_youtube_url(url)?;
+    let listing_url = normalize_listing_url(url)?;
+    let (start, end_with_sentinel) = page_window(page, LIST_PAGE_SIZE)?;
     let exe = ensure_ytdlp(home, custom, emit)?;
 
-    emit("Lecture des vidéos…");
+    emit(&format!("Lecture des vidéos — page {}…", page));
     let mut cmd = Command::new(&exe);
     apply_no_window(&mut cmd);
     cmd.args([
@@ -55,9 +57,9 @@ pub fn fetch_list(
         "--flat-playlist",
         "--no-warnings",
         "--ignore-config",
-        "--playlist-end",
-        &(MAX_LIST_ENTRIES + 1).to_string(),
-        url,
+        "--playlist-items",
+        &format!("{}:{}", start, end_with_sentinel),
+        &listing_url,
     ]);
 
     let output = run_command_with_timeout(cmd, LIST_TIMEOUT, "Lecture YouTube")?;
@@ -71,35 +73,118 @@ pub fn fetch_list(
 
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| "Réponse yt-dlp illisible (JSON invalide).".to_string())?;
-    let list = parse_list_json(value, MAX_LIST_ENTRIES);
+    let list = parse_list_json(value, page, LIST_PAGE_SIZE);
     if list.videos.is_empty() {
         return Err("Aucune vidéo exploitable trouvée pour cette URL.".to_string());
     }
     Ok(list)
 }
 
+/// Les URL racine de chaîne sont multi-playlists dans yt-dlp (vidéos, Shorts,
+/// directs). Les convertir vers l'onglet Vidéos rend les indices de page
+/// continus. Un onglet explicitement fourni par l'utilisateur reste inchangé.
+pub(super) fn normalize_listing_url(url: &str) -> Result<String, String> {
+    validate_youtube_url(url)?;
+    let mut parsed =
+        reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let segments: Vec<_> = parsed
+        .path_segments()
+        .map(|parts| parts.filter(|part| !part.is_empty()).collect())
+        .unwrap_or_default();
+
+    // Les chaînes identifiées par UC ont une playlist d'uploads canonique UU.
+    // Elle reste disponible pour les chaînes « Topic », qui n'ont pas toujours
+    // d'onglet /videos, et fournit une liste plate adaptée à la pagination.
+    let channel_id = match segments.as_slice() {
+        ["channel", id] | ["channel", id, "featured"] if id.starts_with("UC") => {
+            Some((*id).to_string())
+        }
+        _ => None,
+    };
+    if let Some(channel_id) = channel_id {
+        let uploads_id = format!("UU{}", &channel_id[2..]);
+        parsed.set_path("/playlist");
+        parsed
+            .query_pairs_mut()
+            .clear()
+            .append_pair("list", &uploads_id);
+        parsed.set_fragment(None);
+        return Ok(parsed.to_string());
+    }
+
+    let is_handle_root = matches!(segments.as_slice(), [handle] if handle.starts_with('@'));
+    let is_legacy_root = matches!(
+        segments.as_slice(),
+        [kind, _] if matches!(*kind, "channel" | "c" | "user")
+    );
+    let is_featured_tab = matches!(
+        segments.as_slice(),
+        [handle, "featured"] if handle.starts_with('@')
+    ) || matches!(
+        segments.as_slice(),
+        [kind, _, "featured"] if matches!(*kind, "channel" | "c" | "user")
+    );
+
+    if is_handle_root || is_legacy_root || is_featured_tab {
+        let base_segments = if is_featured_tab {
+            &segments[..segments.len() - 1]
+        } else {
+            &segments[..]
+        };
+        parsed.set_path(&format!("/{}/videos", base_segments.join("/")));
+        parsed.set_query(None);
+        parsed.set_fragment(None);
+    }
+
+    Ok(parsed.to_string().trim_end_matches('/').to_string())
+}
+
+/// Renvoie la plage inclusive comprise par yt-dlp. La borne haute inclut une
+/// entrée sentinelle, retirée du résultat, afin de calculer `has_next` sans
+/// connaître la taille totale de la source.
+pub(super) fn page_window(page: usize, page_size: usize) -> Result<(usize, usize), String> {
+    if page == 0 || page_size == 0 {
+        return Err("La page YouTube demandée est invalide.".to_string());
+    }
+    let start = page
+        .checked_sub(1)
+        .and_then(|index| index.checked_mul(page_size))
+        .and_then(|offset| offset.checked_add(1))
+        .ok_or_else(|| "La page YouTube demandée est trop éloignée.".to_string())?;
+    let end_with_sentinel = start
+        .checked_add(page_size)
+        .ok_or_else(|| "La page YouTube demandée est trop éloignée.".to_string())?;
+    Ok((start, end_with_sentinel))
+}
+
 /// Convertit la sortie JSON yt-dlp en `YoutubeList` (pur, sans réseau). Gère la
 /// vidéo seule, la playlist et la chaîne (playlists imbriquées aplaties).
-pub(super) fn parse_list_json(value: Value, limit: usize) -> YoutubeList {
-    let title = value
-        .get("title")
-        .and_then(Value::as_str)
-        .map(str::to_string);
+pub(super) fn parse_list_json(value: Value, page: usize, page_size: usize) -> YoutubeList {
+    let title = channel_tab_title(&value).or_else(|| {
+        value
+            .get("title")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    });
     let image_url = pick_image(&value, value.get("id").and_then(Value::as_str));
 
     let mut videos = Vec::new();
-    let collect_limit = limit.saturating_add(1);
+    let collect_limit = page_size.saturating_add(1);
     if value.get("entries").is_some() {
         collect_entries(&value, collect_limit, &mut videos);
     } else if let Some(video) = build_video(&value) {
         videos.push(video);
     }
 
-    let truncated = videos.len() > limit;
-    if truncated {
-        videos.truncate(limit);
+    let has_next = videos.len() > page_size;
+    if has_next {
+        videos.truncate(page_size);
     }
-    assign_selection_keys(&mut videos);
+    let first_source_index = page
+        .saturating_sub(1)
+        .saturating_mul(page_size)
+        .saturating_add(1);
+    assign_selection_keys(&mut videos, first_source_index);
     let title = title
         .or_else(|| videos.first().map(|v| v.title.clone()))
         .unwrap_or_else(|| "YouTube".to_string());
@@ -108,12 +193,27 @@ pub(super) fn parse_list_json(value: Value, limit: usize) -> YoutubeList {
         title,
         image_url,
         videos,
-        truncated,
+        page,
+        page_size,
+        has_next,
     }
 }
 
-/// Parcourt `entries`, aplatit les playlists imbriquées (tabs de chaîne) et
-/// s'arrête au plafond.
+fn channel_tab_title(value: &Value) -> Option<String> {
+    let webpage_url = value.get("webpage_url").and_then(Value::as_str)?;
+    let path = reqwest::Url::parse(webpage_url).ok()?.path().to_string();
+    let is_media_tab = ["/videos", "/shorts", "/streams"]
+        .iter()
+        .any(|suffix| path.ends_with(suffix));
+    is_media_tab
+        .then(|| value.get("channel").and_then(Value::as_str))
+        .flatten()
+        .filter(|title| !title.is_empty())
+        .map(str::to_string)
+}
+
+/// Parcourt `entries`, aplatit les playlists imbriquées et s'arrête à la borne
+/// de la page courante (sentinelle comprise).
 fn collect_entries(node: &Value, limit: usize, out: &mut Vec<YoutubeVideo>) {
     let Some(entries) = node.get("entries").and_then(Value::as_array) else {
         return;
@@ -142,6 +242,7 @@ fn build_video(entry: &Value) -> Option<YoutubeVideo> {
     Some(YoutubeVideo {
         id: id.unwrap_or("").to_string(),
         selection_key: String::new(),
+        source_index: 0,
         title,
         audio_url,
         duration: format_duration(entry.get("duration").and_then(Value::as_f64)),
@@ -149,12 +250,14 @@ fn build_video(entry: &Value) -> Option<YoutubeVideo> {
     })
 }
 
-fn assign_selection_keys(videos: &mut [YoutubeVideo]) {
+fn assign_selection_keys(videos: &mut [YoutubeVideo], first_source_index: usize) {
     for (index, video) in videos.iter_mut().enumerate() {
+        let source_index = first_source_index.saturating_add(index);
+        video.source_index = source_index;
         video.selection_key = if video.id.is_empty() {
-            format!("video-{}", index + 1)
+            format!("video-{}", source_index)
         } else {
-            format!("{}#{}", video.id, index + 1)
+            format!("{}#{}", video.id, source_index)
         };
     }
 }

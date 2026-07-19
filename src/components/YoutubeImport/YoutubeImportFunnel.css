@@ -179,6 +179,62 @@
   background-clip: padding-box;
 }
 
+.youtube-funnel-pagination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.youtube-funnel-page-btn {
+  min-width: 0;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--borderLt);
+  border-radius: 9px;
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  transition: border-color var(--dur-fast), background var(--dur-fast), opacity var(--dur-fast);
+}
+
+.youtube-funnel-page-btn:last-child {
+  justify-self: end;
+}
+
+.youtube-funnel-page-btn:first-child {
+  justify-self: start;
+}
+
+.youtube-funnel-page-btn:hover:not(:disabled) {
+  border-color: var(--accent-2-border);
+  background: var(--bg3);
+}
+
+.youtube-funnel-page-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.youtube-funnel-page-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.youtube-funnel-page-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
 .youtube-funnel-row {
   width: 100%;
   min-height: 58px;
@@ -283,5 +339,9 @@
 
   .youtube-funnel-seg {
     flex: 1;
+  }
+
+  .youtube-funnel-page-btn span {
+    display: none;
   }
 }
