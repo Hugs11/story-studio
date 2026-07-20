@@ -2,6 +2,7 @@
 //! pas les formats). Le parsing JSON est isolé (`parse_list_json`, pur et testé) ;
 //! l'exécution du binaire reste fine.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
@@ -45,6 +46,7 @@ pub fn fetch_list(
     page: usize,
     emit: &dyn Fn(&str),
 ) -> Result<YoutubeList, String> {
+    let natural_series_order = is_channel_source(url)?;
     let listing_url = normalize_listing_url(url)?;
     let (start, end_with_sentinel) = page_window(page, LIST_PAGE_SIZE)?;
     let exe = ensure_ytdlp(home, custom, emit)?;
@@ -73,11 +75,39 @@ pub fn fetch_list(
 
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| "Réponse yt-dlp illisible (JSON invalide).".to_string())?;
-    let list = parse_list_json(value, page, LIST_PAGE_SIZE);
+    let mut list = parse_list_json(value, page, LIST_PAGE_SIZE);
+    if natural_series_order {
+        reorder_numbered_series(&mut list.videos);
+        let first_source_index = page
+            .saturating_sub(1)
+            .saturating_mul(LIST_PAGE_SIZE)
+            .saturating_add(1);
+        assign_selection_keys(&mut list.videos, first_source_index);
+    }
     if list.videos.is_empty() {
         return Err("Aucune vidéo exploitable trouvée pour cette URL.".to_string());
     }
     Ok(list)
+}
+
+/// Une playlist explicite porte un ordre éditorial que Story Studio ne doit pas
+/// modifier. Une chaîne, en revanche, est listée via ses uploads : YouTube peut
+/// y publier les parties d'une même histoire dans un ordre différent de leur
+/// numérotation, auquel cas une correction locale est utile.
+pub(super) fn is_channel_source(url: &str) -> Result<bool, String> {
+    validate_youtube_url(url)?;
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|e| format!("URL invalide : {}", e))?;
+    let path = parsed.path().trim_end_matches('/');
+    let has_playlist = parsed
+        .query_pairs()
+        .any(|(key, value)| key == "list" && !value.is_empty());
+    let is_video = parsed
+        .host_str()
+        .is_some_and(|host| host.eq_ignore_ascii_case("youtu.be"))
+        || path == "/watch"
+        || path == "/shorts"
+        || path.starts_with("/shorts/");
+    Ok(!has_playlist && !is_video && path != "/playlist")
 }
 
 /// Les URL racine de chaîne sont multi-playlists dans yt-dlp (vidéos, Shorts,
@@ -259,6 +289,85 @@ fn assign_selection_keys(videos: &mut [YoutubeVideo], first_source_index: usize)
         } else {
             format!("{}#{}", video.id, source_index)
         };
+    }
+}
+
+fn numbered_series_part(title: &str) -> Option<(String, u64)> {
+    let trimmed = title.trim();
+    let digit_start = trimmed
+        .char_indices()
+        .rev()
+        .take_while(|(_, ch)| ch.is_ascii_digit())
+        .last()
+        .map(|(index, _)| index)?;
+    if digit_start == trimmed.len() {
+        return None;
+    }
+    let part_number = trimmed[digit_start..].parse().ok()?;
+    let mut prefix = trimmed[..digit_start].trim_end();
+    for marker in ["n°", "nº", "no", "#"] {
+        if prefix.to_ascii_lowercase().ends_with(marker) {
+            prefix = prefix[..prefix.len() - marker.len()].trim_end();
+            break;
+        }
+    }
+
+    let lower = prefix.to_ascii_lowercase();
+    let marker = ["partie", "part", "pt.", "pt"]
+        .into_iter()
+        .find(|marker| lower.ends_with(marker))?;
+    let marker_start = prefix.len().checked_sub(marker.len())?;
+    if marker_start > 0
+        && prefix[..marker_start]
+            .chars()
+            .next_back()
+            .is_some_and(|ch| ch.is_alphanumeric())
+    {
+        return None;
+    }
+    let base = prefix[..marker_start]
+        .trim_end_matches(|ch: char| {
+            ch.is_whitespace() || matches!(ch, '-' | '_' | '.' | '–' | '—')
+        })
+        .trim();
+    if base.is_empty() {
+        return None;
+    }
+    let key = base
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
+    Some((key, part_number))
+}
+
+/// Réordonne uniquement les emplacements déjà occupés par une même série.
+/// Les vidéos sans numéro et les différentes histoires gardent donc exactement
+/// leur position relative dans la liste d'uploads.
+pub(super) fn reorder_numbered_series(videos: &mut [YoutubeVideo]) {
+    let mut positions_by_series: HashMap<String, Vec<usize>> = HashMap::new();
+    for (index, video) in videos.iter().enumerate() {
+        if let Some((series, _)) = numbered_series_part(&video.title) {
+            positions_by_series.entry(series).or_default().push(index);
+        }
+    }
+
+    for positions in positions_by_series
+        .values()
+        .filter(|positions| positions.len() > 1)
+    {
+        let mut ordered: Vec<_> = positions
+            .iter()
+            .map(|index| videos[*index].clone())
+            .collect();
+        ordered.sort_by_key(|video| {
+            numbered_series_part(&video.title)
+                .map(|(_, part)| part)
+                .unwrap_or(u64::MAX)
+        });
+        for (position, video) in positions.iter().zip(ordered) {
+            videos[*position] = video;
+        }
     }
 }
 
