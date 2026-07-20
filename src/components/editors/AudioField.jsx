@@ -4,6 +4,7 @@ import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { pickAudio } from '../../hooks/useFileDialog';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { useMediaMetadata } from '../../hooks/useMediaMetadata';
 import { notifyFileChanged } from '../../store/fileMetadataCache';
 import { useProjectContext } from '../../store/ProjectContext';
 import { isTtsAvailable } from '../../store/xttsSettings';
@@ -29,6 +30,11 @@ function formatAudioTime(value) {
   const seconds = Math.floor(value);
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function formatAudioDuration(value) {
+  if (!Number.isFinite(value) || value <= 0) return '—:—';
+  return formatAudioTime(value);
 }
 
 export function AudioField({
@@ -68,6 +74,8 @@ export function AudioField({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
+  const dropWrapRef = useRef(null);
+  const { getMeta, markForProbe } = useMediaMetadata();
   const filename = file ? basename(file) : null;
   const displayPath = file ? stripWindowsLongPathPrefix(file) : null;
   const fileAvailable = !!file && pathAudit[file] !== false;
@@ -88,6 +96,28 @@ export function AudioField({
     setCurrentTime(0);
     setDuration(0);
   }, [file]);
+
+  useEffect(() => {
+    if (!showFilledState || !file) return undefined;
+    const element = dropWrapRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      markForProbe(file);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      markForProbe(file);
+      observer.disconnect();
+    }, { rootMargin: '200px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [file, markForProbe, showFilledState]);
+
+  const probedDuration = file ? getMeta(file)?.duration_secs : null;
+  useEffect(() => {
+    const value = Number(probedDuration);
+    if (Number.isFinite(value) && value > 0) setDuration(value);
+  }, [probedDuration]);
 
   useEffect(() => () => stopPlayback(), []);
 
@@ -216,7 +246,6 @@ export function AudioField({
     setCurrentTime(nextTime);
   }
 
-  const dropWrapRef = useRef(null);
   const handlePickedRef = useRef(handlePicked);
   handlePickedRef.current = handlePicked;
 
@@ -354,7 +383,7 @@ export function AudioField({
             </Tooltip>
 
             <span className="audio-duration" aria-label="Temps de lecture">
-              {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+              {formatAudioTime(currentTime)} / {formatAudioDuration(duration)}
             </span>
 
             {onClear && (
