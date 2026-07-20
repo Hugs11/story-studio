@@ -1495,6 +1495,10 @@
   border-top: 1px solid color-mix(in srgb, var(--borderLt) 55%, transparent);
 }
 
+.after-play-route + .after-play-destination-row {
+  margin-top: 18px;
+}
+
 .after-play-destination-select {
   width: min(420px, 42%);
   min-width: min(280px, 100%);

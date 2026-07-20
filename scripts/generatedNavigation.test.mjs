@@ -11,6 +11,7 @@ import {
   hasGeneratedEndNode,
   hasVisibleEndNode,
   isCombinedNightStoryBypass,
+  summarizeEffectiveStoryEnds,
 } from '../src/store/generatedNavigation.js';
 import {
   getGeneratedMenuControls,
@@ -677,6 +678,46 @@ test('default pack destination resolves to the first root entry (mirrors Rust tr
 test('default pack destination returns null for empty project', () => {
   const p = project([]);
   assert.equal(getDefaultPackEntryDestination(p), null);
+});
+
+test('multi story summary keeps distinct root story destinations', () => {
+  const a = story('a', { controlSettings: { autoplay: true } });
+  const b = story('b', { controlSettings: { autoplay: true } });
+  const p = project([a, b]);
+
+  const summary = summarizeEffectiveStoryEnds([a, b], () => null, p, p.rootEntries);
+
+  assert.equal(summary.isMixed, false);
+  assert.equal(summary.autoContinuation, true);
+  assert.equal(summary.commonFinalTargetId, null);
+  assert.equal(summary.hasDifferentDestinations, true);
+});
+
+test('multi story summary exposes a shared effective parent destination', () => {
+  const a = story('a', { controlSettings: { autoplay: true } });
+  const b = story('b', { controlSettings: { autoplay: true } });
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [a, b] };
+  const p = project([menu]);
+
+  const summary = summarizeEffectiveStoryEnds([a, b], () => menu, p, p.rootEntries);
+
+  assert.equal(summary.isMixed, false);
+  assert.equal(summary.autoContinuation, true);
+  assert.equal(summary.commonFinalTargetId, 'menu-1');
+  assert.equal(summary.hasDifferentDestinations, false);
+});
+
+test('multi story summary reports mixed continuation modes', () => {
+  const a = story('a', { controlSettings: { autoplay: true } });
+  const b = story('b', { controlSettings: { autoplay: false } });
+  const p = project([a, b]);
+
+  const summary = summarizeEffectiveStoryEnds([a, b], () => null, p, p.rootEntries);
+
+  assert.equal(summary.isMixed, true);
+  assert.equal(summary.autoContinuation, false);
+  assert.equal(summary.showDestination, true);
+  assert.equal(summary.commonFinalTargetId, null);
 });
 
 test('endNode without audio is visible-only and not generated', () => {

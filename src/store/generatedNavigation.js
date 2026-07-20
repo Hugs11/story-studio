@@ -399,6 +399,37 @@ export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries 
   };
 }
 
+export function summarizeEffectiveStoryEnds(
+  entries,
+  resolveParentMenu,
+  project,
+  rootEntries = [],
+) {
+  const behaviors = (entries ?? []).map((entry) => getEffectiveEndBehavior(
+    entry,
+    resolveParentMenu?.(entry) ?? null,
+    project,
+    rootEntries,
+  ));
+  const continuationModes = new Set(behaviors.map((behavior) => behavior.autoContinuation));
+  const isMixed = continuationModes.size > 1;
+  const autoContinuation = behaviors.length > 0 && !isMixed && behaviors[0].autoContinuation;
+  const finalTargetIds = autoContinuation
+    ? behaviors.map((behavior) => behavior.finalTargetId)
+    : [];
+  const uniqueFinalTargetIds = new Set(finalTargetIds);
+
+  return {
+    isMixed,
+    autoContinuation,
+    showDestination: isMixed || autoContinuation,
+    commonFinalTargetId: autoContinuation && uniqueFinalTargetIds.size === 1
+      ? finalTargetIds[0]
+      : null,
+    hasDifferentDestinations: autoContinuation && uniqueFinalTargetIds.size > 1,
+  };
+}
+
 // Adaptateur de la classification partagee pour les ecrans agreges (editeur
 // global, listes et operations atomiques). Chaque ligne conserve son parent,
 // indispensable aux retours `next_story` contextuels.
