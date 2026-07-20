@@ -3,8 +3,6 @@ import { getEffectiveEndBehavior } from './generatedNavigation.js';
 import { refTargetEntryId } from './navigationTargets.js';
 import { buildProjectIndex, findEntryById } from './projectModel/index.js';
 
-const AUDIO_SEGMENT_COVERAGE_TOLERANCE_SEC = 0.02;
-
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
   'returnOnHome',
@@ -117,7 +115,6 @@ export function buildMediaAudioToolRequest({
   statusByPath = {},
   origin,
   tool,
-  mode,
   requestId,
 }) {
   const resolved = resolveAudioStoriesInProjectOrder(project, entryIds, statusByPath);
@@ -129,16 +126,13 @@ export function buildMediaAudioToolRequest({
     return { valid: false, code: 'assemble-count', reason: 'Sélectionnez au moins deux histoires à assembler.' };
   }
 
-  const normalizedMode = tool === 'assemble'
-    ? 'assemble'
-    : (mode === 'full-split' ? 'full-split' : 'extract');
   return {
     valid: true,
     request: {
       requestId,
       origin,
       tool,
-      mode: normalizedMode,
+      ...(tool === 'assemble' ? { mode: 'assemble' } : {}),
       entryIds: resolved.entryIds,
       sourcePaths: resolved.sourcePaths,
       sourceSignature: createMediaToolSourceSignature(project, resolved.entryIds),
@@ -273,72 +267,6 @@ export function getAssemblyReplacementEligibility(project, entryIds) {
   }
 
   return { ...resolved, valid: true, parentId, positions };
-}
-
-function coverageFailure(code, reason, details = {}) {
-  return { valid: false, code, reason, ...details };
-}
-
-export function analyzeAudioSegmentCoverage(
-  segments,
-  durationSec,
-  toleranceSec = AUDIO_SEGMENT_COVERAGE_TOLERANCE_SEC,
-) {
-  const duration = Number(durationSec);
-  const tolerance = Number.isFinite(toleranceSec) && toleranceSec >= 0
-    ? toleranceSec
-    : AUDIO_SEGMENT_COVERAGE_TOLERANCE_SEC;
-  if (!Number.isFinite(duration) || duration <= 0) {
-    return coverageFailure('invalid-duration', 'La durée de la source est invalide.');
-  }
-  if (!Array.isArray(segments) || segments.length < 2) {
-    return coverageFailure('not-enough-segments', 'Ajoutez au moins deux parties pour un découpage complet.');
-  }
-
-  let previousEnd = 0;
-  let previousStart = -Infinity;
-  for (let index = 0; index < segments.length; index += 1) {
-    const start = Number(segments[index]?.startSec);
-    const end = Number(segments[index]?.endSec);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < -tolerance || end > duration + tolerance || end <= start) {
-      return coverageFailure('invalid-bounds', `Les bornes de la partie ${index + 1} sont invalides.`, { index });
-    }
-    if (start + tolerance < previousStart) {
-      return coverageFailure('invalid-order', 'Les parties doivent suivre l’ordre de lecture.', { index });
-    }
-    if (index === 0 && Math.abs(start) > tolerance) {
-      return coverageFailure('start-gap', 'Le découpage complet doit commencer au début de l’audio.', { index });
-    }
-    if (index > 0 && start > previousEnd + tolerance) {
-      return coverageFailure('gap', `Un trou subsiste avant la partie ${index + 1}.`, { index });
-    }
-    if (index > 0 && start < previousEnd - tolerance) {
-      return coverageFailure('overlap', `Les parties ${index} et ${index + 1} se chevauchent.`, { index });
-    }
-    previousStart = start;
-    previousEnd = end;
-  }
-  if (Math.abs(previousEnd - duration) > tolerance) {
-    return coverageFailure('end-gap', 'Le découpage complet doit atteindre la fin de l’audio.');
-  }
-  return { valid: true, code: null, reason: '', toleranceSec: tolerance, durationSec: duration };
-}
-
-export function getMediaToolProjectActions({ request, result, contextValidation }) {
-  if (!request || request.origin === 'media' || !result?.createdPaths?.length || !contextValidation?.valid) return [];
-  if (request.tool === 'split' && request.mode === 'extract' && result.createdPaths.length === 1) {
-    return ['use-as-item-audio', 'replace-story-audio'];
-  }
-  if (
-    request.tool === 'split'
-    && request.mode === 'full-split'
-    && result.coverage?.valid
-    && result.failures?.length === 0
-    && result.createdPaths.length === result.segments?.length
-  ) {
-    return ['replace-story-with-parts'];
-  }
-  return [];
 }
 
 export function getMediaToolAutomaticProjectAction({

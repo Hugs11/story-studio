@@ -69,10 +69,6 @@ export function useProjectMutations({ store }) {
     if (resolvedId) store.deleteItem(resolvedId);
   }, [store.deleteItem, store.selectedId]);
 
-  const handleReplaceStoryWithAudioParts = useCallback((options) => (
-    store.replaceStoryAudioParts(options)
-  ), [store.replaceStoryAudioParts]);
-
   const handleReplaceStoriesWithAssembledStory = useCallback((options) => (
     store.replaceStoriesWithAssembly(options)
   ), [store.replaceStoriesWithAssembly]);
@@ -89,7 +85,6 @@ export function useProjectMutations({ store }) {
     handleBulkUpdateItems,
     handleBulkDeleteItems,
     handleDeleteItem,
-    handleReplaceStoryWithAudioParts,
     handleReplaceStoriesWithAssembledStory,
   };
 }

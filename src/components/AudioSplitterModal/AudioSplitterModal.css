@@ -38,9 +38,7 @@
   font-weight: 650;
 }
 
-.audio-splitter-context,
-.audio-splitter-mode-help,
-.audio-splitter-coverage {
+.audio-splitter-context {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -57,42 +55,10 @@
   color: var(--text);
 }
 
-.audio-splitter-modes {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: 2px;
-  border: 0.5px solid var(--borderLt);
-  border-radius: 6px;
-  background: var(--bg0);
-}
-
-.audio-splitter-modes button {
-  min-height: 28px;
-  padding: 0 11px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
+.audio-splitter-help {
   color: var(--text-secondary);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
-
-.audio-splitter-modes button.is-active {
-  background: var(--accent-dim);
-  color: var(--accent-text);
-}
-
-.audio-splitter-mode-help {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.audio-splitter-coverage {
-  border-color: rgba(245, 208, 96, 0.28);
-  background: rgba(245, 208, 96, 0.08);
-  color: #f5d060;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .audio-splitter-wave-section,

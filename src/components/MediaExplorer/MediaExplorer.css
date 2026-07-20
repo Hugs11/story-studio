@@ -930,13 +930,6 @@
   color: var(--text-secondary);
 }
 
-.media-tool-result-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 /* Pills scrollables dans la colonne gauche */
 .media-toolbar .media-filter-pills {
   min-width: 0;

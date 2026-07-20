@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/plugins/regions';
@@ -20,7 +20,6 @@ import {
 import { useAudioEditorShortcuts } from '../AudioEditorModal/useAudioEditorShortcuts';
 import { useShuttlePlayback } from '../AudioEditorModal/useShuttlePlayback';
 import { createAudioEditorWaveformOptions, styleRegionHandles } from '../AudioEditorModal/audioEditorWaveform';
-import { analyzeAudioSegmentCoverage } from '../../store/mediaToolContext';
 import './AudioSplitterModal.css';
 
 function fileStem(name) {
@@ -73,18 +72,11 @@ export function AudioSplitterModal({
   const [, setPreviewingKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState(() => contextRequest?.mode === 'full-split' ? 'full-split' : 'extract');
 
   const sourceName = item?.name || basename(item?.path || 'audio');
   const selectionDuration = Math.max(0, selection.end - selection.start);
   const canUseSelection = !loading && selection.end > selection.start;
-  const coverage = useMemo(
-    () => analyzeAudioSegmentCoverage(segments, duration),
-    [duration, segments],
-  );
-  const canSubmit = segments.length > 0
-    && !submitting
-    && (mode !== 'full-split' || coverage.valid);
+  const canSubmit = segments.length > 0 && !submitting;
 
   const {
     shuttleRef,
@@ -435,12 +427,7 @@ export function AudioSplitterModal({
         setError(firstFailure ? readableError(firstFailure) : "Aucun extrait n'a pu être généré.");
         return;
       }
-      onCreated?.(createdPaths, result?.failed ?? [], {
-        mode,
-        segments: segments.map((segment) => ({ ...segment })),
-        durationSec: duration,
-        coverage,
-      });
+      onCreated?.(createdPaths, result?.failed ?? []);
     } catch (err) {
       setError(readableError(err));
     } finally {
@@ -452,7 +439,7 @@ export function AudioSplitterModal({
     <div className="modal-overlay">
       <div className="modal-box audio-splitter-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Extraire ou découper un audio</span>
+          <span>Découper un audio</span>
           <Button variant="icon" className="modal-close" onClick={onClose} disabled={submitting}>×</Button>
         </div>
 
@@ -469,28 +456,8 @@ export function AudioSplitterModal({
             </div>
           ) : null}
 
-          <div className="audio-splitter-modes" role="group" aria-label="Mode de découpage">
-            <button
-              type="button"
-              className={mode === 'extract' ? 'is-active' : ''}
-              onClick={() => setMode('extract')}
-              disabled={submitting}
-            >
-              Extraire
-            </button>
-            <button
-              type="button"
-              className={mode === 'full-split' ? 'is-active' : ''}
-              onClick={() => setMode('full-split')}
-              disabled={submitting}
-            >
-              Découper entièrement
-            </button>
-          </div>
-          <div className="audio-splitter-mode-help">
-            {mode === 'extract'
-              ? 'Crée des plages libres sans modifier l’audio ni l’histoire source.'
-              : `Les parties doivent couvrir tout l’audio, dans l’ordre, avec une tolérance de ${Math.round((coverage.toleranceSec ?? 0.02) * 1000)} ms.`}
+          <div className="audio-splitter-help">
+            Sélectionnez une plage, puis ajoutez-la aux extraits à générer.
           </div>
 
           <section className="audio-splitter-wave-section">
@@ -616,10 +583,6 @@ export function AudioSplitterModal({
               </div>
             )}
           </section>
-
-          {mode === 'full-split' && !coverage.valid ? (
-            <div className="audio-splitter-coverage" role="status">Découpage incomplet : {coverage.reason}</div>
-          ) : null}
 
           <div className="audio-splitter-destination">
             <span>Destination</span>

@@ -2,21 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  analyzeAudioSegmentCoverage,
   buildMediaAudioToolRequest,
   createMediaToolSourceSignature,
   getAssemblyReplacementEligibility,
   getMediaToolAutomaticProjectAction,
-  getMediaToolProjectActions,
   haveSameMediaPathMultiset,
   resolveAudioStoriesInProjectOrder,
   validateMediaAudioToolRequest,
 } from '../src/store/mediaToolContext.js';
 import {
   replaceStoriesWithAssembledStory,
-  replaceStoryWithAudioParts,
 } from '../src/store/projectModel/audioTransformations.js';
-import { getEffectiveEndBehavior } from '../src/store/generatedNavigation.js';
 
 function story(id, fields = {}) {
   return {
@@ -51,7 +47,6 @@ function requestFor(value, ids, fields = {}) {
     entryIds: ids,
     origin: fields.origin ?? 'tree',
     tool: fields.tool ?? (ids.length === 1 ? 'split' : 'assemble'),
-    mode: fields.mode,
     requestId: fields.requestId ?? 'request-1',
   });
   assert.equal(built.valid, true);
@@ -66,55 +61,12 @@ test('audio stories follow project order instead of Set insertion order', () => 
   assert.deepEqual(resolved.sourcePaths, ['a.mp3', 'b.mp3', 'c.mp3']);
 });
 
-test('media-origin operations and partial extractions expose no structural replacement', () => {
-  const result = {
-    createdPaths: ['part.flac'],
-    segments: [{ startSec: 1, endSec: 2 }],
-    failures: [],
-  };
-  assert.deepEqual(getMediaToolProjectActions({
-    request: { origin: 'media', tool: 'split', mode: 'extract' },
-    result,
-    contextValidation: { valid: true },
-  }), []);
+test('tree split requests only carry the shortcut context', () => {
+  const value = project([story('a')]);
+  const request = requestFor(value, ['a']);
 
-  assert.deepEqual(getMediaToolProjectActions({
-    request: { origin: 'tree', tool: 'split', mode: 'extract' },
-    result,
-    contextValidation: { valid: true },
-  }), ['use-as-item-audio', 'replace-story-audio']);
-  assert.ok(!getMediaToolProjectActions({
-    request: { origin: 'tree', tool: 'split', mode: 'extract' },
-    result,
-    contextValidation: { valid: true },
-  }).includes('replace-story-with-parts'));
-});
-
-test('full coverage accepts joint segments inside tolerance and rejects gaps, overlaps, bounds, and missing outputs', () => {
-  const joint = [
-    { startSec: 0, endSec: 5 },
-    { startSec: 5.01, endSec: 10 },
-  ];
-  assert.equal(analyzeAudioSegmentCoverage(joint, 10).valid, true);
-  assert.equal(analyzeAudioSegmentCoverage([
-    { startSec: 0, endSec: 4 },
-    { startSec: 4.1, endSec: 10 },
-  ], 10).code, 'gap');
-  assert.equal(analyzeAudioSegmentCoverage([
-    { startSec: 0, endSec: 5.1 },
-    { startSec: 5, endSec: 10 },
-  ], 10).code, 'overlap');
-  assert.equal(analyzeAudioSegmentCoverage([
-    { startSec: -1, endSec: 5 },
-    { startSec: 5, endSec: 10 },
-  ], 10).code, 'invalid-bounds');
-
-  const actions = getMediaToolProjectActions({
-    request: { origin: 'tree', tool: 'split', mode: 'full-split' },
-    result: { createdPaths: ['one.flac'], segments: joint, failures: [], coverage: { valid: true } },
-    contextValidation: { valid: true },
-  });
-  assert.deepEqual(actions, []);
+  assert.equal(request.tool, 'split');
+  assert.equal(request.mode, undefined);
 });
 
 test('assembly replacement requires consecutive stories under one parent', () => {
@@ -153,12 +105,6 @@ test('root stories created by audio imports are replaced automatically after exp
     contextValidation: { valid: true },
     replacementEligibility: eligibility,
   }), 'replace-stories-with-assembly');
-  assert.deepEqual(getMediaToolProjectActions({
-    request,
-    result: { createdPaths: ['assembled.flac'], inputPaths: request.sourcePaths },
-    contextValidation: { valid: true },
-    replacementEligibility: eligibility,
-  }), []);
 });
 
 test('automatic assembly replacement is unavailable outside a safe contextual request', () => {
@@ -217,38 +163,6 @@ test('incoming references block assembly without modifying the project', () => {
   assert.equal(outcome.ok, false);
   assert.equal(outcome.code, 'incoming-navigation');
   assert.equal(outcome.project, value);
-});
-
-test('full split retains the first identity, chains parts, copies title media, and moves the ending to the last part', () => {
-  const original = story('original', {
-    name: 'Le voyage',
-    returnAfterPlay: 'root',
-    returnOnHome: 'root',
-    afterPlaybackPromptAudio: 'ending.mp3',
-    afterPlaybackPromptOkTarget: 'root',
-    titleControlSettings: { autoplay: false, wheel: true, pause: false, ok: true, home: true },
-  });
-  const value = project([menu('menu', [original])]);
-  const request = requestFor(value, ['original'], { mode: 'full-split' });
-  const outcome = replaceStoryWithAudioParts(value, {
-    request,
-    createdPaths: ['part-1.flac', 'part-2.flac', 'part-3.flac'],
-  });
-  assert.equal(outcome.ok, true);
-  const parts = outcome.project.rootEntries[0].children;
-  assert.equal(parts[0].id, 'original');
-  assert.equal(parts[0].returnAfterPlay, `story_play:${parts[1].id}`);
-  assert.equal(parts[1].returnAfterPlay, `story_play:${parts[2].id}`);
-  assert.equal(parts[0].afterPlaybackPromptAudio, null);
-  assert.equal(parts[1].afterPlaybackPromptAudio, null);
-  assert.equal(parts[2].afterPlaybackPromptAudio, 'ending.mp3');
-  assert.equal(parts[2].returnAfterPlay, 'root');
-  assert.deepEqual(parts.map((part) => part.itemAudio), Array(3).fill('original-title.mp3'));
-  assert.deepEqual(parts.map((part) => part.itemImage), Array(3).fill('original.png'));
-
-  const parent = outcome.project.rootEntries[0];
-  assert.equal(getEffectiveEndBehavior(parts[0], parent, outcome.project, outcome.project.rootEntries).finalTargetId, `story_play:${parts[1].id}`);
-  assert.equal(getEffectiveEndBehavior(parts[1], parent, outcome.project, outcome.project.rootEntries).finalTargetId, `story_play:${parts[2].id}`);
 });
 
 test('assembly retains first position and title while taking the last terminal behavior', () => {
