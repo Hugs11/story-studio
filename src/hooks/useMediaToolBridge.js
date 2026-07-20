@@ -2,9 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import {
   analyzeAudioSegmentCoverage,
   buildMediaAudioToolRequest,
+  haveSameMediaPathMultiset,
   validateMediaAudioToolRequest,
 } from '../store/mediaToolContext.js';
-import { pathKey } from '../utils/fileUtils.js';
 
 let requestSequence = 0;
 
@@ -131,10 +131,9 @@ export function useMediaToolBridge({
     } else if (action === 'replace-stories-with-assembly') {
       if (
         request.tool !== 'assemble'
-        || result?.inputPaths?.length !== request.sourcePaths.length
-        || !result.inputPaths.every((path, index) => pathKey(path) === pathKey(request.sourcePaths[index]))
+        || !haveSameMediaPathMultiset(result?.inputPaths, request.sourcePaths)
       ) {
-        return invalidResult('action-not-allowed', 'L’ordre du fichier assemblé ne correspond pas aux histoires.');
+        return invalidResult('action-not-allowed', 'Les fichiers assemblés ne correspondent plus aux histoires sélectionnées.');
       }
       outcome = mutations.handleReplaceStoriesWithAssembledStory({
         request,

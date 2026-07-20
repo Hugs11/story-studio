@@ -324,7 +324,7 @@ export function analyzeAudioSegmentCoverage(
   return { valid: true, code: null, reason: '', toleranceSec: tolerance, durationSec: duration };
 }
 
-export function getMediaToolProjectActions({ request, result, contextValidation, replacementEligibility }) {
+export function getMediaToolProjectActions({ request, result, contextValidation }) {
   if (!request || request.origin === 'media' || !result?.createdPaths?.length || !contextValidation?.valid) return [];
   if (request.tool === 'split' && request.mode === 'extract' && result.createdPaths.length === 1) {
     return ['use-as-item-audio', 'replace-story-audio'];
@@ -338,13 +338,40 @@ export function getMediaToolProjectActions({ request, result, contextValidation,
   ) {
     return ['replace-story-with-parts'];
   }
-  if (
-    request.tool === 'assemble'
-    && replacementEligibility?.valid
-    && result.inputPaths?.length === request.sourcePaths.length
-    && result.inputPaths.every((path, index) => pathKey(path) === pathKey(request.sourcePaths[index]))
-  ) {
-    return ['replace-stories-with-assembly'];
-  }
   return [];
+}
+
+export function getMediaToolAutomaticProjectAction({
+  request,
+  contextValidation,
+  replacementEligibility,
+}) {
+  if (
+    request?.origin !== 'media'
+    && request?.tool === 'assemble'
+    && contextValidation?.valid
+    && replacementEligibility?.valid
+  ) {
+    return 'replace-stories-with-assembly';
+  }
+  return null;
+}
+
+export function haveSameMediaPathMultiset(leftPaths, rightPaths) {
+  if (!Array.isArray(leftPaths) || !Array.isArray(rightPaths) || leftPaths.length !== rightPaths.length) {
+    return false;
+  }
+  const remaining = new Map();
+  for (const path of leftPaths) {
+    const key = pathKey(path);
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  for (const path of rightPaths) {
+    const key = pathKey(path);
+    const count = remaining.get(key) ?? 0;
+    if (count === 0) return false;
+    if (count === 1) remaining.delete(key);
+    else remaining.set(key, count - 1);
+  }
+  return remaining.size === 0;
 }

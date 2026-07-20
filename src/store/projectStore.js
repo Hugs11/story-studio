@@ -238,7 +238,10 @@ export function useProjectStore() {
   }, []);
 
   const syncProjectWithoutHistory = useCallback((data) => {
-    setProjectRaw(normalizeProjectData(data));
+    setProjectRaw((current) => {
+      const next = normalizeProjectData(data);
+      return JSON.stringify(next) === JSON.stringify(current) ? current : next;
+    });
   }, []);
 
   const setProjectType = useCallback((type) => {

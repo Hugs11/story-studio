@@ -40,6 +40,8 @@ export function AudioAssemblyModal({
   onClose,
   onCreated,
   contextRequest = null,
+  projectAction = null,
+  projectActionUnavailableReason = '',
 }) {
   const { workspaceDir } = useProjectContext();
   const initialItems = useMemo(
@@ -73,6 +75,7 @@ export function AudioAssemblyModal({
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [dragOverPosition, setDragOverPosition] = useState(null); // 'above' | 'below'
+  const willReplaceStories = projectAction === 'replace-stories-with-assembly';
 
   function handleGripPointerDown(e, index) {
     if (e.button !== 0 || submitting) return;
@@ -183,7 +186,11 @@ export function AudioAssemblyModal({
         silenceBetweenSec: silence,
         workspaceDir: workspaceDir || null,
       });
-      onCreated?.(outputPath, { inputPaths });
+      onCreated?.(outputPath, {
+        inputPaths,
+        projectAction,
+        projectActionUnavailableReason,
+      });
     } catch (e) {
       setError(readableError(e));
     } finally {
@@ -195,7 +202,7 @@ export function AudioAssemblyModal({
     <div className="modal-overlay">
       <div className="modal-box audio-assembly-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Assembler des audios</span>
+          <span>{willReplaceStories ? 'Assembler et remplacer les histoires' : 'Assembler des audios'}</span>
           <Button variant="icon" className="modal-close" onClick={onClose} disabled={submitting}>×</Button>
         </div>
 
@@ -205,8 +212,13 @@ export function AudioAssemblyModal({
               <strong>Depuis {contextRequest.storyNames.length} histoires sélectionnées</strong>
             ) : null}
             <span>Crée une piste audio unique à partir des fichiers sélectionnés.</span>
-            <span>Les fichiers originaux ne seront pas modifiés.</span>
-            {contextRequest ? <span>Le projet ne sera pas modifié automatiquement.</span> : null}
+            <span>Les fichiers audio originaux resteront disponibles dans Médias.</span>
+            {willReplaceStories ? (
+              <span>Le résultat remplacera les histoires sélectionnées en une seule opération annulable.</span>
+            ) : null}
+            {contextRequest && !willReplaceStories ? (
+              <span>Le projet restera inchangé{projectActionUnavailableReason ? ` : ${projectActionUnavailableReason}` : '.'}</span>
+            ) : null}
           </div>
 
           {ignoredCount > 0 && (
@@ -293,7 +305,7 @@ export function AudioAssemblyModal({
           <Button onClick={onClose} disabled={submitting}>Annuler</Button>
           <Button variant="primary" className="audio-assembly-submit" onClick={handleSubmit} disabled={!canSubmit}>
             {submitting && <span className="audio-assembly-spinner" />}
-            {submitting ? 'Assemblage…' : 'Assembler'}
+            {submitting ? 'Assemblage…' : (willReplaceStories ? 'Assembler et remplacer' : 'Assembler')}
           </Button>
         </div>
       </div>

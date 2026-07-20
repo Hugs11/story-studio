@@ -17,6 +17,7 @@ import {
 import {
   createWorkSnapshot,
   hasUnsavedWork,
+  isSaveInputStillCurrent,
   shouldAbortEphemeralPromotion,
 } from '../src/store/projectHelpers.js';
 
@@ -25,6 +26,12 @@ function snapshot(value) {
 }
 
 const EPHEMERAL_PATH = 'D:/temp/story_studio_session_1_2/.session-recovery.mbah';
+
+test('a completed save only resynchronizes the exact input still current in memory', () => {
+  const inputAtSaveStart = { rootEntries: [] };
+  assert.equal(isSaveInputStillCurrent(inputAtSaveStart, inputAtSaveStart), true);
+  assert.equal(isSaveInputStillCurrent(inputAtSaveStart, { rootEntries: [] }), false);
+});
 
 function beginSeed(state, value, path = EPHEMERAL_PATH) {
   return beginEphemeralSnapshotSeed(state, {
