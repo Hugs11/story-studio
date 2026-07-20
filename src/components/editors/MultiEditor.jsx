@@ -13,8 +13,12 @@ import {
   NavigationTargetSelect,
 } from './story/storyUtils';
 import {
+  getDefaultPackEntryDestination,
+  getGeneratedNavigationTargetName,
   getGeneratedStoryNavigation,
+  summarizeEffectiveStoryEnds,
 } from '../../store/generatedNavigation';
+import { isStoryNavigationTarget } from '../../store/navigationTargets';
 import {
   canShowTextImageBatchAction,
   getTextImageBatchTargets,
@@ -33,12 +37,6 @@ const MENU_CONTROL_KEYS = [
   { key: 'autoplay', label: 'Lecture automatique',  desc: "Après l'audio de présentation, enchaîne automatiquement vers le contenu du dossier, sans attendre OK" },
   { key: 'pause',    label: 'Bouton pause',         desc: "Autorise la pause pendant l'audio de présentation" },
 ];
-
-const STORY_AFTER_CONTROL = {
-  key: 'autoplay',
-  label: 'Enchaîner automatiquement',
-  desc: "À la fin de l'histoire, enchaîne vers la destination de fin sans attendre.",
-};
 
 function getDefaults(type) {
   return type === 'menu' ? MENU_DEFAULTS : STORY_DEFAULTS;
@@ -173,6 +171,29 @@ export const MultiEditor = memo(function MultiEditor({
     return generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId);
   }
 
+  function getEffectiveDestinationInfo(targetId) {
+    if (!targetId) return null;
+    if (targetId === 'root') {
+      const destination = getDefaultPackEntryDestination(project);
+      if (!destination) return { label: 'Menu racine', selectValue: null, kind: 'menu' };
+      const generatedTargetId = destination.type === 'story'
+        ? `story:${destination.id}`
+        : destination.type === 'menu'
+          ? destination.id
+          : null;
+      return {
+        label: destination.name,
+        selectValue: generatedTargetIdToSelectValue(generatedTargetId),
+        kind: destination.type === 'story' ? 'story' : 'menu',
+      };
+    }
+    return {
+      label: getGeneratedNavigationTargetName(targetId, projectIndex),
+      selectValue: generatedTargetIdToSelectValue(targetId),
+      kind: isStoryNavigationTarget(targetId) ? 'story' : 'menu',
+    };
+  }
+
   function getMixedBooleanValue(values) {
     const unique = [...new Set(values)];
     return {
@@ -180,6 +201,25 @@ export const MultiEditor = memo(function MultiEditor({
       value: unique.length > 1 ? false : !!unique[0],
     };
   }
+
+  const storyAfterPlaySummary = onlyStories
+    ? summarizeEffectiveStoryEnds(
+      editableNodes,
+      getParentMenu,
+      project,
+      project?.rootEntries ?? [],
+    )
+    : null;
+  const storyAfterPlayDestination = getEffectiveDestinationInfo(
+    storyAfterPlaySummary?.commonFinalTargetId,
+  );
+  const storyReturnAfterPlayValue = onlyStories
+    ? getMixedSelectValue('returnAfterPlay')
+    : '__mixed__';
+  const storyReturnEmptyLabel = storyAfterPlayDestination?.label
+    || (storyAfterPlaySummary?.hasDifferentDestinations
+      ? 'Destination propre à chaque histoire'
+      : 'Destination par défaut de chaque histoire');
 
   const batchBusy = batchImageGenerating || batchAudioGenerating;
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
@@ -592,11 +632,12 @@ export const MultiEditor = memo(function MultiEditor({
 
       {allSameType && !hasEndNode && (allMenus.length > 0 || onlyStories) && (
         onlyStories ? (() => {
-            const vals = editableNodes.map((n) => !!(n.controlSettings?.[STORY_AFTER_CONTROL.key] ?? STORY_DEFAULTS.autoplay) || !!n.returnAfterPlay);
-            const unique = [...new Set(vals)];
-            const isMixed = unique.length > 1;
-            const value = isMixed ? false : unique[0];
-            const showDestination = isMixed || value;
+            const {
+              isMixed,
+              autoContinuation: value,
+              showDestination,
+              hasDifferentDestinations,
+            } = storyAfterPlaySummary;
 
             return (
               <div className="card">
@@ -648,7 +689,12 @@ export const MultiEditor = memo(function MultiEditor({
                       </span>
                     ) : value ? (
                       <span className="after-play-route-chip is-destination">
-                        <span>Destination configurée</span>
+                        <span>
+                          {storyAfterPlayDestination?.label
+                            || (hasDifferentDestinations
+                              ? 'Destination propre à chaque histoire'
+                              : 'Destination par défaut de chaque histoire')}
+                        </span>
                       </span>
                     ) : (
                       <span className="after-play-route-chip">
@@ -669,7 +715,7 @@ export const MultiEditor = memo(function MultiEditor({
                     </div>
                     <div className="after-play-destination-select">
                       <NavigationTargetSelect
-                        value={getMixedSelectValue('returnAfterPlay')}
+                        value={storyReturnAfterPlayValue}
                         onChange={(target) => {
                           if (target === '__mixed__') return;
                           handleNavChange('returnAfterPlay', target);
@@ -677,7 +723,11 @@ export const MultiEditor = memo(function MultiEditor({
                         allMenus={allMenus}
                         allStories={allStories.filter((s) => !ids.includes(s.id))}
                         currentStoryId={null}
-                        emptyLabel="Suit la destination du dossier parent"
+                        emptyLabel={storyReturnEmptyLabel}
+                        resolvedDefaultValue={storyAfterPlayDestination?.selectValue}
+                        resolvedDefaultLabel={storyAfterPlayDestination?.label}
+                        resolvedDefaultKind={storyAfterPlayDestination?.kind}
+                        hideDefaultWhenResolved
                       />
                     </div>
                   </div>
