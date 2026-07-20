@@ -6,6 +6,8 @@ import {
   fitDiagramViewport,
   getDiagramViewportLayoutKey,
   getWheelZoomFactor,
+  isDiagramSearchWheelEvent,
+  isDiagramWheelOwnedByExternalSurface,
   preserveViewportCenter,
 } from '../src/components/diagram/diagram/viewportGeometry.js';
 
@@ -23,6 +25,41 @@ test('une molette conserve un pas modéré et normalise deltaMode', () => {
   const lineWheel = getWheelZoomFactor({ deltaY: -6.25, deltaMode: 1 });
   assert.ok(pixelWheel > 1 && pixelWheel < 1.2);
   assert.equal(lineWheel, pixelWheel);
+});
+
+test('la molette sur la recherche reste réservée au défilement des résultats', () => {
+  const searchOverlay = {
+    classList: { contains: (className) => className === 'fd-diagram-search' },
+  };
+  assert.equal(isDiagramSearchWheelEvent({
+    composedPath: () => [{}, searchOverlay, {}],
+  }), true);
+  assert.equal(isDiagramSearchWheelEvent({
+    composedPath: () => [],
+    target: { closest: (selector) => selector === '.fd-diagram-search' ? searchOverlay : null },
+  }), true);
+  assert.equal(isDiagramSearchWheelEvent({ composedPath: () => [{}] }), false);
+});
+
+test('une surface superposée au diagramme reste propriétaire de sa molette', () => {
+  const diagramChild = { nodeType: 1 };
+  const modalChild = { nodeType: 1 };
+  const diagramNode = {
+    contains: (target) => target === diagramChild,
+  };
+
+  assert.equal(isDiagramWheelOwnedByExternalSurface({
+    target: modalChild,
+    composedPath: () => [modalChild, {}],
+  }, diagramNode), true);
+  assert.equal(isDiagramWheelOwnedByExternalSurface({
+    target: diagramChild,
+    composedPath: () => [diagramChild],
+  }, diagramNode), false);
+  assert.equal(isDiagramWheelOwnedByExternalSurface({
+    target: modalChild,
+    composedPath: () => [modalChild, diagramNode],
+  }, diagramNode), false);
 });
 
 test('le cadrage ajuste les grands diagrammes sans agrandir les petits au-delà de 100 %', () => {

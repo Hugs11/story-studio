@@ -185,7 +185,11 @@ export function TreePanel({
     setSearchTerm,
     searchInputRef,
     visibleIds,
-  } = useTreeSearch({ projectIndex, projectType, treeSearchFocusTrigger });
+    usedColors,
+    selectedColors: selectedSearchColors,
+    toggleColor: toggleSearchColor,
+    clearSearch,
+  } = useTreeSearch({ project, projectIndex, projectType, treeSearchFocusTrigger });
 
   const lastRevealRequestRef = useRef(null);
   useEffect(() => {
@@ -194,8 +198,7 @@ export function TreePanel({
     if (!requestId || !targetId || lastRevealRequestRef.current === requestId) return undefined;
 
     if (visibleIds && targetId !== 'root' && targetId !== END_NODE_ID && !visibleIds.has(targetId)) {
-      setSearchTerm('');
-      setSearchActive(false);
+      clearSearch();
     }
 
     if (targetId !== 'root' && targetId !== END_NODE_ID) {
@@ -232,7 +235,7 @@ export function TreePanel({
     return () => {
       if (frameId != null) cancelAnimationFrame(frameId);
     };
-  }, [getParentId, selectionRevealRequest, setSearchActive, setSearchTerm, visibleIds]);
+  }, [clearSearch, getParentId, selectionRevealRequest, visibleIds]);
 
   const {
     clipboardRef,
@@ -365,7 +368,7 @@ export function TreePanel({
               containerDroppableId={sortable && entry.type === 'menu' ? `container:${entry.id}` : null}
               navigationBadges={navigationBadgesById.get(entry.id) ?? EMPTY_BADGES}
               showNavigationBadgeColumn={showNavigationBadgeColumn}
-              expanded={isExpanded(entry.id)}
+              expanded={visibleIds !== null || isExpanded(entry.id)}
               onToggleExpand={handleToggleExpand}
               childCount={countDescendants(entry)}
               sortable={sortable}
@@ -379,7 +382,7 @@ export function TreePanel({
               hoverScopeEnabled={sortable && entry.type === 'menu'}
               onHoverScope={sortable ? handleHoverScope : undefined}
             />
-            {entry.type === 'menu' && isExpanded(entry.id)
+            {entry.type === 'menu' && (visibleIds !== null || isExpanded(entry.id))
               ? renderEntries(entry.children ?? [], level + 1, entry, { sortable })
               : null}
           </Fragment>
@@ -427,6 +430,10 @@ export function TreePanel({
               setSearchTerm={setSearchTerm}
               setSearchActive={setSearchActive}
               inputRef={searchInputRef}
+              usedColors={usedColors}
+              selectedColors={selectedSearchColors}
+              onToggleColor={toggleSearchColor}
+              onClearSearch={clearSearch}
             />
           ) : null}
           <div

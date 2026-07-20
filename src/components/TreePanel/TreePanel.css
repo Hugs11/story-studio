@@ -15,6 +15,14 @@
 }
 
 /* ── Search bar ─────────────────────────────────────────────────────────── */
+.tree-search-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 10px 5px;
+  flex-shrink: 0;
+}
+
 .tree-search-bar {
   --tree-search-accent: var(--accent-2);
   --tree-search-accent-dim: var(--accent-2-dim);
@@ -23,7 +31,7 @@
   align-items: center;
   gap: 7px;
   min-height: 28px;
-  margin: 6px 10px 5px;
+  margin: 0;
   padding: 0 7px 0 11px;
   border: 0.5px solid var(--control-border);
   border-radius: 14px;
@@ -31,6 +39,10 @@
   color: var(--control-text-muted);
   flex-shrink: 0;
   transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+}
+
+.tree-search-controls .node-color-filter-row {
+  padding: 2px 8px 1px 11px;
 }
 
 .tree-search-bar:hover {

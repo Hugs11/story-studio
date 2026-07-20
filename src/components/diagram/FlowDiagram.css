@@ -238,6 +238,14 @@
   font-size: 12px;
 }
 
+.fd-diagram-search > .node-color-filter-row {
+  padding: 0 11px 7px 34px;
+}
+
+.fd-diagram-search .node-color-filter-chip {
+  --node-filter-chip-size: 11px;
+}
+
 .fd-diagram-search-close {
   width: 22px;
   height: 22px;
@@ -292,6 +300,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fd-diagram-search-result .fd-diagram-search-result-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+}
+
+.fd-diagram-search-result-color {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--fd-search-result-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fd-search-result-color) 70%, white 30%);
 }
 
 .fd-diagram-search-result small {
@@ -1164,6 +1188,23 @@
     0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
+.fd-complete-placed-node.is-search-dimmed {
+  opacity: 0.18;
+}
+
+.fd-complete-placed-node.is-search-context {
+  opacity: 0.62;
+}
+
+.fd-complete-placed-node.is-search-match {
+  z-index: 5;
+  opacity: 1;
+}
+
+.fd-complete-placed-node.is-search-match .fd-complete-node:not(.is-selected) {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--fd-node-color, var(--accent-2)) 58%, transparent);
+}
+
 /* Étape virtuelle, mais concrète dans la lecture du parcours : elle représente
    un message ou un scénario propre à une seule histoire. */
 .fd-local-end-node {
@@ -1236,6 +1277,22 @@
   touch-action: none;
 }
 
+.fd-complete-node.is-colored {
+  background: color-mix(in srgb, var(--fd-node-color) 13%, var(--bg2));
+  border-color: color-mix(in srgb, var(--fd-node-color) 56%, var(--borderLt));
+}
+
+.fd-complete-node.is-colored .fd-complete-node-type-rail {
+  color: color-mix(in srgb, var(--fd-node-color) 72%, var(--text-secondary));
+  background: color-mix(in srgb, var(--fd-node-color) 17%, var(--bg3));
+  border-right-color: color-mix(in srgb, var(--fd-node-color) 34%, var(--borderLt));
+}
+
+.fd-complete-node.is-colored .fd-complete-node-label {
+  background: color-mix(in srgb, var(--fd-node-color) 16%, var(--bg2));
+  border-top-color: color-mix(in srgb, var(--fd-node-color) 30%, var(--border));
+}
+
 .fd-complete-node:hover {
   border-color: var(--borderLt);
 }
@@ -1281,6 +1338,10 @@
   width: var(--fd-node-root-width);
   border-color: var(--accent);
   border-width: 1.5px;
+}
+
+.fd-complete-node--root.is-colored:not(.is-selected) {
+  border-color: color-mix(in srgb, var(--fd-node-color) 64%, var(--accent));
 }
 
 .fd-structure-summary-node {

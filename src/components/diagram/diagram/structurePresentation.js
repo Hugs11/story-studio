@@ -75,6 +75,7 @@ export function buildStructureProjection(project, options = {}) {
     name: project.projectType === 'simple'
       ? (project.projectName || 'Mon histoire')
       : (project.rootName || 'Menu racine'),
+    treeColor: project.treeColor ?? null,
     children: project.rootEntries ?? [],
   }, 0, {
     expandedStoryGroupIds: options.expandedStoryGroupIds ?? new Set(),

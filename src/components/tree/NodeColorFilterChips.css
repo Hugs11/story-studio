@@ -1,0 +1,35 @@
+.node-color-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 18px;
+}
+
+.node-color-filter-chip {
+  width: var(--node-filter-chip-size, 13px);
+  height: var(--node-filter-chip-size, 13px);
+  flex: 0 0 var(--node-filter-chip-size, 13px);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--node-filter-color) 74%, white 26%);
+  border-radius: 50%;
+  background: var(--node-filter-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.node-color-filter-chip:hover {
+  transform: scale(1.08);
+}
+
+.node-color-filter-chip.is-active {
+  box-shadow:
+    0 0 0 1px var(--bg1),
+    0 0 0 2.5px color-mix(in srgb, var(--node-filter-color) 72%, white 28%);
+}
+
+.node-color-filter-chip:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}

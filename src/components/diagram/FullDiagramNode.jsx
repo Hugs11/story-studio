@@ -92,6 +92,7 @@ export function FullDiagramNode({
   const isDragging = draggingId === entry.id;
   const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
   const isCut = cutIds?.has(entry.id);
+  const nodeColor = entry.treeColor ?? null;
   const canRegroupStories = (entry.type === 'menu' || entry.type === 'root') && hasExpandedStoryGroup;
   const collapseLabel = 'Replier les histoires';
   const dropLabel = isDropTarget
@@ -120,8 +121,11 @@ export function FullDiagramNode({
       ref={nodeRef}
       role="button"
       tabIndex={0}
-      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${hovered ? 'is-linked-hover' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''}`}
-      style={isCut ? { opacity: 0.4 } : undefined}
+      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${hovered ? 'is-linked-hover' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''} ${nodeColor ? 'is-colored' : ''}`}
+      style={{
+        ...(nodeColor ? { '--fd-node-color': nodeColor } : {}),
+        ...(isCut ? { opacity: 0.4 } : {}),
+      }}
       data-fd-drop-container={containerId === undefined ? undefined : (containerId === null ? 'root' : containerId)}
       {...((entry.type === 'story' || entry.type === 'menu' || entry.type === 'root') ? { 'data-media-node-id': entry.id, 'data-media-node-type': entry.type } : {})}
       onPointerDown={(!isRoot && entry.type !== 'end-node') ? (event) => onDragPointerDown?.(event, entry.id) : undefined}

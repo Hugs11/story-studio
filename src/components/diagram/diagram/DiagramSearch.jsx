@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hasVisibleEndNode } from '../../../store/generatedNavigation';
 import { Search } from '../../icons/LucideLocal';
+import { NodeColorFilterChips } from '../../tree/NodeColorFilterChips.jsx';
+import { buildUsedNodeColors, toggleNodeColorFilter } from '../../tree/nodeColorFilter.js';
 import { END_NODE_ID } from '../flowDiagramLayout';
 import { filterDiagramSearchCandidates } from './diagramSearchFilter.js';
 
@@ -11,9 +13,10 @@ const TYPE_LABELS = {
   ref: 'Lien',
 };
 
-export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose }) {
+export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose, onFilterChange }) {
   const [active, setActive] = useState(false);
   const [term, setTerm] = useState('');
+  const [selectedColors, setSelectedColors] = useState(new Set());
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
   const pendingFocusRef = useRef(false);
@@ -24,11 +27,13 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
       id: 'root',
       label: project.rootName || project.projectName || 'Menu racine',
       typeLabel: 'Racine',
+      treeColor: project.treeColor ?? null,
     },
     ...(projectIndex.flatEntries ?? []).map(({ entry }) => ({
       id: entry.id,
       label: entry.name || TYPE_LABELS[entry.type] || entry.id,
       typeLabel: TYPE_LABELS[entry.type] || entry.type,
+      treeColor: entry.treeColor ?? null,
     })),
     ...(hasVisibleEndNode(project) ? [{
       id: END_NODE_ID,
@@ -37,10 +42,37 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
     }] : []),
   ], [project, projectIndex.flatEntries]);
 
-  const results = useMemo(
-    () => filterDiagramSearchCandidates(candidates, term),
-    [candidates, term],
+  const usedColors = useMemo(
+    () => buildUsedNodeColors(candidates.map(({ treeColor }) => treeColor)),
+    [candidates],
   );
+
+  const allResults = useMemo(
+    () => filterDiagramSearchCandidates(
+      candidates,
+      term,
+      Number.POSITIVE_INFINITY,
+      selectedColors,
+    ),
+    [candidates, selectedColors, term],
+  );
+  const results = selectedColors.size > 0 ? allResults : allResults.slice(0, 12);
+  const filterActive = !!term.trim() || selectedColors.size > 0;
+
+  useEffect(() => {
+    const available = new Set(usedColors.map(({ color }) => color));
+    setSelectedColors((current) => {
+      const next = new Set([...current].filter((color) => available.has(color)));
+      return next.size === current.size ? current : next;
+    });
+  }, [usedColors]);
+
+  useEffect(() => {
+    onFilterChange?.({
+      active: active && filterActive,
+      matchingIds: new Set(allResults.map(({ id }) => id)),
+    });
+  }, [active, allResults, filterActive, onFilterChange]);
 
   useEffect(() => {
     if (previousFocusTriggerRef.current === focusTrigger) return;
@@ -69,12 +101,24 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
     onChoose?.(candidate.id);
   };
 
+  const closeSearch = () => {
+    setActive(false);
+    setTerm('');
+    setSelectedColors(new Set());
+  };
+
   return (
     <div
       className="fd-diagram-search"
       role="search"
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        closeSearch();
+        inputRef.current?.blur();
+      }}
     >
       <div className="fd-diagram-search-field">
         <Search aria-hidden="true" />
@@ -90,8 +134,7 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
           }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
-              setActive(false);
-              setTerm('');
+              closeSearch();
               event.currentTarget.blur();
             } else if (event.key === 'ArrowDown' && results.length > 0) {
               event.preventDefault();
@@ -111,15 +154,23 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
           className="fd-diagram-search-close"
           aria-label="Fermer la recherche"
           onClick={() => {
-            setActive(false);
-            setTerm('');
+            closeSearch();
           }}
         >
           ×
         </button>
       </div>
 
-      {term.trim() ? (
+      <NodeColorFilterChips
+        colors={usedColors}
+        selectedColors={selectedColors}
+        onToggle={(color) => {
+          setSelectedColors((current) => toggleNodeColorFilter(current, color));
+          setActiveIndex(0);
+        }}
+      />
+
+      {filterActive ? (
         <div className="fd-diagram-search-results" role="listbox" aria-label="Résultats de recherche">
           {results.length > 0 ? results.map((candidate, index) => (
             <button
@@ -134,7 +185,16 @@ export function DiagramSearch({ project, projectIndex, focusTrigger, onChoose })
                 choose(candidate);
               }}
             >
-              <span>{candidate.label}</span>
+              <span className="fd-diagram-search-result-main">
+                {candidate.treeColor ? (
+                  <i
+                    className="fd-diagram-search-result-color"
+                    style={{ '--fd-search-result-color': candidate.treeColor }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                <span>{candidate.label}</span>
+              </span>
               <small>{candidate.typeLabel}</small>
             </button>
           )) : (
