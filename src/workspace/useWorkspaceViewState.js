@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { KEYS } from '../store/persistentSettings';
-import { LEFT_PANEL_MIN_WIDTH } from '../components/structure/panelResize';
+import { LEFT_PANEL_MIN_WIDTH, TREE_PANEL_MAX_WIDTH } from '../components/structure/panelResize';
 import {
   DEFAULT_WORKSPACE_PANEL_ORDER,
   reorderWorkspacePanels,
@@ -20,7 +20,7 @@ function clampNumber(value, min, max, fallback) {
 }
 
 export function getTreePanelMaxWidth() {
-  return 380;
+  return TREE_PANEL_MAX_WIDTH;
 }
 
 // Codec booléen stable (défini au niveau module pour ne pas réécrire à chaque rendu).

@@ -9,11 +9,19 @@ import {
   reorderWorkspacePanels,
   WORKSPACE_PANEL_ORDER_CODEC,
 } from '../src/workspace/panelLayout.js';
-import { getKeyboardResizeDelta, getPointerResizeDelta } from '../src/components/structure/panelResize.js';
+import {
+  getKeyboardResizeDelta,
+  getPointerResizeDelta,
+  TREE_PANEL_MAX_WIDTH,
+} from '../src/components/structure/panelResize.js';
 
 const A = 'structure';
 const R = 'settings';
 const D = 'diagram';
+
+test('le plafond de l’Arbre permet une vue large sans changer son défaut compact', () => {
+  assert.equal(TREE_PANEL_MAX_WIDTH, 900);
+});
 
 test('normalizeWorkspacePanelOrder conserve uniquement une permutation complète connue', () => {
   assert.deepEqual(normalizeWorkspacePanelOrder([D, A, R]), [D, A, R]);

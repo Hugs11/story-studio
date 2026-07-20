@@ -1,4 +1,5 @@
 export const LEFT_PANEL_MIN_WIDTH = 200;
+export const TREE_PANEL_MAX_WIDTH = 900;
 
 export function getKeyboardResizeDelta(key, direction, step = 16) {
   if (key !== 'ArrowLeft' && key !== 'ArrowRight') return 0;
