@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildMediaAudioToolRequest,
   createMediaToolSourceSignature,
+  getAudioAssemblyLogicalFileName,
   getAssemblyReplacementEligibility,
   getMediaToolAutomaticProjectAction,
   haveSameMediaPathMultiset,
@@ -52,6 +53,23 @@ function requestFor(value, ids, fields = {}) {
   assert.equal(built.valid, true);
   return built.request;
 }
+
+test('contextual assembly derives a logical filename from numbered tree-node parts', () => {
+  assert.equal(getAudioAssemblyLogicalFileName({
+    storyNames: ['L’Oie d’or Pt 01', 'L’Oie d’or Pt 02', 'L’Oie d’or Pt 03'],
+    projectPrefix: 'comtes',
+  }), 'L’Oie d’or.flac');
+});
+
+test('standalone assembly removes the project prefix before suggesting a filename', () => {
+  assert.equal(getAudioAssemblyLogicalFileName({
+    items: [
+      { name: 'comtes__chapitre_01.flac' },
+      { name: 'comtes__chapitre_02.flac' },
+    ],
+    projectPrefix: 'comtes',
+  }), 'chapitre_0_assemble.flac');
+});
 
 test('audio stories follow project order instead of Set insertion order', () => {
   const value = project([menu('menu', [story('a'), story('b'), story('c')])]);
@@ -165,7 +183,7 @@ test('incoming references block assembly without modifying the project', () => {
   assert.equal(outcome.project, value);
 });
 
-test('assembly retains first position and title while taking the last terminal behavior', () => {
+test('assembly retains first position and visuals, uses the logical title, and takes the last terminal behavior', () => {
   const a = story('a', {
     name: 'Premier titre',
     itemAudio: 'first-title.mp3',
@@ -182,14 +200,18 @@ test('assembly retains first position and title while taking the last terminal b
   });
   const value = project([menu('menu', [a, b, story('after')])]);
   const request = requestFor(value, ['b', 'a']);
-  const outcome = replaceStoriesWithAssembledStory(value, { request, outputPath: 'assembled.flac' });
+  const outcome = replaceStoriesWithAssembledStory(value, {
+    request,
+    outputPath: 'comtes__L’Oie d’or.flac',
+    logicalName: 'L’Oie d’or',
+  });
   assert.equal(outcome.ok, true);
   const children = outcome.project.rootEntries[0].children;
   assert.deepEqual(children.map((entry) => entry.id), ['a', 'after']);
-  assert.equal(children[0].name, 'Premier titre');
+  assert.equal(children[0].name, 'L’Oie d’or');
   assert.equal(children[0].itemAudio, 'first-title.mp3');
   assert.equal(children[0].itemImage, 'first.png');
-  assert.equal(children[0].audio, 'assembled.flac');
+  assert.equal(children[0].audio, 'comtes__L’Oie d’or.flac');
   assert.equal(children[0].returnAfterPlay, 'root');
   assert.equal(children[0].returnOnHome, 'story:a');
   assert.equal(children[0].afterPlaybackSequence[0].audio, 'end.mp3');

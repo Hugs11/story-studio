@@ -108,6 +108,7 @@ export function useMediaToolBridge({
       outcome = mutations.handleReplaceStoriesWithAssembledStory({
         request,
         outputPath: result?.createdPaths?.[0],
+        logicalName: result?.logicalName,
       });
     } else {
       return invalidResult('unknown-action', 'Cette action projet n’est pas reconnue.');
