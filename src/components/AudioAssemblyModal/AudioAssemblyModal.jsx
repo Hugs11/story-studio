@@ -3,33 +3,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
 import { basename } from '../../utils/fileUtils';
 import { useProjectContext } from '../../store/ProjectContext';
+import { getAudioAssemblyLogicalFileName } from '../../store/mediaToolContext';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { Button } from '../common/Button';
 import './AudioAssemblyModal.css';
-
-function fileStem(name) {
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(0, dot) : name;
-}
 
 function formatDuration(value) {
   if (!Number.isFinite(value) || value < 0) return '—';
   const s = Math.round(value);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
-function defaultOutputName(items) {
-  const firstName = fileStem(items[0]?.name || 'audio');
-  if (items.length <= 1) return `${firstName}_assemble.flac`;
-  const commonPrefix = items
-    .map((item) => fileStem(item.name || 'audio'))
-    .reduce((prefix, name) => {
-      let i = 0;
-      while (i < prefix.length && i < name.length && prefix[i].toLowerCase() === name[i].toLowerCase()) i += 1;
-      return prefix.slice(0, i);
-    }, firstName)
-    .replace(/[_\-\s]+$/g, '');
-  return `${commonPrefix || firstName}_assemble.flac`;
 }
 
 export function AudioAssemblyModal({
@@ -65,10 +47,13 @@ export function AudioAssemblyModal({
     const current = read(KEYS.AUDIO_ASSEMBLY_OPTIONS, { parse: JSON.parse, defaultValue: {} }) ?? {};
     write(KEYS.AUDIO_ASSEMBLY_OPTIONS, { ...current, ...patch }, { serialize: JSON.stringify });
   }
+  const projectPrefix = sanitizeProjectPrefix(projectName);
   const [outputFileName, setOutputFileName] = useState(() => {
-    const base = defaultOutputName(initialItems);
-    const prefix = sanitizeProjectPrefix(projectName);
-    return prefix ? `${prefix}__${base}` : base;
+    return getAudioAssemblyLogicalFileName({
+      items: initialItems,
+      storyNames: contextRequest?.storyNames,
+      projectPrefix,
+    });
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -76,6 +61,10 @@ export function AudioAssemblyModal({
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [dragOverPosition, setDragOverPosition] = useState(null); // 'above' | 'below'
   const willReplaceStories = projectAction === 'replace-stories-with-assembly';
+  const logicalStem = outputFileName.trim().replace(/\.(mp3|flac|wav|ogg|m4a)$/i, '') || 'montage';
+  const hasProjectPrefix = projectPrefix
+    && logicalStem.toLocaleLowerCase().startsWith(`${projectPrefix}__`.toLocaleLowerCase());
+  const storageFileName = `${hasProjectPrefix || !projectPrefix ? logicalStem : `${projectPrefix}__${logicalStem}`}.flac`;
 
   function handleGripPointerDown(e, index) {
     if (e.button !== 0 || submitting) return;
@@ -178,7 +167,7 @@ export function AudioAssemblyModal({
       const inputPaths = orderedItems.map((item) => item.path);
       // Le backend force l'extension du fichier de travail (FLAC) ; on n'envoie
       // que le radical, en retirant une extension audio éventuellement saisie.
-      const rawName = outputFileName.trim().replace(/\.(mp3|flac|wav|ogg|m4a)$/i, '') || 'montage';
+      const rawName = hasProjectPrefix || !projectPrefix ? logicalStem : `${projectPrefix}__${logicalStem}`;
       const outputPath = await invoke('concat_audio_files', {
         savePath: savePath || '',
         inputPaths,
@@ -188,6 +177,7 @@ export function AudioAssemblyModal({
       });
       onCreated?.(outputPath, {
         inputPaths,
+        logicalName: logicalStem,
         projectAction,
         projectActionUnavailableReason,
       });
@@ -293,8 +283,8 @@ export function AudioAssemblyModal({
               />
             </label>
             <div className="audio-assembly-destination">
-              <span>Destination</span>
-              <strong>fichiers-importes/</strong>
+              <span>Fichier créé</span>
+              <strong title={`fichiers-importes/${storageFileName}`}>fichiers-importes/{storageFileName}</strong>
             </div>
           </section>
 

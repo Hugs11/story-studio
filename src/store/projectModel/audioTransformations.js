@@ -42,7 +42,12 @@ function replaceSelectedSiblings(entries, retainedId, removedIds, replacement) {
   return next;
 }
 
-export function replaceStoriesWithAssembledStory(project, { request, entryIds, outputPath }) {
+export function replaceStoriesWithAssembledStory(project, {
+  request,
+  entryIds,
+  outputPath,
+  logicalName,
+}) {
   const ids = entryIds ?? request?.entryIds ?? [];
   if (request) {
     const validation = validateMediaAudioToolRequest(project, request);
@@ -58,6 +63,7 @@ export function replaceStoriesWithAssembledStory(project, { request, entryIds, o
     ...first,
     ...terminalFieldsFrom(last),
     id: first.id,
+    name: String(logicalName || '').trim() || first.name,
     audio: outputPath,
   });
   const removedIds = new Set(eligibility.entryIds.slice(1));

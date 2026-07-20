@@ -1,4 +1,4 @@
-import { pathKey } from '../utils/fileUtils.js';
+import { basenameNoExt, pathKey } from '../utils/fileUtils.js';
 import { getEffectiveEndBehavior } from './generatedNavigation.js';
 import { refTargetEntryId } from './navigationTargets.js';
 import { buildProjectIndex, findEntryById } from './projectModel/index.js';
@@ -10,6 +10,62 @@ const ENTRY_NAVIGATION_FIELDS = [
   'afterPlaybackPromptOkTarget',
   'afterPlaybackPromptHomeTarget',
 ];
+
+function trimAssemblyPartSuffix(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[\s._–—-]+(?:pt\.?|part(?:ie)?)\s*(?:n[°º]?\s*)?\d+\s*$/iu, '')
+    .replace(/\s*[([]\s*\d+\s*[\])]\s*$/u, '')
+    .replace(/[\s._–—-]+$/u, '')
+    .trim();
+}
+
+function commonAssemblyPrefix(names) {
+  if (names.length === 0) return '';
+  const prefix = names.slice(1).reduce((current, name) => {
+    let index = 0;
+    while (
+      index < current.length
+      && index < name.length
+      && current[index].toLocaleLowerCase() === name[index].toLocaleLowerCase()
+    ) index += 1;
+    return current.slice(0, index);
+  }, names[0]);
+  return prefix.replace(/[\s._–—-]+$/u, '').trim();
+}
+
+function stripAssemblyProjectPrefix(value, projectPrefix) {
+  const prefix = String(projectPrefix || '').trim();
+  if (!prefix) return value;
+  const marker = `${prefix}__`;
+  return value.toLocaleLowerCase().startsWith(marker.toLocaleLowerCase())
+    ? value.slice(marker.length)
+    : value;
+}
+
+export function getAudioAssemblyLogicalFileName({ items = [], storyNames = [], projectPrefix = '' } = {}) {
+  const contextualNames = storyNames
+    .map(trimAssemblyPartSuffix)
+    .filter(Boolean);
+  if (contextualNames.length > 0) {
+    const firstKey = contextualNames[0].toLocaleLowerCase();
+    const sharedName = contextualNames.every((name) => name.toLocaleLowerCase() === firstKey)
+      ? contextualNames[0]
+      : commonAssemblyPrefix(contextualNames);
+    if (sharedName) return `${sharedName}.flac`;
+    return `${contextualNames[0]}_assemble.flac`;
+  }
+
+  const mediaNames = items
+    .map((item) => stripAssemblyProjectPrefix(
+      basenameNoExt(item?.name || item?.path || 'audio'),
+      projectPrefix,
+    ))
+    .filter(Boolean);
+  const firstName = mediaNames[0] || 'audio';
+  const commonPrefix = commonAssemblyPrefix(mediaNames);
+  return `${commonPrefix || firstName}_assemble.flac`;
+}
 
 function normalizeEntryIds(entryIds) {
   return [...new Set([...(entryIds ?? [])].filter((id) => typeof id === 'string' && id))];

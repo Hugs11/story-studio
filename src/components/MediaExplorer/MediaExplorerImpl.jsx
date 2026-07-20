@@ -557,6 +557,7 @@ export function MediaExplorer({
       mode: 'assemble',
       createdPaths: [path],
       inputPaths: metadata.inputPaths ?? [],
+      logicalName: metadata.logicalName ?? '',
       failures: [],
       message: `Audio assemblé créé : ${basename(cleanPath(path))}`,
     };
