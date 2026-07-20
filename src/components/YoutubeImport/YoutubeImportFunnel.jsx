@@ -320,7 +320,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
               </label>
             <div className="youtube-funnel-bulk">
               <button type="button" className="youtube-funnel-seg" onClick={selectAllVisible}>
-                Sélectionner les visibles
+                Tout séléctionner
               </button>
               <button type="button" className="youtube-funnel-seg" onClick={clearSelection} disabled={selected.size === 0}>
                 Tout désélectionner
