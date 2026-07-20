@@ -18,6 +18,7 @@ import {
   sameHoverGuide,
 } from './treeGuides';
 import { END_NODE_ID, EMPTY_BADGES } from './treePanelConstants';
+import { canInlineRenameTreeNode, getInlineRenameFields } from './treeInlineRename';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
 import {
@@ -35,6 +36,7 @@ export function TreePanel({
   onAddMenu, onAddStory, onImportFolder, onDeleteMenu, onDeleteItem, onUnpackZip, onSimulateZip,
   onBulkDeleteItems, onBulkUpdateItems,
   onPasteEntries, onCutPasteEntries, onSetMenuAsRoot, onDemoteRootToMenu, onSelectionChange, onDuplicate, onSetNodeColor,
+  onRenameNode,
   onAddEndNode, onRemoveEndNode, onSimulateNode,
   onOpenMediaAudioTool,
   validationIssues: validationIssuesProp, projectIndex,
@@ -50,6 +52,7 @@ export function TreePanel({
   const [collapsedIds, setCollapsedIds] = useState(new Set());
   const [hoverScopeParentId, setHoverScopeParentId] = useState(null);
   const [hoverGuide, setHoverGuide] = useState(null);
+  const [inlineRename, setInlineRename] = useState(null);
   const osDropHover = activeDropZone === 'treepanel';
 
   const isExpanded = useCallback((id) => !collapsedIds.has(id), [collapsedIds]);
@@ -135,6 +138,26 @@ export function TreePanel({
     setHoverScopeParentId(null);
     setHoverGuide(null);
   }, []);
+
+  const handleStartRename = useCallback((id, type, name) => {
+    if (!canInlineRenameTreeNode(type)) return;
+    setInlineRename({ id, type, originalName: name ?? '', draftName: name ?? '' });
+  }, []);
+
+  const handleRenameChange = useCallback((draftName) => {
+    setInlineRename((current) => (current ? { ...current, draftName } : current));
+  }, []);
+
+  const handleRenameCancel = useCallback(() => {
+    setInlineRename(null);
+  }, []);
+
+  const handleRenameCommit = useCallback(() => {
+    if (!inlineRename) return;
+    const fields = getInlineRenameFields(inlineRename.originalName, inlineRename.draftName);
+    setInlineRename(null);
+    if (fields) onRenameNode?.(inlineRename.id, inlineRename.type, fields);
+  }, [inlineRename, onRenameNode]);
 
   const handleHoverScope = useCallback((parentScopeId, level, enableScope) => {
     const nextGuide = getNextHoverGuide(parentScopeId, level);
@@ -323,6 +346,12 @@ export function TreePanel({
               hovered={hoveredNodeId === entry.id}
               cut={cutIds.has(entry.id)}
               color={entry.treeColor}
+              renaming={inlineRename?.id === entry.id}
+              renameValue={inlineRename?.id === entry.id ? inlineRename.draftName : ''}
+              onStartRename={canInlineRenameTreeNode(entry.type) ? handleStartRename : undefined}
+              onRenameChange={inlineRename?.id === entry.id ? handleRenameChange : undefined}
+              onRenameCommit={inlineRename?.id === entry.id ? handleRenameCommit : undefined}
+              onRenameCancel={inlineRename?.id === entry.id ? handleRenameCancel : undefined}
               isAncestor={ancestorIds.has(entry.id)}
               isActiveScope={activeScopeParentId === parentScopeId}
               isHoverScope={hoverScopeParentId === parentScopeId}
@@ -404,7 +433,10 @@ export function TreePanel({
             ref={treeScrollRef}
             className={`tree${showTreeGuides ? '' : ' tree--no-guides'}`}
             tabIndex={0}
-            onPointerDownCapture={() => treeScrollRef.current?.focus({ preventScroll: true })}
+            onPointerDownCapture={(event) => {
+              if (event.target.closest('.tree-inline-name-input')) return;
+              treeScrollRef.current?.focus({ preventScroll: true });
+            }}
             onKeyDown={handleKeyDown}
             onContextMenu={(e) => handleContextMenu(e, 'root', 'root-bg')}
             onPointerLeave={() => {
