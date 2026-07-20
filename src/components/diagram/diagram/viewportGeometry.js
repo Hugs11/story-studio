@@ -35,6 +35,21 @@ export function getWheelZoomFactor(event, viewportHeight = 800) {
   return Math.exp(-delta * sensitivity);
 }
 
+export function isDiagramSearchWheelEvent(event) {
+  const path = event?.composedPath?.() ?? [];
+  if (path.some((target) => target?.classList?.contains?.('fd-diagram-search'))) return true;
+  return !!event?.target?.closest?.('.fd-diagram-search');
+}
+
+export function isDiagramWheelOwnedByExternalSurface(event, diagramNode) {
+  const path = event?.composedPath?.() ?? [];
+  if (path.includes(diagramNode)) return false;
+
+  const target = event?.target;
+  if (target?.nodeType !== 1 || typeof diagramNode?.contains !== 'function') return false;
+  return !diagramNode.contains(target);
+}
+
 export function fitDiagramViewport({
   containerWidth,
   containerHeight,

@@ -26,6 +26,10 @@ import { DiagramLegend } from './diagram/DiagramLegend';
 import { DiagramViewToggles } from './diagram/DiagramViewToggles';
 import { DiagramSearch } from './diagram/DiagramSearch';
 import {
+  buildDiagramSearchContextIds,
+  diagramEntryMatchesSearch,
+} from './diagram/diagramSearchFilter.js';
+import {
   buildNavigationNodeRoles,
   collectActiveNavigationPathEdges,
   findPrimaryStoryNavigationEdge,
@@ -100,6 +104,10 @@ export function CompleteDiagramTree({
   const [hoveredStructureEdgeId, setHoveredStructureEdgeId] = useState(null);
   const [pinnedStructureEdgeId, setPinnedStructureEdgeId] = useState(null);
   const [pendingRevealNodeId, setPendingRevealNodeId] = useState(null);
+  const [diagramSearchFilter, setDiagramSearchFilter] = useState(() => ({
+    active: false,
+    matchingIds: new Set(),
+  }));
   const activeNavigationEdgeIdRef = useRef(null);
   const activeStructureEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
@@ -285,6 +293,16 @@ export function CompleteDiagramTree({
     queueRevealNode(nodeId);
     handleSelectNode(nodeId);
   }, [handleSelectNode, onSelectionChange, queueRevealNode]);
+  const handleSearchFilterChange = useCallback((nextFilter) => {
+    setDiagramSearchFilter(nextFilter);
+  }, []);
+  const diagramSearchContextIds = useMemo(
+    () => buildDiagramSearchContextIds(
+      diagramSearchFilter.matchingIds,
+      projectIndex.parentMenuById,
+    ),
+    [diagramSearchFilter.matchingIds, projectIndex.parentMenuById],
+  );
   const handleOpenLocalEnd = useCallback((storyId) => {
     onSelectionChange?.(new Set([storyId]));
     if (onOpenLocalEndSettings) {
@@ -589,6 +607,7 @@ export function CompleteDiagramTree({
           projectIndex={projectIndex}
           focusTrigger={searchFocusTrigger}
           onChoose={handleSearchChoose}
+          onFilterChange={handleSearchFilterChange}
         />
         {showActionsBar ? (
         <div className="fd-complete-topbar">
@@ -731,10 +750,17 @@ export function CompleteDiagramTree({
             {layout.nodes.map((node) => {
               const isNavigationActive = activeNavigationNodeIds.has(node.entry.id);
               const isNavigationMember = activeNavigationMemberNodeIds.has(node.entry.id);
+              const isSearchMatch = diagramSearchFilter.active
+                && diagramEntryMatchesSearch(node.entry, diagramSearchFilter.matchingIds);
+              const isSearchContext = diagramSearchFilter.active
+                && diagramSearchContextIds.has(node.entry.id);
+              const isSearchDimmed = diagramSearchFilter.active
+                && !isSearchMatch
+                && !isSearchContext;
               return (
                 <div
                   key={node.entry.id}
-                  className={`fd-complete-placed-node ${isNavigationActive ? 'is-navigation-active' : isNavigationMember ? 'is-navigation-member' : shouldDimNavigation ? 'is-navigation-dimmed' : ''} ${activeStructureNodeIds.has(node.entry.id) ? 'is-structure-active' : structureFocus?.siblingNodeIds.has(node.entry.id) ? 'is-structure-sibling' : hasActiveStructureEdge ? 'is-structure-dimmed' : ''}`}
+                  className={`fd-complete-placed-node ${isNavigationActive ? 'is-navigation-active' : isNavigationMember ? 'is-navigation-member' : shouldDimNavigation ? 'is-navigation-dimmed' : ''} ${activeStructureNodeIds.has(node.entry.id) ? 'is-structure-active' : structureFocus?.siblingNodeIds.has(node.entry.id) ? 'is-structure-sibling' : hasActiveStructureEdge ? 'is-structure-dimmed' : ''} ${isSearchMatch ? 'is-search-match' : isSearchContext ? 'is-search-context' : isSearchDimmed ? 'is-search-dimmed' : ''}`}
                   style={{ left: node.x, top: node.y, width: node.width }}
                 >
                 {node.entry.type === 'story-group' ? (

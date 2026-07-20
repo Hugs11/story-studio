@@ -6,6 +6,8 @@ import {
   centerDiagramNode,
   fitDiagramViewport,
   getWheelZoomFactor,
+  isDiagramSearchWheelEvent,
+  isDiagramWheelOwnedByExternalSurface,
   preserveViewportCenter,
 } from './viewportGeometry.js';
 
@@ -162,6 +164,8 @@ export function useDiagramViewport({
     if (!node) return undefined;
 
     function handleWheel(event) {
+      if (isDiagramSearchWheelEvent(event)
+        || isDiagramWheelOwnedByExternalSurface(event, node)) return;
       const rect = node.getBoundingClientRect();
       const path = event.composedPath?.() ?? [];
       const isInside = path.includes(node) || (
