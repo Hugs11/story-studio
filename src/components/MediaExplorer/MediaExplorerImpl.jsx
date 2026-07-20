@@ -7,6 +7,7 @@ import { Button } from '../common/Button';
 import { useErrorDialog } from '../common/Dialog';
 import { FilePlus, FolderPlus, SlidersHorizontal, Copy, Scissors, FolderInput, Trash2, Link2, Download, Search } from '../icons/LucideLocal';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { normalizeFrenchSearchText } from '../../utils/frenchText';
 import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { KEYS, write } from '../../store/persistentSettings';
@@ -244,6 +245,7 @@ export function MediaExplorer({
     unused:   items.filter((i) => !i.inProject).length,
   }), [items]);
 
+  const normalizedQuery = normalizeFrenchSearchText(query).trim();
   const visible = items.filter((item) => {
     const kindFilters = [
       activeFilters.has('image') ? 'image' : null,
@@ -267,9 +269,9 @@ export function MediaExplorer({
         if (!itemTagList.includes(t)) return false;
       }
     }
-    if (!query.trim()) return true;
-    const haystack = `${item.name} ${item.path} ${item.usages.map((u) => u.label).join(' ')}`.toLowerCase();
-    return haystack.includes(query.trim().toLowerCase());
+    if (!normalizedQuery) return true;
+    const haystack = `${item.name} ${item.path} ${item.usages.map((u) => u.label).join(' ')}`;
+    return normalizeFrenchSearchText(haystack).includes(normalizedQuery);
   });
 
   function handleSortClick(i) {
