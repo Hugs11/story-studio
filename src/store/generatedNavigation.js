@@ -31,6 +31,17 @@ export function hasGeneratedEndNode(project) {
   return !!(!project?.globalOptions?.autoNext && project?.nightModeAudio);
 }
 
+function hasCombinedNightStoryShape(entry) {
+  return !!(
+    entry?.type === 'story'
+    && !entry?.titleControlSettings
+    && entry.itemAudio === entry.audio
+    && entry?.controlSettings?.wheel === true
+    && entry?.controlSettings?.autoplay === true
+    && entry?.returnAfterPlay
+  );
+}
+
 export function getDefaultPackEntryDestination(project) {
   const firstEntry = project?.rootEntries?.[0];
   if (!firstEntry?.id) return null;
@@ -147,15 +158,7 @@ function resolveGeneratedEndNodeTarget(target, entry, parentMenu, rootEntries, f
 }
 
 export function isCombinedNightStoryBypass(entry, project) {
-  return !!(
-    project?.nightModeAudio
-    && entry?.type === 'story'
-    && !entry?.titleControlSettings
-    && entry.itemAudio === entry.audio
-    && entry?.controlSettings?.wheel === true
-    && entry?.controlSettings?.autoplay === true
-    && entry?.returnAfterPlay
-  );
+  return !!(project?.nightModeAudio && hasCombinedNightStoryShape(entry));
 }
 
 function isImportedNightPrompt(entry, parentMenu, project, rootEntries) {
@@ -229,17 +232,27 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     && !hasSequence
     && !isCombinedNightStoryBypass(entry, project)
   );
+  // Prévisualisation de la configuration : le nœud participe au parcours dès
+  // sa création, même si son média requis n'est pas encore renseigné. Cette
+  // information reste distincte de `usesEndNode`, miroir du runtime Rust.
+  const presentsEndNode = !!(
+    hasVisibleEndNode(project)
+    && entry?.type === 'story'
+    && !hasPrompt
+    && !hasSequence
+    && !hasCombinedNightStoryShape(entry)
+  );
   const importedNightPrompt = isImportedNightPrompt(entry, parentMenu, project, rootEntries);
+  const resolvesEndNodeRoute = presentsEndNode || importedNightPrompt;
   // Cible explicitement configurée sur le nœud de fin (null si l'utilisateur
   // n'a rien défini — équivalent du `raw_return.is_none()` Rust).
-  const endNodeConfiguredTargetId = (usesEndNode || importedNightPrompt) && project?.nightModeReturn
+  const endNodeConfiguredTargetId = resolvesEndNodeRoute && project?.nightModeReturn
     ? resolveGeneratedEndNodeTarget(project.nightModeReturn, entry, parentMenu, rootEntries, directReturnTarget)
     : null;
-  // Cible réellement générée par Rust pour cette histoire : si `nightModeReturn` est vide,
-  // le `compute_night_bridge_targets` Rust retombe sur le `fallback_return` propre à la
-  // story (`native_pack.rs:2624-2630`). Le fallback Rust passé à cette fonction est le
-  // `play_return_transition` calculé par story, dont l'équivalent JS est `directReturnTarget`.
-  const endNodeEffectiveTargetId = (usesEndNode || importedNightPrompt)
+  // Cible effective du trajet généré ou présenté. Avec un audio global, elle
+  // reste le miroir Rust : si `nightModeReturn` est vide, le moteur retombe sur
+  // le `fallback_return` propre à la story, équivalent à `directReturnTarget`.
+  const endNodeEffectiveTargetId = resolvesEndNodeRoute
     ? (endNodeConfiguredTargetId ?? directReturnTarget)
     : null;
   const promptOkTarget = hasPrompt
@@ -254,7 +267,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   const promptHomeResolved = hasPrompt
     ? resolvePromptEndHome(entry, { parentMenu, rootEntries, okTargetId: promptOkTarget })
     : { kind: null, targetId: null, effectiveTargetId: null };
-  const globalHomeResolved = (usesEndNode || importedNightPrompt)
+  const globalHomeResolved = resolvesEndNodeRoute
     ? resolveGlobalEndHome(project, {
       entry,
       parentMenu,
@@ -318,6 +331,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       effectiveTargetId: endNodeEffectiveTargetId,
       isConfigured: endNodeConfiguredTargetId !== null,
       isActive: usesEndNode || importedNightPrompt,
+      isPresented: resolvesEndNodeRoute,
       isImportedPrompt: importedNightPrompt,
       isNightMode: !!project?.globalOptions?.nightMode,
     },
@@ -358,7 +372,7 @@ export function getEffectiveEndBehavior(entry, parentMenu, project, rootEntries 
 
   if (autoNext.applies) {
     finalTargetId = autoNext.targetId;
-  } else if (navigation.endNodeReturn.isActive) {
+  } else if (navigation.endNodeReturn.isPresented) {
     endStepKind = navigation.endNodeReturn.isNightMode ? 'night-end-node' : 'end-node';
     finalTargetId = navigation.endNodeReturn.effectiveTargetId ?? navigation.directReturn.targetId;
   } else if (navigation.hasSequence) {
@@ -449,8 +463,8 @@ export function collectEndMessagePresentations(project) {
   return result;
 }
 
-export function getGeneratedEndNodeHomeNavigation(project) {
-  if (!hasGeneratedEndNode(project)) return null;
+function getEndNodeHomeNavigation(project, isAvailable) {
+  if (!isAvailable(project)) return null;
   // Home global vide = `none` (aucune transition, retour au début du pack) : pas de badge Home
   // distinct à afficher, et surtout jamais assimilable au retour OK.
   if (classifyGlobalEndHome(project) === END_HOME_NONE) return null;
@@ -465,8 +479,8 @@ export function getGeneratedEndNodeHomeNavigation(project) {
   };
 }
 
-export function getGeneratedEndNodeReturnNavigation(project) {
-  if (!hasGeneratedEndNode(project)) return null;
+function getEndNodeReturnNavigation(project, isAvailable) {
+  if (!isAvailable(project)) return null;
   const returnTarget = normalizeNavigationTarget(project?.nightModeReturn);
   if (!returnTarget) {
     return {
@@ -484,4 +498,20 @@ export function getGeneratedEndNodeReturnNavigation(project) {
     isContextual: isNextStoryNavigationTarget(returnTarget),
     isDefaultContextual: false,
   };
+}
+
+export function getGeneratedEndNodeHomeNavigation(project) {
+  return getEndNodeHomeNavigation(project, hasGeneratedEndNode);
+}
+
+export function getPresentedEndNodeHomeNavigation(project) {
+  return getEndNodeHomeNavigation(project, hasVisibleEndNode);
+}
+
+export function getGeneratedEndNodeReturnNavigation(project) {
+  return getEndNodeReturnNavigation(project, hasGeneratedEndNode);
+}
+
+export function getPresentedEndNodeReturnNavigation(project) {
+  return getEndNodeReturnNavigation(project, hasVisibleEndNode);
 }

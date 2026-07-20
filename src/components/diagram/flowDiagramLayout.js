@@ -1,7 +1,7 @@
 import { decodeNavigationStoryId, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget, refTargetEntryId } from '../../store/navigationTargets.js';
 import {
   CONTEXTUAL_NEXT_STORY_TARGET,
-  getGeneratedEndNodeReturnNavigation,
+  getPresentedEndNodeReturnNavigation,
   getGeneratedStoryNavigation,
   resolveGeneratedTargetForStory,
 } from '../../store/generatedNavigation.js';
@@ -153,7 +153,7 @@ function collectNavigationTransitions(entries, parentMenu = null, transitions = 
         if (promptHomeTarget && promptHomeTarget !== effectiveReturnTarget) {
           transitions.push({ from: entry.id, to: promptHomeTarget, kind: 'home', source: 'prompt' });
         }
-      } else if (endPresentation === 'global') {
+      } else if (navigation.endNodeReturn.isPresented) {
         effectiveReturnTarget = END_NODE_ID;
         transitions.push({
           from: entry.id,
@@ -266,7 +266,7 @@ export function getCompleteNavigationEdges(project, layout) {
   if (layout.hasEndNode) {
     const endNode = nodeMap.get(END_NODE_ID);
     if (endNode) {
-      const endNodeReturn = getGeneratedEndNodeReturnNavigation(project);
+      const endNodeReturn = getPresentedEndNodeReturnNavigation(project);
       const contextualSourceEdges = regularEdges
         .filter((edge) => edge.to === END_NODE_ID && edge.endNodeTargetId);
       const contextualTargets = contextualSourceEdges.map((edge) => ({
