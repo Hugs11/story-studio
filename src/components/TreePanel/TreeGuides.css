@@ -61,6 +61,14 @@
   background: color-mix(in srgb, var(--tree-scope-bg) 76%, var(--accent-dim));
 }
 
+.tree-item.is-colored.active-scope:not(.active):not(.ancestor-sel) {
+  background: color-mix(in srgb, var(--tree-node-color) 36%, var(--tree-scope-bg));
+}
+
+.tree-item.is-colored.active-scope:not(.active):not(.ancestor-sel):hover {
+  background: color-mix(in srgb, var(--tree-node-color) 46%, var(--tree-scope-bg));
+}
+
 .tree-item.hover-scope:not(.active) {
   background: var(--tree-scope-hover-bg);
 }
@@ -95,11 +103,19 @@
   background: color-mix(in srgb, var(--accent-dim) 32%, transparent);
 }
 
+.tree-item.is-colored.ancestor-sel {
+  background: color-mix(in srgb, var(--tree-node-color) 36%, transparent);
+}
+
+.tree-item.is-colored.ancestor-sel:hover {
+  background: color-mix(in srgb, var(--tree-node-color) 46%, transparent);
+}
+
 .tree-item.ancestor-sel .ti-icon,
 .tree-item.ancestor-sel .tree-chevron {
   color: color-mix(in srgb, var(--text-secondary) 78%, var(--muted));
 }
 
 .tree-item.is-colored.hover-scope:not(.active) {
-  background: color-mix(in srgb, var(--accent) 10%, var(--tree-node-color));
+  background: color-mix(in srgb, var(--tree-node-color) 46%, var(--tree-scope-hover-bg));
 }
