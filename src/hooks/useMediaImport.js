@@ -62,6 +62,7 @@ export function useMediaImport({
   setImportNotice,
   setActiveDropZone,
   showErrorDialog,
+  showConfirmDialog,
 }) {
   const [importing, setImporting] = useState(null);
   const [unpacking, setUnpacking] = useState(null);
@@ -79,6 +80,7 @@ export function useMediaImport({
     persistProjectSnapshot,
     workspaceDirRef,
     showErrorDialog,
+    showConfirmDialog,
     getImportDisplayName,
     isImportedPackPath,
     onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },

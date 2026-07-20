@@ -82,7 +82,9 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
             add_silence: false,
             silence_mode: None,
             harmonize_loudness: true,
-            add_silence_duration_sec: 1.0,
+            add_silence_duration_sec: crate::domain::project::AudioEdgeSilenceDuration::uniform(
+                1.0,
+            ),
             auto_next: false,
             night_mode,
         },
@@ -94,7 +96,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
 }
 
 fn fidelity_fake_assets(canonical: &CanonicalProject) -> Vec<PreparedAsset> {
-    collect_asset_requests(canonical, 1.0)
+    collect_asset_requests(canonical, 1.0, 1.0)
         .into_iter()
         .enumerate()
         .map(|(i, req)| {

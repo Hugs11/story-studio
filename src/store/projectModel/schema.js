@@ -1,5 +1,8 @@
 import { normalizeNavigationTarget } from '../navigationTargets.js';
-import { PACK_AUDIO_EDGE_SILENCE_SECONDS } from '../../config/audioProcessing.js';
+import {
+  getPackAudioEdgeSilenceSettings,
+  normalizePackAudioEdgeSilence,
+} from '../../config/audioProcessing.js';
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
 
@@ -561,7 +564,7 @@ export function projectToSerializable(project) {
   };
 }
 
-export function projectToRustExport(project) {
+export function projectToRustExport(project, audioEdgeSilence = getPackAudioEdgeSilenceSettings()) {
   const serializable = projectToSerializable(project);
   const packMetadata = normalizePackMetadata(serializable.packMetadata);
   if (serializable.projectType === 'simple' && !String(packMetadata.title || '').trim()) {
@@ -577,7 +580,10 @@ export function projectToRustExport(project) {
     globalOptions: {
       ...serializable.globalOptions,
       silenceMode: serializable.globalOptions.silenceMode,
-      addSilenceDurationSec: PACK_AUDIO_EDGE_SILENCE_SECONDS,
+      addSilenceDurationSec: {
+        start: normalizePackAudioEdgeSilence(audioEdgeSilence?.leading),
+        end: normalizePackAudioEdgeSilence(audioEdgeSilence?.trailing),
+      },
     },
   };
 }

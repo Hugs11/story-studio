@@ -491,6 +491,7 @@ function AppContent() {
     setImportNotice,
     setActiveDropZone,
     showErrorDialog,
+    showConfirmDialog,
   });
 
   // Cycle de vie du projet : nouveau projet (reset vers l'accueil), choix du type
