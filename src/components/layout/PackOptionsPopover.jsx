@@ -8,17 +8,21 @@ import {
 } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
-function silenceModeOptions(leadingSeconds, trailingSeconds) {
+function silenceModePresentation(leadingSeconds, trailingSeconds) {
   const leadingLabel = formatPackAudioEdgeSilence(leadingSeconds);
   const trailingLabel = formatPackAudioEdgeSilence(trailingSeconds);
-  const edgeLabel = leadingSeconds === trailingSeconds
-    ? leadingLabel
-    : `${leadingLabel} au début / ${trailingLabel} à la fin`;
-  return [
-    ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences et les ramène à exactement ${leadingLabel} au début et ${trailingLabel} à la fin (coupe si trop long, complète si trop court).`],
-    ['add', `Ajouter ${edgeLabel}`, `Ajouter ${leadingLabel} au début et ${trailingLabel} à la fin`, `Ajoute ${leadingLabel} au début et ${trailingLabel} à la fin sans mesurer l'existant — le silence déjà présent s'additionne.`],
-    ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
-  ];
+  const durationSummary = leadingSeconds === trailingSeconds
+    ? `${leadingLabel} au début et à la fin`
+    : `${leadingLabel} au début · ${trailingLabel} à la fin`;
+
+  return {
+    durationSummary,
+    options: [
+      ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences et les ramène à exactement ${leadingLabel} au début et ${trailingLabel} à la fin (coupe si trop long, complète si trop court).`],
+      ['add', 'Ajouter', `Ajouter ${leadingLabel} au début et ${trailingLabel} à la fin`, `Ajoute ${leadingLabel} au début et ${trailingLabel} à la fin sans mesurer l'existant — le silence déjà présent s'additionne.`],
+      ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
+    ],
+  };
 }
 
 const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
@@ -37,7 +41,7 @@ export function PackOptionsPopover({
   const closeTimerRef = useRef(null);
   const isSimpleProject = projectType === 'simple';
   const { leading, trailing } = getPackAudioEdgeSilenceSettings();
-  const silenceOptions = silenceModeOptions(leading, trailing);
+  const { durationSummary: silenceDurationSummary, options: silenceOptions } = silenceModePresentation(leading, trailing);
   // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
   const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
   const activeSilenceHelp = (silenceOptions.find(([mode]) => mode === activeSilenceMode) ?? silenceOptions[0])[3];
@@ -119,6 +123,7 @@ export function PackOptionsPopover({
               <div className="pack-options-control-row pack-options-control-row--stack">
                 <span className="pack-options-control-copy">
                   <span className="pack-options-control-title">Silence début / fin</span>
+                  <span className="pack-options-silence-duration">{silenceDurationSummary}</span>
                 </span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
                   {silenceOptions.map(([mode, label, ariaLabel, help]) => (
