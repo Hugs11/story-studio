@@ -51,7 +51,8 @@ pub(crate) use provision::update_ytdlp as update_ytdlp_binary;
 #[cfg(test)]
 mod tests {
     use super::metadata::{
-        format_duration, normalize_listing_url, page_window, parse_list_json, validate_youtube_url,
+        format_duration, is_channel_source, normalize_listing_url, page_window, parse_list_json,
+        reorder_numbered_series, validate_youtube_url,
     };
 
     #[test]
@@ -221,5 +222,38 @@ mod tests {
         ] {
             assert_eq!(normalize_listing_url(url).unwrap(), url);
         }
+    }
+
+    #[test]
+    fn distinguishes_channel_uploads_from_explicit_playlist_order() {
+        assert!(is_channel_source("https://www.youtube.com/channel/UC123").unwrap());
+        assert!(is_channel_source("https://www.youtube.com/@example/videos").unwrap());
+        assert!(!is_channel_source("https://www.youtube.com/playlist?list=PL123").unwrap());
+        assert!(!is_channel_source("https://www.youtube.com/watch?v=abc&list=PL123").unwrap());
+        assert!(!is_channel_source("https://youtu.be/abc").unwrap());
+    }
+
+    #[test]
+    fn naturally_orders_numbered_series_without_moving_unrelated_videos() {
+        let json = serde_json::json!({
+            "title": "Uploads",
+            "entries": [
+                { "id": "p1", "title": "Le Jouet magique, Pt. 01" },
+                { "id": "other", "title": "Une autre histoire" },
+                { "id": "p3", "title": "Le Jouet magique, Pt. 03" },
+                { "id": "p4", "title": "Le Jouet magique, Pt. 04" },
+                { "id": "p5", "title": "Le Jouet magique, Pt. 05" },
+                { "id": "p2", "title": "Le Jouet magique, Pt. 02" }
+            ]
+        });
+        let mut list = parse_list_json(json, 1, 400);
+        reorder_numbered_series(&mut list.videos);
+        assert_eq!(
+            list.videos
+                .iter()
+                .map(|video| video.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["p1", "other", "p2", "p3", "p4", "p5"]
+        );
     }
 }
