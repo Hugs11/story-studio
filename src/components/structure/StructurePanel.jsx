@@ -57,9 +57,14 @@ export function StructurePanel({
     onAddMenu, onAddStoryToMenu, onImportFolder, onUnpackZip,
     onImportPodcast, onImportYoutube, onRecord, onGenerateStoryTts, canRecord, canGenerateStoryTts,
     onDeleteMenu, onDeleteItem, onBulkUpdateItems, onBulkDeleteItems,
+    onUpdateMenu, onUpdateItem,
     onSetMenuAsRoot, onDemoteRootToMenu, onDuplicate, onPasteEntries, onCutPasteEntries,
     onAddEndNode, onRemoveEndNode, onOpenMediaAudioTool,
   } = useProjectActions();
+  const handleRenameNode = useCallback((nodeId, nodeType, fields) => {
+    if (nodeType === 'menu') onUpdateMenu(fields, nodeId);
+    else if (nodeType === 'story') onUpdateItem(fields, nodeId);
+  }, [onUpdateItem, onUpdateMenu]);
   const handleSetNodeColor = useStructureNodeColor();
   const [treeDisplayOpen, setTreeDisplayOpen] = useState(false);
   const [showNavigationBadges, setShowNavigationBadges] = usePersistentState(
@@ -153,6 +158,7 @@ export function StructurePanel({
         onDemoteRootToMenu={onDemoteRootToMenu}
         onDuplicate={onDuplicate}
         onSetNodeColor={handleSetNodeColor}
+        onRenameNode={handleRenameNode}
         onAddEndNode={onAddEndNode}
         onRemoveEndNode={onRemoveEndNode}
         onSimulateNode={onSimulateNode}

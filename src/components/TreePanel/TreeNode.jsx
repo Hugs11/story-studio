@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -28,6 +28,44 @@ const BADGE_ICON_BY_KIND = {
 
 const MAX_NAVIGATION_BADGE_SLOTS = 2;
 
+function TreeInlineNameInput({ value, onChange, onCommit, onCancel }) {
+  const inputRef = useRef(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      className="tree-inline-name-input"
+      value={value}
+      aria-label="Renommer"
+      onChange={(event) => onChange(event.target.value)}
+      onBlur={() => {
+        if (!cancelledRef.current) onCommit();
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          event.currentTarget.blur();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          cancelledRef.current = true;
+          onCancel();
+        }
+      }}
+    />
+  );
+}
+
 function TreeNodeInner({
   id,
   type,
@@ -49,6 +87,12 @@ function TreeNodeInner({
   onToggleExpand,
   childCount,
   color,
+  renaming,
+  renameValue,
+  onStartRename,
+  onRenameChange,
+  onRenameCommit,
+  onRenameCancel,
   onSelect,
   onContextMenu,
   onNodeHoverChange,
@@ -61,7 +105,7 @@ function TreeNodeInner({
   suppressSortAnimation,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: !sortable });
+    useSortable({ id, disabled: !sortable || renaming });
   const { setNodeRef: setDropRef } = useDroppable({
     id: containerDroppableId ?? `disabled-container:${id}`,
     disabled: !containerDroppableId,
@@ -158,6 +202,12 @@ function TreeNodeInner({
         ? { 'data-media-node-id': id, 'data-media-node-type': type }
         : {})}
       onClick={(e) => onSelect(id, e)}
+      onDoubleClick={(event) => {
+        if (!onStartRename || event.target.closest('button, input, .badge-nav')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onStartRename(id, type, label);
+      }}
       onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, id, type); } : undefined}
       onPointerEnter={(event) => {
         handlePointerHover?.(event);
@@ -203,7 +253,16 @@ function TreeNodeInner({
           ) : null}
         </div>
         <span className="ti-icon">{resolvedIcon}</span>
-        <span className="ti-label">{label}</span>
+        {renaming ? (
+          <TreeInlineNameInput
+            value={renameValue}
+            onChange={onRenameChange}
+            onCommit={onRenameCommit}
+            onCancel={onRenameCancel}
+          />
+        ) : (
+          <span className="ti-label">{label}</span>
+        )}
         {type === 'zip' && <span className="badge-zip">ZIP</span>}
         {hasToggle && !expanded && childCount > 0 && (
           <span className="badge-count">{childCount}</span>
@@ -234,6 +293,12 @@ export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   && prev.onToggleExpand === next.onToggleExpand
   && prev.childCount === next.childCount
   && prev.color === next.color
+  && prev.renaming === next.renaming
+  && prev.renameValue === next.renameValue
+  && prev.onStartRename === next.onStartRename
+  && prev.onRenameChange === next.onRenameChange
+  && prev.onRenameCommit === next.onRenameCommit
+  && prev.onRenameCancel === next.onRenameCancel
   && prev.onSelect === next.onSelect
   && prev.onContextMenu === next.onContextMenu
   && prev.onNodeHoverChange === next.onNodeHoverChange
