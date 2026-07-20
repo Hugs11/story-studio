@@ -21,7 +21,6 @@ import {
   reorderTopLevelMenus,
   replaceEntryWithEntries,
   replaceStoriesWithAssembledStory,
-  replaceStoryWithAudioParts,
   shallowCloneEntry,
   updateEntry,
   updateProjectRootEntries,
@@ -436,14 +435,6 @@ export function useProjectStore() {
     setSelectedId('root');
   }, [setProject]);
 
-  const replaceStoryAudioParts = useCallback((options) => {
-    const outcome = replaceStoryWithAudioParts(project, options);
-    if (!outcome.ok) return outcome;
-    setProject(outcome.project);
-    setSelectedId(outcome.retainedId);
-    return outcome;
-  }, [project, setProject]);
-
   const replaceStoriesWithAssembly = useCallback((options) => {
     const outcome = replaceStoriesWithAssembledStory(project, options);
     if (!outcome.ok) return outcome;
@@ -533,7 +524,7 @@ export function useProjectStore() {
     updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
     addStory, addZip, updateItem, bulkUpdateItems, bulkDeleteItems, deleteItem, replaceZipWithEntries,
-    replaceStoryAudioParts, replaceStoriesWithAssembly,
+    replaceStoriesWithAssembly,
     pasteEntriesToMenu, cutPasteEntriesToMenu, duplicateEntry,
     removeMediaReferences,
     reorderMenuItems, reorderRootItems, reorderMenus, moveItemToMenu,

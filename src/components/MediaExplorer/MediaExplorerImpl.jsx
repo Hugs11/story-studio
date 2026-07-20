@@ -15,7 +15,6 @@ import { isDeletableWorkspaceMediaPath } from '../../store/workspaceDirs';
 import {
   getMediaToolAutomaticProjectAction,
   getAssemblyReplacementEligibility,
-  getMediaToolProjectActions,
 } from '../../store/mediaToolContext';
 import { AudioAssemblyModal } from '../AudioAssemblyModal/AudioAssemblyModal';
 import { ContextMenu } from '../TreePanel/ContextMenu';
@@ -90,7 +89,6 @@ export function MediaExplorer({
   const [splitterItem, setSplitterItem] = useState(null);
   const [splitterRequest, setSplitterRequest] = useState(null);
   const [toolResult, setToolResult] = useState(null);
-  const [busyProjectAction, setBusyProjectAction] = useState('');
   const [pendingSelectPaths, setPendingSelectPaths] = useState([]);
   const [pendingRevealMediaId, setPendingRevealMediaId] = useState('');
   const { getMeta, markForProbe } = useMediaMetadata();
@@ -605,11 +603,9 @@ export function MediaExplorer({
     });
   }
 
-  function handleAudioSplitCreated(paths, failures = [], metadata = {}) {
+  function handleAudioSplitCreated(paths, failures = []) {
     const createdPaths = paths.filter(Boolean);
-    const request = splitterRequest
-      ? { ...splitterRequest, mode: metadata.mode ?? splitterRequest.mode }
-      : null;
+    const request = splitterRequest;
     const sourcePath = splitterItem?.path;
     const sourceTags = sourcePath ? (mediaTags?.[sourcePath] ?? []) : [];
     const tagsToCopy = new Set([...sourceTags, 'découpe']);
@@ -620,17 +616,14 @@ export function MediaExplorer({
       }
     }
     if (createdPaths.length > 0) setPendingSelectPaths(createdPaths);
+    if (request) onInvalidateMediaToolRequest?.(request.requestId);
     setSplitterItem(null);
     setSplitterRequest(null);
     setToolResult({
-      request,
+      request: null,
       tool: 'split',
-      mode: metadata.mode ?? 'extract',
       createdPaths,
       failures,
-      segments: metadata.segments ?? [],
-      durationSec: metadata.durationSec,
-      coverage: metadata.coverage,
       message: createdPaths.length === 1
         ? `Extrait audio créé : ${basename(cleanPath(createdPaths[0]))}`
         : `${createdPaths.length} extraits audio créés`,
@@ -663,53 +656,9 @@ export function MediaExplorer({
     ? (assemblyContextValidation.reason || liveAssemblyEligibility?.reason || 'Le remplacement du projet n’est pas sûr.')
     : '';
 
-  const contextualValidation = toolResult?.request
-    ? onValidateMediaToolRequest?.(toolResult.request) ?? { valid: false, reason: 'Le contexte projet n’est plus disponible.' }
-    : { valid: false, reason: '' };
-  const assemblyEligibility = toolResult?.request?.tool === 'assemble'
-    ? getAssemblyReplacementEligibility(project, toolResult.request.entryIds)
-    : null;
-  const availableProjectActions = getMediaToolProjectActions({
-    request: toolResult?.request,
-    result: toolResult,
-    contextValidation: contextualValidation,
-    replacementEligibility: assemblyEligibility,
-  });
-  let unavailableProjectActionReason = '';
-  if (toolResult?.request && availableProjectActions.length === 0) {
-    if (!contextualValidation.valid) unavailableProjectActionReason = contextualValidation.reason;
-    else if (toolResult.request.tool === 'assemble' && !assemblyEligibility?.valid) unavailableProjectActionReason = assemblyEligibility?.reason;
-    else if (toolResult.request.tool === 'assemble') unavailableProjectActionReason = 'Les fichiers assemblés ne correspondent plus aux histoires sélectionnées.';
-    else if (toolResult.request.mode === 'full-split' && !toolResult.coverage?.valid) unavailableProjectActionReason = toolResult.coverage?.reason;
-    else if (toolResult.failures?.length) unavailableProjectActionReason = 'Toutes les parties requises n’ont pas pu être créées.';
-  }
-
   function finishMediaToolResult() {
     if (toolResult?.request) onInvalidateMediaToolRequest?.(toolResult.request.requestId);
     setToolResult(null);
-    setBusyProjectAction('');
-  }
-
-  function applyMediaToolProjectAction(action) {
-    if (!toolResult?.request || busyProjectAction) return;
-    setBusyProjectAction(action);
-    const outcome = onApplyMediaToolProjectAction?.({
-      request: toolResult.request,
-      action,
-      result: toolResult,
-    });
-    if (!outcome?.ok) {
-      setBusyProjectAction('');
-      setToolResult((current) => current ? { ...current, actionError: outcome?.reason || 'La modification du projet a échoué.' } : current);
-      return;
-    }
-    setBusyProjectAction('');
-    setToolResult((current) => current ? {
-      ...current,
-      request: null,
-      projectApplied: true,
-      message: 'La modification a été appliquée en une seule opération annulable.',
-    } : current);
   }
 
   const viewSwitch = (
@@ -952,10 +901,7 @@ export function MediaExplorer({
       )}
       <MediaToolResultBanner
         result={toolResult}
-        projectActions={availableProjectActions}
-        unavailableReason={toolResult?.actionError || toolResult?.unavailableReason || unavailableProjectActionReason}
-        busyAction={busyProjectAction}
-        onProjectAction={applyMediaToolProjectAction}
+        unavailableReason={toolResult?.unavailableReason}
         onFinish={finishMediaToolResult}
       />
       {bgCtxMenu && (

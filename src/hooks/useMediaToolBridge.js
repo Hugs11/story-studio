@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
 import {
-  analyzeAudioSegmentCoverage,
   buildMediaAudioToolRequest,
   haveSameMediaPathMultiset,
   validateMediaAudioToolRequest,
@@ -46,7 +45,6 @@ export function useMediaToolBridge({
       entryIds: spec?.entryIds,
       origin: spec?.origin,
       tool: spec?.tool,
-      mode: spec?.mode,
       requestId: nextRequestId(),
     });
     if (!built.valid) {
@@ -100,35 +98,7 @@ export function useMediaToolBridge({
     if (!validation.valid) return invalidResult(validation.code, validation.reason);
 
     let outcome;
-    if (action === 'use-as-item-audio' || action === 'replace-story-audio') {
-      if (request.tool !== 'split' || request.mode !== 'extract' || result?.createdPaths?.length !== 1) {
-        return invalidResult('action-not-allowed', 'Cette affectation n’est pas permise pour ce résultat.');
-      }
-      const outputPath = result?.createdPaths?.[0];
-      if (!outputPath) return invalidResult('missing-output', 'Le fichier créé est introuvable.');
-      mutations.handleUpdateItem(
-        action === 'use-as-item-audio'
-          ? { itemAudio: outputPath, silentTitleStage: false }
-          : { audio: outputPath },
-        request.entryIds[0],
-      );
-      outcome = { ok: true, retainedId: request.entryIds[0] };
-    } else if (action === 'replace-story-with-parts') {
-      const coverage = analyzeAudioSegmentCoverage(result?.segments, result?.durationSec);
-      if (
-        request.tool !== 'split'
-        || request.mode !== 'full-split'
-        || !coverage.valid
-        || result?.failures?.length > 0
-        || result?.createdPaths?.length !== result?.segments?.length
-      ) {
-        return invalidResult('action-not-allowed', coverage.reason || 'Le découpage complet n’est pas exploitable.');
-      }
-      outcome = mutations.handleReplaceStoryWithAudioParts({
-        request,
-        createdPaths: result?.createdPaths,
-      });
-    } else if (action === 'replace-stories-with-assembly') {
+    if (action === 'replace-stories-with-assembly') {
       if (
         request.tool !== 'assemble'
         || !haveSameMediaPathMultiset(result?.inputPaths, request.sourcePaths)

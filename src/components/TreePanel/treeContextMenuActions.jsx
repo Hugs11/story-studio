@@ -160,13 +160,12 @@ export function buildTreeContextActions({
       if (audioContext.stories.length === 1) {
         actions.push({
           icon: <IconScissors />,
-          label: 'Extraire ou découper l’audio dans Médias…',
+          label: 'Découper l’audio dans Médias…',
           fn: () => {
             closeContextMenu();
             onOpenMediaAudioTool({
               origin: 'tree',
               tool: 'split',
-              mode: 'extract',
               entryIds: audioContext.entryIds,
             });
           },
@@ -177,7 +176,7 @@ export function buildTreeContextActions({
           icon: <IconStory />,
           label: replacementEligibility.valid
             ? 'Assembler et remplacer les histoires…'
-            : 'Assembler leurs audios dans Médias…',
+            : `Assembler ${audioContext.stories.length} audios…`,
           fn: () => {
             closeContextMenu();
             onOpenMediaAudioTool({
