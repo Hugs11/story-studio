@@ -33,7 +33,8 @@ pub(crate) struct AssetRequest {
     pub(crate) role: String,
     pub(crate) source_path: String,
     pub(crate) source_kind: AssetSourceKind,
-    pub(crate) silence_duration_sec: f64,
+    pub(crate) leading_silence_sec: f64,
+    pub(crate) trailing_silence_sec: f64,
 }
 
 // Resultat du preprocess parallele d'une AssetRequest. Contient tout ce dont
@@ -98,7 +99,8 @@ fn preprocess_request(
                 ffmpeg,
                 processed_audio_dir,
                 canonical_options,
-                request.silence_duration_sec,
+                request.leading_silence_sec,
+                request.trailing_silence_sec,
                 &request.role,
             )? {
                 AudioPreparation::Encoded { output } => PreprocessedAsset::AudioProcessed {
@@ -145,8 +147,11 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     should_cancel: &(dyn Fn() -> bool + Sync),
 ) -> Result<NativeAssetPreparationReport, String> {
     let canonical = canonicalize_project(project);
-    let requests =
-        collect_asset_requests(&canonical, project.global_options.add_silence_duration_sec);
+    let requests = collect_asset_requests(
+        &canonical,
+        project.global_options.leading_silence_duration_sec(),
+        project.global_options.trailing_silence_duration_sec(),
+    );
     // ffmpeg est requis dès qu'il y a de l'audio : la mesure (niveau + silences)
     // sert à décider entre copie verbatim et ré-encodage.
     let has_audio = requests
@@ -388,12 +393,18 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
 
 pub(crate) fn collect_asset_requests(
     project: &CanonicalProject,
-    silence_duration_sec: f64,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
 ) -> Vec<AssetRequest> {
     let mut requests = Vec::new();
 
     if let Some(path) = project.root_audio.as_ref() {
-        requests.push(audio_request("rootAudio", path, silence_duration_sec));
+        requests.push(audio_request(
+            "rootAudio",
+            path,
+            leading_silence_sec,
+            trailing_silence_sec,
+        ));
     }
     if let Some(path) = project.root_image.as_ref() {
         requests.push(image_request("rootImage", path));
@@ -403,7 +414,12 @@ pub(crate) fn collect_asset_requests(
     }
     if !project.options.auto_next {
         if let Some(path) = project.night_mode_audio.as_ref() {
-            requests.push(audio_request("nightModeAudio", path, silence_duration_sec));
+            requests.push(audio_request(
+                "nightModeAudio",
+                path,
+                leading_silence_sec,
+                trailing_silence_sec,
+            ));
         }
     }
 
@@ -413,7 +429,8 @@ pub(crate) fn collect_asset_requests(
             "root",
             &mut requests,
             project.options.auto_next,
-            silence_duration_sec,
+            leading_silence_sec,
+            trailing_silence_sec,
         );
     }
     for entry in &project.shared_entries {
@@ -422,14 +439,16 @@ pub(crate) fn collect_asset_requests(
             "shared",
             &mut requests,
             project.options.auto_next,
-            silence_duration_sec,
+            leading_silence_sec,
+            trailing_silence_sec,
         );
     }
     if !project.options.auto_next {
         collect_native_graph_requests(
             project.native_graph.as_ref(),
             &mut requests,
-            silence_duration_sec,
+            leading_silence_sec,
+            trailing_silence_sec,
         );
     }
 
@@ -469,7 +488,8 @@ pub(crate) fn active_native_graph(
 fn collect_native_graph_requests(
     native_graph: Option<&serde_json::Value>,
     requests: &mut Vec<AssetRequest>,
-    silence_duration_sec: f64,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
 ) {
     let Some(stages) = active_native_graph(native_graph)
         .and_then(|graph| graph.get("document"))
@@ -485,7 +505,8 @@ fn collect_native_graph_requests(
             requests.push(audio_request(
                 &native_graph_asset_role(stage_id, "audio"),
                 path,
-                silence_duration_sec,
+                leading_silence_sec,
+                trailing_silence_sec,
             ));
         }
         if let Some(path) = stage.get("image").and_then(|value| value.as_str()) {
@@ -502,7 +523,8 @@ fn collect_entry_requests(
     prefix: &str,
     requests: &mut Vec<AssetRequest>,
     auto_next: bool,
-    silence_duration_sec: f64,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
 ) {
     match entry {
         CanonicalEntry::Menu(menu) => {
@@ -511,14 +533,22 @@ fn collect_entry_requests(
                 requests.push(audio_request(
                     &format!("{}/menuAudio", label),
                     path,
-                    silence_duration_sec,
+                    leading_silence_sec,
+                    trailing_silence_sec,
                 ));
             }
             if let Some(path) = menu.image.as_ref() {
                 requests.push(image_request(&format!("{}/menuImage", label), path));
             }
             for child in &menu.children {
-                collect_entry_requests(child, &label, requests, auto_next, silence_duration_sec);
+                collect_entry_requests(
+                    child,
+                    &label,
+                    requests,
+                    auto_next,
+                    leading_silence_sec,
+                    trailing_silence_sec,
+                );
             }
         }
         CanonicalEntry::Story(story) => {
@@ -527,14 +557,16 @@ fn collect_entry_requests(
                 requests.push(audio_request(
                     &format!("{}/storyAudio", label),
                     path,
-                    silence_duration_sec,
+                    leading_silence_sec,
+                    trailing_silence_sec,
                 ));
             }
             if let Some(path) = story.item_audio.as_ref() {
                 requests.push(audio_request(
                     &format!("{}/itemAudio", label),
                     path,
-                    silence_duration_sec,
+                    leading_silence_sec,
+                    trailing_silence_sec,
                 ));
             }
             if !auto_next {
@@ -542,7 +574,8 @@ fn collect_entry_requests(
                     requests.push(audio_request(
                         &format!("{}/afterPlaybackPromptAudio", label),
                         path,
-                        silence_duration_sec,
+                        leading_silence_sec,
+                        trailing_silence_sec,
                     ));
                 }
                 for (index, step) in story.after_playback_sequence.iter().enumerate() {
@@ -550,7 +583,8 @@ fn collect_entry_requests(
                         requests.push(audio_request(
                             &format!("{}/afterPlaybackSequence/{}/audio", label, index),
                             path,
-                            silence_duration_sec,
+                            leading_silence_sec,
+                            trailing_silence_sec,
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -565,7 +599,8 @@ fn collect_entry_requests(
                         requests.push(audio_request(
                             &format!("{}/afterPlaybackHomeStep/audio", label),
                             path,
-                            silence_duration_sec,
+                            leading_silence_sec,
+                            trailing_silence_sec,
                         ));
                     }
                     if let Some(path) = step.image.as_ref() {
@@ -606,12 +641,18 @@ fn emit_asset_result(asset: &PreparedAsset, emit: &dyn Fn(&str)) {
     ));
 }
 
-fn audio_request(role: &str, source_path: &str, silence_duration_sec: f64) -> AssetRequest {
+fn audio_request(
+    role: &str,
+    source_path: &str,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
+) -> AssetRequest {
     AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Audio,
-        silence_duration_sec,
+        leading_silence_sec,
+        trailing_silence_sec,
     }
 }
 
@@ -620,6 +661,7 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Zip,
-        silence_duration_sec: 0.0,
+        leading_silence_sec: 0.0,
+        trailing_silence_sec: 0.0,
     }
 }

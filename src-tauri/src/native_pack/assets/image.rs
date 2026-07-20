@@ -111,6 +111,7 @@ pub(crate) fn image_request(role: &str, source_path: &str) -> AssetRequest {
         role: role.to_string(),
         source_path: source_path.to_string(),
         source_kind: AssetSourceKind::Image,
-        silence_duration_sec: 0.0,
+        leading_silence_sec: 0.0,
+        trailing_silence_sec: 0.0,
     }
 }

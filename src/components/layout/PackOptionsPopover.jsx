@@ -2,15 +2,24 @@ import { useEffect, useRef } from 'react';
 import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
 import { Wrench } from '../icons/LucideLocal';
-import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
+import {
+  formatPackAudioEdgeSilence,
+  getPackAudioEdgeSilenceSettings,
+} from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
 
-const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
-const SILENCE_MODE_OPTIONS = [
-  ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences de début/fin et les ramène à exactement ${EDGE_SILENCE_LABEL} (coupe si trop long, complète si trop court).`],
-  ['add', `Ajouter ${EDGE_SILENCE_LABEL}`, `Ajouter ${EDGE_SILENCE_LABEL} aux silences de début et de fin`, `Ajoute ${EDGE_SILENCE_LABEL} à chaque bord sans mesurer l'existant — le silence déjà présent s'additionne.`],
-  ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
-];
+function silenceModeOptions(leadingSeconds, trailingSeconds) {
+  const leadingLabel = formatPackAudioEdgeSilence(leadingSeconds);
+  const trailingLabel = formatPackAudioEdgeSilence(trailingSeconds);
+  const edgeLabel = leadingSeconds === trailingSeconds
+    ? leadingLabel
+    : `${leadingLabel} au début / ${trailingLabel} à la fin`;
+  return [
+    ['normalize', 'Ajuster', 'Mesurer et ajuster les silences de début et de fin', `Recommandé : mesure les silences et les ramène à exactement ${leadingLabel} au début et ${trailingLabel} à la fin (coupe si trop long, complète si trop court).`],
+    ['add', `Ajouter ${edgeLabel}`, `Ajouter ${leadingLabel} au début et ${trailingLabel} à la fin`, `Ajoute ${leadingLabel} au début et ${trailingLabel} à la fin sans mesurer l'existant — le silence déjà présent s'additionne.`],
+    ['off', 'Ne rien faire', 'Ne pas modifier les silences de début et de fin', 'Ne touche pas aux silences de début et de fin.'],
+  ];
+}
 
 const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
 
@@ -27,9 +36,11 @@ export function PackOptionsPopover({
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
   const isSimpleProject = projectType === 'simple';
+  const { leading, trailing } = getPackAudioEdgeSilenceSettings();
+  const silenceOptions = silenceModeOptions(leading, trailing);
   // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
   const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
-  const activeSilenceHelp = (SILENCE_MODE_OPTIONS.find(([mode]) => mode === activeSilenceMode) ?? SILENCE_MODE_OPTIONS[0])[3];
+  const activeSilenceHelp = (silenceOptions.find(([mode]) => mode === activeSilenceMode) ?? silenceOptions[0])[3];
 
   useEffect(() => () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -110,7 +121,7 @@ export function PackOptionsPopover({
                   <span className="pack-options-control-title">Silence début / fin</span>
                 </span>
                 <div className="pack-options-segmented" role="group" aria-label="Mode de silence début et fin">
-                  {SILENCE_MODE_OPTIONS.map(([mode, label, ariaLabel, help]) => (
+                  {silenceOptions.map(([mode, label, ariaLabel, help]) => (
                     <Tooltip key={mode} text={help} wrap>
                       <button
                         type="button"

@@ -109,7 +109,7 @@ fn canonical_document_for_fidelity(canonical: &CanonicalProject) -> Result<Story
 }
 
 fn placeholder_assets(canonical: &CanonicalProject) -> Vec<PreparedAsset> {
-    collect_asset_requests(canonical, 1.0)
+    collect_asset_requests(canonical, 1.0, 1.0)
         .into_iter()
         .enumerate()
         .map(|(index, request)| {

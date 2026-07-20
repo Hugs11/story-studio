@@ -39,6 +39,17 @@ pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, Strin
 /// Dézipe un ZIP/7z Lunii et retourne `{ rootAudio, rootImage, entries }`.
 /// Les fichiers audio et image sont copiés dans `dest_dir`.
 pub fn unpack_zip_to_entries(zip_path: &str, dest_dir: &str) -> Result<serde_json::Value, String> {
+    unpack_zip_to_entries_with_policy(zip_path, dest_dir, false)
+}
+
+pub fn unpack_zip_to_entries_with_policy(
+    zip_path: &str,
+    dest_dir: &str,
+    allow_unsupported: bool,
+) -> Result<serde_json::Value, String> {
+    if allow_unsupported {
+        return unpack_zip_to_entries_unchecked(zip_path, dest_dir);
+    }
     let editability = classify_pack_editability(zip_path)?;
     if !editability.authoring_editable {
         return Err(format!(
@@ -671,7 +682,9 @@ fn project_from_imported_entries(
         global_options: GlobalOptions {
             add_silence: false,
             silence_mode: None,
-            add_silence_duration_sec: 1.0,
+            add_silence_duration_sec: crate::domain::project::AudioEdgeSilenceDuration::uniform(
+                1.0,
+            ),
             auto_next,
             night_mode,
             harmonize_loudness: true,
@@ -943,7 +956,7 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 mod tests {
     use super::{
         check_pack_editability, classify_pack_editability, unpack_zip_to_entries,
-        unpack_zip_to_entries_unchecked,
+        unpack_zip_to_entries_unchecked, unpack_zip_to_entries_with_policy,
     };
     use std::fs;
     use std::io::Write;
@@ -1970,6 +1983,14 @@ mod tests {
             error.contains("Pack non éditable"),
             "diagnostic inattendu : {error}",
         );
+
+        let forced = unpack_zip_to_entries_with_policy(
+            zip_path.to_str().expect("utf8"),
+            dir.join("forced-out").to_str().expect("utf8"),
+            true,
+        )
+        .expect("explicit unsafe extraction should bypass editability only");
+        assert!(forced["entries"].is_array());
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

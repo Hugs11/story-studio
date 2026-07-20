@@ -75,13 +75,14 @@ export function useProjectLifecycle({
   // pack (décompression affichée DANS le funnel) puis atterrit dans l'éditeur.
   // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
   // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
-  async function handleLandEditablePack({ zipPath, packLabel }) {
+  async function handleLandEditablePack({ zipPath, packLabel, allowUnsupported = false }) {
     await runFunnelLanding('pack', async (workspaceDir) => {
       const transformed = await unpackZipIntoBlankProject({
         zipPath,
         zipName: packLabel,
         workspaceDir,
         baseProject: store.project,
+        allowUnsupported,
       });
       if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
       // Suggérer une version incrémentée (_V2 si aucune) et forcer la modal de

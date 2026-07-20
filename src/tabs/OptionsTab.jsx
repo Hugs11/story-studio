@@ -9,6 +9,7 @@ import { InterfaceSection } from './OptionsTab/InterfaceSection';
 import { ProjectsMediaSection } from './OptionsTab/ProjectsMediaSection';
 import { VoiceSection } from './OptionsTab/VoiceSection';
 import { AiImagesSection } from './OptionsTab/AiImagesSection';
+import { AdvancedSection } from './OptionsTab/AdvancedSection';
 import { YoutubeSection } from './OptionsTab/YoutubeSection';
 import { DiagnosticSection } from './OptionsTab/DiagnosticSection';
 import './OptionsTab.css';
@@ -107,6 +108,10 @@ export function OptionsTab({
             sectionRef={registerSection('comfyui')}
             sdSettings={sdSettings}
             onUpdateSdSettings={onUpdateSdSettings}
+          />
+          <AdvancedSection
+            className={sectionClass('advanced')}
+            sectionRef={registerSection('advanced')}
           />
           <YoutubeSection
             className={sectionClass('youtube')}

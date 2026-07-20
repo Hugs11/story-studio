@@ -2,7 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { normalizeProjectData, projectToRustExport, projectToSerializable } from '../src/store/projectModel.js';
-import { PACK_AUDIO_EDGE_SILENCE_SECONDS } from '../src/config/audioProcessing.js';
+import {
+  PACK_AUDIO_EDGE_SILENCE_SECONDS,
+  normalizePackAudioEdgeSilence,
+} from '../src/config/audioProcessing.js';
+
+test('audio edge silence settings keep the supported range', () => {
+  assert.equal(normalizePackAudioEdgeSilence(null), PACK_AUDIO_EDGE_SILENCE_SECONDS);
+  assert.equal(normalizePackAudioEdgeSilence(-1), 0);
+  assert.equal(normalizePackAudioEdgeSilence(2.5), 2.5);
+  assert.equal(normalizePackAudioEdgeSilence(99), 99);
+});
 
 test('projectToRustExport injects pack export metadata', () => {
   const project = normalizeProjectData({
@@ -27,10 +37,29 @@ test('projectToRustExport injects pack export metadata', () => {
   assert.equal(rustExport.packDescription, 'Changelog');
   assert.equal(rustExport.packUuid, '11111111-2222-4333-8444-555555555555');
   assert.equal(rustExport.globalOptions.silenceMode, 'normalize');
-  assert.equal(rustExport.globalOptions.addSilenceDurationSec, PACK_AUDIO_EDGE_SILENCE_SECONDS);
+  assert.deepEqual(rustExport.globalOptions.addSilenceDurationSec, {
+    start: PACK_AUDIO_EDGE_SILENCE_SECONDS,
+    end: PACK_AUDIO_EDGE_SILENCE_SECONDS,
+  });
   assert.equal(Object.hasOwn(rustExport.globalOptions, 'convertFormat'), false);
   assert.equal(Object.hasOwn(rustExport, 'rootItems'), false);
   assert.equal(Object.hasOwn(rustExport, 'menus'), false);
+});
+
+test('projectToRustExport sends independent leading and trailing silence durations', () => {
+  const rustExport = projectToRustExport({
+    projectType: 'pack',
+    globalOptions: { silenceMode: 'add' },
+    rootEntries: [],
+  }, {
+    leading: 0.2,
+    trailing: 0.7,
+  });
+
+  assert.deepEqual(rustExport.globalOptions.addSilenceDurationSec, {
+    start: 0.2,
+    end: 0.7,
+  });
 });
 
 test('projectToSerializable keeps Rust-only and legacy model fields out of the mbah model', () => {

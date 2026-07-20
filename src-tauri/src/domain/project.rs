@@ -19,7 +19,7 @@ pub(crate) struct GlobalOptions {
         rename = "addSilenceDurationSec",
         default = "default_add_silence_duration_sec"
     )]
-    pub(crate) add_silence_duration_sec: f64,
+    pub(crate) add_silence_duration_sec: AudioEdgeSilenceDuration,
     #[serde(rename = "autoNext")]
     pub(crate) auto_next: bool,
     #[serde(rename = "nightMode")]
@@ -37,13 +37,48 @@ impl GlobalOptions {
             false => SilenceMode::Off,
         })
     }
+
+    pub(crate) fn leading_silence_duration_sec(&self) -> f64 {
+        self.add_silence_duration_sec.leading()
+    }
+
+    pub(crate) fn trailing_silence_duration_sec(&self) -> f64 {
+        self.add_silence_duration_sec.trailing()
+    }
 }
 
-fn default_add_silence_duration_sec() -> f64 {
+#[derive(Deserialize, Clone, Copy, Debug)]
+#[serde(untagged)]
+pub(crate) enum AudioEdgeSilenceDuration {
+    Uniform(f64),
+    Split { start: f64, end: f64 },
+}
+
+impl AudioEdgeSilenceDuration {
+    pub(crate) const fn uniform(seconds: f64) -> Self {
+        Self::Uniform(seconds)
+    }
+
+    pub(crate) fn leading(self) -> f64 {
+        match self {
+            Self::Uniform(seconds) => seconds,
+            Self::Split { start, .. } => start,
+        }
+    }
+
+    pub(crate) fn trailing(self) -> f64 {
+        match self {
+            Self::Uniform(seconds) => seconds,
+            Self::Split { end, .. } => end,
+        }
+    }
+}
+
+fn default_add_silence_duration_sec() -> AudioEdgeSilenceDuration {
     // Aligné sur la cible du vérificateur de pack (0.4 s) et sur le défaut
     // frontend PACK_AUDIO_EDGE_SILENCE_SECONDS. Repli pour les projets dont le
     // JSON ne porte pas encore le champ.
-    0.4
+    AudioEdgeSilenceDuration::uniform(0.4)
 }
 
 fn default_true() -> bool {
@@ -177,4 +212,23 @@ pub(crate) struct Project {
 
 fn default_pack_version() -> i32 {
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AudioEdgeSilenceDuration;
+
+    #[test]
+    fn edge_silence_duration_accepts_legacy_and_split_json() {
+        let legacy: AudioEdgeSilenceDuration =
+            serde_json::from_value(serde_json::json!(0.4)).expect("legacy uniform duration");
+        assert_eq!(legacy.leading(), 0.4);
+        assert_eq!(legacy.trailing(), 0.4);
+
+        let split: AudioEdgeSilenceDuration =
+            serde_json::from_value(serde_json::json!({ "start": 0.2, "end": 0.7 }))
+                .expect("split duration");
+        assert_eq!(split.leading(), 0.2);
+        assert_eq!(split.trailing(), 0.7);
+    }
 }

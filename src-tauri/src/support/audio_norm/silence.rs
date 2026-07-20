@@ -71,11 +71,17 @@ pub(crate) fn build_edge_silence_filters(
     trailing: f64,
     target: f64,
 ) -> EdgeSilenceFilters {
-    let target = if target.is_finite() && target >= 0.0 {
-        target
-    } else {
-        EDGE_SILENCE_SEC
-    };
+    build_edge_silence_filters_with_targets(leading, trailing, target, target)
+}
+
+pub(crate) fn build_edge_silence_filters_with_targets(
+    leading: f64,
+    trailing: f64,
+    leading_target: f64,
+    trailing_target: f64,
+) -> EdgeSilenceFilters {
+    let leading_target = normalized_edge_target(leading_target);
+    let trailing_target = normalized_edge_target(trailing_target);
     let mut pre_filters = Vec::new();
     let mut post_filters = Vec::new();
 
@@ -94,14 +100,24 @@ pub(crate) fn build_edge_silence_filters(
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
 
-    if target > 0.001 {
-        post_filters.push(format!("adelay={}", (target * 1000.0).round()));
-        post_filters.push(format!("apad=pad_dur={}", format_seconds(target)));
+    if leading_target > 0.001 {
+        post_filters.push(format!("adelay={}", (leading_target * 1000.0).round()));
+    }
+    if trailing_target > 0.001 {
+        post_filters.push(format!("apad=pad_dur={}", format_seconds(trailing_target)));
     }
 
     EdgeSilenceFilters {
         pre_filters,
         post_filters,
+    }
+}
+
+fn normalized_edge_target(value: f64) -> f64 {
+    if value.is_finite() && value >= 0.0 {
+        value
+    } else {
+        EDGE_SILENCE_SEC
     }
 }
 
@@ -359,6 +375,15 @@ mod tests {
                 ],
                 post_filters: vec!["adelay=400".to_string(), "apad=pad_dur=0.4".to_string()],
             }
+        );
+    }
+
+    #[test]
+    fn builds_independent_leading_and_trailing_silence_filters() {
+        let filters = build_edge_silence_filters_with_targets(0.0, 0.0, 0.2, 0.7);
+        assert_eq!(
+            filters.post_filters,
+            vec!["adelay=200".to_string(), "apad=pad_dur=0.7".to_string()]
         );
     }
 

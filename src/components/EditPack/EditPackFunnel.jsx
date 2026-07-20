@@ -10,6 +10,7 @@ import {
 import { Eye, FolderOpen, Package, TriangleAlert, Undo2, Upload } from '../icons/LucideLocal';
 import { pickFolder, pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
+import { KEYS, read as readSetting } from '../../store/persistentSettings';
 
 const ARCHIVE_RE = /\.(zip|7z)$/i;
 
@@ -31,6 +32,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
   const [busy, setBusy] = useState({ title: '', hint: '' });
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null); // { zipPath, packLabel }
+  const allowUnsupportedExtraction = readSetting(KEYS.ALLOW_UNSUPPORTED_PACK_EXTRACTION) === 'true';
 
   async function processPack(path, kind) {
     if (!path) return;
@@ -75,6 +77,19 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
     }
   }
 
+  async function handleForceExtract() {
+    if (!pending || !allowUnsupportedExtraction) return;
+    setBusy({ title: 'Extraction forcée du pack…', hint: 'La structure récupérée peut être incomplète.' });
+    setPhase('busy');
+    try {
+      await onLand({ ...pending, allowUnsupported: true });
+      onClose();
+    } catch (e) {
+      setError(`L’extraction forcée a échoué : ${e?.message ?? e}`);
+      setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
+    }
+  }
+
   return (
     <FunnelShell
       icon={<Package />}
@@ -114,12 +129,25 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
           <FunnelSectionHeader
             icon={<TriangleAlert />}
             title="Pack non éditable"
-            description="Ce pack n'est pas éditable avec Story Studio. Tu peux quand même le simuler (lecture seule)."
+            description={allowUnsupportedExtraction
+              ? "Ce pack n'est pas éditable de manière fiable. Tu peux le simuler ou tenter une extraction incomplète."
+              : "Ce pack n'est pas éditable avec Story Studio. Tu peux quand même le simuler (lecture seule)."}
           />
           {pending?.report?.reason && (
             <div className="funnel-error" role="status">{pending.report.reason}</div>
           )}
+          {!allowUnsupportedExtraction && (
+            <div className="funnel-warning" role="status">
+              Besoin de récupérer des éléments ? Une option avancée permet de tenter l’extraction :
+              {' '}Préférences → Avancé → Import et audio. La structure obtenue peut être incomplète.
+            </div>
+          )}
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
+            {allowUnsupportedExtraction && (
+              <FunnelToolButton icon={<TriangleAlert />} accent="neutral" onClick={handleForceExtract}>
+                Extraire quand même
+              </FunnelToolButton>
+            )}
             <FunnelToolButton icon={<Eye />} accent="violet" variant="solid" onClick={handleSimulate}>
               Simuler le pack
             </FunnelToolButton>
@@ -139,12 +167,25 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
           <FunnelSectionHeader
             icon={<TriangleAlert />}
             title="Pack non supporté"
-            description="Ce pack ne peut pas être ouvert ni simulé par Story Studio."
+            description={allowUnsupportedExtraction
+              ? "Ce pack ne peut pas être ouvert normalement. Tu peux tenter une extraction incomplète pour récupérer ses éléments."
+              : "Ce pack ne peut pas être ouvert ni simulé par Story Studio."}
           />
           {pending?.report?.reason && (
             <div className="funnel-error" role="status">{pending.report.reason}</div>
           )}
+          {!allowUnsupportedExtraction && (
+            <div className="funnel-warning" role="status">
+              Besoin de récupérer des éléments ? Une option avancée permet de tenter l’extraction :
+              {' '}Préférences → Avancé → Import et audio. La structure obtenue peut être incomplète.
+            </div>
+          )}
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
+            {allowUnsupportedExtraction && (
+              <FunnelToolButton icon={<TriangleAlert />} accent="neutral" onClick={handleForceExtract}>
+                Tenter l’extraction
+              </FunnelToolButton>
+            )}
             <FunnelToolButton
               icon={<Undo2 />}
               accent="neutral"

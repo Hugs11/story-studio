@@ -28,6 +28,7 @@ pub async fn unpack_zip_to_entries(
     zip_path: String,
     dest_dir: String,
     workspace_dir: String,
+    allow_unsupported: Option<bool>,
 ) -> Result<serde_json::Value, String> {
     log::info!(target: "pack", "unpack_zip_to_entries: zip='{}' dest='{}'", zip_path, dest_dir);
     let zip_path_for_log = zip_path.clone();
@@ -37,7 +38,20 @@ pub async fn unpack_zip_to_entries(
             .to_string();
         let safe_dest =
             crate::services::project_files::validate_unpack_dest_dir(&dest_dir, &workspace_dir)?;
-        pack_reader::unpack_zip_to_entries(&zip_path, &safe_dest.to_string_lossy())
+        let allow_unsupported = allow_unsupported.unwrap_or(false);
+        if allow_unsupported {
+            log::warn!(target: "pack", "unsafe editability bypass enabled for '{}'", zip_path_for_log);
+        }
+        let result = if allow_unsupported {
+            pack_reader::unpack_zip_to_entries_with_policy(
+                &zip_path,
+                &safe_dest.to_string_lossy(),
+                true,
+            )
+        } else {
+            pack_reader::unpack_zip_to_entries(&zip_path, &safe_dest.to_string_lossy())
+        };
+        result
             .inspect_err(|err| log::error!(target: "pack", "unpack_zip_to_entries failed for '{}': {}", zip_path_for_log, err))
     })
     .await

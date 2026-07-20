@@ -98,6 +98,7 @@ export function useImportSession({
   persistProjectSnapshot,
   workspaceDirRef,
   showErrorDialog,
+  showConfirmDialog,
   getImportDisplayName,
   isImportedPackPath,
   onImportedPackPromoted,
@@ -276,6 +277,29 @@ export function useImportSession({
       return;
     }
 
+    let allowUnsupported = false;
+    if (readSetting(KEYS.ALLOW_UNSUPPORTED_PACK_EXTRACTION) === 'true') {
+      try {
+        const report = await invoke('classify_pack_editability', { zipPath: currentZipItem.zipPath });
+        if (!report?.authoringEditable) {
+          const confirmed = await showConfirmDialog?.({
+            title: 'Extraction non supportée',
+            message:
+              "Ce pack n’est pas éditable de manière fiable par Story Studio. L’extraction peut être incomplète et le projet obtenu peut être impossible à régénérer.\n\n"
+              + `${report?.reason || 'La structure du pack n’est pas prise en charge.'}\n\nContinuer uniquement pour récupérer des éléments.`,
+            variant: 'warning',
+            okLabel: 'Extraire quand même',
+            okKind: 'danger-outline',
+            cancelLabel: 'Annuler',
+          });
+          if (!confirmed) return;
+          allowUnsupported = true;
+        }
+      } catch (error) {
+        logger.warn(`unpack:editability-check-failed path='${currentZipItem.zipPath}' error=${error}`);
+      }
+    }
+
     setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
     try {
       const extractedDirName = sanitizeImportedName(currentZipItem.name || itemId, itemId).replace(/[/\\:*?"<>|]/g, '_');
@@ -284,6 +308,7 @@ export function useImportSession({
         zipPath: currentZipItem.zipPath,
         destDir,
         workspaceDir: wsDir,
+        allowUnsupported,
       });
       const transformed = projectFromUnpackResult({
         baseProject,
@@ -335,10 +360,21 @@ export function useImportSession({
   // aucune sauvegarde forcée, l'écriture va dans le dossier de
   // session. Retourne le projet promu (ou `null` si aucune entrée). L'appelant
   // (App.jsx) gère le store et la persistance éphémère.
-  async function unpackZipIntoBlankProject({ zipPath, zipName, workspaceDir, baseProject }) {
+  async function unpackZipIntoBlankProject({
+    zipPath,
+    zipName,
+    workspaceDir,
+    baseProject,
+    allowUnsupported = false,
+  }) {
     const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
     const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
-    const result = await invoke('unpack_zip_to_entries', { zipPath, destDir, workspaceDir });
+    const result = await invoke('unpack_zip_to_entries', {
+      zipPath,
+      destDir,
+      workspaceDir,
+      allowUnsupported,
+    });
     return projectFromUnpackResult({
       baseProject,
       menuId: null,
