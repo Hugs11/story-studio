@@ -6,7 +6,9 @@ import {
   buildMediaAudioToolRequest,
   createMediaToolSourceSignature,
   getAssemblyReplacementEligibility,
+  getMediaToolAutomaticProjectAction,
   getMediaToolProjectActions,
+  haveSameMediaPathMultiset,
   resolveAudioStoriesInProjectOrder,
   validateMediaAudioToolRequest,
 } from '../src/store/mediaToolContext.js';
@@ -137,7 +139,7 @@ test('ordinary consecutive stories are replaceable while an explicit divergent r
   assert.equal(getAssemblyReplacementEligibility(divergent, ['a', 'b']).code, 'ambiguous-navigation');
 });
 
-test('root stories created by audio imports remain replaceable when their explicit root return matches the default', () => {
+test('root stories created by audio imports are replaced automatically after explicit contextual assembly', () => {
   const value = project([
     story('podcast-1', { returnAfterPlay: 'root' }),
     story('podcast-2', { returnAfterPlay: 'root' }),
@@ -146,15 +148,53 @@ test('root stories created by audio imports remain replaceable when their explic
   const eligibility = getAssemblyReplacementEligibility(value, request.entryIds);
 
   assert.equal(eligibility.valid, true);
-  assert.deepEqual(getMediaToolProjectActions({
+  assert.equal(getMediaToolAutomaticProjectAction({
     request,
-    result: {
-      createdPaths: ['assembled.flac'],
-      inputPaths: request.sourcePaths,
-    },
     contextValidation: { valid: true },
     replacementEligibility: eligibility,
-  }), ['replace-stories-with-assembly']);
+  }), 'replace-stories-with-assembly');
+  assert.deepEqual(getMediaToolProjectActions({
+    request,
+    result: { createdPaths: ['assembled.flac'], inputPaths: request.sourcePaths },
+    contextValidation: { valid: true },
+    replacementEligibility: eligibility,
+  }), []);
+});
+
+test('automatic assembly replacement is unavailable outside a safe contextual request', () => {
+  const value = project([story('a'), story('b')]);
+  const request = requestFor(value, ['a', 'b']);
+  const eligibility = getAssemblyReplacementEligibility(value, request.entryIds);
+
+  assert.equal(getMediaToolAutomaticProjectAction({
+    request: { ...request, origin: 'media' },
+    contextValidation: { valid: true },
+    replacementEligibility: eligibility,
+  }), null);
+  assert.equal(getMediaToolAutomaticProjectAction({
+    request,
+    contextValidation: { valid: false },
+    replacementEligibility: eligibility,
+  }), null);
+});
+
+test('assembly input validation accepts modal reordering but requires the same sources', () => {
+  assert.equal(haveSameMediaPathMultiset(
+    ['one.mp3', 'two.mp3', 'three.mp3'],
+    ['three.mp3', 'one.mp3', 'two.mp3'],
+  ), true);
+  assert.equal(haveSameMediaPathMultiset(
+    ['same.mp3', 'same.mp3', 'other.mp3'],
+    ['other.mp3', 'same.mp3', 'same.mp3'],
+  ), true);
+  assert.equal(haveSameMediaPathMultiset(
+    ['one.mp3', 'two.mp3'],
+    ['one.mp3'],
+  ), false);
+  assert.equal(haveSameMediaPathMultiset(
+    ['one.mp3', 'two.mp3'],
+    ['one.mp3', 'other.mp3'],
+  ), false);
 });
 
 test('a changed source signature invalidates the contextual request', () => {

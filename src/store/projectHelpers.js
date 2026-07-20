@@ -67,6 +67,10 @@ export function createWorkSnapshot(project, mediaLibraryPaths = [], mediaTags = 
   });
 }
 
+export function isSaveInputStillCurrent(inputAtSaveStart, currentInput) {
+  return inputAtSaveStart === currentInput;
+}
+
 export function hasUnsavedWork({
   project,
   mediaLibraryPaths = [],

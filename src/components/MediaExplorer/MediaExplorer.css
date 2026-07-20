@@ -913,10 +913,17 @@
   line-height: 1.4;
 }
 
+.btn.media-tool-result-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
 .media-tool-result-copy {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  padding-right: 24px;
 }
 
 .media-tool-result-copy small {

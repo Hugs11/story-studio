@@ -1,11 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ensureWorkspaceDir,
   rememberRecentProject,
   saveProject,
   saveProjectAs,
 } from '../store/projectIO';
-import { createWorkSnapshot, shouldAbortEphemeralPromotion } from '../store/projectHelpers';
+import {
+  createWorkSnapshot,
+  isSaveInputStillCurrent,
+  shouldAbortEphemeralPromotion,
+} from '../store/projectHelpers';
 import { logger } from '../utils/logger';
 
 export function useSaveProgress({
@@ -27,6 +31,8 @@ export function useSaveProgress({
 }) {
   const [saveProgress, setSaveProgress] = useState(null); // null | { lines: string[], complete: boolean }
   const [saveAsProgress, setSaveAsProgress] = useState(null);
+  const liveStoreRef = useRef(store);
+  liveStoreRef.current = store;
 
   const persistProjectSnapshot = useCallback(async (project, savePath) => {
     const result = await saveProject(project, savePath, null, {
@@ -73,12 +79,13 @@ export function useSaveProgress({
         setSaveProgress(prev => prev ? { ...prev, lines: [...prev.lines, step] } : { lines: [step], complete: false });
       }
     }
-    const projectToSave = projectOverride ?? store.project;
-    const mediaTagsToSave = mediaTagsOverride ?? store.mediaTags;
+    const liveStore = liveStoreRef.current;
+    const projectToSave = projectOverride ?? liveStore.project;
+    const mediaTagsToSave = mediaTagsOverride ?? liveStore.mediaTags;
     const mediaLibraryPathsToSave = mediaLibraryPathsOverride ?? mediaLibraryPathsRef.current;
-    logger.info(`save:start kind=${silent ? 'auto' : 'manual'} hasPath=${!!store.savePath} projectType=${projectToSave?.projectType || 'none'} entries=${projectToSave?.rootEntries?.length ?? 0}`);
+    logger.info(`save:start kind=${silent ? 'auto' : 'manual'} hasPath=${!!liveStore.savePath} projectType=${projectToSave?.projectType || 'none'} entries=${projectToSave?.rootEntries?.length ?? 0}`);
     try {
-      let result = await saveProject(projectToSave, store.savePath, onProgress, {
+      let result = await saveProject(projectToSave, liveStore.savePath, onProgress, {
         autosave: silent,
         backupLimit: autoSaveEnabled ? autoSaveBackupLimit : 0,
         mediaTags: mediaTagsToSave,
@@ -100,9 +107,15 @@ export function useSaveProgress({
             workspaceDir: workspaceDirRef.current,
           });
         }
-        store.syncProjectWithoutHistory(result.project);
-        store.setSavePath(result.path);
-        if (result.mediaLibraryPaths) {
+        const currentStore = liveStoreRef.current;
+        if (isSaveInputStillCurrent(projectToSave, currentStore.project)) {
+          currentStore.syncProjectWithoutHistory(result.project);
+        }
+        currentStore.setSavePath(result.path);
+        if (
+          result.mediaLibraryPaths
+          && isSaveInputStillCurrent(mediaLibraryPathsToSave, mediaLibraryPathsRef.current)
+        ) {
           setMediaLibraryPaths(result.mediaLibraryPaths);
           mediaLibraryPathsRef.current = result.mediaLibraryPaths;
         }

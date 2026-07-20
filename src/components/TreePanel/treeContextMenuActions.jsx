@@ -2,7 +2,7 @@ import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
-import { resolveAudioStoriesInProjectOrder } from '../../store/mediaToolContext';
+import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../store/mediaToolContext';
 import { END_NODE_ID } from './treePanelConstants';
 import {
   IconArrowUpLeft,
@@ -172,9 +172,12 @@ export function buildTreeContextActions({
           },
         });
       } else {
+        const replacementEligibility = getAssemblyReplacementEligibility(project, audioContext.entryIds);
         actions.push({
           icon: <IconStory />,
-          label: 'Assembler leurs audios dans Médias…',
+          label: replacementEligibility.valid
+            ? 'Assembler et remplacer les histoires…'
+            : 'Assembler leurs audios dans Médias…',
           fn: () => {
             closeContextMenu();
             onOpenMediaAudioTool({

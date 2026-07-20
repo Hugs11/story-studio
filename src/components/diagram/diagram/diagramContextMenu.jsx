@@ -3,7 +3,7 @@ import { audioClipboard, imageClipboard } from '../../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../../tree/treeOperations';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../../icons/LucideLocal';
 import { END_NODE_ID } from '../flowDiagramLayout';
-import { resolveAudioStoriesInProjectOrder } from '../../../store/mediaToolContext';
+import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../../store/mediaToolContext';
 
 function setNodeColor({ nodeId, nodeType, color, onUpdateMedia, onUpdateMenu, onUpdateItem }) {
   const fields = { treeColor: color };
@@ -137,9 +137,12 @@ export function buildDiagramContextActions({
         },
       });
     } else {
+      const replacementEligibility = getAssemblyReplacementEligibility(project, audioContext.entryIds);
       actions.push({
         icon: <Music />,
-        label: 'Assembler leurs audios dans Médias…',
+        label: replacementEligibility.valid
+          ? 'Assembler et remplacer les histoires…'
+          : 'Assembler leurs audios dans Médias…',
         fn: () => {
           closeContextMenu();
           onOpenMediaAudioTool({

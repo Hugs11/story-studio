@@ -13,6 +13,7 @@ import { KEYS, write } from '../../store/persistentSettings';
 import { basename } from '../../utils/fileUtils';
 import { isDeletableWorkspaceMediaPath } from '../../store/workspaceDirs';
 import {
+  getMediaToolAutomaticProjectAction,
   getAssemblyReplacementEligibility,
   getMediaToolProjectActions,
 } from '../../store/mediaToolContext';
@@ -546,12 +547,11 @@ export function MediaExplorer({
 
   function handleAudioAssemblyCreated(path, metadata = {}) {
     const request = assemblyRequest;
-    onMediaCreated?.(path);
     setPendingSelectPaths([path]);
     setAssemblyOpen(false);
     setAssemblyItems([]);
     setAssemblyRequest(null);
-    setToolResult({
+    const result = {
       request,
       tool: 'assemble',
       mode: 'assemble',
@@ -559,6 +559,37 @@ export function MediaExplorer({
       inputPaths: metadata.inputPaths ?? [],
       failures: [],
       message: `Audio assemblé créé : ${basename(cleanPath(path))}`,
+    };
+    if (request && metadata.projectAction) {
+      const outcome = onApplyMediaToolProjectAction?.({
+        request,
+        action: metadata.projectAction,
+        result,
+      });
+      onMediaCreated?.(path);
+      if (outcome?.ok) {
+        setToolResult({
+          ...result,
+          request: null,
+          projectApplied: true,
+          message: 'Les histoires ont été remplacées par le fichier audio assemblé.',
+        });
+        return;
+      }
+      onInvalidateMediaToolRequest?.(request.requestId);
+      setToolResult({
+        ...result,
+        request: null,
+        unavailableReason: outcome?.reason || 'Le remplacement du projet a été refusé.',
+      });
+      return;
+    }
+    onMediaCreated?.(path);
+    if (request) onInvalidateMediaToolRequest?.(request.requestId);
+    setToolResult({
+      ...result,
+      request: null,
+      unavailableReason: metadata.projectActionUnavailableReason || '',
     });
   }
 
@@ -617,6 +648,21 @@ export function MediaExplorer({
     }
   }
 
+  const assemblyContextValidation = assemblyRequest
+    ? onValidateMediaToolRequest?.(assemblyRequest) ?? { valid: false, reason: 'Le contexte projet n’est plus disponible.' }
+    : { valid: false, reason: '' };
+  const liveAssemblyEligibility = assemblyRequest
+    ? getAssemblyReplacementEligibility(project, assemblyRequest.entryIds)
+    : null;
+  const automaticAssemblyProjectAction = getMediaToolAutomaticProjectAction({
+    request: assemblyRequest,
+    contextValidation: assemblyContextValidation,
+    replacementEligibility: liveAssemblyEligibility,
+  });
+  const automaticAssemblyUnavailableReason = assemblyRequest && !automaticAssemblyProjectAction
+    ? (assemblyContextValidation.reason || liveAssemblyEligibility?.reason || 'Le remplacement du projet n’est pas sûr.')
+    : '';
+
   const contextualValidation = toolResult?.request
     ? onValidateMediaToolRequest?.(toolResult.request) ?? { valid: false, reason: 'Le contexte projet n’est plus disponible.' }
     : { valid: false, reason: '' };
@@ -633,7 +679,7 @@ export function MediaExplorer({
   if (toolResult?.request && availableProjectActions.length === 0) {
     if (!contextualValidation.valid) unavailableProjectActionReason = contextualValidation.reason;
     else if (toolResult.request.tool === 'assemble' && !assemblyEligibility?.valid) unavailableProjectActionReason = assemblyEligibility?.reason;
-    else if (toolResult.request.tool === 'assemble') unavailableProjectActionReason = 'L’ordre d’assemblage ne correspond plus à l’ordre des histoires.';
+    else if (toolResult.request.tool === 'assemble') unavailableProjectActionReason = 'Les fichiers assemblés ne correspondent plus aux histoires sélectionnées.';
     else if (toolResult.request.mode === 'full-split' && !toolResult.coverage?.valid) unavailableProjectActionReason = toolResult.coverage?.reason;
     else if (toolResult.failures?.length) unavailableProjectActionReason = 'Toutes les parties requises n’ont pas pu être créées.';
   }
@@ -861,6 +907,8 @@ export function MediaExplorer({
           savePath={savePath}
           projectName={projectName}
           contextRequest={assemblyRequest}
+          projectAction={automaticAssemblyProjectAction}
+          projectActionUnavailableReason={automaticAssemblyUnavailableReason}
           onClose={() => {
             if (assemblyRequest) onInvalidateMediaToolRequest?.(assemblyRequest.requestId);
             setAssemblyOpen(false);
@@ -905,7 +953,7 @@ export function MediaExplorer({
       <MediaToolResultBanner
         result={toolResult}
         projectActions={availableProjectActions}
-        unavailableReason={toolResult?.actionError || unavailableProjectActionReason}
+        unavailableReason={toolResult?.actionError || toolResult?.unavailableReason || unavailableProjectActionReason}
         busyAction={busyProjectAction}
         onProjectAction={applyMediaToolProjectAction}
         onFinish={finishMediaToolResult}
