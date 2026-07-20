@@ -17,6 +17,21 @@ export default defineConfig(async () => ({
     }),
   ].filter(Boolean),
 
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "react-vendor",
+              test: /node_modules[\\/]react(?:-dom)?[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
+
   // Options Vite propres au développement Tauri, appliquées seulement en `tauri dev` ou `tauri build`.
   //
   // 1. Empêcher Vite de masquer les erreurs Rust.
