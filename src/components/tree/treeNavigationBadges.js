@@ -101,7 +101,7 @@ export function computeBadgesData(entry, parentMenu, issuesById, project, rootEn
   const returnStatus = returnStatusFromIssues(entryIssues);
   const shouldShowDefault = (isDefault) => !isDefault || showDefaultReturns;
 
-  if (navigation.endNodeReturn.isActive) {
+  if (navigation.endNodeReturn.isPresented) {
     const isDefault = !navigation.endNodeReturn.isConfigured;
     if (shouldShowDefault(isDefault)) {
       pushTargetBadge(out, {

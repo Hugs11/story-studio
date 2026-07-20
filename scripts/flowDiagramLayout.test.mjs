@@ -163,6 +163,16 @@ test('un dossier déplié affiche chaque trajet contextuel via le message de fin
   assert.equal(edges.some((edge) => edge.source === 'global-group'), false);
 });
 
+test('un message de fin configuré sans audio participe déjà au parcours affiché', () => {
+  const project = projectWithStoryHome(null);
+  project.globalOptions = { endNode: true };
+  const edges = navigationEdgesFor(project);
+
+  assert.ok(edges.some((edge) => edge.from === 'story-a' && edge.to === 'end-node'));
+  assert.ok(edges.some((edge) => edge.from === 'story-b' && edge.to === 'end-node'));
+  assert.ok(edges.some((edge) => edge.from === 'end-node' && edge.to === 'menu-a'));
+});
+
 test('un dossier replié ne fabrique aucun retour condensé pour une reprise contextuelle', () => {
   const project = projectWithContextualGlobalEnd();
   const layout = getStructureLevelLayout(project, diagramMetrics, {

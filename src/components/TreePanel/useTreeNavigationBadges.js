@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { computeBadgesData, formatBadgeTitle } from '../tree/treeNavigationBadges';
 import {
-  getGeneratedEndNodeHomeNavigation,
-  getGeneratedEndNodeReturnNavigation,
+  getPresentedEndNodeHomeNavigation,
+  getPresentedEndNodeReturnNavigation,
   getGeneratedNavigationTargetName,
   hasVisibleEndNode,
 } from '../../store/generatedNavigation';
@@ -120,7 +120,7 @@ export function useTreeNavigationBadges({
 
   const endNodeNavigationBadges = (() => {
     const badges = [];
-    const returnNavigation = getGeneratedEndNodeReturnNavigation(project);
+    const returnNavigation = getPresentedEndNodeReturnNavigation(project);
     if (hasEndNode && returnNavigation) {
       const nightSuffix = project.globalOptions?.nightMode ? ' (mode nuit)' : '';
       const isNightMode = !!project.globalOptions?.nightMode;
@@ -135,7 +135,7 @@ export function useTreeNavigationBadges({
       });
     }
 
-    const homeNavigation = getGeneratedEndNodeHomeNavigation(project);
+    const homeNavigation = getPresentedEndNodeHomeNavigation(project);
     if (hasEndNode && homeNavigation?.targetId) {
       const homeName = getGeneratedNavigationTargetName(homeNavigation.targetId, projectIndex);
       const nightSuffix = homeNavigation.isNightMode ? ' (mode nuit)' : '';

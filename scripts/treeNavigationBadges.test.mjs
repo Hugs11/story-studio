@@ -87,6 +87,38 @@ test('computeBadgesData : histoire via message de fin configuré expose un badge
   );
 });
 
+test('computeBadgesData : message de fin sans audio expose déjà le parcours configuré', () => {
+  const entry = {
+    id: 'story-a',
+    type: 'story',
+    name: 'A',
+    audio: 'a.mp3',
+    itemAudio: 'a-title.mp3',
+    controlSettings: {},
+  };
+  const project = {
+    rootEntries: [entry],
+    globalOptions: { endNode: true },
+  };
+
+  assert.deepEqual(
+    computeBadgesData(entry, null, new Map(), project, project.rootEntries, { showDefaultReturns: true }),
+    [{
+      kind: 'end-node',
+      status: 'default',
+      targetId: 'story:story-a',
+      isDefault: true,
+      isImportedPrompt: false,
+    }, {
+      kind: 'home',
+      status: 'default',
+      targetId: 'story:story-a',
+      isInactive: false,
+      isDefault: true,
+    }],
+  );
+});
+
 test('computeBadgesData : option default affiche retour et Home par défaut', () => {
   const entry = {
     id: 'story-a',

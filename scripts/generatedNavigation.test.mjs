@@ -7,6 +7,8 @@ import {
   getEffectiveEndBehavior,
   getGeneratedEndNodeHomeNavigation,
   getGeneratedEndNodeReturnNavigation,
+  getPresentedEndNodeHomeNavigation,
+  getPresentedEndNodeReturnNavigation,
   getGeneratedStoryNavigation,
   hasGeneratedEndNode,
   hasVisibleEndNode,
@@ -720,14 +722,25 @@ test('multi story summary reports mixed continuation modes', () => {
   assert.equal(summary.commonFinalTargetId, null);
 });
 
-test('endNode without audio is visible-only and not generated', () => {
-  const p = project([], {
+test('endNode without audio remains non-generated but participates in the presented route', () => {
+  const a = story('a');
+  const p = project([a], {
     globalOptions: { endNode: true },
   });
+  const navigation = getGeneratedStoryNavigation(a, null, p, p.rootEntries);
+  const behavior = getEffectiveEndBehavior(a, null, p, p.rootEntries);
 
   assert.equal(hasVisibleEndNode(p), true);
   assert.equal(hasGeneratedEndNode(p), false);
   assert.equal(getGeneratedEndNodeHomeNavigation({ ...p, nightModeHomeReturn: 'root' }), null);
+  assert.equal(getGeneratedEndNodeReturnNavigation(p), null);
+  assert.equal(getPresentedEndNodeReturnNavigation(p)?.isContextual, true);
+  assert.equal(getPresentedEndNodeHomeNavigation({ ...p, nightModeHomeReturn: 'root' })?.targetId, 'root');
+  assert.equal(navigation.usesEndNode, false);
+  assert.equal(navigation.endNodeReturn.isActive, false);
+  assert.equal(navigation.endNodeReturn.isPresented, true);
+  assert.equal(behavior.endStepKind, 'end-node');
+  assert.equal(behavior.usesEndStep, true);
 });
 
 test('autoNext hides visible/generated end node controls', () => {
