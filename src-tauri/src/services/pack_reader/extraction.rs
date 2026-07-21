@@ -702,6 +702,10 @@ fn project_from_imported_entries(
             ),
             auto_next,
             night_mode,
+            end_message_autoplay: imported
+                .get("endMessageAutoplay")
+                .and_then(|value| value.as_bool())
+                .unwrap_or(true),
             harmonize_loudness: true,
         },
     })

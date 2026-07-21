@@ -78,6 +78,24 @@ test('end node does not hide a story returnOnHome override', () => {
   assert.equal(nav.storyHome.targetId, 'root');
 });
 
+test('global end message controls mirror endMessageAutoplay', () => {
+  const first = story('first');
+  const second = story('second');
+  const value = project([first, second], {
+    nightModeAudio: 'night.mp3',
+    globalOptions: {
+      nightMode: true,
+      endNode: true,
+      endMessageAutoplay: false,
+    },
+  });
+
+  const navigation = getGeneratedStoryNavigation(first, null, value, value.rootEntries);
+
+  assert.equal(navigation.endMessage.controls.autoplay, false);
+  assert.equal(navigation.endMessage.controls.ok, true);
+});
+
 test('returnOnHomeNone with disabled Home is a visible disabled behavior', () => {
   const a = story('a', { returnOnHomeNone: true, controlSettings: { home: false } });
   const nav = getGeneratedStoryNavigation(a, null, project([a]), [a]);
@@ -398,8 +416,31 @@ test('end node fallback respects explicit story returnAfterPlay', () => {
   });
 
   const nav = getGeneratedStoryNavigation(a, menu, p, p.rootEntries);
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+  const summary = summarizeEffectiveStoryEnds([a], () => menu, p, p.rootEntries);
 
   assert.equal(nav.endNodeReturn.effectiveTargetId, 'story:target');
+  assert.equal(behavior.endStepKind, 'night-end-node');
+  assert.equal(behavior.finalTargetId, 'story:target');
+  assert.equal(summary.commonFinalTargetId, 'story:target');
+});
+
+test('an explicit global end return overrides the story destination', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
+  const target = story('target');
+  const a = story('a', { returnAfterPlay: 'story:target' });
+  menu.children = [a, target];
+  const p = project([menu], {
+    nightModeAudio: 'night.mp3',
+    nightModeReturn: 'root',
+    globalOptions: { nightMode: true },
+  });
+
+  const behavior = getEffectiveEndBehavior(a, menu, p, p.rootEntries);
+
+  assert.equal(behavior.navigation.directReturn.targetId, 'story:target');
+  assert.equal(behavior.navigation.endNodeReturn.targetId, 'root');
+  assert.equal(behavior.finalTargetId, 'root');
 });
 
 test('autoNext: story without override returns to next sibling (mirrors Rust auto_next_active)', () => {

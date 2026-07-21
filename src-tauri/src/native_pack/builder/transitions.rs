@@ -13,13 +13,13 @@ pub(crate) fn playback_controls() -> ControlSettings {
     }
 }
 
-pub(crate) fn night_story_controls() -> ControlSettings {
+pub(crate) fn night_story_controls(autoplay: bool) -> ControlSettings {
     ControlSettings {
         wheel: false,
         ok: true,
         home: true,
         pause: false,
-        autoplay: true,
+        autoplay,
     }
 }
 

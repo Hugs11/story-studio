@@ -220,6 +220,7 @@ export const MultiEditor = memo(function MultiEditor({
     || (storyAfterPlaySummary?.hasDifferentDestinations
       ? 'Destination propre à chaque histoire'
       : 'Destination par défaut de chaque histoire');
+  const usesStorySpecificEndReturn = onlyStories && hasEndNode && !project?.nightModeReturn;
 
   const batchBusy = batchImageGenerating || batchAudioGenerating;
   const playbackControlKeys = onlyMenus ? MENU_CONTROL_KEYS : SHARED_DURING_CONTROL_KEYS;
@@ -598,18 +599,50 @@ export const MultiEditor = memo(function MultiEditor({
                 </span>
                 <span className="after-play-route-arrow" aria-hidden="true">→</span>
                 <span className="after-play-route-chip is-destination">
-                  <span>Destination du message de fin</span>
+                  <span>
+                    {usesStorySpecificEndReturn
+                      ? (storyAfterPlayDestination?.label
+                        || (storyAfterPlaySummary?.hasDifferentDestinations
+                          ? 'Selon chaque histoire'
+                          : 'Destination par défaut de chaque histoire'))
+                      : 'Destination du message de fin'}
+                  </span>
                 </span>
               </div>
             </div>
 
             <div className="after-play-destination-row">
               <div className="after-play-destination-copy">
-                <span className="field-label">Message de fin commun</span>
+                <span className="field-label">
+                  {usesStorySpecificEndReturn
+                    ? 'Destination après le message de fin'
+                    : 'Message de fin commun'}
+                </span>
                 <div className="after-play-muted">
-                  La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce message. Pour modifier la destination, sélectionne le message de fin dans l'arbre à gauche.
+                  {usesStorySpecificEndReturn
+                    ? 'Le message de fin conserve une destination propre à chaque histoire sélectionnée.'
+                    : "La Lunii continue automatiquement après chaque audio d'histoire pour jouer ce message. Pour modifier la destination, sélectionne le message de fin dans l'arbre à gauche."}
                 </div>
               </div>
+              {usesStorySpecificEndReturn ? (
+                <div className="after-play-destination-select">
+                  <NavigationTargetSelect
+                    value={storyReturnAfterPlayValue}
+                    onChange={(target) => {
+                      if (target === '__mixed__') return;
+                      handleNavChange('returnAfterPlay', target);
+                    }}
+                    allMenus={allMenus}
+                    allStories={allStories.filter((story) => !ids.includes(story.id))}
+                    currentStoryId={null}
+                    emptyLabel={storyReturnEmptyLabel}
+                    resolvedDefaultValue={storyAfterPlayDestination?.selectValue}
+                    resolvedDefaultLabel={storyAfterPlayDestination?.label}
+                    resolvedDefaultKind={storyAfterPlayDestination?.kind}
+                    hideDefaultWhenResolved
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         ) : (

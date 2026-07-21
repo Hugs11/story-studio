@@ -8,6 +8,7 @@ fn canonical_options() -> CanonicalOptions {
         harmonize_loudness: true,
         auto_next: false,
         night_mode: false,
+        end_message_autoplay: true,
     }
 }
 

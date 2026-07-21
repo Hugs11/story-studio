@@ -13,6 +13,7 @@ pub(super) struct NightBridgeDetection {
     pub(super) audio: String,
     pub(super) return_target: Option<String>,
     pub(super) home_target: Option<String>,
+    pub(super) autoplay: Option<bool>,
 }
 
 struct NightBridgeInstance {
@@ -20,6 +21,7 @@ struct NightBridgeInstance {
     return_stage_id: Option<String>,
     home_stage_id: Option<String>,
     expected_next_or_fallback_stage_id: String,
+    autoplay: bool,
 }
 
 fn normalize_stage_navigation_target(
@@ -120,6 +122,7 @@ pub(super) fn detect_imported_night_mode(
             expected_next_or_fallback_stage_id: context
                 .next_story_id
                 .unwrap_or(context.fallback_stage_id),
+            autoplay: is_stage_autoplay(night_stage),
         });
     }
 
@@ -148,10 +151,16 @@ pub(super) fn detect_imported_night_mode(
         &menu_ids,
         &story_stage_map,
     );
+    let first_autoplay = instances[0].autoplay;
+    let autoplay = instances
+        .iter()
+        .all(|instance| instance.autoplay == first_autoplay)
+        .then_some(first_autoplay);
 
     Some(NightBridgeDetection {
         audio: audio?,
         return_target: Some(return_target),
         home_target,
+        autoplay,
     })
 }

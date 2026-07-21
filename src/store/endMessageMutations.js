@@ -2,7 +2,10 @@ import { collectEndMessagePresentations } from './generatedNavigation.js';
 
 function patchStory(entries, storyId, fields) {
   return (entries ?? []).map((entry) => {
-    if (entry.id === storyId && entry.type === 'story') return { ...entry, ...fields };
+    if (entry.id === storyId && entry.type === 'story') {
+      const resolvedFields = typeof fields === 'function' ? fields(entry) : fields;
+      return { ...entry, ...resolvedFields };
+    }
     if (entry.type !== 'menu') return entry;
     return { ...entry, children: patchStory(entry.children, storyId, fields) };
   });
@@ -49,6 +52,33 @@ export function updateGlobalEndMessageProject(project, fields) {
   const promptFields = globalPromptFields(fields);
   for (const storyId of linkedStoryIds) {
     next = { ...next, rootEntries: patchStory(next.rootEntries, storyId, promptFields) };
+  }
+  return next;
+}
+
+export function updateGlobalEndPlaybackProject(project, autoplay) {
+  const normalizedAutoplay = !!autoplay;
+  const linkedStoryIds = collectEndMessagePresentations(project)
+    .filter((item) => item.presentationKind === 'global' && item.entry.afterPlaybackPromptAudio)
+    .map((item) => item.entry.id);
+  let next = {
+    ...project,
+    globalOptions: {
+      ...project.globalOptions,
+      endMessageAutoplay: normalizedAutoplay,
+    },
+  };
+  for (const storyId of linkedStoryIds) {
+    next = {
+      ...next,
+      rootEntries: patchStory(next.rootEntries, storyId, (story) => ({
+        afterPlaybackPromptControlSettings: {
+          ...(story.afterPlaybackPromptControlSettings ?? {}),
+          autoplay: normalizedAutoplay,
+          ok: true,
+        },
+      })),
+    };
   }
   return next;
 }

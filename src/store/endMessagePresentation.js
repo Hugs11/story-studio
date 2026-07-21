@@ -43,6 +43,30 @@ export function getEffectiveEndMessageControlState(controls = {}, home = null) {
   };
 }
 
+export function summarizeEndMessagePlayback(controlStates = [], fallbackAutoplay = true) {
+  const autoPlay = controlStates.filter((state) => state.playback === 'autoplay').length;
+  const waitingOk = controlStates.filter((state) => state.playback === 'wait-ok').length;
+  const stays = controlStates.filter((state) => state.playback === 'stays').length;
+  const mixed = stays > 0 || (autoPlay > 0 && waitingOk > 0);
+  const mode = mixed
+    ? 'mixed'
+    : autoPlay > 0
+      ? 'auto'
+      : waitingOk > 0
+        ? 'wait'
+        : fallbackAutoplay
+          ? 'auto'
+          : 'wait';
+  return {
+    mode,
+    mixed,
+    autoPlay,
+    waitingOk,
+    stays,
+    total: controlStates.length,
+  };
+}
+
 // Les cibles ont deja ete resolues par generatedNavigation : `next_story`, les
 // fallbacks de derniere histoire et les trois etats Home y sont donc compares
 // selon le meme contrat que Rust et le simulateur.

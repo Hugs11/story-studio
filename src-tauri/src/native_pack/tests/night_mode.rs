@@ -20,6 +20,7 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: true,
+                end_message_autoplay: false,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 name: "Choose a story".to_string(),
@@ -117,7 +118,7 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
     );
     assert_eq!(night_stage.audio.as_deref(), Some("night.mp3"));
     assert!(night_stage.image.is_none());
-    assert!(night_stage.control_settings.autoplay);
+    assert!(!night_stage.control_settings.autoplay);
     assert!(night_stage.control_settings.ok);
     assert!(night_stage.control_settings.home);
     assert_eq!(
@@ -171,6 +172,7 @@ fn night_stage_preserves_story_specific_return_after_play() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: true,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 id: "menu".to_string(),
@@ -308,6 +310,7 @@ fn night_mode_return_next_story_creates_story_specific_night_stages() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: true,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 id: "menu".to_string(),
@@ -443,6 +446,7 @@ fn night_mode_return_global_menu_reuses_single_night_stage() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: true,
+                end_message_autoplay: true,
             },
             entries: vec![
                 CanonicalEntry::Menu(CanonicalMenu {
@@ -594,6 +598,7 @@ fn night_mode_return_story_target_routes_to_story_title() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: true,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 id: "menu".to_string(),

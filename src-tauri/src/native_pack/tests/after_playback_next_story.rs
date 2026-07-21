@@ -133,6 +133,7 @@ fn menu_report(stories: Vec<CanonicalStory>) -> NativeAssetPreparationReport {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 id: "menu".to_string(),

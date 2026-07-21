@@ -54,6 +54,7 @@ export function useProjectActionsValue({
     onUpdateNightMode: (value) => store.updateGlobalOption('nightMode', value),
     onUpdateNightModeReturn: (value) => store.updateGlobalEndMessage({ nightModeReturn: value }),
     onUpdateNightModeHomeReturn: (value) => store.updateGlobalEndMessage({ nightModeHomeReturn: value }),
+    onUpdateEndMessageAutoplay: store.updateGlobalEndPlayback,
     onAttachStoryEndToGlobal: store.attachStoryEndToGlobal,
     onOpenMediaAudioTool,
   };

@@ -3,7 +3,11 @@ import { AudioField } from './AudioField';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
 import { collectEndMessagePresentations } from '../../store/generatedNavigation';
-import { getEffectiveEndMessageControlState } from '../../store/endMessagePresentation';
+import {
+  getEffectiveEndMessageControlState,
+  summarizeEndMessagePlayback,
+} from '../../store/endMessagePresentation';
+import { EndMessagePlaybackControl } from './EndMessagePlaybackControl';
 import './EditorPanel.css';
 
 export function EndNodeEditor({
@@ -19,6 +23,7 @@ export function EndNodeEditor({
   onUpdateNightMode,
   onUpdateNightModeReturn,
   onUpdateNightModeHomeReturn,
+  onUpdateEndMessageAutoplay,
   onUpdateEndNodeName,
   onRemove,
   project = null,
@@ -33,9 +38,10 @@ export function EndNodeEditor({
     item.navigation.endMessage.controls,
     item.effectiveHome,
   ));
-  const waitingOk = controlStates.filter((state) => state.playback === 'wait-ok').length;
-  const autoPlay = controlStates.filter((state) => state.playback === 'autoplay').length;
-  const stays = controlStates.filter((state) => state.playback === 'stays').length;
+  const playbackSummary = summarizeEndMessagePlayback(
+    controlStates,
+    project?.globalOptions?.endMessageAutoplay ?? true,
+  );
 
   return (
     <>
@@ -70,13 +76,6 @@ export function EndNodeEditor({
         {!hasAudio && (
           <div className="info-box warn">
             Audio requis pour la génération.
-          </div>
-        )}
-        {hasAudio && (
-          <div className="info-box">
-            {globalStories.length} histoire{globalStories.length > 1 ? 's utilisent' : ' utilise'} le message du pack<br />
-            {waitingOk} attendent OK · {autoPlay} enchaînent automatiquement{stays ? ` · ${stays} restent sur le message` : ''}<br />
-            {localStories.length} fin{localStories.length !== 1 ? 's locales' : ' locale'}
           </div>
         )}
         {localStories.length > 0 && (
@@ -128,11 +127,25 @@ export function EndNodeEditor({
           <div className="card-title">Après la lecture</div>
         </div>
         <div className="editor-setting-stack">
+          <div className="editor-setting-row end-node-setting-row end-node-playback-row">
+            <div className="editor-setting-copy">
+              <div className="editor-setting-title">Attendre une confirmation</div>
+              <div className="editor-setting-desc">
+                Après le message de fin, l'enfant doit appuyer sur OK pour continuer.
+              </div>
+            </div>
+            <EndMessagePlaybackControl
+              summary={playbackSummary}
+              onChange={onUpdateEndMessageAutoplay}
+            />
+          </div>
           <div className="editor-setting-row end-node-setting-row">
             <div className="editor-setting-copy end-node-setting-copy">
               <div className="editor-setting-title">Retour après le message</div>
               <div className="editor-setting-desc">
-                Destination après le message de fin.
+                {nightModeReturn
+                  ? 'Cette destination remplace les réglages individuels des histoires.'
+                  : 'Chaque histoire utilise sa destination individuelle, héritée ou par défaut.'}
               </div>
             </div>
             <div className="editor-setting-control">
@@ -142,7 +155,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Automatique — retour propre à chaque histoire"
+                emptyLabel="Selon chaque histoire"
               />
             </div>
           </div>

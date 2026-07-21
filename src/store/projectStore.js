@@ -33,6 +33,7 @@ import {
   attachStoryEndToGlobalProject,
   removeGlobalEndMessageProject,
   updateGlobalEndMessageProject,
+  updateGlobalEndPlaybackProject,
 } from './endMessageMutations';
 
 export { sanitizeImportedEntries, sanitizeImportedName };
@@ -73,6 +74,7 @@ const DEFAULT_PROJECT = normalizeProjectData({
     harmonizeLoudness: true,
     autoNext: false,
     nightMode: false,
+    endMessageAutoplay: false,
     aiImageGen: false,
   },
   rootEntries: [],
@@ -293,6 +295,21 @@ export function useProjectStore() {
   // mutation unique : undo restaure donc toujours un etat coherent.
   const updateGlobalEndMessage = useCallback((fields) => {
     setProject((project) => updateGlobalEndMessageProject(project, fields));
+  }, [setProject]);
+
+  const updateGlobalEndPlayback = useCallback((autoplay) => {
+    setProject((project) => updateGlobalEndPlaybackProject(project, autoplay));
+  }, [setProject]);
+
+  const addGlobalEndMessage = useCallback(() => {
+    setProject((project) => ({
+      ...project,
+      globalOptions: {
+        ...project.globalOptions,
+        endNode: true,
+        endMessageAutoplay: false,
+      },
+    }));
   }, [setProject]);
 
   const attachStoryEndToGlobal = useCallback((storyId) => {
@@ -521,7 +538,7 @@ export function useProjectStore() {
     selectedId, setSelectedId,
     canUndo, undo, canRedo, redo,
     setProjectType, updateStoryAudio,
-    updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
+    updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, updateGlobalEndPlayback, addGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,
     addStory, addZip, updateItem, bulkUpdateItems, bulkDeleteItems, deleteItem, replaceZipWithEntries,
     replaceStoriesWithAssembly,

@@ -61,6 +61,9 @@ function normalizeOptions(options) {
     harmonizeLoudness: options?.harmonizeLoudness ?? true,
     autoNext: options?.autoNext ?? false,
     nightMode: options?.nightMode ?? false,
+    // Absent des anciens projets : conserver l'enchaînement automatique historique.
+    // Les nouveaux messages de fin écrivent explicitement `false` à leur création.
+    endMessageAutoplay: options?.endMessageAutoplay ?? true,
     aiImageGen: options?.aiImageGen ?? false,
     endNode: options?.endNode ?? false,
   };

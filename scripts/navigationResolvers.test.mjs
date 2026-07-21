@@ -5,6 +5,7 @@ import {
   HOME_ACTION,
   resolveEndNodeHomeTarget,
   resolvePromptHomeAction,
+  shouldAutoAdvanceEndMessage,
 } from '../src/tabs/EmulatorTab/navigationResolvers.js';
 
 function story(id, fields = {}) {
@@ -14,6 +15,12 @@ function story(id, fields = {}) {
 function promptStory(id, fields = {}) {
   return story(id, { afterPlaybackPromptAudio: 'p.mp3', ...fields });
 }
+
+test('endnode autoplay: le simulateur suit exactement le controle genere', () => {
+  assert.equal(shouldAutoAdvanceEndMessage({ autoplay: true }, true), true);
+  assert.equal(shouldAutoAdvanceEndMessage({ autoplay: false }, true), false);
+  assert.equal(shouldAutoAdvanceEndMessage({ autoplay: true }, false), false);
+});
 
 // resolveEndNodeHomeTarget : volet Home du message de fin global, consommé par le
 // ProjectSimulator pour rester à parité avec le ZipSimulator / story.json.

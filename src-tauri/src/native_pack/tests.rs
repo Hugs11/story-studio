@@ -24,6 +24,7 @@ fn sample_options() -> GlobalOptions {
         add_silence_duration_sec: crate::domain::project::AudioEdgeSilenceDuration::uniform(1.0),
         auto_next: false,
         night_mode: false,
+        end_message_autoplay: true,
     }
 }
 
