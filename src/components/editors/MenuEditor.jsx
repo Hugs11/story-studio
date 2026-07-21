@@ -5,7 +5,6 @@ import { NativeGraphEditor } from './NativeGraphEditor';
 import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { Trash2 } from '../icons/LucideLocal';
-import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { formatFrenchCount } from '../../utils/frenchText.js';
 import './EditorPanel.css';
 
@@ -30,11 +29,9 @@ const MENU_BEHAVIOR_CONTROLS = [
   },
 ];
 
-export const MenuEditor = memo(function MenuEditor({ node, project = null, parentMenu = null, onUpdate, onDelete }) {
+export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete }) {
   const isImportedContinuation = !!node.importedContinuation;
   const isAutoplaySelector = node.controlSettings?.autoplay === true && node.controlSettings?.wheel === false;
-  const generatedMenuControls = getGeneratedMenuControls(node, parentMenu, project);
-  const forcedAutoplay = generatedMenuControls.forceAutoplay && node.controlSettings?.autoplay !== true;
   const nativeGraph = node.nativeGraph ?? null;
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
@@ -84,9 +81,9 @@ export const MenuEditor = memo(function MenuEditor({ node, project = null, paren
             Sélecteur autoplay transparent : ce dossier joue son audio puis enchaîne vers ses choix sans navigation à la molette.
           </div>
         ) : null}
-        {forcedAutoplay ? (
+        {node.autoBlackImage ? (
           <div className="sequence-note sequence-note--spaced">
-            Ce dossier sera traversé automatiquement à l'export : il sert d'étape technique vers son contenu, pas d'écran de choix.
+            Écran transparent : ce dossier n'affichera aucune image pendant que son audio de sélection est joué.
           </div>
         ) : null}
         {nativeGraph ? (
