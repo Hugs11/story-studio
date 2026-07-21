@@ -18,7 +18,7 @@
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
 </p>
 
-Story Studio permet de créer des histoires pour la Lunii, d'importer des packs
+Story Studio pour Lunii permet de créer des histoires, d'importer des packs
 ZIP existants, d'organiser des menus, de vérifier les médias et d'exporter des
 packs d'histoires compatibles Lunii dans un espace de travail Windows visuel.
 Tout reste local : images, audio, navigation, simulation et export ZIP.
