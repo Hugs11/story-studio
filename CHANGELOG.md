@@ -12,6 +12,77 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.4] - 2026-07-21
+
+Story Studio v0.9.4 introduces a unified and customizable editing workspace,
+a clearer level-based diagram, reusable media workflows and stronger
+end-of-story fidelity across imported packs, simulation and generation.
+
+### Added
+
+- Added a unified workspace combining the project tree, node settings and
+  diagram in three independently visible, resizable and reorderable panels.
+  Panel order, visibility and preferred widths are preserved between sessions.
+- Added a permanent level-based diagram with collapsible story groups,
+  selectable navigation relationships, pinned return paths, branch focus,
+  breadcrumbs and improved trackpad zoom.
+- Added contextual audio tools from the tree and diagram. Audio can be opened
+  directly in the splitter or assembly tool, and compatible consecutive stories
+  can be replaced atomically by their assembled result.
+- Added image editing directly from the Media explorer. Edited images are saved
+  as durable, non-destructive derivatives that can be reused in several project
+  fields.
+- Added explicit silent selection screens for stories that intentionally have
+  no title audio, while continuing to reject accidentally missing audio.
+- Added inline tree-node renaming and shared color filters in the tree and
+  diagram searches.
+- Added advanced import and audio settings, including optional recovery from
+  unsupported packs and configurable leading/trailing silence durations.
+- Added a three-state playback control for global end messages, including
+  imported mixed states, one-step normalization to automatic or OK-confirmed
+  playback, and matching behavior in project simulation and generated packs.
+
+### Changed
+
+- Turned the Media explorer into a durable project catalogue. Removing a story,
+  folder or media assignment now preserves its files in Media; permanent disk
+  deletion is centralized there and remains blocked while a file is in use.
+- Unified end-of-story presentation around three explicit states: the pack
+  message, a local ending, or no end message. Editors, diagrams, navigation
+  summaries and simulators now consume the same effective classification.
+- Reworked compact story groups and return paths so large, deeply nested packs
+  remain readable without hiding their effective destinations.
+- Improved synchronization between the tree, diagram, settings and simulator,
+  including multi-selection, external selections and configured end-message
+  routes.
+- Improved YouTube imports with pagination, clearer selection wording and
+  natural ordering for numbered channel series.
+- Displayed audio durations without requiring playback first, simplified
+  microphone recording and clarified contextual assembly and multi-selection
+  destinations.
+- Reduced initial frontend loading work, split large application areas into
+  focused modules and expanded CI with version consistency, lint and pure
+  JavaScript test checks.
+
+### Fixed
+
+- Fixed Home, OK, `next_story`, local-ending and global-ending navigation
+  differences between Rust generation, the JavaScript mirror, ProjectSimulator
+  and ZipSimulator.
+- Fixed multi-node moves so parent/child selections remain hierarchical and
+  each operation produces one coherent undo step.
+- Fixed selection desynchronization between the tree, diagram, validation
+  actions and simulator.
+- Fixed recovery snapshot races, shortcut migration, temporary audio-preview
+  cleanup and out-of-order preview generation.
+- Fixed persistence and transfer of standalone media, contextual audio results
+  and edited-image metadata across saves, recovery sessions and workspace
+  promotion.
+- Fixed imported pack UUID handling, media search normalization, generated-image
+  thumbnail alignment, narrow-panel layouts and pack-silence option sizing.
+
+---
+
 ## [0.9.3] - 2026-07-03
 
 Story Studio v0.9.3 adds an assisted workflow layer on top of the existing

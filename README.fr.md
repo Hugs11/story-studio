@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.3" src="https://img.shields.io/badge/version-0.9.3-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.4" src="https://img.shields.io/badge/version-0.9.4-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -40,14 +40,42 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.3 ajoute un accueil guidé, des sessions non enregistrées avec
-enregistrement optionnel, des flux assistés pour modifier, vérifier ou agréger
-des packs, la génération vocale Piper sans configuration, l'import YouTube et
-une meilleure fidélité des packs importés.
+Story Studio 0.9.4 introduit un espace de travail unifié et réorganisable, un
+diagramme par niveaux plus lisible, des parcours audio et image réutilisables,
+et une meilleure fidélité des fins d'histoires de l'import à la génération.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.3](https://github.com/Hugs11/story-studio/releases/tag/v0.9.3)
+- [Lire les notes de version 0.9.4](https://github.com/Hugs11/story-studio/releases/tag/v0.9.4)
 - [Voir le changelog complet](CHANGELOG.md)
+
+## Packs de démonstration
+
+Découvrez Story Studio avec deux packs prêts à ouvrir, parcourir dans le
+simulateur et adapter dans l'éditeur :
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L"><img src="docs/assets/demo-packs/leo-la-licorne.png" width="130" alt="Couverture de Léo la licorne"></a><br>
+      <strong>Léo la licorne</strong><br>
+      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L">Télécharger sur Proton Drive</a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF"><img src="docs/assets/demo-packs/toudou-cache-cache.png" width="130" alt="Couverture de Toudou mon doudou et Cache-Cache"></a><br>
+      <strong>Toudou mon doudou + Cache-Cache — intégrale</strong><br>
+      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF">Télécharger sur Proton Drive</a>
+    </td>
+  </tr>
+</table>
+
+Pour découvrir un pack dans Story Studio :
+
+1. Téléchargez son fichier ZIP depuis Proton Drive.
+2. Lancez Story Studio et cliquez sur **Modifier un pack existant**.
+3. Sélectionnez le fichier `.zip` téléchargé.
+
+Ces packs sont distribués séparément du logiciel. Leurs histoires, fichiers
+audio et illustrations ne sont pas couverts par la licence MIT de Story Studio.
 
 ## En un coup d'œil
 
@@ -61,33 +89,85 @@ une meilleure fidélité des packs importés.
 | **Workflow** | Accueil guidé, éditeur arborescent visuel, agrégation de packs ZIP, navigation par nœuds, explorateur de médias, simulateur |
 | **Vie privée** | App locale, aucun backend hébergé, aucune télémétrie |
 
-## Captures d'écran
+## Du premier import au pack prêt à jouer
 
-![Éditeur Story Studio](docs/assets/screenshots/editor-dark.png)
+Story Studio rassemble tout le parcours dans une application locale : partir
+de ses propres fichiers ou d'un pack existant, préparer les médias, construire
+la navigation, tester le résultat et exporter un pack prêt pour la boîte à
+histoires.
 
-| Vérificateur de packs | Navigation dans l'arbre |
+### 1. Démarrer un projet ou importer des histoires
+
+Créez selon vos envies, reprenez un travail enregistré, modifiez un pack ZIP/7z
+existant ou partez d'un podcast ou de YouTube. Des parcours guidés
+permettent aussi d'agréger plusieurs packs ou d'analyser un pack communautaire.
+
+![Accueil guidé de Story Studio](docs/assets/screenshots/home-dark.png)
+
+### 2. Préparer les fichiers audio
+
+Importez ou enregistrez un son, puis ajustez-le avant de l'utiliser dans une
+histoire. Un enregistrement long peut être découpé en extraits réutilisables ;
+plusieurs fichiers peuvent aussi être réordonnés et assemblés en une seule piste
+sans modifier les originaux.
+
+![Édition précise d'une forme d'onde dans Story Studio](docs/assets/screenshots/audio-editor-dark.png)
+
+| Découper un enregistrement en extraits | Assembler plusieurs fichiers en une piste |
 |---|---|
-| ![Vérificateur de packs communautaires](docs/assets/screenshots/pack-checker-dark.png) | ![Badges de navigation dans l'arbre](docs/assets/screenshots/Tree-node-light.png) |
+| ![Découpe audio avec plusieurs extraits préparés](docs/assets/screenshots/Audio-decoupe-light.png) | ![Assemblage audio avec des sources réordonnables](docs/assets/screenshots/Audio-assemble-light.png) |
 
-| Écran d'accueil | Métadonnées du pack |
-|---|---|
-| ![Écran d'accueil](docs/assets/screenshots/home-dark.png) | ![Métadonnées du pack](docs/assets/screenshots/pack-metadata-dark.png) |
+### 3. Créer les voix, générer les illustrations et adapter les images
 
-| Options du pack | Diagramme et simulateur |
-|---|---|
-| ![Options du pack](docs/assets/screenshots/Pack-settings.png) | ![Vue diagramme avec simulateur](docs/assets/screenshots/diagram-simulator-dark.png) |
+Générez des voix localement avec Piper, prêt à l'emploi, ou utilisez XTTS pour
+le clonage vocal avancé. ComfyUI peut produire des illustrations via un service
+local ; les tâches vocales et visuelles restent suivies dans les files de
+génération de Story Studio.
 
-| Éditeur audio | Découpe audio |
+| Générer une voix localement avec Piper ou XTTS | Générer une illustration avec ComfyUI |
 |---|---|
-| ![Éditeur audio](docs/assets/screenshots/audio-editor-dark.png) | ![Découpe audio](docs/assets/screenshots/Audio-decoupe-light.png) |
+| ![Génération vocale locale avec Piper](docs/assets/screenshots/voice-generation-dark.png) | ![Génération d'une illustration avec un workflow ComfyUI](docs/assets/screenshots/comfyui-generation-dark.png) |
 
-| Assemblage audio | Import podcast |
-|---|---|
-| ![Assemblage audio](docs/assets/screenshots/Audio-assemble-light.png) | ![Import podcast](docs/assets/screenshots/Podcast-import.png) |
+Les images peuvent ensuite être recadrées, redimensionnées et ajustées au
+format 320×240 de la boîte à histoires.
 
-| Préférences | Éditeur principal |
+![Recadrage et ajustement d'une image pour la boîte à histoires](docs/assets/screenshots/image-editor-dark.png)
+
+### 4. Organiser l'histoire et tester sa navigation
+
+Construisez les menus et les histoires dans l'arbre, attribuez leurs images et
+leurs sons, puis définissez le rôle des boutons pendant et après la lecture.
+L'explorateur Médias conserve les fichiers utilisés ou non à côté du projet.
+
+![Espace unifié avec l'arbre, les réglages de l'histoire et le diagramme](docs/assets/screenshots/workspace-dark.png)
+
+Le diagramme peut être ouvert en plein écran pour comprendre la structure
+complète, les groupes d'histoires et les chemins de retour tout en conservant
+l'organisation par niveaux.
+
+![Diagramme complet par niveaux d'un grand pack d'histoires](docs/assets/screenshots/diagram-full-dark.png)
+
+Le simulateur flottant permet ensuite de parcourir cette même navigation
+directement au-dessus du diagramme avant l'export.
+
+![Diagramme complet du projet testé dans le simulateur intégré](docs/assets/screenshots/diagram-simulator-dark.png)
+
+### 5. Vérifier les réglages et générer le pack
+
+Contrôlez les métadonnées publiques, la couverture, le nom du fichier et les
+options audio ou de navigation communes au pack. Story Studio indique si le
+projet est prêt, puis génère le ZIP compatible Lunii depuis le même espace de
+travail.
+
+| Vérifier les métadonnées avant l'export | Ajuster les réglages globaux de génération |
 |---|---|
-| ![Préférences en mode clair](docs/assets/screenshots/preferences-light.png) | ![Éditeur principal](docs/assets/screenshots/editor-dark.png) |
+| ![Métadonnées du pack et nom du fichier généré](docs/assets/screenshots/pack-metadata-dark.png) | ![Réglages audio et navigation du pack](docs/assets/screenshots/Pack-settings.png) |
+
+Les packs communautaires existants peuvent également être analysés séparément.
+Le vérificateur regroupe les problèmes de structure, d'image et d'audio,
+propose des corrections sûres et peut exporter un rapport détaillé.
+
+![Vérificateur de pack communautaire et corrections proposées](docs/assets/screenshots/pack-checker-dark.png)
 
 ## Fonctionnalités
 
