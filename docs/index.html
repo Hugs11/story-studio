@@ -45,7 +45,7 @@
         "codeRepository": "https://github.com/Hugs11/story-studio",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Windows",
-        "softwareVersion": "0.9.3",
+        "softwareVersion": "0.9.4",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -288,6 +288,92 @@
         margin-top: 6px;
       }
 
+      .demo-card {
+        max-width: 820px;
+        margin: 16px auto 0;
+        padding: 20px 24px;
+        border: 1px solid rgba(245, 174, 35, 0.35);
+        border-radius: 12px;
+        background: rgba(245, 174, 35, 0.07);
+        text-align: left;
+      }
+
+      .demo-card h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      .demo-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14.5px;
+      }
+
+      .demo-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 16px 0 12px;
+      }
+
+      .demo-link {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg-elev);
+        color: var(--text);
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .demo-cover {
+        display: block;
+        width: 56px;
+        height: 56px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+
+      .demo-link-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+      }
+
+      .demo-link:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .demo-link-source {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .demo-note {
+        font-size: 12.5px !important;
+      }
+
+      .demo-steps {
+        margin: 14px 0 12px;
+        padding-left: 22px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .demo-steps strong {
+        color: var(--text);
+      }
+
       section {
         padding: 48px 0;
       }
@@ -312,74 +398,104 @@
         box-shadow: var(--shadow-lg);
       }
 
-      .showcase {
+      .journey-intro {
+        max-width: 760px;
+        margin: -12px 0 42px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .journey {
         display: flex;
         flex-direction: column;
-        gap: 56px;
+        gap: 72px;
       }
-      .row {
-        display: grid;
-        grid-template-columns: 1.15fr 1fr;
-        gap: 40px;
+
+      .journey-step {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .journey-copy {
+        max-width: 780px;
+      }
+
+      .journey-number {
+        display: inline-flex;
         align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #1a1408;
+        font-size: 14px;
+        font-weight: 800;
+        box-shadow: 0 4px 14px rgba(245, 174, 35, 0.24);
       }
-      .row.reverse {
-        grid-template-columns: 1fr 1.15fr;
+
+      .journey-copy h3 {
+        margin: 0 0 10px;
+        font-size: clamp(21px, 2.5vw, 27px);
+        letter-spacing: -0.2px;
       }
-      .row.reverse .row-media {
-        order: 2;
+
+      .journey-copy p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
       }
-      .row-media img {
+
+      .journey-media,
+      .media-pair figure {
+        margin: 0;
+      }
+
+      .journey-media img,
+      .media-pair img {
         width: 100%;
         height: auto;
         display: block;
         border-radius: 12px;
         border: 1px solid var(--border);
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
-      .row-media img:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+
+      .journey-media--compact {
+        max-width: 680px;
+        margin-inline: auto;
       }
-      .row-text .icon {
-        width: 40px;
-        height: 40px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(107, 123, 255, 0.15);
-        color: var(--violet);
-        border-radius: 10px;
-        margin-bottom: 14px;
+
+      .media-pair {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        align-items: start;
       }
-      .row-text .icon svg {
-        width: 22px;
-        height: 22px;
+
+      .media-pair--settings {
+        grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.75fr);
       }
-      .row-text h3 {
-        margin: 0 0 10px;
-        font-size: 22px;
-        font-weight: 700;
-        letter-spacing: -0.2px;
-      }
-      .row-text p {
-        margin: 0;
+
+      .media-pair figcaption {
+        margin-top: 9px;
         color: var(--muted);
-        font-size: 16px;
+        font-size: 13px;
+        text-align: center;
       }
 
       @media (max-width: 760px) {
-        .row,
-        .row.reverse {
+        .journey {
+          gap: 52px;
+        }
+        .media-pair,
+        .media-pair--settings {
           grid-template-columns: 1fr;
-          gap: 18px;
         }
-        .row.reverse .row-media {
-          order: 0;
-        }
-        .showcase {
-          gap: 40px;
+        .journey-media--compact {
+          max-width: 100%;
         }
       }
 
@@ -475,6 +591,12 @@
         .release-card {
           padding: 18px;
         }
+        .demo-card {
+          padding: 18px;
+        }
+        .demo-links {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -530,20 +652,53 @@
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.3</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.4</h2>
             <ul>
-              <li>Nouvel accueil guidé pour modifier un pack, créer depuis un podcast ou YouTube, agréger des archives et vérifier/corriger un pack.</li>
-              <li>Sessions non enregistrées par défaut : travail immédiat, enregistrement optionnel, reprise après crash et tri des médias à conserver.</li>
-              <li>Piper devient le moteur vocal local par défaut, sans serveur ni configuration, avec voix françaises téléchargées au premier usage.</li>
-              <li>Import YouTube via yt-dlp auto-téléchargé et import de vidéos, playlists ou chaînes dans l'éditeur.</li>
-              <li>Import de packs plus fidèle : références partagées, juge de fidélité canonique, agrégats et graphes ramifiés mieux préservés.</li>
+              <li>Nouvel espace de travail unifié : Arbre, Réglages et Diagramme peuvent être affichés, redimensionnés et réorganisés librement.</li>
+              <li>Diagramme permanent par niveaux avec groupes repliables, chemins de retour interactifs, focus de branche et zoom au pavé tactile.</li>
+              <li>Outils audio contextuels, édition d'images depuis Médias et catalogue durable pour réutiliser les résultats sans perdre les sources.</li>
+              <li>Messages de fin globaux, locaux ou absents présentés de façon cohérente, avec contrôle de confirmation et fidélité des packs importés.</li>
+              <li>Import YouTube paginé, renommage direct dans l'arbre, filtres par couleur et nombreux correctifs de sessions, médias et navigation.</li>
             </ul>
+          </div>
+
+          <div class="demo-card" aria-labelledby="demo-packs-title">
+            <h2 id="demo-packs-title">Deux packs pour découvrir Story Studio</h2>
+            <p>
+              Ouvrez-les dans le simulateur, explorez leur structure puis adaptez-les
+              librement dans l'éditeur.
+            </p>
+            <div class="demo-links">
+              <a class="demo-link" href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L" target="_blank" rel="noopener noreferrer">
+                <img class="demo-cover" src="assets/demo-packs/leo-la-licorne.png" alt="Couverture de Léo la licorne" />
+                <span class="demo-link-copy">
+                  <span>Léo la licorne</span>
+                  <span class="demo-link-source">Télécharger sur Proton Drive ↗</span>
+                </span>
+              </a>
+              <a class="demo-link" href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF" target="_blank" rel="noopener noreferrer">
+                <img class="demo-cover" src="assets/demo-packs/toudou-cache-cache.png" alt="Couverture de Toudou mon doudou et Cache-Cache" />
+                <span class="demo-link-copy">
+                  <span>Toudou mon doudou + Cache-Cache</span>
+                  <span class="demo-link-source">Télécharger sur Proton Drive ↗</span>
+                </span>
+              </a>
+            </div>
+            <ol class="demo-steps">
+              <li>Téléchargez le fichier ZIP du pack depuis Proton Drive.</li>
+              <li>Lancez Story Studio et cliquez sur <strong>Modifier un pack existant</strong>.</li>
+              <li>Sélectionnez le fichier <code>.zip</code> téléchargé.</li>
+            </ol>
+            <p class="demo-note">
+              Ces packs sont distribués séparément du logiciel et leurs contenus ne
+              sont pas couverts par la licence MIT de Story Studio.
+            </p>
           </div>
         </div>
         <div class="hero-shot">
           <img
-            src="assets/screenshots/editor-dark.png"
-            alt="Aperçu de l'éditeur Story Studio"
+            src="assets/screenshots/workspace-dark.png"
+            alt="Espace de travail unifié de Story Studio"
             width="1080"
           />
         </div>
@@ -551,276 +706,196 @@
 
       <section id="features">
         <div class="container">
-          <div class="showcase">
-            <div class="row">
-              <div class="row-media">
+          <h2>Du premier import au pack prêt à jouer</h2>
+          <p class="journey-intro">
+            Story Studio rassemble tout le parcours dans une application locale :
+            partir de ses propres fichiers ou d'un pack existant, préparer les
+            médias, construire la navigation, tester le résultat et exporter un
+            pack prêt pour la boîte à histoires.
+          </p>
+
+          <div class="journey">
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">1</span>
+                <h3>Démarrer un projet ou importer des histoires</h3>
+                <p>
+                  Créez selon vos envies, reprenez un travail enregistré,
+                  modifiez un pack ZIP/7z existant ou partez d'un podcast ou de
+                  YouTube. Des parcours guidés permettent aussi d'agréger
+                  plusieurs packs ou d'analyser un pack communautaire.
+                </p>
+              </div>
+              <figure class="journey-media">
                 <img
                   src="assets/screenshots/home-dark.png"
-                  alt="Écran d'accueil de Story Studio"
+                  alt="Accueil guidé de Story Studio avec les différents parcours de création et d'import"
                   loading="lazy"
                 />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                </span>
-                <h3>Démarrez en quelques secondes</h3>
+              </figure>
+            </article>
+
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">2</span>
+                <h3>Préparer les fichiers audio</h3>
                 <p>
-                  Un écran d'accueil clair pour créer librement, modifier un
-                  pack existant, importer depuis un podcast ou YouTube, agréger
-                  plusieurs archives et vérifier un pack communautaire.
+                  Importez ou enregistrez un son, puis ajustez-le avant de
+                  l'utiliser dans une histoire. Un enregistrement long peut être
+                  découpé en extraits réutilisables ; plusieurs fichiers peuvent
+                  aussi être réordonnés et assemblés en une seule piste sans
+                  modifier les originaux.
                 </p>
               </div>
-            </div>
-
-            <div class="row reverse">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/pack-checker-dark.png"
-                  alt="Vérificateur de packs communautaires"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 12l2 2 4-4" />
-                    <path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 1 0-2.948 8.001" />
-                    <path d="M21 16v-4h-4" />
-                  </svg>
-                </span>
-                <h3>Vérifiez les packs communautaires</h3>
-                <p>
-                  Analysez un ZIP avant de le partager ou de le corriger :
-                  métadonnées, images, audio, silences, saturation et navigation
-                  sont résumés dans un rapport lisible.
-                </p>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/Tree-node-light.png"
-                  alt="Badges de navigation dans l'arbre du projet"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 7h18M3 12h18M3 17h12" />
-                  </svg>
-                </span>
-                <h3>Repères de navigation lisibles</h3>
-                <p>
-                  Les badges et états de l'arbre rendent les retours, l'accueil
-                  et les chemins particuliers plus visibles pendant l'édition.
-                  Vous gardez le parcours final sous les yeux.
-                </p>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/pack-metadata-dark.png"
-                  alt="Fenêtre de métadonnées du pack"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 6v6l4 2" />
-                  </svg>
-                </span>
-                <h3>Métadonnées du pack</h3>
-                <p>
-                  Préparez le nom exporté, la couverture, l'âge conseillé,
-                  l'auteur, la version et la description dans une fenêtre dédiée
-                  avant de générer votre pack.
-                </p>
-              </div>
-            </div>
-
-            <div class="row reverse">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/Pack-settings.png"
-                  alt="Options du pack"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    <path d="M3.3 7 12 12l8.7-5" />
-                    <path d="M12 22V12" />
-                  </svg>
-                </span>
-                <h3>Options du pack au bon endroit</h3>
-                <p>
-                  Les réglages de génération sont regroupés dans un popover
-                  clair, accessible depuis la barre d'outils, sans encombrer
-                  l'éditeur principal.
-                </p>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/Podcast-import.png"
-                  alt="Import de podcast RSS"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="14" y="14" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                  </svg>
-                </span>
-                <h3>Importez depuis un podcast ou YouTube</h3>
-                <p>
-                  Récupérez des épisodes depuis un flux RSS ou des vidéos depuis
-                  YouTube, puis retrouvez-les comme histoires prêtes à organiser
-                  dans votre pack.
-                </p>
-              </div>
-            </div>
-
-            <div class="row reverse">
-              <div class="row-media">
+              <figure class="journey-media">
                 <img
                   src="assets/screenshots/audio-editor-dark.png"
-                  alt="Éditeur audio avec forme d'onde"
+                  alt="Éditeur audio de Story Studio"
                   loading="lazy"
                 />
+              </figure>
+              <div class="media-pair">
+                <figure>
+                  <img
+                    src="assets/screenshots/Audio-decoupe-light.png"
+                    alt="Découpe d'un enregistrement audio en plusieurs extraits"
+                    loading="lazy"
+                  />
+                  <figcaption>Découper un enregistrement long</figcaption>
+                </figure>
+                <figure>
+                  <img
+                    src="assets/screenshots/Audio-assemble-light.png"
+                    alt="Assemblage de plusieurs fichiers audio"
+                    loading="lazy"
+                  />
+                  <figcaption>Réordonner et assembler plusieurs pistes</figcaption>
+                </figure>
               </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                  </svg>
-                </span>
-                <h3>Audio sans complication</h3>
+            </article>
+
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">3</span>
+                <h3>Générer les voix et les images</h3>
                 <p>
-                  Enregistrez votre voix au micro, générez une voix locale avec
-                  Piper, coupez, ajoutez des fondus et assemblez plusieurs
-                  fichiers en une seule piste — directement dans l'app.
+                  Piper fournit une synthèse vocale locale prête à l'emploi ;
+                  XTTS peut être utilisé pour des voix personnalisées. Pour les
+                  illustrations, Story Studio pilote les workflows ComfyUI
+                  configurés dans l'application.
                 </p>
               </div>
-            </div>
-
-            <div class="row">
-              <div class="row-media">
+              <div class="media-pair">
+                <figure>
+                  <img
+                    src="assets/screenshots/voice-generation-dark.png"
+                    alt="Génération locale d'une voix avec Piper"
+                    loading="lazy"
+                  />
+                  <figcaption>Générer une voix avec Piper ou XTTS</figcaption>
+                </figure>
+                <figure>
+                  <img
+                    src="assets/screenshots/comfyui-generation-dark.png"
+                    alt="Génération d'une image avec un workflow ComfyUI"
+                    loading="lazy"
+                  />
+                  <figcaption>Créer une illustration avec ComfyUI</figcaption>
+                </figure>
+              </div>
+              <div class="journey-copy">
+                <h3>Modifier et adapter les images</h3>
+                <p>
+                  Les images peuvent ensuite être recadrées, redimensionnées et
+                  ajustées au format 320×240 de la boîte à histoires.
+                </p>
+              </div>
+              <figure class="journey-media journey-media--compact">
                 <img
-                  src="assets/screenshots/Audio-decoupe-light.png"
-                  alt="Découpe d'un fichier audio avant utilisation"
+                  src="assets/screenshots/image-editor-dark.png"
+                  alt="Outils de recadrage et d'ajustement d'une image"
                   loading="lazy"
                 />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.5 14.5 3 3" />
-                    <path d="M21 3 8.5 15.5" />
-                    <circle cx="5.5" cy="17.5" r="2.5" />
-                    <circle cx="5.5" cy="6.5" r="2.5" />
-                  </svg>
-                </span>
-                <h3>Découpez avant d'utiliser</h3>
+              </figure>
+            </article>
+
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">4</span>
+                <h3>Organiser, visualiser et tester le projet</h3>
                 <p>
-                  Séparez une longue piste en plusieurs segments avant de
-                  l'associer à une histoire, un menu ou un assemblage audio.
+                  Construisez les menus et les histoires dans l'arbre, puis
+                  réglez chaque nœud dans le panneau central. Le diagramme donne
+                  une vue d'ensemble de la structure, des retours et des
+                  enchaînements du pack.
                 </p>
               </div>
-            </div>
-
-            <div class="row reverse">
-              <div class="row-media">
+              <figure class="journey-media">
                 <img
-                  src="assets/screenshots/Audio-assemble-light.png"
-                  alt="Assemblage de plusieurs fichiers audio"
+                  src="assets/screenshots/diagram-full-dark.png"
+                  alt="Diagramme complet d'un pack complexe"
                   loading="lazy"
                 />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 12h6" />
-                    <path d="M14 12h6" />
-                    <path d="M10 7v10" />
-                    <path d="M14 7v10" />
-                  </svg>
-                </span>
-                <h3>Assemblez vos pistes</h3>
+              </figure>
+              <div class="journey-copy">
                 <p>
-                  Combinez plusieurs fichiers audio en une seule narration, en
-                  gardant un flux de travail clair avant l'export final.
+                  Le simulateur flottant permet de parcourir l'histoire comme
+                  sur la boîte, tout en gardant le diagramme sous les yeux.
                 </p>
               </div>
-            </div>
-
-            <div class="row">
-              <div class="row-media">
+              <figure class="journey-media">
                 <img
                   src="assets/screenshots/diagram-simulator-dark.png"
-                  alt="Vue diagramme avec simulateur intégré"
+                  alt="Diagramme du pack avec le simulateur flottant"
                   loading="lazy"
                 />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                </span>
-                <h3>Testez avant d'exporter</h3>
-                <p>
-                  Visualisez la navigation de votre pack sous forme de diagramme,
-                  et lancez le simulateur intégré pour vérifier le résultat comme
-                  si vous étiez sur la conteuse. Plus de mauvaises surprises
-                  après transfert.
-                </p>
-              </div>
-            </div>
+              </figure>
+            </article>
 
-            <div class="row reverse">
-              <div class="row-media">
-                <img
-                  src="assets/screenshots/preferences-light.png"
-                  alt="Préférences de Story Studio"
-                  loading="lazy"
-                />
-              </div>
-              <div class="row-text">
-                <span class="icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                </span>
-                <h3>Personnalisez à votre goût</h3>
+            <article class="journey-step">
+              <div class="journey-copy">
+                <span class="journey-number">5</span>
+                <h3>Vérifier les réglages puis générer le pack</h3>
                 <p>
-                  Thème clair, sombre ou système, raccourcis clavier configurables,
-                  workspace à choisir. Story Studio s'adapte à votre façon de
-                  travailler, pas l'inverse.
+                  Contrôlez les métadonnées, la couverture et les options de
+                  traitement audio avant l'export. Story Studio signale les
+                  points à corriger et ne propose la génération que lorsque le
+                  projet est prêt.
                 </p>
               </div>
-            </div>
+              <div class="media-pair media-pair--settings">
+                <figure>
+                  <img
+                    src="assets/screenshots/pack-metadata-dark.png"
+                    alt="Métadonnées et couverture du pack"
+                    loading="lazy"
+                  />
+                  <figcaption>Renseigner les métadonnées du pack</figcaption>
+                </figure>
+                <figure>
+                  <img
+                    src="assets/screenshots/Pack-settings.png"
+                    alt="Options de traitement audio et de lecture du pack"
+                    loading="lazy"
+                  />
+                  <figcaption>Vérifier les options de génération</figcaption>
+                </figure>
+              </div>
+              <div class="journey-copy">
+                <p>
+                  Le parcours de vérification peut aussi analyser un pack
+                  communautaire existant : format, images, niveau sonore,
+                  silences et navigation sont réunis dans un rapport lisible.
+                </p>
+              </div>
+              <figure class="journey-media">
+                <img
+                  src="assets/screenshots/pack-checker-dark.png"
+                  alt="Rapport de vérification d'un pack communautaire"
+                  loading="lazy"
+                />
+              </figure>
+            </article>
           </div>
         </div>
       </section>

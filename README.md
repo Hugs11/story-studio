@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.3" src="https://img.shields.io/badge/version-0.9.3-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.4" src="https://img.shields.io/badge/version-0.9.4-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -44,13 +44,42 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.3 adds a guided home experience, optional-save ephemeral
-sessions, assisted pack editing/checking/aggregation flows, zero-config Piper
-voice generation, YouTube import and stronger imported-pack fidelity.
+Story Studio 0.9.4 introduces a unified and reorderable workspace, a clearer
+level-based diagram, reusable audio and image workflows, and stronger
+end-of-story fidelity from imported packs through simulation and generation.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.3 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.3)
+- [Read the v0.9.4 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.4)
 - [See the full changelog](CHANGELOG.md)
+
+## Demo packs
+
+Discover Story Studio with two ready-to-open packs that you can explore in the
+simulator and adapt in the editor:
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L"><img src="docs/assets/demo-packs/leo-la-licorne.png" width="130" alt="Léo la licorne cover"></a><br>
+      <strong>Léo la licorne</strong><br>
+      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L">Download from Proton Drive</a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF"><img src="docs/assets/demo-packs/toudou-cache-cache.png" width="130" alt="Toudou mon doudou and Cache-Cache cover"></a><br>
+      <strong>Toudou mon doudou + Cache-Cache — complete collection</strong><br>
+      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF">Download from Proton Drive</a>
+    </td>
+  </tr>
+</table>
+
+To explore a pack in Story Studio:
+
+1. Download its ZIP file from Proton Drive.
+2. Launch Story Studio and click **Modify an existing pack**.
+3. Select the downloaded `.zip` file.
+
+These packs are distributed separately from the software. Their stories, audio
+files and illustrations are not covered by Story Studio's MIT license.
 
 ## At a Glance
 
@@ -65,33 +94,80 @@ voice generation, YouTube import and stronger imported-pack fidelity.
 | **Workflow** | Guided home workflows, visual tree editor, ZIP pack aggregation, node-based navigation, media explorer, simulator |
 | **Privacy model** | Local app, no hosted backend, no telemetry |
 
-## Screenshots
+## From first import to finished pack
 
-![Story Studio editor](docs/assets/screenshots/editor-dark.png)
+Story Studio keeps the complete workflow in one local application: start from
+your own files or an existing pack, prepare the media, build the navigation,
+test the result and export a pack ready for the story box.
 
-| Community pack checker | Tree navigation |
+### 1. Start a project or import existing stories
+
+Start however you like, reopen saved work, edit an existing ZIP/7z pack, or
+start from a podcast or YouTube source. Dedicated guided flows also let you
+aggregate several packs or inspect a community pack.
+
+![Story Studio guided home screen](docs/assets/screenshots/home-dark.png)
+
+### 2. Prepare the audio
+
+Import or record audio, then adjust it before using it in a story. A long
+recording can be split into reusable clips, while several files can be reordered
+and assembled into a single track without changing the originals.
+
+![Editing an audio waveform in Story Studio](docs/assets/screenshots/audio-editor-dark.png)
+
+| Split one recording into clips | Assemble several files into one track |
 |---|---|
-| ![Community pack checker](docs/assets/screenshots/pack-checker-dark.png) | ![Tree navigation badges](docs/assets/screenshots/Tree-node-light.png) |
+| ![Audio splitter with several prepared clips](docs/assets/screenshots/Audio-decoupe-light.png) | ![Audio assembly with reorderable source files](docs/assets/screenshots/Audio-assemble-light.png) |
 
-| Home screen | Pack metadata |
-|---|---|
-| ![Home screen](docs/assets/screenshots/home-dark.png) | ![Pack metadata modal](docs/assets/screenshots/pack-metadata-dark.png) |
+### 3. Create voices, generate artwork and adapt images
 
-| Pack options | Diagram and simulator |
-|---|---|
-| ![Pack options popover](docs/assets/screenshots/Pack-settings.png) | ![Diagram view with simulator](docs/assets/screenshots/diagram-simulator-dark.png) |
+Generate voices locally with zero-config Piper or use XTTS for advanced voice
+cloning. ComfyUI can produce illustrations through a local service, with both
+voice and image jobs followed from Story Studio's generation queues.
 
-| Audio editor | Audio splitter |
+| Generate a voice locally with Piper or XTTS | Generate an illustration with ComfyUI |
 |---|---|
-| ![Audio editor](docs/assets/screenshots/audio-editor-dark.png) | ![Audio splitter](docs/assets/screenshots/Audio-decoupe-light.png) |
+| ![Local voice generation with Piper](docs/assets/screenshots/voice-generation-dark.png) | ![Illustration generation with a ComfyUI workflow](docs/assets/screenshots/comfyui-generation-dark.png) |
 
-| Audio assembly | Podcast import |
-|---|---|
-| ![Audio assembly](docs/assets/screenshots/Audio-assemble-light.png) | ![Podcast import](docs/assets/screenshots/Podcast-import.png) |
+Images can then be cropped, resized and adjusted for the 320x240 story-box
+format.
 
-| Preferences | Main editor |
+![Cropping and adjusting an image for the story box](docs/assets/screenshots/image-editor-dark.png)
+
+### 4. Organize the story and test its navigation
+
+Build menus and stories in the tree, assign their images and audio, and define
+what the buttons do during and after playback. The Media explorer keeps used
+and unused files available alongside the project.
+
+![Unified workspace with the tree, story settings and diagram](docs/assets/screenshots/workspace-dark.png)
+
+Open the diagram full-screen to understand the complete structure, story groups
+and return paths without losing the level-by-level organization.
+
+![Full level-based diagram of a large story pack](docs/assets/screenshots/diagram-full-dark.png)
+
+The floating simulator then lets you play through the same navigation directly
+on top of the diagram before exporting.
+
+![Full project diagram tested with the built-in simulator](docs/assets/screenshots/diagram-simulator-dark.png)
+
+### 5. Review the settings and generate the pack
+
+Check the public metadata, cover, filename and pack-wide audio or navigation
+options. Story Studio reports whether the project is ready, then generates the
+Lunii-compatible ZIP from the same workspace.
+
+| Review pack metadata before export | Adjust pack-wide generation settings |
 |---|---|
-| ![Preferences in light mode](docs/assets/screenshots/preferences-light.png) | ![Main editor](docs/assets/screenshots/editor-dark.png) |
+| ![Pack metadata and generated filename](docs/assets/screenshots/pack-metadata-dark.png) | ![Pack audio and navigation settings](docs/assets/screenshots/Pack-settings.png) |
+
+Existing community packs can also be analyzed separately. The checker groups
+structural, image and audio findings, proposes safe corrections and can export
+a detailed report.
+
+![Community pack checker with proposed corrections](docs/assets/screenshots/pack-checker-dark.png)
 
 ## Features
 
