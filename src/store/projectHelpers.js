@@ -93,6 +93,12 @@ export function hasExplicitExportPackName(project) {
   return false;
 }
 
+export function shouldPromptRegenerateImportedUuid(metadata) {
+  const current = String(metadata?.uuid || '').trim();
+  const original = String(metadata?.originalUuid || '').trim();
+  return !!current && !!original && current === original;
+}
+
 export function buildTransferPromptSignature(savePath, candidates) {
   return `${savePath}::${candidates.map((candidate) => candidate.path.toLowerCase()).sort().join('|')}`;
 }
