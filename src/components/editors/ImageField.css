@@ -274,7 +274,7 @@
   flex-shrink: 0;
 }
 
-.image-sd-thumb-wrap > .tooltip-wrap {
+.image-sd-thumb-remove-wrap {
   position: absolute;
   top: -5px;
   right: -5px;
