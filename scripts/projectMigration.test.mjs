@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 
 import { migrateProjectData, normalizeProjectData, projectToRustExport, projectToSerializable } from '../src/store/projectModel.js';
 
+test('legacy end message stays automatic while an explicit new setting is preserved', () => {
+  const legacy = normalizeProjectData({ globalOptions: {}, rootEntries: [] });
+  const waiting = normalizeProjectData({
+    globalOptions: { endMessageAutoplay: false },
+    rootEntries: [],
+  });
+
+  assert.equal(legacy.globalOptions.endMessageAutoplay, true);
+  assert.equal(waiting.globalOptions.endMessageAutoplay, false);
+  assert.equal(projectToRustExport(waiting).globalOptions.endMessageAutoplay, false);
+});
+
 test('migrates a legacy convention name to pack metadata', () => {
   const migrated = normalizeProjectData(migrateProjectData({
     name: '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2',

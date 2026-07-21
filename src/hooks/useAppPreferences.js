@@ -138,7 +138,7 @@ export function useAppPreferences({
   }
 
   function handleAddEndNode() {
-    store.updateGlobalOption('endNode', true);
+    store.addGlobalEndMessage();
     store.setSelectedId('end-node');
   }
 

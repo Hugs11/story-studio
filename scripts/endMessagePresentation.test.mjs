@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   classifyEndMessagePresentation,
+  summarizeEndMessagePlayback,
 } from '../src/store/endMessagePresentation.js';
 import { getGeneratedEndMessageControls } from '../src/store/generatedPlayback.js';
 import { getEffectiveEndMessageControlState } from '../src/store/endMessagePresentation.js';
@@ -65,6 +66,23 @@ test('les controles effectifs du message global sans projection suivent Rust', (
     home: true,
     pause: false,
     autoplay: true,
+  });
+  assert.equal(getGeneratedEndMessageControls({}, { globalAutoplay: false }).autoplay, false);
+});
+
+test('le resume de lecture distingue auto, attente et mixte importe', () => {
+  const auto = { playback: 'autoplay', home: 'target' };
+  const wait = { playback: 'wait-ok', home: 'target' };
+  assert.deepEqual(summarizeEndMessagePlayback([], false), {
+    mode: 'wait', mixed: false, autoPlay: 0, waitingOk: 0, stays: 0, total: 0,
+  });
+  assert.equal(summarizeEndMessagePlayback([auto, auto]).mode, 'auto');
+  assert.equal(summarizeEndMessagePlayback([wait, wait]).mode, 'wait');
+  assert.deepEqual(summarizeEndMessagePlayback([
+    ...Array.from({ length: 145 }, () => wait),
+    ...Array.from({ length: 9 }, () => auto),
+  ]), {
+    mode: 'mixed', mixed: true, autoPlay: 9, waitingOk: 145, stays: 0, total: 154,
   });
 });
 

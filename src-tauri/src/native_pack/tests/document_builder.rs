@@ -62,6 +62,7 @@ fn builds_story_title_without_item_audio() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "story-id".to_string(),
@@ -156,6 +157,7 @@ fn root_ref_can_target_shared_story() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Ref(CanonicalRef {
             id: "ref-shared".to_string(),
@@ -225,6 +227,7 @@ fn imported_direct_story_stage_stays_combined() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "direct".to_string(),
@@ -281,6 +284,7 @@ fn imported_title_home_story_play_targets_playback_stage() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
             id: "menu".to_string(),
@@ -377,6 +381,7 @@ fn imported_menu_home_story_play_targets_playback_stage() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
             id: "menu".to_string(),
@@ -460,6 +465,7 @@ fn imported_story_home_story_play_targets_playback_stage() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
             id: "menu".to_string(),
@@ -557,6 +563,7 @@ fn root_story_return_to_shared_story_uses_single_option_action() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "source".to_string(),
@@ -635,6 +642,7 @@ fn generates_imported_prompt_controls_and_home_null() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Story(CanonicalStory {
             id: "story-id".to_string(),
@@ -721,6 +729,7 @@ fn exports_after_playback_sequence_before_story_return() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: true,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
             id: "menu".to_string(),
@@ -901,6 +910,7 @@ fn auto_next_overrides_end_steps_and_story_returns() {
             harmonize_loudness: true,
             auto_next: true,
             night_mode: true,
+            end_message_autoplay: true,
         },
         entries: vec![CanonicalEntry::Menu(CanonicalMenu {
             id: "menu".to_string(),
@@ -1156,6 +1166,7 @@ fn collects_asset_requests_for_pack() {
             harmonize_loudness: true,
             auto_next: false,
             night_mode: true,
+            end_message_autoplay: true,
         },
         entries: vec![
             CanonicalEntry::Menu(CanonicalMenu {
@@ -1276,6 +1287,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
             ),
             auto_next: false,
             night_mode: false,
+            end_message_autoplay: true,
         },
         pack_version: 1,
         pack_description: String::new(),
@@ -1388,6 +1400,7 @@ fn builds_simple_story_pack() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Story(CanonicalStory {
                 name: "Single Story".to_string(),
@@ -1461,6 +1474,7 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 name: "Choose a story".to_string(),
@@ -1597,6 +1611,7 @@ fn builds_recursive_menu_story_tree() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 name: "Choose a character".to_string(),
@@ -1743,6 +1758,7 @@ fn preserves_explicit_menu_home_transition() {
             harmonize_loudness: true,
                     auto_next: false,
                     night_mode: false,
+                    end_message_autoplay: true,
                 },
                 entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                     id: "characters".to_string(),
@@ -1855,6 +1871,7 @@ fn preserves_imported_story_title_home_transition() {
             harmonize_loudness: true,
                     auto_next: false,
                     night_mode: false,
+                    end_message_autoplay: true,
                 },
                 entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                     id: "characters".to_string(),

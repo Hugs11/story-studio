@@ -893,6 +893,7 @@ fn duplicated_night_stages_are_imported_as_next_story_night_mode() {
     assert_eq!(result["nightModeAudio"].as_str(), Some("night.mp3"));
     assert_eq!(result["nightModeReturn"].as_str(), Some("next_story"));
     assert_eq!(result["nightModeHomeReturn"].as_str(), Some("root"));
+    assert_eq!(result["endMessageAutoplay"].as_bool(), Some(true));
 
     let entries = result["entries"].as_array().expect("entries");
     assert!(entries
@@ -901,6 +902,31 @@ fn duplicated_night_stages_are_imported_as_next_story_night_mode() {
     assert!(entries
         .iter()
         .all(|entry| entry["returnAfterPlay"].as_str().is_none()));
+
+    let mut manual_doc = doc.clone();
+    for stage in manual_doc["stageNodes"]
+        .as_array_mut()
+        .expect("manual stages")
+    {
+        if stage["name"].as_str() == Some("nightStage") {
+            stage["controlSettings"]["autoplay"] = serde_json::Value::Bool(false);
+        }
+    }
+    let manual_result =
+        walk_story_doc_to_entries(&manual_doc, &assets).expect("manual imported entries");
+    assert_eq!(manual_result["endMessageAutoplay"].as_bool(), Some(false));
+
+    let mut mixed_doc = doc.clone();
+    let mut night_stages: Vec<_> = mixed_doc["stageNodes"]
+        .as_array_mut()
+        .expect("mixed stages")
+        .iter_mut()
+        .filter(|stage| stage["name"].as_str() == Some("nightStage"))
+        .collect();
+    night_stages[0]["controlSettings"]["autoplay"] = serde_json::Value::Bool(false);
+    let mixed_result =
+        walk_story_doc_to_entries(&mixed_doc, &assets).expect("mixed imported entries");
+    assert!(mixed_result["endMessageAutoplay"].is_null());
 }
 
 #[test]

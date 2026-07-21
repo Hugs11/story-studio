@@ -289,6 +289,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     ...endMessageBase,
     controls: getGeneratedEndMessageControls(entry, {
       usePromptControls: hasPrompt && endMessageBase.presentationKind !== 'none',
+      globalAutoplay: project?.globalOptions?.endMessageAutoplay ?? true,
     }),
   };
   const sequence = entry?.afterPlaybackSequence ?? [];

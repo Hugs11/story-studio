@@ -10,7 +10,15 @@ import { LuniiShell } from './LuniiShell';
 import { getLocalUrl, MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
-import { findEntryLocation, getMenuBrowseState, HOME_ACTION, resolveEndNodeHomeTarget, resolvePromptHomeAction, resolveStoryHomeTarget } from './navigationResolvers';
+import {
+  findEntryLocation,
+  getMenuBrowseState,
+  HOME_ACTION,
+  resolveEndNodeHomeTarget,
+  resolvePromptHomeAction,
+  resolveStoryHomeTarget,
+  shouldAutoAdvanceEndMessage,
+} from './navigationResolvers';
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 
@@ -52,6 +60,9 @@ export function ProjectSimulator({
   const activeStory = isSimple ? simpleStory : currentEntry;
   const activeSequence = activeStory?.type === 'story' ? (activeStory.afterPlaybackSequence ?? []) : [];
   const activeSequenceStep = state === 'sequence' ? activeSequence[sequenceIndex] : null;
+  const activeStoryNavigation = activeStory?.type === 'story'
+    ? getGeneratedStoryNavigation(activeStory, currentMenu, project, rootEntries)
+    : null;
 
   // rootEntries change a chaque edition du projet (frappe dans un champ). On ne
   // doit re-synchroniser le simulateur sur son ancre que lorsque l'ancre change,
@@ -537,7 +548,13 @@ export function ProjectSimulator({
   }, [activeSequenceStep, advanceSequence, state, autoPlaybackEnabled]);
 
   useEffect(() => {
-    if (state !== 'endnode' || !autoPlaybackEnabled) return undefined;
+    if (
+      state !== 'endnode'
+      || !shouldAutoAdvanceEndMessage(
+        activeStoryNavigation?.endMessage?.controls,
+        autoPlaybackEnabled,
+      )
+    ) return undefined;
 
     let pollTimer;
     let waited = 0;
@@ -560,7 +577,12 @@ export function ProjectSimulator({
       clearTimeout(pollTimer);
       if (audioRef.current) audioRef.current.removeEventListener('ended', navigateAfterStory);
     };
-  }, [navigateAfterStory, state, autoPlaybackEnabled]);
+  }, [
+    activeStoryNavigation?.endMessage?.controls?.autoplay,
+    navigateAfterStory,
+    state,
+    autoPlaybackEnabled,
+  ]);
 
   function handleOk() {
     if (isSimple && state === 'playing' && simpleStory?.controlSettings?.ok === false) {

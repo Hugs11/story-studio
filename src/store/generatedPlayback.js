@@ -12,9 +12,17 @@ const GENERATED_GLOBAL_END_CONTROLS = Object.freeze({
 
 // Miroir de `night_story_controls` / `prompt_controls_from_settings` Rust.
 // Une projection technique garde ses controles importes ; un message global
-// sans projection emet les controles fixes du night bridge.
-export function getGeneratedEndMessageControls(entry, { usePromptControls = false } = {}) {
-  if (!usePromptControls) return { ...GENERATED_GLOBAL_END_CONTROLS };
+// sans projection emet les controles configures du night bridge.
+export function getGeneratedEndMessageControls(entry, {
+  usePromptControls = false,
+  globalAutoplay = GENERATED_GLOBAL_END_CONTROLS.autoplay,
+} = {}) {
+  if (!usePromptControls) {
+    return {
+      ...GENERATED_GLOBAL_END_CONTROLS,
+      autoplay: globalAutoplay !== false,
+    };
+  }
   const controls = entry?.afterPlaybackPromptControlSettings ?? {};
   return {
     wheel: controls.wheel ?? GENERATED_GLOBAL_END_CONTROLS.wheel,

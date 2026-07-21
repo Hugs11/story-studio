@@ -24,12 +24,25 @@ pub(crate) struct CanonicalProject {
     pub(crate) shared_entries: Vec<CanonicalEntry>,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub(crate) struct CanonicalOptions {
     pub(crate) silence_mode: SilenceMode,
     pub(crate) auto_next: bool,
     pub(crate) night_mode: bool,
+    pub(crate) end_message_autoplay: bool,
     pub(crate) harmonize_loudness: bool,
+}
+
+impl Default for CanonicalOptions {
+    fn default() -> Self {
+        Self {
+            silence_mode: SilenceMode::default(),
+            auto_next: false,
+            night_mode: false,
+            end_message_autoplay: true,
+            harmonize_loudness: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -281,6 +294,7 @@ fn canonicalize_options(options: &GlobalOptions) -> CanonicalOptions {
         silence_mode: options.silence_mode(),
         auto_next: options.auto_next,
         night_mode: options.night_mode,
+        end_message_autoplay: options.end_message_autoplay,
         harmonize_loudness: options.harmonize_loudness,
     }
 }

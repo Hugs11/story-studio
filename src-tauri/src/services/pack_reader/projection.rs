@@ -407,15 +407,17 @@ pub(super) fn walk_story_doc_to_entries(
         &actions,
         assets,
     );
-    let (night_mode_audio, night_mode_return, night_mode_home_return) = night_mode_detection
-        .map(|detection| {
-            (
-                Some(detection.audio),
-                detection.return_target,
-                detection.home_target,
-            )
-        })
-        .unwrap_or((None, None, None));
+    let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
+        night_mode_detection
+            .map(|detection| {
+                (
+                    Some(detection.audio),
+                    detection.return_target,
+                    detection.home_target,
+                    detection.autoplay,
+                )
+            })
+            .unwrap_or((None, None, None, None));
     let unresolved_transitions = assign_return_targets(&mut entries, &stage_names);
     if let Some(target) = night_mode_return.as_deref() {
         remove_night_mode_return_overrides(&mut entries, target, None);
@@ -482,6 +484,7 @@ pub(super) fn walk_story_doc_to_entries(
         "nightModeAudio": if auto_next_detected { None } else { night_mode_audio },
         "nightModeReturn": if auto_next_detected { None } else { night_mode_return },
         "nightModeHomeReturn": if auto_next_detected { None } else { night_mode_home_return },
+        "endMessageAutoplay": if auto_next_detected { None } else { end_message_autoplay },
         "nativeGraph": serde_json::Value::Null,
         "advancedTransitionsDetected": reported_unresolved_transitions_detected,
         "unresolvedTransitions": reported_unresolved_transitions,

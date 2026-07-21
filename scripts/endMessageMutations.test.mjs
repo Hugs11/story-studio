@@ -5,6 +5,7 @@ import {
   attachStoryEndToGlobalProject,
   removeGlobalEndMessageProject,
   updateGlobalEndMessageProject,
+  updateGlobalEndPlaybackProject,
 } from '../src/store/endMessageMutations.js';
 
 function baseProject() {
@@ -20,6 +21,7 @@ function baseProject() {
           id: 'linked', type: 'story', afterPlaybackPromptAudio: 'global.mp3',
           afterPlaybackPromptOkTarget: 'menu:menu', afterPlaybackPromptHomeNone: true,
           afterPlaybackPromptControlSettings: linkedControls,
+          returnAfterPlay: 'story:local',
         },
         {
           id: 'local', type: 'story', afterPlaybackPromptAudio: 'global.mp3',
@@ -48,6 +50,17 @@ test('mise a jour globale propage seulement les projections liees et preserve le
   assert.equal(project.nightModeAudio, 'global.mp3');
 });
 
+test('le mode selon chaque histoire réactive le retour individuel sans le modifier', () => {
+  const project = baseProject();
+  const next = updateGlobalEndMessageProject(project, { nightModeReturn: null });
+  const [linked, local] = stories(next);
+
+  assert.equal(next.nightModeReturn, null);
+  assert.equal(linked.afterPlaybackPromptOkTarget, null);
+  assert.equal(linked.returnAfterPlay, 'story:local');
+  assert.equal(local.afterPlaybackPromptOkTarget, 'menu:menu');
+});
+
 test('rattachement aligne les trois dimensions sans modifier les controles locaux', () => {
   const project = baseProject();
   const next = attachStoryEndToGlobalProject(project, 'local');
@@ -71,4 +84,22 @@ test('suppression globale retire les projections liees et conserve les fins loca
   assert.deepEqual(linked.afterPlaybackSequence, []);
   assert.equal(local.afterPlaybackPromptAudio, 'global.mp3');
   assert.equal(local.afterPlaybackPromptHomeTarget, 'root');
+});
+
+test('uniformiser la lecture modifie seulement les projections globales en une mutation', () => {
+  const project = baseProject();
+  const automatic = updateGlobalEndPlaybackProject(project, true);
+  let [linked, local] = stories(automatic);
+
+  assert.equal(automatic.globalOptions.endMessageAutoplay, true);
+  assert.equal(linked.afterPlaybackPromptControlSettings.autoplay, true);
+  assert.equal(linked.afterPlaybackPromptControlSettings.ok, true);
+  assert.deepEqual(local.afterPlaybackPromptControlSettings, project.rootEntries[0].children[1].afterPlaybackPromptControlSettings);
+
+  const waiting = updateGlobalEndPlaybackProject(automatic, false);
+  [linked, local] = stories(waiting);
+  assert.equal(waiting.globalOptions.endMessageAutoplay, false);
+  assert.equal(linked.afterPlaybackPromptControlSettings.autoplay, false);
+  assert.equal(linked.afterPlaybackPromptControlSettings.ok, true);
+  assert.deepEqual(local.afterPlaybackPromptControlSettings, project.rootEntries[0].children[1].afterPlaybackPromptControlSettings);
 });

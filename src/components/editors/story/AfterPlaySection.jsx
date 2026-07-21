@@ -158,6 +158,7 @@ export function AfterPlaySection({
   const endMessage = storyNavigation?.endMessage ?? { presentationKind: 'none' };
   const usesGlobalEndNodeAudio = endMessage.presentationKind === 'global';
   const hasGeneratedEndNode = usesGlobalEndNodeAudio;
+  const usesStorySpecificEndReturn = hasGeneratedEndNode && !project?.nightModeReturn;
   const autoNextResolution = effectiveEndBehavior?.autoNext ?? null;
   const autoNextApplies = !!autoNextResolution?.applies;
 
@@ -344,11 +345,14 @@ export function AfterPlaySection({
       : `${project?.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`;
   const routeContextText = autoNextApplies
     ? 'Auto-next activé'
-    : null;
+    : usesStorySpecificEndReturn
+      ? 'Destination réglée dans cette histoire'
+      : null;
   const showEndModeControls = !hasGeneratedEndNode && !autoNextApplies;
-  const showReturnDestinationRow = !hasGeneratedEndNode
-    && !autoNextApplies
-    && autoContinuationEnabled;
+  const showReturnDestinationRow = !autoNextApplies && (
+    usesStorySpecificEndReturn
+    || (!hasGeneratedEndNode && autoContinuationEnabled)
+  );
   const autoNextContextText = getAutoNextContextText(autoNextResolution);
   const afterPlayNotes = [
     autoNextContextText,
@@ -673,10 +677,16 @@ export function AfterPlaySection({
         <div className="after-play-destination-row">
           <div className="after-play-destination-copy">
             <span className="field-label">
-              {autoNextApplies ? 'Exception à auto-next' : "Destination après l'histoire"}
+              {usesStorySpecificEndReturn
+                ? 'Destination après le message de fin'
+                : autoNextApplies
+                  ? 'Exception à auto-next'
+                  : "Destination après l'histoire"}
             </span>
             <div className="after-play-muted">
-              {autoNextApplies
+              {usesStorySpecificEndReturn
+                ? 'Utilisée lorsque le retour du message de fin est réglé sur « Selon chaque histoire ». Une valeur vide suit le dossier ou le comportement par défaut.'
+                : autoNextApplies
                 ? 'Laisser vide pour suivre le comportement auto-next global.'
                 : "L'écran ou le menu affiché à la sortie automatique."}
             </div>

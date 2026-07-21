@@ -127,6 +127,10 @@ export const HOME_ACTION = Object.freeze({
   TARGET: 'target', // cible explicite résolue (`targetId`)
 });
 
+export function shouldAutoAdvanceEndMessage(controls, autoPlaybackEnabled = true) {
+  return !!(autoPlaybackEnabled && controls?.autoplay === true);
+}
+
 // Volet Home d'un prompt de fin local, résolu comme Rust (`resolve_story_home_transition`) :
 //   homeNone             → COVER (aucune transition → début du pack) ;
 //   sans cible           → MESSAGE_OK (suit OK) ;

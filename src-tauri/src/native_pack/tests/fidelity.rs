@@ -87,6 +87,7 @@ fn fidelity_project(extracted: &serde_json::Value, title: &str) -> Project {
             ),
             auto_next: false,
             night_mode,
+            end_message_autoplay: extracted["endMessageAutoplay"].as_bool().unwrap_or(true),
         },
         pack_version: 1,
         pack_description: String::new(),

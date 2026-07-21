@@ -20,6 +20,7 @@ fn makes_root_menu_selectable_when_pack_has_multiple_root_entries() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![
                 CanonicalEntry::Story(CanonicalStory {
@@ -132,6 +133,7 @@ fn keeps_single_cover_stage_when_pack_has_multiple_root_entries() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![
                 CanonicalEntry::Story(CanonicalStory {
@@ -292,6 +294,7 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![
                 CanonicalEntry::Zip(CanonicalZip {
@@ -478,6 +481,7 @@ fn omits_menu_image_when_auto_black_image_is_enabled() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Menu(CanonicalMenu {
                 name: "Menu sans image".to_string(),
@@ -634,6 +638,7 @@ fn builds_regular_imported_zip_under_root() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Zip(CanonicalZip {
                 name: "Imported pack".to_string(),
@@ -862,6 +867,7 @@ fn builds_collection_import_without_extra_square_one() {
                 harmonize_loudness: true,
                 auto_next: false,
                 night_mode: false,
+                end_message_autoplay: true,
             },
             entries: vec![CanonicalEntry::Zip(CanonicalZip {
                 name: "Collection import".to_string(),

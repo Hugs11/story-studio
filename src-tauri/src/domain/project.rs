@@ -24,6 +24,9 @@ pub(crate) struct GlobalOptions {
     pub(crate) auto_next: bool,
     #[serde(rename = "nightMode")]
     pub(crate) night_mode: bool,
+    // Absent des anciens projets : conserver l'autoplay historique du bridge de fin.
+    #[serde(rename = "endMessageAutoplay", default = "default_true")]
+    pub(crate) end_message_autoplay: bool,
     // Harmonisation du volume (-14 LUFS) à la génération. Absent des anciens
     // projets → `true` (comportement historique : volume toujours harmonisé).
     #[serde(rename = "harmonizeLoudness", default = "default_true")]
@@ -216,7 +219,17 @@ fn default_pack_version() -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::AudioEdgeSilenceDuration;
+    use super::{AudioEdgeSilenceDuration, GlobalOptions};
+
+    #[test]
+    fn legacy_global_options_keep_end_message_autoplay() {
+        let options: GlobalOptions = serde_json::from_value(serde_json::json!({
+            "autoNext": false,
+            "nightMode": true
+        }))
+        .expect("legacy global options");
+        assert!(options.end_message_autoplay);
+    }
 
     #[test]
     fn edge_silence_duration_accepts_legacy_and_split_json() {

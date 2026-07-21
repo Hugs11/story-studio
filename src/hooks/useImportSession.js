@@ -73,7 +73,13 @@ function projectFromUnpackResult({
       nightModeAudio: result.nightModeAudio,
       nightModeReturn: result.nightModeReturn ?? null,
       nightModeHomeReturn: result.nightModeHomeReturn ?? null,
-      globalOptions: { ...nextProject.globalOptions, nightMode: true },
+      globalOptions: {
+        ...nextProject.globalOptions,
+        nightMode: true,
+        endMessageAutoplay: typeof result?.endMessageAutoplay === 'boolean'
+          ? result.endMessageAutoplay
+          : true,
+      },
     };
   }
   return {

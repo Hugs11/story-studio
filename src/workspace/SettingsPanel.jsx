@@ -32,6 +32,7 @@ export function SettingsPanel({
     onUpdateNightMode,
     onUpdateNightModeReturn,
     onUpdateNightModeHomeReturn,
+    onUpdateEndMessageAutoplay,
     onRemoveEndNode,
     onSelect,
     onAttachStoryEndToGlobal,
@@ -60,6 +61,7 @@ export function SettingsPanel({
         onUpdateNightMode={onUpdateNightMode}
         onUpdateNightModeReturn={onUpdateNightModeReturn}
         onUpdateNightModeHomeReturn={onUpdateNightModeHomeReturn}
+        onUpdateEndMessageAutoplay={onUpdateEndMessageAutoplay}
         onUpdateEndNodeName={(value) => onUpdateRoot?.({ endNodeName: value })}
         onRemove={onRemoveEndNode}
         project={project}

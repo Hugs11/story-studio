@@ -81,7 +81,9 @@ impl<'a> StoryBuilder<'a> {
             square_one: false,
             audio: Some(self.asset_name("nightModeAudio")?),
             image: None,
-            control_settings: night_story_controls(),
+            control_settings: night_story_controls(
+                self.report.project.options.end_message_autoplay,
+            ),
             home_transition,
             ok_transition: Some(return_transition),
             position: zero_position(),
