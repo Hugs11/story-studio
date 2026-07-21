@@ -31,7 +31,6 @@ const MENU_BEHAVIOR_CONTROLS = [
 
 export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete }) {
   const isImportedContinuation = !!node.importedContinuation;
-  const isAutoplaySelector = node.controlSettings?.autoplay === true && node.controlSettings?.wheel === false;
   const nativeGraph = node.nativeGraph ?? null;
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
@@ -76,16 +75,6 @@ export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete })
             {node.importedContinuation.sourceStepName ? ` · étape ${node.importedContinuation.sourceStepName}` : ''}.
           </div>
         )}
-        {isAutoplaySelector ? (
-          <div className="sequence-note sequence-note--spaced">
-            Sélecteur autoplay transparent : ce dossier joue son audio puis enchaîne vers ses choix sans navigation à la molette.
-          </div>
-        ) : null}
-        {node.autoBlackImage ? (
-          <div className="sequence-note sequence-note--spaced">
-            Écran transparent : ce dossier n'affichera aucune image pendant que son audio de sélection est joué.
-          </div>
-        ) : null}
         {nativeGraph ? (
           <div className="sequence-note sequence-note--spaced">
             Graphe interactif natif attaché à ce pack extrait : {nativeGraphStageCount} stages, {nativeGraphActionCount} actions.
@@ -183,7 +172,7 @@ export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete })
             <div className="menu-behavior-copy">
               <span className="during-play-control-title">Écran transparent</span>
               <span className="menu-behavior-desc">
-                Aucune image n'est affichée, l'écran reste vide.
+                Aucune image ne sera affichée pendant la lecture de l'audio de sélection.
               </span>
             </div>
           </label>
