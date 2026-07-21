@@ -15,6 +15,26 @@ use crate::native_pack::{canonicalize_project, StoryDocument};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
 const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
+
+fn pack_uuid_from_doc(doc: &serde_json::Value) -> Option<&str> {
+    let root_uuid = doc
+        .get("uuid")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if root_uuid.is_some() {
+        return root_uuid;
+    }
+
+    doc.get("stageNodes")
+        .and_then(|value| value.as_array())?
+        .iter()
+        .find(|stage| stage.get("squareOne").and_then(|value| value.as_bool()) == Some(true))
+        .and_then(stage_uuid)
+        .map(str::trim)
+        .filter(|value| uuid::Uuid::parse_str(value).is_ok())
+}
+
 pub fn load_pack_zip(zip_path: &str) -> Result<String, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?;
     read_story_json_from_zip(&zip_path)
@@ -80,12 +100,7 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
     let thumbnail_path = extract_zip_thumbnail(&zip_path, dest)?;
 
     let mut result = walk_story_doc_to_entries(&doc, &asset_map)?;
-    if let Some(uuid) = doc
-        .get("uuid")
-        .and_then(|value| value.as_str())
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
+    if let Some(uuid) = pack_uuid_from_doc(&doc) {
         result["uuid"] = serde_json::Value::String(uuid.to_string());
     }
     if let Some(thumb) = thumbnail_path {
@@ -1386,6 +1401,46 @@ mod tests {
     #[test]
     fn wheel_autoplay_cycle_is_unmodeled() {
         assert!(super::has_unmodeled_wheel(&unmodeled_wheel_story_json()));
+    }
+
+    #[test]
+    fn pack_uuid_prefers_root_metadata() {
+        let doc = serde_json::json!({
+            "uuid": "11111111-2222-4333-8444-555555555555",
+            "stageNodes": [{
+                "uuid": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                "squareOne": true
+            }]
+        });
+
+        assert_eq!(
+            super::pack_uuid_from_doc(&doc),
+            Some("11111111-2222-4333-8444-555555555555")
+        );
+    }
+
+    #[test]
+    fn pack_uuid_falls_back_to_legacy_square_one_uuid() {
+        let doc = serde_json::json!({
+            "stageNodes": [{
+                "uuid": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                "squareOne": true
+            }]
+        });
+
+        assert_eq!(
+            super::pack_uuid_from_doc(&doc),
+            Some("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
+        );
+    }
+
+    #[test]
+    fn pack_uuid_does_not_treat_an_arbitrary_stage_id_as_pack_identity() {
+        let doc = serde_json::json!({
+            "stageNodes": [{ "uuid": "cover", "squareOne": true }]
+        });
+
+        assert_eq!(super::pack_uuid_from_doc(&doc), None);
     }
 
     #[test]

@@ -3,18 +3,13 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { getLastExportDir, saveLastExportDir } from './useFileDialog';
 import { ensureExportsDir, projectToRustExport } from '../store/projectIO';
 import { getGenerateErrors } from '../store/projectValidation';
-import { hasExplicitExportPackName } from '../store/projectHelpers';
+import {
+  hasExplicitExportPackName,
+  shouldPromptRegenerateImportedUuid,
+} from '../store/projectHelpers';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { generateUuid } from '../utils/uuid';
 import { logger } from '../utils/logger';
-
-// Vrai si l'UUID du draft est encore l'UUID importé d'origine (non régénéré via ↺ ni
-// modifié). Sert à ne proposer la régénération que quand ça a du sens.
-function isImportedOriginalUuid(draft) {
-  const current = String(draft?.uuid || '').trim();
-  const original = String(draft?.originalUuid || '').trim();
-  return !!current && (!original || current === original);
-}
 
 // Grappe « générer le pack » extraite d'AppContent : étape métadonnées
 // (PackNameModal), gardes de validation (audit en cours puis erreurs bloquantes),
@@ -100,7 +95,7 @@ export function usePackGeneration({
     // Nouvelle révision d'un pack importé : proposer (sans obligation) un nouvel UUID
     // AVANT de générer — donc avant le sélecteur de dossier de sortie (dialogue natif
     // OS qui passe devant). Dialogue in-app awaitable, résolu ici puis on continue.
-    if (generate && importedPackPendingMetaRef.current && isImportedOriginalUuid(draft)) {
+    if (generate && importedPackPendingMetaRef.current && shouldPromptRegenerateImportedUuid(draft)) {
       const choice = await showChoiceDialog({
         title: "Nouvelle révision d'un pack importé",
         message: "Ce pack a un UUID d'origine. Générer un nouvel UUID pour cette version ?\n\n"

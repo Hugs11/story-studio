@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { generateConventionName, getExportPackName } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
+import { shouldPromptRegenerateImportedUuid } from '../../store/projectHelpers';
 import './PackNameModal.css';
 
 const AGE_CHIPS = ['2', '3', '6', '9', '12'];
@@ -127,6 +128,8 @@ export function PackNameModal({
   }, [open, packMetadata]);
 
   const normalizedDraft = useMemo(() => normalizeDraft(draft), [draft]);
+  const showImportedUuidHint = promptRegenerateUuid
+    && shouldPromptRegenerateImportedUuid(normalizedDraft);
   const exportName = useMemo(() => {
     if (normalizedDraft.namingMode === 'legacy' && normalizedDraft.legacyExportName) {
       return getExportPackName(normalizedDraft);
@@ -308,7 +311,7 @@ export function PackNameModal({
               </Tooltip>
             </div>
           </div>
-          {promptRegenerateUuid && packMetadata?.uuid ? (
+          {showImportedUuidHint ? (
             <div className="pack-meta-field-row">
               <span />
               <p className="pack-meta-uuid-hint">UUID importé du pack. Tu peux le régénérer si tu le souhaites.</p>
