@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.4" src="https://img.shields.io/badge/version-0.9.4-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.5" src="https://img.shields.io/badge/version-0.9.5-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -40,12 +40,12 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.4 introduit un espace de travail unifié et réorganisable, un
-diagramme par niveaux plus lisible, des parcours audio et image réutilisables,
-et une meilleure fidélité des fins d'histoires de l'import à la génération.
+Story Studio 0.9.5 restaure la compatibilité d'édition des packs Story Studio
+0.9.3 dont le message de fin « histoire suivante » mutualisé renvoie la
+dernière histoire des dossiers imbriqués vers le menu principal.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.4](https://github.com/Hugs11/story-studio/releases/tag/v0.9.4)
+- [Lire les notes de version 0.9.5](https://github.com/Hugs11/story-studio/releases/tag/v0.9.5)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## Packs de démonstration
