@@ -4,6 +4,52 @@ pub(super) fn custom_workflows_dir(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("luniipack-workflows")
 }
 
+fn is_model_input_key(key: &str) -> bool {
+    matches!(
+        key,
+        "ckpt_name"
+            | "unet_name"
+            | "clip_name"
+            | "clip_name1"
+            | "clip_name2"
+            | "vae_name"
+            | "lora_name"
+            | "model_name"
+            | "control_net_name"
+            | "controlnet_name"
+    )
+}
+
+pub(super) fn normalize_comfyui_model_names(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(object) => {
+            for (key, child) in object {
+                if is_model_input_key(key) {
+                    if let serde_json::Value::String(model_name) = child {
+                        if model_name.contains('\\')
+                            && !model_name.starts_with(r"\\")
+                            && !model_name
+                                .as_bytes()
+                                .get(1)
+                                .is_some_and(|byte| *byte == b':')
+                        {
+                            *model_name = model_name.replace('\\', "/");
+                        }
+                    }
+                } else {
+                    normalize_comfyui_model_names(child);
+                }
+            }
+        }
+        serde_json::Value::Array(values) => {
+            for child in values {
+                normalize_comfyui_model_names(child);
+            }
+        }
+        _ => {}
+    }
+}
+
 pub(super) fn load_manifests_from_dir(
     dir: &Path,
     is_custom: bool,
@@ -136,8 +182,17 @@ pub fn import_workflow_sync(
     fs::create_dir_all(&custom_dir)
         .map_err(|e| format!("Impossible de créer le dossier workflows : {}", e))?;
 
-    fs::copy(&api_json_path, custom_dir.join(&api_filename))
-        .map_err(|e| format!("Impossible de copier le workflow : {}", e))?;
+    let api_content = fs::read_to_string(&api_json_path)
+        .map_err(|e| format!("Impossible de lire le workflow : {}", e))?;
+    let mut api: serde_json::Value = serde_json::from_str(&api_content)
+        .map_err(|e| format!("Workflow API JSON invalide : {}", e))?;
+    normalize_comfyui_model_names(&mut api);
+    fs::write(
+        custom_dir.join(&api_filename),
+        serde_json::to_string_pretty(&api)
+            .map_err(|e| format!("Impossible de sérialiser le workflow : {}", e))?,
+    )
+    .map_err(|e| format!("Impossible de copier le workflow : {}", e))?;
 
     manifest.api_file = api_filename;
     manifest.is_custom = true;
@@ -189,4 +244,64 @@ pub fn delete_custom_workflow_sync(
         .map_err(|e| format!("Impossible de supprimer le config : {}", e))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn model_names_from_windows_become_portable_without_touching_other_values() {
+        let mut workflow = serde_json::json!({
+            "1": {
+                "inputs": {
+                    "ckpt_name": "checkpoints\\flux\\model.safetensors",
+                    "seed": 123456789,
+                    "text": "garder\\cet antislash"
+                }
+            },
+            "2": {
+                "inputs": {
+                    "lora_name": "loras/portable/model.safetensors",
+                    "control_net_name": "controlnet\\pose.safetensors"
+                }
+            }
+        });
+
+        normalize_comfyui_model_names(&mut workflow);
+
+        assert_eq!(
+            workflow["1"]["inputs"]["ckpt_name"],
+            "checkpoints/flux/model.safetensors"
+        );
+        assert_eq!(workflow["1"]["inputs"]["seed"], 123456789);
+        assert_eq!(workflow["1"]["inputs"]["text"], "garder\\cet antislash");
+        assert_eq!(
+            workflow["2"]["inputs"]["lora_name"],
+            "loras/portable/model.safetensors"
+        );
+        assert_eq!(
+            workflow["2"]["inputs"]["control_net_name"],
+            "controlnet/pose.safetensors"
+        );
+    }
+
+    #[test]
+    fn absolute_windows_model_paths_are_not_rewritten_as_relative_names() {
+        let mut workflow = serde_json::json!({
+            "1": { "inputs": { "ckpt_name": r"C:\models\model.safetensors" } },
+            "2": { "inputs": { "vae_name": r"\\server\models\vae.safetensors" } }
+        });
+
+        normalize_comfyui_model_names(&mut workflow);
+
+        assert_eq!(
+            workflow["1"]["inputs"]["ckpt_name"],
+            r"C:\models\model.safetensors"
+        );
+        assert_eq!(
+            workflow["2"]["inputs"]["vae_name"],
+            r"\\server\models\vae.safetensors"
+        );
+    }
 }

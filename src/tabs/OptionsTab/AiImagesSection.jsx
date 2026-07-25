@@ -21,7 +21,7 @@ export function AiImagesSection({ className, sectionRef, sdSettings, onUpdateSdS
   }, []);
 
   async function handleTestSd() {
-    const launching = sdSettings?.autoStart && sdSettings?.batPath;
+    const launching = sdSettings?.autoStart && sdSettings?.launcherPath;
     setSdProbe({
       state: 'loading',
       message: launching ? 'Démarrage de ComfyUI en cours… (peut prendre jusqu\'à 60s)' : 'Connexion à ComfyUI en cours…',
@@ -97,12 +97,12 @@ export function AiImagesSection({ className, sectionRef, sdSettings, onUpdateSdS
               />
             </label>
             <label className="xtts-label">
-              Fichier de démarrage (.bat)
+              Script de démarrage ComfyUI
               <input
                 className="xtts-input"
-                value={sdSettings?.batPath ?? ''}
-                onChange={(e) => onUpdateSdSettings?.({ batPath: e.target.value })}
-                placeholder="C:\chemin\vers\start_comfyui.bat"
+                value={sdSettings?.launcherPath ?? ''}
+                onChange={(e) => onUpdateSdSettings?.({ launcherPath: e.target.value })}
+                placeholder="Chemin vers start_comfyui.bat, start_comfyui.sh ou un launcher"
               />
             </label>
           </div>
@@ -111,7 +111,7 @@ export function AiImagesSection({ className, sectionRef, sdSettings, onUpdateSdS
             <div className="opts-row-info">
               <div className="opts-row-label">Démarrer ComfyUI automatiquement</div>
               <div className="opts-row-sub">
-                Lance le fichier .bat si ComfyUI ne répond pas au moment de générer.
+                Lance le script de démarrage si ComfyUI ne répond pas au moment de générer.
               </div>
             </div>
             <Toggle on={sdSettings?.autoStart} onChange={(v) => onUpdateSdSettings?.({ autoStart: v })} />
@@ -120,7 +120,7 @@ export function AiImagesSection({ className, sectionRef, sdSettings, onUpdateSdS
           <div className="xtts-actions">
             <Button onClick={handleTestSd} disabled={sdProbe.state === 'loading'}>
               {sdProbe.state === 'loading'
-                ? (sdSettings?.autoStart && sdSettings?.batPath ? 'Démarrage…' : 'Test en cours…')
+                ? (sdSettings?.autoStart && sdSettings?.launcherPath ? 'Démarrage…' : 'Test en cours…')
                 : 'Tester ComfyUI'}
             </Button>
           </div>
