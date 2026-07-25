@@ -1,0 +1,41 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "filesystem-windows",
+  "description": "User-selected file access with Windows system locations denied",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "windows"
+  ],
+  "permissions": [
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }],
+      "deny": [
+        { "path": "C:\\Windows" },
+        { "path": "C:\\Windows\\**" },
+        { "path": "C:\\Program Files" },
+        { "path": "C:\\Program Files\\**" },
+        { "path": "C:\\Program Files (x86)" },
+        { "path": "C:\\Program Files (x86)\\**" },
+        { "path": "C:\\ProgramData" },
+        { "path": "C:\\ProgramData\\**" }
+      ]
+    },
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }],
+      "deny": [
+        { "path": "C:\\Windows" },
+        { "path": "C:\\Windows\\**" },
+        { "path": "C:\\Program Files" },
+        { "path": "C:\\Program Files\\**" },
+        { "path": "C:\\Program Files (x86)" },
+        { "path": "C:\\Program Files (x86)\\**" },
+        { "path": "C:\\ProgramData" },
+        { "path": "C:\\ProgramData\\**" }
+      ]
+    }
+  ]
+}
