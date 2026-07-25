@@ -7,3 +7,4 @@ pub mod lunii_zip_validator;
 pub(crate) mod network;
 pub mod paths;
 pub mod temp;
+pub(crate) mod tool_resolver;

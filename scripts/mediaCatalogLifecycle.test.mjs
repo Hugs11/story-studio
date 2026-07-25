@@ -32,6 +32,20 @@ function projectWith(entries) {
   };
 }
 
+test('the media catalog keeps case-distinct Linux files with spaces and accents', () => {
+  const upper = '/tmp/Médias de test/A.wav';
+  const lower = '/tmp/Médias de test/a.wav';
+  const project = projectWith([
+    { id: 'story-a', type: 'story', name: 'A', audio: upper },
+    { id: 'story-b', type: 'story', name: 'B', audio: lower },
+  ]);
+
+  const items = collectMediaLibrary({ project });
+
+  assert.equal(items.length, 2);
+  assert.deepEqual(new Set(items.map((item) => item.path)), new Set([upper, lower]));
+});
+
 test('edited image sidecars stay beside their image and can be rewritten to a durable source', () => {
   const imagePath = 'C:\\session\\images-generees\\episode__cover-modifiee.png';
   const durableSource = 'C:\\workspace\\fichiers-importes\\episode__cover.png';

@@ -152,6 +152,20 @@ test('work snapshots canonicalize media ordering and Windows path casing', () =>
   assert.equal(first, second);
 });
 
+test('work snapshots preserve case-distinct POSIX media paths with spaces and accents', () => {
+  const project = { projectType: null, projectName: '', rootEntries: [] };
+  const bothFiles = createWorkSnapshot(project, [
+    '/tmp/Médias de test/A.wav',
+    '/tmp/Médias de test/a.wav',
+  ]);
+  const oneFile = createWorkSnapshot(project, [
+    '/tmp/Médias de test/A.wav',
+  ]);
+
+  assert.notEqual(bothFiles, oneFile);
+  assert.match(bothFiles, /Médias de test/);
+});
+
 test('periodic autosave can take over after the initial ephemeral seed', () => {
   const state = createEphemeralSnapshotSeedState();
   const initial = beginSeed(state, { version: 1 });
