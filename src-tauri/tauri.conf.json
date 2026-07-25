@@ -30,12 +30,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
     "resources": {
       "../LICENSE": "LICENSE",
-      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
-      "tools/ffmpeg.exe": "tools/ffmpeg.exe",
-      "tools/7z.exe": "tools/7z.exe"
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
     },
     "icon": [
       "icons/32x32.png",
