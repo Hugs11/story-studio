@@ -77,6 +77,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             use tauri::Manager;
+            let resource_dir = app
+                .path()
+                .resource_dir()
+                .map_err(|error| format!("Dossier de ressources Tauri inaccessible : {error}"))?;
+            support::tool_resolver::initialize_resource_dir(resource_dir);
             if let Ok(dir) = app.path().app_log_dir() {
                 commands::diagnostics::prune_old_log_files(&dir, 3);
             }

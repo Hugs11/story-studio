@@ -1,4 +1,6 @@
 const WEB_PATH_PATTERN = /^[a-z]+:\/\//i;
+const WINDOWS_DRIVE_PATH_PATTERN = /^[a-z]:[\\/]/i;
+const WINDOWS_UNC_PATH_PATTERN = /^(?:\\\\|\/\/)/;
 
 export function stripWindowsLongPathPrefix(path) {
   const value = String(path || '');
@@ -7,10 +9,16 @@ export function stripWindowsLongPathPrefix(path) {
 }
 
 export function pathKey(path) {
-  return stripWindowsLongPathPrefix(path)
-    .trim()
-    .replace(/\\/g, '/')
-    .toLowerCase();
+  const value = stripWindowsLongPathPrefix(path).trim();
+  if (!value) return '';
+  if (WEB_PATH_PATTERN.test(value) || value.startsWith('blob:') || value.startsWith('data:')) {
+    return value;
+  }
+
+  const normalized = value.replace(/\\/g, '/');
+  return WINDOWS_DRIVE_PATH_PATTERN.test(value) || WINDOWS_UNC_PATH_PATTERN.test(value)
+    ? normalized.toLowerCase()
+    : normalized;
 }
 
 export function normalizeWindowsPath(path) {
@@ -21,7 +29,7 @@ export function normalizeWindowsPath(path) {
     return trimmed;
   }
 
-  if (/^[a-z]:[\\/]/i.test(trimmed)) {
+  if (WINDOWS_DRIVE_PATH_PATTERN.test(trimmed)) {
     const drive = trimmed.slice(0, 2);
     const rest = trimmed
       .slice(2)

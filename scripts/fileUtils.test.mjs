@@ -18,6 +18,23 @@ test('pathKey strips Windows long path prefixes and compares mixed case paths', 
 
 test('pathKey normalizes long UNC paths', () => {
   assert.equal(pathKey('\\\\?\\UNC\\Server\\Share\\Audio.MP3'), '//server/share/audio.mp3');
+  assert.equal(pathKey('//Server/Share/Audio.MP3'), '//server/share/audio.mp3');
+});
+
+test('pathKey preserves POSIX case, accents, spaces, and case-distinct files', () => {
+  assert.equal(pathKey('/tmp/Été sonore/A.wav'), '/tmp/Été sonore/A.wav');
+  assert.equal(pathKey('/tmp/A.wav') === pathKey('/tmp/a.wav'), false);
+});
+
+test('pathKey keeps URLs, blobs, and data values explicit and case-preserving', () => {
+  assert.equal(pathKey('https://example.test/Asset.MP3'), 'https://example.test/Asset.MP3');
+  assert.equal(pathKey('blob:https://example.test/Asset-ID'), 'blob:https://example.test/Asset-ID');
+  assert.equal(pathKey('data:Audio/WAV;base64,ABC'), 'data:Audio/WAV;base64,ABC');
+});
+
+test('pathKey preserves relative path case while normalizing separators', () => {
+  assert.equal(pathKey('./Assets/Voice.MP3'), './Assets/Voice.MP3');
+  assert.equal(pathKey('Assets\\Voice.MP3'), 'Assets/Voice.MP3');
 });
 
 test('pathKey handles nullish and empty inputs', () => {

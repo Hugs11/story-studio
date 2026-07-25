@@ -53,7 +53,7 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
   // référencés par une entrée projet (pour ne jamais rendre invisible une référence existante).
   if (!isProjectRef && !options.allowOriginalBackup && isOriginalBackup(path)) return;
   const checkedPath = stripWindowsLongPathPrefix(path);
-  const key = checkedPath.replace(/\\/g, '/').toLowerCase();
+  const key = pathKey(checkedPath);
   const existing = map.get(key);
   const usage = { label, source, field, ...(entryId ? { entryId } : {}) };
   if (existing) {
