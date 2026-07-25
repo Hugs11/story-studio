@@ -1084,6 +1084,150 @@ mod tests {
         })
     }
 
+    fn nested_next_story_night_mode_story_json() -> serde_json::Value {
+        let selection_controls = serde_json::json!({
+            "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false
+        });
+        let playback_controls = serde_json::json!({
+            "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true
+        });
+        let night_controls = serde_json::json!({
+            "wheel": false, "ok": true, "home": true, "pause": false, "autoplay": false
+        });
+        serde_json::json!({
+            "title": "0.9.3 nested night fallback",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": true,
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Racine", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": "cover.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "outer-menu", "name": "Menu principal", "type": "stage", "squareOne": false,
+                    "audio": "menu.mp3", "image": "menu.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "outer-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "menu-a", "name": "Menu A", "type": "stage", "squareOne": false,
+                    "audio": "menu.mp3", "image": "menu.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "menu-a-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "menu-b", "name": "Menu B", "type": "stage", "squareOne": false,
+                    "audio": "menu.mp3", "image": "menu.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "menu-b-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "root-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-a1", "name": "A1", "type": "stage", "squareOne": false,
+                    "audio": "title.mp3", "image": "title.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "story-a1-title-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-a-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-a1-play", "name": "Histoire A1", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": playback_controls,
+                    "okTransition": { "actionNode": "story-a1-play-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-a-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-a1-night", "name": "nightStage", "type": "stage", "squareOne": false,
+                    "audio": "night.mp3", "image": null,
+                    "controlSettings": night_controls,
+                    "okTransition": { "actionNode": "story-a1-night-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "story-a2", "name": "A2", "type": "stage", "squareOne": false,
+                    "audio": "title.mp3", "image": "title.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "story-a2-title-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-a-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-a2-play", "name": "Histoire A2", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": playback_controls,
+                    "okTransition": { "actionNode": "terminal-night-entry-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-a-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-b1", "name": "B1", "type": "stage", "squareOne": false,
+                    "audio": "title.mp3", "image": "title.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "story-b1-title-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-b-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-b1-play", "name": "Histoire B1", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": playback_controls,
+                    "okTransition": { "actionNode": "story-b1-play-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-b-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-b1-night", "name": "nightStage", "type": "stage", "squareOne": false,
+                    "audio": "night.mp3", "image": null,
+                    "controlSettings": night_controls,
+                    "okTransition": { "actionNode": "story-b1-night-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "story-b2", "name": "B2", "type": "stage", "squareOne": false,
+                    "audio": "title.mp3", "image": "title.png",
+                    "controlSettings": selection_controls,
+                    "okTransition": { "actionNode": "story-b2-title-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-b-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "story-b2-play", "name": "Histoire B2", "type": "stage", "squareOne": false,
+                    "audio": "story.mp3", "image": null,
+                    "controlSettings": playback_controls,
+                    "okTransition": { "actionNode": "terminal-night-entry-action", "optionIndex": 0 },
+                    "homeTransition": { "actionNode": "menu-b-home-action", "optionIndex": 0 }
+                },
+                {
+                    "uuid": "terminal-night", "name": "nightStage", "type": "stage", "squareOne": false,
+                    "audio": "night.mp3", "image": null,
+                    "controlSettings": night_controls,
+                    "okTransition": { "actionNode": "terminal-night-action", "optionIndex": 0 },
+                    "homeTransition": null
+                }
+            ],
+            "actionNodes": [
+                { "id": "root-action", "name": "Racine", "options": ["outer-menu"] },
+                { "id": "outer-action", "name": "Menu principal", "options": ["menu-a", "menu-b"] },
+                { "id": "menu-a-action", "name": "Menu A", "options": ["story-a1", "story-a2"] },
+                { "id": "menu-b-action", "name": "Menu B", "options": ["story-b1", "story-b2"] },
+                { "id": "menu-a-home-action", "name": "Retour A", "options": ["menu-a"] },
+                { "id": "menu-b-home-action", "name": "Retour B", "options": ["menu-b"] },
+                { "id": "story-a1-title-action", "name": "Titre A1", "options": ["story-a1-play"] },
+                { "id": "story-a1-play-action", "name": "Lecture A1", "options": ["story-a1-night"] },
+                { "id": "story-a1-night-action", "name": "Suite A1", "options": ["story-a2"] },
+                { "id": "story-a2-title-action", "name": "Titre A2", "options": ["story-a2-play"] },
+                { "id": "story-b1-title-action", "name": "Titre B1", "options": ["story-b1-play"] },
+                { "id": "story-b1-play-action", "name": "Lecture B1", "options": ["story-b1-night"] },
+                { "id": "story-b1-night-action", "name": "Suite B1", "options": ["story-b2"] },
+                { "id": "story-b2-title-action", "name": "Titre B2", "options": ["story-b2-play"] },
+                { "id": "terminal-night-entry-action", "name": "Message final", "options": ["terminal-night"] },
+                { "id": "terminal-night-action", "name": "Retour principal", "options": ["outer-menu"] }
+            ]
+        })
+    }
+
     fn lapin_like_story_json() -> serde_json::Value {
         serde_json::json!({
             "title": "Lapin-like synthetic",
@@ -1467,6 +1611,57 @@ mod tests {
         assert!(report.authoring_editable);
         assert!(!report.read_only_inspectable);
         assert!(!report.uses_graph_projection);
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn nested_093_next_story_night_fallback_preserves_end_message_model() {
+        let dir = temp_dir("nested_093_night_fallback");
+        let zip_path = dir.join("pack.zip");
+        write_story_zip_with_assets(
+            &zip_path,
+            &nested_next_story_night_mode_story_json(),
+            &[
+                "root.mp3",
+                "cover.png",
+                "menu.mp3",
+                "menu.png",
+                "title.mp3",
+                "title.png",
+                "story.mp3",
+                "night.mp3",
+            ],
+        );
+
+        let imported = unpack_zip_to_entries_unchecked(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect("0.9.3 import");
+        assert_eq!(imported["nightMode"].as_bool(), Some(true));
+        assert!(
+            imported["nightModeAudio"]
+                .as_str()
+                .map(|path| path.replace('\\', "/"))
+                .is_some_and(|path| path.ends_with("/night.mp3"))
+        );
+        assert_eq!(imported["nightModeReturn"].as_str(), Some("next_story"));
+        assert_eq!(imported["endMessageAutoplay"].as_bool(), Some(false));
+
+        let outer = &imported["entries"][0];
+        let menu_a = &outer["children"][0];
+        let menu_b = &outer["children"][1];
+        assert!(menu_a["children"][0]["returnAfterPlay"].is_null());
+        assert_eq!(
+            menu_a["children"][1]["returnAfterPlay"].as_str(),
+            Some("outer-menu")
+        );
+        assert!(menu_b["children"][0]["returnAfterPlay"].is_null());
+        assert_eq!(
+            menu_b["children"][1]["returnAfterPlay"].as_str(),
+            Some("outer-menu")
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

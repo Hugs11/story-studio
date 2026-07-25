@@ -8,7 +8,7 @@ use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
 };
-use super::night_mode::detect_imported_night_mode;
+use super::night_mode::{apply_night_fallback_overrides, detect_imported_night_mode};
 use super::sequence_menus::expand_sequence_choice_menus;
 use super::stage::{
     action_options, is_stage_autoplay, resolve_asset, stage_action_options, stage_control_bool,
@@ -409,11 +409,12 @@ pub(super) fn walk_story_doc_to_entries(
     );
     let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
         night_mode_detection
+            .as_ref()
             .map(|detection| {
                 (
-                    Some(detection.audio),
-                    detection.return_target,
-                    detection.home_target,
+                    Some(detection.audio.clone()),
+                    detection.return_target.clone(),
+                    detection.home_target.clone(),
                     detection.autoplay,
                 )
             })
@@ -421,6 +422,9 @@ pub(super) fn walk_story_doc_to_entries(
     let unresolved_transitions = assign_return_targets(&mut entries, &stage_names);
     if let Some(target) = night_mode_return.as_deref() {
         remove_night_mode_return_overrides(&mut entries, target, None);
+    }
+    if let Some(detection) = night_mode_detection.as_ref() {
+        apply_night_fallback_overrides(&mut entries, detection);
     }
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
