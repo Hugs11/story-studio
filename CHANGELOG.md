@@ -12,6 +12,16 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.5] - 2026-07-25
+
+### Fixed
+
+- Restored authoring import compatibility for Story Studio 0.9.3 packs whose
+  global next-story end message returns the final story of nested folders to
+  the main menu.
+
+---
+
 ## [0.9.4] - 2026-07-21
 
 Story Studio v0.9.4 introduces a unified and customizable editing workspace,
