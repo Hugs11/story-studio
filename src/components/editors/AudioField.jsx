@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useRef, useState, useEffect } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
@@ -10,6 +10,7 @@ import { useProjectContext } from '../../store/ProjectContext';
 import { isTtsAvailable } from '../../store/xttsSettings';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
+import { logger } from '../../utils/logger';
 import { RecordModal } from '../RecordModal/RecordModal';
 // reason: lazy() pour sortir wavesurfer.js (~18 KB gz) + AudioEditorModal du
 // chunk partage. Charge uniquement quand l'utilisateur ouvre l'editeur audio.
@@ -20,6 +21,12 @@ import { Mic, Copy, Scissors, FolderOpen, FolderInput, ClipboardPaste, Play, Spe
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
 import { ContextMenu } from '../TreePanel/ContextMenu';
+import {
+  createAudioFieldWebAudioOptions,
+  disposeAudioFieldWebAudio,
+  needsWebAudioPlayback,
+  stopAudioFieldWebAudio,
+} from './audioFieldPlayback';
 
 const WAVE_HEIGHTS = [6, 10, 14, 10, 16, 12, 8, 14, 10, 6, 12, 8, 14, 10, 16, 8, 12, 6, 10, 14];
 const FILLED_WAVE_HEIGHTS = Array.from({ length: 96 }, (_, index) => WAVE_HEIGHTS[index % WAVE_HEIGHTS.length]);
@@ -74,6 +81,11 @@ export function AudioField({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
+  const webAudioRef = useRef(null);
+  const webAudioUrlRef = useRef(null);
+  const webAudioLoadRef = useRef(null);
+  const webAudioGenerationRef = useRef(0);
+  const playbackRequestRef = useRef(0);
   const dropWrapRef = useRef(null);
   const { getMeta, markForProbe } = useMediaMetadata();
   const filename = file ? basename(file) : null;
@@ -82,6 +94,7 @@ export function AudioField({
   const ttsAvailable = isTtsAvailable(xttsSettings);
   const showFilledState = !!file && fileAvailable;
   const audioUrl = useLocalFile(showFilledState ? file : null);
+  const useWebAudio = needsWebAudioPlayback(file);
   const tooltipText = description || displayPath || '';
   const progressRatio = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
   const playedBars = Math.round(progressRatio * FILLED_WAVE_HEIGHTS.length);
@@ -91,11 +104,34 @@ export function AudioField({
     setPendingGeneratedSource(null);
   });
 
+  const disposeWebAudioPlayer = useCallback(() => {
+    webAudioGenerationRef.current += 1;
+    webAudioLoadRef.current = null;
+    webAudioUrlRef.current = null;
+    const player = webAudioRef.current;
+    webAudioRef.current = null;
+    disposeAudioFieldWebAudio(player);
+  }, []);
+
+  const stopPlayback = useCallback((reset = false) => {
+    playbackRequestRef.current += 1;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      if (reset) audio.currentTime = 0;
+    }
+    stopAudioFieldWebAudio(webAudioRef.current, reset);
+    setIsPlaying(false);
+    if (reset) setCurrentTime(0);
+    if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
+  }, []);
+
   useEffect(() => {
     stopPlayback();
+    disposeWebAudioPlayer();
     setCurrentTime(0);
     setDuration(0);
-  }, [file]);
+  }, [disposeWebAudioPlayer, file, stopPlayback]);
 
   useEffect(() => {
     if (!showFilledState || !file) return undefined;
@@ -119,7 +155,10 @@ export function AudioField({
     if (Number.isFinite(value) && value > 0) setDuration(value);
   }, [probedDuration]);
 
-  useEffect(() => () => stopPlayback(), []);
+  useEffect(() => () => {
+    stopPlayback();
+    disposeWebAudioPlayer();
+  }, [disposeWebAudioPlayer, stopPlayback]);
 
   async function handleReplace() {
     const picked = await pickAudio();
@@ -175,17 +214,6 @@ export function AudioField({
     if (onPick) void onPick(path);
   }
 
-  function stopPlayback(reset = false) {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      if (reset) audio.currentTime = 0;
-    }
-    setIsPlaying(false);
-    if (reset) setCurrentTime(0);
-    if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
-  }
-
   function ensureAudioElement() {
     if (!audioUrl) return null;
     const audio = audioRef.current;
@@ -216,34 +244,122 @@ export function AudioField({
     return nextAudio;
   }
 
+  async function ensureWebAudioPlayer() {
+    if (!audioUrl) return null;
+    if (webAudioLoadRef.current?.url === audioUrl) {
+      return webAudioLoadRef.current.promise;
+    }
+    if (webAudioRef.current && webAudioUrlRef.current === audioUrl) {
+      return webAudioRef.current;
+    }
+
+    disposeWebAudioPlayer();
+    const generation = webAudioGenerationRef.current;
+    const requestedUrl = audioUrl;
+    const loadPromise = (async () => {
+      const { default: WaveSurfer } = await import('wavesurfer.js');
+      if (generation !== webAudioGenerationRef.current) return null;
+
+      const player = WaveSurfer.create(createAudioFieldWebAudioOptions(
+        document.createElement('div'),
+      ));
+      webAudioRef.current = player;
+      webAudioUrlRef.current = requestedUrl;
+
+      player.on('ready', (value) => {
+        setDuration(Number.isFinite(value) ? value : 0);
+      });
+      player.on('timeupdate', (value) => {
+        setCurrentTime(Number.isFinite(value) ? value : 0);
+      });
+      player.on('play', () => setIsPlaying(true));
+      player.on('pause', () => setIsPlaying(false));
+      player.on('finish', () => {
+        setIsPlaying(false);
+        setCurrentTime(player.getDuration());
+        if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
+        window.setTimeout(() => {
+          if (webAudioRef.current !== player || player.isPlaying()) return;
+          player.setTime(0);
+          setCurrentTime(0);
+        }, 350);
+      });
+      player.on('error', (error) => {
+        logger.error('audio-field:webaudio-error', file, error);
+        setIsPlaying(false);
+      });
+
+      try {
+        await player.load(requestedUrl);
+      } catch (error) {
+        if (generation === webAudioGenerationRef.current) {
+          logger.error('audio-field:webaudio-load-error', file, error);
+          disposeWebAudioPlayer();
+        } else {
+          disposeAudioFieldWebAudio(player);
+        }
+        return null;
+      }
+      if (generation !== webAudioGenerationRef.current) {
+        disposeAudioFieldWebAudio(player);
+        return null;
+      }
+      return player;
+    })();
+    webAudioLoadRef.current = { url: requestedUrl, promise: loadPromise };
+    const player = await loadPromise;
+    if (webAudioLoadRef.current?.promise === loadPromise) webAudioLoadRef.current = null;
+    return player;
+  }
+
   async function handlePlay(e) {
     e.stopPropagation();
-    const audio = ensureAudioElement();
-    if (!audio) return;
     if (isPlaying) {
       stopPlayback();
       return;
     }
     if (activeAudioFieldStop && activeAudioFieldStop !== stopPlayback) activeAudioFieldStop();
     activeAudioFieldStop = stopPlayback;
+    const request = ++playbackRequestRef.current;
     try {
-      await audio.play();
-    } catch {
+      if (useWebAudio) {
+        const player = await ensureWebAudioPlayer();
+        if (!player || request !== playbackRequestRef.current) return;
+        await player.play();
+      } else {
+        const audio = ensureAudioElement();
+        if (!audio || request !== playbackRequestRef.current) return;
+        await audio.play();
+      }
+    } catch (error) {
+      logger.error('audio-field:playback-error', file, error);
       setIsPlaying(false);
+      if (activeAudioFieldStop === stopPlayback) activeAudioFieldStop = null;
     }
   }
 
   function handleWaveScrub(e) {
     e.stopPropagation();
-    const audio = ensureAudioElement();
-    if (!audio) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
-    const knownDuration = Number.isFinite(audio.duration) ? audio.duration : duration;
-    if (!knownDuration) return;
-    const nextTime = ratio * knownDuration;
-    audio.currentTime = nextTime;
-    setCurrentTime(nextTime);
+    if (useWebAudio) {
+      void ensureWebAudioPlayer().then((player) => {
+        const knownDuration = player?.getDuration() || duration;
+        if (!player || !knownDuration) return;
+        const nextTime = ratio * knownDuration;
+        player.setTime(nextTime);
+        setCurrentTime(nextTime);
+      });
+      return;
+    }
+    const audio = ensureAudioElement();
+    if (audio) {
+      const knownDuration = Number.isFinite(audio.duration) ? audio.duration : duration;
+      if (!knownDuration) return;
+      const nextTime = ratio * knownDuration;
+      audio.currentTime = nextTime;
+      setCurrentTime(nextTime);
+    }
   }
 
   const handlePickedRef = useRef(handlePicked);
@@ -413,7 +529,15 @@ export function AudioField({
                 </Tooltip>
               )}
               <Tooltip text="Éditer l'audio">
-                <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio">
+                <Button
+                  variant="icon"
+                  size="sm"
+                  onClick={() => {
+                    stopPlayback(true);
+                    setShowAudioEditor(true);
+                  }}
+                  aria-label="Éditer l'audio"
+                >
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                 </Button>
               </Tooltip>
