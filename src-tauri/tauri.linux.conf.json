@@ -1,10 +1,21 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "enableGTKAppId": true
+  },
   "bundle": {
     "targets": [
       "appimage",
       "deb",
       "rpm"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "desktopTemplate": "linux/story-studio.desktop.hbs"
+      },
+      "rpm": {
+        "desktopTemplate": "linux/story-studio.desktop.hbs"
+      }
+    }
   }
 }
