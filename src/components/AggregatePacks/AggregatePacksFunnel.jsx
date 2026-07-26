@@ -41,6 +41,7 @@ import { parseConventionName, generateConventionName } from '../../utils/packCon
 import { basename, basenameNoExt } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import './AggregatePacksFunnel.css';
 
 const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal')
@@ -153,13 +154,12 @@ export function AggregatePacksFunnel({ onClose }) {
     return () => {
       const sessionDir = sessionDirRef.current;
       if (sessionDir) invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
-      audioRef.current?.pause();
+      disposeAudioPlayerRef(audioRef);
     };
   }, []);
 
   useEffect(() => {
-    audioRef.current?.pause();
-    audioRef.current = null;
+    disposeAudioPlayerRef(audioRef);
     setAudioPlaying(false);
   }, [audioUrl]);
 
@@ -267,7 +267,7 @@ export function AggregatePacksFunnel({ onClose }) {
       return;
     }
 
-    const audio = audioRef.current ?? new Audio(audioUrl);
+    const audio = audioRef.current ?? createAudioPlayer(audioUrl);
     audioRef.current = audio;
     audio.onended = () => setAudioPlaying(false);
     audio.onpause = () => setAudioPlaying(false);

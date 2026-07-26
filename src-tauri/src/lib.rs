@@ -108,7 +108,6 @@ pub fn run() {
             commands::generation::generate_pack,
             commands::generation::cancel_generate_pack,
             commands::files::save_recording,
-            commands::files::allow_audio_asset,
             commands::files::delete_file,
             commands::files::delete_workspace_media_file,
             commands::files::concat_audio_files,

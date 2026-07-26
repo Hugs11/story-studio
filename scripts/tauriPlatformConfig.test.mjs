@@ -32,11 +32,6 @@ test('Tauri platform configs resolve with replacement arrays and isolated tool r
   assert.equal(linux.bundle.resources['../LICENSE'], 'LICENSE');
   assert.equal(linux.app.windows[0].decorations, false);
   assert.equal(linux.app.enableGTKAppId, true);
-  assert.equal(common.app.security.assetProtocol.enable, true);
-  assert.deepEqual(common.app.security.assetProtocol.scope, []);
-  assert.match(common.app.security.csp, /media-src[^;]*\basset:/);
-  assert.match(common.app.security.csp, /media-src[^;]*http:\/\/asset\.localhost/);
-  assert.match(common.app.security.csp, /media-src[^;]*https:\/\/asset\.localhost/);
   assert.equal(
     linux.bundle.linux.deb.desktopTemplate,
     'linux/story-studio.desktop.hbs',
