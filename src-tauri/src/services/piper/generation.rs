@@ -1,4 +1,4 @@
-//! Génération de voix Piper : provisionne (idempotent) puis exécute `piper.exe`
+//! Génération de voix Piper : provisionne (idempotent) puis exécute Piper
 //! avec le texte sur **stdin** (jamais d'interpolation shell), produit un WAV
 //! puis le convertit en MP3 conforme via ffmpeg embarqué. Sortie bornée à
 //! `voix-generees/` du projet/workspace.
@@ -7,6 +7,7 @@ use super::output::{generated_dir, output_filename};
 use super::provision::{bin_dir, ensure_piper, piper_exe, voice_paths};
 use super::{PiperGenerateRequest, PiperSettings, PiperStatus, PiperVoiceInfo};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use std::ffi::OsString;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -138,16 +139,12 @@ fn run_piper(
 
     let mut cmd = Command::new(&exe);
     apply_no_window(&mut cmd);
-    cmd.args([
-        "--model".as_ref(),
-        model_path.as_os_str(),
-        "--output_file".as_ref(),
-        wav_out.as_os_str(),
-        "--length_scale".as_ref(),
-        format!("{:.3}", length_scale).as_ref(),
-        "--sentence_silence".as_ref(),
-        format!("{:.3}", sentence_silence).as_ref(),
-    ]);
+    cmd.args(piper_arguments(
+        &model_path,
+        wav_out,
+        length_scale,
+        sentence_silence,
+    ));
     // current_dir = dossier du binaire : piper y trouve espeak-ng-data et ses DLL.
     cmd.current_dir(bin_dir(home))
         .stdin(Stdio::piped())
@@ -183,6 +180,24 @@ fn run_piper(
     Ok(())
 }
 
+fn piper_arguments(
+    model_path: &Path,
+    wav_out: &Path,
+    length_scale: f32,
+    sentence_silence: f32,
+) -> Vec<OsString> {
+    vec![
+        OsString::from("--model"),
+        model_path.as_os_str().to_os_string(),
+        OsString::from("--output_file"),
+        wav_out.as_os_str().to_os_string(),
+        OsString::from("--length_scale"),
+        OsString::from(format!("{length_scale:.3}")),
+        OsString::from("--sentence_silence"),
+        OsString::from(format!("{sentence_silence:.3}")),
+    ]
+}
+
 fn encode_mp3(wav: &Path, mp3: &Path) -> Result<(), String> {
     let ffmpeg = get_ffmpeg_path()?;
     let mut cmd = Command::new(&ffmpeg);
@@ -200,4 +215,34 @@ fn encode_mp3(wav: &Path, mp3: &Path) -> Result<(), String> {
         return Err(format!("Conversion MP3 échouée : {}", stderr.trim()));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::piper_arguments;
+    use std::ffi::OsString;
+    use std::path::Path;
+
+    #[test]
+    fn command_arguments_keep_paths_and_values_separate() {
+        let args = piper_arguments(
+            Path::new("/tmp/voix été/modèle.onnx"),
+            Path::new("/tmp/sortie audio.wav"),
+            1.25,
+            0.4,
+        );
+        assert_eq!(
+            args,
+            vec![
+                OsString::from("--model"),
+                OsString::from("/tmp/voix été/modèle.onnx"),
+                OsString::from("--output_file"),
+                OsString::from("/tmp/sortie audio.wav"),
+                OsString::from("--length_scale"),
+                OsString::from("1.250"),
+                OsString::from("--sentence_silence"),
+                OsString::from("0.400"),
+            ]
+        );
+    }
 }

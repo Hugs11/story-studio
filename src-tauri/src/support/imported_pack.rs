@@ -418,6 +418,7 @@ fn seven_zip_binary_names(platform: &str) -> &'static [&'static str] {
 
 struct SevenZipResolutionContext<'a> {
     platform: &'a str,
+    architecture: &'a str,
     debug: bool,
     override_path: Option<PathBuf>,
     resource_dir: Option<PathBuf>,
@@ -452,6 +453,7 @@ fn seven_zip_candidates(context: &SevenZipResolutionContext<'_>) -> Vec<PathBuf>
             &mut candidates,
             context.cwd.as_deref(),
             context.platform,
+            context.architecture,
             names,
         );
         if context.platform == "windows" {
@@ -477,6 +479,7 @@ fn seven_zip_candidates(context: &SevenZipResolutionContext<'_>) -> Vec<PathBuf>
 fn resolve_7z_path() -> Result<PathBuf, String> {
     let context = SevenZipResolutionContext {
         platform: std::env::consts::OS,
+        architecture: std::env::consts::ARCH,
         debug: cfg!(debug_assertions),
         override_path: std::env::var_os("STORY_STUDIO_7Z_PATH").map(PathBuf::from),
         resource_dir: resource_dir(),
@@ -640,6 +643,7 @@ mod tests {
     fn seven_zip_context(platform: &'static str) -> SevenZipResolutionContext<'static> {
         SevenZipResolutionContext {
             platform,
+            architecture: "x86_64",
             debug: true,
             override_path: None,
             resource_dir: None,
@@ -653,6 +657,7 @@ mod tests {
     fn seven_zip_names_match_platform() {
         assert_eq!(seven_zip_binary_names("windows"), &["7z.exe"]);
         assert_eq!(seven_zip_binary_names("linux"), &["7zz", "7z"]);
+        assert_eq!(seven_zip_binary_names("macos"), &["7zz", "7z"]);
     }
 
     #[test]

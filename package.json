@@ -2,7 +2,7 @@
   "name": "story-studio",
   "private": true,
   "version": "0.9.5",
-  "description": "Open-source Windows editor for creating Lunii-compatible story packs",
+  "description": "Open-source desktop editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
   "homepage": "https://hugs11.github.io/story-studio/",
@@ -24,7 +24,10 @@
     "audio-editor",
     "tauri",
     "react",
-    "windows"
+    "windows",
+    "linux",
+    "macos",
+    "apple-silicon"
   ],
   "scripts": {
     "dev": "vite",

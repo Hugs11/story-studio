@@ -38,6 +38,8 @@ pub(crate) fn push_resource_candidates(
     };
     for name in names {
         push_candidate(candidates, resource_dir.join("tools").join(name));
+    }
+    for name in names {
         push_candidate(candidates, resource_dir.join(name));
     }
 }
@@ -46,13 +48,27 @@ pub(crate) fn push_development_candidates(
     candidates: &mut Vec<PathBuf>,
     cwd: Option<&Path>,
     platform: &str,
+    architecture: &str,
     names: &[&str],
 ) {
     let Some(cwd) = cwd else {
         return;
     };
+    let native_platform = format!("{platform}-{architecture}");
     for base in cwd.ancestors() {
         for name in names {
+            push_candidate(
+                candidates,
+                base.join("src-tauri")
+                    .join("tools")
+                    .join(&native_platform)
+                    .join(name),
+            );
+            push_candidate(
+                candidates,
+                base.join("tools").join(&native_platform).join(name),
+            );
+            // Compatibilité avec l'ancien dossier de développement de phase 3.
             push_candidate(
                 candidates,
                 base.join("src-tauri")
@@ -121,6 +137,7 @@ mod tests {
             &mut candidates,
             Some(Path::new("/repo/src-tauri")),
             "linux",
+            "x86_64",
             &["ffmpeg"],
         );
 
@@ -129,6 +146,7 @@ mod tests {
             Some(&PathBuf::from("/opt/story/resources/tools/ffmpeg"))
         );
         assert!(candidates.contains(&PathBuf::from("/repo/src-tauri/tools/linux/ffmpeg")));
+        assert!(candidates.contains(&PathBuf::from("/repo/src-tauri/tools/linux-x86_64/ffmpeg")));
     }
 
     #[test]
@@ -142,5 +160,29 @@ mod tests {
             resolve_regular_file("outil test", vec![missing.clone()]).expect_err("missing tool");
         assert!(error.contains("outil test introuvable"));
         assert!(error.contains(&missing.display().to_string()));
+    }
+
+    #[test]
+    fn packaged_resource_layout_is_stable_across_linux_and_macos_bundles() {
+        for resource_dir in [
+            "/tmp/.mount_Story/usr/lib/story-studio",
+            "/usr/lib/Story Studio",
+            "/Applications/Story Studio.app/Contents/Resources",
+        ] {
+            let mut candidates = Vec::new();
+            push_resource_candidates(
+                &mut candidates,
+                Some(Path::new(resource_dir)),
+                &["ffmpeg", "7zz"],
+            );
+            assert_eq!(
+                candidates[0],
+                Path::new(resource_dir).join("tools").join("ffmpeg")
+            );
+            assert_eq!(
+                candidates[1],
+                Path::new(resource_dir).join("tools").join("7zz")
+            );
+        }
     }
 }

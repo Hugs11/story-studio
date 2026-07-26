@@ -62,6 +62,7 @@ fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
 /// Hôtes officiels autorisés pour le téléchargement d'artefacts tiers
 /// (binaire Piper, voix). Toute autre origine est refusée.
 const ALLOWED_DOWNLOAD_HOSTS: &[&str] = &[
+    "api.github.com",
     "github.com",
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
@@ -137,6 +138,7 @@ mod tests {
     fn public_download_urls_allow_official_artifact_hosts() {
         for url in [
             "https://github.com/rhasspy/piper/releases/download/x/file.zip",
+            "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest",
             "https://release-assets.githubusercontent.com/github-production-release-asset/file",
             "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/file.onnx",
             "https://us.aws.cdn.hf.co/xet-bridge-us/file",

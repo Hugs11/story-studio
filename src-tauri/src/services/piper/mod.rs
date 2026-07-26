@@ -1,7 +1,7 @@
 //! Backend TTS Piper : moteur de voix **zéro-config** par défaut. Un simple
 //! exécutable autonome (pas de serveur, pas de Python) provisionné au 1er usage.
 //! Comparé à `services/xtts`, il n'y a **aucun cycle de vie serveur** : on
-//! télécharge le binaire + la voix une fois, puis on invoque `piper.exe`.
+//! télécharge le binaire natif + la voix une fois, puis invoque Piper sans shell.
 
 use serde::{Deserialize, Serialize};
 
@@ -75,6 +75,11 @@ mod tests {
         length_scale_for_speed, sentence_silence_for_setting, validate_text_for_generation,
     };
     use super::output::output_filename;
+    use super::provision::piper_exe;
+    use super::{ensure_sync, generate_audio_sync, PiperGenerateRequest, PiperSettings};
+    use std::path::Path;
+    use std::process::Command;
+    use uuid::Uuid;
 
     #[test]
     fn default_voice_is_in_catalog() {
@@ -130,5 +135,72 @@ mod tests {
         assert!(validate_text_for_generation("Bonjour").is_ok());
         assert!(validate_text_for_generation("   ").is_err());
         assert!(validate_text_for_generation(&"a".repeat(5001)).is_err());
+    }
+
+    #[test]
+    #[ignore = "requires network access and the prepared native FFmpeg"]
+    fn live_linux_provisions_once_and_generates_all_catalog_voices() {
+        if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            return;
+        }
+
+        let root =
+            std::env::temp_dir().join(format!("story_studio_piper_live_été_{}", Uuid::new_v4()));
+        let home = root.join("données Piper");
+        let workspace = root.join("espace de travail");
+        std::fs::create_dir_all(&workspace).expect("create live Piper workspace");
+        let emit = |message: &str| eprintln!("{message}");
+
+        ensure_sync(&home, DEFAULT_VOICE, &emit).expect("initial Piper provision");
+        let initial_mtime = std::fs::metadata(piper_exe(&home))
+            .and_then(|metadata| metadata.modified())
+            .expect("Piper executable mtime");
+        ensure_sync(&home, DEFAULT_VOICE, &emit).expect("idempotent Piper provision");
+        assert_eq!(
+            initial_mtime,
+            std::fs::metadata(piper_exe(&home))
+                .and_then(|metadata| metadata.modified())
+                .expect("Piper executable mtime after restart")
+        );
+
+        for voice in VOICES {
+            let output = generate_audio_sync(
+                &home,
+                PiperSettings {
+                    voice: voice.id.to_string(),
+                    speed: 1.0,
+                    sentence_silence: 0.35,
+                },
+                PiperGenerateRequest {
+                    text: format!("Validation de la voix {} sous Linux.", voice.label),
+                    voice: Some(voice.id.to_string()),
+                    speed: 1.0,
+                    sentence_silence: Some(0.35),
+                    save_path: None,
+                    workspace_dir: Some(workspace.to_string_lossy().to_string()),
+                    filename_hint: Some(voice.id.to_string()),
+                },
+                &emit,
+            )
+            .unwrap_or_else(|error| panic!("generate {}: {error}", voice.id));
+            let output = Path::new(&output);
+            assert!(output.is_file());
+            assert!(std::fs::metadata(output).unwrap().len() > 0);
+            let ffmpeg =
+                crate::support::ffmpeg::get_ffmpeg_path().expect("resolve prepared native FFmpeg");
+            let status = Command::new(ffmpeg)
+                .args(["-v", "error", "-i"])
+                .arg(output)
+                .args(["-f", "null", "-"])
+                .status()
+                .expect("validate generated MP3");
+            assert!(
+                status.success(),
+                "{} is not a readable MP3",
+                output.display()
+            );
+        }
+
+        std::fs::remove_dir_all(root).expect("clean live Piper fixture");
     }
 }
