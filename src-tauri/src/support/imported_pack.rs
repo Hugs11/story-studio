@@ -714,17 +714,20 @@ mod tests {
         let Ok(seven_zip) = resolve_7z_path() else {
             return;
         };
-        let dir = temp_import_dir("seven_zip_fixture");
-        let source_dir = dir.join("source");
-        let archive = dir.join("fixture.7z");
-        let extracted = dir.join("extracted");
-        fs::create_dir_all(source_dir.join("assets")).expect("create fixture source");
+        let dir = temp_import_dir("seven_zip_fixture").join("Dossier Été");
+        let source_dir = dir.join("source avec espaces");
+        let archive = dir.join("Pack Été.7z");
+        let extracted = dir.join("extrait avec espaces");
+        fs::create_dir_all(source_dir.join("assets/Médias été")).expect("create fixture source");
         fs::write(
             source_dir.join("story.json"),
             br#"{"title":"Fixture 7z","stageNodes":[]}"#,
         )
         .expect("write fixture story");
-        fs::write(source_dir.join("assets/test.txt"), b"fixture").expect("write fixture asset");
+        fs::write(source_dir.join("assets/Médias été/A.txt"), b"upper")
+            .expect("write uppercase fixture asset");
+        fs::write(source_dir.join("assets/Médias été/a.txt"), b"lower")
+            .expect("write lowercase fixture asset");
         fs::create_dir_all(&extracted).expect("create extraction dir");
 
         let mut create = Command::new(&seven_zip);
@@ -746,11 +749,46 @@ mod tests {
         extract_7z_archive(&archive, &extracted).expect("extract fixture");
         assert!(extracted.join("story.json").is_file());
         assert_eq!(
-            fs::read(extracted.join("assets/test.txt")).expect("read extracted asset"),
-            b"fixture"
+            fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase asset"),
+            b"upper"
+        );
+        assert_eq!(
+            fs::read(extracted.join("assets/Médias été/a.txt")).expect("read lowercase asset"),
+            b"lower"
         );
 
-        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+        fs::remove_dir_all(dir.parent().expect("temp import parent"))
+            .expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn extracts_zip_with_spaces_accents_and_case_distinct_entries() {
+        let dir = temp_import_dir("zip_unicode_case").join("Dossier Été");
+        let archive = dir.join("Pack Été.zip");
+        let extracted = dir.join("extrait avec espaces");
+        write_zip(
+            &archive,
+            &[
+                ("story.json", br#"{"title":"Fixture ZIP","stageNodes":[]}"#),
+                ("assets/Médias été/A.txt", b"upper"),
+                ("assets/Médias été/a.txt", b"lower"),
+            ],
+        );
+        fs::create_dir_all(&extracted).expect("create zip extraction dir");
+
+        extract_zip_archive(&archive, &extracted).expect("extract unicode zip fixture");
+
+        assert_eq!(
+            fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase zip asset"),
+            b"upper"
+        );
+        assert_eq!(
+            fs::read(extracted.join("assets/Médias été/a.txt")).expect("read lowercase zip asset"),
+            b"lower"
+        );
+
+        fs::remove_dir_all(dir.parent().expect("temp import parent"))
+            .expect("cleanup temp import dir");
     }
 
     #[test]

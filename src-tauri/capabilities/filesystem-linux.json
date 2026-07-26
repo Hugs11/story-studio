@@ -43,7 +43,12 @@
     },
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }],
+      "allow": [
+        { "path": "**" },
+        { "path": "**/.session-recovery.mbah*" },
+        { "path": "**/.story-studio-image-edits" },
+        { "path": "**/.story-studio-image-edits/**" }
+      ],
       "deny": [
         { "path": "/boot" },
         { "path": "/boot/**" },

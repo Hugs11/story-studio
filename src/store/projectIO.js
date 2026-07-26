@@ -27,6 +27,7 @@ import { reconcileMediaLibraryPaths } from './mediaLibrary';
 import {
   imageEditMetadataPath,
   readImageEditMetadata,
+  supportsImageEditMetadata,
   withImageEditSourcePath,
   writeImageEditMetadata,
 } from './imageEditMetadata';
@@ -735,6 +736,10 @@ export async function copyMediaToWorkspace(
   if (cachedMain) return cachedMain;
 
   const imageCopy = await copyPlainMediaToWorkspace(sourcePath, baseDir, category, projectName);
+  if (!supportsImageEditMetadata(sourcePath)) {
+    knownCopies?.set(pathKey(sourcePath), imageCopy.path);
+    return imageCopy.path;
+  }
   let copiedDependency = null;
   let dependencyCopyRecord = null;
   try {

@@ -15,7 +15,11 @@ import {
   KEYBOARD_ZOOM_STEP,
   formatTime,
 } from './audioEditorConstants';
-import { createAudioEditorWaveformOptions, styleRegionHandles } from './audioEditorWaveform';
+import {
+  createAudioEditorWaveformOptions,
+  disposeAudioEditorWaveform,
+  styleRegionHandles,
+} from './audioEditorWaveform';
 import { useAudioEditorShortcuts } from './useAudioEditorShortcuts';
 import { useShuttlePlayback } from './useShuttlePlayback';
 import { useWaveformViewport } from './useWaveformViewport';
@@ -370,7 +374,7 @@ export function AudioEditorModal({ filePath, savePath, workspaceDir, onConfirm, 
       auditionEndRef.current = null;
       stopShuttle();
       containerRef.current?.removeEventListener('wheel', handleWheel);
-      ws.destroy();
+      disposeAudioEditorWaveform(ws);
       if (wsRef.current === ws) wsRef.current = null;
       regionRef.current = null;
     };

@@ -3,9 +3,16 @@ import { mkdir, readFile, writeFile } from '@tauri-apps/plugin-fs';
 export const IMAGE_EDIT_METADATA_DIR = '.story-studio-image-edits';
 const METADATA_SUFFIX = '.edit.json';
 const METADATA_VERSION = 1;
+const IMAGE_EDIT_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif']);
+
+export function supportsImageEditMetadata(path) {
+  const name = String(path || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+  const extension = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+  return IMAGE_EDIT_EXTENSIONS.has(extension);
+}
 
 export function imageEditMetadataPath(imagePath) {
-  if (!imagePath) return null;
+  if (!imagePath || !supportsImageEditMetadata(imagePath)) return null;
   const normalized = String(imagePath);
   const splitIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
   if (splitIndex < 0) return `${IMAGE_EDIT_METADATA_DIR}/${normalized}${METADATA_SUFFIX}`;

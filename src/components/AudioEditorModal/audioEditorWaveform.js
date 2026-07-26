@@ -21,6 +21,16 @@ export function createAudioEditorWaveformOptions({ container, url, plugins }) {
   };
 }
 
+export function disposeAudioEditorWaveform(waveSurfer) {
+  if (!waveSurfer) return;
+  try {
+    waveSurfer.pause();
+  } catch {
+    // The backend may already have been torn down.
+  }
+  waveSurfer.destroy();
+}
+
 // Construit un AudioBuffer inverse pour le playback shuttle arriere (Web Audio
 // ne supporte pas une playbackRate negative -- on cree donc un buffer reverse
 // qu'on lit en avant). Pas de dependance au contexte qui le cree autrement

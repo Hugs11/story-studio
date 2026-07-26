@@ -19,6 +19,7 @@ import {
 import { pathKey } from '../src/utils/fileUtils.js';
 import {
   imageEditMetadataPath,
+  supportsImageEditMetadata,
   withImageEditSourcePath,
 } from '../src/store/imageEditMetadata.js';
 
@@ -65,6 +66,14 @@ test('edited image sidecars stay beside their image and can be rewritten to a du
     transform: { scale: 1.2 },
     filters: { brightness: 10 },
   });
+});
+
+test('image sidecars are never probed for audio or archive files', () => {
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/cover.PNG'), true);
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/voix.flac'), false);
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/pack.7z'), false);
+  assert.equal(imageEditMetadataPath('/tmp/Été sonore/voix.flac'), null);
+  assert.equal(imageEditMetadataPath('/tmp/Été sonore/pack.7z'), null);
 });
 
 test('a deleted imported story leaves its audio visible as unused', () => {
