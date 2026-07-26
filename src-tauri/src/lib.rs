@@ -77,6 +77,18 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             use tauri::Manager;
+            #[cfg(target_os = "linux")]
+            {
+                let default_icon = app.default_window_icon().cloned();
+                if let (Some(window), Some(icon)) = (app.get_webview_window("main"), default_icon) {
+                    if let Err(error) = window.set_icon(icon) {
+                        log::warn!(
+                            target: "boot",
+                            "Linux window icon could not be applied: {error}"
+                        );
+                    }
+                }
+            }
             let resource_dir = app
                 .path()
                 .resource_dir()
