@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Tooltip } from '../common/Tooltip';
 import { Button } from '../common/Button';
@@ -226,9 +227,16 @@ function QueueAudioButton({ path, filename }) {
 
   useEffect(() => {
     setPlaying(false);
+    if (url) {
+      const audio = createAudioPlayer(url);
+      audioRef.current = audio;
+      audio.addEventListener('play', () => setPlaying(true));
+      audio.addEventListener('pause', () => setPlaying(false));
+      audio.addEventListener('ended', () => stopRef.current?.());
+    }
     return () => {
       if (activeQueueAudioStopper === stopRef.current) activeQueueAudioStopper = null;
-      audioRef.current?.pause();
+      disposeAudioPlayerRef(audioRef);
     };
   }, [url]);
 
@@ -268,16 +276,6 @@ function QueueAudioButton({ path, filename }) {
       >
         <Icon className="sd-row-icon" strokeWidth={2} absoluteStrokeWidth />
       </Button>
-      {url && (
-        <audio
-          ref={audioRef}
-          src={url}
-          preload="metadata"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={() => stopRef.current?.()}
-        />
-      )}
     </>
   );
 }

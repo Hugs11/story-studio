@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { logger } from '../utils/logger';
 import { MIME } from '../utils/mimeTypes';
 import { FILE_CHANGED_EVENT, FILE_REFRESH_THROTTLE_MS, readPathSnapshot } from '../store/fileMetadataCache';
 import { acquireLocalFileUrl } from '../store/localFileUrlCache';
-import { isLocalAudioPath, versionLocalAssetUrl } from '../utils/localMediaAsset';
 
 function normalizeFsPath(path) {
   if (typeof path !== 'string') return '';
@@ -30,7 +28,6 @@ export function useLocalFile(path) {
     let activeRelease = null;
     let forceNonce = 0;
     const readablePath = normalizeFsPath(path);
-    const isAudio = isLocalAudioPath(readablePath);
     const ext = readablePath.split('.').pop().toLowerCase();
     const mime = MIME[ext] || 'application/octet-stream';
 
@@ -43,14 +40,6 @@ export function useLocalFile(path) {
 
     async function loadCurrentPath({ allowThrottle = false, force = false } = {}) {
       try {
-        if (isAudio) {
-          const version = await invoke('allow_audio_asset', { path: readablePath });
-          if (cancelled) return;
-          releaseActive();
-          setUrl(versionLocalAssetUrl(convertFileSrc(readablePath), version));
-          return;
-        }
-
         const snapshot = await readPathSnapshot(readablePath, {
           maxAgeMs: allowThrottle ? FILE_REFRESH_THROTTLE_MS : 0,
           force,

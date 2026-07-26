@@ -1,47 +1,5 @@
 use crate::services::project_files;
 use crate::support::lunii_zip_validator::{validate_lunii_zip, LuniiZipValidationReport};
-use std::path::{Path, PathBuf};
-use std::time::UNIX_EPOCH;
-use tauri::Manager;
-
-const AUDIO_ASSET_EXTENSIONS: &[&str] = &["mp3", "ogg", "wav", "flac", "m4a", "webm"];
-
-fn validate_audio_asset_path(path: &Path) -> Result<std::fs::Metadata, String> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .map(str::to_ascii_lowercase)
-        .ok_or_else(|| "Le fichier audio doit avoir une extension prise en charge.".to_string())?;
-    if !AUDIO_ASSET_EXTENSIONS.contains(&extension.as_str()) {
-        return Err(format!(
-            "Extension audio non prise en charge pour la lecture locale : .{extension}"
-        ));
-    }
-
-    let metadata = std::fs::metadata(path)
-        .map_err(|error| format!("Fichier audio local inaccessible : {error}"))?;
-    if !metadata.is_file() {
-        return Err("Le média local doit être un fichier régulier.".to_string());
-    }
-    Ok(metadata)
-}
-
-#[tauri::command]
-pub fn allow_audio_asset(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let asset_path = PathBuf::from(path);
-    let metadata = validate_audio_asset_path(&asset_path)?;
-    app.asset_protocol_scope()
-        .allow_file(&asset_path)
-        .map_err(|error| format!("Impossible d’autoriser la lecture du média local : {error}"))?;
-
-    let modified_nanos = metadata
-        .modified()
-        .ok()
-        .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
-        .map(|value| value.as_nanos())
-        .unwrap_or_default();
-    Ok(format!("{}:{modified_nanos}", metadata.len()))
-}
 
 #[tauri::command]
 pub fn save_recording(
@@ -532,52 +490,5 @@ pub fn validate_lunii_zip_cmd(zip_path: String) -> LuniiZipValidationReport {
                 }],
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod local_audio_asset_tests {
-    use super::validate_audio_asset_path;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn test_dir() -> std::path::PathBuf {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after Unix epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!(
-            "story-studio-audio-asset-{}-{nonce}",
-            std::process::id()
-        ))
-    }
-
-    #[test]
-    fn accepts_regular_audio_files_with_spaces_accents_and_case() {
-        let dir = test_dir();
-        std::fs::create_dir_all(&dir).expect("test directory should be created");
-        let path = dir.join("Été Sonore.FLAC");
-        std::fs::write(&path, b"fLaC").expect("test audio should be created");
-
-        let metadata = validate_audio_asset_path(&path).expect("FLAC path should be accepted");
-
-        assert_eq!(metadata.len(), 4);
-        std::fs::remove_dir_all(dir).expect("test directory should be removed");
-    }
-
-    #[test]
-    fn rejects_non_audio_files_and_directories() {
-        let dir = test_dir();
-        std::fs::create_dir_all(&dir).expect("test directory should be created");
-        let image_path = dir.join("cover.png");
-        std::fs::write(&image_path, b"png").expect("test image should be created");
-
-        assert!(validate_audio_asset_path(&image_path)
-            .expect_err("image path should be rejected")
-            .contains("Extension audio non prise en charge"));
-        assert!(validate_audio_asset_path(&dir)
-            .expect_err("directory should be rejected")
-            .contains("extension prise en charge"));
-
-        std::fs::remove_dir_all(dir).expect("test directory should be removed");
     }
 }
