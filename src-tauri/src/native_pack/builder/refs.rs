@@ -6,8 +6,8 @@
 //! cibles disponibles, y compris en avant), `resolve_pending_ref_options` réécrit chaque
 //! option vers le vrai stage natif de la cible — en réutilisant exactement le résolveur
 //! de `returnAfterPlay` (`resolve_story_return_transition` + tables préallouées).
-use super::core::StoryBuilder;
 use super::super::Transition;
+use super::core::StoryBuilder;
 
 /// Une option de menu (ou d'entrée racine) qui doit pointer vers un nœud existant.
 pub(in crate::native_pack::builder) struct PendingRefOption {

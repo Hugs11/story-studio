@@ -1640,12 +1640,10 @@ mod tests {
         )
         .expect("0.9.3 import");
         assert_eq!(imported["nightMode"].as_bool(), Some(true));
-        assert!(
-            imported["nightModeAudio"]
-                .as_str()
-                .map(|path| path.replace('\\', "/"))
-                .is_some_and(|path| path.ends_with("/night.mp3"))
-        );
+        assert!(imported["nightModeAudio"]
+            .as_str()
+            .map(|path| path.replace('\\', "/"))
+            .is_some_and(|path| path.ends_with("/night.mp3")));
         assert_eq!(imported["nightModeReturn"].as_str(), Some("next_story"));
         assert_eq!(imported["endMessageAutoplay"].as_bool(), Some(false));
 

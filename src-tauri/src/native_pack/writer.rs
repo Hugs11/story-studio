@@ -96,7 +96,10 @@ pub(crate) fn write_native_pack_zip(
     Ok(zip_path)
 }
 
-fn serialize_story_with_pack_uuid(story: &StoryDocument, pack_uuid: &str) -> Result<String, String> {
+fn serialize_story_with_pack_uuid(
+    story: &StoryDocument,
+    pack_uuid: &str,
+) -> Result<String, String> {
     let mut story_value = serde_json::to_value(story)
         .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
     let uuid = if pack_uuid.trim().is_empty() {

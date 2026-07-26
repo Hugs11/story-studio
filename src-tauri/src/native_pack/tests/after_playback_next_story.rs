@@ -214,7 +214,10 @@ fn prompt_home_next_story_targets_next_sibling_title() {
     .expect("document");
 
     let prompt = stage_by_name(&document, "Fin - A");
-    let target = transition_target(&document, prompt.home_transition.as_ref().expect("prompt home"));
+    let target = transition_target(
+        &document,
+        prompt.home_transition.as_ref().expect("prompt home"),
+    );
     assert_eq!(target.name, "Titre - B");
 }
 
@@ -270,7 +273,12 @@ fn prompt_home_empty_follows_ok_including_next_story() {
 #[test]
 fn sequence_final_ok_next_story_targets_next_sibling_title() {
     let document = build_story_document(&menu_report(vec![
-        sequence_story("a", "A", vec![seq_step("SeqA", Some("next_story"), None)], None),
+        sequence_story(
+            "a",
+            "A",
+            vec![seq_step("SeqA", Some("next_story"), None)],
+            None,
+        ),
         plain_story("b", "B"),
     ]))
     .expect("document");
@@ -284,7 +292,12 @@ fn sequence_final_ok_next_story_targets_next_sibling_title() {
 fn sequence_final_ok_next_story_on_last_story_falls_back_to_menu() {
     let document = build_story_document(&menu_report(vec![
         plain_story("a", "A"),
-        sequence_story("b", "B", vec![seq_step("SeqB", Some("next_story"), None)], None),
+        sequence_story(
+            "b",
+            "B",
+            vec![seq_step("SeqB", Some("next_story"), None)],
+            None,
+        ),
     ]))
     .expect("document");
 
@@ -340,6 +353,9 @@ fn sequence_home_step_home_next_story_targets_next_sibling_title() {
     .expect("document");
 
     let step = stage_by_name(&document, "Reaction A");
-    let target = transition_target(&document, step.home_transition.as_ref().expect("home step home"));
+    let target = transition_target(
+        &document,
+        step.home_transition.as_ref().expect("home step home"),
+    );
     assert_eq!(target.name, "Titre - B");
 }
