@@ -249,6 +249,7 @@ pub(super) fn collect_menu_ids_from_entry(entry: &serde_json::Value) -> Vec<Stri
 }
 
 pub(super) struct StoryNavigationContext {
+    pub(super) story_id: String,
     pub(super) play_stage_id: String,
     pub(super) next_story_id: Option<String>,
     pub(super) fallback_stage_id: String,
@@ -280,6 +281,7 @@ pub(super) fn collect_story_navigation_contexts(
                     }
                 });
                 contexts.push(StoryNavigationContext {
+                    story_id: story_id.to_string(),
                     play_stage_id: play_stage_id.to_string(),
                     next_story_id,
                     fallback_stage_id: parent_menu_id.unwrap_or(story_id).to_string(),
