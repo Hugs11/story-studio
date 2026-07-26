@@ -12,13 +12,51 @@ on:
       - "docs/**"
       - "*.md"
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: Build (Windows)
-    runs-on: windows-latest
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            cache: windows-x64
+          - name: Linux x86_64
+            os: ubuntu-22.04
+            cache: linux-x86_64
+          - name: macOS ARM64
+            os: macos-15
+            cache: macos-arm64
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify Apple Silicon runner
+        if: runner.os == 'macOS'
+        shell: bash
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            unzip \
+            xz-utils
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,7 +67,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy,rustfmt
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -38,12 +76,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          key: ${{ matrix.cache }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ matrix.cache }}-cargo-
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Prepare native platform tools
+        run: node scripts/prepare-platform-tools.mjs
 
       - name: Check version consistency
         run: npm run check:version
@@ -56,6 +97,10 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
 
       - name: Rust tests
         working-directory: src-tauri

@@ -68,14 +68,15 @@ export function YoutubeSection({ className, sectionRef }) {
           <div className="opts-row-label">Chemin yt-dlp personnalisé</div>
           <div className="opts-row-sub">
             Laisse vide pour utiliser la version gérée automatiquement. Renseigne le chemin complet
-            d'un <code>yt-dlp.exe</code> pour l'utiliser à la place (le téléchargement auto est alors ignoré).
+            d'un exécutable <code>yt-dlp.exe</code> sous Windows ou <code>yt-dlp</code> sous
+            Linux/macOS pour l'utiliser à la place (le téléchargement auto est alors ignoré).
           </div>
         </div>
         <input
           className="xtts-input"
           type="text"
           spellCheck={false}
-          placeholder="C:\\chemin\\vers\\yt-dlp.exe"
+          placeholder="Chemin complet vers yt-dlp"
           value={ytDlpPath}
           onChange={(event) => handleYtDlpPathChange(event.target.value)}
           style={{ flex: 1, minWidth: 0 }}

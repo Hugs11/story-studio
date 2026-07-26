@@ -9,7 +9,18 @@
       "deb",
       "rpm"
     ],
+    "resources": {
+      "tools/linux-x86_64/ffmpeg": "tools/ffmpeg",
+      "tools/linux-x86_64/7zz": "tools/7zz",
+      "tools/linux-x86_64/platform-tools.json": "tools/platform-tools.json",
+      "tools/linux-x86_64/licenses/GPL-3.0.txt": "tools/licenses/GPL-3.0.txt",
+      "tools/linux-x86_64/licenses/7-Zip-License.txt": "tools/licenses/7-Zip-License.txt",
+      "tools/linux-x86_64/licenses/imageio-ffmpeg-LICENSE.txt": "tools/licenses/imageio-ffmpeg-LICENSE.txt"
+    },
     "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
       "deb": {
         "desktopTemplate": "linux/story-studio.desktop.hbs"
       },

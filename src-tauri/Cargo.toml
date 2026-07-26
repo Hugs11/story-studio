@@ -1,9 +1,11 @@
 [package]
 name = "story-studio"
 version = "0.9.5"
-description = "Desktop editor for creating Lunii-compatible story packs"
+description = "Cross-platform desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
+homepage = "https://hugs11.github.io/story-studio/"
+repository = "https://github.com/Hugs11/story-studio"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -28,6 +30,8 @@ tauri-plugin-fs = "2"
 tauri-plugin-log = "2"
 log = "0.4"
 zip = "2"
+tar = "0.4"
+flate2 = "1"
 sha1 = "0.10"
 sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }

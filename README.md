@@ -5,13 +5,13 @@
 </p>
 
 <p align="center">
-  A modern Windows desktop editor for creating, aggregating, testing and exporting Lunii-compatible story packs.
+  A modern desktop editor for creating, aggregating, testing and exporting Lunii-compatible story packs.
 </p>
 
 <p align="center">
-  <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
+  <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
-  <a href="#requirements"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
+  <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
   <a href="CHANGELOG.md"><img alt="Version 0.9.5" src="https://img.shields.io/badge/version-0.9.5-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
@@ -20,12 +20,12 @@
 
 ## Tu cherches a creer des histoires pour la Lunii ?
 
-Story Studio pour Lunii est un editeur Windows open source pour creer, importer,
+Story Studio pour Lunii est un editeur desktop open source pour creer, importer,
 verifier et exporter des packs d'histoires compatibles Lunii. La documentation
 francaise est disponible ici : [README.fr.md](README.fr.md).
 
 Story Studio for Lunii lets you create, import, organize, test and export
-Lunii-compatible story packs in a visual Windows desktop workspace. Everything
+Lunii-compatible story packs in a visual desktop workspace. Everything
 stays local: images, audio, navigation, simulation and ZIP export.
 
 Import your media, assemble and trim audio, crop images, organize menus and
@@ -47,6 +47,10 @@ GitHub issues.
 Story Studio 0.9.5 restores editing compatibility for Story Studio 0.9.3 packs
 whose shared next-story end message returns the final story of nested folders
 to the main menu.
+
+Version 0.9.5 remains the current public Windows x64 release. Linux x86_64 and
+macOS Apple Silicon packages are being prepared for 0.9.6 and are not published
+yet.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
 - [Read the v0.9.5 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.5)
@@ -86,7 +90,7 @@ files and illustrations are not covered by Story Studio's MIT license.
 | | |
 |---|---|
 | **Status** | Beta |
-| **Platform** | Windows desktop |
+| **Target platforms** | Windows x64, Linux x86_64 and macOS Apple Silicon |
 | **Interface language** | French only for now |
 | **Project format** | `.mbah` |
 | **Export format** | Lunii-compatible ZIP packs |
@@ -196,13 +200,40 @@ navigation, simulation and export into one clear local workspace.
 
 ## Requirements
 
-Windows 10 or later, with WebView2. Bundled third-party binaries keep their
-own licenses — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+| Platform | Requirements and limits |
+|---|---|
+| Windows x64 | Windows 10 or later with WebView2 |
+| Linux x86_64 | A glibc-based distribution with WebKitGTK 4.1 and the usual GStreamer codecs; AppImage, DEB and RPM packages are planned |
+| macOS Apple Silicon | macOS 11 or later on an M1-or-newer Mac; Intel Macs are not supported |
+
+Bundled third-party binaries keep their own licenses and pinned provenance —
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Installation
 
-Download the Windows installer from the
+The current 0.9.5 release only provides Windows installers on the
 [GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest).
+The following package types are prepared for 0.9.6 but must not be treated as
+released until they appear on that page:
+
+- **AppImage:** make the file executable with `chmod +x Story-Studio*.AppImage`,
+  then run it.
+- **Debian/Ubuntu:** install the downloaded DEB with
+  `sudo apt install ./Story-Studio*.deb`.
+- **Fedora:** install the downloaded RPM with
+  `sudo dnf install ./Story-Studio*.rpm`.
+- **macOS Apple Silicon:** open the DMG, drag Story Studio into Applications,
+  then launch the app.
+
+The macOS build has no Developer ID certificate and is not notarized. Gatekeeper
+may therefore block its first launch. In Finder, Control-click the app and
+choose **Open**, or use **System Settings → Privacy & Security → Open Anyway**.
+Do not disable Gatekeeper globally.
+
+AI integrations are optional. XTTS is validated on Linux in CPU-only mode and
+does not require an NVIDIA driver; it has not been installed or manually
+validated on macOS for 0.9.6. ComfyUI is manually validated on Windows only:
+manual Linux and macOS tests have not been run.
 
 To build from source or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -224,6 +255,12 @@ managed workspace folders:
 Files in managed media folders use a `{project-name}__` prefix so multiple
 projects can share the same workspace more safely.
 
+Application data is stored under `%LOCALAPPDATA%\com.hugs11.story-studio` on
+Windows, `${XDG_DATA_HOME:-~/.local/share}/com.hugs11.story-studio` on Linux,
+and `~/Library/Application Support/com.hugs11.story-studio` on macOS.
+User-selected files remain accessible outside these folders, including on
+external macOS volumes under `/Volumes`.
+
 When Story Studio offers to delete media from disk, it only deletes files inside
 managed workspace media folders. External source files are removed from the
 project or media library reference only.
@@ -231,6 +268,7 @@ project or media library reference only.
 ## Documentation
 
 - [XTTS setup guide](docs/guides/xtts-setup.md)
+- [XTTS CPU setup guide for Linux](docs/guides/xtts-setup-linux.md)
 - [ComfyUI setup guide](docs/guides/comfyui-setup.md)
 - [Security model](SECURITY.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
@@ -238,8 +276,8 @@ project or media library reference only.
 
 ## Roadmap
 
-- Exit beta with a polished v1 for Windows.
-- Go multi-platform (macOS and Linux).
+- Complete and validate the Windows x64, Linux x86_64 and macOS Apple Silicon packages.
+- Exit beta with a polished v1.
 - Adapt the app to support other story-box devices.
 
 ## Contributing

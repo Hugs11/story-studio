@@ -30,6 +30,13 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Hugs11",
+    "homepage": "https://hugs11.github.io/story-studio/",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
+    "category": "Education",
+    "shortDescription": "Visual editor for Lunii-compatible story packs",
+    "longDescription": "Create, import, test and export interactive audio story packs in a local desktop workspace.",
     "resources": {
       "../LICENSE": "LICENSE",
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"

@@ -41,6 +41,7 @@ fn ffmpeg_binary_names(platform: &str) -> &'static [&'static str] {
 
 struct FfmpegResolutionContext<'a> {
     platform: &'a str,
+    architecture: &'a str,
     debug: bool,
     override_path: Option<PathBuf>,
     resource_dir: Option<PathBuf>,
@@ -75,6 +76,7 @@ fn ffmpeg_candidates(context: &FfmpegResolutionContext<'_>) -> Vec<PathBuf> {
             &mut candidates,
             context.cwd.as_deref(),
             context.platform,
+            context.architecture,
             names,
         );
         push_path_candidates(&mut candidates, &context.path_dirs, names);
@@ -86,6 +88,7 @@ fn ffmpeg_candidates(context: &FfmpegResolutionContext<'_>) -> Vec<PathBuf> {
 pub(crate) fn get_ffmpeg_path() -> Result<PathBuf, String> {
     let context = FfmpegResolutionContext {
         platform: std::env::consts::OS,
+        architecture: std::env::consts::ARCH,
         debug: cfg!(debug_assertions),
         override_path: std::env::var_os("STORY_STUDIO_FFMPEG_PATH").map(PathBuf::from),
         resource_dir: resource_dir(),
@@ -113,6 +116,7 @@ mod tests {
     fn context(platform: &'static str) -> FfmpegResolutionContext<'static> {
         FfmpegResolutionContext {
             platform,
+            architecture: "x86_64",
             debug: true,
             override_path: None,
             resource_dir: None,
@@ -126,6 +130,7 @@ mod tests {
     fn binary_name_matches_platform() {
         assert_eq!(ffmpeg_binary_names("windows"), &["ffmpeg.exe"]);
         assert_eq!(ffmpeg_binary_names("linux"), &["ffmpeg"]);
+        assert_eq!(ffmpeg_binary_names("macos"), &["ffmpeg"]);
     }
 
     #[test]
