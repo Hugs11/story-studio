@@ -76,11 +76,13 @@ impl<'a> StoryBuilder<'a> {
             let prompt_home_transition = if story.after_playback_prompt_home_none {
                 None
             } else {
-                Some(self.resolve_story_home_transition(
-                    nav.resolve(story.after_playback_prompt_home_target.as_deref())
-                        .as_deref(),
-                    prompt_ok_transition.clone(),
-                ))
+                Some(
+                    self.resolve_story_home_transition(
+                        nav.resolve(story.after_playback_prompt_home_target.as_deref())
+                            .as_deref(),
+                        prompt_ok_transition.clone(),
+                    ),
+                )
             };
 
             self.action_nodes.push(ActionNode {

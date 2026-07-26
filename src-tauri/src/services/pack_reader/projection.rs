@@ -176,10 +176,12 @@ pub(super) fn walk_story_doc_to_entries(
             }
 
             let chain_stage = stages.get(eff_first_id).copied();
-            let chain_audio = chain_stage
-                .and_then(|stage| resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets));
-            let chain_image = chain_stage
-                .and_then(|stage| resolve_asset(stage.get("image").and_then(|v| v.as_str()), assets));
+            let chain_audio = chain_stage.and_then(|stage| {
+                resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets)
+            });
+            let chain_image = chain_stage.and_then(|stage| {
+                resolve_asset(stage.get("image").and_then(|v| v.as_str()), assets)
+            });
 
             let terminal_id = chase_single_chain(eff_first_id, &stages, &actions, &mut visited);
             let has_distinct_title_stage = terminal_id != eff_first_id;
@@ -516,11 +518,7 @@ fn mark_explicit_silent_title_stages(
         let stage_id = entry
             .get("_titleStageId")
             .and_then(|value| value.as_str())
-            .or_else(|| {
-                entry
-                    .get("nativeStageId")
-                    .and_then(|value| value.as_str())
-            })
+            .or_else(|| entry.get("nativeStageId").and_then(|value| value.as_str()))
             .or_else(|| entry.get("id").and_then(|value| value.as_str()))
             .map(str::to_string);
         let source_has_explicit_null_audio = stage_id
@@ -529,11 +527,7 @@ fn mark_explicit_silent_title_stages(
             .and_then(|stage| stage.get("audio"))
             .is_some_and(serde_json::Value::is_null);
 
-        if is_story
-            && has_title_controls
-            && item_audio_is_empty
-            && source_has_explicit_null_audio
-        {
+        if is_story && has_title_controls && item_audio_is_empty && source_has_explicit_null_audio {
             entry["silentTitleStage"] = serde_json::Value::Bool(true);
         }
 

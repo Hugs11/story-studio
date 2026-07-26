@@ -229,7 +229,10 @@ mod tests {
 
     #[test]
     fn home_edge_is_classified_home() {
-        let stages = vec![stage("x", None, Some("home-act")), stage("root", None, None)];
+        let stages = vec![
+            stage("x", None, Some("home-act")),
+            stage("root", None, None),
+        ];
         let actions = vec![("home-act".to_string(), action(&["root"]))];
         let (smap, amap) = index(&stages, &actions);
         let edges = classify_stage_edges(&stages[0], &smap, &amap, &HashSet::new());

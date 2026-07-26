@@ -1,9 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use super::after_playback::{
-    is_imported_night_mode_stage_candidate, is_named_night_bridge_stage,
-};
+use super::after_playback::{is_imported_night_mode_stage_candidate, is_named_night_bridge_stage};
 use super::navigation_targets::{
     build_story_stage_map, collect_menu_ids_from_entry, collect_story_navigation_contexts,
     resolve_navigation_target_for_stage,
@@ -89,9 +87,7 @@ fn infer_night_return(
     let has_next_story = instances
         .iter()
         .any(|instance| instance.next_story_stage_id.is_some());
-    let all_named_night_bridges = instances
-        .iter()
-        .all(|instance| instance.named_night_bridge);
+    let all_named_night_bridges = instances.iter().all(|instance| instance.named_night_bridge);
     let every_non_terminal_follows_next = instances.iter().all(|instance| {
         instance
             .next_story_stage_id
