@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from '@tauri-apps/plugin-fs';
 
-export const IMAGE_EDIT_METADATA_DIR = '.story-studio-image-edits';
+const IMAGE_EDIT_METADATA_DIR = '.story-studio-image-edits';
 const METADATA_SUFFIX = '.edit.json';
 const METADATA_VERSION = 1;
 const IMAGE_EDIT_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif']);
