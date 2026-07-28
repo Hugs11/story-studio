@@ -9,8 +9,8 @@ fn sanitizes_project_name_for_export_zip() {
         "Nom_de_l_histoire"
     );
     assert_eq!(
-        sanitized_project_name("3+]RTL-mon_histoire(8_chapitres)[by_hugs_V1"),
-        "3+]RTL-mon_histoire(8_chapitres)[by_hugs_V1"
+        sanitized_project_name("3+]RTL-mon_histoire(8_chapitres)[by_author_V1"),
+        "3+]RTL-mon_histoire(8_chapitres)[by_author_V1"
     );
     assert_eq!(sanitized_project_name("///"), "story-studio");
 }
