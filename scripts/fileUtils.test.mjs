@@ -40,9 +40,9 @@ test('pathKey preserves relative path case while normalizing separators', () => 
 });
 
 test('pathKey collapses repeated separators while preserving UNC roots', () => {
-  assert.equal(pathKey('C:\\\\Users\\\\Hugs///Voice.MP3'), 'c:/users/hugs/voice.mp3');
+  assert.equal(pathKey('C:\\\\Users\\\\TestUser///Voice.MP3'), 'c:/users/testuser/voice.mp3');
   assert.equal(pathKey('\\\\Server\\\\Share///Voice.MP3'), '//server/share/voice.mp3');
-  assert.equal(pathKey('/Users//Hugs///Voice.MP3'), '/Users/Hugs/Voice.MP3');
+  assert.equal(pathKey('/Users//TestUser///Voice.MP3'), '/Users/TestUser/Voice.MP3');
 });
 
 test('pathKey handles nullish and empty inputs', () => {
