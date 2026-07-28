@@ -606,7 +606,19 @@ export function AggregatePacksFunnel({ onClose }) {
               <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handlePickImage}>
                 Choisir une image
               </FunnelToolButton>
-              <FunnelToolButton icon={<Sparkles />} accent="violet" variant="solid" onClick={() => setTextImageOpen(true)}>
+              <FunnelToolButton
+                icon={<Sparkles />}
+                accent="violet"
+                variant="solid"
+                onClick={async () => {
+                  try {
+                    await ensureSessionDir();
+                    setTextImageOpen(true);
+                  } catch (sessionError) {
+                    setError(`Impossible de préparer la session : ${sessionError?.message ?? sessionError}`);
+                  }
+                }}
+              >
                 Générer une image-titre
               </FunnelToolButton>
               <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={async () => {
@@ -712,6 +724,7 @@ export function AggregatePacksFunnel({ onClose }) {
         <Suspense fallback={null}>
           <TextImagePromptModal
             defaultText={metadata.title || 'Mes histoires du soir'}
+            workspaceDir={sessionDirRef.current || ''}
             onConfirm={(path) => {
               if (path) setRootImage(path);
               setTextImageOpen(false);

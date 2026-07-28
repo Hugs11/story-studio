@@ -5,7 +5,8 @@
 //!
 //! Sécurité (invariants `support/`) : arguments en tableau (jamais de shell),
 //! `CREATE_NO_WINDOW`, URL bornées aux domaines YouTube, destination bornée au
-//! dossier temp, noms de fichiers assainis, plafonds sur la liste et la taille.
+//! cache privé de l'application, noms de fichiers assainis, plafonds sur la liste
+//! et la taille.
 
 use serde::Serialize;
 
@@ -309,6 +310,7 @@ mod tests {
 
         let output = download_audio(
             &home,
+            &root.join("downloads"),
             None,
             &video_url,
             "validation été avec espaces",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   chmod,
   copyFile,
@@ -12,7 +12,11 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises';
-import { arch as hostArch, platform as hostPlatform } from 'node:os';
+import {
+  arch as hostArch,
+  platform as hostPlatform,
+  tmpdir,
+} from 'node:os';
 import {
   dirname,
   join,
@@ -44,9 +48,22 @@ const TOOLS_ROOT = join(REPO_ROOT, 'src-tauri', 'tools');
 const PATCH_PATH = join(SCRIPT_DIR, 'patches', 'piper-1.6.0-story-studio.patch');
 const NOTICES_PATH = join(REPO_ROOT, 'THIRD_PARTY_NOTICES.md');
 const CACHE_ROOT = join(TOOLS_ROOT, '.piper-cache');
-const BUILD_ROOT = join(TOOLS_ROOT, '.piper-build');
 const MAX_ARCHIVE_ENTRIES = 100_000;
 const MAX_COMMAND_OUTPUT = 16 * 1024 * 1024;
+
+export function piperBuildRoot({
+  repositoryRoot = REPO_ROOT,
+  platform = hostPlatform(),
+  temporaryRoot = platform === 'win32' ? tmpdir() : '/tmp',
+} = {}) {
+  const repositoryKey = createHash('sha256')
+    .update(resolve(repositoryRoot))
+    .digest('hex')
+    .slice(0, 8);
+  // eSpeak NG uses a fixed 160-byte data path buffer on POSIX while compiling
+  // phonemes. Keep intermediates short even when the repository path is long.
+  return join(temporaryRoot, `story-studio-piper-${repositoryKey}`);
+}
 
 function cmakePath(path) {
   return sep === '\\' ? path.replaceAll('\\', '/') : path;
@@ -440,7 +457,7 @@ export async function buildPiperRuntime({
   const { key, target } = selectPiperTarget(platform, architecture);
   const cmake = process.env.PIPER_CMAKE || 'cmake';
   const ctest = process.env.PIPER_CTEST || relatedTool(cmake, 'ctest');
-  const workspace = join(BUILD_ROOT, target.platformName);
+  const workspace = join(piperBuildRoot(), target.platformName);
   const buildDir = join(workspace, 'build');
   const installDir = join(workspace, 'install');
   const staging = join(TOOLS_ROOT, `.piper runtime installing-${randomUUID()}`);

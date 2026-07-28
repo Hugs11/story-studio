@@ -7,6 +7,10 @@ use crate::support::paths::path_for_frontend;
 
 pub const TEMP_IMAGES_DIR: &str = "story_studio_images";
 pub const LEGACY_TEMP_IMAGES_DIR: &str = "luniipack_images";
+pub const AUDIO_PREVIEWS_DIR: &str = "audio-previews";
+pub const PODCAST_MEDIA_DIR: &str = "podcast-media";
+pub const YOUTUBE_MEDIA_DIR: &str = "youtube-media";
+pub const SESSION_WORKSPACES_DIR: &str = "sessions";
 pub const SESSION_WORKSPACE_PREFIX: &str = "story_studio_session_";
 pub const SESSION_RECOVERY_FILE: &str = ".session-recovery.mbah";
 
@@ -35,29 +39,40 @@ fn now_nanos() -> u128 {
         .as_nanos()
 }
 
-fn canonical_temp_dir() -> Result<PathBuf, String> {
-    let temp = std::env::temp_dir();
-    fs::create_dir_all(&temp).map_err(|e| format!("Dossier temporaire inaccessible : {}", e))?;
-    fs::canonicalize(&temp).map_err(|e| format!("Dossier temporaire inaccessible : {}", e))
+pub fn app_cache_subdir(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+    use tauri::Manager;
+
+    app.path()
+        .app_cache_dir()
+        .map(|path| path.join(name))
+        .map_err(|error| format!("Dossier cache de Story Studio inaccessible : {error}"))
+}
+
+fn canonical_session_root(root: &Path) -> Result<PathBuf, String> {
+    fs::create_dir_all(root)
+        .map_err(|e| format!("Dossier temporaire de Story Studio inaccessible : {}", e))?;
+    fs::canonicalize(root)
+        .map_err(|e| format!("Dossier temporaire de Story Studio inaccessible : {}", e))
 }
 
 fn canonical_existing(path: &Path) -> Result<PathBuf, String> {
     fs::canonicalize(path).map_err(|e| format!("Chemin temporaire inaccessible : {}", e))
 }
 
-pub fn is_session_workspace_dir(path: &Path) -> Result<bool, String> {
-    let temp = canonical_temp_dir()?;
+pub fn is_session_workspace_dir(root: &Path, path: &Path) -> Result<bool, String> {
+    let root = canonical_session_root(root)?;
     let target = canonical_existing(path)?;
     let Some(name) = target.file_name().and_then(|value| value.to_str()) else {
         return Ok(false);
     };
-    Ok(name.starts_with(SESSION_WORKSPACE_PREFIX) && target.starts_with(temp))
+    Ok(name.starts_with(SESSION_WORKSPACE_PREFIX) && target.starts_with(root))
 }
 
-pub fn create_session_workspace() -> Result<String, String> {
+pub fn create_session_workspace(root: &Path) -> Result<String, String> {
+    let root = canonical_session_root(root)?;
     let mut session_dir = None;
     for attempt in 0..100_u8 {
-        let candidate = std::env::temp_dir().join(format!(
+        let candidate = root.join(format!(
             "{}{}_{}_{}",
             SESSION_WORKSPACE_PREFIX,
             std::process::id(),
@@ -89,34 +104,32 @@ pub fn create_session_workspace() -> Result<String, String> {
         })?;
     }
 
-    if !is_session_workspace_dir(&session_dir)? {
-        return Err("Dossier de session hors du temporaire systeme.".to_string());
+    if !is_session_workspace_dir(&root, &session_dir)? {
+        return Err("Dossier de session hors du cache de Story Studio.".to_string());
     }
 
     let session_dir = canonical_existing(&session_dir)?;
     Ok(path_for_frontend(&session_dir.to_string_lossy()))
 }
 
-pub fn cleanup_session_workspace(path: &str) -> Result<(), String> {
+pub fn cleanup_session_workspace(root: &Path, path: &str) -> Result<(), String> {
     let session_dir = PathBuf::from(path);
     if !session_dir.exists() {
         return Ok(());
     }
-    if !is_session_workspace_dir(&session_dir)? {
-        return Err(
-            "Refus de supprimer un dossier hors session temporaire Story Studio.".to_string(),
-        );
+    if !is_session_workspace_dir(root, &session_dir)? {
+        return Err("Refus de supprimer un dossier hors session Story Studio.".to_string());
     }
     fs::remove_dir_all(&session_dir)
         .map_err(|e| format!("Impossible de nettoyer le dossier de session : {}", e))
 }
 
-pub fn cleanup_orphan_session_workspaces(max_age: std::time::Duration) {
-    let Ok(temp) = canonical_temp_dir() else {
+pub fn cleanup_orphan_session_workspaces(root: &Path, max_age: std::time::Duration) {
+    let Ok(root) = canonical_session_root(root) else {
         return;
     };
     let cutoff = SystemTime::now().checked_sub(max_age).unwrap_or(UNIX_EPOCH);
-    let Ok(entries) = fs::read_dir(&temp) else {
+    let Ok(entries) = fs::read_dir(&root) else {
         return;
     };
 
@@ -138,16 +151,16 @@ pub fn cleanup_orphan_session_workspaces(max_age: std::time::Duration) {
             continue;
         };
         if modified < cutoff {
-            let _ = cleanup_session_workspace(&path.to_string_lossy());
+            let _ = cleanup_session_workspace(&root, &path.to_string_lossy());
         }
     }
 }
 
-pub fn list_session_recoveries() -> Vec<SessionRecovery> {
-    let Ok(temp) = canonical_temp_dir() else {
+pub fn list_session_recoveries(root: &Path) -> Vec<SessionRecovery> {
+    let Ok(root) = canonical_session_root(root) else {
         return Vec::new();
     };
-    let Ok(entries) = fs::read_dir(&temp) else {
+    let Ok(entries) = fs::read_dir(&root) else {
         return Vec::new();
     };
 
@@ -163,7 +176,7 @@ pub fn list_session_recoveries() -> Vec<SessionRecovery> {
         if !name.starts_with(SESSION_WORKSPACE_PREFIX) {
             continue;
         }
-        if !matches!(is_session_workspace_dir(&session_dir), Ok(true)) {
+        if !matches!(is_session_workspace_dir(&root, &session_dir), Ok(true)) {
             continue;
         }
         let snapshot = session_dir.join(SESSION_RECOVERY_FILE);
@@ -191,24 +204,36 @@ pub fn list_session_recoveries() -> Vec<SessionRecovery> {
 mod tests {
     use super::*;
 
+    fn test_session_root(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "story_studio_session_tests_{}_{}_{}",
+            label,
+            std::process::id(),
+            now_nanos()
+        ))
+    }
+
     #[test]
-    fn create_session_workspace_stays_under_temp_and_creates_dirs() {
-        let session = create_session_workspace().expect("create session workspace");
+    fn create_session_workspace_stays_under_root_and_creates_dirs() {
+        let root = test_session_root("create");
+        let session = create_session_workspace(&root).expect("create session workspace");
         let session_path = PathBuf::from(&session);
-        assert!(is_session_workspace_dir(&session_path).expect("validate session"));
+        assert!(is_session_workspace_dir(&root, &session_path).expect("validate session"));
         for dir_name in SESSION_WORKSPACE_DIRS {
             assert!(
                 session_path.join(dir_name).is_dir(),
                 "{dir_name} should exist"
             );
         }
-        cleanup_session_workspace(&session).expect("cleanup session");
+        cleanup_session_workspace(&root, &session).expect("cleanup session");
+        fs::remove_dir(root).expect("cleanup test root");
     }
 
     #[test]
     fn list_session_recoveries_returns_snapshots_newest_first() {
-        let older = create_session_workspace().expect("create older session");
-        let newer = create_session_workspace().expect("create newer session");
+        let root = test_session_root("recoveries");
+        let older = create_session_workspace(&root).expect("create older session");
+        let newer = create_session_workspace(&root).expect("create newer session");
         let older_snapshot = PathBuf::from(&older).join(SESSION_RECOVERY_FILE);
         let newer_snapshot = PathBuf::from(&newer).join(SESSION_RECOVERY_FILE);
         fs::write(&older_snapshot, b"{}").expect("write older snapshot");
@@ -217,7 +242,7 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(100));
         fs::write(&newer_snapshot, b"{}").expect("write newer snapshot");
 
-        let recoveries = list_session_recoveries();
+        let recoveries = list_session_recoveries(&root);
         let older_index = recoveries
             .iter()
             .position(|entry| {
@@ -232,20 +257,18 @@ mod tests {
             .expect("newer recovery listed");
         assert!(newer_index < older_index);
 
-        cleanup_session_workspace(&older).expect("cleanup older session");
-        cleanup_session_workspace(&newer).expect("cleanup newer session");
+        cleanup_session_workspace(&root, &older).expect("cleanup older session");
+        cleanup_session_workspace(&root, &newer).expect("cleanup newer session");
+        fs::remove_dir(root).expect("cleanup test root");
     }
 
     #[test]
     fn cleanup_session_workspace_rejects_non_session_dir() {
-        let dir = std::env::temp_dir().join(format!(
-            "story_studio_not_a_session_{}_{}",
-            std::process::id(),
-            now_nanos()
-        ));
+        let root = test_session_root("reject");
+        let dir = root.join("story_studio_not_a_session");
         fs::create_dir_all(&dir).expect("create temp dir");
-        let err = cleanup_session_workspace(&dir.to_string_lossy()).unwrap_err();
+        let err = cleanup_session_workspace(&root, &dir.to_string_lossy()).unwrap_err();
         assert!(err.contains("Refus"));
-        fs::remove_dir_all(dir).expect("manual cleanup");
+        fs::remove_dir_all(root).expect("manual cleanup");
     }
 }

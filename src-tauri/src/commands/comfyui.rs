@@ -107,14 +107,24 @@ pub async fn comfyui_poll_job(
 
 #[tauri::command]
 pub async fn comfyui_download_output(
+    app: tauri::AppHandle,
     settings: ComfyUiSettings,
     filename: String,
     subfolder: String,
     prompt_id: String,
     workspace_dir: Option<String>,
 ) -> Result<String, String> {
+    let fallback_dir =
+        crate::support::temp::app_cache_subdir(&app, crate::support::temp::TEMP_IMAGES_DIR)?;
     tauri::async_runtime::spawn_blocking(move || {
-        download_output_sync(settings, filename, subfolder, prompt_id, workspace_dir)
+        download_output_sync(
+            settings,
+            filename,
+            subfolder,
+            prompt_id,
+            workspace_dir,
+            fallback_dir,
+        )
     })
     .await
     .map_err(|e| e.to_string())?

@@ -307,13 +307,27 @@ fn extract_zip_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
             })?;
         }
 
-        let mut out = fs::File::create(&target).map_err(|e| {
-            format!(
-                "Impossible de creer le fichier extrait {} : {}",
-                target.display(),
-                e
-            )
-        })?;
+        let mut out = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                return Err(format!(
+                    "Collision de nom pendant l'extraction de {} : {} existe deja sur ce volume.",
+                    source.display(),
+                    target.display()
+                ));
+            }
+            Err(error) => {
+                return Err(format!(
+                    "Impossible de creer le fichier extrait {} : {}",
+                    target.display(),
+                    error
+                ));
+            }
+        };
         std::io::copy(&mut entry, &mut out).map_err(|e| {
             format!(
                 "Impossible d'extraire {} depuis {} : {}",
@@ -733,6 +747,9 @@ mod tests {
             .expect("write uppercase fixture asset");
         fs::write(source_dir.join("assets/Médias été/a.txt"), b"lower")
             .expect("write lowercase fixture asset");
+        let supports_case_distinct_files = fs::read(source_dir.join("assets/Médias été/A.txt"))
+            .expect("read source case probe")
+            == b"upper";
         fs::create_dir_all(&extracted).expect("create extraction dir");
 
         let mut create = Command::new(&seven_zip);
@@ -753,10 +770,12 @@ mod tests {
 
         extract_7z_archive(&archive, &extracted).expect("extract fixture");
         assert!(extracted.join("story.json").is_file());
-        assert_eq!(
-            fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase asset"),
-            b"upper"
-        );
+        if supports_case_distinct_files {
+            assert_eq!(
+                fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase asset"),
+                b"upper"
+            );
+        }
         assert_eq!(
             fs::read(extracted.join("assets/Médias été/a.txt")).expect("read lowercase asset"),
             b"lower"
@@ -781,19 +800,51 @@ mod tests {
         );
         fs::create_dir_all(&extracted).expect("create zip extraction dir");
 
-        extract_zip_archive(&archive, &extracted).expect("extract unicode zip fixture");
-
-        assert_eq!(
-            fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase zip asset"),
-            b"upper"
-        );
-        assert_eq!(
-            fs::read(extracted.join("assets/Médias été/a.txt")).expect("read lowercase zip asset"),
-            b"lower"
-        );
+        match extract_zip_archive(&archive, &extracted) {
+            Ok(()) => {
+                assert_eq!(
+                    fs::read(extracted.join("assets/Médias été/A.txt"))
+                        .expect("read uppercase zip asset"),
+                    b"upper"
+                );
+                assert_eq!(
+                    fs::read(extracted.join("assets/Médias été/a.txt"))
+                        .expect("read lowercase zip asset"),
+                    b"lower"
+                );
+            }
+            Err(error) => assert!(
+                error.contains("Collision de nom"),
+                "unexpected extraction error: {error}"
+            ),
+        }
 
         fs::remove_dir_all(dir.parent().expect("temp import parent"))
             .expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn duplicate_zip_targets_are_rejected_instead_of_overwritten() {
+        let dir = temp_import_dir("zip_duplicate_target");
+        let archive = dir.join("duplicate.zip");
+        let extracted = dir.join("extracted");
+        write_zip(
+            &archive,
+            &[("story.json", br#"{"title":"Archive","stageNodes":[]}"#)],
+        );
+        fs::create_dir_all(&extracted).expect("create zip extraction dir");
+        fs::write(extracted.join("story.json"), b"existing")
+            .expect("write existing extraction target");
+
+        let error = extract_zip_archive(&archive, &extracted)
+            .expect_err("reject duplicate extraction target");
+        assert!(error.contains("Collision de nom"));
+        assert_eq!(
+            fs::read(extracted.join("story.json")).expect("read preserved extraction target"),
+            b"existing"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
     #[test]

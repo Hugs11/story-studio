@@ -4,7 +4,7 @@
 // pour les anciens contextes qui n'ont pas besoin d'un média autonome durable.
 
 import { writeFile, mkdir, remove, exists } from '@tauri-apps/plugin-fs';
-import { join, tempDir } from '@tauri-apps/api/path';
+import { appCacheDir, join } from '@tauri-apps/api/path';
 import { logger } from '../../utils/logger';
 import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
 import {
@@ -83,7 +83,7 @@ export async function exportEditedImage({
   if (managedWorkspace) {
     directory = joinPath(managedWorkspace, IMAGES_GENEREES);
   } else {
-    directory = await join(await tempDir(), TEMP_IMAGES_DIR);
+    directory = await join(await appCacheDir(), TEMP_IMAGES_DIR);
   }
   await mkdir(directory, { recursive: true });
 

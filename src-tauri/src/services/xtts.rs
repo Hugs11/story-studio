@@ -48,7 +48,7 @@ pub use generation::{generate_audio_sync, get_status_sync};
 
 #[cfg(test)]
 mod tests {
-    use super::output::output_filename;
+    use super::output::{generated_dir, output_filename};
     use super::{generate_audio_sync, get_status_sync, XttsGenerateRequest, XttsSettings};
     use std::fs;
     use std::path::PathBuf;
@@ -68,6 +68,29 @@ mod tests {
                 "{name:?} should be rejected"
             );
         }
+    }
+
+    #[test]
+    fn generated_dir_prefers_active_workspace_and_falls_back_to_saved_project() {
+        let mut request = XttsGenerateRequest {
+            text: "Bonjour".to_string(),
+            language: None,
+            speaker: None,
+            voice: None,
+            save_path: Some("/projets/sauvegarde.mbah".to_string()),
+            workspace_dir: Some("/cache/session-active".to_string()),
+            filename_hint: None,
+        };
+        assert_eq!(
+            generated_dir(&request).unwrap(),
+            PathBuf::from("/cache/session-active/voix-generees")
+        );
+
+        request.workspace_dir = None;
+        assert_eq!(
+            generated_dir(&request).unwrap(),
+            PathBuf::from("/projets/voix-generees")
+        );
     }
 
     #[test]

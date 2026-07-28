@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   assertSafeArchiveEntries,
+  piperBuildRoot,
   PIPER_TARGETS,
 } from './build-piper-runtime.mjs';
 import {
@@ -72,6 +73,21 @@ test('Piper target selection rejects unsupported architectures', () => {
     () => selectPiperTarget('linux', 'arm64'),
     /Unsupported Piper target/,
   );
+});
+
+test('Piper build intermediates use a short checkout-specific temporary root', () => {
+  const first = piperBuildRoot({
+    repositoryRoot: '/very/long/checkout/one',
+    platform: 'darwin',
+  });
+  const second = piperBuildRoot({
+    repositoryRoot: '/very/long/checkout/two',
+    platform: 'linux',
+  });
+
+  assert.match(first, /^\/tmp\/story-studio-piper-[a-f0-9]{8}$/);
+  assert.match(second, /^\/tmp\/story-studio-piper-[a-f0-9]{8}$/);
+  assert.notEqual(first, second);
 });
 
 test('Piper source archive inspection rejects traversal and unexpected roots', () => {

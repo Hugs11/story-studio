@@ -63,7 +63,7 @@ pub use generation::{ensure_sync, generate_audio_sync, list_voices_sync};
 mod tests {
     use super::catalog::{find_voice, DEFAULT_VOICE, VOICES};
     use super::generation::{length_scale_for_speed, validate_text_for_generation};
-    use super::output::output_filename;
+    use super::output::{generated_dir, output_filename};
     use super::runtime::resolve_piper_runtime;
     use super::{ensure_sync, generate_audio_sync, PiperGenerateRequest, PiperSettings};
     use std::path::Path;
@@ -98,6 +98,28 @@ mod tests {
                 "{name:?} should be rejected"
             );
         }
+    }
+
+    #[test]
+    fn generated_dir_prefers_active_workspace_and_falls_back_to_saved_project() {
+        let mut request = PiperGenerateRequest {
+            text: "Bonjour".to_string(),
+            voice: None,
+            speed: 1.0,
+            save_path: Some("/projets/sauvegarde.mbah".to_string()),
+            workspace_dir: Some("/cache/session-active".to_string()),
+            filename_hint: None,
+        };
+        assert_eq!(
+            generated_dir(&request).unwrap(),
+            Path::new("/cache/session-active/voix-generees")
+        );
+
+        request.workspace_dir = None;
+        assert_eq!(
+            generated_dir(&request).unwrap(),
+            Path::new("/projets/voix-generees")
+        );
     }
 
     #[test]

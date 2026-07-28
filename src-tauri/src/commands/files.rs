@@ -95,8 +95,13 @@ pub async fn split_audio_segments(
 }
 
 #[tauri::command]
-pub fn extract_audio_embedded_image(audio_path: String) -> Result<Option<String>, String> {
-    project_files::extract_audio_embedded_image(&audio_path)
+pub fn extract_audio_embedded_image(
+    app: tauri::AppHandle,
+    audio_path: String,
+) -> Result<Option<String>, String> {
+    let output_dir =
+        crate::support::temp::app_cache_subdir(&app, crate::support::temp::TEMP_IMAGES_DIR)?;
+    project_files::extract_audio_embedded_image(&audio_path, &output_dir)
 }
 
 #[tauri::command]
@@ -191,6 +196,7 @@ pub async fn audio_edit_info(
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn preview_audio_edit(
+    app: tauri::AppHandle,
     input_path: String,
     mode: String,
     start_sec: f64,
@@ -201,25 +207,30 @@ pub async fn preview_audio_edit(
     fade_out_sec: f64,
     cut_fade_sec: f64,
 ) -> Result<String, String> {
+    let preview_root =
+        crate::support::temp::app_cache_subdir(&app, crate::support::temp::AUDIO_PREVIEWS_DIR)?;
     log::info!(target: "files",
         "preview_audio_edit: mode={} input='{}' range={}..{}s fades={}/{}/{}",
         mode, input_path, start_sec, end_sec, fade_in_sec, fade_out_sec, cut_fade_sec);
     let input_for_log = input_path.clone();
     let mode_for_log = mode.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::preview_audio_edit(project_files::AudioEditRequest {
-            input_path: &input_path,
-            save_path: save_path.as_deref(),
-            workspace_dir: workspace_dir.as_deref(),
-            params: project_files::AudioEditParams {
-                mode: &mode,
-                start_sec,
-                end_sec,
-                fade_in_sec,
-                fade_out_sec,
-                cut_fade_sec,
+        project_files::preview_audio_edit(
+            project_files::AudioEditRequest {
+                input_path: &input_path,
+                save_path: save_path.as_deref(),
+                workspace_dir: workspace_dir.as_deref(),
+                params: project_files::AudioEditParams {
+                    mode: &mode,
+                    start_sec,
+                    end_sec,
+                    fade_in_sec,
+                    fade_out_sec,
+                    cut_fade_sec,
+                },
             },
-        })
+            &preview_root,
+        )
         .inspect_err(|err| {
             log::error!(target: "files",
             "preview_audio_edit failed (mode={}) for '{}': {}", mode_for_log, input_for_log, err)
@@ -272,11 +283,14 @@ pub async fn apply_audio_edit(
 
 #[tauri::command]
 pub async fn commit_audio_preview(
+    app: tauri::AppHandle,
     input_path: String,
     preview_path: String,
     save_path: Option<String>,
     workspace_dir: Option<String>,
 ) -> Result<project_files::TrimAudioResult, String> {
+    let preview_root =
+        crate::support::temp::app_cache_subdir(&app, crate::support::temp::AUDIO_PREVIEWS_DIR)?;
     log::info!(target: "files",
         "commit_audio_preview: input='{}' preview='{}'", input_path, preview_path);
     let input_for_log = input_path.clone();
@@ -286,6 +300,7 @@ pub async fn commit_audio_preview(
             &preview_path,
             save_path.as_deref(),
             workspace_dir.as_deref(),
+            &preview_root,
         )
         .inspect_err(|err| {
             log::error!(target: "files",
@@ -297,10 +312,15 @@ pub async fn commit_audio_preview(
 }
 
 #[tauri::command]
-pub async fn discard_audio_preview(preview_path: String) -> Result<(), String> {
+pub async fn discard_audio_preview(
+    app: tauri::AppHandle,
+    preview_path: String,
+) -> Result<(), String> {
+    let preview_root =
+        crate::support::temp::app_cache_subdir(&app, crate::support::temp::AUDIO_PREVIEWS_DIR)?;
     let preview_for_log = preview_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::discard_audio_preview(&preview_path).inspect_err(|error| {
+        project_files::discard_audio_preview(&preview_path, &preview_root).inspect_err(|error| {
             log::warn!(
                 target: "audio_preview",
                 "discard rejected for '{}': {}",
