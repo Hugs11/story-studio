@@ -208,14 +208,12 @@ ABI-incompatible plugins from a newer host distribution.
 The DEB and RPM use the distribution WebKitGTK/GStreamer stack instead and do
 not bundle this AppImage-specific plugin set.
 
-## Runtime-downloaded tools (not bundled)
+## External runtime tools
 
-The tools below are **not** included in this repository or its installers. Story
-Studio downloads them on first use from their official sources, over HTTPS from
-an allowlist of official hosts, into a writable app-data folder
-(`{app_data}/yt-dlp/`, `{app_data}/piper/`). They run on the end user's machine;
-Story Studio does **not** redistribute them. Their upstream licenses still apply
-to the downloaded copies, which is why they are disclosed here.
+The tools below run as separate processes. yt-dlp is downloaded on first use
+into writable app-data; Piper 1.6 is built from source and bundled per platform
+while its voice models remain downloaded separately. Their upstream licenses
+and notices apply as detailed below.
 
 ### yt-dlp
 
@@ -245,70 +243,85 @@ does not redistribute yt-dlp; it is fetched at runtime. If a future
 release bundles it, treat that standalone binary as GPL v3 or later and
 include the matching upstream third-party notices.
 
-### Piper (text-to-speech)
+### Piper (text-to-speech) — 0.9.6 migration
 
-- **Used by:** the default zero-config TTS backend (plan 08). Provisioned by
-  `src-tauri/src/services/piper/`.
-- **Downloaded from:**
-  - binary archive:
-    <https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip>
-    (SHA-256
-    `f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea`)
-  - Linux x86_64 archive:
-    <https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz>
-    (SHA-256
-    `a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992`)
-  - macOS asset published as ARM64:
-    <https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_macos_aarch64.tar.gz>
-    (SHA-256
-    `6b1eb03b3735946cb35216e063e7eebcc33a6bbf5dd96ec0217959bf1cdcb0cc`)
-  - voice models: <https://huggingface.co/rhasspy/piper-voices> (tag `v1.0.0`)
-- **Upstream projects:** <https://github.com/rhasspy/piper> and
-  <https://github.com/rhasspy/piper-voices>
-- **Licenses:**
-  - Piper itself: **MIT License** —
-    <https://github.com/rhasspy/piper/blob/master/LICENSE.md>
-  - The Windows archive also contains **eSpeak NG** (phonemizer data + library),
-    licensed under the **GNU GPL v3** —
-    <https://github.com/espeak-ng/espeak-ng/blob/master/COPYING> — and
-    **ONNX Runtime**, licensed under the **MIT License** —
-    <https://github.com/microsoft/onnxruntime/blob/main/LICENSE>.
-  - Each voice model carries **its own license**, documented in that voice's
-    `MODEL_CARD` in the `piper-voices` repository. The French voices available
-    in Story Studio are:
-    - `fr_FR-siwis-medium`: dataset/model card license **CC BY 4.0** —
-      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/siwis/medium/MODEL_CARD>
-    - `fr_FR-tom-medium`: dataset/model card license **AGPL v3** —
-      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/tom/medium/MODEL_CARD>
-    - `fr_FR-gilles-low`: dataset/model card license **CC0** —
-      <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/gilles/low/MODEL_CARD>
+Story Studio 0.9.6 builds and bundles a native Piper runtime for Windows x64,
+Linux x86_64 and macOS Apple Silicon. The runtime is invoked as a separate
+process. It needs no Python installation, Homebrew runtime or Rosetta.
 
-Because the Piper Windows archive includes eSpeak NG (GPL v3), treat the
-downloaded Piper toolchain as **GPL v3** for any redistribution. Story Studio
-does not redistribute it — it is fetched at runtime from the official sources
-above — but anyone who chooses to bundle it must honor those terms. If a future
-release bundles Piper voices too, review each selected voice model card and
-document the exact voice license in the bundled-assets section.
+- **Used by:** the default zero-config TTS backend (plan 08).
+- **Piper source:** `OHF-Voice/piper1-gpl` tag `v1.6.0`, commit
+  `f04d52c5528ac7cf2d73757f57990ff490f75005` —
+  <https://codeload.github.com/OHF-Voice/piper1-gpl/tar.gz/refs/tags/v1.6.0>
+  (SHA-256
+  `171e27d9f5dc38048552155909f5760f781c08958e6208ea4b5d97525e1ad82b`).
+- **Story Studio build recipe:** `scripts/build-piper-runtime.mjs`, manifest
+  `scripts/piper-runtime-manifest.mjs` and published patch
+  `scripts/patches/piper-1.6.0-story-studio.patch`.
+- **Piper license:** **GNU GPL v3 or later**, as declared by Piper 1.6 —
+  <https://github.com/OHF-Voice/piper1-gpl/blob/v1.6.0/COPYING>.
+- **eSpeak NG source:** commit
+  `212928b394a96e8fd2096616bfd54e17845c48f6` —
+  <https://codeload.github.com/espeak-ng/espeak-ng/tar.gz/212928b394a96e8fd2096616bfd54e17845c48f6>
+  (SHA-256
+  `1f201cabc73e569a7cb434d40d3b30980f923010f8ecd4d1c4ae94691ac2888a`).
+  eSpeak NG is primarily **GNU GPL v3 or later** and its source/data tree
+  carries additional Apache-2.0, BSD-2-Clause and Unicode-data notices.
+- **Sonic build input:** commit
+  `fbf75c3d6d846bad3bb3d456cbc5d07d9fd8c104` —
+  <https://codeload.github.com/waywardgeek/sonic/tar.gz/fbf75c3d6d846bad3bb3d456cbc5d07d9fd8c104>
+  (SHA-256
+  `715827b5a39b79e56e44397d7b845910df996d4cca74777b3b61629b1ddc98c1`).
+  eSpeak's CMake configures this pinned **Apache-2.0** source while Piper
+  explicitly disables libsonic runtime integration; no Sonic object is linked
+  into the distributed runtime.
+- **ONNX Runtime:** version `1.22.0`, **MIT License** —
+  <https://github.com/microsoft/onnxruntime/blob/v1.22.0/LICENSE>.
+  Official archives used by the recipe:
+  - Windows x64 —
+    <https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-win-x64-1.22.0.zip>,
+    SHA-256
+    `174c616efc0271194488642a72f1a514e01487da4dfe84c49296d66e40ebe0da`;
+  - Linux x86_64 —
+    <https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-linux-x64-1.22.0.tgz>,
+    SHA-256
+    `8344d55f93d5bc5021ce342db50f62079daf39aaafb5d311a451846228be49b3`;
+  - macOS ARM64 —
+    <https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-osx-arm64-1.22.0.tgz>,
+    SHA-256
+    `cab6dcbd77e7ec775390e7b73a8939d45fec3379b017c7cb74f5b204c1a1cc07`.
 
-The platform name of a release asset is not trusted by itself. Story Studio
-checks PE/ELF/Mach-O architecture before activation. In particular, the
-official `piper_macos_aarch64.tar.gz` asset above currently contains an x86_64
-Mach-O `piper` executable and is therefore deliberately rejected on Apple
-Silicon. A native official/reproducible replacement is required before Piper
-can be declared functional on macOS; Rosetta is not used as a fallback.
+Each generated runtime contains the Piper, eSpeak NG and ONNX Runtime license
+texts, ONNX Runtime third-party notices, binary hashes and a machine-readable
+provenance manifest. The build downloads every source/runtime archive over
+HTTPS, verifies its pinned SHA-256 before extraction and rejects an unexpected
+platform architecture or loader path.
+
+The three French voice models are not bundled. They remain downloaded on first
+use from <https://huggingface.co/rhasspy/piper-voices> tag `v1.0.0`, with their
+existing pinned hashes. Each model carries its own license:
+
+- `fr_FR-siwis-medium`: **CC BY 4.0** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/siwis/medium/MODEL_CARD>
+- `fr_FR-tom-medium`: **AGPL v3** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/tom/medium/MODEL_CARD>
+- `fr_FR-gilles-low`: **CC0** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/gilles/low/MODEL_CARD>
 
 ## Distribution notes
 
-The historical Windows binaries remain tracked in `src-tauri/tools/`. Linux and
-macOS payloads are reproducibly prepared from the pinned archives above by
-`scripts/prepare-platform-tools.mjs` and are intentionally ignored by Git.
-Each generated tool directory includes the GPL v3 text, the 7-Zip license,
-the imageio-ffmpeg package license and a machine-readable provenance manifest.
-Do not replace the tracked Windows `ffmpeg.exe` without checking that it remains
-below GitHub's hard **100 MiB per-file** limit.
+The historical Windows FFmpeg and 7-Zip binaries remain tracked in
+`src-tauri/tools/`. Linux and macOS FFmpeg/7-Zip payloads are reproducibly
+prepared from the pinned archives above by `scripts/prepare-platform-tools.mjs`.
+Piper is built separately by `scripts/build-piper-runtime.mjs`; preparation
+validates and preserves an existing runtime. Generated platform directories are
+intentionally ignored by Git.
 
-yt-dlp and Piper are **not** bundled: they are downloaded at runtime (see
-"Runtime-downloaded tools" above). If a future release decides to bundle either
-of them in the installer, move its entry up and document the exact file, version,
-SHA-256 and the resulting license obligations (notably yt-dlp's GPLv3+
-standalone Windows binary and Piper's GPL v3 eSpeak NG component).
+Each generated tool directory includes the applicable license texts and
+machine-readable provenance manifests. Do not replace the tracked Windows
+`ffmpeg.exe` without checking that it remains below GitHub's hard **100 MiB
+per-file** limit.
+
+yt-dlp remains downloaded at runtime and is not bundled. Piper 1.6 is bundled
+without its voice models; corresponding-source availability for the exact
+runtime build must accompany the 0.9.6 release.

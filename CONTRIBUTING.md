@@ -38,6 +38,24 @@ cargo test --all-targets
 cargo clippy --all-targets -- -D warnings
 ```
 
+## Building the Piper Runtime
+
+Story Studio builds Piper 1.6 from pinned, SHA-256-verified sources for the
+current host only. The supported targets are Windows x64, Linux x86_64, and
+macOS Apple Silicon.
+
+Install a C/C++ toolchain, Git, CMake 3.26 or newer, and Ninja (Linux/macOS).
+Windows builds use Visual Studio 2022 instead of Ninja. Then run:
+
+```sh
+npm run build:piper-runtime
+```
+
+The command builds and tests Piper before placing the validated runtime under
+`src-tauri/tools/<platform>/piper/`. Sources, caches, build outputs, and the
+runtime are intentionally ignored by Git. The exact inputs, hashes, patch, and
+license obligations are documented in `THIRD_PARTY_NOTICES.md`.
+
 ## Reporting Bugs
 
 Open a GitHub issue using the bug report template. Include:

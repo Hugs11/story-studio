@@ -33,6 +33,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:linux:bundles": "node scripts/build-linux-bundles-podman.mjs",
+    "build:piper-runtime": "node scripts/build-piper-runtime.mjs",
     "build:stats": "cross-env BUNDLE_STATS=1 vite build",
     "preview": "vite preview",
     "lint": "eslint .",

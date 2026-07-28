@@ -1,0 +1,143 @@
+diff --git a/libpiper/CMakeLists.txt b/libpiper/CMakeLists.txt
+index 846a633..be41b0d 100644
+--- a/libpiper/CMakeLists.txt
++++ b/libpiper/CMakeLists.txt
+@@ -37,0 +38,17 @@ endif()
++set(PIPER_ESPEAK_SOURCE_DIR "" CACHE PATH
++    "Pre-verified local eSpeak NG source directory")
++set(PIPER_SONIC_SOURCE_DIR "" CACHE PATH
++    "Pre-verified local Sonic source directory")
++if(PIPER_ESPEAK_SOURCE_DIR)
++    set(PIPER_ESPEAK_SOURCE_ARGS
++        SOURCE_DIR "${PIPER_ESPEAK_SOURCE_DIR}"
++        DOWNLOAD_COMMAND ""
++        UPDATE_COMMAND ""
++    )
++else()
++    set(PIPER_ESPEAK_SOURCE_ARGS
++        GIT_REPOSITORY https://github.com/espeak-ng/espeak-ng.git
++        GIT_TAG 212928b394a96e8fd2096616bfd54e17845c48f6
++    )
++endif()
++
+@@ -39,2 +56 @@ ExternalProject_Add(espeak_ng_external
+-    GIT_REPOSITORY https://github.com/espeak-ng/espeak-ng.git
+-    GIT_TAG 212928b394a96e8fd2096616bfd54e17845c48f6  # 2025-Mar-22
++    ${PIPER_ESPEAK_SOURCE_ARGS}
+@@ -43,0 +60,2 @@ ExternalProject_Add(espeak_ng_external
++        -DFETCHCONTENT_FULLY_DISCONNECTED:BOOL=ON
++        "-DFETCHCONTENT_SOURCE_DIR_SONIC-GIT=${PIPER_SONIC_SOURCE_DIR}"
+diff --git a/libpiper/src/main/utils/wavfile.cpp b/libpiper/src/main/utils/wavfile.cpp
+index fbaed5c..ab19b9b 100644
+--- a/libpiper/src/main/utils/wavfile.cpp
++++ b/libpiper/src/main/utils/wavfile.cpp
+@@ -2,0 +3,2 @@
++#include <algorithm>
++#include <cmath>
+@@ -4,0 +7,20 @@
++void normalizeAudioSamples(std::vector<float> &samples) {
++    float maxAmplitude = 0.0F;
++    for (const float sample : samples) {
++        if (std::isfinite(sample)) {
++            maxAmplitude = std::max(maxAmplitude, std::abs(sample));
++        }
++    }
++
++    if (maxAmplitude < 1e-8F) {
++        std::fill(samples.begin(), samples.end(), 0.0F);
++        return;
++    }
++
++    for (float &sample : samples) {
++        sample = std::isfinite(sample)
++                     ? std::clamp(sample / maxAmplitude, -1.0F, 1.0F)
++                     : 0.0F;
++    }
++}
++
+@@ -13 +35,2 @@ void textToWavFile(piper_synthesizer *piper,
+-    bool isHeaderWritten = false;
++    std::vector<float> samples;
++    int sampleRate = 0;
+@@ -17,6 +40,4 @@ void textToWavFile(piper_synthesizer *piper,
+-            if (!isHeaderWritten) {
+-                writeWavStreamHeader(stream, chunk.sample_rate);
+-                isHeaderWritten = true;
+-            }
+-            stream.write(reinterpret_cast<const char *>(chunk.samples),
+-                       chunk.num_samples * sizeof(float));
++            sampleRate = chunk.sample_rate;
++            samples.insert(samples.end(),
++                           chunk.samples,
++                           chunk.samples + chunk.num_samples);
+@@ -24,0 +46,7 @@ void textToWavFile(piper_synthesizer *piper,
++
++    if (!samples.empty()) {
++        normalizeAudioSamples(samples);
++        writeWavStreamHeader(stream, sampleRate);
++        stream.write(reinterpret_cast<const char *>(samples.data()),
++                     samples.size() * sizeof(float));
++    }
+diff --git a/libpiper/src/main/utils/wavfile.hpp b/libpiper/src/main/utils/wavfile.hpp
+index 5ad66c4..d8ae730 100644
+--- a/libpiper/src/main/utils/wavfile.hpp
++++ b/libpiper/src/main/utils/wavfile.hpp
+@@ -6,0 +7,3 @@
++#include <vector>
++
++void normalizeAudioSamples(std::vector<float> &samples);
+diff --git a/libpiper/tests/DownloadModel.cmake b/libpiper/tests/DownloadModel.cmake
+index b58550f..fcec083 100644
+--- a/libpiper/tests/DownloadModel.cmake
++++ b/libpiper/tests/DownloadModel.cmake
+@@ -11,0 +12,5 @@ function(download_piper_model)
++    if(PIPER_TEST_MODEL_DIR)
++        set(${ARG_OUTPUT_DIR} ${PIPER_TEST_MODEL_DIR} PARENT_SCOPE)
++        return()
++    endif()
++
+diff --git a/libpiper/tests/test_wavfile.cpp b/libpiper/tests/test_wavfile.cpp
+index 5039a89..a7d41b5 100644
+--- a/libpiper/tests/test_wavfile.cpp
++++ b/libpiper/tests/test_wavfile.cpp
+@@ -1,0 +2,2 @@
++#include <cmath>
++#include <cstring>
+@@ -3,0 +6 @@
++#include <vector>
+@@ -30,0 +34,21 @@ piper_synthesizer *WavFileTest::synth = nullptr;
++TEST(WavFileUtilsTest, NormalizesFiniteSamples) {
++  std::vector<float> samples{-0.25F, 0.5F, 0.125F};
++  normalizeAudioSamples(samples);
++  EXPECT_FLOAT_EQ(samples[0], -0.5F);
++  EXPECT_FLOAT_EQ(samples[1], 1.0F);
++  EXPECT_FLOAT_EQ(samples[2], 0.25F);
++}
++
++TEST(WavFileUtilsTest, QuasiSilenceBecomesSilence) {
++  std::vector<float> samples{0.0F, -1e-9F, 1e-9F};
++  normalizeAudioSamples(samples);
++  EXPECT_EQ(samples, std::vector<float>(3, 0.0F));
++}
++
++TEST(WavFileUtilsTest, NonFiniteSamplesBecomeSilence) {
++  std::vector<float> samples{0.5F, std::nanf(""), -0.25F};
++  normalizeAudioSamples(samples);
++  EXPECT_EQ(samples[1], 0.0F);
++  EXPECT_FLOAT_EQ(samples[0], 1.0F);
++}
++
+@@ -41,0 +66,13 @@ TEST_F(WavFileTest, TextToWavFile) {
++
++  ASSERT_EQ((audio_data.length() - 44) % sizeof(float), 0);
++  float max_amplitude = 0.0F;
++  for (std::size_t offset = 44;
++       offset + sizeof(float) <= audio_data.length();
++       offset += sizeof(float)) {
++    float sample = 0.0F;
++    std::memcpy(&sample, audio_data.data() + offset, sizeof(float));
++    ASSERT_TRUE(std::isfinite(sample));
++    ASSERT_LE(std::abs(sample), 1.0F);
++    max_amplitude = std::max(max_amplitude, std::abs(sample));
++  }
++  EXPECT_NEAR(max_amplitude, 1.0F, 1e-5F);

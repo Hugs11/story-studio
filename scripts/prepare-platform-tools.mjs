@@ -3,6 +3,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   chmod,
+  cp,
   mkdir,
   readFile,
   rename,
@@ -14,6 +15,13 @@ import { arch as hostArch, platform as hostPlatform } from 'node:os';
 import { dirname, join, posix, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  inspectExecutable,
+  validateExecutable,
+} from './native-executable.mjs';
+import { validatePiperRuntime } from './piper-runtime.mjs';
+
+export { inspectExecutable };
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '..');
@@ -182,86 +190,6 @@ export function inspectZipArchive(bytes) {
   return names;
 }
 
-function readU32(bytes, offset, bigEndian) {
-  return bigEndian ? bytes.readUInt32BE(offset) : bytes.readUInt32LE(offset);
-}
-
-export function inspectExecutable(bytes) {
-  if (bytes.length >= 70 && bytes.subarray(0, 2).toString('binary') === 'MZ') {
-    const peOffset = bytes.readUInt32LE(0x3c);
-    if (peOffset + 6 > bytes.length || bytes.readUInt32LE(peOffset) !== 0x00004550) {
-      throw new Error('Invalid PE executable.');
-    }
-    const machine = bytes.readUInt16LE(peOffset + 4);
-    const architecture = new Map([
-      [0x014c, 'x86'],
-      [0x8664, 'x86_64'],
-      [0xaa64, 'aarch64'],
-    ]).get(machine);
-    return { format: 'pe', architectures: architecture ? [architecture] : [] };
-  }
-
-  if (bytes.length >= 20 && bytes.subarray(0, 4).equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46]))) {
-    if (bytes[5] !== 1) throw new Error('Only little-endian ELF executables are supported.');
-    const machine = bytes.readUInt16LE(18);
-    const architecture = new Map([
-      [3, 'x86'],
-      [62, 'x86_64'],
-      [183, 'aarch64'],
-    ]).get(machine);
-    return { format: 'elf', architectures: architecture ? [architecture] : [] };
-  }
-
-  if (bytes.length >= 8) {
-    const magic = bytes.subarray(0, 4).toString('hex');
-    if (magic === 'cffaedfe' || magic === 'feedfacf') {
-      const bigEndian = magic === 'feedfacf';
-      const cpuType = readU32(bytes, 4, bigEndian);
-      const architecture = new Map([
-        [7, 'x86'],
-        [0x01000007, 'x86_64'],
-        [0x0100000c, 'aarch64'],
-      ]).get(cpuType);
-      return { format: 'macho', architectures: architecture ? [architecture] : [] };
-    }
-    if (['cafebabe', 'cafebabf', 'bebafeca', 'bfbafeca'].includes(magic)) {
-      const bigEndian = magic.startsWith('cafe');
-      const is64 = magic.endsWith('babf') || magic.startsWith('bfba');
-      const count = readU32(bytes, 4, bigEndian);
-      if (!count || count > 32) throw new Error('Invalid universal Mach-O executable.');
-      const entrySize = is64 ? 32 : 20;
-      const architectures = [];
-      for (let index = 0; index < count; index += 1) {
-        const offset = 8 + index * entrySize;
-        if (offset + 4 > bytes.length) throw new Error('Truncated universal Mach-O executable.');
-        const cpuType = readU32(bytes, offset, bigEndian);
-        const architecture = new Map([
-          [7, 'x86'],
-          [0x01000007, 'x86_64'],
-          [0x0100000c, 'aarch64'],
-        ]).get(cpuType);
-        if (architecture && !architectures.includes(architecture)) architectures.push(architecture);
-      }
-      return { format: 'macho', architectures };
-    }
-  }
-  throw new Error('Unsupported executable format.');
-}
-
-function validateExecutable(bytes, expected) {
-  const inspected = inspectExecutable(bytes);
-  if (inspected.format !== expected.format) {
-    throw new Error(`Expected ${expected.format}, found ${inspected.format}.`);
-  }
-  for (const architecture of expected.architectures) {
-    if (!inspected.architectures.includes(architecture)) {
-      throw new Error(
-        `Expected ${architecture} executable, found ${inspected.architectures.join(', ') || 'unknown'}.`,
-      );
-    }
-  }
-}
-
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: options.encoding === 'buffer' ? null : (options.encoding ?? 'utf8'),
@@ -359,7 +287,39 @@ function extractMember(archivePath, archiveType, member, archiveBytes) {
   return run('tar', ['-xJOf', archivePath, member], { encoding: 'buffer' });
 }
 
-async function prepareGeneratedPlatform(config) {
+async function preserveExistingPiperRuntime(
+  destination,
+  staging,
+  platform,
+  architecture,
+) {
+  const existing = join(destination, 'piper');
+  try {
+    const metadata = await stat(existing);
+    if (!metadata.isDirectory()) throw new Error('Existing Piper runtime is not a directory.');
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+  await validatePiperRuntime(existing, { platform, architecture });
+  await cp(existing, join(staging, 'piper'), {
+    recursive: true,
+    errorOnExist: true,
+  });
+  return true;
+}
+
+async function validateOptionalPiperRuntime(platformName, platform, architecture) {
+  const runtime = join(TOOLS_ROOT, platformName, 'piper');
+  try {
+    await validatePiperRuntime(runtime, { platform, architecture });
+    process.stdout.write(`Validated existing Piper runtime in ${runtime}.\n`);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
+async function prepareGeneratedPlatform(config, platform, architecture) {
   const destination = join(TOOLS_ROOT, config.platformName);
   const staging = join(TOOLS_ROOT, `.${config.platformName}-installing-${randomUUID()}`);
   await mkdir(join(staging, 'licenses'), { recursive: true });
@@ -463,6 +423,12 @@ async function prepareGeneratedPlatform(config) {
       join(staging, 'platform-tools.json'),
       `${JSON.stringify(manifest, null, 2)}\n`,
     );
+    const preservedPiper = await preserveExistingPiperRuntime(
+      destination,
+      staging,
+      platform,
+      architecture,
+    );
 
     const old = join(TOOLS_ROOT, `.${config.platformName}-old-${randomUUID()}`);
     let hadDestination = false;
@@ -480,6 +446,7 @@ async function prepareGeneratedPlatform(config) {
     }
     if (hadDestination) await rm(old, { recursive: true, force: true });
     process.stdout.write(`Prepared ${config.platformName} tools in ${destination}.\n`);
+    if (preservedPiper) process.stdout.write('Preserved validated Piper runtime.\n');
   } catch (error) {
     await rm(staging, { recursive: true, force: true });
     throw error;
@@ -561,8 +528,15 @@ export async function preparePlatformTools({
     );
   }
   await validateNotices(config);
-  if (config.generated) await prepareGeneratedPlatform(config);
-  else await validateTrackedWindows(config);
+  if (config.generated) await prepareGeneratedPlatform(config, platform, architecture);
+  else {
+    await validateTrackedWindows(config);
+    await validateOptionalPiperRuntime(
+      config.platformName,
+      platform,
+      architecture,
+    );
+  }
 }
 
 const isMain = process.argv[1]
