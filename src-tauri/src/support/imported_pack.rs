@@ -13,7 +13,7 @@ use crate::support::tool_resolver::{
     push_resource_candidates, resolve_regular_file, resource_dir,
 };
 
-const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
+pub(crate) const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
 // Incrémenter à chaque évolution du story.json produit par la conversion (voir
 // cache_key_for_source) pour ignorer les zips convertis par une version antérieure.
 const CONVERSION_FORMAT_VERSION: &str = "v2-root-uuid";
@@ -107,13 +107,16 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
 
 /// Convertit un **dossier brut** de pack Lunii (pris directement sur la carte SD :
 /// pack filesystem `ri/si/li/ni/...` ou pack Studio `story.json + assets/`) en un
-/// ZIP Studio mis en cache sous `temp/`, et renvoie son chemin. Aucune archive
-/// intermédiaire : on localise la racine du pack dans le dossier puis on convertit.
-pub(crate) fn ensure_studio_pack_zip_from_dir(dir: &str) -> Result<PathBuf, String> {
+/// ZIP Studio mis en cache dans le dossier applicatif fourni, et renvoie son chemin.
+/// Les fichiers de travail restent dans le temporaire système car ils ne quittent
+/// jamais le backend.
+pub(crate) fn ensure_studio_pack_zip_from_dir(
+    dir: &str,
+    cache_dir: &Path,
+) -> Result<PathBuf, String> {
     let source = validate_existing_dir_path(dir, "Dossier de pack importe")?;
 
-    let cache_dir = std::env::temp_dir().join(IMPORTED_PACK_CACHE_DIR);
-    fs::create_dir_all(&cache_dir).map_err(|e| {
+    fs::create_dir_all(cache_dir).map_err(|e| {
         format!(
             "Impossible de creer le cache des archives importees : {}",
             e
@@ -914,6 +917,7 @@ mod tests {
     fn ensure_studio_pack_zip_from_dir_converts_studio_directory() {
         let dir = temp_import_dir("studio_dir");
         let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache applicatif");
         fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
         fs::write(
             pack_dir.join("story.json"),
@@ -922,8 +926,10 @@ mod tests {
         .expect("write story.json");
         fs::write(pack_dir.join("assets").join("a.png"), b"png").expect("write asset");
 
-        let zip = ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"))
-            .expect("convert studio directory");
+        let zip =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("convert studio directory");
+        assert_eq!(zip.parent(), Some(cache_dir.as_path()));
         assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
@@ -932,10 +938,11 @@ mod tests {
     #[test]
     fn ensure_studio_pack_zip_from_dir_rejects_non_pack_directory() {
         let dir = temp_import_dir("non_pack_dir");
+        let cache_dir = dir.join("cache");
         fs::create_dir_all(&dir).expect("create temp dir");
         fs::write(dir.join("readme.txt"), b"not a pack").expect("write file");
 
-        let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"))
+        let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"), &cache_dir)
             .expect_err("reject non-pack directory");
         assert!(err.contains("Aucun pack Lunii reconnu") || err.contains("non reconnue"));
 

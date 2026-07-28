@@ -111,6 +111,7 @@ pub fn run() {
                         support::temp::TEMP_IMAGES_DIR,
                         support::temp::PODCAST_MEDIA_DIR,
                         support::temp::YOUTUBE_MEDIA_DIR,
+                        support::imported_pack::IMPORTED_PACK_CACHE_DIR,
                     ] {
                         cleanup_old_files_in_dir(&dir.join(cache_dir), max_age);
                     }

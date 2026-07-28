@@ -59,12 +59,19 @@ pub async fn unpack_zip_to_entries(
 }
 
 #[tauri::command]
-pub async fn convert_folder_pack_to_zip(folder_path: String) -> Result<String, String> {
+pub async fn convert_folder_pack_to_zip(
+    app: AppHandle,
+    folder_path: String,
+) -> Result<String, String> {
     log::info!(target: "pack", "convert_folder_pack_to_zip: '{}'", folder_path);
     let folder_for_log = folder_path.clone();
+    let cache_dir = crate::support::temp::app_cache_subdir(
+        &app,
+        crate::support::imported_pack::IMPORTED_PACK_CACHE_DIR,
+    )?;
     tauri::async_runtime::spawn_blocking(move || {
-        crate::support::imported_pack::ensure_studio_pack_zip_from_dir(&folder_path)
-            .map(|path| path.to_string_lossy().to_string())
+        crate::support::imported_pack::ensure_studio_pack_zip_from_dir(&folder_path, &cache_dir)
+            .map(|path| crate::support::paths::path_for_frontend(&path.to_string_lossy()))
             .inspect_err(|err| log::error!(target: "pack", "convert_folder_pack_to_zip failed for '{}': {}", folder_for_log, err))
     })
     .await
