@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  download,
   inspectExecutable,
   inspectZipArchive,
   PLATFORM_MANIFEST,
@@ -100,4 +101,100 @@ test('unsupported platform pairs are refused without downloading', async () => {
     preparePlatformTools({ platform: 'linux', architecture: 'arm64' }),
     /Unsupported platform\/architecture/,
   );
+});
+
+test('platform tool downloads retry transient failures and retain integrity checks', async () => {
+  const bytes = Buffer.from('verified download');
+  const spec = {
+    url: 'https://www.gnu.org/licenses/test.txt',
+    sha256: '636a193cc46913f6e164b8428da57752de7db348e95903e5f0e3c2e66a300525',
+    maxBytes: 1_024,
+  };
+  const delays = [];
+  let attempts = 0;
+  const result = await download(spec, 'Test asset', {
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw new TypeError('fetch failed', {
+          cause: Object.assign(new Error('connection reset'), { code: 'ECONNRESET' }),
+        });
+      }
+      if (attempts === 2) {
+        return {
+          ok: true,
+          body: {
+            async *[Symbol.asyncIterator]() {
+              yield Buffer.from('partial');
+              throw new TypeError('terminated', {
+                cause: Object.assign(new Error('socket disconnected'), {
+                  code: 'UND_ERR_SOCKET',
+                }),
+              });
+            },
+          },
+          headers: new Headers(),
+          url: spec.url,
+        };
+      }
+      const response = new Response(bytes, {
+        headers: { 'content-length': String(bytes.length) },
+      });
+      Object.defineProperty(response, 'url', { value: spec.url });
+      return response;
+    },
+    retryDelayMs: 10,
+    waitForRetry: async (delay) => delays.push(delay),
+  });
+
+  assert.deepEqual(result, bytes);
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [10, 20]);
+});
+
+test('platform tool download failures identify the asset and network cause', async () => {
+  const spec = {
+    url: 'https://www.gnu.org/licenses/test.txt',
+    sha256: '0'.repeat(64),
+    maxBytes: 1_024,
+  };
+  let attempts = 0;
+
+  await assert.rejects(
+    download(spec, 'GPL test license', {
+      fetchImpl: async () => {
+        attempts += 1;
+        throw new TypeError('fetch failed', {
+          cause: Object.assign(new Error('socket disconnected'), { code: 'UND_ERR_SOCKET' }),
+        });
+      },
+      waitForRetry: async () => {},
+    }),
+    /GPL test license download failed after 3 attempts: fetch failed — UND_ERR_SOCKET — socket disconnected/,
+  );
+  assert.equal(attempts, 3);
+});
+
+test('platform tool downloads do not retry integrity failures', async () => {
+  const bytes = Buffer.from('tampered download');
+  const spec = {
+    url: 'https://www.gnu.org/licenses/test.txt',
+    sha256: '0'.repeat(64),
+    maxBytes: 1_024,
+  };
+  let attempts = 0;
+
+  await assert.rejects(
+    download(spec, 'Test asset', {
+      fetchImpl: async () => {
+        attempts += 1;
+        const response = new Response(bytes);
+        Object.defineProperty(response, 'url', { value: spec.url });
+        return response;
+      },
+      waitForRetry: async () => {},
+    }),
+    /SHA-256 mismatch/,
+  );
+  assert.equal(attempts, 1);
 });
