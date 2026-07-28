@@ -29,6 +29,8 @@ const TOOLS_ROOT = join(REPO_ROOT, 'src-tauri', 'tools');
 const NOTICES_PATH = join(REPO_ROOT, 'THIRD_PARTY_NOTICES.md');
 const MAX_ARCHIVE_ENTRIES = 4096;
 const MAX_COMMAND_OUTPUT = 256 * 1024 * 1024;
+const DOWNLOAD_MAX_ATTEMPTS = 3;
+const DOWNLOAD_RETRY_DELAY_MS = 1_000;
 
 const GPL_LICENSE = {
   url: 'https://www.gnu.org/licenses/gpl-3.0.txt',
@@ -132,6 +134,27 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
+function downloadErrorDetails(error) {
+  const details = [error?.message || String(error)];
+  if (error?.cause?.code) details.push(error.cause.code);
+  if (error?.cause?.message && error.cause.message !== error.message) {
+    details.push(error.cause.message);
+  }
+  return [...new Set(details)].join(' — ');
+}
+
+function isTransientDownloadError(error) {
+  return error?.transient === true
+    || error instanceof TypeError
+    || ['AbortError', 'TimeoutError'].includes(error?.name);
+}
+
+function wait(milliseconds) {
+  return new Promise((resolveWait) => {
+    setTimeout(resolveWait, milliseconds);
+  });
+}
+
 function assertSafeArchivePath(name) {
   if (!name || name.includes('\0') || name.includes('\\') || name.startsWith('/')) {
     throw new Error(`Archive path is unsafe: ${JSON.stringify(name)}`);
@@ -205,25 +228,18 @@ function run(command, args, options = {}) {
   return result.stdout;
 }
 
-async function download(spec, label) {
-  const parsed = new URL(spec.url);
-  if (parsed.protocol !== 'https:') throw new Error(`${label} URL must use HTTPS.`);
-  const allowedHosts = [
-    'files.pythonhosted.org',
-    'www.7-zip.org',
-    'd.7-zip.org',
-    'www.gnu.org',
-  ];
-  if (!allowedHosts.includes(parsed.hostname)) throw new Error(`${label} host is not allowed.`);
-
-  process.stdout.write(`Downloading ${label}…\n`);
-  const response = await fetch(spec.url, {
+async function downloadOnce(spec, label, fetchImpl, allowedHosts) {
+  const response = await fetchImpl(spec.url, {
     headers: { 'User-Agent': 'Story-Studio-platform-tools' },
     redirect: 'follow',
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok || !response.body) {
-    throw new Error(`${label} download failed with HTTP ${response.status}.`);
+    const error = new Error(`${label} download failed with HTTP ${response.status}.`);
+    error.transient = response.status === 408
+      || response.status === 429
+      || response.status >= 500;
+    throw error;
   }
   const finalUrl = new URL(response.url);
   if (finalUrl.protocol !== 'https:' || !allowedHosts.includes(finalUrl.hostname)) {
@@ -243,6 +259,45 @@ async function download(spec, label) {
   const actual = sha256(bytes);
   if (actual !== spec.sha256) throw new Error(`${label} SHA-256 mismatch.`);
   return bytes;
+}
+
+export async function download(spec, label, {
+  fetchImpl = fetch,
+  maxAttempts = DOWNLOAD_MAX_ATTEMPTS,
+  retryDelayMs = DOWNLOAD_RETRY_DELAY_MS,
+  waitForRetry = wait,
+} = {}) {
+  const parsed = new URL(spec.url);
+  if (parsed.protocol !== 'https:') throw new Error(`${label} URL must use HTTPS.`);
+  const allowedHosts = [
+    'files.pythonhosted.org',
+    'www.7-zip.org',
+    'd.7-zip.org',
+    'www.gnu.org',
+  ];
+  if (!allowedHosts.includes(parsed.hostname)) throw new Error(`${label} host is not allowed.`);
+
+  process.stdout.write(`Downloading ${label}…\n`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await downloadOnce(spec, label, fetchImpl, allowedHosts);
+    } catch (error) {
+      const details = downloadErrorDetails(error);
+      if (!isTransientDownloadError(error) || attempt === maxAttempts) {
+        const attemptSummary = attempt > 1 ? ` after ${attempt} attempts` : '';
+        throw new Error(`${label} download failed${attemptSummary}: ${details}`, {
+          cause: error,
+        });
+      }
+      const delay = retryDelayMs * attempt;
+      process.stdout.write(
+        `${label} download attempt ${attempt}/${maxAttempts} failed: ${details}. `
+        + `Retrying in ${delay} ms…\n`,
+      );
+      await waitForRetry(delay);
+    }
+  }
+  throw new Error(`${label} download failed: no download attempt was configured.`);
 }
 
 async function withArchive(bytes, archiveSpec, action) {
