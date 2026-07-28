@@ -87,7 +87,18 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
   const linux = await readJson('../src-tauri/capabilities/filesystem-linux.json');
   const macos = await readJson('../src-tauri/capabilities/filesystem-macos.json');
 
-  assert.equal(common.permissions.some((permission) => typeof permission === 'object'), false);
+  assert.equal(common.permissions.includes('fs:allow-appcache-write-recursive'), true);
+  const commonFsScope = common.permissions.find(
+    (permission) => permission?.identifier === 'fs:scope',
+  );
+  assert.deepEqual(
+    new Set(commonFsScope.allow.map(({ path }) => path)),
+    new Set([
+      '$APPCACHE/**/.session-recovery.mbah*',
+      '$APPCACHE/**/.story-studio-image-edits',
+      '$APPCACHE/**/.story-studio-image-edits/**',
+    ]),
+  );
   assert.deepEqual(windows.platforms, ['windows']);
   assert.deepEqual(linux.platforms, ['linux']);
   assert.deepEqual(macos.platforms, ['macOS']);
