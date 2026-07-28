@@ -129,12 +129,21 @@ test('macOS bundle declares microphone usage without Apple credentials', async (
   assert.doesNotMatch(config, /APPLE_|notari|Developer ID|teamId/i);
 });
 
-test('frontend-visible temporary media uses the app-owned cache instead of the system temp dir', async () => {
-  const [textImages, imageExports, fileCommands, podcastCommands, youtubeCommands, comfyCommands] =
+test('frontend-visible temporary files use the app-owned cache instead of the system temp dir', async () => {
+  const [
+    textImages,
+    imageExports,
+    fileCommands,
+    packCommands,
+    podcastCommands,
+    youtubeCommands,
+    comfyCommands,
+  ] =
     await Promise.all([
       readFile(new URL('../src/components/TextImageGenerator/generateTextImage.js', import.meta.url), 'utf8'),
       readFile(new URL('../src/components/ImageEditorModal/imageEditorExport.js', import.meta.url), 'utf8'),
       readFile(new URL('../src-tauri/src/commands/files.rs', import.meta.url), 'utf8'),
+      readFile(new URL('../src-tauri/src/commands/pack.rs', import.meta.url), 'utf8'),
       readFile(new URL('../src-tauri/src/commands/podcast.rs', import.meta.url), 'utf8'),
       readFile(new URL('../src-tauri/src/commands/youtube.rs', import.meta.url), 'utf8'),
       readFile(new URL('../src-tauri/src/commands/comfyui.rs', import.meta.url), 'utf8'),
@@ -147,6 +156,13 @@ test('frontend-visible temporary media uses the app-owned cache instead of the s
 
   assert.match(fileCommands, /app_cache_subdir[\s\S]*TEMP_IMAGES_DIR/);
   assert.match(fileCommands, /app_cache_subdir[\s\S]*AUDIO_PREVIEWS_DIR/);
+  const folderConversionCommand = packCommands.match(
+    /pub async fn convert_folder_pack_to_zip[\s\S]*?(?=\n#\[tauri::command\])/,
+  )?.[0] ?? '';
+  assert.match(folderConversionCommand, /app_cache_subdir/);
+  assert.match(folderConversionCommand, /IMPORTED_PACK_CACHE_DIR/);
+  assert.match(folderConversionCommand, /path_for_frontend/);
+  assert.doesNotMatch(folderConversionCommand, /std::env::temp_dir/);
   assert.match(podcastCommands, /app_cache_subdir[\s\S]*PODCAST_MEDIA_DIR/);
   assert.match(youtubeCommands, /app_cache_subdir[\s\S]*YOUTUBE_MEDIA_DIR/);
   assert.match(comfyCommands, /app_cache_subdir[\s\S]*TEMP_IMAGES_DIR/);
