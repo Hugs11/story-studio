@@ -34,8 +34,12 @@
       "allow": [
         { "path": "**" },
         { "path": "**/.session-recovery.mbah*" },
+        { "path": "**/.story-studio-backups" },
+        { "path": "**/.story-studio-backups/**" },
         { "path": "**/.story-studio-image-edits" },
-        { "path": "**/.story-studio-image-edits/**" }
+        { "path": "**/.story-studio-image-edits/**" },
+        { "path": "**/.story-studio-thumbnail" },
+        { "path": "**/.story-studio-thumbnail/**" }
       ],
       "deny": [
         { "path": "/System" },

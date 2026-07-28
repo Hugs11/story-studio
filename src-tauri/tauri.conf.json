@@ -21,7 +21,7 @@
         "maximizable": true,
         "maximized": true,
         "decorations": false,
-        "zoomHotkeysEnabled": true
+        "zoomHotkeysEnabled": false
       }
     ],
     "security": {

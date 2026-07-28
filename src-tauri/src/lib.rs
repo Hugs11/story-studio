@@ -79,11 +79,32 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             {
                 let default_icon = app.default_window_icon().cloned();
-                if let (Some(window), Some(icon)) = (app.get_webview_window("main"), default_icon) {
-                    if let Err(error) = window.set_icon(icon) {
+                if let Some(window) = app.get_webview_window("main") {
+                    if let Some(icon) = default_icon {
+                        if let Err(error) = window.set_icon(icon) {
+                            log::warn!(
+                                target: "boot",
+                                "Linux window icon could not be applied: {error}"
+                            );
+                        }
+                    }
+                    let pinch_window = window.clone();
+                    if let Err(error) = window.with_webview(move |platform_webview| {
+                        if let Err(error) =
+                            support::linux_webview_gestures::install_diagram_pinch_bridge(
+                                pinch_window,
+                                platform_webview,
+                            )
+                        {
+                            log::warn!(
+                                target: "diagram",
+                                "Linux diagram pinch bridge could not be installed: {error}"
+                            );
+                        }
+                    }) {
                         log::warn!(
-                            target: "boot",
-                            "Linux window icon could not be applied: {error}"
+                            target: "diagram",
+                            "Linux WebView is unavailable for diagram pinch handling: {error}"
                         );
                     }
                 }

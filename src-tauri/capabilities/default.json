@@ -30,8 +30,12 @@
       "identifier": "fs:scope",
       "allow": [
         { "path": "$APPCACHE/**/.session-recovery.mbah*" },
+        { "path": "$APPCACHE/**/.story-studio-backups" },
+        { "path": "$APPCACHE/**/.story-studio-backups/**" },
         { "path": "$APPCACHE/**/.story-studio-image-edits" },
-        { "path": "$APPCACHE/**/.story-studio-image-edits/**" }
+        { "path": "$APPCACHE/**/.story-studio-image-edits/**" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail/**" }
       ]
     }
   ]
