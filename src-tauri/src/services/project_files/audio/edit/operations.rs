@@ -71,16 +71,12 @@ pub fn trim_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = match workspace_dir.filter(|s| !s.trim().is_empty()) {
-            Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-            None => {
-                let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour découper un fichier externe."
-                        .to_string()
-                })?;
-                project_dir_from_save_path(sp)?.join("fichiers-importes")
-            }
-        };
+        let importes_dir = workspace_or_project_dir(
+            workspace_dir,
+            save_path,
+            "Définissez un emplacement de travail pour découper un fichier externe.",
+        )?
+        .join("fichiers-importes");
         fs::create_dir_all(&importes_dir)
             .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
 
@@ -101,7 +97,7 @@ pub fn trim_audio(
         )?;
 
         Ok(TrimAudioResult {
-            output_path: path_for_frontend(&out_path.to_string_lossy()),
+            output_path: path_for_frontend(&out_path),
             path_changed: true,
             original_path: None,
         })
@@ -182,16 +178,12 @@ pub fn cut_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = match workspace_dir.filter(|s| !s.trim().is_empty()) {
-            Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-            None => {
-                let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour couper un fichier externe."
-                        .to_string()
-                })?;
-                project_dir_from_save_path(sp)?.join("fichiers-importes")
-            }
-        };
+        let importes_dir = workspace_or_project_dir(
+            workspace_dir,
+            save_path,
+            "Définissez un emplacement de travail pour couper un fichier externe.",
+        )?
+        .join("fichiers-importes");
         fs::create_dir_all(&importes_dir)
             .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
 
@@ -210,7 +202,7 @@ pub fn cut_audio(
         )?;
 
         Ok(TrimAudioResult {
-            output_path: path_for_frontend(&out_path.to_string_lossy()),
+            output_path: path_for_frontend(&out_path),
             path_changed: true,
             original_path: None,
         })
@@ -235,8 +227,8 @@ pub fn audio_edit_info(
 
     Ok(AudioEditInfo {
         original_available: original_path.is_some(),
-        original_path: original_path.map(|path| path_for_frontend(&path.to_string_lossy())),
-        source_path: path_for_frontend(&input.to_string_lossy()),
+        original_path: original_path.map(path_for_frontend),
+        source_path: path_for_frontend(&input),
         mode: None,
         start_sec: None,
         end_sec: None,
@@ -278,9 +270,9 @@ pub fn restore_audio_original(
             let _ = fs::remove_dir(parent); // best-effort si vide
         }
         return Ok(TrimAudioResult {
-            output_path: path_for_frontend(&original.to_string_lossy()),
+            output_path: path_for_frontend(&original),
             path_changed: true,
-            original_path: Some(path_for_frontend(&original.to_string_lossy())),
+            original_path: Some(path_for_frontend(&original)),
         });
     }
     fs::copy(&original, &input)
@@ -294,9 +286,9 @@ pub fn restore_audio_original(
         let _ = fs::remove_dir(parent); // best-effort si vide
     }
     Ok(TrimAudioResult {
-        output_path: path_for_frontend(&input.to_string_lossy()),
+        output_path: path_for_frontend(&input),
         path_changed: false,
-        original_path: Some(path_for_frontend(&original.to_string_lossy())),
+        original_path: Some(path_for_frontend(&original)),
     })
 }
 
@@ -321,7 +313,7 @@ pub fn preview_audio_edit(
         params: request.params,
         ext: "wav",
     })?;
-    Ok(path_for_frontend(&output.to_string_lossy()))
+    Ok(path_for_frontend(&output))
 }
 
 pub fn commit_audio_preview(
@@ -371,16 +363,12 @@ pub(crate) fn commit_audio_preview_in(
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = match workspace_dir.filter(|s| !s.trim().is_empty()) {
-            Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-            None => {
-                let sp = save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour éditer un fichier externe."
-                        .to_string()
-                })?;
-                project_dir_from_save_path(sp)?.join("fichiers-importes")
-            }
-        };
+        let importes_dir = workspace_or_project_dir(
+            workspace_dir,
+            save_path,
+            "Définissez un emplacement de travail pour éditer un fichier externe.",
+        )?
+        .join("fichiers-importes");
         fs::create_dir_all(&importes_dir)
             .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
         let stem = input
@@ -443,9 +431,9 @@ pub(crate) fn commit_audio_preview_in(
     )?;
 
     let result = TrimAudioResult {
-        output_path: path_for_frontend(&final_path.to_string_lossy()),
+        output_path: path_for_frontend(&final_path),
         path_changed,
-        original_path: Some(path_for_frontend(&original_path.to_string_lossy())),
+        original_path: Some(path_for_frontend(&original_path)),
     };
     if let Err(error) = discard_audio_preview_in(&preview, preview_temp_root) {
         log::warn!(
@@ -485,16 +473,12 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = match request.workspace_dir.filter(|s| !s.trim().is_empty()) {
-            Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-            None => {
-                let sp = request.save_path.ok_or_else(|| {
-                    "Définissez un emplacement de travail pour éditer un fichier externe."
-                        .to_string()
-                })?;
-                project_dir_from_save_path(sp)?.join("fichiers-importes")
-            }
-        };
+        let importes_dir = workspace_or_project_dir(
+            request.workspace_dir,
+            request.save_path,
+            "Définissez un emplacement de travail pour éditer un fichier externe.",
+        )?
+        .join("fichiers-importes");
         fs::create_dir_all(&importes_dir)
             .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
         let stem = input
@@ -564,8 +548,8 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
     )?;
 
     Ok(TrimAudioResult {
-        output_path: path_for_frontend(&final_path.to_string_lossy()),
+        output_path: path_for_frontend(&final_path),
         path_changed,
-        original_path: Some(path_for_frontend(&original_path.to_string_lossy())),
+        original_path: Some(path_for_frontend(&original_path)),
     })
 }

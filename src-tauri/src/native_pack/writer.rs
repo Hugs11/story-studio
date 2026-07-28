@@ -9,6 +9,7 @@ use super::{
 };
 use crate::domain::project::Project;
 use crate::services::project_files::validate_existing_file_path;
+use crate::support::paths::path_for_frontend;
 use uuid::Uuid;
 
 pub(crate) fn generate_native_pack_v1_with_cancel(
@@ -28,7 +29,7 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
             "✅ ZIP natif v1 genere : {}",
             zip_path.to_string_lossy()
         ));
-        Ok(zip_path.to_string_lossy().to_string())
+        Ok(path_for_frontend(&zip_path))
     })();
 
     let _ = fs::remove_dir_all(&asset_report.stage_dir);

@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use super::super::project_dir_from_save_path;
+use super::super::workspace_or_project_dir;
 use super::{
     run_ffmpeg_audio_edit, unique_audio_assembly_path, validate_audio_assembly_filename,
     validate_audio_assembly_input, AudioEditParams, FfmpegAudioEditRequest,
@@ -44,15 +44,12 @@ pub struct AudioSplitResult {
 }
 
 fn split_target_dir(save_path: &str, workspace_dir: Option<&str>) -> Result<PathBuf, String> {
-    let has_workspace = workspace_dir.map(|s| !s.trim().is_empty()).unwrap_or(false);
-    if save_path.trim().is_empty() && !has_workspace {
-        return Err("Enregistrez le projet avant de découper un audio.".to_string());
-    }
-
-    let target_dir = match workspace_dir.filter(|s| !s.trim().is_empty()) {
-        Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-        None => project_dir_from_save_path(save_path)?.join("fichiers-importes"),
-    };
+    let target_dir = workspace_or_project_dir(
+        workspace_dir,
+        Some(save_path),
+        "Enregistrez le projet avant de découper un audio.",
+    )?
+    .join("fichiers-importes");
     fs::create_dir_all(&target_dir)
         .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
     fs::canonicalize(&target_dir)
@@ -96,7 +93,7 @@ fn split_one_segment(
     }
 
     Ok(AudioSplitSuccess {
-        output_path: path_for_frontend(&output_path.to_string_lossy()),
+        output_path: path_for_frontend(&output_path),
         output_file_name: output_path
             .file_name()
             .and_then(|value| value.to_str())

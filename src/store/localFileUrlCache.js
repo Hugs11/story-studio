@@ -11,6 +11,7 @@
 //    consommateur.
 
 import { readFile } from '@tauri-apps/plugin-fs';
+import { pathKey } from '../utils/fileUtils';
 
 const MAX_CONCURRENT_READS = 6;
 const REVOKE_DELAY_MS = 1000;
@@ -48,7 +49,7 @@ function revokeSoon(url) {
 const entries = new Map();
 
 function entryKey(path, version) {
-  return `${path}\u0000${version ?? ''}`;
+  return `${pathKey(path)}\u0000${version ?? ''}`;
 }
 
 // Acquiert l'object URL d'un fichier. Retourne la promesse de l'URL et une

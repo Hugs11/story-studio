@@ -10,6 +10,7 @@ use super::metadata::validate_youtube_url;
 use super::process::run_command_with_timeout;
 use super::provision::ensure_ytdlp;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use crate::support::paths::path_for_frontend;
 
 /// Garde-fou de taille par vidéo (cohérent avec le plafond média podcast).
 const MAX_FILESIZE: &str = "300M";
@@ -77,7 +78,7 @@ pub fn download_audio(
     if !dest.is_file() || std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0) == 0 {
         return Err("yt-dlp n'a produit aucun fichier audio.".to_string());
     }
-    Ok(dest.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest))
 }
 
 /// Radical de fichier sûr et unique dans `dir` (mêmes règles que le podcast :

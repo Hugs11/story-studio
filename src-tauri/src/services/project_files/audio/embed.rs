@@ -4,6 +4,7 @@ use std::process::Command;
 
 use super::super::validate_existing_file_path;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
+use crate::support::paths::path_for_frontend;
 pub(crate) fn looks_like_missing_embedded_image(stderr: &str) -> bool {
     let lower = stderr.to_lowercase();
     lower.contains("matches no streams")
@@ -47,7 +48,7 @@ pub fn extract_audio_embedded_image(
 
     if output.status.success() {
         if output_path.exists() {
-            return Ok(Some(output_path.to_string_lossy().to_string()));
+            return Ok(Some(path_for_frontend(&output_path)));
         }
         return Ok(None);
     }

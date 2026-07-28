@@ -100,7 +100,7 @@ export function shouldPromptRegenerateImportedUuid(metadata) {
 }
 
 export function buildTransferPromptSignature(savePath, candidates) {
-  return `${savePath}::${candidates.map((candidate) => candidate.path.toLowerCase()).sort().join('|')}`;
+  return `${pathKey(savePath)}::${candidates.map((candidate) => pathKey(candidate.path)).sort().join('|')}`;
 }
 
 export function shouldAbortEphemeralPromotion({ isEphemeralSession = false, transferErrors = [] } = {}) {

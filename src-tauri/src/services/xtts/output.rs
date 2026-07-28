@@ -1,4 +1,5 @@
 use super::{XttsGenerateRequest, XttsSettings};
+use crate::services::project_files::workspace_or_project_dir;
 use crate::support::ffmpeg::now_millis;
 use std::path::{Path, PathBuf};
 
@@ -66,32 +67,12 @@ fn reject_unsafe_hint(raw_hint: &str) -> Result<(), String> {
 }
 
 pub(super) fn generated_dir(request: &XttsGenerateRequest) -> Result<PathBuf, String> {
-    if let Some(workspace_dir) = request
-        .workspace_dir
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        return Ok(PathBuf::from(workspace_dir).join("voix-generees"));
-    }
-
-    let save_path = request
-        .save_path
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix."
-                .to_string()
-        })?;
-    let project_path = PathBuf::from(save_path);
-    let parent = project_path.parent().ok_or_else(|| {
-        format!(
-            "Impossible de determiner le dossier du projet depuis {}",
-            save_path
-        )
-    })?;
-    Ok(parent.join("voix-generees"))
+    workspace_or_project_dir(
+        request.workspace_dir.as_deref(),
+        request.save_path.as_deref(),
+        "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix.",
+    )
+    .map(|dir| dir.join("voix-generees"))
 }
 
 pub(super) fn server_output_dir(settings: &XttsSettings) -> PathBuf {

@@ -23,6 +23,7 @@ import {
   posix,
   resolve,
   sep,
+  win32,
 } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -62,7 +63,8 @@ export function piperBuildRoot({
     .slice(0, 8);
   // eSpeak NG uses a fixed 160-byte data path buffer on POSIX while compiling
   // phonemes. Keep intermediates short even when the repository path is long.
-  return join(temporaryRoot, `story-studio-piper-${repositoryKey}`);
+  const joinForTarget = platform === 'win32' ? win32.join : posix.join;
+  return joinForTarget(temporaryRoot, `story-studio-piper-${repositoryKey}`);
 }
 
 function cmakePath(path) {

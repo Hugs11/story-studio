@@ -8,17 +8,8 @@
 // scripts/sessionMediaTriage.test.mjs) détecte ces orphelins et applique le
 // choix de l'utilisateur ; la copie disque reste côté appelant.
 
-import { basename, pathKey } from '../utils/fileUtils.js';
+import { basename, isPathInside, pathKey } from '../utils/fileUtils.js';
 import { walkProjectMediaReferences } from './projectModel/index.js';
-
-function normalizedDirPrefix(dir) {
-  const key = pathKey(dir ?? '').replace(/\/+$/, '');
-  return key ? `${key}/` : null;
-}
-
-function isInsideDir(path, dirPrefix) {
-  return !!dirPrefix && pathKey(path ?? '').startsWith(dirPrefix);
-}
 
 /**
  * Liste les médias qui vivent dans le dossier de session sans être référencés
@@ -28,8 +19,7 @@ function isInsideDir(path, dirPrefix) {
  * à re-pointer. Retourne des `{ path, filename }` dédupliqués.
  */
 export function collectSessionOnlyMedia({ project, mediaLibraryPaths, mediaTags = null, sessionDir, excludeKeys = null }) {
-  const dirPrefix = normalizedDirPrefix(sessionDir);
-  if (!dirPrefix) return [];
+  if (!pathKey(sessionDir)) return [];
 
   const referenced = new Set();
   for (const ref of walkProjectMediaReferences(project)) {
@@ -44,7 +34,7 @@ export function collectSessionOnlyMedia({ project, mediaLibraryPaths, mediaTags 
     const key = pathKey(path);
     if (seen.has(key)) continue;
     seen.add(key);
-    if (!isInsideDir(path, dirPrefix)) continue;
+    if (!isPathInside(path, sessionDir)) continue;
     if (referenced.has(key)) continue;
     if (excludeKeys?.has(key)) continue;
     orphans.push({ path, filename: basename(path) || path });

@@ -594,7 +594,7 @@ impl<'a> GraphProjector<'a> {
         match self.assets {
             Some(assets) => assets
                 .get(short)
-                .map(|path| path.to_string_lossy().into_owned()),
+                .map(crate::support::paths::path_for_frontend),
             None => Some(name.to_string()),
         }
     }

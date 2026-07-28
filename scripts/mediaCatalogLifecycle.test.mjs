@@ -47,6 +47,20 @@ test('the media catalog keeps case-distinct Linux files with spaces and accents'
   assert.deepEqual(new Set(items.map((item) => item.path)), new Set([upper, lower]));
 });
 
+test('managed folder origin follows Windows casing rules but preserves POSIX casing', () => {
+  const windows = 'C:\\WORKSPACE\\ENREGISTREMENTS\\prise.wav';
+  const posix = '/tmp/Workspace/ENREGISTREMENTS/prise.wav';
+  const items = collectMediaLibrary({
+    project: projectWith([
+      { id: 'story-windows', type: 'story', name: 'Windows', audio: windows },
+      { id: 'story-posix', type: 'story', name: 'POSIX', audio: posix },
+    ]),
+  });
+
+  assert.equal(items.find((item) => item.path === windows)?.origin, 'recorded');
+  assert.equal(items.find((item) => item.path === posix)?.origin, 'project');
+});
+
 test('edited image sidecars stay beside their image and can be rewritten to a durable source', () => {
   const imagePath = 'C:\\session\\images-generees\\episode__cover-modifiee.png';
   const durableSource = 'C:\\workspace\\fichiers-importes\\episode__cover.png';
@@ -216,6 +230,14 @@ test('disk deletion eligibility is limited to deletable workspace media folders'
     workspace,
   ), false);
   assert.equal(isDeletableWorkspaceMediaPath('D:/external/test.mp3', workspace), false);
+  assert.equal(isDeletableWorkspaceMediaPath(
+    '/home/Studio/fichiers-importes/test.mp3',
+    '/home/Studio',
+  ), true);
+  assert.equal(isDeletableWorkspaceMediaPath(
+    '/home/studio/fichiers-importes/test.mp3',
+    '/home/Studio',
+  ), false);
 });
 
 test('edited image names stay readable and resolve collisions without changing the source stem', () => {

@@ -15,6 +15,7 @@ import {
   resetEphemeralSnapshotSeedState,
 } from '../src/store/ephemeralSnapshotSeed.js';
 import {
+  buildTransferPromptSignature,
   createWorkSnapshot,
   hasUnsavedWork,
   isSaveInputStillCurrent,
@@ -26,6 +27,17 @@ function snapshot(value) {
 }
 
 const EPHEMERAL_PATH = 'D:/temp/story_studio_session_1_2/.session-recovery.mbah';
+
+test('transfer signatures follow Windows case rules but preserve POSIX case', () => {
+  assert.equal(
+    buildTransferPromptSignature('C:\\WORK\\story.mbah', [{ path: 'C:\\WORK\\A.wav' }]),
+    buildTransferPromptSignature('c:/work/story.mbah', [{ path: 'c:/work/a.wav' }]),
+  );
+  assert.notEqual(
+    buildTransferPromptSignature('/home/Studio/story.mbah', [{ path: '/home/Studio/A.wav' }]),
+    buildTransferPromptSignature('/home/studio/story.mbah', [{ path: '/home/studio/a.wav' }]),
+  );
+});
 
 test('a completed save only resynchronizes the exact input still current in memory', () => {
   const inputAtSaveStart = { rootEntries: [] };

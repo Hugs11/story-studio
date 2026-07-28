@@ -109,7 +109,7 @@ pub fn create_session_workspace(root: &Path) -> Result<String, String> {
     }
 
     let session_dir = canonical_existing(&session_dir)?;
-    Ok(path_for_frontend(&session_dir.to_string_lossy()))
+    Ok(path_for_frontend(&session_dir))
 }
 
 pub fn cleanup_session_workspace(root: &Path, path: &str) -> Result<(), String> {
@@ -190,8 +190,8 @@ pub fn list_session_recoveries(root: &Path) -> Vec<SessionRecovery> {
             .map(|duration| duration.as_millis())
             .unwrap_or_default();
         recoveries.push(SessionRecovery {
-            session_dir: path_for_frontend(&session_dir.to_string_lossy()),
-            snapshot_path: path_for_frontend(&snapshot.to_string_lossy()),
+            session_dir: path_for_frontend(&session_dir),
+            snapshot_path: path_for_frontend(&snapshot),
             modified_at_ms,
         });
     }
@@ -245,15 +245,11 @@ mod tests {
         let recoveries = list_session_recoveries(&root);
         let older_index = recoveries
             .iter()
-            .position(|entry| {
-                entry.snapshot_path == path_for_frontend(&older_snapshot.to_string_lossy())
-            })
+            .position(|entry| entry.snapshot_path == path_for_frontend(&older_snapshot))
             .expect("older recovery listed");
         let newer_index = recoveries
             .iter()
-            .position(|entry| {
-                entry.snapshot_path == path_for_frontend(&newer_snapshot.to_string_lossy())
-            })
+            .position(|entry| entry.snapshot_path == path_for_frontend(&newer_snapshot))
             .expect("newer recovery listed");
         assert!(newer_index < older_index);
 

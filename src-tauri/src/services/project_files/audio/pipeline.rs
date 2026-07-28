@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{project_dir_from_save_path, validate_existing_file_path};
+use super::super::{validate_existing_file_path, workspace_or_project_dir};
 use super::WORKING_AUDIO_EXTENSION;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
@@ -211,10 +211,6 @@ pub fn concat_audio_files(
     silence_between_sec: f64,
     workspace_dir: Option<&str>,
 ) -> Result<String, String> {
-    let has_workspace = workspace_dir.map(|s| !s.trim().is_empty()).unwrap_or(false);
-    if save_path.trim().is_empty() && !has_workspace {
-        return Err("Enregistrez le projet avant de créer un fichier assemblé.".to_string());
-    }
     if input_paths.len() < 2 {
         return Err("Sélectionnez au moins deux audios à assembler.".to_string());
     }
@@ -227,10 +223,12 @@ pub fn concat_audio_files(
         .map(|path| validate_audio_assembly_input(path))
         .collect::<Result<Vec<_>, _>>()?;
     let output_name = validate_audio_assembly_filename(output_file_name)?;
-    let target_dir = match workspace_dir.filter(|s| !s.trim().is_empty()) {
-        Some(ws) => PathBuf::from(ws).join("fichiers-importes"),
-        None => project_dir_from_save_path(save_path)?.join("fichiers-importes"),
-    };
+    let target_dir = workspace_or_project_dir(
+        workspace_dir,
+        Some(save_path),
+        "Enregistrez le projet avant de créer un fichier assemblé.",
+    )?
+    .join("fichiers-importes");
     fs::create_dir_all(&target_dir)
         .map_err(|e| format!("Impossible de créer fichiers-importes : {}", e))?;
     let target_dir = fs::canonicalize(&target_dir)
@@ -270,7 +268,7 @@ pub fn concat_audio_files(
             .map_err(|e| format!("Impossible de préparer la liste d'assemblage : {}", e))?;
 
         run_ffmpeg_concat_audio(&ffmpeg, &list_path, &output_path)?;
-        Ok(path_for_frontend(&output_path.to_string_lossy()))
+        Ok(path_for_frontend(&output_path))
     })();
 
     let _ = fs::remove_dir_all(&temp_dir);

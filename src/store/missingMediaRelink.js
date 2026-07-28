@@ -85,11 +85,11 @@ export function relinkMediaLibraryPaths(paths = [], replacements = {}) {
 
 export function candidatePathsForRelinkRoot(missingPath, selectedRoot) {
   if (!hasPath(missingPath) || !hasPath(selectedRoot)) return [];
-  const normalized = String(missingPath).replace(/\\/g, '/');
+  const normalized = pathKey(missingPath);
   const candidates = [];
   for (const dirName of MANAGED_PROJECT_DIRS) {
     const marker = `/${dirName}/`;
-    const markerIndex = normalized.toLowerCase().lastIndexOf(marker.toLowerCase());
+    const markerIndex = normalized.lastIndexOf(marker);
     if (markerIndex >= 0) {
       candidates.push(joinPath(selectedRoot, normalized.slice(markerIndex + 1)));
     }

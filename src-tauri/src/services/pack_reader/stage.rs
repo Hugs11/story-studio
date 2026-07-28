@@ -28,7 +28,7 @@ pub(super) fn resolve_asset(name: Option<&str>, map: &HashMap<String, PathBuf>) 
     } else {
         name
     };
-    map.get(short).map(|p| p.to_string_lossy().into_owned())
+    map.get(short).map(crate::support::paths::path_for_frontend)
 }
 
 pub(super) fn is_stage_autoplay(stage: &serde_json::Value) -> bool {
@@ -76,5 +76,22 @@ pub(super) fn stage_action_options<'a>(
     match action_id.and_then(|id| actions.get(id)) {
         Some(a) => action_options(a),
         None => vec![],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolved_assets_cross_the_native_to_frontend_path_boundary() {
+        let assets = HashMap::from([(
+            "voice.mp3".to_string(),
+            PathBuf::from(r"\\?\C:\Workspace Été\voice.mp3"),
+        )]);
+        assert_eq!(
+            resolve_asset(Some("assets/voice.mp3"), &assets),
+            Some(r"C:\Workspace Été\voice.mp3".to_string())
+        );
     }
 }
