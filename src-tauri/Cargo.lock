@@ -4226,6 +4226,8 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 name = "story-studio"
 version = "0.9.5"
 dependencies = [
+ "glib",
+ "gtk",
  "image",
  "log",
  "rayon",

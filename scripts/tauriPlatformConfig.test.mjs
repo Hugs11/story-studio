@@ -51,6 +51,13 @@ test('Tauri platform configs resolve with replacement arrays and isolated tool r
   assert.equal(macos.bundle.resources['../LICENSE'], 'LICENSE');
   assert.equal(linux.app.windows[0].decorations, false);
   assert.equal(macos.app.windows[0].decorations, false);
+  for (const [platform, config] of Object.entries({ windows, linux, macos })) {
+    assert.equal(
+      config.app.windows[0].zoomHotkeysEnabled,
+      false,
+      `${platform} must leave page zoom disabled so interactive surfaces own wheel and pinch gestures`,
+    );
+  }
   assert.equal(linux.app.enableGTKAppId, true);
   assert.equal(linux.bundle.linux.appimage.bundleMediaFramework, true);
   assert.equal(macos.bundle.macOS.minimumSystemVersion, '11.0');
@@ -86,6 +93,11 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
   const windows = await readJson('../src-tauri/capabilities/filesystem-windows.json');
   const linux = await readJson('../src-tauri/capabilities/filesystem-linux.json');
   const macos = await readJson('../src-tauri/capabilities/filesystem-macos.json');
+  const frontendHiddenDirectories = [
+    '.story-studio-backups',
+    '.story-studio-image-edits',
+    '.story-studio-thumbnail',
+  ];
 
   assert.equal(common.permissions.includes('fs:allow-appcache-write-recursive'), true);
   const commonFsScope = common.permissions.find(
@@ -95,8 +107,10 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     new Set(commonFsScope.allow.map(({ path }) => path)),
     new Set([
       '$APPCACHE/**/.session-recovery.mbah*',
-      '$APPCACHE/**/.story-studio-image-edits',
-      '$APPCACHE/**/.story-studio-image-edits/**',
+      ...frontendHiddenDirectories.flatMap((directory) => [
+        `$APPCACHE/**/${directory}`,
+        `$APPCACHE/**/${directory}/**`,
+      ]),
     ]),
   );
   assert.deepEqual(windows.platforms, ['windows']);
@@ -111,6 +125,14 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     assert.equal(denied.has('/run'), true);
     assert.equal(denied.has('/run/**'), false, '/run/media must stay available for removable media');
     assert.equal(permission.allow.some(({ path }) => path === '**'), true);
+  }
+  const linuxFsScope = linux.permissions.find(
+    (permission) => permission?.identifier === 'fs:scope',
+  );
+  const linuxAllowed = new Set(linuxFsScope.allow.map(({ path }) => path));
+  for (const directory of frontendHiddenDirectories) {
+    assert.equal(linuxAllowed.has(`**/${directory}`), true);
+    assert.equal(linuxAllowed.has(`**/${directory}/**`), true);
   }
 
   for (const permission of macos.permissions) {
@@ -129,6 +151,14 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     assert.equal(denied.has('/Volumes'), false);
     assert.equal(denied.has('/Volumes/**'), false);
     assert.equal(permission.allow.some(({ path }) => path === '**'), true);
+  }
+  const macosFsScope = macos.permissions.find(
+    (permission) => permission?.identifier === 'fs:scope',
+  );
+  const macosAllowed = new Set(macosFsScope.allow.map(({ path }) => path));
+  for (const directory of frontendHiddenDirectories) {
+    assert.equal(macosAllowed.has(`**/${directory}`), true);
+    assert.equal(macosAllowed.has(`**/${directory}/**`), true);
   }
 });
 
