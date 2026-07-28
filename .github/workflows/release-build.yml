@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           - name: Windows x64
-            os: windows-latest
+            os: windows-2022
             cache: windows-x64
             bundles: nsis,msi
             artifact: story-studio-windows-x64
