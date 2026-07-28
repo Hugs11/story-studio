@@ -17,7 +17,7 @@ export function classifyOsDroppedFiles(paths) {
 }
 
 // Retourne true si le projet a du contenu (= mérite d'être sauvegardé)
-export function isProjectDirty(project) {
+function isProjectDirty(project) {
   if (!project) return false;
   if (project.projectType !== null) return true;
   let hasEntries = false;
