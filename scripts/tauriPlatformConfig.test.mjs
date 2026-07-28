@@ -140,6 +140,18 @@ test('macOS bundle declares microphone usage without Apple credentials', async (
   assert.doesNotMatch(config, /APPLE_|notari|Developer ID|teamId/i);
 });
 
+test('GitHub workflows pin the Windows runner required by the Piper build', async () => {
+  const workflows = await Promise.all([
+    readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/release-build.yml', import.meta.url), 'utf8'),
+  ]);
+
+  for (const workflow of workflows) {
+    assert.match(workflow, /^\s+os: windows-2022$/m);
+    assert.doesNotMatch(workflow, /^\s+os: windows-latest$/m);
+  }
+});
+
 test('frontend-visible temporary files use the app-owned cache instead of the system temp dir', async () => {
   const [
     textImages,
