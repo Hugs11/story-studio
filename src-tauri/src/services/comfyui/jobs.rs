@@ -372,14 +372,19 @@ pub fn download_output_sync(
         return Err(format!("ComfyUI /view HTTP {}", response.status()));
     }
 
-    let dest_dir = workspace_dir
+    let dest_dir = if let Some(workspace_dir) = workspace_dir
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .map(|value| PathBuf::from(value).join("images-generees"))
-        .unwrap_or_else(|| {
-            fallback_dir.join(format!("sd_{}", &prompt_id[..prompt_id.len().min(8)]))
-        });
+    {
+        crate::services::project_files::absolute_path(workspace_dir, "Emplacement de travail")?
+            .join("images-generees")
+    } else {
+        if !fallback_dir.is_absolute() {
+            return Err("Dossier de repli ComfyUI doit être un chemin absolu.".to_string());
+        }
+        fallback_dir.join(format!("sd_{}", &prompt_id[..prompt_id.len().min(8)]))
+    };
     fs::create_dir_all(&dest_dir)
         .map_err(|e| format!("Impossible de créer le dossier de destination : {}", e))?;
 
@@ -389,7 +394,7 @@ pub fn download_output_sync(
         .map_err(|e| format!("Impossible de lire les bytes de l'image : {}", e))?;
     fs::write(&dest_path, &bytes).map_err(|e| format!("Impossible d'écrire l'image : {}", e))?;
 
-    Ok(dest_path.to_string_lossy().to_string())
+    Ok(crate::support::paths::path_for_frontend(&dest_path))
 }
 
 pub fn resolve_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {

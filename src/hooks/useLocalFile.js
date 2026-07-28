@@ -3,12 +3,11 @@ import { logger } from '../utils/logger';
 import { MIME } from '../utils/mimeTypes';
 import { FILE_CHANGED_EVENT, FILE_REFRESH_THROTTLE_MS, readPathSnapshot } from '../store/fileMetadataCache';
 import { acquireLocalFileUrl } from '../store/localFileUrlCache';
+import { pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils';
 
 function normalizeFsPath(path) {
   if (typeof path !== 'string') return '';
-  const trimmed = path.trim();
-  if (trimmed.startsWith('\\\\?\\UNC\\')) return `\\\\${trimmed.slice(8)}`;
-  return trimmed.startsWith('\\\\?\\') ? trimmed.slice(4) : trimmed;
+  return stripWindowsLongPathPrefix(path.trim());
 }
 
 function versionOf(snapshot) {
@@ -79,7 +78,7 @@ export function useLocalFile(path) {
     }
 
     function handleFileChanged(event) {
-      if (normalizeFsPath(event?.detail?.path ?? '') !== readablePath) return;
+      if (pathKey(event?.detail?.path ?? '') !== pathKey(readablePath)) return;
       // Le contenu a change sans changer de chemin : on relit en forcant.
       void loadCurrentPath({ force: true });
     }

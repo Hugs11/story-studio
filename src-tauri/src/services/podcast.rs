@@ -12,6 +12,7 @@ use std::time::Duration;
 use serde::Serialize;
 
 use crate::support::network::http_client;
+use crate::support::paths::path_for_frontend;
 
 const MAX_FEED_BYTES: u64 = 10 * 1024 * 1024; // 10 Mo
 const MAX_MEDIA_BYTES: u64 = 300 * 1024 * 1024; // 300 Mo
@@ -114,7 +115,7 @@ pub fn download_media(output_dir: &Path, url: &str, file_name: &str) -> Result<S
         return Err("Fichier téléchargé vide.".to_string());
     }
     fs::write(&dest, &bytes).map_err(|e| format!("Écriture du fichier impossible : {}", e))?;
-    Ok(dest.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest))
 }
 
 fn parse_feed(xml: &str) -> Result<PodcastFeed, String> {

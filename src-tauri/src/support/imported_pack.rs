@@ -390,15 +390,23 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
         {
             let entry = entry.map_err(|e| format!("Lecture dossier impossible : {}", e))?;
             let path = entry.path();
-            let metadata = entry
-                .metadata()
+            let metadata = fs::symlink_metadata(&path)
                 .map_err(|e| format!("Metadonnees inaccessibles {} : {}", path.display(), e))?;
+            if metadata.file_type().is_symlink() {
+                return Err(format!(
+                    "Archive refusee : lien symbolique extrait interdit ({})",
+                    path.display()
+                ));
+            }
             if metadata.is_dir() {
                 stack.push(path);
                 continue;
             }
             if !metadata.is_file() {
-                continue;
+                return Err(format!(
+                    "Archive refusee : entree extraite non reguliere ({})",
+                    path.display()
+                ));
             }
 
             file_count += 1;
@@ -727,8 +735,20 @@ mod tests {
         let error = resolve_regular_file("7-Zip", seven_zip_candidates(&context))
             .expect_err("missing tool");
         assert!(error.contains("7-Zip introuvable"));
-        assert!(error.contains("resources/tools/7zz"));
-        assert!(error.contains("resources/tools/7z"));
+        assert!(error.contains(
+            &dir.join("resources")
+                .join("tools")
+                .join("7zz")
+                .display()
+                .to_string()
+        ));
+        assert!(error.contains(
+            &dir.join("resources")
+                .join("tools")
+                .join("7z")
+                .display()
+                .to_string()
+        ));
     }
 
     #[test]
@@ -786,6 +806,24 @@ mod tests {
 
         fs::remove_dir_all(dir.parent().expect("temp import parent"))
             .expect("cleanup temp import dir");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn extracted_tree_validation_rejects_symbolic_links() {
+        use std::os::unix::fs::symlink;
+
+        let dir = temp_import_dir("seven_zip_symlink");
+        let extracted = dir.join("extracted");
+        let outside = dir.join("outside");
+        fs::create_dir_all(&extracted).expect("create extracted");
+        fs::create_dir_all(&outside).expect("create outside");
+        symlink(&outside, extracted.join("linked")).expect("create symlink");
+
+        let error = validate_extracted_tree_limits(&extracted).expect_err("reject symlink");
+        assert!(error.contains("lien symbolique"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 
     #[test]

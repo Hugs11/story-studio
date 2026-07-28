@@ -3,7 +3,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{project_dir_from_save_path, validate_existing_file_path, MANAGED_PROJECT_DIRS};
+use super::super::{
+    absolute_path, project_dir_from_save_path, validate_existing_file_path,
+    workspace_or_project_dir, MANAGED_PROJECT_DIRS,
+};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
 // ── Audio trim ────────────────────────────────────────────────────────────────
@@ -144,7 +147,9 @@ pub(crate) fn is_in_managed_media_dir(
 
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
-        bases.push(PathBuf::from(ws));
+        if let Ok(dir) = absolute_path(ws, "Emplacement de travail") {
+            bases.push(dir);
+        }
     }
     if let Some(sp) = save_path.filter(|s| !s.trim().is_empty()) {
         if let Ok(dir) = project_dir_from_save_path(sp) {

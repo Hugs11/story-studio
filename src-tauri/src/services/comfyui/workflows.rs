@@ -28,10 +28,10 @@ pub(super) fn normalize_comfyui_model_names(value: &mut serde_json::Value) {
                     if let serde_json::Value::String(model_name) = child {
                         if model_name.contains('\\')
                             && !model_name.starts_with(r"\\")
-                            && !model_name
+                            && model_name
                                 .as_bytes()
                                 .get(1)
-                                .is_some_and(|byte| *byte == b':')
+                                .is_none_or(|byte| *byte != b':')
                         {
                             *model_name = model_name.replace('\\', "/");
                         }

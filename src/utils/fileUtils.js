@@ -2,10 +2,18 @@ const WEB_PATH_PATTERN = /^[a-z]+:\/\//i;
 const WINDOWS_DRIVE_PATH_PATTERN = /^[a-z]:[\\/]/i;
 const WINDOWS_UNC_PATH_PATTERN = /^(?:\\\\|\/\/)/;
 
+function withPortableSeparators(path) {
+  const value = String(path || '').replace(/\\/g, '/');
+  if (WINDOWS_UNC_PATH_PATTERN.test(path)) {
+    return `//${value.slice(2).replace(/\/+/g, '/')}`;
+  }
+  return value.replace(/\/+/g, '/');
+}
+
 export function stripWindowsLongPathPrefix(path) {
   const value = String(path || '');
-  if (value.startsWith('\\\\?\\UNC\\')) return `\\\\${value.slice(8)}`;
-  return value.replace(/^\\\\\?\\/, '');
+  if (/^\\\\\?\\UNC\\/i.test(value)) return `\\\\${value.slice(8)}`;
+  return value.replace(/^\\\\\?\\/i, '');
 }
 
 export function pathKey(path) {
@@ -15,7 +23,7 @@ export function pathKey(path) {
     return value;
   }
 
-  const normalized = value.replace(/\\/g, '/');
+  const normalized = withPortableSeparators(value);
   return WINDOWS_DRIVE_PATH_PATTERN.test(value) || WINDOWS_UNC_PATH_PATTERN.test(value)
     ? normalized.toLowerCase()
     : normalized;
@@ -23,7 +31,7 @@ export function pathKey(path) {
 
 export function normalizeWindowsPath(path) {
   if (typeof path !== 'string') return path ?? null;
-  const trimmed = path.trim();
+  const trimmed = stripWindowsLongPathPrefix(path).trim();
   if (!trimmed) return null;
   if (WEB_PATH_PATTERN.test(trimmed) || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
     return trimmed;
@@ -47,6 +55,38 @@ export function normalizeWindowsPath(path) {
   }
 
   return trimmed;
+}
+
+// Comparaison d'appartenance pour des chemins natifs. La casse est ignorée
+// uniquement pour les chemins Windows (lecteur ou UNC), jamais pour POSIX.
+export function isPathInside(path, directory) {
+  const pathValue = pathKey(path);
+  const directoryValue = pathKey(directory);
+  if (!pathValue || !directoryValue) return false;
+  const normalizedPath = pathValue.length > 1 ? pathValue.replace(/\/+$/, '') : pathValue;
+  const normalizedDirectory = directoryValue.length > 1
+    ? directoryValue.replace(/\/+$/, '')
+    : directoryValue;
+  return normalizedPath === normalizedDirectory
+    || normalizedPath.startsWith(`${normalizedDirectory}/`);
+}
+
+// Forme portable sauvegardée dans un projet. Un chemin externe est conservé
+// tel quel ; un chemin interne devient `./...` avec des séparateurs `/`.
+export function toProjectRelativePath(path, directory) {
+  if (typeof path !== 'string' || typeof directory !== 'string') return path;
+  const nativePath = withPortableSeparators(stripWindowsLongPathPrefix(path));
+  const nativeDirectory = withPortableSeparators(stripWindowsLongPathPrefix(directory))
+    .replace(/\/+$/, '');
+  if (
+    !nativePath
+    || !nativeDirectory
+    || !isPathInside(nativePath, nativeDirectory)
+    || pathKey(nativePath) === pathKey(nativeDirectory)
+  ) {
+    return path;
+  }
+  return `./${nativePath.slice(nativeDirectory.length + 1)}`;
 }
 
 // Dernier segment d'un chemin (fichier ou dossier), supporte `/` et `\`.

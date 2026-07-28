@@ -35,6 +35,27 @@ test('collectSessionOnlyMedia: ignore les chemins hors session', () => {
   assert.deepEqual(orphans, []);
 });
 
+test('collectSessionOnlyMedia: ne confond pas la session avec un dossier frère préfixé', () => {
+  const sibling = `${SESSION_DIR}-copy\\voix-generees\\prise1.mp3`;
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [sibling],
+    sessionDir: SESSION_DIR,
+  });
+  assert.deepEqual(orphans, []);
+});
+
+test('collectSessionOnlyMedia: conserve la sensibilité à la casse des chemins POSIX', () => {
+  const sessionDir = '/tmp/StoryStudioSession';
+  const differentCase = '/tmp/storystudiosession/voix-generees/prise1.mp3';
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [differentCase],
+    sessionDir,
+  });
+  assert.deepEqual(orphans, []);
+});
+
 test('collectSessionOnlyMedia: ignore les fichiers de session référencés par un nœud', () => {
   const inSession = `${SESSION_DIR}\\voix-generees\\prise1.mp3`;
   const orphans = collectSessionOnlyMedia({

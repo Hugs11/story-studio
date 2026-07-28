@@ -72,25 +72,34 @@ mod tests {
 
     #[test]
     fn generated_dir_prefers_active_workspace_and_falls_back_to_saved_project() {
+        let root = std::env::temp_dir().join("story_studio_xtts_output_test");
+        let workspace = root.join("cache").join("session-active");
+        let save_path = root.join("projets").join("sauvegarde.mbah");
         let mut request = XttsGenerateRequest {
             text: "Bonjour".to_string(),
             language: None,
             speaker: None,
             voice: None,
-            save_path: Some("/projets/sauvegarde.mbah".to_string()),
-            workspace_dir: Some("/cache/session-active".to_string()),
+            save_path: Some(save_path.to_string_lossy().to_string()),
+            workspace_dir: Some(workspace.to_string_lossy().to_string()),
             filename_hint: None,
         };
         assert_eq!(
             generated_dir(&request).unwrap(),
-            PathBuf::from("/cache/session-active/voix-generees")
+            workspace.join("voix-generees")
         );
 
         request.workspace_dir = None;
         assert_eq!(
             generated_dir(&request).unwrap(),
-            PathBuf::from("/projets/voix-generees")
+            save_path
+                .parent()
+                .expect("project parent")
+                .join("voix-generees")
         );
+
+        request.workspace_dir = Some("relative-workspace".to_string());
+        assert!(generated_dir(&request).is_err());
     }
 
     #[test]

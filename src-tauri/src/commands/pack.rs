@@ -51,6 +51,9 @@ pub async fn unpack_zip_to_entries(
         } else {
             pack_reader::unpack_zip_to_entries(&zip_path, &safe_dest.to_string_lossy())
         };
+        if result.is_err() {
+            let _ = std::fs::remove_dir_all(&safe_dest);
+        }
         result
             .inspect_err(|err| log::error!(target: "pack", "unpack_zip_to_entries failed for '{}': {}", zip_path_for_log, err))
     })
@@ -71,7 +74,7 @@ pub async fn convert_folder_pack_to_zip(
     )?;
     tauri::async_runtime::spawn_blocking(move || {
         crate::support::imported_pack::ensure_studio_pack_zip_from_dir(&folder_path, &cache_dir)
-            .map(|path| crate::support::paths::path_for_frontend(&path.to_string_lossy()))
+            .map(crate::support::paths::path_for_frontend)
             .inspect_err(|err| log::error!(target: "pack", "convert_folder_pack_to_zip failed for '{}': {}", folder_for_log, err))
     })
     .await
@@ -123,7 +126,7 @@ pub async fn analyze_community_pack(
         }
         let mut report = community_pack_checker::analyze_pack_with_log(&analysis_zip, &emit);
         report.pack_name = pack_name_from_source(&source);
-        report.zip_path = source.to_string_lossy().to_string();
+        report.zip_path = crate::support::paths::path_for_frontend(&source);
         Ok(report)
     })
     .await

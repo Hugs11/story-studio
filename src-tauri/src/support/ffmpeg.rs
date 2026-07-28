@@ -202,6 +202,12 @@ mod tests {
         let error =
             resolve_regular_file("FFmpeg", ffmpeg_candidates(&context)).expect_err("missing");
         assert!(error.contains("FFmpeg introuvable"));
-        assert!(error.contains("resources/tools/ffmpeg"));
+        assert!(error.contains(
+            &dir.join("resources")
+                .join("tools")
+                .join("ffmpeg")
+                .display()
+                .to_string()
+        ));
     }
 }

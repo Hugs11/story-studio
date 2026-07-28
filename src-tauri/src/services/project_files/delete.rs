@@ -6,6 +6,7 @@ use super::{
     ensure_managed_project_file, is_original_backup, project_dir_from_save_path, AUDIO_EDIT_DIR,
     MANAGED_PROJECT_DIRS,
 };
+use crate::support::paths::path_for_frontend;
 
 #[derive(serde::Serialize)]
 pub struct CleanupFile {
@@ -60,7 +61,7 @@ pub fn scan_unused_files(
                 let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
                 total_size += size;
                 unused_files.push(CleanupFile {
-                    path: path.to_string_lossy().into_owned(),
+                    path: path_for_frontend(&path),
                     name,
                     size,
                 });

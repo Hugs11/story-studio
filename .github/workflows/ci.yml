@@ -55,6 +55,7 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libxdo-dev \
             patchelf \
+            python3-venv \
             unzip \
             xz-utils
 
@@ -85,6 +86,20 @@ jobs:
 
       - name: Prepare native platform tools
         run: node scripts/prepare-platform-tools.mjs
+
+      - name: Install modern CMake and Ninja on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/piper-build-tools"
+          "${RUNNER_TEMP}/piper-build-tools/bin/pip" install \
+            --disable-pip-version-check \
+            cmake==3.31.10 \
+            ninja==1.13.0
+          echo "${RUNNER_TEMP}/piper-build-tools/bin" >> "${GITHUB_PATH}"
+
+      - name: Build and validate Piper runtime
+        run: npm run build:piper-runtime
 
       - name: Check version consistency
         run: npm run check:version

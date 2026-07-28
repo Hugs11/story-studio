@@ -40,7 +40,7 @@ function mediaKind(path) {
 // 'ai' = ComfyUI/XTTS result · 'recorded' = enregistrements/ · 'imported' = fichiers-importes/ · 'project' = referenced in project node · 'library' = extra standalone path
 function detectOrigin(path, source) {
   if (source === 'XTTS' || source === 'ComfyUI') return 'ai';
-  const norm = path.replace(/\\/g, '/').toLowerCase();
+  const norm = pathKey(path);
   if (norm.includes('/enregistrements/')) return 'recorded';
   if (norm.includes('/fichiers-importes/')) return 'imported';
   if (source === 'Explorateur') return 'library';

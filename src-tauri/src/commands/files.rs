@@ -406,7 +406,7 @@ fn scan_dir_recursive(dir: &std::path::Path) -> Result<Vec<ScanEntry>, String> {
             entries.push(ScanEntry {
                 entry_type,
                 name,
-                path: Some(path.to_string_lossy().to_string()),
+                path: Some(crate::support::paths::path_for_frontend(&path)),
                 children: Vec::new(),
             });
         }
@@ -476,7 +476,7 @@ fn collect_media_files_recursive(dir: &std::path::Path, out: &mut Vec<String>) {
                 || IMAGE_EXTENSIONS.contains(&ext.as_str())
                 || ARCHIVE_EXTENSIONS.contains(&ext.as_str())
             {
-                out.push(path.to_string_lossy().to_string());
+                out.push(crate::support::paths::path_for_frontend(&path));
             }
         }
     }

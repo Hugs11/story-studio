@@ -30,7 +30,7 @@ pub fn get_current_log_file(app: tauri::AppHandle) -> Result<String, String> {
         .app_log_dir()
         .map_err(|err| format!("Impossible de localiser le dossier de logs : {}", err))?;
     let candidate = dir.join("story-studio.log");
-    Ok(candidate.to_string_lossy().to_string())
+    Ok(crate::support::paths::path_for_frontend(&candidate))
 }
 
 /// Garde au plus `keep` fichiers `.log` (le courant + rotations).

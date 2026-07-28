@@ -8,6 +8,7 @@ use super::provision::{ensure_piper, voice_paths};
 use super::runtime::{resolve_piper_runtime, PiperRuntime};
 use super::{PiperGenerateRequest, PiperSettings, PiperStatus, PiperVoiceInfo};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use crate::support::paths::path_for_frontend;
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::Path;
@@ -113,7 +114,7 @@ pub fn generate_audio_sync(
     result?;
 
     emit(&format!("Audio Piper genere : {}", dest_mp3.display()));
-    Ok(dest_mp3.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest_mp3))
 }
 
 fn run_piper(

@@ -141,15 +141,19 @@ test('macOS bundle declares microphone usage without Apple credentials', async (
 });
 
 test('GitHub workflows pin the Windows runner required by the Piper build', async () => {
-  const workflows = await Promise.all([
+  const [ci, release] = await Promise.all([
     readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/release-build.yml', import.meta.url), 'utf8'),
   ]);
 
-  for (const workflow of workflows) {
+  for (const workflow of [ci, release]) {
     assert.match(workflow, /^\s+os: windows-2022$/m);
     assert.doesNotMatch(workflow, /^\s+os: windows-latest$/m);
+    assert.match(workflow, /npm run build:piper-runtime/);
   }
+  assert.match(ci, /python3-venv/);
+  assert.match(ci, /cmake==3\.31\.10/);
+  assert.match(ci, /ninja==1\.13\.0/);
 });
 
 test('frontend-visible temporary files use the app-owned cache instead of the system temp dir', async () => {

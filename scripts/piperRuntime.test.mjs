@@ -88,6 +88,13 @@ test('Piper build intermediates use a short checkout-specific temporary root', (
   assert.match(first, /^\/tmp\/story-studio-piper-[a-f0-9]{8}$/);
   assert.match(second, /^\/tmp\/story-studio-piper-[a-f0-9]{8}$/);
   assert.notEqual(first, second);
+
+  const windows = piperBuildRoot({
+    repositoryRoot: 'C:\\very\\long\\checkout',
+    platform: 'win32',
+    temporaryRoot: 'C:\\Temp',
+  });
+  assert.match(windows, /^C:\\Temp\\story-studio-piper-[a-f0-9]{8}$/);
 });
 
 test('Piper source archive inspection rejects traversal and unexpected roots', () => {

@@ -1,19 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { KEYS, read, write, remove } from '../store/persistentSettings';
+import { pathKey } from '../utils/fileUtils';
 
 const CACHE_PREFIX = KEYS.MEDIA_METADATA_PREFIX;
 const TTL_MS = 7 * 24 * 3600 * 1000;
 
-function normKey(path) {
-  return path.replace(/\\/g, '/').toLowerCase();
-}
-
 function readCache(path) {
-  const data = read(CACHE_PREFIX + normKey(path), { parse: JSON.parse });
+  const data = read(CACHE_PREFIX + pathKey(path), { parse: JSON.parse });
   if (!data) return null;
   if (Date.now() - (data.ts ?? 0) > TTL_MS) {
-    remove(CACHE_PREFIX + normKey(path));
+    remove(CACHE_PREFIX + pathKey(path));
     return null;
   }
   return data;
@@ -21,7 +18,7 @@ function readCache(path) {
 
 function writeCache(meta) {
   write(
-    CACHE_PREFIX + normKey(meta.path),
+    CACHE_PREFIX + pathKey(meta.path),
     { ...meta, ts: Date.now() },
     { serialize: JSON.stringify },
   );
@@ -46,30 +43,30 @@ export function useMediaMetadata() {
   const timerRef = useRef(null);
 
   const flushBatch = useCallback(async () => {
-    const toProbe = [...pendingRef.current].filter((p) => !inFlightRef.current.has(normKey(p)));
+    const toProbe = [...pendingRef.current].filter((p) => !inFlightRef.current.has(pathKey(p)));
     pendingRef.current.clear();
     if (!toProbe.length) return;
 
-    toProbe.forEach((p) => inFlightRef.current.add(normKey(p)));
+    toProbe.forEach((p) => inFlightRef.current.add(pathKey(p)));
     try {
       const results = await invoke('probe_media_files', { paths: toProbe });
       setMeta((prev) => {
         const next = new Map(prev);
         for (const r of results) {
           writeCache(r);
-          next.set(normKey(r.path), r);
+          next.set(pathKey(r.path), r);
         }
         return next;
       });
     } catch {
       // Probe errors are non-fatal — columns show "—"
     } finally {
-      toProbe.forEach((p) => inFlightRef.current.delete(normKey(p)));
+      toProbe.forEach((p) => inFlightRef.current.delete(pathKey(p)));
     }
   }, []);
 
   const markForProbe = useCallback((path) => {
-    const key = normKey(path);
+    const key = pathKey(path);
     if (inFlightRef.current.has(key)) return;
 
     const cached = readCache(path);
@@ -89,7 +86,7 @@ export function useMediaMetadata() {
   }, [flushBatch]);
 
   const getMeta = useCallback((path) => {
-    return meta.get(normKey(path)) ?? null;
+    return meta.get(pathKey(path)) ?? null;
   }, [meta]);
 
   return { getMeta, markForProbe };

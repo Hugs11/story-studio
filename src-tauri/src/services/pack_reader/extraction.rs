@@ -4,6 +4,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use unicode_normalization::UnicodeNormalization;
 
 use super::projection::walk_story_doc_to_entries;
 use super::stage::{is_stage_autoplay, stage_action_options, stage_control_bool, stage_uuid};
@@ -104,7 +105,8 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
         result["uuid"] = serde_json::Value::String(uuid.to_string());
     }
     if let Some(thumb) = thumbnail_path {
-        result["thumbnailImage"] = serde_json::Value::String(thumb.to_string_lossy().to_string());
+        result["thumbnailImage"] =
+            serde_json::Value::String(crate::support::paths::path_for_frontend(&thumb));
     }
     Ok(result)
 }
@@ -909,6 +911,7 @@ fn extract_all_zip_assets(
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     ensure_zip_entry_count(archive.len(), zip_path)?;
     let mut map = HashMap::new();
+    let mut portable_names = HashSet::new();
     let mut total_asset_bytes = 0_u64;
 
     for i in 0..archive.len() {
@@ -925,24 +928,31 @@ fn extract_all_zip_assets(
         let short = asset_name
             .strip_prefix("assets/")
             .ok_or_else(|| format!("Nom d'asset hors dossier assets/ : {asset_name}"))?;
+        // NFC + minuscules : couvre les collisions des volumes Windows/macOS
+        // insensibles à la casse et les formes Unicode composées/décomposées.
+        let portable_name: String = short.nfc().flat_map(char::to_lowercase).collect();
+        if !portable_names.insert(portable_name) {
+            return Err(format!(
+                "Collision de nom d'asset non portable entre plateformes : {short}"
+            ));
+        }
         ensure_zip_entry_size("Asset", &name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
         total_asset_bytes = total_asset_bytes
             .checked_add(entry.size())
             .ok_or_else(|| "Taille totale des assets ZIP trop volumineuse.".to_string())?;
         ensure_total_asset_size(total_asset_bytes)?;
         let out_path = dest.join(short);
-        if !out_path.exists() {
-            if let Some(parent) = out_path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|e| format!("Création dossier asset {} impossible : {}", short, e))?;
-            }
-            let mut buf = Vec::new();
-            entry
-                .read_to_end(&mut buf)
-                .map_err(|e| format!("Lecture asset {} impossible : {}", name, e))?;
-            fs::write(&out_path, &buf)
-                .map_err(|e| format!("Écriture asset {} impossible : {}", short, e))?;
+        if let Some(parent) = out_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Création dossier asset {} impossible : {}", short, e))?;
         }
+        let mut output = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&out_path)
+            .map_err(|e| format!("Création asset {} impossible : {}", short, e))?;
+        std::io::copy(&mut entry, &mut output)
+            .map_err(|e| format!("Écriture asset {} impossible : {}", short, e))?;
         map.insert(short.to_string(), out_path);
     }
     Ok(map)
@@ -956,15 +966,17 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
         if let Ok(mut entry) = archive.by_name(name) {
             ensure_zip_entry_size("Thumbnail", name, entry.size(), ARCHIVE_MAX_FILE_BYTES)?;
             let file_name = Path::new(name).file_name().unwrap_or_default();
-            let out_path = dest.join(file_name);
-            if !out_path.exists() {
-                let mut buf = Vec::new();
-                entry
-                    .read_to_end(&mut buf)
-                    .map_err(|e| format!("Lecture thumbnail impossible : {}", e))?;
-                fs::write(&out_path, &buf)
-                    .map_err(|e| format!("Écriture thumbnail impossible : {}", e))?;
-            }
+            let thumbnail_dir = dest.join(".story-studio-thumbnail");
+            fs::create_dir_all(&thumbnail_dir)
+                .map_err(|e| format!("Création dossier thumbnail impossible : {}", e))?;
+            let out_path = thumbnail_dir.join(file_name);
+            let mut output = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&out_path)
+                .map_err(|e| format!("Création thumbnail impossible : {}", e))?;
+            std::io::copy(&mut entry, &mut output)
+                .map_err(|e| format!("Écriture thumbnail impossible : {}", e))?;
             return Ok(Some(out_path));
         }
     }
@@ -974,8 +986,9 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 #[cfg(test)]
 mod tests {
     use super::{
-        check_pack_editability, classify_pack_editability, unpack_zip_to_entries,
-        unpack_zip_to_entries_unchecked, unpack_zip_to_entries_with_policy,
+        check_pack_editability, classify_pack_editability, extract_all_zip_assets,
+        extract_zip_thumbnail, unpack_zip_to_entries, unpack_zip_to_entries_unchecked,
+        unpack_zip_to_entries_with_policy,
     };
     use std::fs;
     use std::io::Write;
@@ -1023,6 +1036,60 @@ mod tests {
                 ("assets/extra.mp3", b"extra"),
             ],
         );
+    }
+
+    #[test]
+    fn asset_extraction_rejects_case_collisions_portably() {
+        let dir = temp_dir("asset_case_collision");
+        let zip_path = dir.join("pack.zip");
+        let output_dir = dir.join("out");
+        fs::create_dir_all(&output_dir).expect("create output");
+        write_zip(
+            &zip_path,
+            &[
+                ("assets/Été/Voice.mp3", b"upper"),
+                ("assets/E\u{301}té/voice.mp3", b"lower"),
+            ],
+        );
+
+        let error =
+            extract_all_zip_assets(&zip_path, &output_dir).expect_err("collision must fail");
+        assert!(error.contains("Collision de nom d'asset non portable"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn root_thumbnail_does_not_overwrite_asset_with_same_name() {
+        let dir = temp_dir("thumbnail_asset_collision");
+        let zip_path = dir.join("pack.zip");
+        let output_dir = dir.join("out");
+        fs::create_dir_all(&output_dir).expect("create output");
+        write_zip(
+            &zip_path,
+            &[
+                ("thumbnail.png", b"root-thumbnail"),
+                ("assets/thumbnail.png", b"asset-thumbnail"),
+            ],
+        );
+
+        let assets = extract_all_zip_assets(&zip_path, &output_dir).expect("extract assets");
+        let thumbnail = extract_zip_thumbnail(&zip_path, &output_dir)
+            .expect("extract root thumbnail")
+            .expect("thumbnail path");
+        let asset = assets.get("thumbnail.png").expect("asset thumbnail");
+
+        assert_ne!(thumbnail, *asset);
+        assert_eq!(
+            fs::read(&thumbnail).expect("read root thumbnail"),
+            b"root-thumbnail"
+        );
+        assert_eq!(
+            fs::read(asset).expect("read asset thumbnail"),
+            b"asset-thumbnail"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 
     fn write_story_zip_with_assets(path: &Path, story: &serde_json::Value, assets: &[&str]) {
