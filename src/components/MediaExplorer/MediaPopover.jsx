@@ -232,8 +232,12 @@ export function MediaPopover({
         <>
           <PopoverAudioPlayer path={item.path} name={item.name} />
           {firstUsage?.entryId && onSelectNode ? (
-            <Button className="mp-action-btn mp-action-btn--goto" onClick={handleGoTo}>
-              → Aller vers « {firstUsage.label} »
+            <Button
+              className="mp-action-btn mp-action-btn--goto"
+              onClick={handleGoTo}
+              title={`Ouvrir les réglages de « ${firstUsage.label} »`}
+            >
+              Voir l’utilisation dans le projet
             </Button>
           ) : null}
           {onSplit ? (
