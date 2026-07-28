@@ -349,6 +349,7 @@ pub fn download_output_sync(
     subfolder: String,
     prompt_id: String,
     workspace_dir: Option<String>,
+    fallback_dir: PathBuf,
 ) -> Result<String, String> {
     require_local_url(&settings.server_url, "ComfyUI")?;
     let client = http_client(Duration::from_secs(60))?;
@@ -377,9 +378,7 @@ pub fn download_output_sync(
         .filter(|value| !value.is_empty())
         .map(|value| PathBuf::from(value).join("images-generees"))
         .unwrap_or_else(|| {
-            std::env::temp_dir()
-                .join(TEMP_IMAGES_DIR)
-                .join(format!("sd_{}", &prompt_id[..prompt_id.len().min(8)]))
+            fallback_dir.join(format!("sd_{}", &prompt_id[..prompt_id.len().min(8)]))
         });
     fs::create_dir_all(&dest_dir)
         .map_err(|e| format!("Impossible de créer le dossier de destination : {}", e))?;

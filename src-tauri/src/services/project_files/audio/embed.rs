@@ -1,9 +1,9 @@
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 use super::super::validate_existing_file_path;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
-use crate::support::temp::TEMP_IMAGES_DIR;
 pub(crate) fn looks_like_missing_embedded_image(stderr: &str) -> bool {
     let lower = stderr.to_lowercase();
     lower.contains("matches no streams")
@@ -11,19 +11,21 @@ pub(crate) fn looks_like_missing_embedded_image(stderr: &str) -> bool {
         || lower.contains("stream map '0:v:0'")
 }
 
-pub fn extract_audio_embedded_image(audio_path: &str) -> Result<Option<String>, String> {
+pub fn extract_audio_embedded_image(
+    audio_path: &str,
+    output_dir: &Path,
+) -> Result<Option<String>, String> {
     let source = validate_existing_file_path(audio_path, "Fichier audio")?;
     let ffmpeg = get_ffmpeg_path()?;
 
-    let temp_dir = std::env::temp_dir().join(TEMP_IMAGES_DIR);
-    fs::create_dir_all(&temp_dir).map_err(|e| {
+    fs::create_dir_all(output_dir).map_err(|e| {
         format!(
             "Impossible de creer le dossier temporaire des images : {}",
             e
         )
     })?;
 
-    let output_path = temp_dir.join(format!("metadata_{}.png", now_millis()));
+    let output_path = output_dir.join(format!("metadata_{}.png", now_millis()));
 
     let mut cmd = Command::new(ffmpeg);
     cmd.arg("-y")

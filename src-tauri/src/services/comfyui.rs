@@ -97,7 +97,6 @@ pub struct ComfyProgressEvent {
 // ── Utilitaires internes ─────────────────────────────────────────────────────
 
 use crate::support::network::require_local_url;
-use crate::support::temp::TEMP_IMAGES_DIR;
 
 mod client;
 mod jobs;

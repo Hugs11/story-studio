@@ -4,6 +4,7 @@ import { generateTextImage } from './generateTextImage';
 import { drawTextImage, TEXT_IMG_W, TEXT_IMG_H } from './drawTextImage';
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useProjectContext } from '../../store/ProjectContext';
 import './TextImagePromptModal.css';
 
 const OVERLAY_STYLE = {
@@ -17,11 +18,12 @@ const OVERLAY_STYLE = {
   backdropFilter: 'blur(2px)',
 };
 
-export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
+export function TextImagePromptModal({ defaultText, workspaceDir: workspaceOverride, onConfirm, onCancel }) {
   const [text, setText] = useState(defaultText || '');
   const [generating, setGenerating] = useState(false);
   const canvasRef = useRef(null);
   const inputRef = useRef(null);
+  const { workspaceDir: contextWorkspaceDir } = useProjectContext();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -38,7 +40,10 @@ export function TextImagePromptModal({ defaultText, onConfirm, onCancel }) {
     if (generating) return;
     setGenerating(true);
     try {
-      const path = await generateTextImage(text || 'Sans titre');
+      const path = await generateTextImage(
+        text || 'Sans titre',
+        workspaceOverride || contextWorkspaceDir,
+      );
       onConfirm(path);
     } finally {
       setGenerating(false);

@@ -300,10 +300,15 @@ pub fn restore_audio_original(
     })
 }
 
-pub fn preview_audio_edit(request: AudioEditRequest<'_>) -> Result<String, String> {
+pub fn preview_audio_edit(
+    request: AudioEditRequest<'_>,
+    preview_root: &Path,
+) -> Result<String, String> {
     let input = validate_existing_file_path(request.input_path, "Fichier audio")?;
     let source = audio_edit_source_for(&input);
-    let output = std::env::temp_dir().join(format!(
+    fs::create_dir_all(preview_root)
+        .map_err(|e| format!("Impossible de créer le dossier des aperçus audio : {}", e))?;
+    let output = preview_root.join(format!(
         "{}{}.wav",
         AUDIO_PREVIEW_PREFIX,
         uuid::Uuid::new_v4()
@@ -324,13 +329,14 @@ pub fn commit_audio_preview(
     preview_path: &str,
     save_path: Option<&str>,
     workspace_dir: Option<&str>,
+    preview_root: &Path,
 ) -> Result<TrimAudioResult, String> {
     commit_audio_preview_in(
         input_path,
         preview_path,
         save_path,
         workspace_dir,
-        &std::env::temp_dir(),
+        preview_root,
     )
 }
 

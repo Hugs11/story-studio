@@ -128,3 +128,26 @@ test('macOS bundle declares microphone usage without Apple credentials', async (
   assert.match(plist, /<key>NSMicrophoneUsageDescription<\/key>/);
   assert.doesNotMatch(config, /APPLE_|notari|Developer ID|teamId/i);
 });
+
+test('frontend-visible temporary media uses the app-owned cache instead of the system temp dir', async () => {
+  const [textImages, imageExports, fileCommands, podcastCommands, youtubeCommands, comfyCommands] =
+    await Promise.all([
+      readFile(new URL('../src/components/TextImageGenerator/generateTextImage.js', import.meta.url), 'utf8'),
+      readFile(new URL('../src/components/ImageEditorModal/imageEditorExport.js', import.meta.url), 'utf8'),
+      readFile(new URL('../src-tauri/src/commands/files.rs', import.meta.url), 'utf8'),
+      readFile(new URL('../src-tauri/src/commands/podcast.rs', import.meta.url), 'utf8'),
+      readFile(new URL('../src-tauri/src/commands/youtube.rs', import.meta.url), 'utf8'),
+      readFile(new URL('../src-tauri/src/commands/comfyui.rs', import.meta.url), 'utf8'),
+    ]);
+
+  for (const frontendSource of [textImages, imageExports]) {
+    assert.match(frontendSource, /appCacheDir/);
+    assert.doesNotMatch(frontendSource, /\btempDir\b|BaseDirectory\.Temp/);
+  }
+
+  assert.match(fileCommands, /app_cache_subdir[\s\S]*TEMP_IMAGES_DIR/);
+  assert.match(fileCommands, /app_cache_subdir[\s\S]*AUDIO_PREVIEWS_DIR/);
+  assert.match(podcastCommands, /app_cache_subdir[\s\S]*PODCAST_MEDIA_DIR/);
+  assert.match(youtubeCommands, /app_cache_subdir[\s\S]*YOUTUBE_MEDIA_DIR/);
+  assert.match(comfyCommands, /app_cache_subdir[\s\S]*TEMP_IMAGES_DIR/);
+});
