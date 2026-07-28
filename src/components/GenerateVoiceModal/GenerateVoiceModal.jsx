@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { KEYS, read, write } from '../../store/persistentSettings';
-import { PIPER_DEFAULT_SENTENCE_SILENCE, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
+import { PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
 import { formatFrenchCount } from '../../utils/frenchText.js';
 import { Button } from '../common/Button';
 import './GenerateVoiceModal.css';
@@ -116,10 +116,6 @@ function PiperVoiceModal({
     const value = Number(xttsSettings.piperSpeed);
     return Number.isFinite(value) && value > 0 ? value : 1.0;
   });
-  const [sentenceSilence, setSentenceSilence] = useState(() => {
-    const value = Number(xttsSettings.piperSentenceSilence);
-    return Number.isFinite(value) ? Math.max(0, Math.min(1.5, value)) : PIPER_DEFAULT_SENTENCE_SILENCE;
-  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('Voix prête à l’emploi, sans configuration.');
@@ -193,10 +189,10 @@ function PiperVoiceModal({
         target,
         targetLabel: label,
         voiceLabel: selectedVoiceInfo?.label || selectedVoice,
-        request: { text, voice: selectedVoice, speed, sentenceSilence, savePath, filenameHint },
+        request: { text, voice: selectedVoice, speed, savePath, filenameHint },
       });
       write(KEYS.PIPER_LAST_VOICE, selectedVoice);
-      onUpdateXttsSettings?.({ piperVoice: selectedVoice, piperSpeed: speed, piperSentenceSilence: sentenceSilence });
+      onUpdateXttsSettings?.({ piperVoice: selectedVoice, piperSpeed: speed });
       onClose();
     } catch (e) {
       setError(`${e}\nRéessaie, ou passe à XTTS dans les Préférences si le problème persiste.`);
@@ -258,20 +254,6 @@ function PiperVoiceModal({
             step="0.05"
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
-            disabled={submitting}
-          />
-        </label>
-
-        <label className="tts-field">
-          <span>Pause phrase · {sentenceSilence.toFixed(2)}s</span>
-          <input
-            className="tts-input"
-            type="range"
-            min="0"
-            max="1.5"
-            step="0.05"
-            value={sentenceSilence}
-            onChange={(e) => setSentenceSilence(Number(e.target.value))}
             disabled={submitting}
           />
         </label>

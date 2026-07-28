@@ -1,7 +1,5 @@
-//! Backend TTS Piper : moteur de voix **zéro-config** par défaut. Un simple
-//! exécutable autonome (pas de serveur, pas de Python) provisionné au 1er usage.
-//! Comparé à `services/xtts`, il n'y a **aucun cycle de vie serveur** : on
-//! télécharge le binaire natif + la voix une fois, puis invoque Piper sans shell.
+//! Backend TTS Piper : moteur de voix **zéro-config** par défaut. Le runtime
+//! natif 1.6 est embarqué ; les voix seules sont téléchargées au premier usage.
 
 use serde::{Deserialize, Serialize};
 
@@ -11,20 +9,14 @@ fn default_speed() -> f32 {
     1.0
 }
 
-fn default_sentence_silence() -> f32 {
-    0.35
-}
-
 /// Réglages Piper, désérialisés depuis l'objet `xttsSettings` côté JS (les champs
-/// non-Piper sont ignorés).
+/// non-Piper et l'ancien `piperSentenceSilence` sont ignorés).
 #[derive(Deserialize)]
 pub struct PiperSettings {
     #[serde(rename = "piperVoice", default)]
     pub voice: String,
     #[serde(rename = "piperSpeed", default = "default_speed")]
     pub speed: f32,
-    #[serde(rename = "piperSentenceSilence", default = "default_sentence_silence")]
-    pub sentence_silence: f32,
 }
 
 #[derive(Deserialize)]
@@ -33,8 +25,6 @@ pub struct PiperGenerateRequest {
     pub voice: Option<String>,
     #[serde(default)]
     pub speed: f32,
-    #[serde(rename = "sentenceSilence", default)]
-    pub sentence_silence: Option<f32>,
     #[serde(rename = "savePath")]
     pub save_path: Option<String>,
     #[serde(rename = "workspaceDir", default)]
@@ -65,17 +55,16 @@ mod catalog;
 mod generation;
 mod output;
 mod provision;
+mod runtime;
 
 pub use generation::{ensure_sync, generate_audio_sync, list_voices_sync};
 
 #[cfg(test)]
 mod tests {
     use super::catalog::{find_voice, DEFAULT_VOICE, VOICES};
-    use super::generation::{
-        length_scale_for_speed, sentence_silence_for_setting, validate_text_for_generation,
-    };
+    use super::generation::{length_scale_for_speed, validate_text_for_generation};
     use super::output::output_filename;
-    use super::provision::piper_exe;
+    use super::runtime::resolve_piper_runtime;
     use super::{ensure_sync, generate_audio_sync, PiperGenerateRequest, PiperSettings};
     use std::path::Path;
     use std::process::Command;
@@ -124,13 +113,6 @@ mod tests {
     }
 
     #[test]
-    fn sentence_silence_clamps_to_supported_range() {
-        assert!((sentence_silence_for_setting(0.35) - 0.35).abs() < f32::EPSILON);
-        assert_eq!(sentence_silence_for_setting(-1.0), 0.0);
-        assert_eq!(sentence_silence_for_setting(3.0), 1.5);
-    }
-
-    #[test]
     fn text_generation_rejects_empty_and_huge_inputs() {
         assert!(validate_text_for_generation("Bonjour").is_ok());
         assert!(validate_text_for_generation("   ").is_err());
@@ -139,7 +121,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires network access and the prepared native FFmpeg"]
-    fn live_linux_provisions_once_and_generates_all_catalog_voices() {
+    fn live_linux_uses_embedded_runtime_and_generates_all_catalog_voices() {
         if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
             return;
         }
@@ -151,38 +133,45 @@ mod tests {
         std::fs::create_dir_all(&workspace).expect("create live Piper workspace");
         let emit = |message: &str| eprintln!("{message}");
 
-        ensure_sync(&home, DEFAULT_VOICE, &emit).expect("initial Piper provision");
-        let initial_mtime = std::fs::metadata(piper_exe(&home))
+        let runtime = resolve_piper_runtime().expect("resolve embedded Piper runtime");
+        let initial_mtime = std::fs::metadata(&runtime.executable)
             .and_then(|metadata| metadata.modified())
             .expect("Piper executable mtime");
+        ensure_sync(&home, DEFAULT_VOICE, &emit).expect("initial Piper voice provision");
         ensure_sync(&home, DEFAULT_VOICE, &emit).expect("idempotent Piper provision");
         assert_eq!(
             initial_mtime,
-            std::fs::metadata(piper_exe(&home))
+            std::fs::metadata(&runtime.executable)
                 .and_then(|metadata| metadata.modified())
                 .expect("Piper executable mtime after restart")
         );
 
-        for voice in VOICES {
+        let cases = VOICES.iter().map(|voice| (voice, 1.0)).chain(
+            [0.5, 1.5]
+                .into_iter()
+                .map(|speed| (find_voice(DEFAULT_VOICE).unwrap(), speed)),
+        );
+        for (voice, speed) in cases {
             let output = generate_audio_sync(
                 &home,
                 PiperSettings {
                     voice: voice.id.to_string(),
-                    speed: 1.0,
-                    sentence_silence: 0.35,
+                    speed,
                 },
                 PiperGenerateRequest {
-                    text: format!("Validation de la voix {} sous Linux.", voice.label),
+                    text: format!(
+                        "Validation de la voix {} sous Linux à la vitesse {speed}.",
+                        voice.label
+                    ),
                     voice: Some(voice.id.to_string()),
-                    speed: 1.0,
-                    sentence_silence: Some(0.35),
+                    speed,
                     save_path: None,
                     workspace_dir: Some(workspace.to_string_lossy().to_string()),
-                    filename_hint: Some(voice.id.to_string()),
+                    filename_hint: Some(format!("{}-{speed}", voice.id)),
                 },
                 &emit,
             )
-            .unwrap_or_else(|error| panic!("generate {}: {error}", voice.id));
+            .unwrap_or_else(|error| panic!("generate {} at {speed}: {error}", voice.id));
             let output = Path::new(&output);
             assert!(output.is_file());
             assert!(std::fs::metadata(output).unwrap().len() > 0);

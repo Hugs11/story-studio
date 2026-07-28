@@ -1,68 +1,5 @@
-//! Catalogue figé des artefacts Piper téléchargeables par plateforme et voix
-//! françaises par défaut. Toutes les URL sont des sources officielles
-//! HTTPS, épinglées par version pour la reproductibilité. Aucun binaire n'est
-//! embarqué dans le dépôt ; tout est provisionné au 1er usage.
-
-/// Version du binaire Piper (release `rhasspy/piper`). Épinglée pour garantir un
-/// archive stable (chaque archive contient un dossier racine `piper/`).
-pub(super) const BINARY_VERSION: &str = "2023.11.14-2";
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum ArchiveKind {
-    Zip,
-    TarGz,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct BinaryEntry {
-    pub os: &'static str,
-    pub arch: &'static str,
-    pub archive_name: &'static str,
-    pub url: &'static str,
-    pub sha256: &'static str,
-    pub archive_kind: ArchiveKind,
-    pub executable_name: &'static str,
-}
-
-/// Le catalogue conserve strictement la release Windows historique et ajoute
-/// les deux assets officiellement nommés pour les cibles POSIX. L'architecture
-/// du binaire extrait est contrôlée avant activation : l'asset macOS amont est
-/// donc refusé s'il ne contient pas réellement du code ARM64.
-pub(super) const BINARIES: &[BinaryEntry] = &[
-    BinaryEntry {
-        os: "windows",
-        arch: "x86_64",
-        archive_name: "piper_windows_amd64.zip",
-        url: "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
-        sha256: "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea",
-        archive_kind: ArchiveKind::Zip,
-        executable_name: "piper.exe",
-    },
-    BinaryEntry {
-        os: "linux",
-        arch: "x86_64",
-        archive_name: "piper_linux_x86_64.tar.gz",
-        url: "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz",
-        sha256: "a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992",
-        archive_kind: ArchiveKind::TarGz,
-        executable_name: "piper",
-    },
-    BinaryEntry {
-        os: "macos",
-        arch: "aarch64",
-        archive_name: "piper_macos_aarch64.tar.gz",
-        url: "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_macos_aarch64.tar.gz",
-        sha256: "6b1eb03b3735946cb35216e063e7eebcc33a6bbf5dd96ec0217959bf1cdcb0cc",
-        archive_kind: ArchiveKind::TarGz,
-        executable_name: "piper",
-    },
-];
-
-pub(super) fn binary_for(os: &str, arch: &str) -> Option<&'static BinaryEntry> {
-    BINARIES
-        .iter()
-        .find(|entry| entry.os == os && entry.arch == arch)
-}
+//! Catalogue figé des voix françaises Piper. Le runtime natif 1.6 est embarqué
+//! séparément ; seuls les modèles et leurs configurations sont téléchargés.
 
 /// Base HuggingFace pour les voix `rhasspy/piper-voices`, épinglée au tag v1.0.0.
 const VOICES_BASE: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0";
@@ -78,6 +15,8 @@ pub(super) struct VoiceEntry {
     pub quality: &'static str,
     /// Chemin relatif sous `VOICES_BASE`, sans l'extension finale.
     rel_path: &'static str,
+    pub onnx_sha256: &'static str,
+    pub json_sha256: &'static str,
 }
 
 impl VoiceEntry {
@@ -97,18 +36,24 @@ pub(super) const VOICES: &[VoiceEntry] = &[
         label: "Siwis (féminine, médium)",
         quality: "medium",
         rel_path: "fr/fr_FR/siwis/medium/fr_FR-siwis-medium",
+        onnx_sha256: "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99",
+        json_sha256: "39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959",
     },
     VoiceEntry {
         id: "fr_FR-tom-medium",
         label: "Tom (masculine, médium)",
         quality: "medium",
         rel_path: "fr/fr_FR/tom/medium/fr_FR-tom-medium",
+        onnx_sha256: "bf65074ccdeeeeaa832e75edb1c0a513c01c9a972bdf085ff8a6e71ea234fd41",
+        json_sha256: "2f7f885ad5a0aad802e3cc24e4f57239febdcb142b4876de5d238094674361cc",
     },
     VoiceEntry {
         id: "fr_FR-gilles-low",
         label: "Gilles (masculine, légère)",
         quality: "low",
         rel_path: "fr/fr_FR/gilles/low/fr_FR-gilles-low",
+        onnx_sha256: "5cd711846720e261c2a176f6924c198a7424d0a75dd4b0a5357a5fb9cb739285",
+        json_sha256: "5a47cc0789e91267d17666bbec842dd92950669271a09023eb6970ee364cf88a",
     },
 ];
 
@@ -121,30 +66,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn catalog_covers_the_three_supported_desktop_targets() {
-        let windows = binary_for("windows", "x86_64").expect("Windows Piper");
-        let linux = binary_for("linux", "x86_64").expect("Linux Piper");
-        let macos = binary_for("macos", "aarch64").expect("macOS Piper");
-
-        assert_eq!(windows.archive_name, "piper_windows_amd64.zip");
-        assert_eq!(windows.executable_name, "piper.exe");
-        assert_eq!(windows.archive_kind, ArchiveKind::Zip);
-        assert_eq!(linux.archive_name, "piper_linux_x86_64.tar.gz");
-        assert_eq!(linux.executable_name, "piper");
-        assert_eq!(macos.archive_name, "piper_macos_aarch64.tar.gz");
-        assert_eq!(macos.executable_name, "piper");
-        assert!(BINARIES.iter().all(|entry| {
-            entry
-                .url
-                .starts_with("https://github.com/rhasspy/piper/releases/download/")
-                && entry.sha256.len() == 64
-        }));
-    }
-
-    #[test]
-    fn catalog_rejects_unsupported_pairs() {
-        assert!(binary_for("linux", "aarch64").is_none());
-        assert!(binary_for("macos", "x86_64").is_none());
-        assert!(binary_for("windows", "aarch64").is_none());
+    fn voice_catalog_pins_model_and_configuration_hashes() {
+        for voice in VOICES {
+            assert_eq!(voice.onnx_sha256.len(), 64);
+            assert_eq!(voice.json_sha256.len(), 64);
+            assert!(voice.onnx_url().starts_with("https://huggingface.co/"));
+            assert!(voice.json_url().ends_with(".onnx.json?download=true"));
+        }
     }
 }
