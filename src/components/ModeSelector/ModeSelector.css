@@ -53,10 +53,6 @@
   background: url('/favicon.svg') center / contain no-repeat;
 }
 
-:root[data-theme="dark"] .mode-home-mark {
-  background-image: url('/favicon-dark.svg');
-}
-
 .mode-home-brand {
   min-width: 0;
   display: flex;
