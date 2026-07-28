@@ -24,16 +24,17 @@ export function MediaDeleteDialog({
       <div className="gen-modal" style={{ width: 380, maxWidth: '92vw' }}>
         <div className="gen-header">
           <span className="gen-title">
-            {deleteDisk ? 'Supprimer définitivement' : 'Retirer de la médiathèque'}
+            {usedCount > 0
+              ? (usedCount === 1 ? 'Média encore utilisé' : `${usedCount} médias encore utilisés`)
+              : (deleteDisk ? 'Supprimer définitivement' : 'Retirer de la médiathèque')}
           </span>
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {usedCount > 0 && (
             <div style={{ fontSize: 12, color: 'var(--warning-text)', lineHeight: 1.5 }}>
               {usedCount === 1
-                ? 'Ce fichier est encore utilisé dans le projet.'
-                : `${usedCount} fichiers sont encore utilisés dans le projet.`}
-              {' '}Retire d’abord leurs affectations depuis les réglages ou supprime les nœuds concernés.
+                ? 'Ce média ne peut pas être retiré de la médiathèque car il est encore utilisé dans le projet. Retirez d’abord ses affectations depuis les réglages concernés.'
+                : `${usedCount} médias ne peuvent pas être retirés de la médiathèque car ils sont encore utilisés dans le projet. Retirez d’abord leurs affectations depuis les réglages concernés.`}
               <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
                 {usedItems.slice(0, 5).map((item) => (
                   <li key={item.id}>
@@ -70,8 +71,14 @@ export function MediaDeleteDialog({
           )}
         </div>
         <div className="gen-footer">
-          <Button type="button" onClick={onCancel}>Annuler</Button>
-          <Button type="button" variant="danger" onClick={onConfirm} disabled={usedCount > 0}>{actionLabel}</Button>
+          {usedCount > 0 ? (
+            <Button type="button" onClick={onCancel}>Fermer</Button>
+          ) : (
+            <>
+              <Button type="button" onClick={onCancel}>Annuler</Button>
+              <Button type="button" variant="danger" onClick={onConfirm}>{actionLabel}</Button>
+            </>
+          )}
         </div>
       </div>
     </div>
