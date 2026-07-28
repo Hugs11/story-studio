@@ -129,9 +129,9 @@ export function EndNodeEditor({
         <div className="editor-setting-stack">
           <div className="editor-setting-row end-node-setting-row end-node-playback-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Attendre une confirmation</div>
+              <div className="editor-setting-title">Quand passer à la suite ?</div>
               <div className="editor-setting-desc">
-                Après le message de fin, l'enfant doit appuyer sur OK pour continuer.
+                Le retour vers la destination configurée ci-dessous s’effectue dès la fin du message ou après un appui sur OK.
               </div>
             </div>
             <EndMessagePlaybackControl
