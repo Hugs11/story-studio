@@ -60,7 +60,7 @@ fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
 }
 
 /// Hôtes officiels autorisés pour le téléchargement d'artefacts tiers
-/// (binaire Piper, voix). Toute autre origine est refusée.
+/// (voix Piper, yt-dlp). Toute autre origine est refusée.
 const ALLOWED_DOWNLOAD_HOSTS: &[&str] = &[
     "api.github.com",
     "github.com",

@@ -2,7 +2,8 @@ use crate::services::piper::{PiperGenerateRequest, PiperSettings, PiperStatus};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 
-/// Dossier app-data inscriptible où le binaire et les voix sont provisionnés.
+/// Dossier app-data inscriptible réservé aux voix téléchargées et à la
+/// migration de l'ancien cache. Le runtime est lu depuis les ressources.
 fn piper_home(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app
         .path()
@@ -16,7 +17,7 @@ pub async fn piper_list_voices(app: AppHandle) -> Result<PiperStatus, String> {
     let home = piper_home(&app)?;
     tauri::async_runtime::spawn_blocking(move || crate::services::piper::list_voices_sync(&home))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

@@ -21,11 +21,20 @@ RUN apt-get update \
       libwebkit2gtk-4.1-dev \
       libxdo-dev \
       patchelf \
+      python3 \
+      python3-venv \
       rpm \
       unzip \
       xdg-utils \
       xz-utils \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/piper-build-tools \
+    && /opt/piper-build-tools/bin/pip install \
+      --disable-pip-version-check \
+      --no-cache-dir \
+      cmake==3.31.10 \
+      ninja==1.13.0
 
 RUN curl --fail --location --show-error \
       "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
@@ -42,12 +51,13 @@ RUN curl --fail --location --show-error \
     && /tmp/rustup-init -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}" \
     && rm /tmp/rustup-init
 
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/opt/piper-build-tools/bin:/root/.cargo/bin:${PATH}"
 WORKDIR /workspace
 COPY . .
 
 RUN npm ci \
     && node scripts/prepare-platform-tools.mjs \
+    && npm run build:piper-runtime \
     && npm run check:version \
     && npm run build \
     && npm run tauri:build -- --bundles appimage,deb \

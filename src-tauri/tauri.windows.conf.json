@@ -7,7 +7,8 @@
     ],
     "resources": {
       "tools/ffmpeg.exe": "tools/ffmpeg.exe",
-      "tools/7z.exe": "tools/7z.exe"
+      "tools/7z.exe": "tools/7z.exe",
+      "tools/windows-x86_64/piper/": "tools/piper/"
     }
   }
 }
