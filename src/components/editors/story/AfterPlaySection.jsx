@@ -16,6 +16,7 @@ import {
 import {
   getDefaultPackEntryDestination,
   getEffectiveEndBehavior,
+  getPackStartReturnLabel,
 } from '../../../store/generatedNavigation';
 import {
   CONTROL_DEFS,
@@ -138,6 +139,7 @@ export function AfterPlaySection({
   const { onAttachStoryEndToGlobal } = useProjectActions();
   const { onImportFile } = useProjectContext();
   const autoNextEnabled = !!project?.globalOptions?.autoNext;
+  const packStartReturnLabel = getPackStartReturnLabel(project);
   const hasEndNode = !!(!autoNextEnabled && (project?.nightModeAudio || project?.globalOptions?.nightMode || project?.globalOptions?.endNode));
   const rawHasPrompt = !!node?.afterPlaybackPromptAudio;
   const hasPrompt = rawHasPrompt && !autoNextEnabled;
@@ -401,6 +403,7 @@ export function AfterPlaySection({
               allStories={allStories}
               currentStoryId={node.id}
               includeNone
+              noneLabel={packStartReturnLabel}
               includeStoryPlay={false}
               emptyLabel="Identique au bouton OK"
             />
@@ -489,6 +492,7 @@ export function AfterPlaySection({
             homeStep={afterPlaybackHomeStep}
             allMenus={allMenus}
             allStories={allStories}
+            packStartReturnLabel={packStartReturnLabel}
             onUpdate={onUpdate}
           />
         )}
@@ -590,6 +594,7 @@ export function AfterPlaySection({
                   allStories={allStories}
                   currentStoryId={node.id}
                   includeNone
+                  noneLabel={packStartReturnLabel}
                   emptyLabel="Identique au bouton OK"
                   includeStoryPlay={false}
                 />
