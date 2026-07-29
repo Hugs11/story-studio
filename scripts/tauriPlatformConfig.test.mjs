@@ -180,6 +180,9 @@ test('GitHub workflows pin the Windows runner required by the Piper build', asyn
     assert.match(workflow, /^\s+os: windows-2022$/m);
     assert.doesNotMatch(workflow, /^\s+os: windows-latest$/m);
     assert.match(workflow, /npm run build:piper-runtime/);
+    assert.match(workflow, /name: Cache verified build downloads/);
+    assert.match(workflow, /path: src-tauri\/tools\/\.download-cache/);
+    assert.match(workflow, /scripts\/verified-download\.mjs/);
   }
   assert.match(ci, /python3-venv/);
   assert.match(ci, /cmake==3\.31\.10/);

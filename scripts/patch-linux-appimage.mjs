@@ -17,9 +17,17 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { verifiedDownload } from './verified-download.mjs';
 
 const MAX_TOOL_BYTES = 24 * 1024 * 1024;
+const DOWNLOAD_CACHE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'src-tauri',
+  'tools',
+  '.download-cache',
+);
 const WAYLAND_LIBRARIES = new Set([
   'libwayland-client.so.0',
   'libwayland-cursor.so.0',
@@ -88,28 +96,18 @@ function run(command, args, options = {}) {
 }
 
 async function downloadPinnedFile(spec, destination, label) {
-  const response = await fetch(spec.url, {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(60_000),
+  const bytes = await verifiedDownload({
+    ...spec,
+    maxBytes: MAX_TOOL_BYTES,
+  }, label, {
+    allowedHosts: [
+      'github.com',
+      'objects.githubusercontent.com',
+      'release-assets.githubusercontent.com',
+    ],
+    cacheDir: DOWNLOAD_CACHE,
+    userAgent: 'Story-Studio-AppImage-patcher',
   });
-  if (!response.ok || !response.body) {
-    throw new Error(`${label} download failed with HTTP ${response.status}.`);
-  }
-  const declaredSize = Number(response.headers.get('content-length') || 0);
-  if (declaredSize > MAX_TOOL_BYTES) throw new Error(`${label} download is too large.`);
-
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of response.body) {
-    size += chunk.byteLength;
-    if (size > MAX_TOOL_BYTES) throw new Error(`${label} download exceeded its size limit.`);
-    chunks.push(chunk);
-  }
-  const bytes = Buffer.concat(chunks);
-  const digest = createHash('sha256').update(bytes).digest('hex');
-  if (digest !== spec.sha256) {
-    throw new Error(`${label} SHA-256 mismatch: expected ${spec.sha256}, got ${digest}.`);
-  }
   await writeFile(destination, bytes, { mode: 0o755 });
   return bytes;
 }
