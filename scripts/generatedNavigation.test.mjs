@@ -10,6 +10,7 @@ import {
   getPresentedEndNodeHomeNavigation,
   getPresentedEndNodeReturnNavigation,
   getGeneratedStoryNavigation,
+  getPackStartReturnLabel,
   hasGeneratedEndNode,
   hasVisibleEndNode,
   isCombinedNightStoryBypass,
@@ -721,6 +722,21 @@ test('default pack destination resolves to the first root entry (mirrors Rust tr
 test('default pack destination returns null for empty project', () => {
   const p = project([]);
   assert.equal(getDefaultPackEntryDestination(p), null);
+});
+
+test('pack start return label exposes the first concrete destination', () => {
+  const menu = { id: 'menu-1', type: 'menu', name: "Que va faire Léo aujourd'hui ?", children: [] };
+  const rootStory = story('root-story', { name: 'Une histoire directe' });
+
+  assert.equal(
+    getPackStartReturnLabel(project([menu])),
+    "Retour vers « Que va faire Léo aujourd'hui ? »",
+  );
+  assert.equal(
+    getPackStartReturnLabel(project([rootStory])),
+    'Retour vers « Une histoire directe »',
+  );
+  assert.equal(getPackStartReturnLabel(project([])), 'Retour à la couverture du pack');
 });
 
 test('multi story summary keeps distinct root story destinations', () => {

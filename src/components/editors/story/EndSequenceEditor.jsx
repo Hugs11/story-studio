@@ -20,6 +20,7 @@ export function EndSequenceEditor({
   homeStep,
   allMenus,
   allStories,
+  packStartReturnLabel = 'Retour à la couverture du pack',
   onUpdate,
 }) {
   const { showConfirmDialog } = useErrorDialog();
@@ -220,6 +221,7 @@ export function EndSequenceEditor({
                     allStories={allStories}
                     currentStoryId={node.id}
                     includeNone
+                    noneLabel={packStartReturnLabel}
                     emptyLabel="Comme à la fin de l'histoire"
                     includeStoryPlay={false}
                   />
@@ -328,6 +330,7 @@ export function EndSequenceEditor({
               allStories={allStories}
               currentStoryId={node.id}
               includeNone
+              noneLabel={packStartReturnLabel}
               emptyLabel="Comme à la fin de l'histoire"
               includeStoryPlay={false}
             />
