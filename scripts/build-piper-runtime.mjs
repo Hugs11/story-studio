@@ -42,13 +42,17 @@ import {
   sha256,
   validatePiperRuntime,
 } from './piper-runtime.mjs';
+import {
+  verifiedDownload,
+  verifiedDownloadCachePath,
+} from './verified-download.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '..');
 const TOOLS_ROOT = join(REPO_ROOT, 'src-tauri', 'tools');
 const PATCH_PATH = join(SCRIPT_DIR, 'patches', 'piper-1.6.0-story-studio.patch');
 const NOTICES_PATH = join(REPO_ROOT, 'THIRD_PARTY_NOTICES.md');
-const CACHE_ROOT = join(TOOLS_ROOT, '.piper-cache');
+const DOWNLOAD_CACHE = join(TOOLS_ROOT, '.download-cache');
 const MAX_ARCHIVE_ENTRIES = 100_000;
 const MAX_COMMAND_OUTPUT = 16 * 1024 * 1024;
 
@@ -112,60 +116,13 @@ function isAllowedDownloadHost(hostname) {
 }
 
 async function cachedDownload(spec) {
-  await mkdir(CACHE_ROOT, { recursive: true });
-  const destination = join(CACHE_ROOT, spec.filename);
-  try {
-    const cached = await readFile(destination);
-    if (sha256(cached) === spec.sha256) {
-      process.stdout.write(`Using verified cache for ${spec.filename}.\n`);
-      return destination;
-    }
-    await rm(destination);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-
-  const initialUrl = new URL(spec.url);
-  if (initialUrl.protocol !== 'https:' || !isAllowedDownloadHost(initialUrl.hostname)) {
-    throw new Error(`Untrusted Piper build input URL: ${spec.url}`);
-  }
-  process.stdout.write(`Downloading ${spec.filename}…\n`);
-  const response = await fetch(spec.url, {
-    headers: { 'User-Agent': 'Story-Studio-Piper-runtime-builder' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(180_000),
+  await verifiedDownload(spec, spec.filename, {
+    allowedHosts: isAllowedDownloadHost,
+    cacheDir: DOWNLOAD_CACHE,
+    timeoutMs: 180_000,
+    userAgent: 'Story-Studio-Piper-runtime-builder',
   });
-  if (!response.ok || !response.body) {
-    throw new Error(`${spec.filename} download failed with HTTP ${response.status}.`);
-  }
-  const finalUrl = new URL(response.url);
-  if (finalUrl.protocol !== 'https:' || !isAllowedDownloadHost(finalUrl.hostname)) {
-    throw new Error(`${spec.filename} redirected to an untrusted host.`);
-  }
-  const declaredLength = Number(response.headers.get('content-length') || 0);
-  if (declaredLength > spec.maxBytes) {
-    throw new Error(`${spec.filename} exceeds its declared size limit.`);
-  }
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of response.body) {
-    size += chunk.byteLength;
-    if (size > spec.maxBytes) {
-      throw new Error(`${spec.filename} exceeded its size limit.`);
-    }
-    chunks.push(chunk);
-  }
-  const bytes = Buffer.concat(chunks);
-  if (!bytes.length) {
-    throw new Error(`${spec.filename} has an invalid size.`);
-  }
-  if (sha256(bytes) !== spec.sha256) {
-    throw new Error(`${spec.filename} SHA-256 mismatch.`);
-  }
-  const temporary = `${destination}.downloading-${randomUUID()}`;
-  await writeFile(temporary, bytes);
-  await rename(temporary, destination);
-  return destination;
+  return verifiedDownloadCachePath(spec, DOWNLOAD_CACHE);
 }
 
 async function validatePublicNotices(target) {

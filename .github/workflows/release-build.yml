@@ -94,6 +94,14 @@ jobs:
             ${{ matrix.cache }}-cargo-release-
             ${{ matrix.cache }}-cargo-
 
+      - name: Cache verified build downloads
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/tools/.download-cache
+          key: ${{ matrix.cache }}-downloads-${{ hashFiles('scripts/verified-download.mjs', 'scripts/prepare-platform-tools.mjs', 'scripts/build-piper-runtime.mjs', 'scripts/piper-runtime-manifest.mjs', 'scripts/patch-linux-appimage.mjs') }}
+          restore-keys: |
+            ${{ matrix.cache }}-downloads-
+
       - name: Install dependencies
         run: npm ci
 

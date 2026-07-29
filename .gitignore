@@ -60,6 +60,7 @@ src-tauri/tools/.*-installing-*/
 src-tauri/tools/.*-old-*/
 src-tauri/tools/.piper-build/
 src-tauri/tools/.piper-cache/
+src-tauri/tools/.download-cache/
 src-tauri/tools/.piper runtime installing-*/
 src-tauri/tools/.piper-runtime-old-*/
 

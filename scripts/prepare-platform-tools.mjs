@@ -20,6 +20,7 @@ import {
   validateExecutable,
 } from './native-executable.mjs';
 import { validatePiperRuntime } from './piper-runtime.mjs';
+import { verifiedDownload } from './verified-download.mjs';
 
 export { inspectExecutable };
 
@@ -27,13 +28,12 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '..');
 const TOOLS_ROOT = join(REPO_ROOT, 'src-tauri', 'tools');
 const NOTICES_PATH = join(REPO_ROOT, 'THIRD_PARTY_NOTICES.md');
+const DOWNLOAD_CACHE = join(TOOLS_ROOT, '.download-cache');
+const GPL_LICENSE_PATH = join(SCRIPT_DIR, 'assets', 'GPL-3.0.txt');
 const MAX_ARCHIVE_ENTRIES = 4096;
 const MAX_COMMAND_OUTPUT = 256 * 1024 * 1024;
-const DOWNLOAD_MAX_ATTEMPTS = 3;
-const DOWNLOAD_RETRY_DELAY_MS = 1_000;
 
 const GPL_LICENSE = {
-  url: 'https://www.gnu.org/licenses/gpl-3.0.txt',
   sha256: '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986',
   maxBytes: 64 * 1024,
 };
@@ -134,27 +134,6 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function downloadErrorDetails(error) {
-  const details = [error?.message || String(error)];
-  if (error?.cause?.code) details.push(error.cause.code);
-  if (error?.cause?.message && error.cause.message !== error.message) {
-    details.push(error.cause.message);
-  }
-  return [...new Set(details)].join(' — ');
-}
-
-function isTransientDownloadError(error) {
-  return error?.transient === true
-    || error instanceof TypeError
-    || ['AbortError', 'TimeoutError'].includes(error?.name);
-}
-
-function wait(milliseconds) {
-  return new Promise((resolveWait) => {
-    setTimeout(resolveWait, milliseconds);
-  });
-}
-
 function assertSafeArchivePath(name) {
   if (!name || name.includes('\0') || name.includes('\\') || name.startsWith('/')) {
     throw new Error(`Archive path is unsafe: ${JSON.stringify(name)}`);
@@ -228,76 +207,29 @@ function run(command, args, options = {}) {
   return result.stdout;
 }
 
-async function downloadOnce(spec, label, fetchImpl, allowedHosts) {
-  const response = await fetchImpl(spec.url, {
-    headers: { 'User-Agent': 'Story-Studio-platform-tools' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(60_000),
-  });
-  if (!response.ok || !response.body) {
-    const error = new Error(`${label} download failed with HTTP ${response.status}.`);
-    error.transient = response.status === 408
-      || response.status === 429
-      || response.status >= 500;
-    throw error;
-  }
-  const finalUrl = new URL(response.url);
-  if (finalUrl.protocol !== 'https:' || !allowedHosts.includes(finalUrl.hostname)) {
-    throw new Error(`${label} redirected to an untrusted host.`);
-  }
-  const declaredLength = Number(response.headers.get('content-length') || 0);
-  if (declaredLength > spec.maxBytes) throw new Error(`${label} exceeds its size limit.`);
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of response.body) {
-    size += chunk.byteLength;
-    if (size > spec.maxBytes) throw new Error(`${label} exceeded its size limit.`);
-    chunks.push(chunk);
-  }
-  const bytes = Buffer.concat(chunks);
-  if (!bytes.length) throw new Error(`${label} has an invalid size.`);
-  const actual = sha256(bytes);
-  if (actual !== spec.sha256) throw new Error(`${label} SHA-256 mismatch.`);
-  return bytes;
-}
-
-export async function download(spec, label, {
-  fetchImpl = fetch,
-  maxAttempts = DOWNLOAD_MAX_ATTEMPTS,
-  retryDelayMs = DOWNLOAD_RETRY_DELAY_MS,
-  waitForRetry = wait,
-} = {}) {
-  const parsed = new URL(spec.url);
-  if (parsed.protocol !== 'https:') throw new Error(`${label} URL must use HTTPS.`);
+export async function download(spec, label, options = {}) {
   const allowedHosts = [
     'files.pythonhosted.org',
     'www.7-zip.org',
     'd.7-zip.org',
-    'www.gnu.org',
   ];
-  if (!allowedHosts.includes(parsed.hostname)) throw new Error(`${label} host is not allowed.`);
+  return verifiedDownload(spec, label, {
+    allowedHosts,
+    cacheDir: DOWNLOAD_CACHE,
+    userAgent: 'Story-Studio-platform-tools',
+    ...options,
+  });
+}
 
-  process.stdout.write(`Downloading ${label}…\n`);
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await downloadOnce(spec, label, fetchImpl, allowedHosts);
-    } catch (error) {
-      const details = downloadErrorDetails(error);
-      if (!isTransientDownloadError(error) || attempt === maxAttempts) {
-        const attemptSummary = attempt > 1 ? ` after ${attempt} attempts` : '';
-        throw new Error(`${label} download failed${attemptSummary}: ${details}`, {
-          cause: error,
-        });
-      }
-      const delay = retryDelayMs * attempt;
-      process.stdout.write(
-        `${label} download attempt ${attempt}/${maxAttempts} failed: ${details}. `
-        + `Retrying in ${delay} ms…\n`,
-      );
-      await waitForRetry(delay);
-    }
+async function readBundledGplLicense() {
+  const bytes = await readFile(GPL_LICENSE_PATH);
+  if (!bytes.length || bytes.length > GPL_LICENSE.maxBytes) {
+    throw new Error('Bundled GPL v3 license has an invalid size.');
   }
-  throw new Error(`${label} download failed: no download attempt was configured.`);
+  if (sha256(bytes) !== GPL_LICENSE.sha256) {
+    throw new Error('Bundled GPL v3 license SHA-256 mismatch.');
+  }
+  return bytes;
 }
 
 async function withArchive(bytes, archiveSpec, action) {
@@ -383,7 +315,7 @@ async function prepareGeneratedPlatform(config, platform, architecture) {
     const [ffmpegArchive, sevenZipArchive, gplLicense] = await Promise.all([
       download(config.ffmpeg.archive, 'FFmpeg'),
       download(config.sevenZip.archive, '7-Zip'),
-      download(GPL_LICENSE, 'GPL v3 license'),
+      readBundledGplLicense(),
     ]);
 
     const ffmpegFiles = await withArchive(

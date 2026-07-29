@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   download,
@@ -106,13 +108,14 @@ test('unsupported platform pairs are refused without downloading', async () => {
 test('platform tool downloads retry transient failures and retain integrity checks', async () => {
   const bytes = Buffer.from('verified download');
   const spec = {
-    url: 'https://www.gnu.org/licenses/test.txt',
+    url: 'https://files.pythonhosted.org/packages/test.bin',
     sha256: '636a193cc46913f6e164b8428da57752de7db348e95903e5f0e3c2e66a300525',
     maxBytes: 1_024,
   };
   const delays = [];
   let attempts = 0;
   const result = await download(spec, 'Test asset', {
+    cacheDir: null,
     fetchImpl: async () => {
       attempts += 1;
       if (attempts === 1) {
@@ -143,7 +146,8 @@ test('platform tool downloads retry transient failures and retain integrity chec
       Object.defineProperty(response, 'url', { value: spec.url });
       return response;
     },
-    retryDelayMs: 10,
+    jitterRatio: 0,
+    retryDelaysMs: [10, 20],
     waitForRetry: async (delay) => delays.push(delay),
   });
 
@@ -154,7 +158,7 @@ test('platform tool downloads retry transient failures and retain integrity chec
 
 test('platform tool download failures identify the asset and network cause', async () => {
   const spec = {
-    url: 'https://www.gnu.org/licenses/test.txt',
+    url: 'https://files.pythonhosted.org/packages/test.bin',
     sha256: '0'.repeat(64),
     maxBytes: 1_024,
   };
@@ -162,23 +166,26 @@ test('platform tool download failures identify the asset and network cause', asy
 
   await assert.rejects(
     download(spec, 'GPL test license', {
+      cacheDir: null,
       fetchImpl: async () => {
         attempts += 1;
         throw new TypeError('fetch failed', {
           cause: Object.assign(new Error('socket disconnected'), { code: 'UND_ERR_SOCKET' }),
         });
       },
+      jitterRatio: 0,
+      retryDelaysMs: [1, 2, 3, 4],
       waitForRetry: async () => {},
     }),
-    /GPL test license download failed after 3 attempts: fetch failed — UND_ERR_SOCKET — socket disconnected/,
+    /GPL test license download failed after 5 attempts: fetch failed — UND_ERR_SOCKET — socket disconnected/,
   );
-  assert.equal(attempts, 3);
+  assert.equal(attempts, 5);
 });
 
 test('platform tool downloads do not retry integrity failures', async () => {
   const bytes = Buffer.from('tampered download');
   const spec = {
-    url: 'https://www.gnu.org/licenses/test.txt',
+    url: 'https://files.pythonhosted.org/packages/test.bin',
     sha256: '0'.repeat(64),
     maxBytes: 1_024,
   };
@@ -186,6 +193,7 @@ test('platform tool downloads do not retry integrity failures', async () => {
 
   await assert.rejects(
     download(spec, 'Test asset', {
+      cacheDir: null,
       fetchImpl: async () => {
         attempts += 1;
         const response = new Response(bytes);
@@ -197,4 +205,17 @@ test('platform tool downloads do not retry integrity failures', async () => {
     /SHA-256 mismatch/,
   );
   assert.equal(attempts, 1);
+});
+
+test('the immutable GPL license is bundled and integrity-pinned', async () => {
+  const license = await readFile(new URL('./assets/GPL-3.0.txt', import.meta.url));
+  assert.equal(
+    createHash('sha256').update(license).digest('hex'),
+    '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986',
+  );
+  const implementation = await readFile(
+    new URL('./prepare-platform-tools.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(implementation, /gnu\.org/);
 });
