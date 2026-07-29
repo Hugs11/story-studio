@@ -76,6 +76,112 @@ fn export_zip_path_adds_numeric_suffix_on_collision() {
 }
 
 #[test]
+fn output_preflight_creates_and_removes_its_probe() {
+    let base = std::env::temp_dir().join(format!(
+        "story_studio_output_preflight_test_{}",
+        now_millis()
+    ));
+
+    preflight_output_directory(&base).expect("preflight output");
+
+    let remaining = fs::read_dir(&base)
+        .expect("read output dir")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("collect output dir");
+    assert!(remaining.is_empty());
+
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn output_preflight_reports_the_blocked_destination() {
+    let base =
+        std::env::temp_dir().join(format!("story_studio_output_blocked_test_{}", now_millis()));
+    fs::write(&base, b"not a directory").expect("create blocking file");
+
+    let error = preflight_output_directory(&base).expect_err("preflight should fail");
+
+    assert!(error.contains("dossier de destination"));
+    assert!(error.contains(&base.to_string_lossy().to_string()));
+
+    let _ = fs::remove_file(base);
+}
+
+#[test]
+fn completed_zip_is_transferred_without_leaving_a_partial_file() {
+    let base =
+        std::env::temp_dir().join(format!("story_studio_zip_transfer_test_{}", now_millis()));
+    let local_dir = base.join("local");
+    let output_dir = base.join("output");
+    fs::create_dir_all(&local_dir).expect("create local dir");
+    let local_zip = local_dir.join("assembled.zip");
+    let contents = b"completed local zip";
+    fs::write(&local_zip, contents).expect("write local zip");
+
+    let final_path = transfer_completed_zip(&local_zip, &output_dir, "Pack réseau", &|| false)
+        .expect("transfer zip");
+
+    assert_eq!(
+        final_path.file_name().and_then(|name| name.to_str()),
+        Some("Pack_réseau.zip")
+    );
+    assert_eq!(fs::read(&final_path).expect("read final zip"), contents);
+    assert!(fs::read_dir(&output_dir)
+        .expect("read output dir")
+        .all(|entry| !entry
+            .expect("output entry")
+            .file_name()
+            .to_string_lossy()
+            .ends_with(".partial")));
+
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn completed_zip_transfer_preserves_an_existing_export() {
+    let base =
+        std::env::temp_dir().join(format!("story_studio_zip_collision_test_{}", now_millis()));
+    let output_dir = base.join("output");
+    fs::create_dir_all(&output_dir).expect("create output dir");
+    let existing = output_dir.join("Pack.zip");
+    fs::write(&existing, b"existing").expect("write existing zip");
+    let local_zip = base.join("assembled.zip");
+    fs::write(&local_zip, b"new").expect("write local zip");
+
+    let final_path =
+        transfer_completed_zip(&local_zip, &output_dir, "Pack", &|| false).expect("transfer zip");
+
+    assert_eq!(
+        final_path.file_name().and_then(|name| name.to_str()),
+        Some("Pack-2.zip")
+    );
+    assert_eq!(fs::read(existing).expect("read existing zip"), b"existing");
+    assert_eq!(fs::read(final_path).expect("read new zip"), b"new");
+
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn cancelled_zip_transfer_removes_the_partial_file() {
+    let base = std::env::temp_dir().join(format!("story_studio_zip_cancel_test_{}", now_millis()));
+    let output_dir = base.join("output");
+    let local_zip = base.join("assembled.zip");
+    fs::create_dir_all(&base).expect("create base dir");
+    fs::write(&local_zip, vec![42_u8; 1024]).expect("write local zip");
+
+    let error = transfer_completed_zip(&local_zip, &output_dir, "Pack", &|| true)
+        .expect_err("transfer should be cancelled");
+
+    assert_eq!(error, "Génération annulée.");
+    assert!(fs::read_dir(&output_dir)
+        .expect("read output dir")
+        .next()
+        .is_none());
+
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
 fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
     let base =
         std::env::temp_dir().join(format!("story_studio_thumbnail_png_test_{}", now_millis()));
