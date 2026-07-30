@@ -6,7 +6,7 @@
     <title>Story Studio pour Lunii — Créer, éditer et tester des packs</title>
     <meta
       name="description"
-      content="Story Studio est un éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii."
+      content="Story Studio est un éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs d'histoires compatibles Lunii."
     />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="EW_r5pSDajA6Py5Z_duzkWnG2z-j_8UgUwk07VyOa4c" />
@@ -17,7 +17,7 @@
     <meta property="og:title" content="Story Studio pour Lunii — Créer et tester des packs" />
     <meta
       property="og:description"
-      content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii."
+      content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs compatibles Lunii."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -31,7 +31,7 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Story Studio pour Lunii — Créer et tester des packs" />
-    <meta name="twitter:description" content="Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs compatibles Lunii." />
+    <meta name="twitter:description" content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs compatibles Lunii." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
@@ -41,13 +41,13 @@
         "@type": "SoftwareApplication",
         "name": "Story Studio",
         "alternateName": "Story Studio pour Lunii",
-        "description": "Éditeur Windows open source pour créer des histoires pour la Lunii, importer des podcasts ou vidéos, corriger et exporter des packs d'histoires compatibles Lunii.",
+        "description": "Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs d'histoires compatibles Lunii.",
         "url": "https://hugs11.github.io/story-studio/",
         "downloadUrl": "https://github.com/Hugs11/story-studio/releases/latest",
         "codeRepository": "https://github.com/Hugs11/story-studio",
         "applicationCategory": "MultimediaApplication",
-        "operatingSystem": "Windows",
-        "softwareVersion": "0.9.5",
+        "operatingSystem": "Windows 10+, Linux x86_64, macOS 11+",
+        "softwareVersion": "0.9.6",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -618,11 +618,10 @@
         <div class="container">
           <h1>Créer des histoires pour la Lunii avec Story Studio</h1>
           <p class="tagline">
-            Story Studio est un éditeur Windows open source pour créer des
-            histoires pour la Lunii, importer, corriger, organiser, tester et
-            exporter des packs d'histoires compatibles Lunii. Tout se fait
-            dans une interface visuelle, avec vos images, vos sons, vos menus
-            et vos chemins de navigation.
+            Story Studio est un éditeur desktop open source pour Windows,
+            Linux et macOS. Il permet de créer des histoires pour la Lunii,
+            importer, corriger, organiser, tester et exporter des packs
+            compatibles Lunii dans une interface visuelle.
           </p>
           <p class="tagline">
             Si vous cherchez un outil pour créer des histoires pour la Lunii,
@@ -641,10 +640,10 @@
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              <span id="download-label">Télécharger pour Windows</span>
+              <span id="download-label">Voir les téléchargements</span>
             </a>
             <div class="cta-meta" id="download-meta">
-              Windows 10 ou plus récent · Installeur officiel
+              Windows x64 · Linux x86_64 · macOS Apple Silicon
             </div>
             <div class="hero-links">
               <a href="https://github.com/Hugs11/story-studio/releases/latest">Notes de version</a>
@@ -654,11 +653,11 @@
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.5</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.6</h2>
             <ul>
-              <li>Compatibilité d'édition restaurée pour les packs créés avec Story Studio 0.9.3 utilisant « histoire suivante ».</li>
-              <li>Les fins de dossiers mutualisées conservent désormais leur retour explicite vers le menu principal lors de l'import et de la régénération.</li>
-              <li>La fidélité des packs de démonstration est vérifiée stage par stage, sans perte de transition, de média ni de topologie.</li>
+              <li>Première version publique pour Linux x86_64 et macOS Apple Silicon, aux côtés de Windows x64.</li>
+              <li>Piper 1.6, FFmpeg et 7-Zip sont fournis nativement pour chaque plateforme prise en charge.</li>
+              <li>Gestion des fichiers, de l'audio, des images et des imports renforcée sur les trois systèmes.</li>
             </ul>
           </div>
 
@@ -924,25 +923,26 @@
           <h2>Comment installer</h2>
           <div class="steps">
             <div class="step">
-              <h3>Téléchargez l'installeur</h3>
+              <h3>Choisissez votre plateforme</h3>
               <p>
-                Cliquez sur le bouton « Télécharger pour Windows » en haut de la page.
-                Le fichier se trouve ensuite dans votre dossier <em>Téléchargements</em>.
+                Le bouton en haut de la page propose le paquet recommandé pour votre
+                système. La page GitHub Releases donne accès à tous les formats.
               </p>
             </div>
             <div class="step">
-              <h3>Double-cliquez sur le fichier</h3>
+              <h3>Installez le paquet</h3>
               <p>
-                Lancez l'installeur (<code>.exe</code>) et suivez les étapes. Windows peut
-                afficher un avertissement SmartScreen : cliquez sur <em>Informations
-                complémentaires</em> puis <em>Exécuter quand même</em>.
+                Sous Windows, lancez l'EXE ou utilisez le MSI. Sous Linux,
+                exécutez l'AppImage ou installez le DEB/RPM. Sur Mac Apple
+                Silicon, ouvrez le DMG et glissez l'app dans Applications.
               </p>
             </div>
             <div class="step">
               <h3>Lancez Story Studio</h3>
               <p>
-                Ouvrez Story Studio depuis le menu Démarrer ou le raccourci créé sur le
-                bureau. Vous pouvez commencer votre premier pack tout de suite.
+                Le build macOS n'est pas notarié : au premier lancement,
+                faites un Contrôle-clic sur l'app puis choisissez
+                <em>Ouvrir</em>, sans désactiver Gatekeeper globalement.
               </p>
             </div>
           </div>
@@ -981,17 +981,46 @@
           return mb >= 1 ? mb.toFixed(1) + " Mo" : (bytes / 1024).toFixed(0) + " Ko";
         }
 
-        function pickAsset(assets) {
+        function detectPlatform() {
+          var platform = (navigator.userAgentData && navigator.userAgentData.platform) ||
+            navigator.platform || navigator.userAgent || "";
+          if (/Mac/i.test(platform)) return "macos";
+          if (/Linux|X11/i.test(platform)) return "linux";
+          if (/Win/i.test(platform)) return "windows";
+          return "other";
+        }
+
+        function platformDetails(platform) {
+          if (platform === "macos") {
+            return {
+              label: "Télécharger pour macOS Apple Silicon",
+              meta: "macOS 11 ou plus récent · DMG ARM64",
+              pattern: /\.dmg$/i
+            };
+          }
+          if (platform === "linux") {
+            return {
+              label: "Télécharger pour Linux",
+              meta: "Linux x86_64 · AppImage",
+              pattern: /\.AppImage$/i
+            };
+          }
+          if (platform === "windows") {
+            return {
+              label: "Télécharger pour Windows",
+              meta: "Windows 10 ou plus récent · EXE x64",
+              pattern: /\.exe$/i
+            };
+          }
+          return null;
+        }
+
+        function pickAsset(assets, details) {
           if (!assets || !assets.length) return null;
-          // Prefer .exe (NSIS) installer, fallback to .msi
-          var exe = assets.find(function (a) {
-            return /\.exe$/i.test(a.name) && !/\.sig$/i.test(a.name);
+          if (!details) return null;
+          return assets.find(function (asset) {
+            return details.pattern.test(asset.name) && !/\.sig$/i.test(asset.name);
           });
-          if (exe) return exe;
-          var msi = assets.find(function (a) {
-            return /\.msi$/i.test(a.name) && !/\.sig$/i.test(a.name);
-          });
-          return msi || null;
         }
 
         function setFallback(message) {
@@ -1014,13 +1043,14 @@
               versionText.textContent = "Dernière version — Bêta";
             }
 
-            var asset = pickAsset(release.assets || []);
+            var details = platformDetails(detectPlatform());
+            var asset = pickAsset(release.assets || [], details);
             if (asset && asset.browser_download_url) {
               btn.setAttribute("href", asset.browser_download_url);
-              label.textContent = "Télécharger pour Windows";
+              label.textContent = details.label;
               var size = formatSize(asset.size);
               meta.textContent =
-                "Windows 10 ou plus récent · " +
+                details.meta + " · " +
                 asset.name +
                 (size ? " (" + size + ")" : "");
             } else {

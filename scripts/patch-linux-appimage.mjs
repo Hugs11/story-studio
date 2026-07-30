@@ -28,6 +28,11 @@ const DOWNLOAD_CACHE = resolve(
   'tools',
   '.download-cache',
 );
+const APPIMAGE_RUNTIME_LICENSE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  'assets',
+  'AppImage-type2-runtime-LICENSE.txt',
+);
 const WAYLAND_LIBRARIES = new Set([
   'libwayland-client.so.0',
   'libwayland-cursor.so.0',
@@ -178,6 +183,14 @@ async function documentBundledGStreamer(appDir) {
     }
     await copyFile(source, join(licenses, `${packageName}-copyright`));
   }
+  const runtimeLicenseMetadata = await lstat(APPIMAGE_RUNTIME_LICENSE);
+  if (!runtimeLicenseMetadata.isFile()) {
+    throw new Error('AppImage runtime license is not a regular file.');
+  }
+  await copyFile(
+    APPIMAGE_RUNTIME_LICENSE,
+    join(licenses, 'AppImage-type2-runtime-LICENSE.txt'),
+  );
   return plugins.length;
 }
 

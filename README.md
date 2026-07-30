@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.5" src="https://img.shields.io/badge/version-0.9.5-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.6" src="https://img.shields.io/badge/version-0.9.6-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -44,16 +44,13 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.5 restores editing compatibility for Story Studio 0.9.3 packs
-whose shared next-story end message returns the final story of nested folders
-to the main menu.
-
-Version 0.9.5 remains the current public Windows x64 release. Linux x86_64 and
-macOS Apple Silicon packages are being prepared for 0.9.6 and are not published
-yet.
+Story Studio 0.9.6 brings the complete desktop editor to Linux x86_64 and
+macOS Apple Silicon alongside Windows x64. It also adds native Piper 1.6
+runtimes, hardens cross-platform file and tool handling, and fixes several
+audio, image and pack-import regressions.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.5 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.5)
+- [Read the v0.9.6 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.6)
 - [See the full changelog](CHANGELOG.md)
 
 ## Demo packs
@@ -203,19 +200,20 @@ navigation, simulation and export into one clear local workspace.
 | Platform | Requirements and limits |
 |---|---|
 | Windows x64 | Windows 10 or later with WebView2 |
-| Linux x86_64 | A glibc-based distribution with WebKitGTK 4.1 and the usual GStreamer codecs; AppImage, DEB and RPM packages are planned |
+| Linux x86_64 | A glibc-based distribution with WebKitGTK 4.1 and the usual GStreamer codecs; AppImage, DEB and RPM packages are available |
 | macOS Apple Silicon | macOS 11 or later on an M1-or-newer Mac; Intel Macs are not supported |
 
 Bundled third-party binaries keep their own licenses and pinned provenance —
-see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the
+[corresponding-source offer](THIRD_PARTY_SOURCE_OFFER.md).
 
 ## Installation
 
-The current 0.9.5 release only provides Windows installers on the
-[GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest).
-The following package types are prepared for 0.9.6 but must not be treated as
-released until they appear on that page:
+Download the package for your platform from the
+[GitHub Releases page](https://github.com/Hugs11/story-studio/releases/latest):
 
+- **Windows x64:** use the EXE installer, or the MSI package for managed
+  deployments.
 - **AppImage:** make the file executable with `chmod +x Story-Studio*.AppImage`,
   then run it.
 - **Debian/Ubuntu:** install the downloaded DEB with

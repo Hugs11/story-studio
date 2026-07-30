@@ -13,7 +13,7 @@ binary, its provenance, and the obligations that come with redistributing it.
 - **Upstream project:** <https://lucide.dev/>
 - **Source repository:** <https://github.com/lucide-icons/lucide>
 - **License:** ISC License
-- **License text:** <https://github.com/lucide-icons/lucide/blob/main/LICENSE>
+- **License text:** `public/licenses/Lucide-ISC.txt`
 - **Copyright notice:** Copyright (c) Lucide Icons and Contributors.
 
 Story Studio copies selected Lucide SVG path data into local React components
@@ -26,7 +26,7 @@ MIT license.
 - **Bundled file:** `public/fonts/SpaceGrotesk-Variable.woff2`
 - **Upstream project:** <https://github.com/floriankarsten/space-grotesk>
 - **License:** SIL Open Font License, Version 1.1
-- **License text:** <https://github.com/floriankarsten/space-grotesk/blob/master/OFL.txt>
+- **License text:** `public/fonts/OFL-SpaceGrotesk.txt`
 - **Copyright notice:** Copyright 2020 The Space Grotesk Project Authors.
 - **SHA-256:** `8E085AA438094F11487A836652EDD5C054FA6A96F63FC7C282105EE3A4B08C07`
 
@@ -85,19 +85,25 @@ License and is not covered by Story Studio's MIT license.
     `b1ae3173414b5fc5f538a726c4e48ea97edc0d2cdc11f103afee655c463fa742`
   - extracted `7.1` ARM64 binary SHA-256:
     `6d175a4743ca50256e89a8cdd731100f9cee33bd79aeea46894d209410dc6617`.
-- **Build configuration:** the binary reports `--enable-gpl --enable-version3`
-  and `--enable-libmp3lame` (see `ffmpeg -buildconf`). Per FFmpeg's own legal notice, enabling
-  `--enable-gpl` and any GPL component makes the resulting binary licensed
-  under the **GNU GPL v3 or later**, not LGPL.
+- **Cross-platform version policy:** these validated binaries intentionally use
+  different FFmpeg versions because each target comes from a separately pinned
+  native distribution source. Story Studio requires the same codecs and
+  operations on every platform, not a shared FFmpeg build number.
+- **Build configuration:** all three binaries report `--enable-gpl` and
+  `--enable-libmp3lame`. Windows and Linux additionally report
+  `--enable-version3`; macOS does not. None reports `--enable-nonfree`.
+  Consequently the Windows and Linux builds are **GNU GPL v3 or later**, while
+  the macOS build is **GNU GPL v2 or later**.
 - **License texts:**
   - FFmpeg legal overview: <https://www.ffmpeg.org/legal.html>
+  - GPL v2: <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
   - GPL v3: <https://www.gnu.org/licenses/gpl-3.0.en.html>
 
 ### Obligations when redistributing this binary
 
 Story Studio redistributes a native FFmpeg executable as object code inside
 each platform bundle.
-Under GPL v3 §6, anyone distributing the binary must also make available the
+Under GPL §3/§6, anyone distributing the binary must also make available the
 **Corresponding Source** of FFmpeg (the source code, build scripts and
 configuration used to produce the binary). The Gyan build page publishes the
 upstream source archives and build recipes used to produce these official
@@ -117,9 +123,9 @@ bundled binary with an LGPL-only FFmpeg build that you produce yourself.
 
 - The Story Studio source code (Rust + JavaScript in this repository) remains
   under the **MIT License**.
-- The FFmpeg binaries are **not** MIT-licensed. They are
-  redistributed under the **GPL v3 or later** and carries its own obligations
-  (notably, providing the Corresponding Source on request).
+- The FFmpeg binaries are **not** MIT-licensed. They are redistributed under
+  GPL v3 or later on Windows/Linux and GPL v2 or later on macOS, with their own
+  obligations (notably, providing the Corresponding Source).
 - Do **not** describe `ffmpeg.exe` or any other third-party binary in this
   repository as covered by Story Studio's MIT license.
 
@@ -158,6 +164,8 @@ notice with:
     `5c2fd36f00a66f7787dcf1badd977d44a02b50063fe5678e1f19ff64797432ed`.
 - **Upstream project:** <https://www.7-zip.org/>
 - **License information:** <https://www.7-zip.org/license.txt>
+- **Bundled license text:** `scripts/assets/7-Zip-License.txt` is copied into
+  every platform bundle as `tools/licenses/7-Zip-License.txt`.
 
 7-Zip is free software. Most of the code is under the **GNU LGPL**; some parts
 are under **BSD-style** licenses; and some parts may carry the **unRAR**
@@ -179,6 +187,8 @@ covered by Story Studio's MIT license.
   - appimagetool: <https://github.com/AppImage/appimagetool/blob/1.9.1/LICENSE>
   - type2 runtime and its statically linked components:
     <https://github.com/AppImage/type2-runtime/blob/20251108/LICENSE>
+- **Bundled license text:** the AppImage contains
+  `licenses/AppImage-type2-runtime-LICENSE.txt`.
 
 `appimagetool` is used only while building and is not shipped as a standalone
 tool. Its versioned runtime is embedded in the resulting AppImage. Both files

@@ -29,6 +29,7 @@ const REPO_ROOT = resolve(SCRIPT_DIR, '..');
 const TOOLS_ROOT = join(REPO_ROOT, 'src-tauri', 'tools');
 const NOTICES_PATH = join(REPO_ROOT, 'THIRD_PARTY_NOTICES.md');
 const DOWNLOAD_CACHE = join(TOOLS_ROOT, '.download-cache');
+const GPL2_LICENSE_PATH = join(SCRIPT_DIR, 'assets', 'GPL-2.0.txt');
 const GPL_LICENSE_PATH = join(SCRIPT_DIR, 'assets', 'GPL-3.0.txt');
 const MAX_ARCHIVE_ENTRIES = 4096;
 const MAX_COMMAND_OUTPUT = 256 * 1024 * 1024;
@@ -36,6 +37,10 @@ const MAX_COMMAND_OUTPUT = 256 * 1024 * 1024;
 const GPL_LICENSE = {
   sha256: '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986',
   maxBytes: 64 * 1024,
+};
+const GPL2_LICENSE = {
+  sha256: '8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643',
+  maxBytes: 32 * 1024,
 };
 
 export const PLATFORM_MANIFEST = {
@@ -76,6 +81,8 @@ export const PLATFORM_MANIFEST = {
       licenseMember: 'imageio_ffmpeg-0.6.0.dist-info/LICENSE',
       binarySha256: 'e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99',
       version: '7.0.2-static',
+      license: 'GPL-3.0-or-later',
+      licenseFile: 'GPL-3.0.txt',
       format: 'elf',
       architectures: ['x86_64'],
       provenance: 'imageio-ffmpeg 0.6.0 wheel; binary built by johnvansickle.com',
@@ -109,6 +116,8 @@ export const PLATFORM_MANIFEST = {
       licenseMember: 'imageio_ffmpeg-0.6.0.dist-info/LICENSE',
       binarySha256: '6d175a4743ca50256e89a8cdd731100f9cee33bd79aeea46894d209410dc6617',
       version: '7.1',
+      license: 'GPL-2.0-or-later',
+      licenseFile: 'GPL-2.0.txt',
       format: 'macho',
       architectures: ['aarch64'],
       provenance: 'imageio-ffmpeg 0.6.0 wheel; native Apple Silicon build from osxexperts.net',
@@ -232,6 +241,17 @@ async function readBundledGplLicense() {
   return bytes;
 }
 
+async function readBundledGpl2License() {
+  const bytes = await readFile(GPL2_LICENSE_PATH);
+  if (!bytes.length || bytes.length > GPL2_LICENSE.maxBytes) {
+    throw new Error('Bundled GPL v2 license has an invalid size.');
+  }
+  if (sha256(bytes) !== GPL2_LICENSE.sha256) {
+    throw new Error('Bundled GPL v2 license SHA-256 mismatch.');
+  }
+  return bytes;
+}
+
 async function withArchive(bytes, archiveSpec, action) {
   const tempDir = join(TOOLS_ROOT, `.prepare-${randomUUID()}`);
   const extension = archiveSpec.type === 'zip' ? 'zip' : 'tar.xz';
@@ -315,7 +335,9 @@ async function prepareGeneratedPlatform(config, platform, architecture) {
     const [ffmpegArchive, sevenZipArchive, gplLicense] = await Promise.all([
       download(config.ffmpeg.archive, 'FFmpeg'),
       download(config.sevenZip.archive, '7-Zip'),
-      readBundledGplLicense(),
+      config.ffmpeg.licenseFile === 'GPL-2.0.txt'
+        ? readBundledGpl2License()
+        : readBundledGplLicense(),
     ]);
 
     const ffmpegFiles = await withArchive(
@@ -368,7 +390,7 @@ async function prepareGeneratedPlatform(config, platform, architecture) {
     const sevenZipPath = join(staging, '7zz');
     await writeFile(ffmpegPath, ffmpegFiles.binary);
     await writeFile(sevenZipPath, sevenZipFiles.binary);
-    await writeFile(join(staging, 'licenses', 'GPL-3.0.txt'), gplLicense);
+    await writeFile(join(staging, 'licenses', config.ffmpeg.licenseFile), gplLicense);
     await writeFile(
       join(staging, 'licenses', 'imageio-ffmpeg-LICENSE.txt'),
       ffmpegFiles.license,
@@ -394,7 +416,7 @@ async function prepareGeneratedPlatform(config, platform, architecture) {
           archiveUrl: config.ffmpeg.archive.url,
           archiveSha256: config.ffmpeg.archive.sha256,
           binarySha256: config.ffmpeg.binarySha256,
-          license: 'GPL-3.0-or-later',
+          license: config.ffmpeg.license,
         },
         sevenZip: {
           version: config.sevenZip.version,

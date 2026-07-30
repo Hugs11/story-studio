@@ -12,6 +12,51 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.6] - 2026-07-30
+
+Story Studio v0.9.6 brings the complete desktop editor to Linux x86_64 and
+macOS Apple Silicon while preserving the existing Windows x64 experience.
+
+### Added
+
+- Added native Linux packages for AppImage, Debian/Ubuntu and Fedora, plus a
+  macOS Apple Silicon app and DMG alongside the existing Windows installers.
+- Added bundled, integrity-pinned FFmpeg and 7-Zip tools for every supported
+  platform, so interactive shell configuration is not required.
+- Added reproducible native Piper 1.6 runtimes for Windows x64, Linux x86_64
+  and macOS Apple Silicon, with their source provenance and license notices.
+- Added XTTS support on Linux in CPU-only mode.
+
+### Changed
+
+- Ported filesystem permissions, cache locations, process launchers and
+  external-tool resolution to Windows, Linux and macOS boundaries.
+- Hardened downloads, archive extraction, generated-pack publication and
+  user-selected path handling across desktop filesystems.
+- Unified local audio playback through Web Audio and Tauri asset streaming for
+  consistent FLAC and preview behavior across desktop webviews.
+- Improved image filters, hidden asset handling and diagram pinch gestures
+  across WebView2, WebKitGTK and WebKit.
+
+### Fixed
+
+- Fixed Fedora startup, taskbar identity and packaging regressions.
+- Fixed imported end-message destinations and preserved story names during
+  pack import.
+- Fixed frontend-visible temporary files on macOS and Linux by keeping them in
+  application-owned cache locations.
+- Fixed media-removal and pack-start wording so destructive actions and
+  navigation destinations are explicit.
+
+### Platform notes
+
+- macOS builds target Apple Silicon only, are ad-hoc signed and are not
+  notarized; Gatekeeper may require an explicit first launch.
+- XTTS was not installed or manually validated on macOS. ComfyUI was manually
+  validated on Windows only; manual Linux and macOS ComfyUI tests were not run.
+
+---
+
 ## [0.9.5] - 2026-07-25
 
 ### Fixed

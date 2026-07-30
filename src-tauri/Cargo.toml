@@ -1,6 +1,6 @@
 [package]
 name = "story-studio"
-version = "0.9.5"
+version = "0.9.6"
 description = "Cross-platform desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
