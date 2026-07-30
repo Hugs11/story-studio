@@ -135,8 +135,9 @@ fn save_recording_prefers_workspace_dir() {
 
 #[test]
 fn save_recording_accepts_session_workspace_without_save_path() {
+    let root = temp_project_dir("session_recording_root");
     let session =
-        crate::support::temp::create_session_workspace().expect("create session workspace");
+        crate::support::temp::create_session_workspace(&root).expect("create session workspace");
 
     let written = save_recording(None, Some(&session), "session-recording.webm", b"audio")
         .expect("save recording in session workspace");
@@ -149,5 +150,6 @@ fn save_recording_accepts_session_workspace_without_save_path() {
     );
     assert_eq!(fs::read(&written_path).expect("read recording"), b"audio");
 
-    crate::support::temp::cleanup_session_workspace(&session).expect("cleanup session");
+    crate::support::temp::cleanup_session_workspace(&root, &session).expect("cleanup session");
+    fs::remove_dir(root).expect("cleanup session root");
 }

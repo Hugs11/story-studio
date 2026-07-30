@@ -2,7 +2,10 @@ import { Toggle } from '../common/Toggle';
 import { AudioField } from './AudioField';
 import { NavigationTargetSelect } from './story/storyUtils';
 import { Trash2 } from '../icons/LucideLocal';
-import { collectEndMessagePresentations } from '../../store/generatedNavigation';
+import {
+  collectEndMessagePresentations,
+  getPackStartReturnLabel,
+} from '../../store/generatedNavigation';
 import {
   getEffectiveEndMessageControlState,
   summarizeEndMessagePlayback,
@@ -31,6 +34,7 @@ export function EndNodeEditor({
   onAttachStory,
 }) {
   const hasAudio = typeof nightModeAudio === 'string' && nightModeAudio.trim().length > 0;
+  const packStartReturnLabel = getPackStartReturnLabel(project);
   const presentations = collectEndMessagePresentations(project);
   const globalStories = presentations.filter((item) => item.presentationKind === 'global');
   const localStories = presentations.filter((item) => item.presentationKind === 'local_prompt' || item.presentationKind === 'local_sequence');
@@ -114,7 +118,7 @@ export function EndNodeEditor({
                 allMenus={allMenus}
                 allStories={allStories}
                 currentStoryId={null}
-                emptyLabel="Aucune transition — retour au début du pack"
+                emptyLabel={packStartReturnLabel}
                 includeStoryPlay={false}
               />
             </div>
@@ -129,9 +133,9 @@ export function EndNodeEditor({
         <div className="editor-setting-stack">
           <div className="editor-setting-row end-node-setting-row end-node-playback-row">
             <div className="editor-setting-copy">
-              <div className="editor-setting-title">Attendre une confirmation</div>
+              <div className="editor-setting-title">Quand passer à la suite ?</div>
               <div className="editor-setting-desc">
-                Après le message de fin, l'enfant doit appuyer sur OK pour continuer.
+                Le retour vers la destination configurée ci-dessous s’effectue dès la fin du message ou après un appui sur OK.
               </div>
             </div>
             <EndMessagePlaybackControl

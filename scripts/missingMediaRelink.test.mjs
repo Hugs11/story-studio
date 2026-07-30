@@ -99,6 +99,20 @@ test('candidatePathsForRelinkRoot tries managed folder suffix then basename', ()
   );
 });
 
+test('candidatePathsForRelinkRoot follows native case rules for managed folders', () => {
+  assert.deepEqual(
+    candidatePathsForRelinkRoot('D:\\LOST\\FICHIERS-IMPORTES\\story.mp3', 'C:/project'),
+    [
+      'C:/project/fichiers-importes/story.mp3',
+      'C:/project/story.mp3',
+    ],
+  );
+  assert.deepEqual(
+    candidatePathsForRelinkRoot('/tmp/LOST/FICHIERS-IMPORTES/story.mp3', '/project'),
+    ['/project/story.mp3'],
+  );
+});
+
 test('workspaceFallbackForProjectRelativePath maps managed relative paths to workspace root', () => {
   assert.equal(
     workspaceFallbackForProjectRelativePath('./fichiers-importes/story.mp3', 'C:/workspace'),

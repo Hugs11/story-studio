@@ -11,8 +11,8 @@ use super::navigation_targets::{
 use super::night_mode::{apply_night_fallback_overrides, detect_imported_night_mode};
 use super::sequence_menus::expand_sequence_choice_menus;
 use super::stage::{
-    action_options, is_stage_autoplay, resolve_asset, stage_action_options, stage_control_bool,
-    stage_controls, stage_uuid,
+    action_options, imported_story_name, is_stage_autoplay, resolve_asset, stage_action_options,
+    stage_control_bool, stage_controls, stage_uuid,
 };
 use super::story_entry::{
     autoplay_stage_to_story_entry, resolve_after_playback_sequence_assets,
@@ -176,10 +176,12 @@ pub(super) fn walk_story_doc_to_entries(
             }
 
             let chain_stage = stages.get(eff_first_id).copied();
-            let chain_audio = chain_stage
-                .and_then(|stage| resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets));
-            let chain_image = chain_stage
-                .and_then(|stage| resolve_asset(stage.get("image").and_then(|v| v.as_str()), assets));
+            let chain_audio = chain_stage.and_then(|stage| {
+                resolve_asset(stage.get("audio").and_then(|v| v.as_str()), assets)
+            });
+            let chain_image = chain_stage.and_then(|stage| {
+                resolve_asset(stage.get("image").and_then(|v| v.as_str()), assets)
+            });
 
             let terminal_id = chase_single_chain(eff_first_id, &stages, &actions, &mut visited);
             let has_distinct_title_stage = terminal_id != eff_first_id;
@@ -215,25 +217,25 @@ pub(super) fn walk_story_doc_to_entries(
                 })],
                 1 => {
                     // Si terminal est autoplay, c'est lui-même le stage de lecture
-                    let (story_audio, story_controls) = if is_stage_autoplay(terminal) {
-                        (
-                            resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets),
-                            stage_controls(terminal),
-                        )
+                    let play_stage = if is_stage_autoplay(terminal) {
+                        terminal
                     } else {
                         let play_id = term_opts[0];
-                        let play_stage = stages.get(play_id).copied().unwrap_or(terminal);
-                        (
-                            resolve_asset(play_stage.get("audio").and_then(|v| v.as_str()), assets),
-                            stage_controls(play_stage),
-                        )
+                        stages.get(play_id).copied().unwrap_or(terminal)
                     };
-                    let story_name = terminal
+                    let story_audio =
+                        resolve_asset(play_stage.get("audio").and_then(|v| v.as_str()), assets);
+                    let story_controls = stage_controls(play_stage);
+                    let title_name = terminal
                         .get("name")
                         .and_then(|v| v.as_str())
                         .filter(|s| !s.trim().is_empty())
-                        .unwrap_or(&pack_title)
-                        .to_string();
+                        .unwrap_or(&pack_title);
+                    let play_name = play_stage
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let story_name = imported_story_name(title_name, play_name).to_string();
                     let detection_opt = if is_stage_autoplay(terminal) {
                         let d = detect_story_return_stage_id(
                             terminal,
@@ -516,11 +518,7 @@ fn mark_explicit_silent_title_stages(
         let stage_id = entry
             .get("_titleStageId")
             .and_then(|value| value.as_str())
-            .or_else(|| {
-                entry
-                    .get("nativeStageId")
-                    .and_then(|value| value.as_str())
-            })
+            .or_else(|| entry.get("nativeStageId").and_then(|value| value.as_str()))
             .or_else(|| entry.get("id").and_then(|value| value.as_str()))
             .map(str::to_string);
         let source_has_explicit_null_audio = stage_id
@@ -529,11 +527,7 @@ fn mark_explicit_silent_title_stages(
             .and_then(|stage| stage.get("audio"))
             .is_some_and(serde_json::Value::is_null);
 
-        if is_story
-            && has_title_controls
-            && item_audio_is_empty
-            && source_has_explicit_null_audio
-        {
+        if is_story && has_title_controls && item_audio_is_empty && source_has_explicit_null_audio {
             entry["silentTitleStage"] = serde_json::Value::Bool(true);
         }
 
@@ -924,10 +918,15 @@ pub(super) fn walk_entry(
                     // Terminal est une feuille : stage courant = titre, terminal = lecture
                     let story_audio =
                         resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets);
+                    let play_name = terminal
+                        .get("name")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or("");
+                    let story_name = imported_story_name(&name, play_name);
                     Ok(serde_json::json!({
                         "id": stage_uuid(stage).unwrap_or(""),
                         "type": "story",
-                        "name": name,
+                        "name": story_name,
                         "audio": story_audio,
                         "itemAudio": item_audio,
                         "itemImage": item_image,
@@ -1053,22 +1052,23 @@ pub(super) fn walk_entry(
                     }
                     // Si terminal est autoplay, c'est lui-même le stage de lecture
                     // (ex: pack natif Lunii où Histoire → loop nuit, la cible est un stage nuit)
-                    let (play_audio, play_controls) = if is_stage_autoplay(terminal) {
-                        (
-                            resolve_asset(terminal.get("audio").and_then(|v| v.as_str()), assets),
-                            stage_controls(terminal),
-                        )
+                    let play_stage = if is_stage_autoplay(terminal) {
+                        terminal
                     } else {
                         let play_id = term_opts[0];
                         if !visited.contains(play_id) {
                             visited.insert(play_id.to_string());
                         }
-                        let play_stage = stages.get(play_id).copied().unwrap_or(terminal);
-                        (
-                            resolve_asset(play_stage.get("audio").and_then(|v| v.as_str()), assets),
-                            stage_controls(play_stage),
-                        )
+                        stages.get(play_id).copied().unwrap_or(terminal)
                     };
+                    let play_audio =
+                        resolve_asset(play_stage.get("audio").and_then(|v| v.as_str()), assets);
+                    let play_controls = stage_controls(play_stage);
+                    let play_name = play_stage
+                        .get("name")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or("");
+                    let story_name = imported_story_name(&name, play_name);
                     let detection = detect_story_return_stage_id(
                         terminal,
                         stages,
@@ -1086,7 +1086,7 @@ pub(super) fn walk_entry(
                     Ok(serde_json::json!({
                         "id": stage_uuid(stage).unwrap_or(""),
                         "type": "story",
-                        "name": name,
+                        "name": story_name,
                         "audio": play_audio,
                         "itemAudio": item_audio,
                         "itemImage": item_image,
@@ -1139,10 +1139,15 @@ pub(super) fn walk_entry(
                                         )
                                     })
                                 });
+                            let play_name = terminal
+                                .get("name")
+                                .and_then(|value| value.as_str())
+                                .unwrap_or("");
+                            let story_name = imported_story_name(&name, play_name);
                             return Ok(serde_json::json!({
                                 "id": stage_uuid(stage).unwrap_or(""),
                                 "type": "story",
-                                "name": name,
+                                "name": story_name,
                                 "audio": play_audio,
                                 "itemAudio": item_audio,
                                 "itemImage": item_image,

@@ -239,7 +239,9 @@ pub(crate) fn is_in_trim_dir(
 
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
-        bases.push(PathBuf::from(ws));
+        if let Ok(dir) = absolute_path(ws, "Emplacement de travail") {
+            bases.push(dir);
+        }
     }
     if let Some(sp) = save_path.filter(|s| !s.trim().is_empty()) {
         if let Ok(dir) = project_dir_from_save_path(sp) {

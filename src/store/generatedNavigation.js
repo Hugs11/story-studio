@@ -52,6 +52,13 @@ export function getDefaultPackEntryDestination(project) {
   };
 }
 
+export function getPackStartReturnLabel(project) {
+  const destination = getDefaultPackEntryDestination(project);
+  return destination?.name
+    ? `Retour vers « ${destination.name} »`
+    : 'Retour à la couverture du pack';
+}
+
 function resolveNavigationTargetId(target, parentMenu = null) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return null;

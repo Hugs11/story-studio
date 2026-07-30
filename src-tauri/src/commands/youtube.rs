@@ -16,6 +16,10 @@ fn youtube_home(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir.join("yt-dlp"))
 }
 
+fn youtube_output_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    crate::support::temp::app_cache_subdir(app, crate::support::temp::YOUTUBE_MEDIA_DIR)
+}
+
 fn empty_to_none(value: Option<String>) -> Option<String> {
     value.filter(|s| !s.trim().is_empty())
 }
@@ -49,16 +53,22 @@ pub async fn download_youtube_audio(
     ytdlp_path: Option<String>,
 ) -> Result<String, String> {
     let home = youtube_home(&app)?;
+    let output_dir = youtube_output_dir(&app)?;
     let custom = empty_to_none(ytdlp_path);
     let emit_app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
-        youtube::download_audio(&home, custom.as_deref(), &video_url, &file_name, &emit)
-            .inspect_err(
-                |err| log::error!(target: "youtube", "download_youtube_audio failed: {}", err),
-            )
+        youtube::download_audio(
+            &home,
+            &output_dir,
+            custom.as_deref(),
+            &video_url,
+            &file_name,
+            &emit,
+        )
+        .inspect_err(|err| log::error!(target: "youtube", "download_youtube_audio failed: {}", err))
     })
     .await
     .map_err(|e| e.to_string())?

@@ -1,10 +1,9 @@
-import { writeFile, mkdir, copyFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { join, tempDir } from '@tauri-apps/api/path';
+import { writeFile, mkdir } from '@tauri-apps/plugin-fs';
+import { appCacheDir, join } from '@tauri-apps/api/path';
 import { TEXT_IMG_W, TEXT_IMG_H, drawTextImage } from './drawTextImage';
 import { TEMP_IMAGES_DIR } from '../../utils/tempDirs';
-import { KEYS, read } from '../../store/persistentSettings';
 
-export async function generateTextImage(text) {
+export async function generateTextImage(text, workspaceDir = '') {
   const canvas = document.createElement('canvas');
   canvas.width = TEXT_IMG_W;
   canvas.height = TEXT_IMG_H;
@@ -14,24 +13,22 @@ export async function generateTextImage(text) {
   const buf = await blob.arrayBuffer();
   const filename = `edited_${Date.now()}.png`;
 
-  await mkdir(TEMP_IMAGES_DIR, { baseDir: BaseDirectory.Temp, recursive: true });
-  const tempRelPath = `${TEMP_IMAGES_DIR}/${filename}`;
-  await writeFile(tempRelPath, new Uint8Array(buf), { baseDir: BaseDirectory.Temp });
-  const tmp = await tempDir();
-  const tempAbsPath = await join(tmp, tempRelPath);
-
-  const workspaceDir = read(KEYS.WORKSPACE_DIR);
-  if (workspaceDir) {
+  const managedWorkspace = workspaceDir?.trim();
+  if (managedWorkspace) {
     try {
-      const destDir = `${workspaceDir}/images-generees`;
+      const destDir = await join(managedWorkspace, 'images-generees');
       await mkdir(destDir, { recursive: true });
-      const destPath = `${destDir}/${filename}`;
-      await copyFile(tempAbsPath, destPath);
+      const destPath = await join(destDir, filename);
+      await writeFile(destPath, new Uint8Array(buf));
       return destPath;
     } catch {
-      // workspace copy failed — fall through to temp path
+      // workspace write failed — fall through to the app-owned cache
     }
   }
 
-  return tempAbsPath;
+  const cacheDir = await join(await appCacheDir(), TEMP_IMAGES_DIR);
+  await mkdir(cacheDir, { recursive: true });
+  const cachePath = await join(cacheDir, filename);
+  await writeFile(cachePath, new Uint8Array(buf));
+  return cachePath;
 }

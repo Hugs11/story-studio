@@ -10,10 +10,23 @@ pub(crate) const MANAGED_PROJECT_DIRS: [&str; 4] = [
     "fichiers-importes",
 ];
 
+pub(crate) fn absolute_path(path: &str, label: &str) -> Result<PathBuf, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err(format!("{} vide.", label));
+    }
+    let path = PathBuf::from(trimmed);
+    if !path.is_absolute() {
+        return Err(format!("{} doit être un chemin absolu.", label));
+    }
+    Ok(path)
+}
+
 pub(crate) fn project_dir_from_save_path(save_path: &str) -> Result<PathBuf, String> {
-    let save_path = PathBuf::from(save_path);
+    let save_path = absolute_path(save_path, "Chemin du projet")?;
     save_path
         .parent()
+        .filter(|dir| !dir.as_os_str().is_empty())
         .map(|dir| dir.to_path_buf())
         .ok_or_else(|| {
             format!(
@@ -21,6 +34,23 @@ pub(crate) fn project_dir_from_save_path(save_path: &str) -> Result<PathBuf, Str
                 save_path.display()
             )
         })
+}
+
+pub(crate) fn workspace_or_project_dir(
+    workspace_dir: Option<&str>,
+    save_path: Option<&str>,
+    missing_message: &str,
+) -> Result<PathBuf, String> {
+    if let Some(workspace_dir) = workspace_dir
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return absolute_path(workspace_dir, "Emplacement de travail");
+    }
+    if let Some(save_path) = save_path.map(str::trim).filter(|value| !value.is_empty()) {
+        return project_dir_from_save_path(save_path);
+    }
+    Err(missing_message.to_string())
 }
 
 pub(crate) fn ensure_managed_project_file(
@@ -57,14 +87,22 @@ pub(crate) fn ensure_managed_project_file(
     ))
 }
 
-/// Valide que `dest_dir` est situé directement sous `<workspace_dir>/zips-extraits/`.
-/// Retourne le chemin canonique sûr, construit depuis la base validée + le seul
-/// composant nom de `dest_dir` (toute tentative de traversée est neutralisée).
+/// Réserve un nouveau dossier d'extraction directement sous
+/// `<workspace_dir>/zips-extraits/`. Le workspace doit être absolu ; seule la
+/// dernière composante de `dest_dir` sert de nom. Un suffixe est ajouté si le
+/// nom existe déjà, afin de ne jamais réutiliser des assets d'une extraction
+/// précédente ni suivre un lien symbolique préexistant.
 pub(crate) fn validate_unpack_dest_dir(
     dest_dir: &str,
     workspace_dir: &str,
 ) -> Result<PathBuf, String> {
-    let zips_base = PathBuf::from(workspace_dir).join("zips-extraits");
+    let workspace_dir = workspace_dir.trim();
+    if workspace_dir.is_empty() {
+        return Err("Emplacement de travail requis pour extraire un pack.".to_string());
+    }
+    let workspace_path = absolute_path(workspace_dir, "L'emplacement de travail")?;
+
+    let zips_base = workspace_path.join("zips-extraits");
     fs::create_dir_all(&zips_base)
         .map_err(|e| format!("Impossible de créer zips-extraits : {}", e))?;
     let zips_base_canonical = fs::canonicalize(&zips_base)
@@ -82,7 +120,40 @@ pub(crate) fn validate_unpack_dest_dir(
         return Err("Nom de sous-dossier d'extraction invalide.".to_string());
     }
 
-    Ok(zips_base_canonical.join(subdir_name))
+    let stem = subdir_name.to_string_lossy();
+    for index in 1..=1000_u16 {
+        let name = if index == 1 {
+            stem.to_string()
+        } else {
+            format!("{stem}-{index}")
+        };
+        let candidate = zips_base_canonical.join(name);
+        match fs::create_dir(&candidate) {
+            Ok(()) => {
+                let canonical = fs::canonicalize(&candidate).map_err(|e| {
+                    format!(
+                        "Dossier d'extraction nouvellement créé inaccessible : {}",
+                        e
+                    )
+                })?;
+                if canonical.parent() != Some(zips_base_canonical.as_path()) {
+                    let _ = fs::remove_dir_all(&candidate);
+                    return Err("Dossier d'extraction hors de zips-extraits.".to_string());
+                }
+                return Ok(canonical);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(format!(
+                    "Impossible de réserver le dossier d'extraction {} : {}",
+                    candidate.display(),
+                    error
+                ))
+            }
+        }
+    }
+
+    Err("Impossible de réserver un nom de dossier d'extraction unique.".to_string())
 }
 
 pub(crate) fn validate_existing_file_path(path: &str, label: &str) -> Result<PathBuf, String> {

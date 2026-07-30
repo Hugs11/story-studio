@@ -1,5 +1,9 @@
 import { logger } from '../../utils/logger';
 import { applyLevels } from './imageLevels';
+import {
+  applyPortableImageFilters,
+  hasPortableImageFilters,
+} from './imageFilters';
 
 export const CANVAS_W = 320;
 export const CANVAS_H = 240;
@@ -28,41 +32,6 @@ export function containFit(img) {
   };
 }
 
-/**
- * Construit la string ctx.filter CSS à partir des valeurs de filtre.
- *
- * Ordre important :
- * 1. thickness (blur+contrast morphologique) — doit être en premier
- * 2. blur simple
- * 3. ajustements couleur
- * 4. invert — en dernier pour ne pas interagir avec les autres
- *
- * brightness/contrast : delta [-50,+50]   → 1 + val/100
- * saturation          : delta [-100,+100] → 1 + val/100
- * blur                : px [0,8]
- * thickness           : [0,5] — blur+contrast combinés pour gonfler les traits
- * grayscale/invert    : boolean
- * hue                 : degrés [0,360]
- * sepia               : % [0,100]
- */
-function buildFilter({ brightness = 0, contrast = 0, saturation = 0, grayscale = false, hue = 0, sepia = 0, blur = 0, invert = false, thickness = 0 }) {
-  const parts = [];
-  // Trick morphologique : blur étale les bords, contrast re-binarise → traits plus épais
-  if (thickness > 0) {
-    parts.push(`blur(${(thickness * 0.6).toFixed(1)}px)`);
-    parts.push(`contrast(${(2 + thickness * 1.8).toFixed(1)})`);
-  }
-  if (blur > 0) parts.push(`blur(${blur}px)`);
-  if (brightness !== 0) parts.push(`brightness(${1 + brightness / 100})`);
-  if (contrast !== 0) parts.push(`contrast(${1 + contrast / 100})`);
-  if (saturation !== 0) parts.push(`saturate(${1 + saturation / 100})`);
-  if (grayscale) parts.push('grayscale(1)');
-  if (hue !== 0) parts.push(`hue-rotate(${hue}deg)`);
-  if (sepia !== 0) parts.push(`sepia(${sepia / 100})`);
-  if (invert) parts.push('invert(1)');
-  return parts.length ? parts.join(' ') : 'none';
-}
-
 function applyVignette(ctx, filters = {}) {
   const strength = Math.max(0, Math.min(100, Number(filters.vignette) || 0)) / 100;
   if (strength <= 0) return;
@@ -88,9 +57,9 @@ function applyVignette(ctx, filters = {}) {
 }
 
 /**
- * Dessine l'image filtrée (filtres CSS) dans le contexte, après clearRect.
- * Laisse ctx.filter à 'none'. Réutilisé tel quel pour calculer l'histogramme
- * (source = pixels après filtres CSS, avant niveaux et vignette).
+ * Dessine l'image puis applique les filtres portables directement aux pixels.
+ * Réutilisé tel quel pour calculer l'histogramme (source = pixels après
+ * filtres, avant niveaux et vignette).
  * Retourne false si la transform est invalide (rien dessiné).
  */
 export function drawFilteredImage(ctx, img, transform, filters) {
@@ -102,7 +71,6 @@ export function drawFilteredImage(ctx, img, transform, filters) {
     return false;
   }
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-  ctx.filter = buildFilter(filters);
   try {
     ctx.drawImage(
       img,
@@ -121,7 +89,19 @@ export function drawFilteredImage(ctx, img, transform, filters) {
     });
     throw error;
   }
-  ctx.filter = 'none';
+  if (hasPortableImageFilters(filters)) {
+    try {
+      const imageData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+      applyPortableImageFilters(imageData, filters, CANVAS_W, CANVAS_H);
+      ctx.putImageData(imageData, 0, 0);
+    } catch (error) {
+      logger.error('image-editor:filter-error', {
+        error,
+        filters,
+      });
+      throw error;
+    }
+  }
   return true;
 }
 
@@ -129,7 +109,7 @@ export function drawFilteredImage(ctx, img, transform, filters) {
  * Rend l'image sur le canvas avec la transform et les filtres donnés.
  *
  * Pipeline :
- * 1. filtres CSS + drawImage   (drawFilteredImage)
+ * 1. drawImage + filtres pixels portables (drawFilteredImage)
  * 2. passe niveaux pixel (LUT) — sautée si neutre
  * 3. vignettage (overlay) — toujours en dernier
  */

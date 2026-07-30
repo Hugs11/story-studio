@@ -3,7 +3,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{project_dir_from_save_path, validate_existing_file_path, MANAGED_PROJECT_DIRS};
+use super::super::{
+    absolute_path, project_dir_from_save_path, validate_existing_file_path,
+    workspace_or_project_dir, MANAGED_PROJECT_DIRS,
+};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
 // ── Audio trim ────────────────────────────────────────────────────────────────
@@ -144,7 +147,9 @@ pub(crate) fn is_in_managed_media_dir(
 
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Some(ws) = workspace_dir.filter(|s| !s.trim().is_empty()) {
-        bases.push(PathBuf::from(ws));
+        if let Ok(dir) = absolute_path(ws, "Emplacement de travail") {
+            bases.push(dir);
+        }
     }
     if let Some(sp) = save_path.filter(|s| !s.trim().is_empty()) {
         if let Ok(dir) = project_dir_from_save_path(sp) {
@@ -303,9 +308,9 @@ mod preview;
 
 pub(crate) use ffmpeg::*;
 pub use operations::*;
+#[cfg(test)]
+pub(crate) use preview::cleanup_old_audio_previews_in;
 pub use preview::{cleanup_old_audio_previews, discard_audio_preview};
 pub(crate) use preview::{
     discard_audio_preview_in, validate_managed_audio_preview_in, AUDIO_PREVIEW_PREFIX,
 };
-#[cfg(test)]
-pub(crate) use preview::cleanup_old_audio_previews_in;

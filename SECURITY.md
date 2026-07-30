@@ -2,7 +2,9 @@
 
 ## Scope
 
-Story Studio is a local Windows desktop application. It has no network backend, no user accounts, and no telemetry. All data stays on the user's machine.
+Story Studio is a local desktop application for Windows, Linux and macOS. It
+has no network backend, no user accounts and no telemetry. All data stays on
+the user's machine.
 
 ## Permissions model
 
@@ -33,22 +35,26 @@ The optional XTTS and ComfyUI integrations make HTTP requests to `localhost` onl
 
 ## Bundled binaries
 
-`ffmpeg.exe` and `7z.exe` are bundled third-party binaries. They are invoked as subprocesses with arguments constructed in Rust. User input is never passed directly to shell commands; arguments are always passed as discrete array elements to prevent injection.
+Native FFmpeg and 7-Zip executables are bundled for every supported platform.
+They are invoked as subprocesses with arguments constructed in Rust. User
+input is never interpolated into a shell command; executable paths and
+arguments are passed as discrete process parameters.
 
 See `THIRD_PARTY_NOTICES.md` for provenance details on the bundled binaries.
 
 ## User-configured external launchers
 
 If the user enables the **ComfyUI** integration and supplies a path to a local
-`.bat` launcher (Preferences → ComfyUI), Story Studio can spawn that batch file
-to start the ComfyUI server. The launcher path comes from the user's local
-preferences only; it is never fetched from a remote source. The spawn uses
-`cmd /c "<path>"` with the path passed as a discrete argument (no shell
-interpolation of user input). Story Studio does not download, install or
-auto-update ComfyUI — the user fully controls which `.bat` runs.
+launcher (Preferences → ComfyUI), Story Studio can start that file to launch
+the ComfyUI server. Windows `.bat` and `.cmd` files are passed to `cmd /c` as a
+discrete argument; Unix `.sh` files are either executed directly or passed to
+`/bin/sh` as a discrete argument. Other executable launchers run directly.
+The launcher must be a regular local file and cannot be a symbolic link. Its
+path comes from local preferences only and is never fetched remotely. Story
+Studio does not download, install or auto-update ComfyUI.
 
-If you do not configure a ComfyUI launcher, no external process is spawned by
-this integration.
+If no ComfyUI launcher is configured, this integration spawns no external
+process.
 
 ## Reporting a vulnerability
 

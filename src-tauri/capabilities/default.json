@@ -15,20 +15,10 @@
     "core:window:allow-is-maximized",
     "core:window:allow-start-dragging",
     "opener:default",
-    {
-      "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "**" }],
-      "deny": [
-        { "path": "C:\\Windows\\**" },
-        { "path": "C:\\Windows\\System32\\**" },
-        { "path": "C:\\Program Files\\**" },
-        { "path": "C:\\Program Files (x86)\\**" },
-        { "path": "C:\\ProgramData\\**" }
-      ]
-    },
     "dialog:default",
     "log:default",
     "fs:default",
+    "fs:allow-appcache-write-recursive",
     "fs:allow-temp-write-recursive",
     "fs:allow-read-file",
     "fs:allow-read-text-file",
@@ -38,13 +28,14 @@
     "fs:allow-exists",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }],
-      "deny": [
-        { "path": "C:\\Windows\\**" },
-        { "path": "C:\\Windows\\System32\\**" },
-        { "path": "C:\\Program Files\\**" },
-        { "path": "C:\\Program Files (x86)\\**" },
-        { "path": "C:\\ProgramData\\**" }
+      "allow": [
+        { "path": "$APPCACHE/**/.session-recovery.mbah*" },
+        { "path": "$APPCACHE/**/.story-studio-backups" },
+        { "path": "$APPCACHE/**/.story-studio-backups/**" },
+        { "path": "$APPCACHE/**/.story-studio-image-edits" },
+        { "path": "$APPCACHE/**/.story-studio-image-edits/**" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail/**" }
       ]
     }
   ]

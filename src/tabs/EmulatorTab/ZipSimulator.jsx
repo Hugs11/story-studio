@@ -7,6 +7,7 @@ import { MIME } from './useUrlCache';
 import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { toPackAssetName } from '../../utils/zipAssetName';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 
 export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dragHandleProps = null }) {
   const [graph, setGraph] = useState(null);   // { stageNodes: Map, actionNodes: Map, squareOneId, title }
@@ -93,7 +94,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
 
   // ── Audio ──
   const playZipAudio = useCallback(async (assetHash) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    disposeAudioPlayerRef(audioRef);
     setPaused(false);
     if (!assetHash || !zipPath) return;
     const seq = ++playSeqRef.current; // numéro de séquence pour détecter les charges tardives
@@ -105,7 +106,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
       const ext = assetHash.split('.').pop().toLowerCase();
       const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      const audio = createAudioPlayer(url, { revokeSourceOnDestroy: true });
       audio.play().catch(e => logger.error('zip-simulator:audio-play-error', e));
       audioRef.current = audio;
     } catch (e) { logger.error('zip-simulator:play-audio-error', assetHash, e); }
@@ -116,7 +117,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (currentStage?.audio) playZipAudio(currentStage.audio);
-    else if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    else disposeAudioPlayerRef(audioRef);
   }, [stageId]);
 
   // Auto-avance sur les nœuds autoplay (comportement Lunii réel) :
@@ -181,7 +182,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      disposeAudioPlayerRef(audioRef);
     };
   }, []);
 

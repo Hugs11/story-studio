@@ -5,10 +5,8 @@ export function PiperVoiceSettings({
   piperProvision,
   piperVoice,
   piperSpeed,
-  piperSentenceSilence,
   updatePiperVoice,
   updatePiperSpeed,
-  updatePiperSentenceSilence,
   preparePiperVoice,
 }) {
   return (
@@ -43,19 +41,6 @@ export function PiperVoiceSettings({
             step="0.05"
             value={piperSpeed}
             onChange={(e) => updatePiperSpeed(e.target.value)}
-          />
-        </label>
-
-        <label className="xtts-label">
-          Pause phrase ({piperSentenceSilence.toFixed(2)}s)
-          <input
-            className="xtts-input"
-            type="number"
-            min="0"
-            max="1.5"
-            step="0.05"
-            value={piperSentenceSilence}
-            onChange={(e) => updatePiperSentenceSilence(e.target.value)}
           />
         </label>
       </div>

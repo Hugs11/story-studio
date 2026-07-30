@@ -4,6 +4,7 @@
 //! utilisateur. Piper produit un MP3 final (WAV intermédiaire converti).
 
 use super::PiperGenerateRequest;
+use crate::services::project_files::workspace_or_project_dir;
 use crate::support::ffmpeg::now_millis;
 use std::path::{Path, PathBuf};
 
@@ -70,30 +71,10 @@ pub(super) fn output_filename(filename_hint: Option<&str>, ext: &str) -> Result<
 }
 
 pub(super) fn generated_dir(request: &PiperGenerateRequest) -> Result<PathBuf, String> {
-    if let Some(workspace_dir) = request
-        .workspace_dir
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        return Ok(PathBuf::from(workspace_dir).join("voix-generees"));
-    }
-
-    let save_path = request
-        .save_path
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix."
-                .to_string()
-        })?;
-    let project_path = PathBuf::from(save_path);
-    let parent = project_path.parent().ok_or_else(|| {
-        format!(
-            "Impossible de determiner le dossier du projet depuis {}",
-            save_path
-        )
-    })?;
-    Ok(parent.join("voix-generees"))
+    workspace_or_project_dir(
+        request.workspace_dir.as_deref(),
+        request.save_path.as_deref(),
+        "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix.",
+    )
+    .map(|dir| dir.join("voix-generees"))
 }

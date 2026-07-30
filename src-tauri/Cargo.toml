@@ -1,9 +1,11 @@
 [package]
 name = "story-studio"
-version = "0.9.5"
-description = "Desktop editor for creating Lunii-compatible story packs"
+version = "0.9.6"
+description = "Cross-platform desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
+homepage = "https://hugs11.github.io/story-studio/"
+repository = "https://github.com/Hugs11/story-studio"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -35,3 +37,8 @@ uuid = { version = "1", features = ["v4"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif", "webp"] }
 rayon = "1"
 roxmltree = "0.20"
+unicode-normalization = "0.1"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+glib = "0.18"
+gtk = "0.18"

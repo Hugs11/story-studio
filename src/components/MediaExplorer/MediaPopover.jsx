@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { Button } from '../common/Button';
 import { FilePen, Scissors } from '../icons/LucideLocal';
 import './MediaPopover.css';
@@ -39,12 +40,24 @@ function PopoverAudioPlayer({ path, name }) {
   const progress = duration ? Math.min(1, current / duration) : 0;
 
   useEffect(() => {
-    const a = audioRef.current;
-    if (!a || !url) return;
-    a.src = url;
-    a.load();
+    if (!url) return undefined;
+    const a = createAudioPlayer(url);
+    audioRef.current = a;
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    const onEnded = () => {
+      setPlaying(false);
+      setCurrent(0);
+    };
+    const onTimeUpdate = () => setCurrent(a.currentTime);
+    const onDurationChange = () => setDuration(a.duration);
+    a.addEventListener('play', onPlay);
+    a.addEventListener('pause', onPause);
+    a.addEventListener('ended', onEnded);
+    a.addEventListener('timeupdate', onTimeUpdate);
+    a.addEventListener('durationchange', onDurationChange);
     a.play().catch(() => {});
-    return () => { a.pause(); a.src = ''; };
+    return () => disposeAudioPlayerRef(audioRef);
   }, [url]);
 
   function toggle() {
@@ -63,15 +76,6 @@ function PopoverAudioPlayer({ path, name }) {
 
   return (
     <div className="mp-audio-player">
-      <audio
-        ref={audioRef}
-        preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setCurrent(0); }}
-        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-        onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-      />
       <div className="mp-waveform" onClick={handleWaveClick} title="Cliquer pour chercher">
         {heights.map((h, i) => (
           <span
@@ -228,8 +232,12 @@ export function MediaPopover({
         <>
           <PopoverAudioPlayer path={item.path} name={item.name} />
           {firstUsage?.entryId && onSelectNode ? (
-            <Button className="mp-action-btn mp-action-btn--goto" onClick={handleGoTo}>
-              → Aller vers « {firstUsage.label} »
+            <Button
+              className="mp-action-btn mp-action-btn--goto"
+              onClick={handleGoTo}
+              title={`Ouvrir les réglages de « ${firstUsage.label} »`}
+            >
+              Voir l’utilisation dans le projet
             </Button>
           ) : null}
           {onSplit ? (

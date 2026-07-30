@@ -38,3 +38,32 @@ test('sanitizeImportedEntries increments duplicate names across an extracted tre
     ['Stage title', 'Stage title 3', 'Stage title 2', 'Stage title 4'],
   );
 });
+
+test('sanitizeImportedEntries keeps numbering generic Stage names across folders and stories', () => {
+  const entries = sanitizeImportedEntries([
+    {
+      id: 'menu-1',
+      type: 'menu',
+      name: 'Stage',
+      children: [
+        { id: 'story-1', type: 'story', name: 'Stage' },
+        {
+          id: 'menu-2',
+          type: 'menu',
+          name: 'Stage',
+          children: [{ id: 'story-2', type: 'story', name: 'Stage' }],
+        },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(
+    [
+      entries[0].name,
+      entries[0].children[0].name,
+      entries[0].children[1].name,
+      entries[0].children[1].children[0].name,
+    ],
+    ['Stage', 'Stage 2', 'Stage 3', 'Stage 4'],
+  );
+});

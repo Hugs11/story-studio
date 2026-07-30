@@ -4,6 +4,7 @@ use super::client::{
 use super::lifecycle::ensure_server_with_log;
 use super::output::{generated_dir, output_filename, reference_voice_exists, server_output_dir};
 use super::{XttsGenerateRequest, XttsSettings, XttsStatus};
+use crate::support::paths::path_for_frontend;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -197,5 +198,5 @@ pub fn generate_audio_sync(
         .map_err(|e| format!("Impossible de copier l'audio XTTS vers le projet : {}", e))?;
     emit(&format!("Audio XTTS copie vers {}", dest.display()));
 
-    Ok(dest.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest))
 }

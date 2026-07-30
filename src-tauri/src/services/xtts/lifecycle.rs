@@ -1,7 +1,7 @@
 use super::client::{health_request, XttsHealthResponse};
 use super::XttsSettings;
 use crate::support::network::require_local_url;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
@@ -13,27 +13,40 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 static XTTS_START_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
+pub(super) fn xtts_python_path(xtts_dir: &Path, platform: &str) -> PathBuf {
+    if platform == "windows" {
+        xtts_dir.join("venv").join("Scripts").join("python.exe")
+    } else {
+        xtts_dir.join("venv").join("bin").join("python")
+    }
+}
+
+fn xtts_server_args(force_cpu: bool) -> Vec<&'static str> {
+    let mut args = vec!["server.py"];
+    if force_cpu {
+        args.push("--cpu");
+    }
+    args
+}
+
 fn start_server(settings: &XttsSettings) -> Result<(), String> {
     let xtts_dir = PathBuf::from(&settings.xtts_dir);
-    let python_path = xtts_dir.join("venv").join("Scripts").join("python.exe");
+    let python_path = xtts_python_path(&xtts_dir, std::env::consts::OS);
     let server_path = xtts_dir.join("server.py");
     let models_dir = xtts_dir.join("models");
 
-    if !python_path.exists() {
+    if !python_path.is_file() {
         return Err(format!(
             "Python XTTS introuvable : {}",
             python_path.display()
         ));
     }
-    if !server_path.exists() {
+    if !server_path.is_file() {
         return Err(format!("server.py introuvable dans {}", xtts_dir.display()));
     }
 
     let mut cmd = Command::new(&python_path);
-    cmd.arg("server.py");
-    if settings.force_cpu {
-        cmd.arg("--cpu");
-    }
+    cmd.args(xtts_server_args(settings.force_cpu));
     cmd.current_dir(&xtts_dir)
         .env("TTS_HOME", &models_dir)
         .env("COQUI_TTS_HOME", &models_dir)
@@ -120,4 +133,28 @@ pub(super) fn ensure_server_with_log(
         "XTTS ne repond toujours pas apres demarrage automatique. {}",
         last_error
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn python_path_matches_windows_and_linux_virtualenvs() {
+        let root = PathBuf::from("XTTS root");
+        assert_eq!(
+            xtts_python_path(&root, "windows"),
+            root.join("venv/Scripts/python.exe")
+        );
+        assert_eq!(
+            xtts_python_path(&root, "linux"),
+            root.join("venv/bin/python")
+        );
+    }
+
+    #[test]
+    fn force_cpu_is_forwarded_as_a_separate_argument() {
+        assert_eq!(xtts_server_args(false), vec!["server.py"]);
+        assert_eq!(xtts_server_args(true), vec!["server.py", "--cpu"]);
+    }
 }

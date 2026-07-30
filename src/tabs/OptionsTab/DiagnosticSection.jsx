@@ -52,7 +52,7 @@ export function DiagnosticSection({
             {resolvedLogPath ? (
               <><code>{resolvedLogPath}</code> — fichier courant : <code>story-studio.log</code></>
             ) : (
-              <>Sous <code>%LOCALAPPDATA%\com.hugs11.story-studio\logs\</code>. Fichier courant : <code>story-studio.log</code>.</>
+              <>Dans le dossier de données de Story Studio. Fichier courant : <code>story-studio.log</code>.</>
             )}
             {copiedLogPath ? (
               <span style={{ color: 'var(--accent-2-text)', marginLeft: 6 }}>(copié)</span>

@@ -21,6 +21,7 @@ import {
 } from './navigationResolvers';
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 
 const END_NODE_ID = 'end-node';
 
@@ -301,30 +302,31 @@ export function ProjectSimulator({
   }, [currentEntry, currentMenu, isSimple, project, rootEntries, simpleStory]);
 
   const playAudio = useCallback(async (path) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    disposeAudioPlayerRef(audioRef);
     setPaused(false);
     const seq = ++playSeqRef.current;
     const url = await getLocalUrl(path);
     if (!mountedRef.current || seq !== playSeqRef.current) return;
     if (url) {
-      const audio = new Audio(url);
+      const audio = createAudioPlayer(url);
       audio.play().catch(() => {});
       audioRef.current = audio;
     }
   }, []);
 
   const playZipItemAudio = useCallback(async (zipPath, assetHash) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    disposeAudioPlayerRef(audioRef);
     setPaused(false);
     if (!zipPath || !assetHash) return;
+    const seq = ++playSeqRef.current;
     try {
       const assetName = toPackAssetName(assetHash);
       const bytes = await invoke('get_pack_asset', { zipPath, assetName });
       // Si le composant a été démonté pendant l'await, ne pas créer l'Audio
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || seq !== playSeqRef.current) return;
       const ext = assetHash.split('.').pop().toLowerCase();
       const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'audio/mpeg' });
-      const audio = new Audio(URL.createObjectURL(blob));
+      const audio = createAudioPlayer(URL.createObjectURL(blob), { revokeSourceOnDestroy: true });
       audio.play().catch(() => {});
       audioRef.current = audio;
     } catch {}
@@ -342,7 +344,7 @@ export function ProjectSimulator({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      disposeAudioPlayerRef(audioRef);
     };
   }, []);
 

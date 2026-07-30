@@ -18,6 +18,7 @@ use rayon::prelude::*;
 
 use crate::services::pack_reader;
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
+use crate::support::paths::path_for_frontend;
 
 use models::{
     issue, AudioValidationItem, CategorySummary, FixedPackResult as FixedPackResultModel,
@@ -35,7 +36,7 @@ pub fn analyze_pack(zip_path: &Path) -> ReportModel {
 
 pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportModel {
     let pack_name = pack_name_from_path(zip_path);
-    let zip_path_string = zip_path.to_string_lossy().to_string();
+    let zip_path_string = path_for_frontend(zip_path);
     let mut report = empty_report(&pack_name, &zip_path_string);
     emit(&format!("Analyse demandée pour {}", pack_name));
     report
@@ -197,8 +198,8 @@ pub(crate) fn create_fixed_pack_with_source_log(
         emit("ZIP corrigé finalisé.");
 
         Ok(FixedPackResultModel {
-            source_zip_path: source_path.to_string_lossy().to_string(),
-            fixed_zip_path: fixed_zip_path.to_string_lossy().to_string(),
+            source_zip_path: path_for_frontend(source_path),
+            fixed_zip_path: path_for_frontend(&fixed_zip_path),
             fixed_count: audio_items.len() + image_items.len() + usize::from(metadata_will_change),
             audio_fixed: audio_items.len(),
             image_fixed: image_items.len(),

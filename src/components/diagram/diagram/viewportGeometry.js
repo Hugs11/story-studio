@@ -35,6 +35,13 @@ export function getWheelZoomFactor(event, viewportHeight = 800) {
   return Math.exp(-delta * sensitivity);
 }
 
+export function getPinchZoomFactor(scale, previousScale = 1) {
+  const current = finitePositive(scale);
+  const previous = finitePositive(previousScale);
+  if (!current || !previous) return 1;
+  return Math.max(0.5, Math.min(2, current / previous));
+}
+
 export function isDiagramSearchWheelEvent(event) {
   const path = event?.composedPath?.() ?? [];
   if (path.some((target) => target?.classList?.contains?.('fd-diagram-search'))) return true;

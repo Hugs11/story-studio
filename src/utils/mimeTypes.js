@@ -14,6 +14,7 @@ export const MIME = {
   mp3: 'audio/mpeg',
   ogg: 'audio/ogg',
   wav: 'audio/wav',
+  flac: 'audio/flac',
   m4a: 'audio/mp4',
   webm: 'audio/webm',
 };

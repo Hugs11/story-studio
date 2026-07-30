@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-  Éditeur Windows moderne pour créer, agréger, tester et exporter des packs d'histoires compatibles Lunii.
+  Éditeur desktop moderne pour créer, agréger, tester et exporter des packs d'histoires compatibles Lunii.
 </p>
 
 <p align="center">
-  <a href=".github/workflows/ci.yml"><img alt="CI: Windows build" src="https://img.shields.io/badge/CI-Windows%20build-2ea44f.svg"></a>
+  <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-builds%20desktop-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
-  <a href="#configuration-requise"><img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.5" src="https://img.shields.io/badge/version-0.9.5-2F80ED.svg"></a>
+  <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.6" src="https://img.shields.io/badge/version-0.9.6-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -20,7 +20,7 @@
 
 Story Studio pour Lunii permet de créer des histoires, d'importer des packs
 ZIP existants, d'organiser des menus, de vérifier les médias et d'exporter des
-packs d'histoires compatibles Lunii dans un espace de travail Windows visuel.
+packs d'histoires compatibles Lunii dans un espace de travail desktop visuel.
 Tout reste local : images, audio, navigation, simulation et export ZIP.
 
 Importez vos médias, assemblez et découpez l'audio, recadrez les images,
@@ -40,12 +40,13 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.5 restaure la compatibilité d'édition des packs Story Studio
-0.9.3 dont le message de fin « histoire suivante » mutualisé renvoie la
-dernière histoire des dossiers imbriqués vers le menu principal.
+Story Studio 0.9.6 apporte l'éditeur desktop complet à Linux x86_64 et macOS
+Apple Silicon aux côtés de Windows x64. Cette version ajoute aussi les runtimes
+natifs Piper 1.6, renforce la gestion multiplateforme des fichiers et outils,
+et corrige plusieurs régressions audio, image et import de packs.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.5](https://github.com/Hugs11/story-studio/releases/tag/v0.9.5)
+- [Lire les notes de version 0.9.6](https://github.com/Hugs11/story-studio/releases/tag/v0.9.6)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## Packs de démonstration
@@ -82,7 +83,7 @@ audio et illustrations ne sont pas couverts par la licence MIT de Story Studio.
 | | |
 |---|---|
 | **Statut** | Beta |
-| **Plateforme** | Windows desktop |
+| **Plateformes cibles** | Windows x64, Linux x86_64 et macOS Apple Silicon |
 | **Format projet** | `.mbah` |
 | **Format d'export** | Packs ZIP compatibles Lunii |
 | **Stack principale** | React 19, Vite, Tauri 2, Rust |
@@ -197,13 +198,43 @@ compréhensible.
 
 ## Configuration requise
 
-Windows 10 ou plus récent, avec WebView2. Les binaires tiers embarqués ont
-leurs propres licences — voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+| Plateforme | Prérequis et limites |
+|---|---|
+| Windows x64 | Windows 10 ou plus récent avec WebView2 |
+| Linux x86_64 | Distribution basée sur glibc avec WebKitGTK 4.1 et les codecs GStreamer usuels ; paquets AppImage, DEB et RPM disponibles |
+| macOS Apple Silicon | macOS 11 ou plus récent sur Mac M1 ou ultérieur ; les Mac Intel ne sont pas pris en charge |
+
+Les binaires tiers embarqués conservent leurs licences et une provenance
+épinglée — voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) et
+[l'offre de sources correspondantes](THIRD_PARTY_SOURCE_OFFER.md).
 
 ## Installation
 
-Téléchargez l'installeur Windows depuis la
-[page GitHub Releases](https://github.com/Hugs11/story-studio/releases/latest).
+Téléchargez le paquet adapté à votre plateforme depuis la
+[page GitHub Releases](https://github.com/Hugs11/story-studio/releases/latest) :
+
+- **Windows x64 :** utilisez l'installeur EXE, ou le paquet MSI pour un
+  déploiement administré.
+- **AppImage :** rendez le fichier exécutable avec
+  `chmod +x Story-Studio*.AppImage`, puis lancez-le.
+- **Debian/Ubuntu :** installez le DEB téléchargé avec
+  `sudo apt install ./Story-Studio*.deb`.
+- **Fedora :** installez le RPM téléchargé avec
+  `sudo dnf install ./Story-Studio*.rpm`.
+- **macOS Apple Silicon :** ouvrez le DMG, glissez Story Studio dans
+  Applications, puis lancez l'app.
+
+Le build macOS n'a pas de certificat Developer ID et n'est pas notarié.
+Gatekeeper peut donc bloquer le premier lancement. Dans Finder, faites un
+Contrôle-clic sur l'app puis choisissez **Ouvrir**, ou utilisez
+**Réglages Système → Confidentialité et sécurité → Ouvrir quand même**.
+Ne désactivez pas Gatekeeper globalement.
+
+Les intégrations IA sont optionnelles. XTTS est validé sous Linux en mode CPU
+uniquement et ne nécessite aucun pilote NVIDIA ; il n'a pas été installé ni
+validé manuellement sous macOS pour la 0.9.6. ComfyUI est validé manuellement
+uniquement sous Windows : les tests manuels Linux et macOS n'ont pas été
+exécutés.
 
 Pour compiler depuis les sources ou contribuer, voir
 [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -228,6 +259,13 @@ Les fichiers dans les dossiers médias gérés utilisent un préfixe
 `{nom-du-projet}__` pour que plusieurs projets puissent partager le même
 espace de travail sans risque.
 
+Les données applicatives sont stockées dans
+`%LOCALAPPDATA%\com.hugs11.story-studio` sous Windows,
+`${XDG_DATA_HOME:-~/.local/share}/com.hugs11.story-studio` sous Linux et
+`~/Library/Application Support/com.hugs11.story-studio` sous macOS.
+Les fichiers choisis par l'utilisateur restent accessibles hors de ces
+dossiers, y compris sur les volumes macOS externes sous `/Volumes`.
+
 Quand Story Studio te propose de supprimer un média du disque, il ne
 supprime que les fichiers à l'intérieur des dossiers médias gérés de
 l'espace de travail. Les fichiers sources externes ne sont retirés que de
@@ -236,6 +274,7 @@ la référence projet ou bibliothèque médias.
 ## Documentation
 
 - [Guide d'installation XTTS](docs/guides/xtts-setup.fr.md)
+- [Guide XTTS CPU pour Linux](docs/guides/xtts-setup-linux.fr.md)
 - [Guide d'installation ComfyUI](docs/guides/comfyui-setup.fr.md)
 - [Modèle de sécurité](SECURITY.md)
 - [Mentions tierces](THIRD_PARTY_NOTICES.md)
@@ -245,8 +284,8 @@ la référence projet ou bibliothèque médias.
 
 ## Roadmap
 
-- Sortir de beta avec une v1 polish pour Windows.
-- Passer en multi-plateforme (macOS et Linux).
+- Finaliser et valider les paquets Windows x64, Linux x86_64 et macOS Apple Silicon.
+- Sortir de beta avec une v1 finalisée.
 - Rendre le logiciel compatible avec d'autres types de boîtes à histoires.
 
 ## Contribuer

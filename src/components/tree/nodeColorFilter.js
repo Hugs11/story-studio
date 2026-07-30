@@ -10,11 +10,11 @@ const COLOR_LABELS = new Map([
   ['#d95bb4', 'Rose'],
 ]);
 
-export function normalizeNodeColor(color) {
+function normalizeNodeColor(color) {
   return typeof color === 'string' ? color.trim().toLowerCase() : '';
 }
 
-export function getNodeColorLabel(color) {
+function getNodeColorLabel(color) {
   const normalized = normalizeNodeColor(color);
   return COLOR_LABELS.get(normalized) ?? `Couleur ${normalized || 'inconnue'}`;
 }
