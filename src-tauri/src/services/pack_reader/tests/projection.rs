@@ -106,7 +106,7 @@ fn linear_story_play_returns_are_imported_as_auto_next() {
             },
             {
                 "uuid": "a-title",
-                "name": "A",
+                "name": "Titre - A",
                 "audio": "a-title.mp3",
                 "image": "a.png",
                 "okTransition": { "actionNode": "a-title-action", "optionIndex": 0 },
@@ -122,7 +122,7 @@ fn linear_story_play_returns_are_imported_as_auto_next() {
             },
             {
                 "uuid": "b-title",
-                "name": "B",
+                "name": "Titre - B",
                 "audio": "b-title.mp3",
                 "image": "b.png",
                 "okTransition": { "actionNode": "b-title-action", "optionIndex": 0 },
@@ -174,6 +174,13 @@ fn linear_story_play_returns_are_imported_as_auto_next() {
         .expect("children");
 
     assert_eq!(children.len(), 2);
+    assert_eq!(
+        children
+            .iter()
+            .map(|child| child.get("name").and_then(|value| value.as_str()))
+            .collect::<Vec<_>>(),
+        vec![Some("A"), Some("B")]
+    );
     assert!(children
         .iter()
         .all(|child| child.get("returnAfterPlay").is_none()));

@@ -47,6 +47,25 @@ pub(super) fn stage_uuid(stage: &serde_json::Value) -> Option<&str> {
         .filter(|value| !value.trim().is_empty())
 }
 
+/// Retrouve le nom éditable d'une histoire générée par Story Studio.
+///
+/// La génération nomme ses deux stages techniques `Titre - X` et `Histoire - X`.
+/// On ne retire ces préfixes que lorsque la paire reconnue porte exactement le même
+/// suffixe, afin de préserver les noms légitimes et les libellés génériques des packs tiers.
+pub(super) fn imported_story_name<'a>(title_name: &'a str, play_name: &str) -> &'a str {
+    let Some(title_suffix) = title_name.strip_prefix("Titre - ") else {
+        return title_name;
+    };
+    let Some(play_suffix) = play_name.strip_prefix("Histoire - ") else {
+        return title_name;
+    };
+    if !title_suffix.trim().is_empty() && title_suffix == play_suffix {
+        title_suffix
+    } else {
+        title_name
+    }
+}
+
 pub(super) fn stage_control_bool(stage: &serde_json::Value, key: &str, default: bool) -> bool {
     stage
         .get("controlSettings")
@@ -93,5 +112,30 @@ mod tests {
             resolve_asset(Some("assets/voice.mp3"), &assets),
             Some(r"C:\Workspace Été\voice.mp3".to_string())
         );
+    }
+
+    #[test]
+    fn generated_title_and_play_pair_restores_the_authoring_name() {
+        assert_eq!(
+            imported_story_name(
+                "Titre - épisode 5, un réveil difficile",
+                "Histoire - épisode 5, un réveil difficile"
+            ),
+            "épisode 5, un réveil difficile"
+        );
+    }
+
+    #[test]
+    fn unrelated_or_mismatched_stage_names_are_preserved() {
+        assert_eq!(imported_story_name("Stage", "Stage"), "Stage");
+        assert_eq!(
+            imported_story_name("Titre de noblesse", "Histoire - Titre de noblesse"),
+            "Titre de noblesse"
+        );
+        assert_eq!(
+            imported_story_name("Titre - Episode 5", "Histoire - Episode 6"),
+            "Titre - Episode 5"
+        );
+        assert_eq!(imported_story_name("Titre - ", "Histoire - "), "Titre - ");
     }
 }
