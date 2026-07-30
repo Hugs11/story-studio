@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use crate::domain::project::{EntryControlSettings, ProjectEntry};
 use crate::native_pack::{sanitize_stage_label, ActionNode, StageNode, StoryDocument};
 
+use super::stage::imported_story_name;
+
 pub(crate) struct GraphImportOutput {
     pub(crate) root_entries: Vec<ProjectEntry>,
     pub(crate) shared_entries: Vec<ProjectEntry>,
@@ -486,7 +488,7 @@ impl<'a> GraphProjector<'a> {
                 Some(ProjectEntry {
                     id: title_stage.uuid.clone(),
                     entry_type: "story".to_string(),
-                    name: title_stage.name.clone(),
+                    name: imported_story_name(&title_stage.name, &play_stage.name).to_string(),
                     native_stage_id: Some(title_stage.uuid.clone()),
                     audio: self.resolve_asset(play_stage.audio.as_deref()),
                     image: self.resolve_asset(play_stage.image.as_deref()),
@@ -1076,7 +1078,7 @@ mod tests {
                 ),
                 stage(
                     "title",
-                    "Title",
+                    "Titre - Episode 5",
                     true,
                     false,
                     Some("title-action"),
@@ -1085,7 +1087,7 @@ mod tests {
                 ),
                 stage(
                     "play",
-                    "Playback",
+                    "Histoire - Episode 5",
                     false,
                     true,
                     None,
@@ -1107,6 +1109,7 @@ mod tests {
         let title = &output.shared_entries[0];
         assert_eq!(title.id, "title");
         assert_eq!(title.entry_type, "story");
+        assert_eq!(title.name, "Episode 5");
         assert!(title.children.is_empty());
         assert_eq!(title.item_audio.as_deref(), Some("title.mp3"));
         assert_eq!(title.audio.as_deref(), Some("play.mp3"));
