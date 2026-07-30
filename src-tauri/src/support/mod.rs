@@ -4,9 +4,9 @@ pub(crate) mod executable;
 pub mod ffmpeg;
 pub mod fs_pack_reader;
 pub mod imported_pack;
-pub mod lunii_zip_validator;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux_webview_gestures;
+pub mod lunii_zip_validator;
 pub(crate) mod network;
 pub mod paths;
 pub mod temp;

@@ -13,10 +13,8 @@ const END_SIGNAL: &CStr = c"end";
 
 fn block_existing_handlers(gesture: &gtk::GestureZoom, signal: &CStr) -> u32 {
     unsafe {
-        let signal_id = glib::gobject_ffi::g_signal_lookup(
-            signal.as_ptr(),
-            gesture.type_().into_glib(),
-        );
+        let signal_id =
+            glib::gobject_ffi::g_signal_lookup(signal.as_ptr(), gesture.type_().into_glib());
         if signal_id == 0 {
             return 0;
         }
@@ -36,12 +34,7 @@ unsafe extern "C" fn unref_gobject(data: *mut c_void) {
     glib::gobject_ffi::g_object_unref(data.cast::<glib::gobject_ffi::GObject>());
 }
 
-fn dispatch_pinch(
-    window: &WebviewWindow,
-    phase: &str,
-    scale: f64,
-    center: Option<(f64, f64)>,
-) {
+fn dispatch_pinch(window: &WebviewWindow, phase: &str, scale: f64, center: Option<(f64, f64)>) {
     let (x, y) = center.unwrap_or((-1.0, -1.0));
     if !scale.is_finite() || !x.is_finite() || !y.is_finite() {
         return;
@@ -91,12 +84,7 @@ pub(crate) fn install_diagram_pinch_bridge(
 
     let begin_window = window.clone();
     gesture.connect_begin(move |gesture, _| {
-        dispatch_pinch(
-            &begin_window,
-            "begin",
-            1.0,
-            gesture.bounding_box_center(),
-        );
+        dispatch_pinch(&begin_window, "begin", 1.0, gesture.bounding_box_center());
     });
 
     let change_window = window.clone();
