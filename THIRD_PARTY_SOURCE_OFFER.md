@@ -8,7 +8,8 @@ The `v0.9.6` GitHub release includes a
 `story-studio-v0.9.6-corresponding-sources.zip` asset. It contains the pinned
 Piper and eSpeak NG sources, the Story Studio Piper patch and build recipe,
 the FFmpeg source releases matching each bundled major/minor version, the
-embedded FFmpeg build configurations, and this offer.
+embedded FFmpeg build configurations, the 7-Zip 25.01 source, the AppImage
+type2 runtime source, the imageio-ffmpeg 0.6.0 source, and this offer.
 
 ## Piper 1.6
 
@@ -37,6 +38,18 @@ All three binaries report `--enable-gpl`; none reports
 `--enable-nonfree`. Their complete configuration strings and original
 distribution provenance are included in the release source asset and in
 `THIRD_PARTY_NOTICES.md`.
+
+## 7-Zip and AppImage runtime
+
+- 7-Zip 25.01 source: official `7z2501-src.7z`, SHA-256
+  `2aed39b8f1238464475e9de7dda169a5e873a1dc8bbf4f664b943eaba5620181`.
+- AppImage type2 runtime source: tag `20251108`, SHA-256
+  `4c4f6df4647c9f01f871d7edd3716d8aeeffda9d22ffbebe3fccd95a6ab52c95`.
+- imageio-ffmpeg source: tag `v0.6.0`, SHA-256
+  `9c671e814b6d78680db71b1fab88ae20d9305f38808b8aaf57dae53fd969ad9d`.
+
+The AppImage runtime license identifies the linked musl, libfuse,
+squashfuse, zstd and zlib projects and their source locations.
 
 ## Source request
 
