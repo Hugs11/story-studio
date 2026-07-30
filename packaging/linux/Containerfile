@@ -1,0 +1,64 @@
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG NODE_VERSION=22.23.1
+ARG NODE_SHA256=9749e988f437343b7fa832c69ded82a312e41a03116d766797ac14f6f9eee578
+ARG RUSTUP_VERSION=1.28.2
+ARG RUSTUP_SHA256=20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
+ARG RUST_TOOLCHAIN=1.97.1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      build-essential \
+      ca-certificates \
+      curl \
+      file \
+      gstreamer1.0-libav \
+      libayatana-appindicator3-dev \
+      libfuse2 \
+      librsvg2-dev \
+      libssl-dev \
+      libwebkit2gtk-4.1-dev \
+      libxdo-dev \
+      patchelf \
+      python3 \
+      python3-venv \
+      rpm \
+      unzip \
+      xdg-utils \
+      xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/piper-build-tools \
+    && /opt/piper-build-tools/bin/pip install \
+      --disable-pip-version-check \
+      --no-cache-dir \
+      cmake==3.31.10 \
+      ninja==1.13.0
+
+RUN curl --fail --location --show-error \
+      "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+      --output /tmp/node.tar.xz \
+    && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum --check --strict \
+    && tar --extract --xz --file /tmp/node.tar.xz --directory /usr/local --strip-components=1 \
+    && rm /tmp/node.tar.xz
+
+RUN curl --fail --location --show-error \
+      "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/x86_64-unknown-linux-gnu/rustup-init" \
+      --output /tmp/rustup-init \
+    && echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum --check --strict \
+    && chmod 755 /tmp/rustup-init \
+    && /tmp/rustup-init -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}" \
+    && rm /tmp/rustup-init
+
+ENV PATH="/opt/piper-build-tools/bin:/root/.cargo/bin:${PATH}"
+WORKDIR /workspace
+COPY . .
+
+RUN npm ci \
+    && node scripts/prepare-platform-tools.mjs \
+    && npm run build:piper-runtime \
+    && npm run check:version \
+    && npm run build \
+    && npm run tauri:build -- --bundles appimage,deb \
+    && node scripts/patch-linux-appimage.mjs src-tauri/target/release/bundle/appimage

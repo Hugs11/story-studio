@@ -1,12 +1,15 @@
-//! Génération de voix Piper : provisionne (idempotent) puis exécute `piper.exe`
+//! Génération de voix Piper : provisionne (idempotent) puis exécute Piper
 //! avec le texte sur **stdin** (jamais d'interpolation shell), produit un WAV
 //! puis le convertit en MP3 conforme via ffmpeg embarqué. Sortie bornée à
 //! `voix-generees/` du projet/workspace.
 
 use super::output::{generated_dir, output_filename};
-use super::provision::{bin_dir, ensure_piper, piper_exe, voice_paths};
+use super::provision::{ensure_piper, voice_paths};
+use super::runtime::{resolve_piper_runtime, PiperRuntime};
 use super::{PiperGenerateRequest, PiperSettings, PiperStatus, PiperVoiceInfo};
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use crate::support::paths::path_for_frontend;
+use std::ffi::OsString;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -15,7 +18,8 @@ const MAX_TEXT_CHARS: usize = 5000;
 
 /// Liste les voix du catalogue avec leur état d'installation local. Aucun réseau :
 /// le modal peut afficher les voix par défaut avant tout téléchargement.
-pub fn list_voices_sync(home: &Path) -> PiperStatus {
+pub fn list_voices_sync(home: &Path) -> Result<PiperStatus, String> {
+    resolve_piper_runtime()?;
     let voices = super::catalog::VOICES
         .iter()
         .map(|voice| PiperVoiceInfo {
@@ -25,17 +29,17 @@ pub fn list_voices_sync(home: &Path) -> PiperStatus {
             installed: super::provision::is_voice_installed(home, voice.id),
         })
         .collect();
-    PiperStatus {
+    Ok(PiperStatus {
         default_voice: super::catalog::DEFAULT_VOICE.to_string(),
-        binary_installed: super::provision::is_binary_installed(home),
+        binary_installed: true,
         voices,
-    }
+    })
 }
 
-/// Provisionne le binaire + la voix demandée (idempotent). Exposé pour le feedback
-/// « Préparation de la voix… » côté modal, avant de mettre la génération en file.
+/// Valide le runtime embarqué puis provisionne la voix demandée (idempotent).
+/// Exposé pour le feedback « Préparation de la voix… » côté modal.
 pub fn ensure_sync(home: &Path, voice_id: &str, emit: &dyn Fn(&str)) -> Result<(), String> {
-    ensure_piper(home, voice_id, emit)
+    ensure_piper(home, voice_id, emit).map(|_| ())
 }
 
 /// Convertit une vitesse utilisateur (0.5–2.0) en `length_scale` Piper. Piper
@@ -43,12 +47,6 @@ pub fn ensure_sync(home: &Path, voice_id: &str, emit: &dyn Fn(&str)) -> Result<(
 pub(super) fn length_scale_for_speed(speed: f32) -> f32 {
     let clamped = speed.clamp(0.5, 2.0);
     (1.0 / clamped).clamp(0.5, 2.0)
-}
-
-/// Durée de silence après chaque phrase. Piper accepte une valeur flottante en
-/// secondes ; on borne pour éviter les narrations cassées par une valeur extrême.
-pub(super) fn sentence_silence_for_setting(sentence_silence: f32) -> f32 {
-    sentence_silence.clamp(0.0, 1.5)
 }
 
 pub(super) fn validate_text_for_generation(text: &str) -> Result<(), String> {
@@ -84,7 +82,7 @@ pub fn generate_audio_sync(
     }
 
     emit("Generation Piper demandee.");
-    ensure_piper(home, &voice_id, emit)?;
+    let runtime = ensure_piper(home, &voice_id, emit)?;
 
     let output_dir = generated_dir(&request)?;
     std::fs::create_dir_all(&output_dir)
@@ -102,16 +100,13 @@ pub fn generate_audio_sync(
     } else {
         settings.speed
     };
-    let sentence_silence = request
-        .sentence_silence
-        .unwrap_or(settings.sentence_silence);
     let result = run_piper(
+        &runtime,
         home,
         &voice_id,
         &request.text,
         &wav_tmp,
         speed,
-        sentence_silence,
         emit,
     )
     .and_then(|_| encode_mp3(&wav_tmp, &dest_mp3));
@@ -119,37 +114,32 @@ pub fn generate_audio_sync(
     result?;
 
     emit(&format!("Audio Piper genere : {}", dest_mp3.display()));
-    Ok(dest_mp3.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest_mp3))
 }
 
 fn run_piper(
+    runtime: &PiperRuntime,
     home: &Path,
     voice_id: &str,
     text: &str,
     wav_out: &Path,
     speed: f32,
-    sentence_silence: f32,
     emit: &dyn Fn(&str),
 ) -> Result<(), String> {
-    let exe = piper_exe(home);
-    let (model_path, _config_path) = voice_paths(home, voice_id);
+    let (model_path, config_path) = voice_paths(home, voice_id);
     let length_scale = length_scale_for_speed(speed);
-    let sentence_silence = sentence_silence_for_setting(sentence_silence);
 
-    let mut cmd = Command::new(&exe);
+    let mut cmd = Command::new(&runtime.executable);
     apply_no_window(&mut cmd);
-    cmd.args([
-        "--model".as_ref(),
-        model_path.as_os_str(),
-        "--output_file".as_ref(),
-        wav_out.as_os_str(),
-        "--length_scale".as_ref(),
-        format!("{:.3}", length_scale).as_ref(),
-        "--sentence_silence".as_ref(),
-        format!("{:.3}", sentence_silence).as_ref(),
-    ]);
-    // current_dir = dossier du binaire : piper y trouve espeak-ng-data et ses DLL.
-    cmd.current_dir(bin_dir(home))
+    cmd.args(piper_arguments(
+        &model_path,
+        &config_path,
+        wav_out,
+        length_scale,
+        &runtime.root.join("espeak-ng-data"),
+    ));
+    // current_dir = runtime en lecture seule : Piper y trouve ses DLL/bibliothèques.
+    cmd.current_dir(&runtime.root)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
@@ -183,6 +173,27 @@ fn run_piper(
     Ok(())
 }
 
+fn piper_arguments(
+    model_path: &Path,
+    config_path: &Path,
+    wav_out: &Path,
+    length_scale: f32,
+    espeak_data: &Path,
+) -> Vec<OsString> {
+    vec![
+        OsString::from("--model"),
+        model_path.as_os_str().to_os_string(),
+        OsString::from("--config"),
+        config_path.as_os_str().to_os_string(),
+        OsString::from("--output_file"),
+        wav_out.as_os_str().to_os_string(),
+        OsString::from("--length_scale"),
+        OsString::from(format!("{length_scale:.3}")),
+        OsString::from("--espeak_data"),
+        espeak_data.as_os_str().to_os_string(),
+    ]
+}
+
 fn encode_mp3(wav: &Path, mp3: &Path) -> Result<(), String> {
     let ffmpeg = get_ffmpeg_path()?;
     let mut cmd = Command::new(&ffmpeg);
@@ -200,4 +211,38 @@ fn encode_mp3(wav: &Path, mp3: &Path) -> Result<(), String> {
         return Err(format!("Conversion MP3 échouée : {}", stderr.trim()));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::piper_arguments;
+    use std::ffi::OsString;
+    use std::path::Path;
+
+    #[test]
+    fn command_arguments_keep_paths_and_values_separate() {
+        let args = piper_arguments(
+            Path::new("/tmp/voix été/modèle.onnx"),
+            Path::new("/tmp/voix été/modèle.onnx.json"),
+            Path::new("/tmp/sortie audio.wav"),
+            1.25,
+            Path::new("/tmp/runtime Piper/espeak-ng-data"),
+        );
+        assert_eq!(
+            args,
+            vec![
+                OsString::from("--model"),
+                OsString::from("/tmp/voix été/modèle.onnx"),
+                OsString::from("--config"),
+                OsString::from("/tmp/voix été/modèle.onnx.json"),
+                OsString::from("--output_file"),
+                OsString::from("/tmp/sortie audio.wav"),
+                OsString::from("--length_scale"),
+                OsString::from("1.250"),
+                OsString::from("--espeak_data"),
+                OsString::from("/tmp/runtime Piper/espeak-ng-data"),
+            ]
+        );
+        assert!(!args.iter().any(|arg| arg == "--sentence_silence"));
+    }
 }

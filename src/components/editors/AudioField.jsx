@@ -10,6 +10,7 @@ import { useProjectContext } from '../../store/ProjectContext';
 import { isTtsAvailable } from '../../store/xttsSettings';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../../utils/fileUtils';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { RecordModal } from '../RecordModal/RecordModal';
 // reason: lazy() pour sortir wavesurfer.js (~18 KB gz) + AudioEditorModal du
 // chunk partage. Charge uniquement quand l'utilisateur ouvre l'editeur audio.
@@ -93,6 +94,7 @@ export function AudioField({
 
   useEffect(() => {
     stopPlayback();
+    disposeAudioPlayerRef(audioRef);
     setCurrentTime(0);
     setDuration(0);
   }, [file]);
@@ -119,7 +121,10 @@ export function AudioField({
     if (Number.isFinite(value) && value > 0) setDuration(value);
   }, [probedDuration]);
 
-  useEffect(() => () => stopPlayback(), []);
+  useEffect(() => () => {
+    stopPlayback();
+    disposeAudioPlayerRef(audioRef);
+  }, []);
 
   async function handleReplace() {
     const picked = await pickAudio();
@@ -191,8 +196,8 @@ export function AudioField({
     const audio = audioRef.current;
     if (audio && audio.src === audioUrl) return audio;
 
-    if (audio) audio.pause();
-    const nextAudio = new Audio(audioUrl);
+    if (audio) disposeAudioPlayerRef(audioRef);
+    const nextAudio = createAudioPlayer(audioUrl);
     nextAudio.preload = 'metadata';
     nextAudio.addEventListener('loadedmetadata', () => {
       setDuration(Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0);
@@ -413,7 +418,15 @@ export function AudioField({
                 </Tooltip>
               )}
               <Tooltip text="Éditer l'audio">
-                <Button variant="icon" size="sm" onClick={() => setShowAudioEditor(true)} aria-label="Éditer l'audio">
+                <Button
+                  variant="icon"
+                  size="sm"
+                  onClick={() => {
+                    stopPlayback(true);
+                    setShowAudioEditor(true);
+                  }}
+                  aria-label="Éditer l'audio"
+                >
                   <Scissors className="audio-action-icon" strokeWidth={2} absoluteStrokeWidth />
                 </Button>
               </Tooltip>

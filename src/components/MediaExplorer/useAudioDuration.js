@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { createAudioPlayer } from '../../utils/audioPlayer';
 import { formatDuration } from './helpers';
 
 const durationCache = new Map();
@@ -25,17 +26,16 @@ export function useAudioDuration(path, exists) {
   useEffect(() => {
     if (!url) return;
     if (durationCache.has(path)) { setDuration(durationCache.get(path)); return; }
-    const audio = new Audio();
+    const audio = createAudioPlayer(url);
     audio.preload = 'metadata';
-    audio.src = url;
     audio.onloadedmetadata = () => {
       const d = formatDuration(audio.duration);
       durationCache.set(path, d);
       setDuration(d);
-      audio.src = '';
+      audio.destroy();
     };
-    audio.onerror = () => { audio.src = ''; };
-    return () => { audio.src = ''; };
+    audio.onerror = () => audio.destroy();
+    return () => audio.destroy();
   }, [url, path]);
 
   return [duration, ref];

@@ -2,7 +2,15 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, copyFile, mkdir, rename, remove, exists, readDir } from '@tauri-apps/plugin-fs';
 import { getProjectFilePrefix, sanitizeProjectPrefix } from '../utils/projectPrefix';
-import { basename, basenameNoExt, dirname, joinPath, pathKey } from '../utils/fileUtils';
+import {
+  basename,
+  basenameNoExt,
+  dirname,
+  isPathInside,
+  joinPath,
+  pathKey,
+  toProjectRelativePath,
+} from '../utils/fileUtils';
 import { TEMP_IMAGES_DIR, LEGACY_TEMP_IMAGES_DIR } from '../utils/tempDirs';
 import {
   migrateProjectData,
@@ -27,6 +35,7 @@ import { reconcileMediaLibraryPaths } from './mediaLibrary';
 import {
   imageEditMetadataPath,
   readImageEditMetadata,
+  supportsImageEditMetadata,
   withImageEditSourcePath,
   writeImageEditMetadata,
 } from './imageEditMetadata';
@@ -125,7 +134,7 @@ export function getRecentProjects() {
 export function rememberRecentProject(project, path) {
   if (!path) return [];
   const existing = getRecentProjects();
-  const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
+  const normalizedPath = pathKey(path);
   const nextEntry = {
     path,
     projectName: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
@@ -136,7 +145,7 @@ export function rememberRecentProject(project, path) {
   };
   const next = [
     nextEntry,
-    ...existing.filter((entry) => entry.path.replace(/\\/g, '/').toLowerCase() !== normalizedPath),
+    ...existing.filter((entry) => pathKey(entry.path) !== normalizedPath),
   ].slice(0, RECENT_PROJECT_LIMIT);
   writeSetting(KEYS.RECENT_PROJECTS, JSON.stringify(next));
   return next;
@@ -144,9 +153,9 @@ export function rememberRecentProject(project, path) {
 
 export function forgetRecentProject(path) {
   if (!path) return getRecentProjects();
-  const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
+  const normalizedPath = pathKey(path);
   const next = getRecentProjects()
-    .filter((entry) => entry.path.replace(/\\/g, '/').toLowerCase() !== normalizedPath);
+    .filter((entry) => pathKey(entry.path) !== normalizedPath);
   writeSetting(KEYS.RECENT_PROJECTS, JSON.stringify(next));
   return next;
 }
@@ -154,7 +163,7 @@ export function forgetRecentProject(path) {
 /** Détecte si un chemin est une image temporaire produite par Story Studio */
 function isTempImage(path) {
   if (typeof path !== 'string') return false;
-  const normalized = path.replace(/\\/g, '/');
+  const normalized = pathKey(path);
   return normalized.includes(`/${TEMP_IMAGES_DIR}/`)
     || normalized.includes(`/${LEGACY_TEMP_IMAGES_DIR}/`);
 }
@@ -187,12 +196,6 @@ function getProjectAssetsDir(savePath) {
   return joinPath(projectDir, `${projectBaseName}_assets`);
 }
 
-function isPathInsideDir(path, dir) {
-  const normalizedPath = normalizePath(path);
-  const normalizedDir = normalizePath(dir);
-  return normalizedPath === normalizedDir || normalizedPath.startsWith(`${normalizedDir}/`);
-}
-
 function relativizeTagKeys(tags, mbahDir) {
   if (!tags || typeof tags !== 'object') return {};
   const result = {};
@@ -207,10 +210,7 @@ function relativizeTagKeys(tags, mbahDir) {
 // Converts an absolute path to a relative path (./...) if it's inside mbahDir, otherwise returns it unchanged.
 function toProjectRelative(absolutePath, mbahDir) {
   if (!hasPath(absolutePath)) return absolutePath;
-  const fwdPath = absolutePath.replace(/\\/g, '/');
-  const fwdDir = mbahDir.replace(/\\/g, '/').replace(/\/$/, '');
-  if (!fwdPath.toLowerCase().startsWith(fwdDir.toLowerCase() + '/')) return absolutePath;
-  return './' + fwdPath.slice(fwdDir.length + 1);
+  return toProjectRelativePath(absolutePath, mbahDir);
 }
 
 // Resolves a relative path (./...) against mbahDir into an absolute path.
@@ -281,14 +281,14 @@ function isManagedProjectPath(path, savePath) {
   const workspaceDir = readSetting(KEYS.WORKSPACE_DIR);
   if (isManagedWorkspacePath(path, workspaceDir)) return true;
   const projectDir = getProjectDir(savePath);
-  if (isPathInsideDir(path, projectDir)) return true;
-  if (isPathInsideDir(path, getProjectAssetsDir(savePath))) return true;
-  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, joinPath(projectDir, dirName)));
+  if (isPathInside(path, projectDir)) return true;
+  if (isPathInside(path, getProjectAssetsDir(savePath))) return true;
+  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInside(path, joinPath(projectDir, dirName)));
 }
 
 function isManagedWorkspacePath(path, workspaceDir) {
   if (!hasPath(path) || !hasPath(workspaceDir)) return false;
-  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInsideDir(path, joinPath(workspaceDir, dirName)));
+  return MANAGED_PROJECT_DIRS.some((dirName) => isPathInside(path, joinPath(workspaceDir, dirName)));
 }
 
 function shouldTransferProjectPath(path, savePath, statusByPath = null) {
@@ -735,6 +735,10 @@ export async function copyMediaToWorkspace(
   if (cachedMain) return cachedMain;
 
   const imageCopy = await copyPlainMediaToWorkspace(sourcePath, baseDir, category, projectName);
+  if (!supportsImageEditMetadata(sourcePath)) {
+    knownCopies?.set(pathKey(sourcePath), imageCopy.path);
+    return imageCopy.path;
+  }
   let copiedDependency = null;
   let dependencyCopyRecord = null;
   try {

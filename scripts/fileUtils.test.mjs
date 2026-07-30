@@ -5,10 +5,12 @@ import {
   basename,
   basenameNoExt,
   dirname,
+  isPathInside,
   joinPath,
   normalizeWindowsPath,
   pathKey,
   stripWindowsLongPathPrefix,
+  toProjectRelativePath,
 } from '../src/utils/fileUtils.js';
 
 test('pathKey strips Windows long path prefixes and compares mixed case paths', () => {
@@ -18,6 +20,29 @@ test('pathKey strips Windows long path prefixes and compares mixed case paths', 
 
 test('pathKey normalizes long UNC paths', () => {
   assert.equal(pathKey('\\\\?\\UNC\\Server\\Share\\Audio.MP3'), '//server/share/audio.mp3');
+  assert.equal(pathKey('//Server/Share/Audio.MP3'), '//server/share/audio.mp3');
+});
+
+test('pathKey preserves POSIX case, accents, spaces, and case-distinct files', () => {
+  assert.equal(pathKey('/tmp/Été sonore/A.wav'), '/tmp/Été sonore/A.wav');
+  assert.equal(pathKey('/tmp/A.wav') === pathKey('/tmp/a.wav'), false);
+});
+
+test('pathKey keeps URLs, blobs, and data values explicit and case-preserving', () => {
+  assert.equal(pathKey('https://example.test/Asset.MP3'), 'https://example.test/Asset.MP3');
+  assert.equal(pathKey('blob:https://example.test/Asset-ID'), 'blob:https://example.test/Asset-ID');
+  assert.equal(pathKey('data:Audio/WAV;base64,ABC'), 'data:Audio/WAV;base64,ABC');
+});
+
+test('pathKey preserves relative path case while normalizing separators', () => {
+  assert.equal(pathKey('./Assets/Voice.MP3'), './Assets/Voice.MP3');
+  assert.equal(pathKey('Assets\\Voice.MP3'), 'Assets/Voice.MP3');
+});
+
+test('pathKey collapses repeated separators while preserving UNC roots', () => {
+  assert.equal(pathKey('C:\\\\Users\\\\TestUser///Voice.MP3'), 'c:/users/testuser/voice.mp3');
+  assert.equal(pathKey('\\\\Server\\\\Share///Voice.MP3'), '//server/share/voice.mp3');
+  assert.equal(pathKey('/Users//TestUser///Voice.MP3'), '/Users/TestUser/Voice.MP3');
 });
 
 test('pathKey handles nullish and empty inputs', () => {
@@ -43,6 +68,11 @@ test('normalizeWindowsPath keeps web paths unchanged', () => {
 test('normalizeWindowsPath keeps relative paths and canonicalizes local Windows separators', () => {
   assert.equal(normalizeWindowsPath('./asset.mp3'), './asset.mp3');
   assert.equal(normalizeWindowsPath('C:/Foo//bar\\baz.mp3'), 'C:\\Foo\\bar\\baz.mp3');
+  assert.equal(normalizeWindowsPath('\\\\?\\C:\\Foo\\bar.mp3'), 'C:\\Foo\\bar.mp3');
+  assert.equal(
+    normalizeWindowsPath('\\\\?\\unc\\Server\\Share\\bar.mp3'),
+    '\\\\Server\\Share\\bar.mp3',
+  );
 });
 
 test('normalizeWindowsPath returns null on empty or nullish inputs', () => {
@@ -94,4 +124,27 @@ test('joinPath collapses redundant separators and supports mixed inputs', () => 
   assert.equal(joinPath('', 'bar.mp3'), 'bar.mp3');
   assert.equal(joinPath('C:/Foo', '', 'bar.mp3'), 'C:/Foo/bar.mp3');
   assert.equal(joinPath(), '');
+});
+
+test('isPathInside follows Windows case rules without applying them to POSIX', () => {
+  assert.equal(isPathInside('C:\\WORK\\Audio\\A.wav', 'c:/work'), true);
+  assert.equal(isPathInside('\\\\Server\\Share\\Audio\\A.wav', '//server/share'), true);
+  assert.equal(isPathInside('C:/workspace-copy/A.wav', 'C:/workspace'), false);
+  assert.equal(isPathInside('/home/Studio/Audio/A.wav', '/home/Studio'), true);
+  assert.equal(isPathInside('/home/studio/Audio/A.wav', '/home/Studio'), false);
+});
+
+test('toProjectRelativePath is portable and preserves external POSIX casing', () => {
+  assert.equal(
+    toProjectRelativePath('C:\\WORK\\Audio\\A.wav', 'c:/work'),
+    './Audio/A.wav',
+  );
+  assert.equal(
+    toProjectRelativePath('/home/Studio/Audio/A.wav', '/home/Studio'),
+    './Audio/A.wav',
+  );
+  assert.equal(
+    toProjectRelativePath('/home/studio/Audio/A.wav', '/home/Studio'),
+    '/home/studio/Audio/A.wav',
+  );
 });

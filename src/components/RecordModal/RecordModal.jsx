@@ -4,6 +4,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Mic } from '../icons/LucideLocal';
 import { Button } from '../common/Button';
 import { sanitizeProjectPrefix } from '../../utils/projectPrefix';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import './RecordModal.css';
 
 const COUNTDOWN_SECONDS = 3;
@@ -114,23 +115,19 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
     if (!blobRef.current) return;
     stopPreview();
     const url = URL.createObjectURL(blobRef.current);
-    const a = new Audio(url);
+    const a = createAudioPlayer(url, { revokeSourceOnDestroy: true });
     previewUrlRef.current = url;
     a.onended = () => {
+      if (audioRef.current === a) disposeAudioPlayerRef(audioRef);
       if (previewUrlRef.current === url) previewUrlRef.current = null;
-      URL.revokeObjectURL(url);
     };
-    a.play();
     audioRef.current = a;
+    a.play().catch(() => stopPreview());
   }
 
   function stopPreview() {
-    audioRef.current?.pause();
-    audioRef.current = null;
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
-    }
+    disposeAudioPlayerRef(audioRef);
+    previewUrlRef.current = null;
   }
 
   function retry() {

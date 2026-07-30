@@ -15,6 +15,7 @@ import {
   resetEphemeralSnapshotSeedState,
 } from '../src/store/ephemeralSnapshotSeed.js';
 import {
+  buildTransferPromptSignature,
   createWorkSnapshot,
   hasUnsavedWork,
   isSaveInputStillCurrent,
@@ -26,6 +27,17 @@ function snapshot(value) {
 }
 
 const EPHEMERAL_PATH = 'D:/temp/story_studio_session_1_2/.session-recovery.mbah';
+
+test('transfer signatures follow Windows case rules but preserve POSIX case', () => {
+  assert.equal(
+    buildTransferPromptSignature('C:\\WORK\\story.mbah', [{ path: 'C:\\WORK\\A.wav' }]),
+    buildTransferPromptSignature('c:/work/story.mbah', [{ path: 'c:/work/a.wav' }]),
+  );
+  assert.notEqual(
+    buildTransferPromptSignature('/home/Studio/story.mbah', [{ path: '/home/Studio/A.wav' }]),
+    buildTransferPromptSignature('/home/studio/story.mbah', [{ path: '/home/studio/a.wav' }]),
+  );
+});
 
 test('a completed save only resynchronizes the exact input still current in memory', () => {
   const inputAtSaveStart = { rootEntries: [] };
@@ -150,6 +162,20 @@ test('work snapshots canonicalize media ordering and Windows path casing', () =>
   });
 
   assert.equal(first, second);
+});
+
+test('work snapshots preserve case-distinct POSIX media paths with spaces and accents', () => {
+  const project = { projectType: null, projectName: '', rootEntries: [] };
+  const bothFiles = createWorkSnapshot(project, [
+    '/tmp/Médias de test/A.wav',
+    '/tmp/Médias de test/a.wav',
+  ]);
+  const oneFile = createWorkSnapshot(project, [
+    '/tmp/Médias de test/A.wav',
+  ]);
+
+  assert.notEqual(bothFiles, oneFile);
+  assert.match(bothFiles, /Médias de test/);
 });
 
 test('periodic autosave can take over after the initial ephemeral seed', () => {

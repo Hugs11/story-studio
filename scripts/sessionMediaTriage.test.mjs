@@ -29,8 +29,29 @@ function projectWith(paths = {}) {
 test('collectSessionOnlyMedia: ignore les chemins hors session', () => {
   const orphans = collectSessionOnlyMedia({
     project: projectWith({}),
-    mediaLibraryPaths: ['C:\\Users\\hugs\\Musique\\externe.mp3'],
+    mediaLibraryPaths: ['C:\\Users\\TestUser\\Musique\\externe.mp3'],
     sessionDir: SESSION_DIR,
+  });
+  assert.deepEqual(orphans, []);
+});
+
+test('collectSessionOnlyMedia: ne confond pas la session avec un dossier frère préfixé', () => {
+  const sibling = `${SESSION_DIR}-copy\\voix-generees\\prise1.mp3`;
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [sibling],
+    sessionDir: SESSION_DIR,
+  });
+  assert.deepEqual(orphans, []);
+});
+
+test('collectSessionOnlyMedia: conserve la sensibilité à la casse des chemins POSIX', () => {
+  const sessionDir = '/tmp/StoryStudioSession';
+  const differentCase = '/tmp/storystudiosession/voix-generees/prise1.mp3';
+  const orphans = collectSessionOnlyMedia({
+    project: projectWith({}),
+    mediaLibraryPaths: [differentCase],
+    sessionDir,
   });
   assert.deepEqual(orphans, []);
 });
@@ -101,7 +122,7 @@ test('applySessionMediaTriage: remplace les conservés, retire les abandonnés, 
   const keptOld = `${SESSION_DIR}\\voix-generees\\prise2.mp3`;
   const keptNew = 'C:\\Workspace\\fichiers-importes\\prise2.mp3';
   const droppedPath = `${SESSION_DIR}\\images-generees\\brouillon.png`;
-  const external = 'C:\\Users\\hugs\\Musique\\externe.mp3';
+  const external = 'C:\\Users\\TestUser\\Musique\\externe.mp3';
 
   const result = applySessionMediaTriage({
     mediaLibraryPaths: [keptOld, droppedPath, external],

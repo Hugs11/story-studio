@@ -5,6 +5,7 @@ import {
   centerDiagramNode,
   fitDiagramViewport,
   getDiagramViewportLayoutKey,
+  getPinchZoomFactor,
   getWheelZoomFactor,
   isDiagramSearchWheelEvent,
   isDiagramWheelOwnedByExternalSurface,
@@ -25,6 +26,14 @@ test('une molette conserve un pas modéré et normalise deltaMode', () => {
   const lineWheel = getWheelZoomFactor({ deltaY: -6.25, deltaMode: 1 });
   assert.ok(pixelWheel > 1 && pixelWheel < 1.2);
   assert.equal(lineWheel, pixelWheel);
+});
+
+test('un geste natif applique les variations de son échelle absolue sans saut', () => {
+  assert.equal(getPinchZoomFactor(1.2, 1), 1.2);
+  assert.equal(getPinchZoomFactor(1.5, 1.2), 1.25);
+  assert.equal(getPinchZoomFactor(0.8, 1), 0.8);
+  assert.equal(getPinchZoomFactor(0, 1), 1);
+  assert.equal(getPinchZoomFactor(10, 1), 2);
 });
 
 test('la molette sur la recherche reste réservée au défilement des résultats', () => {

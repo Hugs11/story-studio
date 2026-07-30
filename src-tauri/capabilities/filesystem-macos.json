@@ -1,0 +1,62 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "filesystem-macos",
+  "description": "User-selected file access with macOS system locations denied",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "macOS"
+  ],
+  "permissions": [
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }],
+      "deny": [
+        { "path": "/System" },
+        { "path": "/System/**" },
+        { "path": "/Library" },
+        { "path": "/Library/**" },
+        { "path": "/private" },
+        { "path": "/private/**" },
+        { "path": "/usr" },
+        { "path": "/usr/**" },
+        { "path": "/bin" },
+        { "path": "/bin/**" },
+        { "path": "/sbin" },
+        { "path": "/sbin/**" },
+        { "path": "/dev" },
+        { "path": "/dev/**" }
+      ]
+    },
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "**" },
+        { "path": "**/.session-recovery.mbah*" },
+        { "path": "**/.story-studio-backups" },
+        { "path": "**/.story-studio-backups/**" },
+        { "path": "**/.story-studio-image-edits" },
+        { "path": "**/.story-studio-image-edits/**" },
+        { "path": "**/.story-studio-thumbnail" },
+        { "path": "**/.story-studio-thumbnail/**" }
+      ],
+      "deny": [
+        { "path": "/System" },
+        { "path": "/System/**" },
+        { "path": "/Library" },
+        { "path": "/Library/**" },
+        { "path": "/private" },
+        { "path": "/private/**" },
+        { "path": "/usr" },
+        { "path": "/usr/**" },
+        { "path": "/bin" },
+        { "path": "/bin/**" },
+        { "path": "/sbin" },
+        { "path": "/sbin/**" },
+        { "path": "/dev" },
+        { "path": "/dev/**" }
+      ]
+    }
+  ]
+}

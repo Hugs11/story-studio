@@ -1,0 +1,17 @@
+{
+  "platform": "windows-x86_64",
+  "tools": {
+    "ffmpeg": {
+      "version": "8.1-essentials_build-www.gyan.dev",
+      "provenance": "Gyan Doshi release-essentials build",
+      "binarySha256": "1a65d5b0b10d8d9a81d2824a3538046a40ed3607c906b335a166add87613f705",
+      "license": "GPL-3.0-or-later"
+    },
+    "sevenZip": {
+      "version": "25.01",
+      "provenance": "Official 7-Zip console executable",
+      "binarySha256": "26817725650583d99ca3e617a618dd75c0f71bd316b5761780b7361f5f824cad",
+      "license": "LGPL-2.1-or-later AND BSD-3-Clause AND BSD-2-Clause AND LicenseRef-unRAR-restriction"
+    }
+  }
+}

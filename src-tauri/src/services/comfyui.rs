@@ -16,8 +16,8 @@ pub struct ComfyUiSettings {
     pub server_url: String,
     #[serde(rename = "autoStart", default)]
     pub auto_start: bool,
-    #[serde(rename = "batPath", default)]
-    pub bat_path: String,
+    #[serde(rename = "launcherPath", alias = "batPath", default)]
+    pub launcher_path: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -97,7 +97,6 @@ pub struct ComfyProgressEvent {
 // ── Utilitaires internes ─────────────────────────────────────────────────────
 
 use crate::support::network::require_local_url;
-use crate::support::temp::TEMP_IMAGES_DIR;
 
 mod client;
 mod jobs;
@@ -128,5 +127,25 @@ mod tests {
         assert!(safe_comfyui_output_filename("nested/ComfyUI_00001_.png").is_err());
         assert!(safe_comfyui_output_filename("..\\ComfyUI_00001_.png").is_err());
         assert!(safe_comfyui_output_filename("ComfyUI_..\u{0}.png").is_err());
+    }
+
+    #[test]
+    fn settings_accept_legacy_bat_path_and_serialize_portable_name() {
+        let settings: ComfyUiSettings = serde_json::from_value(serde_json::json!({
+            "serverUrl": "http://127.0.0.1:8188",
+            "autoStart": true,
+            "batPath": r"C:\Comfy UI\run.bat"
+        }))
+        .expect("deserialize legacy settings");
+        assert_eq!(settings.launcher_path, r"C:\Comfy UI\run.bat");
+
+        let serialized = serde_json::to_value(settings).expect("serialize settings");
+        assert_eq!(
+            serialized
+                .get("launcherPath")
+                .and_then(|value| value.as_str()),
+            Some(r"C:\Comfy UI\run.bat")
+        );
+        assert!(serialized.get("batPath").is_none());
     }
 }

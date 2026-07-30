@@ -1,5 +1,5 @@
 import { exists, stat } from '@tauri-apps/plugin-fs';
-import { stripWindowsLongPathPrefix } from '../utils/fileUtils';
+import { pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils';
 
 export const FILE_REFRESH_THROTTLE_MS = 1500;
 const PATH_QUERY_TIMEOUT_MS = 4000;
@@ -8,9 +8,13 @@ const pathSnapshotCache = new Map();
 const inflightPathSnapshots = new Map();
 let statPermissionAvailable = true;
 
-function normalizePath(path) {
+function readablePath(path) {
   if (typeof path !== 'string') return '';
   return stripWindowsLongPathPrefix(path.trim());
+}
+
+function cacheKey(path) {
+  return pathKey(readablePath(path));
 }
 
 function normalizeTimeMs(value) {
@@ -76,9 +80,9 @@ async function queryPathSnapshot(path) {
 }
 
 function getCachedPathSnapshot(path) {
-  const normalizedPath = normalizePath(path);
-  if (!normalizedPath) return null;
-  return pathSnapshotCache.get(normalizedPath) ?? null;
+  const key = cacheKey(path);
+  if (!key) return null;
+  return pathSnapshotCache.get(key) ?? null;
 }
 
 export function hasFreshPathSnapshot(path, maxAgeMs = FILE_REFRESH_THROTTLE_MS) {
@@ -92,35 +96,37 @@ export const FILE_CHANGED_EVENT = 'local-file-changed';
 // relisent le contenu, sans dépendre de la détection mtime/taille (qui peut être
 // indisponible si `stat` n'est pas permis).
 export function notifyFileChanged(path) {
-  const normalizedPath = normalizePath(path);
-  if (!normalizedPath) return;
-  pathSnapshotCache.delete(normalizedPath);
+  const normalizedPath = readablePath(path);
+  const key = cacheKey(normalizedPath);
+  if (!key) return;
+  pathSnapshotCache.delete(key);
   window.dispatchEvent(new CustomEvent(FILE_CHANGED_EVENT, { detail: { path: normalizedPath } }));
 }
 
 export async function readPathSnapshot(path, { maxAgeMs = 0, force = false } = {}) {
-  const normalizedPath = normalizePath(path);
+  const normalizedPath = readablePath(path);
   if (!normalizedPath) return buildSnapshot('', null, false);
+  const key = cacheKey(normalizedPath);
 
-  const cachedSnapshot = pathSnapshotCache.get(normalizedPath);
+  const cachedSnapshot = pathSnapshotCache.get(key);
   if (!force && isFresh(cachedSnapshot, maxAgeMs)) {
     return cachedSnapshot;
   }
 
-  const inflight = inflightPathSnapshots.get(normalizedPath);
+  const inflight = inflightPathSnapshots.get(key);
   if (inflight) return inflight;
 
   const promise = queryPathSnapshot(normalizedPath)
     .then((snapshot) => {
-      pathSnapshotCache.set(normalizedPath, snapshot);
-      inflightPathSnapshots.delete(normalizedPath);
+      pathSnapshotCache.set(key, snapshot);
+      inflightPathSnapshots.delete(key);
       return snapshot;
     })
     .catch((error) => {
-      inflightPathSnapshots.delete(normalizedPath);
+      inflightPathSnapshots.delete(key);
       throw error;
     });
 
-  inflightPathSnapshots.set(normalizedPath, promise);
+  inflightPathSnapshots.set(key, promise);
   return promise;
 }

@@ -11,7 +11,7 @@
 
 ## Testing
 
-<!-- How did you verify this change? If it touches native_pack.rs, confirm cargo test passes with zero warnings. -->
+<!-- How did you verify this change? If it touches src-tauri/src/native_pack/, confirm cargo test and clippy pass. -->
 
 - [ ] `npm run build` passes
 - [ ] Tested manually with a simple story project

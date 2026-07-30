@@ -41,6 +41,7 @@ import { parseConventionName, generateConventionName } from '../../utils/packCon
 import { basename, basenameNoExt } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';
 import { useLocalFile } from '../../hooks/useLocalFile';
+import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import './AggregatePacksFunnel.css';
 
 const AudioEditorModal = lazy(() => import('../AudioEditorModal/AudioEditorModal')
@@ -153,13 +154,12 @@ export function AggregatePacksFunnel({ onClose }) {
     return () => {
       const sessionDir = sessionDirRef.current;
       if (sessionDir) invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
-      audioRef.current?.pause();
+      disposeAudioPlayerRef(audioRef);
     };
   }, []);
 
   useEffect(() => {
-    audioRef.current?.pause();
-    audioRef.current = null;
+    disposeAudioPlayerRef(audioRef);
     setAudioPlaying(false);
   }, [audioUrl]);
 
@@ -267,7 +267,7 @@ export function AggregatePacksFunnel({ onClose }) {
       return;
     }
 
-    const audio = audioRef.current ?? new Audio(audioUrl);
+    const audio = audioRef.current ?? createAudioPlayer(audioUrl);
     audioRef.current = audio;
     audio.onended = () => setAudioPlaying(false);
     audio.onpause = () => setAudioPlaying(false);
@@ -606,7 +606,19 @@ export function AggregatePacksFunnel({ onClose }) {
               <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={handlePickImage}>
                 Choisir une image
               </FunnelToolButton>
-              <FunnelToolButton icon={<Sparkles />} accent="violet" variant="solid" onClick={() => setTextImageOpen(true)}>
+              <FunnelToolButton
+                icon={<Sparkles />}
+                accent="violet"
+                variant="solid"
+                onClick={async () => {
+                  try {
+                    await ensureSessionDir();
+                    setTextImageOpen(true);
+                  } catch (sessionError) {
+                    setError(`Impossible de préparer la session : ${sessionError?.message ?? sessionError}`);
+                  }
+                }}
+              >
                 Générer une image-titre
               </FunnelToolButton>
               <FunnelToolButton icon={<Crop />} accent="violet" variant="outline" onClick={async () => {
@@ -712,6 +724,7 @@ export function AggregatePacksFunnel({ onClose }) {
         <Suspense fallback={null}>
           <TextImagePromptModal
             defaultText={metadata.title || 'Mes histoires du soir'}
+            workspaceDir={sessionDirRef.current || ''}
             onConfirm={(path) => {
               if (path) setRootImage(path);
               setTextImageOpen(false);

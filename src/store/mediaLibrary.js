@@ -40,7 +40,7 @@ function mediaKind(path) {
 // 'ai' = ComfyUI/XTTS result · 'recorded' = enregistrements/ · 'imported' = fichiers-importes/ · 'project' = referenced in project node · 'library' = extra standalone path
 function detectOrigin(path, source) {
   if (source === 'XTTS' || source === 'ComfyUI') return 'ai';
-  const norm = path.replace(/\\/g, '/').toLowerCase();
+  const norm = pathKey(path);
   if (norm.includes('/enregistrements/')) return 'recorded';
   if (norm.includes('/fichiers-importes/')) return 'imported';
   if (source === 'Explorateur') return 'library';
@@ -53,7 +53,7 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
   // référencés par une entrée projet (pour ne jamais rendre invisible une référence existante).
   if (!isProjectRef && !options.allowOriginalBackup && isOriginalBackup(path)) return;
   const checkedPath = stripWindowsLongPathPrefix(path);
-  const key = checkedPath.replace(/\\/g, '/').toLowerCase();
+  const key = pathKey(checkedPath);
   const existing = map.get(key);
   const usage = { label, source, field, ...(entryId ? { entryId } : {}) };
   if (existing) {

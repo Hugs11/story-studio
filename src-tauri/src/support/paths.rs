@@ -1,19 +1,31 @@
 //! Helpers de normalisation de chemins partagés entre commandes Tauri.
 
+use std::path::Path;
+
 /// Retire le préfixe UNC `\\?\` de Windows que `fs::canonicalize` ajoute systématiquement,
 /// afin de rendre le chemin compatible avec :
 /// - le plugin `@tauri-apps/plugin-fs` (qui ne reconnaît pas les formes UNC dans son scope) ;
 /// - la sérialisation/normalisation côté frontend (comparaisons, audits, médiathèque).
 ///
-/// À appliquer sur tout chemin renvoyé vers le frontend après une canonicalisation.
+/// À appliquer à tout chemin natif renvoyé vers le frontend. Cela rend la frontière
+/// Rust -> Tauri explicite et évite qu'une future canonicalisation fasse fuiter un
+/// chemin Windows étendu dans le code JavaScript.
 /// Ne pas l'utiliser pour les vérifications de sécurité internes : la forme canonique
 /// reste utile pour les gardes (`is_in_trim_dir`, `delete_workspace_media_file`, etc.).
-pub fn path_for_frontend(path: &str) -> String {
-    let Some(stripped) = path.strip_prefix(r"\\?\") else {
-        return path.to_string();
-    };
-    if let Some(unc_path) = stripped.strip_prefix(r"UNC\") {
-        return format!(r"\\{}", unc_path);
+pub fn path_for_frontend(path: impl AsRef<Path>) -> String {
+    let path = path.as_ref().to_string_lossy();
+    if !path
+        .get(..4)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(r"\\?\"))
+    {
+        return path.into_owned();
+    }
+    let stripped = &path[4..];
+    if stripped
+        .get(..4)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("UNC\\"))
+    {
+        return format!(r"\\{}", &stripped[4..]);
     }
     stripped.to_string()
 }
@@ -34,6 +46,14 @@ mod tests {
     fn converts_windows_extended_network_path() {
         assert_eq!(
             path_for_frontend(r"\\?\UNC\server\share\bar.mp3"),
+            r"\\server\share\bar.mp3"
+        );
+    }
+
+    #[test]
+    fn accepts_case_insensitive_windows_extended_prefixes() {
+        assert_eq!(
+            path_for_frontend(r"\\?\unc\server\share\bar.mp3"),
             r"\\server\share\bar.mp3"
         );
     }

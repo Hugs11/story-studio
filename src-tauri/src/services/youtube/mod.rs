@@ -5,7 +5,8 @@
 //!
 //! Sécurité (invariants `support/`) : arguments en tableau (jamais de shell),
 //! `CREATE_NO_WINDOW`, URL bornées aux domaines YouTube, destination bornée au
-//! dossier temp, noms de fichiers assainis, plafonds sur la liste et la taille.
+//! cache privé de l'application, noms de fichiers assainis, plafonds sur la liste
+//! et la taille.
 
 use serde::Serialize;
 
@@ -54,6 +55,9 @@ mod tests {
         format_duration, is_channel_source, normalize_listing_url, page_window, parse_list_json,
         reorder_numbered_series, validate_youtube_url,
     };
+    use super::{download_audio, fetch_list, update_ytdlp_binary};
+    use std::path::Path;
+    use uuid::Uuid;
 
     #[test]
     fn accepts_youtube_hosts_only() {
@@ -255,5 +259,68 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["p1", "other", "p2", "p3", "p4", "p5"]
         );
+    }
+
+    #[test]
+    #[ignore = "requires live GitHub and YouTube access plus the prepared native FFmpeg"]
+    fn live_linux_updates_lists_and_downloads_with_native_tools() {
+        if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            return;
+        }
+
+        let root =
+            std::env::temp_dir().join(format!("story_studio_youtube_live_été_{}", Uuid::new_v4()));
+        let home = root.join("données YouTube");
+        std::fs::create_dir_all(&home).expect("create live YouTube home");
+        let emit = |message: &str| eprintln!("{message}");
+        let installed = update_ytdlp_binary(&home, &emit).expect("forced yt-dlp update");
+
+        let custom_dir = root.join("outil avec espaces et accents été");
+        std::fs::create_dir_all(&custom_dir).expect("create custom yt-dlp directory");
+        let custom = custom_dir.join("yt-dlp");
+        std::fs::copy(&installed, &custom).expect("copy custom yt-dlp");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&custom, std::fs::Permissions::from_mode(0o755))
+                .expect("make custom yt-dlp executable");
+        }
+
+        let video_url = std::env::var("STORY_STUDIO_YOUTUBE_VIDEO_URL")
+            .unwrap_or_else(|_| "https://www.youtube.com/watch?v=PIMtEh8qo4o".to_string());
+        let video = fetch_list(
+            &home,
+            Some(custom.to_string_lossy().as_ref()),
+            &video_url,
+            1,
+            &emit,
+        )
+        .expect("read public video metadata");
+        assert_eq!(video.videos.len(), 1);
+
+        let playlist_url =
+            std::env::var("STORY_STUDIO_YOUTUBE_PLAYLIST_URL").unwrap_or_else(|_| {
+                "https://www.youtube.com/playlist?list=PLxrLFHZQc8nqMzvzB0Ml0nGWgjnB9HO7f"
+                    .to_string()
+            });
+        let playlist =
+            fetch_list(&home, None, &playlist_url, 1, &emit).expect("read public playlist fixture");
+        assert!(playlist.videos.len() > 1);
+        assert_eq!(playlist.page, 1);
+
+        let output = download_audio(
+            &home,
+            &root.join("downloads"),
+            None,
+            &video_url,
+            "validation été avec espaces",
+            &emit,
+        )
+        .expect("download public video audio");
+        let output = Path::new(&output);
+        assert!(output.is_file());
+        assert!(std::fs::metadata(output).unwrap().len() > 0);
+        std::fs::remove_file(output).expect("remove downloaded audio fixture");
+        std::fs::remove_dir_all(root).expect("clean live YouTube fixture");
     }
 }

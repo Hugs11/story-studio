@@ -1,8 +1,8 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.5",
-  "description": "Open-source Windows editor for creating Lunii-compatible story packs",
+  "version": "0.9.6",
+  "description": "Open-source desktop editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
   "homepage": "https://hugs11.github.io/story-studio/",
@@ -24,11 +24,16 @@
     "audio-editor",
     "tauri",
     "react",
-    "windows"
+    "windows",
+    "linux",
+    "macos",
+    "apple-silicon"
   ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:linux:bundles": "node scripts/build-linux-bundles-podman.mjs",
+    "build:piper-runtime": "node scripts/build-piper-runtime.mjs",
     "build:stats": "cross-env BUNDLE_STATS=1 vite build",
     "preview": "vite preview",
     "lint": "eslint .",

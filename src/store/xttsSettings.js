@@ -1,9 +1,8 @@
-import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
+import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings.js';
 
 // Voix Piper par défaut — doit correspondre au catalogue Rust
 // (`services/piper/catalog.rs`).
 export const PIPER_DEFAULT_VOICE = 'fr_FR-siwis-medium';
-export const PIPER_DEFAULT_SENTENCE_SILENCE = 0.35;
 
 const DEFAULT_XTTS_SETTINGS = {
   // Moteur TTS actif. Piper est le défaut zéro-config ; XTTS reste
@@ -19,14 +18,22 @@ const DEFAULT_XTTS_SETTINGS = {
   // Réglages Piper.
   piperVoice: PIPER_DEFAULT_VOICE,
   piperSpeed: 1.0,
-  piperSentenceSilence: PIPER_DEFAULT_SENTENCE_SILENCE,
 };
+
+function withoutLegacyPiperSettings(settings) {
+  const portable = { ...(settings ?? {}) };
+  delete portable.piperSentenceSilence;
+  return portable;
+}
 
 export function loadXttsSettings() {
   try {
     const raw = readSetting(KEYS.XTTS_SETTINGS);
     if (!raw) return { ...DEFAULT_XTTS_SETTINGS };
-    const parsed = { ...DEFAULT_XTTS_SETTINGS, ...JSON.parse(raw) };
+    const parsed = {
+      ...DEFAULT_XTTS_SETTINGS,
+      ...withoutLegacyPiperSettings(JSON.parse(raw)),
+    };
     return {
       ...parsed,
       favoriteVoices: Array.isArray(parsed.favoriteVoices) ? parsed.favoriteVoices : [],
@@ -37,7 +44,10 @@ export function loadXttsSettings() {
 }
 
 export function saveXttsSettings(settings) {
-  writeSetting(KEYS.XTTS_SETTINGS, JSON.stringify(settings));
+  writeSetting(KEYS.XTTS_SETTINGS, JSON.stringify({
+    ...DEFAULT_XTTS_SETTINGS,
+    ...withoutLegacyPiperSettings(settings),
+  }));
 }
 
 // Le bouton TTS est disponible quand Piper est actif (zéro-config, toujours

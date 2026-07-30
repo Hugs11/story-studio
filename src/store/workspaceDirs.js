@@ -2,7 +2,7 @@
 // Utiliser ces constantes au lieu de strings hardcodés pour éviter
 // les drift entre fichiers (`projectIO`, hooks d'import, médiathèque, etc.).
 
-import { basenameNoExt, joinPath } from '../utils/fileUtils.js';
+import { basenameNoExt, isPathInside, joinPath } from '../utils/fileUtils.js';
 
 export const FICHIERS_IMPORTES = 'fichiers-importes';
 const ENREGISTREMENTS = 'enregistrements';
@@ -55,13 +55,7 @@ const DELETABLE_WORKSPACE_DIRS = Object.freeze([
 
 export function isDeletableWorkspaceMediaPath(path, workspaceDir) {
   if (!path || !workspaceDir?.trim()) return false;
-  const normalizedPath = String(path).replace(/\\/g, '/').replace(/\/+/g, '/').toLowerCase();
-  const normalizedWorkspace = String(workspaceDir)
-    .replace(/\\/g, '/')
-    .replace(/\/+/g, '/')
-    .replace(/\/$/, '')
-    .toLowerCase();
   return DELETABLE_WORKSPACE_DIRS.some((dir) => (
-    normalizedPath.startsWith(`${normalizedWorkspace}/${dir.toLowerCase()}/`)
+    isPathInside(path, joinPath(workspaceDir, dir))
   ));
 }

@@ -1,15 +1,5 @@
-//! Catalogue figé des artefacts Piper téléchargeables : binaire Windows + voix
-//! françaises par défaut. Toutes les URL sont des sources officielles
-//! HTTPS, épinglées par version pour la reproductibilité. Aucun binaire n'est
-//! embarqué dans le dépôt ; tout est provisionné au 1er usage.
-
-/// Version du binaire Piper (release `rhasspy/piper`). Épinglée pour garantir un
-/// archive stable (le zip top-level contient un dossier `piper/`).
-pub(super) const BINARY_VERSION: &str = "2023.11.14-2";
-
-/// Archive autonome Windows amd64 (piper.exe + onnxruntime + espeak-ng-data).
-pub(super) const BINARY_URL: &str =
-    "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip";
+//! Catalogue figé des voix françaises Piper. Le runtime natif 1.6 est embarqué
+//! séparément ; seuls les modèles et leurs configurations sont téléchargés.
 
 /// Base HuggingFace pour les voix `rhasspy/piper-voices`, épinglée au tag v1.0.0.
 const VOICES_BASE: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0";
@@ -25,6 +15,8 @@ pub(super) struct VoiceEntry {
     pub quality: &'static str,
     /// Chemin relatif sous `VOICES_BASE`, sans l'extension finale.
     rel_path: &'static str,
+    pub onnx_sha256: &'static str,
+    pub json_sha256: &'static str,
 }
 
 impl VoiceEntry {
@@ -44,21 +36,42 @@ pub(super) const VOICES: &[VoiceEntry] = &[
         label: "Siwis (féminine, médium)",
         quality: "medium",
         rel_path: "fr/fr_FR/siwis/medium/fr_FR-siwis-medium",
+        onnx_sha256: "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99",
+        json_sha256: "39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959",
     },
     VoiceEntry {
         id: "fr_FR-tom-medium",
         label: "Tom (masculine, médium)",
         quality: "medium",
         rel_path: "fr/fr_FR/tom/medium/fr_FR-tom-medium",
+        onnx_sha256: "bf65074ccdeeeeaa832e75edb1c0a513c01c9a972bdf085ff8a6e71ea234fd41",
+        json_sha256: "2f7f885ad5a0aad802e3cc24e4f57239febdcb142b4876de5d238094674361cc",
     },
     VoiceEntry {
         id: "fr_FR-gilles-low",
         label: "Gilles (masculine, légère)",
         quality: "low",
         rel_path: "fr/fr_FR/gilles/low/fr_FR-gilles-low",
+        onnx_sha256: "5cd711846720e261c2a176f6924c198a7424d0a75dd4b0a5357a5fb9cb739285",
+        json_sha256: "5a47cc0789e91267d17666bbec842dd92950669271a09023eb6970ee364cf88a",
     },
 ];
 
 pub(super) fn find_voice(id: &str) -> Option<&'static VoiceEntry> {
     VOICES.iter().find(|voice| voice.id == id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn voice_catalog_pins_model_and_configuration_hashes() {
+        for voice in VOICES {
+            assert_eq!(voice.onnx_sha256.len(), 64);
+            assert_eq!(voice.json_sha256.len(), 64);
+            assert!(voice.onnx_url().starts_with("https://huggingface.co/"));
+            assert!(voice.json_url().ends_with(".onnx.json?download=true"));
+        }
+    }
 }

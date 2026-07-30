@@ -74,7 +74,13 @@ export const MultiEditor = memo(function MultiEditor({
     [ids, project, projectIndex],
   );
 
-  const { xttsSettings, onQueueXttsGenerate, onMediaCreated, savePath } = useProjectContext();
+  const {
+    xttsSettings,
+    onQueueXttsGenerate,
+    onMediaCreated,
+    savePath,
+    workspaceDir,
+  } = useProjectContext();
   const { showErrorDialog } = useErrorDialog();
   const [batchImageGenerating, setBatchImageGenerating] = useState(false);
   const [batchAudioGenerating, setBatchAudioGenerating] = useState(false);
@@ -260,7 +266,7 @@ export const MultiEditor = memo(function MultiEditor({
         const isMenu = node.type === 'menu';
 
         try {
-          const imagePath = await generateTextImage(text);
+          const imagePath = await generateTextImage(text, workspaceDir);
           if (imagePath) {
             onMediaCreated?.(imagePath);
             imageUpdates.set(

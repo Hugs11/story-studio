@@ -19,6 +19,7 @@ import {
 import { pathKey } from '../src/utils/fileUtils.js';
 import {
   imageEditMetadataPath,
+  supportsImageEditMetadata,
   withImageEditSourcePath,
 } from '../src/store/imageEditMetadata.js';
 
@@ -31,6 +32,34 @@ function projectWith(entries) {
     globalOptions: {},
   };
 }
+
+test('the media catalog keeps case-distinct Linux files with spaces and accents', () => {
+  const upper = '/tmp/Médias de test/A.wav';
+  const lower = '/tmp/Médias de test/a.wav';
+  const project = projectWith([
+    { id: 'story-a', type: 'story', name: 'A', audio: upper },
+    { id: 'story-b', type: 'story', name: 'B', audio: lower },
+  ]);
+
+  const items = collectMediaLibrary({ project });
+
+  assert.equal(items.length, 2);
+  assert.deepEqual(new Set(items.map((item) => item.path)), new Set([upper, lower]));
+});
+
+test('managed folder origin follows Windows casing rules but preserves POSIX casing', () => {
+  const windows = 'C:\\WORKSPACE\\ENREGISTREMENTS\\prise.wav';
+  const posix = '/tmp/Workspace/ENREGISTREMENTS/prise.wav';
+  const items = collectMediaLibrary({
+    project: projectWith([
+      { id: 'story-windows', type: 'story', name: 'Windows', audio: windows },
+      { id: 'story-posix', type: 'story', name: 'POSIX', audio: posix },
+    ]),
+  });
+
+  assert.equal(items.find((item) => item.path === windows)?.origin, 'recorded');
+  assert.equal(items.find((item) => item.path === posix)?.origin, 'project');
+});
 
 test('edited image sidecars stay beside their image and can be rewritten to a durable source', () => {
   const imagePath = 'C:\\session\\images-generees\\episode__cover-modifiee.png';
@@ -51,6 +80,14 @@ test('edited image sidecars stay beside their image and can be rewritten to a du
     transform: { scale: 1.2 },
     filters: { brightness: 10 },
   });
+});
+
+test('image sidecars are never probed for audio or archive files', () => {
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/cover.PNG'), true);
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/voix.flac'), false);
+  assert.equal(supportsImageEditMetadata('/tmp/Été sonore/pack.7z'), false);
+  assert.equal(imageEditMetadataPath('/tmp/Été sonore/voix.flac'), null);
+  assert.equal(imageEditMetadataPath('/tmp/Été sonore/pack.7z'), null);
 });
 
 test('a deleted imported story leaves its audio visible as unused', () => {
@@ -193,6 +230,14 @@ test('disk deletion eligibility is limited to deletable workspace media folders'
     workspace,
   ), false);
   assert.equal(isDeletableWorkspaceMediaPath('D:/external/test.mp3', workspace), false);
+  assert.equal(isDeletableWorkspaceMediaPath(
+    '/home/Studio/fichiers-importes/test.mp3',
+    '/home/Studio',
+  ), true);
+  assert.equal(isDeletableWorkspaceMediaPath(
+    '/home/studio/fichiers-importes/test.mp3',
+    '/home/Studio',
+  ), false);
 });
 
 test('edited image names stay readable and resolve collisions without changing the source stem', () => {

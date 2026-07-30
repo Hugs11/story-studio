@@ -1,6 +1,6 @@
 //! Téléchargement de l'audio d'une vidéo : `yt-dlp -x --audio-format mp3` avec le
-//! ffmpeg embarqué. Sortie bornée à un dossier temp système (le frontend la copie
-//! ensuite dans le projet/session, comme pour le podcast).
+//! ffmpeg embarqué. Sortie bornée au cache privé de l'application (le frontend
+//! la copie ensuite dans le projet/session, comme pour le podcast).
 
 use std::path::Path;
 use std::process::Command;
@@ -10,14 +10,15 @@ use super::metadata::validate_youtube_url;
 use super::process::run_command_with_timeout;
 use super::provision::ensure_ytdlp;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use crate::support::paths::path_for_frontend;
 
-const TEMP_DIR: &str = "story_studio_youtube";
 /// Garde-fou de taille par vidéo (cohérent avec le plafond média podcast).
 const MAX_FILESIZE: &str = "300M";
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 pub fn download_audio(
     home: &Path,
+    output_dir: &Path,
     custom: Option<&str>,
     video_url: &str,
     file_name: &str,
@@ -31,13 +32,12 @@ pub fn download_audio(
         .parent()
         .ok_or_else(|| "Dossier ffmpeg introuvable.".to_string())?;
 
-    let dir = std::env::temp_dir().join(TEMP_DIR);
-    std::fs::create_dir_all(&dir)
+    std::fs::create_dir_all(output_dir)
         .map_err(|e| format!("Création du dossier temporaire impossible : {}", e))?;
-    let stem = unique_stem(&dir, file_name);
-    let dest = dir.join(format!("{}.mp3", stem));
+    let stem = unique_stem(output_dir, file_name);
+    let dest = output_dir.join(format!("{}.mp3", stem));
     // yt-dlp remplace `%(ext)s` ; après extraction MP3 le fichier est `<stem>.mp3`.
-    let out_template = dir.join(format!("{}.%(ext)s", stem));
+    let out_template = output_dir.join(format!("{}.%(ext)s", stem));
 
     emit("Téléchargement de l'audio…");
     let mut cmd = Command::new(&exe);
@@ -63,12 +63,12 @@ pub fn download_audio(
     let output = match run_command_with_timeout(cmd, DOWNLOAD_TIMEOUT, "Téléchargement YouTube") {
         Ok(output) => output,
         Err(err) => {
-            cleanup_stem_files(&dir, &stem);
+            cleanup_stem_files(output_dir, &stem);
             return Err(err);
         }
     };
     if !output.status.success() {
-        cleanup_stem_files(&dir, &stem);
+        cleanup_stem_files(output_dir, &stem);
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
             "Téléchargement impossible : {}",
@@ -78,7 +78,7 @@ pub fn download_audio(
     if !dest.is_file() || std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0) == 0 {
         return Err("yt-dlp n'a produit aucun fichier audio.".to_string());
     }
-    Ok(dest.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest))
 }
 
 /// Radical de fichier sûr et unique dans `dir` (mêmes règles que le podcast :

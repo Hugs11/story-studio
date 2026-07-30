@@ -15,6 +15,44 @@ test('legacy end message stays automatic while an explicit new setting is preser
   assert.equal(projectToRustExport(waiting).globalOptions.endMessageAutoplay, false);
 });
 
+test('normalizes imported global end message destinations to typed navigation targets', () => {
+  const imported = normalizeProjectData({
+    globalOptions: {},
+    nightModeReturn: 'stage-2',
+    nightModeHomeReturn: 'story_play:story-b',
+    rootEntries: [{ id: 'stage-2', type: 'menu', name: 'Stage 2', children: [] }],
+  });
+
+  assert.equal(imported.nightModeReturn, 'menu:stage-2');
+  assert.equal(imported.nightModeHomeReturn, 'story_play:story-b');
+
+  const reopened = normalizeProjectData(projectToSerializable(imported));
+  assert.equal(reopened.nightModeReturn, 'menu:stage-2');
+  assert.equal(reopened.nightModeHomeReturn, 'story_play:story-b');
+
+  const cases = [
+    [null, null],
+    ['   ', null],
+    ['root', 'root'],
+    ['current_menu', 'current_menu'],
+    ['next_story', 'next_story'],
+    ['menu:menu-a', 'menu:menu-a'],
+    ['story:story-a', 'story:story-a'],
+    ['story_play:story-a', 'story_play:story-a'],
+    ['story_home_step:story-a', 'story_home_step:story-a'],
+  ];
+  for (const [value, expected] of cases) {
+    const normalized = normalizeProjectData({
+      globalOptions: {},
+      nightModeReturn: value,
+      nightModeHomeReturn: value,
+      rootEntries: [],
+    });
+    assert.equal(normalized.nightModeReturn, expected);
+    assert.equal(normalized.nightModeHomeReturn, expected);
+  }
+});
+
 test('migrates a legacy convention name to pack metadata', () => {
   const migrated = normalizeProjectData(migrateProjectData({
     name: '3+]Les_histoires_de_Mini-loup[by_funkyfoenky_V2',

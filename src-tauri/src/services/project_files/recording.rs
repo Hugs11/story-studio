@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::project_dir_from_save_path;
+use super::workspace_or_project_dir;
 use crate::support::paths::path_for_frontend;
 
 pub(super) const MAX_RECORDING_BYTES: usize = 100 * 1024 * 1024;
@@ -55,20 +55,11 @@ pub(crate) fn save_recording(
     }
 
     let file_name = validate_recording_filename(filename)?;
-    let project_dir = workspace_dir
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            save_path
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .and_then(|value| project_dir_from_save_path(value).ok())
-        })
-        .ok_or_else(|| {
-            "Definissez un emplacement de travail ou sauvegardez le projet avant d'enregistrer un audio."
-                .to_string()
-        })?;
+    let project_dir = workspace_or_project_dir(
+        workspace_dir,
+        save_path,
+        "Definissez un emplacement de travail ou sauvegardez le projet avant d'enregistrer un audio.",
+    )?;
     let recordings_dir = project_dir.join("enregistrements");
     fs::create_dir_all(&recordings_dir)
         .map_err(|e| format!("Impossible de creer le dossier d'enregistrements : {}", e))?;
@@ -76,5 +67,5 @@ pub(crate) fn save_recording(
 
     fs::write(&file_path, data)
         .map_err(|e| format!("Impossible de sauvegarder l'enregistrement : {}", e))?;
-    Ok(path_for_frontend(&file_path.to_string_lossy()))
+    Ok(path_for_frontend(&file_path))
 }

@@ -44,7 +44,12 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
         'voix détectées',
       );
       const deviceLabel = status.device === 'cuda' ? 'GPU CUDA' : status.device === 'cpu' ? 'CPU' : 'device inconnu';
-      setXttsProbe({ state: 'ok', message: `Serveur prêt sur ${deviceLabel} • ${voicesLabel}` });
+      const modelLabel = status.model || 'modèle inconnu';
+      const voiceNames = voices.length > 0 ? ` • ${voices.join(', ')}` : '';
+      setXttsProbe({
+        state: 'ok',
+        message: `Serveur prêt • ${modelLabel} • ${deviceLabel} • ${voicesLabel}${voiceNames}`,
+      });
     } catch (e) {
       setXttsProbe({ state: 'error', message: String(e) });
     }

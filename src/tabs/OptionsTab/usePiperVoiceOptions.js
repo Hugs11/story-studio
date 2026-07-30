@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { KEYS, write } from '../../store/persistentSettings';
-import { PIPER_DEFAULT_SENTENCE_SILENCE, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
+import { PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
@@ -13,9 +13,6 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   const piperSpeed = Number.isFinite(Number(xttsSettings.piperSpeed)) && Number(xttsSettings.piperSpeed) > 0
     ? Number(xttsSettings.piperSpeed)
     : 1.0;
-  const piperSentenceSilence = Number.isFinite(Number(xttsSettings.piperSentenceSilence))
-    ? Math.max(0, Math.min(1.5, Number(xttsSettings.piperSentenceSilence)))
-    : PIPER_DEFAULT_SENTENCE_SILENCE;
 
   // Catalogue Piper (voix installées + à télécharger). Aucun réseau : lecture
   // locale de l'état d'installation.
@@ -53,13 +50,6 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
     }
   }
 
-  function updatePiperSentenceSilence(rawValue) {
-    const value = Number(rawValue);
-    if (Number.isFinite(value)) {
-      onUpdateXttsSettings({ piperSentenceSilence: Math.max(0, Math.min(1.5, value)) });
-    }
-  }
-
   async function preparePiperVoice() {
     setPiperProvision({ state: 'loading', message: 'Préparation de la voix…' });
     try {
@@ -78,10 +68,8 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
     piperProvision,
     piperVoice,
     piperSpeed,
-    piperSentenceSilence,
     updatePiperVoice,
     updatePiperSpeed,
-    updatePiperSentenceSilence,
     preparePiperVoice,
   };
 }

@@ -8,8 +8,12 @@ use std::process::{Command, Stdio};
 use crate::services::project_files::{validate_existing_dir_path, validate_existing_file_path};
 use crate::support::archive_limits::{ARCHIVE_MAX_ENTRIES, ARCHIVE_MAX_FILE_BYTES};
 use crate::support::ffmpeg::{apply_no_window, now_millis};
+use crate::support::tool_resolver::{
+    path_dirs, push_candidate, push_development_candidates, push_path_candidates,
+    push_resource_candidates, resolve_regular_file, resource_dir,
+};
 
-const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
+pub(crate) const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
 // Incrémenter à chaque évolution du story.json produit par la conversion (voir
 // cache_key_for_source) pour ignorer les zips convertis par une version antérieure.
 const CONVERSION_FORMAT_VERSION: &str = "v2-root-uuid";
@@ -103,13 +107,16 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
 
 /// Convertit un **dossier brut** de pack Lunii (pris directement sur la carte SD :
 /// pack filesystem `ri/si/li/ni/...` ou pack Studio `story.json + assets/`) en un
-/// ZIP Studio mis en cache sous `temp/`, et renvoie son chemin. Aucune archive
-/// intermédiaire : on localise la racine du pack dans le dossier puis on convertit.
-pub(crate) fn ensure_studio_pack_zip_from_dir(dir: &str) -> Result<PathBuf, String> {
+/// ZIP Studio mis en cache dans le dossier applicatif fourni, et renvoie son chemin.
+/// Les fichiers de travail restent dans le temporaire système car ils ne quittent
+/// jamais le backend.
+pub(crate) fn ensure_studio_pack_zip_from_dir(
+    dir: &str,
+    cache_dir: &Path,
+) -> Result<PathBuf, String> {
     let source = validate_existing_dir_path(dir, "Dossier de pack importe")?;
 
-    let cache_dir = std::env::temp_dir().join(IMPORTED_PACK_CACHE_DIR);
-    fs::create_dir_all(&cache_dir).map_err(|e| {
+    fs::create_dir_all(cache_dir).map_err(|e| {
         format!(
             "Impossible de creer le cache des archives importees : {}",
             e
@@ -303,13 +310,27 @@ fn extract_zip_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
             })?;
         }
 
-        let mut out = fs::File::create(&target).map_err(|e| {
-            format!(
-                "Impossible de creer le fichier extrait {} : {}",
-                target.display(),
-                e
-            )
-        })?;
+        let mut out = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                return Err(format!(
+                    "Collision de nom pendant l'extraction de {} : {} existe deja sur ce volume.",
+                    source.display(),
+                    target.display()
+                ));
+            }
+            Err(error) => {
+                return Err(format!(
+                    "Impossible de creer le fichier extrait {} : {}",
+                    target.display(),
+                    error
+                ));
+            }
+        };
         std::io::copy(&mut entry, &mut out).map_err(|e| {
             format!(
                 "Impossible d'extraire {} depuis {} : {}",
@@ -369,15 +390,23 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
         {
             let entry = entry.map_err(|e| format!("Lecture dossier impossible : {}", e))?;
             let path = entry.path();
-            let metadata = entry
-                .metadata()
+            let metadata = fs::symlink_metadata(&path)
                 .map_err(|e| format!("Metadonnees inaccessibles {} : {}", path.display(), e))?;
+            if metadata.file_type().is_symlink() {
+                return Err(format!(
+                    "Archive refusee : lien symbolique extrait interdit ({})",
+                    path.display()
+                ));
+            }
             if metadata.is_dir() {
                 stack.push(path);
                 continue;
             }
             if !metadata.is_file() {
-                continue;
+                return Err(format!(
+                    "Archive refusee : entree extraite non reguliere ({})",
+                    path.display()
+                ));
             }
 
             file_count += 1;
@@ -404,75 +433,86 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn resolve_7z_path() -> Result<PathBuf, String> {
-    // Override via variable d'environnement — développement uniquement.
-    // En release, seul le binaire bundlé est accepté.
-    #[cfg(debug_assertions)]
-    if let Ok(override_path) = std::env::var("STORY_STUDIO_7Z_PATH") {
-        let path = PathBuf::from(override_path);
-        if path.exists() {
-            return Ok(path);
-        }
+fn seven_zip_binary_names(platform: &str) -> &'static [&'static str] {
+    if platform == "windows" {
+        &["7z.exe"]
+    } else {
+        &["7zz", "7z"]
     }
-
-    // Binaire bundlé (priorité absolue en release et en debug)
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let bundled = dir.join("tools").join("7z.exe");
-            if bundled.exists() {
-                return Ok(bundled);
-            }
-            let sibling = dir.join("7z.exe");
-            if sibling.exists() {
-                return Ok(sibling);
-            }
-        }
-    }
-
-    if let Ok(cwd) = std::env::current_dir() {
-        for base in cwd.ancestors() {
-            let candidate = base.join("tools").join("7z.exe");
-            if candidate.exists() {
-                return Ok(candidate);
-            }
-        }
-    }
-
-    // Fallbacks système — debug uniquement.
-    // En release le binaire bundlé dans tools/ est requis.
-    #[cfg(debug_assertions)]
-    {
-        for candidate in [
-            PathBuf::from(r"C:\Program Files\7-Zip\7z.exe"),
-            PathBuf::from(r"C:\Program Files\NVIDIA Corporation\NVIDIA App\7z.exe"),
-        ] {
-            if candidate.exists() {
-                return Ok(candidate);
-            }
-        }
-
-        if let Some(found) = find_in_path("7z.exe") {
-            return Ok(found);
-        }
-    }
-
-    Err("7z.exe introuvable. Installez 7-Zip ou placez 7z.exe dans tools/.".to_string())
 }
 
-#[cfg(debug_assertions)]
-fn find_in_path(executable: &str) -> Option<PathBuf> {
-    let path_env = std::env::var_os("PATH")?;
-    for dir in std::env::split_paths(&path_env) {
-        let dir_str = dir.to_string_lossy();
-        if dir_str.contains("WindowsApps") {
-            continue;
-        }
-        let candidate = dir.join(executable);
-        if candidate.exists() {
-            return Some(candidate);
+struct SevenZipResolutionContext<'a> {
+    platform: &'a str,
+    architecture: &'a str,
+    debug: bool,
+    override_path: Option<PathBuf>,
+    resource_dir: Option<PathBuf>,
+    current_exe: Option<PathBuf>,
+    cwd: Option<PathBuf>,
+    path_dirs: Vec<PathBuf>,
+}
+
+fn seven_zip_candidates(context: &SevenZipResolutionContext<'_>) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    let names = seven_zip_binary_names(context.platform);
+
+    if context.debug {
+        if let Some(path) = &context.override_path {
+            push_candidate(&mut candidates, path.clone());
         }
     }
-    None
+
+    push_resource_candidates(&mut candidates, context.resource_dir.as_deref(), names);
+
+    if context.platform == "windows" {
+        if let Some(exe_dir) = context.current_exe.as_deref().and_then(Path::parent) {
+            for name in names {
+                push_candidate(&mut candidates, exe_dir.join("tools").join(name));
+                push_candidate(&mut candidates, exe_dir.join(name));
+            }
+        }
+    }
+
+    if context.debug {
+        push_development_candidates(
+            &mut candidates,
+            context.cwd.as_deref(),
+            context.platform,
+            context.architecture,
+            names,
+        );
+        if context.platform == "windows" {
+            for candidate in [
+                PathBuf::from(r"C:\Program Files\7-Zip\7z.exe"),
+                PathBuf::from(r"C:\Program Files\NVIDIA Corporation\NVIDIA App\7z.exe"),
+            ] {
+                push_candidate(&mut candidates, candidate);
+            }
+        }
+        let filtered_path_dirs = context
+            .path_dirs
+            .iter()
+            .filter(|dir| !dir.to_string_lossy().contains("WindowsApps"))
+            .cloned()
+            .collect::<Vec<_>>();
+        push_path_candidates(&mut candidates, &filtered_path_dirs, names);
+    }
+
+    candidates
+}
+
+fn resolve_7z_path() -> Result<PathBuf, String> {
+    let context = SevenZipResolutionContext {
+        platform: std::env::consts::OS,
+        architecture: std::env::consts::ARCH,
+        debug: cfg!(debug_assertions),
+        override_path: std::env::var_os("STORY_STUDIO_7Z_PATH").map(PathBuf::from),
+        resource_dir: resource_dir(),
+        current_exe: std::env::current_exe().ok(),
+        cwd: std::env::current_dir().ok(),
+        path_dirs: path_dirs(std::env::var_os("PATH")),
+    };
+    resolve_regular_file("7-Zip", seven_zip_candidates(&context))
 }
 
 fn locate_pack_root(extracted_dir: &Path) -> Result<PathBuf, String> {
@@ -625,6 +665,229 @@ mod tests {
         writer.finish().expect("finish zip");
     }
 
+    fn seven_zip_context(platform: &'static str) -> SevenZipResolutionContext<'static> {
+        SevenZipResolutionContext {
+            platform,
+            architecture: "x86_64",
+            debug: true,
+            override_path: None,
+            resource_dir: None,
+            current_exe: None,
+            cwd: None,
+            path_dirs: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn seven_zip_names_match_platform() {
+        assert_eq!(seven_zip_binary_names("windows"), &["7z.exe"]);
+        assert_eq!(seven_zip_binary_names("linux"), &["7zz", "7z"]);
+        assert_eq!(seven_zip_binary_names("macos"), &["7zz", "7z"]);
+    }
+
+    #[test]
+    fn seven_zip_override_precedes_packaged_resource() {
+        let dir = temp_import_dir("seven_zip_override");
+        let override_path = dir.join("custom 7z");
+        let resource_path = dir.join("resources/tools/7z");
+        fs::create_dir_all(resource_path.parent().expect("resource parent"))
+            .expect("create resource dir");
+        fs::write(&override_path, b"override").expect("write override");
+        fs::write(&resource_path, b"resource").expect("write resource");
+
+        let mut context = seven_zip_context("linux");
+        context.override_path = Some(override_path.clone());
+        context.resource_dir = Some(dir.join("resources"));
+        let resolved = resolve_regular_file("7-Zip", seven_zip_candidates(&context))
+            .expect("resolve override");
+        assert_eq!(resolved, override_path);
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn seven_zip_packaged_resource_precedes_development_and_path() {
+        let dir = temp_import_dir("seven_zip_resource");
+        let resource_path = dir.join("resources/tools/7z");
+        let dev_path = dir.join("src-tauri/tools/linux/7z");
+        let path_binary = dir.join("bin/7z");
+        for path in [&resource_path, &dev_path, &path_binary] {
+            fs::create_dir_all(path.parent().expect("parent")).expect("create parent");
+            fs::write(path, b"tool").expect("write tool");
+        }
+
+        let mut context = seven_zip_context("linux");
+        context.resource_dir = Some(dir.join("resources"));
+        context.cwd = Some(dir.clone());
+        context.path_dirs = vec![dir.join("bin")];
+        let resolved = resolve_regular_file("7-Zip", seven_zip_candidates(&context))
+            .expect("resolve resource");
+        assert_eq!(resolved, resource_path);
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn seven_zip_missing_error_lists_candidates() {
+        let dir = temp_import_dir("seven_zip_missing");
+        let mut context = seven_zip_context("linux");
+        context.resource_dir = Some(dir.join("resources"));
+        let error = resolve_regular_file("7-Zip", seven_zip_candidates(&context))
+            .expect_err("missing tool");
+        assert!(error.contains("7-Zip introuvable"));
+        assert!(error.contains(
+            &dir.join("resources")
+                .join("tools")
+                .join("7zz")
+                .display()
+                .to_string()
+        ));
+        assert!(error.contains(
+            &dir.join("resources")
+                .join("tools")
+                .join("7z")
+                .display()
+                .to_string()
+        ));
+    }
+
+    #[test]
+    fn extracts_small_seven_zip_fixture_when_tool_is_available() {
+        let Ok(seven_zip) = resolve_7z_path() else {
+            return;
+        };
+        let dir = temp_import_dir("seven_zip_fixture").join("Dossier Été");
+        let source_dir = dir.join("source avec espaces");
+        let archive = dir.join("Pack Été.7z");
+        let extracted = dir.join("extrait avec espaces");
+        fs::create_dir_all(source_dir.join("assets/Médias été")).expect("create fixture source");
+        fs::write(
+            source_dir.join("story.json"),
+            br#"{"title":"Fixture 7z","stageNodes":[]}"#,
+        )
+        .expect("write fixture story");
+        fs::write(source_dir.join("assets/Médias été/A.txt"), b"upper")
+            .expect("write uppercase fixture asset");
+        fs::write(source_dir.join("assets/Médias été/a.txt"), b"lower")
+            .expect("write lowercase fixture asset");
+        let supports_case_distinct_files = fs::read(source_dir.join("assets/Médias été/A.txt"))
+            .expect("read source case probe")
+            == b"upper";
+        fs::create_dir_all(&extracted).expect("create extraction dir");
+
+        let mut create = Command::new(&seven_zip);
+        apply_no_window(&mut create);
+        let output = create
+            .current_dir(&source_dir)
+            .args(["a", "-y"])
+            .arg(&archive)
+            .arg("story.json")
+            .arg("assets")
+            .output()
+            .expect("launch 7-Zip fixture creation");
+        assert!(
+            output.status.success(),
+            "7-Zip fixture creation failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        extract_7z_archive(&archive, &extracted).expect("extract fixture");
+        assert!(extracted.join("story.json").is_file());
+        if supports_case_distinct_files {
+            assert_eq!(
+                fs::read(extracted.join("assets/Médias été/A.txt")).expect("read uppercase asset"),
+                b"upper"
+            );
+        }
+        assert_eq!(
+            fs::read(extracted.join("assets/Médias été/a.txt")).expect("read lowercase asset"),
+            b"lower"
+        );
+
+        fs::remove_dir_all(dir.parent().expect("temp import parent"))
+            .expect("cleanup temp import dir");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn extracted_tree_validation_rejects_symbolic_links() {
+        use std::os::unix::fs::symlink;
+
+        let dir = temp_import_dir("seven_zip_symlink");
+        let extracted = dir.join("extracted");
+        let outside = dir.join("outside");
+        fs::create_dir_all(&extracted).expect("create extracted");
+        fs::create_dir_all(&outside).expect("create outside");
+        symlink(&outside, extracted.join("linked")).expect("create symlink");
+
+        let error = validate_extracted_tree_limits(&extracted).expect_err("reject symlink");
+        assert!(error.contains("lien symbolique"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn extracts_zip_with_spaces_accents_and_case_distinct_entries() {
+        let dir = temp_import_dir("zip_unicode_case").join("Dossier Été");
+        let archive = dir.join("Pack Été.zip");
+        let extracted = dir.join("extrait avec espaces");
+        write_zip(
+            &archive,
+            &[
+                ("story.json", br#"{"title":"Fixture ZIP","stageNodes":[]}"#),
+                ("assets/Médias été/A.txt", b"upper"),
+                ("assets/Médias été/a.txt", b"lower"),
+            ],
+        );
+        fs::create_dir_all(&extracted).expect("create zip extraction dir");
+
+        match extract_zip_archive(&archive, &extracted) {
+            Ok(()) => {
+                assert_eq!(
+                    fs::read(extracted.join("assets/Médias été/A.txt"))
+                        .expect("read uppercase zip asset"),
+                    b"upper"
+                );
+                assert_eq!(
+                    fs::read(extracted.join("assets/Médias été/a.txt"))
+                        .expect("read lowercase zip asset"),
+                    b"lower"
+                );
+            }
+            Err(error) => assert!(
+                error.contains("Collision de nom"),
+                "unexpected extraction error: {error}"
+            ),
+        }
+
+        fs::remove_dir_all(dir.parent().expect("temp import parent"))
+            .expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn duplicate_zip_targets_are_rejected_instead_of_overwritten() {
+        let dir = temp_import_dir("zip_duplicate_target");
+        let archive = dir.join("duplicate.zip");
+        let extracted = dir.join("extracted");
+        write_zip(
+            &archive,
+            &[("story.json", br#"{"title":"Archive","stageNodes":[]}"#)],
+        );
+        fs::create_dir_all(&extracted).expect("create zip extraction dir");
+        fs::write(extracted.join("story.json"), b"existing")
+            .expect("write existing extraction target");
+
+        let error = extract_zip_archive(&archive, &extracted)
+            .expect_err("reject duplicate extraction target");
+        assert!(error.contains("Collision de nom"));
+        assert_eq!(
+            fs::read(extracted.join("story.json")).expect("read preserved extraction target"),
+            b"existing"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
     #[test]
     fn ensure_studio_pack_zip_returns_valid_studio_zip_source() {
         let dir = temp_import_dir("studio_zip");
@@ -692,6 +955,7 @@ mod tests {
     fn ensure_studio_pack_zip_from_dir_converts_studio_directory() {
         let dir = temp_import_dir("studio_dir");
         let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache applicatif");
         fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
         fs::write(
             pack_dir.join("story.json"),
@@ -700,8 +964,10 @@ mod tests {
         .expect("write story.json");
         fs::write(pack_dir.join("assets").join("a.png"), b"png").expect("write asset");
 
-        let zip = ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"))
-            .expect("convert studio directory");
+        let zip =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("path utf8"), &cache_dir)
+                .expect("convert studio directory");
+        assert_eq!(zip.parent(), Some(cache_dir.as_path()));
         assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
 
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
@@ -710,10 +976,11 @@ mod tests {
     #[test]
     fn ensure_studio_pack_zip_from_dir_rejects_non_pack_directory() {
         let dir = temp_import_dir("non_pack_dir");
+        let cache_dir = dir.join("cache");
         fs::create_dir_all(&dir).expect("create temp dir");
         fs::write(dir.join("readme.txt"), b"not a pack").expect("write file");
 
-        let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"))
+        let err = ensure_studio_pack_zip_from_dir(dir.to_str().expect("path utf8"), &cache_dir)
             .expect_err("reject non-pack directory");
         assert!(err.contains("Aucun pack Lunii reconnu") || err.contains("non reconnue"));
 

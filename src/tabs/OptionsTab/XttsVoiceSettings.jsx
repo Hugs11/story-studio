@@ -46,7 +46,7 @@ export function XttsVoiceSettings({
             className="xtts-input"
             value={xttsSettings.xttsDir}
             onChange={(e) => updateXttsDir(e.target.value)}
-            placeholder="C:\\chemin\\vers\\XTTS"
+            placeholder="Dossier contenant server.py, venv, models et voices"
           />
         </label>
 

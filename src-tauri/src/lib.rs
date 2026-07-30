@@ -4,15 +4,14 @@ mod native_pack;
 mod services;
 mod support;
 
-fn cleanup_temp_image_dir(dir_name: &str) {
-    let dir = std::env::temp_dir().join(dir_name);
+fn cleanup_old_files_in_dir(dir: &std::path::Path, max_age: std::time::Duration) {
     if !dir.is_dir() {
         return;
     }
     let cutoff = std::time::SystemTime::now()
-        .checked_sub(std::time::Duration::from_secs(24 * 3600))
+        .checked_sub(max_age)
         .unwrap_or(std::time::UNIX_EPOCH);
-    if let Ok(entries) = std::fs::read_dir(&dir) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if !path.is_file() {
@@ -30,15 +29,15 @@ fn cleanup_temp_image_dir(dir_name: &str) {
 }
 
 fn cleanup_temp_images() {
-    let max_age = std::time::Duration::from_secs(24 * 3600);
     for dir_name in [
         support::temp::TEMP_IMAGES_DIR,
         support::temp::LEGACY_TEMP_IMAGES_DIR,
     ] {
-        cleanup_temp_image_dir(dir_name);
+        cleanup_old_files_in_dir(
+            &std::env::temp_dir().join(dir_name),
+            std::time::Duration::from_secs(24 * 3600),
+        );
     }
-    services::project_files::cleanup_old_audio_previews(max_age);
-    support::temp::cleanup_orphan_session_workspaces(max_age);
 }
 
 fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
@@ -77,8 +76,67 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             use tauri::Manager;
+            #[cfg(target_os = "linux")]
+            {
+                let default_icon = app.default_window_icon().cloned();
+                if let Some(window) = app.get_webview_window("main") {
+                    if let Some(icon) = default_icon {
+                        if let Err(error) = window.set_icon(icon) {
+                            log::warn!(
+                                target: "boot",
+                                "Linux window icon could not be applied: {error}"
+                            );
+                        }
+                    }
+                    let pinch_window = window.clone();
+                    if let Err(error) = window.with_webview(move |platform_webview| {
+                        if let Err(error) =
+                            support::linux_webview_gestures::install_diagram_pinch_bridge(
+                                pinch_window,
+                                platform_webview,
+                            )
+                        {
+                            log::warn!(
+                                target: "diagram",
+                                "Linux diagram pinch bridge could not be installed: {error}"
+                            );
+                        }
+                    }) {
+                        log::warn!(
+                            target: "diagram",
+                            "Linux WebView is unavailable for diagram pinch handling: {error}"
+                        );
+                    }
+                }
+            }
+            let resource_dir = app
+                .path()
+                .resource_dir()
+                .map_err(|error| format!("Dossier de ressources Tauri inaccessible : {error}"))?;
+            support::tool_resolver::initialize_resource_dir(resource_dir);
             if let Ok(dir) = app.path().app_log_dir() {
                 commands::diagnostics::prune_old_log_files(&dir, 3);
+            }
+            if let Ok(dir) = app.path().app_cache_dir() {
+                std::thread::spawn(move || {
+                    let max_age = std::time::Duration::from_secs(24 * 3600);
+                    support::temp::cleanup_orphan_session_workspaces(
+                        &dir.join(support::temp::SESSION_WORKSPACES_DIR),
+                        max_age,
+                    );
+                    services::project_files::cleanup_old_audio_previews(
+                        &dir.join(support::temp::AUDIO_PREVIEWS_DIR),
+                        max_age,
+                    );
+                    for cache_dir in [
+                        support::temp::TEMP_IMAGES_DIR,
+                        support::temp::PODCAST_MEDIA_DIR,
+                        support::temp::YOUTUBE_MEDIA_DIR,
+                        support::imported_pack::IMPORTED_PACK_CACHE_DIR,
+                    ] {
+                        cleanup_old_files_in_dir(&dir.join(cache_dir), max_age);
+                    }
+                });
             }
             log::warn!(target: "boot",
                 "Story Studio {} started (os = {})",

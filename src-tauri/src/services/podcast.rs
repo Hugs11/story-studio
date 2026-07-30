@@ -12,8 +12,8 @@ use std::time::Duration;
 use serde::Serialize;
 
 use crate::support::network::http_client;
+use crate::support::paths::path_for_frontend;
 
-const TEMP_PODCAST_DIR: &str = "story_studio_podcast";
 const MAX_FEED_BYTES: u64 = 10 * 1024 * 1024; // 10 Mo
 const MAX_MEDIA_BYTES: u64 = 300 * 1024 * 1024; // 300 Mo
 const FEED_TIMEOUT: Duration = Duration::from_secs(30);
@@ -85,7 +85,7 @@ pub fn fetch_feed(url: &str) -> Result<PodcastFeed, String> {
     parse_feed(cleaned)
 }
 
-pub fn download_media(url: &str, file_name: &str) -> Result<String, String> {
+pub fn download_media(output_dir: &Path, url: &str, file_name: &str) -> Result<String, String> {
     let parsed = validate_remote_url(url)?;
     let client = http_client(MEDIA_TIMEOUT)?;
     let response = client
@@ -106,17 +106,16 @@ pub fn download_media(url: &str, file_name: &str) -> Result<String, String> {
     let ext = extension_for(content_type.as_deref(), &parsed);
     let stem = sanitize_stem(file_name);
 
-    let dir = std::env::temp_dir().join(TEMP_PODCAST_DIR);
-    fs::create_dir_all(&dir)
+    fs::create_dir_all(output_dir)
         .map_err(|e| format!("Création du dossier temporaire impossible : {}", e))?;
-    let dest = unique_path(&dir, &stem, &ext);
+    let dest = unique_path(output_dir, &stem, &ext);
 
     let bytes = read_limited(response, MAX_MEDIA_BYTES)?;
     if bytes.is_empty() {
         return Err("Fichier téléchargé vide.".to_string());
     }
     fs::write(&dest, &bytes).map_err(|e| format!("Écriture du fichier impossible : {}", e))?;
-    Ok(dest.to_string_lossy().to_string())
+    Ok(path_for_frontend(&dest))
 }
 
 fn parse_feed(xml: &str) -> Result<PodcastFeed, String> {

@@ -87,8 +87,8 @@ pub(crate) fn discard_audio_preview_in(
         .map_err(|error| format!("Impossible de supprimer l'aperçu audio : {}", error))
 }
 
-pub fn discard_audio_preview(preview_path: &str) -> Result<(), String> {
-    discard_audio_preview_in(Path::new(preview_path), &std::env::temp_dir())
+pub fn discard_audio_preview(preview_path: &str, preview_root: &Path) -> Result<(), String> {
+    discard_audio_preview_in(Path::new(preview_path), preview_root)
 }
 
 pub(crate) fn cleanup_old_audio_previews_in(
@@ -138,8 +138,8 @@ pub(crate) fn cleanup_old_audio_previews_in(
     Ok(report)
 }
 
-pub fn cleanup_old_audio_previews(max_age: Duration) {
-    match cleanup_old_audio_previews_in(&std::env::temp_dir(), max_age, SystemTime::now()) {
+pub fn cleanup_old_audio_previews(preview_root: &Path, max_age: Duration) {
+    match cleanup_old_audio_previews_in(preview_root, max_age, SystemTime::now()) {
         Ok(report) if report.errors > 0 => {
             log::warn!(
                 target: "audio_preview",

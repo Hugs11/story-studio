@@ -17,7 +17,7 @@ export function classifyOsDroppedFiles(paths) {
 }
 
 // Retourne true si le projet a du contenu (= mérite d'être sauvegardé)
-export function isProjectDirty(project) {
+function isProjectDirty(project) {
   if (!project) return false;
   if (project.projectType !== null) return true;
   let hasEntries = false;
@@ -100,7 +100,7 @@ export function shouldPromptRegenerateImportedUuid(metadata) {
 }
 
 export function buildTransferPromptSignature(savePath, candidates) {
-  return `${savePath}::${candidates.map((candidate) => candidate.path.toLowerCase()).sort().join('|')}`;
+  return `${pathKey(savePath)}::${candidates.map((candidate) => pathKey(candidate.path)).sort().join('|')}`;
 }
 
 export function shouldAbortEphemeralPromotion({ isEphemeralSession = false, transferErrors = [] } = {}) {

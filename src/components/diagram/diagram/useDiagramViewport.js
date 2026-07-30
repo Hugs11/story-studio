@@ -5,6 +5,7 @@ import { clampZoom } from '../flowDiagramLayout';
 import {
   centerDiagramNode,
   fitDiagramViewport,
+  getPinchZoomFactor,
   getWheelZoomFactor,
   isDiagramSearchWheelEvent,
   isDiagramWheelOwnedByExternalSurface,
@@ -162,6 +163,7 @@ export function useDiagramViewport({
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return undefined;
+    const pinchState = { active: false, scale: 1 };
 
     function handleWheel(event) {
       if (isDiagramSearchWheelEvent(event)
@@ -188,11 +190,73 @@ export function useDiagramViewport({
       handleZoom(scaleFactor, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
 
+    function handlePinch({ phase, scale, clientX, clientY }, sourceEvent = null) {
+      sourceEvent?.preventDefault?.();
+      if (phase === 'begin') {
+        pinchState.active = true;
+        pinchState.scale = 1;
+        return;
+      }
+      if (phase === 'end') {
+        pinchState.active = false;
+        pinchState.scale = 1;
+        return;
+      }
+      if (phase !== 'change') return;
+
+      const nextScale = Number(scale);
+      const previousScale = pinchState.active ? pinchState.scale : 1;
+      pinchState.active = true;
+      if (Number.isFinite(nextScale) && nextScale > 0) {
+        pinchState.scale = nextScale;
+      }
+
+      const rect = node.getBoundingClientRect();
+      const x = Number(clientX);
+      const y = Number(clientY);
+      if (!Number.isFinite(x) || !Number.isFinite(y)
+        || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+      if (document.elementFromPoint?.(x, y)?.closest?.('.fd-diagram-search')) return;
+
+      handleZoom(
+        getPinchZoomFactor(nextScale, previousScale),
+        { x: x - rect.left, y: y - rect.top },
+      );
+    }
+
+    function handleNativePinch(event) {
+      handlePinch(event.detail ?? {});
+    }
+
+    function handleWebKitGesture(event) {
+      const phase = event.type === 'gesturestart'
+        ? 'begin'
+        : event.type === 'gestureend'
+          ? 'end'
+          : 'change';
+      handlePinch({
+        phase,
+        scale: event.scale,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      }, event);
+    }
+
     // Capture au niveau fenêtre : WebView2 peut envoyer le pincement trackpad à
     // une couche interne du diagramme, voire laisser un composant l'intercepter
     // avant la remontée vers le stage.
     window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-    return () => window.removeEventListener('wheel', handleWheel, true);
+    window.addEventListener('story-studio:native-pinch', handleNativePinch);
+    for (const eventName of ['gesturestart', 'gesturechange', 'gestureend']) {
+      window.addEventListener(eventName, handleWebKitGesture, { passive: false, capture: true });
+    }
+    return () => {
+      window.removeEventListener('wheel', handleWheel, true);
+      window.removeEventListener('story-studio:native-pinch', handleNativePinch);
+      for (const eventName of ['gesturestart', 'gesturechange', 'gestureend']) {
+        window.removeEventListener(eventName, handleWebKitGesture, true);
+      }
+    };
   }, [handleZoom]);
 
   const updateLayoutStats = useCallback((layout, navigationEdgeCount) => {
