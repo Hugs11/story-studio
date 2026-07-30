@@ -1,22 +1,27 @@
 # Contributing to Story Studio
 
-Thanks for your interest in contributing. Story Studio is a Windows desktop app with a React frontend and a Tauri/Rust backend, so the project values focused pull requests, reproducible testing, and clear release notes.
+Thanks for your interest in contributing. Story Studio is a cross-platform
+desktop app for Windows x64, Linux x86_64 and macOS Apple Silicon, with a React
+frontend and a Tauri/Rust backend. The project values focused pull requests,
+reproducible testing and clear release notes.
 
 ## Development Setup
 
-```powershell
+```sh
 git clone https://github.com/hugs11/story-studio.git
 cd story-studio
 npm install
-npm run tauri dev
+npm run tauri:dev
 ```
 
 Prerequisites:
 
-- Windows 10 or later
 - Node.js 20.19+ or 22.12+ (required by Vite 8)
 - Rust stable
-- [Tauri v2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/)
+- [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for your
+  target platform
+- Windows 10 or later, a supported glibc-based Linux distribution, or macOS 11
+  or later on Apple Silicon
 
 The dev server runs on `localhost:1420` with hot reload. The Rust backend recompiles automatically when you save a `.rs` file.
 
@@ -29,11 +34,13 @@ npm run tauri dev
 
 ## Useful Commands
 
-```powershell
+```sh
+npm run check:version
+npm run lint
+node --test scripts/*.test.mjs
 npm run build
-npm run tauri build
+npm run tauri:build
 cd src-tauri
-cargo build
 cargo test --all-targets
 cargo clippy --all-targets -- -D warnings
 ```
@@ -80,9 +87,9 @@ Open a GitHub issue using the feature request template. Describe the use case be
 5. Update docs or screenshots when the user experience changes.
 6. Open the PR against `main` and fill in the pull request template.
 
-If you touch `src-tauri/src/native_pack.rs`, run:
+If you touch `src-tauri/src/native_pack/`, run:
 
-```powershell
+```sh
 cd src-tauri
 cargo test --all-targets
 cargo clippy --all-targets -- -D warnings

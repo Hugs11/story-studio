@@ -29,6 +29,18 @@ test('Tauri platform configs resolve with replacement arrays and isolated tool r
   assert.deepEqual(macos.bundle.targets, ['app', 'dmg']);
   assert.equal(windows.bundle.resources['tools/ffmpeg.exe'], 'tools/ffmpeg.exe');
   assert.equal(windows.bundle.resources['tools/7z.exe'], 'tools/7z.exe');
+  assert.equal(
+    windows.bundle.resources['../scripts/assets/windows-platform-tools.json'],
+    'tools/platform-tools.json',
+  );
+  assert.equal(
+    windows.bundle.resources['../scripts/assets/GPL-3.0.txt'],
+    'tools/licenses/GPL-3.0.txt',
+  );
+  assert.equal(
+    windows.bundle.resources['../scripts/assets/7-Zip-License.txt'],
+    'tools/licenses/7-Zip-License.txt',
+  );
   assert.equal(linux.bundle.resources['tools/ffmpeg.exe'], undefined);
   assert.equal(linux.bundle.resources['tools/7z.exe'], undefined);
   assert.equal(linux.bundle.resources['tools/linux-x86_64/ffmpeg'], 'tools/ffmpeg');
@@ -49,6 +61,26 @@ test('Tauri platform configs resolve with replacement arrays and isolated tool r
   );
   assert.equal(linux.bundle.resources['../LICENSE'], 'LICENSE');
   assert.equal(macos.bundle.resources['../LICENSE'], 'LICENSE');
+  for (const config of [windows, linux, macos]) {
+    assert.equal(
+      config.bundle.resources['../THIRD_PARTY_SOURCE_OFFER.md'],
+      'THIRD_PARTY_SOURCE_OFFER.md',
+    );
+  }
+  for (const config of [linux, macos]) {
+    assert.equal(
+      Object.values(config.bundle.resources).includes('tools/licenses/7-Zip-License.txt'),
+      true,
+    );
+  }
+  assert.equal(
+    Object.values(linux.bundle.resources).includes('tools/licenses/GPL-3.0.txt'),
+    true,
+  );
+  assert.equal(
+    Object.values(macos.bundle.resources).includes('tools/licenses/GPL-2.0.txt'),
+    true,
+  );
   assert.equal(linux.app.windows[0].decorations, false);
   assert.equal(macos.app.windows[0].decorations, false);
   for (const [platform, config] of Object.entries({ windows, linux, macos })) {

@@ -219,3 +219,36 @@ test('the immutable GPL license is bundled and integrity-pinned', async () => {
   );
   assert.doesNotMatch(implementation, /gnu\.org/);
 });
+
+test('the immutable GPL v2 license is bundled for the macOS FFmpeg build', async () => {
+  const bytes = await readFile(new URL('./assets/GPL-2.0.txt', import.meta.url));
+  assert.equal(
+    createHash('sha256').update(bytes).digest('hex'),
+    '8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643',
+  );
+  const implementation = await readFile(
+    new URL('./prepare-platform-tools.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(implementation, /license: 'GPL-2\.0-or-later'/);
+  assert.match(implementation, /licenseFile: 'GPL-2\.0\.txt'/);
+});
+
+test('redistributed platform tools include immutable local license texts', async () => {
+  const [sevenZipLicense, appImageRuntimeLicense, windowsManifest] = await Promise.all([
+    readFile(new URL('./assets/7-Zip-License.txt', import.meta.url)),
+    readFile(new URL('./assets/AppImage-type2-runtime-LICENSE.txt', import.meta.url)),
+    readFile(new URL('./assets/windows-platform-tools.json', import.meta.url), 'utf8'),
+  ]);
+  assert.equal(
+    createHash('sha256').update(sevenZipLicense).digest('hex'),
+    '477e15d4033026edb25d36c9f078bb0beafc9318f6505473648972a536ece263',
+  );
+  assert.equal(
+    createHash('sha256').update(appImageRuntimeLicense).digest('hex'),
+    'aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2230f9c0ca1',
+  );
+  const manifest = JSON.parse(windowsManifest);
+  assert.equal(manifest.tools.ffmpeg.version, '8.1-essentials_build-www.gyan.dev');
+  assert.equal(manifest.tools.sevenZip.version, '25.01');
+});

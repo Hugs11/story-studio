@@ -8,6 +8,9 @@
     "resources": {
       "tools/ffmpeg.exe": "tools/ffmpeg.exe",
       "tools/7z.exe": "tools/7z.exe",
+      "../scripts/assets/windows-platform-tools.json": "tools/platform-tools.json",
+      "../scripts/assets/GPL-3.0.txt": "tools/licenses/GPL-3.0.txt",
+      "../scripts/assets/7-Zip-License.txt": "tools/licenses/7-Zip-License.txt",
       "tools/windows-x86_64/piper/": "tools/piper/"
     }
   }
