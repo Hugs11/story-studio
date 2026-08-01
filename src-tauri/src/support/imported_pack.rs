@@ -54,11 +54,7 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
         let _ = fs::remove_file(&cached_zip);
     }
 
-    let workspace = std::env::temp_dir().join(format!(
-        "story_studio_imported_pack_{}_{}",
-        now_millis(),
-        cache_key,
-    ));
+    let workspace = unique_import_workspace(&cache_key);
     let extracted_dir = workspace.join("extracted");
     let converted_zip = workspace.join("converted.zip");
     fs::create_dir_all(&extracted_dir).map_err(|e| {
@@ -89,18 +85,9 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
     }
     conversion_result?;
 
-    if let Some(parent) = cached_zip.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Impossible de finaliser le cache d'import : {}", e))?;
-    }
-    fs::copy(&converted_zip, &cached_zip).map_err(|e| {
-        format!(
-            "Impossible de mettre en cache l'archive convertie {} : {}",
-            cached_zip.display(),
-            e
-        )
-    })?;
+    let publish_result = publish_cached_zip(&converted_zip, &cached_zip);
     let _ = fs::remove_dir_all(&workspace);
+    publish_result?;
 
     Ok(cached_zip)
 }
@@ -131,11 +118,7 @@ pub(crate) fn ensure_studio_pack_zip_from_dir(
         let _ = fs::remove_file(&cached_zip);
     }
 
-    let workspace = std::env::temp_dir().join(format!(
-        "story_studio_imported_pack_{}_{}",
-        now_millis(),
-        cache_key,
-    ));
+    let workspace = unique_import_workspace(&cache_key);
     let converted_zip = workspace.join("converted.zip");
     fs::create_dir_all(&workspace).map_err(|e| {
         format!(
@@ -154,16 +137,65 @@ pub(crate) fn ensure_studio_pack_zip_from_dir(
     }
     conversion_result?;
 
-    fs::copy(&converted_zip, &cached_zip).map_err(|e| {
-        format!(
-            "Impossible de mettre en cache l'archive convertie {} : {}",
-            cached_zip.display(),
-            e
-        )
-    })?;
+    let publish_result = publish_cached_zip(&converted_zip, &cached_zip);
     let _ = fs::remove_dir_all(&workspace);
+    publish_result?;
 
     Ok(cached_zip)
+}
+
+fn unique_import_workspace(cache_key: &str) -> PathBuf {
+    std::env::temp_dir().join(format!(
+        "story_studio_imported_pack_{}_{}_{}",
+        now_millis(),
+        cache_key,
+        uuid::Uuid::new_v4()
+    ))
+}
+
+fn publish_cached_zip(converted_zip: &Path, cached_zip: &Path) -> Result<(), String> {
+    let parent = cached_zip
+        .parent()
+        .ok_or_else(|| format!("Chemin de cache invalide : {}", cached_zip.display()))?;
+    fs::create_dir_all(parent)
+        .map_err(|e| format!("Impossible de finaliser le cache d'import : {e}"))?;
+
+    if cached_zip.is_file() && zip_contains_story_json(cached_zip).unwrap_or(false) {
+        return Ok(());
+    }
+
+    let cached_name = cached_zip
+        .file_name()
+        .and_then(OsStr::to_str)
+        .unwrap_or("pack.zip");
+    let staged_zip = parent.join(format!(".{cached_name}.{}.tmp", uuid::Uuid::new_v4()));
+    if let Err(error) = fs::copy(converted_zip, &staged_zip) {
+        let _ = fs::remove_file(&staged_zip);
+        return Err(format!(
+            "Impossible de preparer le cache de l'archive convertie {} : {}",
+            cached_zip.display(),
+            error
+        ));
+    }
+
+    if let Err(first_error) = fs::rename(&staged_zip, cached_zip) {
+        if cached_zip.is_file() && zip_contains_story_json(cached_zip).unwrap_or(false) {
+            let _ = fs::remove_file(&staged_zip);
+            return Ok(());
+        }
+        let _ = fs::remove_file(cached_zip);
+        if let Err(second_error) = fs::rename(&staged_zip, cached_zip) {
+            let _ = fs::remove_file(&staged_zip);
+            return Err(format!(
+                "Impossible de publier le cache de l'archive convertie {} : {}; nouvelle tentative : {}",
+                cached_zip.display(),
+                first_error,
+                second_error
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 /// Convertit une racine de pack déjà localisée (Studio ou filesystem) en ZIP Studio.
@@ -566,12 +598,7 @@ fn looks_like_studio_pack_directory(dir: &Path) -> bool {
 }
 
 fn looks_like_fs_pack_directory(dir: &Path) -> bool {
-    dir.join("ri").is_file()
-        && dir.join("si").is_file()
-        && dir.join("li").is_file()
-        && dir.join("ni").is_file()
-        && dir.join("rf").is_dir()
-        && dir.join("sf").is_dir()
+    crate::support::fs_pack_reader::detect_fs_pack_variant(dir).is_some()
 }
 
 fn zip_directory_to_file(source_dir: &Path, output_zip: &Path) -> Result<(), String> {
@@ -640,6 +667,7 @@ fn convert_fs_pack_directory_to_zip(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Barrier};
 
     fn temp_import_dir(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -665,6 +693,18 @@ mod tests {
         writer.finish().expect("finish zip");
     }
 
+    fn minimal_plain_node_index() -> Vec<u8> {
+        let mut ni = vec![0_u8; 512 + 44];
+        ni[2..4].copy_from_slice(&1_i16.to_le_bytes());
+        ni[8..12].copy_from_slice(&44_u32.to_le_bytes());
+        ni[12..16].copy_from_slice(&1_u32.to_le_bytes());
+        let stage = &mut ni[512..];
+        for offset in [0, 4, 8, 12, 16, 20, 24, 28] {
+            stage[offset..offset + 4].copy_from_slice(&(-1_i32).to_le_bytes());
+        }
+        ni
+    }
+
     fn seven_zip_context(platform: &'static str) -> SevenZipResolutionContext<'static> {
         SevenZipResolutionContext {
             platform,
@@ -683,6 +723,110 @@ mod tests {
         assert_eq!(seven_zip_binary_names("windows"), &["7z.exe"]);
         assert_eq!(seven_zip_binary_names("linux"), &["7zz", "7z"]);
         assert_eq!(seven_zip_binary_names("macos"), &["7zz", "7z"]);
+    }
+
+    #[test]
+    fn import_workspaces_are_unique_for_the_same_cache_key() {
+        let first = unique_import_workspace("same-source");
+        let second = unique_import_workspace("same-source");
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn concurrent_plain_archive_conversion_shares_only_complete_cache_files() {
+        let dir = temp_import_dir("concurrent_plain_archive");
+        let archive = dir.join("plain.zip");
+        let ni = minimal_plain_node_index();
+        write_zip(
+            &archive,
+            &[
+                ("ni", &ni),
+                ("ri.plain", b""),
+                ("si.plain", b""),
+                ("li.plain", b""),
+                ("rf/", b""),
+                ("sf/", b""),
+            ],
+        );
+
+        let worker_count = 8;
+        let barrier = Arc::new(Barrier::new(worker_count));
+        let archive_path = Arc::new(
+            archive
+                .to_str()
+                .expect("concurrent archive path utf8")
+                .to_string(),
+        );
+        let handles = (0..worker_count)
+            .map(|_| {
+                let barrier = Arc::clone(&barrier);
+                let archive_path = Arc::clone(&archive_path);
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    ensure_studio_pack_zip(&archive_path)
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let converted = handles
+            .into_iter()
+            .map(|handle| {
+                handle
+                    .join()
+                    .expect("conversion worker panicked")
+                    .expect("concurrent conversion succeeds")
+            })
+            .collect::<Vec<_>>();
+        assert!(converted.windows(2).all(|paths| paths[0] == paths[1]));
+        assert!(zip_contains_story_json(&converted[0]).expect("complete shared cache zip"));
+
+        let _ = fs::remove_file(&converted[0]);
+        fs::remove_dir_all(dir).expect("cleanup concurrent import fixture");
+    }
+
+    #[test]
+    fn concurrent_external_pack_conversion_when_configured() {
+        let Some(archive) = std::env::var_os("STORY_STUDIO_PACK_ARCHIVE") else {
+            return;
+        };
+        let archive = fs::canonicalize(archive).expect("canonical external archive");
+        let cache_key = cache_key_for_source(&archive).expect("external archive cache key");
+        let cached_zip = std::env::temp_dir()
+            .join(IMPORTED_PACK_CACHE_DIR)
+            .join(format!("{cache_key}.zip"));
+        let _ = fs::remove_file(&cached_zip);
+
+        let worker_count = 8;
+        let barrier = Arc::new(Barrier::new(worker_count));
+        let archive_path = Arc::new(
+            archive
+                .to_str()
+                .expect("external archive path utf8")
+                .to_string(),
+        );
+        let handles = (0..worker_count)
+            .map(|_| {
+                let barrier = Arc::clone(&barrier);
+                let archive_path = Arc::clone(&archive_path);
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    crate::services::pack_reader::load_pack_zip(&archive_path)
+                })
+            })
+            .collect::<Vec<_>>();
+
+        for handle in handles {
+            let story_json = handle
+                .join()
+                .expect("external conversion worker panicked")
+                .expect("external concurrent pack loading succeeds");
+            let document: serde_json::Value =
+                serde_json::from_str(&story_json).expect("external story document json");
+            assert!(document.get("stageNodes").is_some());
+        }
+        assert!(zip_contains_story_json(&cached_zip).expect("complete external cache zip"));
+
+        let _ = fs::remove_file(cached_zip);
     }
 
     #[test]
