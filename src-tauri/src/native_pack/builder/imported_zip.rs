@@ -12,6 +12,7 @@ impl<'a> StoryBuilder<'a> {
         zip: &CanonicalZip,
         role_prefix: &str,
         parent_return_transition: Transition,
+        wrapper_home_transition: Option<Transition>,
         wrap_for_selection: bool,
     ) -> Result<String, String> {
         let bundle = self
@@ -144,15 +145,10 @@ impl<'a> StoryBuilder<'a> {
                 pause: false,
                 autoplay: false,
             },
-            // À la racine, parent_return_transition bouclerait vers ce stage wrapper
-            // (root_action[n] == wrapper_stage_id). None évite l'auto-boucle.
-            home_transition: if self.root_action_id.as_deref()
-                == Some(parent_return_transition.action_node.as_str())
-            {
-                None
-            } else {
-                Some(parent_return_transition)
-            },
+            // Le retour interne du ZIP vise sa couverture wrapper, tandis que Home
+            // sur cette couverture revient au sélecteur parent. Réutiliser ici
+            // parent_return_transition sélectionnerait le wrapper lui-même.
+            home_transition: wrapper_home_transition,
             ok_transition: Some(Transition {
                 action_node: wrapper_action_id,
                 option_index: 0,
