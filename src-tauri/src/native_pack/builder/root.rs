@@ -152,6 +152,7 @@ impl<'a> StoryBuilder<'a> {
                 zip,
                 &scoped_label_id("root", &zip.id, &zip.name),
                 transition(root_action_id, root_index as i32),
+                None,
                 root_has_multiple_entries,
             ),
             CanonicalEntry::Ref(reference) => {
