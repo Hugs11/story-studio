@@ -30,6 +30,8 @@ import {
 import { ConformingSection } from './CommunityPackConforming';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
 import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
   isAutomaticSilenceIssue,
   isOptionalSilenceIssue,
   optionalSilenceSelectionKey,
@@ -249,7 +251,8 @@ function issueText(issue) {
 }
 
 function hasMeasureIssue(record, key) {
-  const messages = record.issues.map(issueText);
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
+  const messages = scopedIssues.map(issueText);
   switch (key) {
     case 'format':
       return messages.some((message) => message.includes('format') || message.includes('mono'));
@@ -342,9 +345,7 @@ function buildProblemGroups(report) {
       count: records.length,
       fixCount: section.id === 'title'
         ? records.length
-        : records.reduce((sum, record) => (
-          sum + record.issues.filter((issue) => issue.fixDisposition === 'automatic').length
-        ), 0),
+        : records.reduce((sum, record) => sum + automaticCorrectionCount(record), 0),
       optionalCount: section.id === 'optionalSilence' ? records.length : 0,
     };
   }).filter((group) => group.count > 0);
@@ -444,16 +445,6 @@ function summarizeGroups(groups, report) {
   };
 }
 
-function categoryStats(summary) {
-  const total = summary?.total ?? 0;
-  const ok = summary?.ok ?? 0;
-  return {
-    total,
-    ok,
-    needsFix: Math.max(0, total - ok),
-  };
-}
-
 export function titleNeedsCorrection(report) {
   return (report?.titleSummary?.warnings || 0) > 0 || (report?.titleSummary?.errors || 0) > 0;
 }
@@ -482,9 +473,9 @@ function SplitStat({ ok, needsFix }) {
 }
 
 function SummaryTiles({ report, saturatedCount = 0 }) {
-  const audio = categoryStats(report.audioSummary);
-  const images = categoryStats(report.imageSummary);
-  const title = categoryStats(report.titleSummary);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
@@ -530,7 +521,9 @@ function TechnicalDetail({ record }) {
               key={row.key}
               label={row.label}
               value={row.value}
-              status={hasMeasureIssue(record, row.key) ? 'bad' : 'ok'}
+              status={hasMeasureIssue(record, row.key)
+                ? (record.issue.fixDisposition === 'optional' ? 'info' : 'bad')
+                : 'ok'}
             />
           ))
         ) : record.kind === 'image' ? (

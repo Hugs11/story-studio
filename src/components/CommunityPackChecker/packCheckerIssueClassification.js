@@ -60,3 +60,20 @@ export function packCorrectionCounts(report) {
     optional: report?.optionalCorrectionsAvailable ?? optionalSilenceIssues(report).length,
   };
 }
+
+export function categoryConformanceStats(summary) {
+  const total = summary?.total ?? 0;
+  const conforming = Math.min(total, (summary?.ok ?? 0) + (summary?.infos ?? 0));
+  return {
+    total,
+    ok: conforming,
+    needsFix: Math.max(0, total - conforming),
+  };
+}
+
+export function automaticCorrectionCount(record) {
+  const scopedIssues = record?.sectionIssues?.length
+    ? record.sectionIssues
+    : (record?.issues || []);
+  return scopedIssues.filter((issue) => issue.fixDisposition === 'automatic').length;
+}

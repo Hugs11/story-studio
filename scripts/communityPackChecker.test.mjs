@@ -9,6 +9,8 @@ import {
   reportBaseName,
 } from '../src/components/CommunityPackChecker/communityPackExports.js';
 import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
   isOptionalSilenceIssue,
   optionalSilenceIssues,
   optionalSilenceSelectionKey,
@@ -109,8 +111,30 @@ test('suggestion-only reports stay visibly conforming', () => {
     correctionsAvailable: 0,
     optionalCorrectionsAvailable: 1,
     summary: { errors: 0, warnings: 0, infos: 1, ok: 4 },
+    audioSummary: { total: 1, ok: 0, infos: 1, warnings: 0, errors: 0 },
     issues: [report.issues[1]],
   };
   const html = formatHtmlReport(suggestionOnly);
   assert.match(html, /Pack conforme, avec 1 ajustement facultatif/);
+  assert.match(html, /class="measure measure--info"/);
+  assert.doesNotMatch(html, /class="measure measure--bad"/);
+  assert.deepEqual(categoryConformanceStats(suggestionOnly.audioSummary), {
+    total: 1,
+    ok: 1,
+    needsFix: 0,
+  });
+  assert.match(formatReadableReport(suggestionOnly), /Audio : 1\/1 conformes/);
+});
+
+test('automatic correction counts stay scoped to their displayed group', () => {
+  const silenceIssue = report.issues[0];
+  const volumeIssue = {
+    ...silenceIssue,
+    code: null,
+    message: 'Le volume moyen de cet audio est trop faible.',
+  };
+  assert.equal(automaticCorrectionCount({
+    issues: [silenceIssue, volumeIssue],
+    sectionIssues: [silenceIssue],
+  }), 1);
 });

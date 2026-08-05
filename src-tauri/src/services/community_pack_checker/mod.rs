@@ -241,6 +241,14 @@ fn build_audio_fix_plans(
     report: &ReportModel,
     selection: PackCorrectionSelectionModel,
 ) -> Result<Vec<PlannedAudioFix>, String> {
+    let maximum_selections = report.audio_items.len().saturating_mul(2);
+    if selection.optional_audio_silences.len() > maximum_selections {
+        return Err(format!(
+            "Trop de suggestions audio sélectionnées : {} reçue(s), {} maximum pour ce pack.",
+            selection.optional_audio_silences.len(),
+            maximum_selections
+        ));
+    }
     let selected: HashSet<_> = selection.optional_audio_silences.into_iter().collect();
     for requested in &selected {
         let expected_code = match requested.edge {

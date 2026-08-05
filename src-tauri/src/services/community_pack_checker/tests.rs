@@ -100,6 +100,22 @@ fn optional_audio_silence_selection_is_validated_and_deduplicated() {
     assert!(invalid
         .expect_err("stale selection must fail")
         .contains("inconnue ou obsolète"));
+
+    let excessive = build_audio_fix_plans(
+        &report,
+        models::PackCorrectionSelection {
+            optional_audio_silences: vec![
+                models::OptionalAudioSilenceSelection {
+                    file_path: "assets/test.mp3".to_string(),
+                    edge: models::AudioSilenceEdge::Trailing,
+                };
+                3
+            ],
+        },
+    );
+    assert!(excessive
+        .expect_err("selection count must be bounded")
+        .contains("Trop de suggestions audio sélectionnées"));
 }
 
 #[test]

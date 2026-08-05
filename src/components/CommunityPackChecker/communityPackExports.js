@@ -12,6 +12,8 @@ import {
 } from './packCheckerFormat.js';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing.js';
 import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
   isAutomaticSilenceIssue,
   isOptionalSilenceIssue,
   packCorrectionCounts,
@@ -80,16 +82,6 @@ const ICONS = {
 
 function icon(name) {
   return ICONS[name] || ICONS.info;
-}
-
-function categoryStats(summary) {
-  const total = summary?.total ?? 0;
-  const ok = summary?.ok ?? 0;
-  return {
-    total,
-    ok,
-    needsFix: Math.max(0, total - ok),
-  };
 }
 
 function issueText(issue) {
@@ -273,9 +265,7 @@ function buildProblemGroups(report) {
       count: records.length,
       fixCount: section.id === 'title'
         ? records.length
-        : records.reduce((sum, record) => (
-          sum + record.issues.filter((issue) => issue.fixDisposition === 'automatic').length
-        ), 0),
+        : records.reduce((sum, record) => sum + automaticCorrectionCount(record), 0),
       optionalCount: section.id === 'optionalSilence' ? records.length : 0,
     };
   }).filter((group) => group.count > 0);
@@ -455,11 +445,11 @@ function roleLabel(kind) {
   return 'Fichier';
 }
 
-function measureRowsHtml(rows, badKeys = new Set()) {
+function measureRowsHtml(rows, badKeys = new Set(), infoKeys = new Set()) {
   return rows.map((row) => {
-    const status = badKeys.has(row.key) ? 'bad' : 'ok';
+    const status = infoKeys.has(row.key) ? 'info' : (badKeys.has(row.key) ? 'bad' : 'ok');
     return html`<div class="measure measure--${status}">
-      <span>${icon(status === 'bad' ? 'warning' : 'check')}${escapeHtml(row.label)}</span>
+      <span>${icon(status === 'bad' ? 'warning' : (status === 'info' ? 'info' : 'check'))}${escapeHtml(row.label)}</span>
       <strong>${escapeHtml(row.value)}</strong>
     </div>`;
   }).join('');
@@ -471,11 +461,15 @@ function recordDetailHtml(record) {
   if (record.kind === 'audio') rows = audioMeasureRows(item);
   else if (record.kind === 'image') rows = [...imageMeasureRows(item), { key: 'expected', label: 'Attendu', value: '320×240' }];
   else rows = [{ key: 'category', label: 'Catégorie', value: record.issue.category || 'Info' }];
-  const badKeys = new Set(rows.filter((row) => hasMeasureIssue(record.issues, row.key)).map((row) => row.key));
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
+  const flaggedKeys = new Set(rows.filter((row) => hasMeasureIssue(scopedIssues, row.key)).map((row) => row.key));
+  const optional = record.issue.fixDisposition === 'optional';
+  const badKeys = optional ? new Set() : flaggedKeys;
+  const infoKeys = optional ? flaggedKeys : new Set();
   return html`<div class="tech-detail">
     <div>
       <div class="tech-title">Mesures</div>
-      ${measureRowsHtml(rows, badKeys)}
+      ${measureRowsHtml(rows, badKeys, infoKeys)}
     </div>
     <div>
       <div class="tech-title">Ce qui est proposé</div>
@@ -1061,6 +1055,7 @@ function reportStyles() {
     .measure svg { width: 12px; height: 12px; }
     .measure--ok svg { color: var(--success-text); }
     .measure--bad svg { color: var(--danger-text); }
+    .measure--info svg { color: var(--success-text); }
     .measure strong {
       font-family: var(--mono);
       font-size: 11px;
@@ -1165,9 +1160,9 @@ export function formatHtmlReport(report) {
   const correctionCounts = packCorrectionCounts(report);
   const saturatedCount = saturatedFileCount(groups);
   const conformingGroups = buildConformingGroups(report);
-  const audio = categoryStats(report.audioSummary);
-  const images = categoryStats(report.imageSummary);
-  const title = categoryStats(report.titleSummary);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
@@ -1277,8 +1272,10 @@ export function formatReadableReport(report) {
   lines.push('');
   lines.push(`## Résumé`);
   lines.push('');
-  lines.push(`- Audio : ${report.audioSummary?.ok ?? 0}/${report.audioSummary?.total ?? 0} conformes`);
-  lines.push(`- Images : ${report.imageSummary?.ok ?? 0}/${report.imageSummary?.total ?? 0} conformes`);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  lines.push(`- Audio : ${audio.ok}/${audio.total} conformes`);
+  lines.push(`- Images : ${images.ok}/${images.total} conformes`);
   lines.push(`- Structure Lunii : ${report.structureSummary?.luniiCompatible ? 'valide' : 'à corriger'}`);
   lines.push(`- Édition Story Studio : ${report.structureSummary?.storyStudioEditable ? 'supportée' : 'non supportée ou à vérifier'}`);
   lines.push(`- Mode nuit : ${report.nightMode?.detected ? 'détecté' : 'absent'}`);
