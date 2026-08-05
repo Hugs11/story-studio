@@ -4,21 +4,30 @@ use std::fs::OpenOptions;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 
+use serde::Serialize;
+
 use super::{
     build_story_document, prepare_native_pack_assets_report_with_cancel, CanonicalProject,
-    NativeAssetPreparationReport, StoryDocument,
+    NativeAssetPreparationReport, NativeGenerationWarning, StoryDocument,
 };
 use crate::domain::project::Project;
 use crate::services::project_files::validate_existing_file_path;
 use crate::support::paths::path_for_frontend;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePackGenerationResult {
+    pub(crate) zip_path: String,
+    pub(crate) warnings: Vec<NativeGenerationWarning>,
+}
+
 pub(crate) fn generate_native_pack_v1_with_cancel(
     project: &Project,
     output_folder: &str,
     emit: &dyn Fn(&str),
     should_cancel: &(dyn Fn() -> bool + Sync),
-) -> Result<String, String> {
+) -> Result<NativePackGenerationResult, String> {
     let output_dir = PathBuf::from(output_folder);
     preflight_output_directory(&output_dir)?;
     let asset_report = prepare_native_pack_assets_report_with_cancel(project, emit, should_cancel)?;
@@ -42,7 +51,10 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
             "✅ ZIP natif v1 genere : {}",
             zip_path.to_string_lossy()
         ));
-        Ok(path_for_frontend(&zip_path))
+        Ok(NativePackGenerationResult {
+            zip_path: path_for_frontend(&zip_path),
+            warnings: asset_report.warnings.clone(),
+        })
     })();
 
     let _ = fs::remove_dir_all(&asset_report.stage_dir);

@@ -148,6 +148,7 @@ fn fidelity_report_for(
             imported_zip_count: 0,
         },
         notes: Vec::new(),
+        warnings: Vec::new(),
     }
 }
 

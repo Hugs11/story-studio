@@ -14,6 +14,6 @@ pub(crate) use silence::{
 #[cfg(test)]
 pub(crate) use silence::{edges_from_envelope, parse_rms_envelope};
 pub(crate) use types::{
-    LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS, TARGET_LUFS,
-    VALIDATION_WINDOW_LUFS,
+    LoudnessAction, EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB,
+    NEAR_MUTE_LUFS, TARGET_LUFS, VALIDATION_WINDOW_LUFS,
 };

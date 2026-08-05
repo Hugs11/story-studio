@@ -15,9 +15,10 @@ import { Check } from '../icons/LucideLocal';
  * @param {string}   [props.title='Terminé']
  * @param {string}   [props.fileName]
  * @param {string}   [props.meta]
+ * @param {React.ReactNode} [props.notice]  Avertissement non bloquant éventuel.
  * @param {React.ReactNode} props.children  Boutons d'action.
  */
-export function FunnelDoneState({ icon, tone = 'success', title = 'Terminé', fileName, meta, children }) {
+export function FunnelDoneState({ icon, tone = 'success', title = 'Terminé', fileName, meta, notice, children }) {
   return (
     <div className="funnel-done">
       <div className={`funnel-done-badge${tone === 'error' ? ' funnel-done-badge--error' : ''}`} aria-hidden="true">
@@ -26,6 +27,7 @@ export function FunnelDoneState({ icon, tone = 'success', title = 'Terminé', fi
       <div className="funnel-done-title">{title}</div>
       {fileName ? <div className="funnel-done-file" title={fileName}>{fileName}</div> : null}
       {meta ? <div className="funnel-done-meta">{meta}</div> : null}
+      {notice ? <div className="funnel-done-notice" role="status">{notice}</div> : null}
       {children ? <div className="funnel-done-actions">{children}</div> : null}
     </div>
   );
