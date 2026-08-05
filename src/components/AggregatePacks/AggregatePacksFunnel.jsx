@@ -368,7 +368,14 @@ export function AggregatePacksFunnel({ onClose }) {
         setProgress((current) => Math.min(0.9, current + 0.012));
       }, 350);
       logger.info(`aggregate-funnel:generate start count=${packs.length} output='${outputFolder}' session='${sessionDir}'`);
-      const resultPath = await invoke('generate_pack', { projectJson, outputFolder });
+      const generationResult = await invoke('generate_pack', { projectJson, outputFolder });
+      const resultPath = typeof generationResult === 'string'
+        ? generationResult
+        : generationResult?.zipPath;
+      const warnings = Array.isArray(generationResult?.warnings)
+        ? generationResult.warnings
+        : [];
+      if (!resultPath) throw new Error('Le moteur n’a renvoyé aucun chemin de ZIP.');
       window.clearInterval(timer);
       timer = null;
       unlisten?.();
@@ -384,6 +391,7 @@ export function AggregatePacksFunnel({ onClose }) {
         sizeBytes,
         packCount: packs.length,
         storyCount: packs.reduce((sum, pack) => sum + (pack.storyCount || 0), 0),
+        warnings,
       });
       if (sessionDirRef.current) {
         await invoke('cleanup_session_workspace', { path: sessionDirRef.current }).catch(() => {});
@@ -475,6 +483,17 @@ export function AggregatePacksFunnel({ onClose }) {
             `${result?.storyCount ?? totalStories} histoire${(result?.storyCount ?? totalStories) > 1 ? 's' : ''}`,
             `${result?.packCount ?? packs.length} packs agrégés`,
           ].filter(Boolean).join(' · ')}
+          notice={result?.warnings?.length ? (
+            <div>
+              <strong>
+                Pack généré avec {result.warnings.length} avertissement{result.warnings.length > 1 ? 's' : ''} audio.
+              </strong>
+              {result.warnings.map((warning, index) => (
+                <div key={`${warning.code || 'audio'}-${warning.role || index}`}>{warning.message}</div>
+              ))}
+              <small>Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.</small>
+            </div>
+          ) : null}
         >
           <FunnelToolButton icon={<FolderOpen />} accent="neutral" onClick={() => outputDir && openPath(outputDir)}>
             Ouvrir le dossier

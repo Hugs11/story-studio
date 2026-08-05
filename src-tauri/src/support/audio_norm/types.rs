@@ -2,6 +2,8 @@ pub(crate) const TARGET_LUFS: f64 = -14.0;
 pub(crate) const LIMITER_SAMPLE_PEAK_DBFS: f64 = -2.0;
 pub(crate) const LIMITER_SAMPLE_PEAK_LINEAR: f64 = 0.794_328;
 pub(crate) const EXPECTED_FINAL_TRUE_PEAK_DBTP: f64 = -0.5;
+/// Seuil d'information : au-delà, le traitement reste autorisé mais la forte
+/// limitation est signalée à l'utilisateur après génération.
 pub(crate) const MAX_LIMITING_DB: f64 = 6.0;
 pub(crate) const VALIDATION_WINDOW_LUFS: (f64, f64) = (-20.0, -10.0);
 pub(crate) const DEADBAND_LUFS: (f64, f64) = (-15.5, -12.5);

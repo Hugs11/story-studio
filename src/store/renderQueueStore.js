@@ -15,6 +15,7 @@ function genId() {
 //   cancelRequested: boolean,
 //   logs: string[],
 //   resultPath: string | null,
+//   warnings: Array<object>,
 //   errorMessage: string | null,
 //   createdAt: number,
 // }
@@ -34,6 +35,7 @@ export function useRenderQueueStore() {
       cancelRequested: false,
       logs: [],
       resultPath: null,
+      warnings: [],
       errorMessage: null,
       createdAt: Date.now(),
     };
