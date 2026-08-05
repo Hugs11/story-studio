@@ -359,6 +359,10 @@
   border-color: var(--checker-listen-border);
 }
 
+.checker-group--optional.is-expanded {
+  border-color: var(--success-border);
+}
+
 .checker-group-head {
   display: flex;
   align-items: center;
@@ -392,6 +396,13 @@
   background: var(--warning-bg);
   color: var(--warning-text);
   border-color: var(--warning-border);
+}
+
+.checker-group--optional .checker-group-icon,
+.checker-group--optional .checker-group-badge {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
 }
 
 /* Source saturée : ton « danger », distinct du violet (Manuel) et de l'ambre (Auto). */
@@ -473,6 +484,10 @@
   color: var(--checker-listen-text);
 }
 
+.checker-group--optional .checker-group-count strong {
+  color: var(--success-text);
+}
+
 .checker-group-count small {
   color: var(--muted);
   font-size: 10px;
@@ -503,6 +518,24 @@
 
 .checker-mini-file {
   border-top: 0.5px solid var(--border);
+}
+
+.checker-optional-choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 4px 2px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.checker-optional-choice input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--success-text);
 }
 
 .checker-mini-file-button {

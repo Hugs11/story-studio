@@ -32,6 +32,19 @@ pub(crate) struct EdgeSilenceFilters {
     pub post_filters: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct EdgeSilenceSelection {
+    pub leading: bool,
+    pub trailing: bool,
+}
+
+impl EdgeSilenceSelection {
+    pub(crate) const BOTH: Self = Self {
+        leading: true,
+        trailing: true,
+    };
+}
+
 pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMeasure, String> {
     let envelope_filter = format!(
         "aformat=channel_layouts=mono,asetnsamples=n={}:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level",
@@ -71,7 +84,7 @@ pub(crate) fn build_edge_silence_filters(
     trailing: f64,
     target: f64,
 ) -> EdgeSilenceFilters {
-    build_edge_silence_filters_with_targets(leading, trailing, target, target)
+    build_selected_edge_silence_filters(leading, trailing, target, EdgeSilenceSelection::BOTH)
 }
 
 pub(crate) fn build_edge_silence_filters_with_targets(
@@ -79,6 +92,31 @@ pub(crate) fn build_edge_silence_filters_with_targets(
     trailing: f64,
     leading_target: f64,
     trailing_target: f64,
+) -> EdgeSilenceFilters {
+    build_selected_edge_silence_filters_with_targets(
+        leading,
+        trailing,
+        leading_target,
+        trailing_target,
+        EdgeSilenceSelection::BOTH,
+    )
+}
+
+pub(crate) fn build_selected_edge_silence_filters(
+    leading: f64,
+    trailing: f64,
+    target: f64,
+    selection: EdgeSilenceSelection,
+) -> EdgeSilenceFilters {
+    build_selected_edge_silence_filters_with_targets(leading, trailing, target, target, selection)
+}
+
+fn build_selected_edge_silence_filters_with_targets(
+    leading: f64,
+    trailing: f64,
+    leading_target: f64,
+    trailing_target: f64,
+    selection: EdgeSilenceSelection,
 ) -> EdgeSilenceFilters {
     let leading_target = normalized_edge_target(leading_target);
     let trailing_target = normalized_edge_target(trailing_target);
@@ -88,11 +126,11 @@ pub(crate) fn build_edge_silence_filters_with_targets(
     let lead_trim = (leading - EDGE_TRIM_GUARD_SEC).max(0.0);
     let trail_trim = (trailing - EDGE_TRIM_GUARD_SEC).max(0.0);
 
-    if lead_trim > 0.001 {
+    if selection.leading && lead_trim > 0.001 {
         pre_filters.push(format!("atrim=start={}", format_seconds(lead_trim)));
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
-    if trail_trim > 0.001 {
+    if selection.trailing && trail_trim > 0.001 {
         pre_filters.push("areverse".to_string());
         pre_filters.push(format!("atrim=start={}", format_seconds(trail_trim)));
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
@@ -100,10 +138,10 @@ pub(crate) fn build_edge_silence_filters_with_targets(
         pre_filters.push("asetpts=PTS-STARTPTS".to_string());
     }
 
-    if leading_target > 0.001 {
+    if selection.leading && leading_target > 0.001 {
         post_filters.push(format!("adelay={}", (leading_target * 1000.0).round()));
     }
-    if trailing_target > 0.001 {
+    if selection.trailing && trailing_target > 0.001 {
         post_filters.push(format!("apad=pad_dur={}", format_seconds(trailing_target)));
     }
 
@@ -291,6 +329,69 @@ mod tests {
             ),
             other => panic!("attendu Measured, obtenu {:?}", other),
         }
+    }
+
+    #[test]
+    fn selected_edge_filters_leave_unselected_edge_untouched() {
+        let leading_only = build_selected_edge_silence_filters(
+            0.2,
+            1.5,
+            EDGE_SILENCE_SEC,
+            EdgeSilenceSelection {
+                leading: true,
+                trailing: false,
+            },
+        );
+        assert!(leading_only
+            .pre_filters
+            .iter()
+            .any(|filter| filter.starts_with("atrim=start=")));
+        assert!(leading_only
+            .post_filters
+            .iter()
+            .any(|filter| filter.starts_with("adelay=")));
+        assert!(!leading_only
+            .pre_filters
+            .iter()
+            .any(|filter| filter == "areverse"));
+        assert!(!leading_only
+            .post_filters
+            .iter()
+            .any(|filter| filter.starts_with("apad=")));
+
+        let trailing_only = build_selected_edge_silence_filters(
+            1.5,
+            0.2,
+            EDGE_SILENCE_SEC,
+            EdgeSilenceSelection {
+                leading: false,
+                trailing: true,
+            },
+        );
+        assert!(trailing_only
+            .pre_filters
+            .iter()
+            .any(|filter| filter == "areverse"));
+        assert!(trailing_only
+            .post_filters
+            .iter()
+            .any(|filter| filter.starts_with("apad=")));
+        assert!(!trailing_only
+            .post_filters
+            .iter()
+            .any(|filter| filter.starts_with("adelay=")));
+
+        let none = build_selected_edge_silence_filters(
+            1.5,
+            1.5,
+            EDGE_SILENCE_SEC,
+            EdgeSilenceSelection {
+                leading: false,
+                trailing: false,
+            },
+        );
+        assert!(none.pre_filters.is_empty());
+        assert!(none.post_filters.is_empty());
     }
 
     #[test]

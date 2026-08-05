@@ -11,6 +11,12 @@ import {
   titleConforming,
 } from './packCheckerFormat.js';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing.js';
+import {
+  isAutomaticSilenceIssue,
+  isOptionalSilenceIssue,
+  packCorrectionCounts,
+  silenceEdgeForIssue,
+} from './packCheckerIssueClassification.js';
 
 const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 
@@ -158,7 +164,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'listen',
     icon: 'info',
     action: 'Écoute ou vérifie ces fichiers avant de valider le pack.',
-    match: (issue) => !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
+    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
   },
   {
     id: 'silence',
@@ -167,7 +173,16 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     icon: 'wrench',
     action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issueText(issue).includes('silence'),
+    match: isAutomaticSilenceIssue,
+  },
+  {
+    id: 'optionalSilence',
+    title: 'Suggestions facultatives',
+    badge: 'Facultatif',
+    bucket: 'optional',
+    icon: 'info',
+    action: `Ces silences longs peuvent être volontaires. Le pack reste conforme ; ils peuvent être ramenés à ${EDGE_SILENCE_LABEL}.`,
+    match: isOptionalSilenceIssue,
   },
   {
     id: 'volume',
@@ -227,7 +242,7 @@ function buildProblemGroups(report) {
   const files = itemMap(report);
   const used = new Set();
   const relevantIssues = (report.issues || []).filter((issue) => (
-    issue.severity === 'error' || issue.severity === 'warning'
+    issue.severity === 'error' || issue.severity === 'warning' || isOptionalSilenceIssue(issue)
   ));
 
   return PROBLEM_SECTIONS.map((section) => {
@@ -236,7 +251,9 @@ function buildProblemGroups(report) {
     for (const issue of relevantIssues) {
       if (used.has(issue) || !section.match(issue)) continue;
       used.add(issue);
-      const key = uniqueIssueKey(issue);
+      const key = section.id === 'optionalSilence'
+        ? `${uniqueIssueKey(issue)}:${issue.code}`
+        : uniqueIssueKey(issue);
       if (seen.has(key)) continue;
       seen.add(key);
       const fileIssues = issue.filePath ? (byFile.get(issue.filePath) || [issue]) : [issue];
@@ -257,18 +274,23 @@ function buildProblemGroups(report) {
       fixCount: section.id === 'title'
         ? records.length
         : records.reduce((sum, record) => (
-          sum + record.issues.filter((issue) => issue.autoFixAvailable).length
+          sum + record.issues.filter((issue) => issue.fixDisposition === 'automatic').length
         ), 0),
+      optionalCount: section.id === 'optionalSilence' ? records.length : 0,
     };
   }).filter((group) => group.count > 0);
 }
 
 function silenceSummaryParts(issues, item) {
   const hasStart = issues.some((issue) => {
+    if (silenceEdgeForIssue(issue) === 'leading') return true;
     const message = (issue.message || '').toLowerCase();
     return message.includes('début') || message.includes('debut');
   });
-  const hasEnd = issues.some((issue) => (issue.message || '').toLowerCase().includes('fin'));
+  const hasEnd = issues.some((issue) => (
+    silenceEdgeForIssue(issue) === 'trailing'
+    || (issue.message || '').toLowerCase().includes('fin')
+  ));
   const parts = [];
   if (hasStart) parts.push(`Silence début = ${formatSeconds(item?.leadingSilenceSecs)}`);
   if (hasEnd) parts.push(`Silence fin = ${formatSeconds(item?.trailingSilenceSecs)}`);
@@ -341,6 +363,9 @@ function summarizeGroups(groups, report) {
   const fixCount = groups
     .filter((group) => group.bucket === 'fix')
     .reduce((sum, group) => sum + group.fixCount, 0);
+  const optionalCount = groups
+    .filter((group) => group.bucket === 'optional')
+    .reduce((sum, group) => sum + group.optionalCount, 0);
   const saturatedCount = saturatedFileCount(groups);
   const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
@@ -354,6 +379,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Aucun problème automatique ou manuel détecté.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (hasBlocking) {
@@ -364,6 +390,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Certains points demandent une vérification manuelle.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (saturatedCount > 0) {
@@ -376,6 +403,7 @@ function summarizeGroups(groups, report) {
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (listenCount > 0) {
@@ -388,6 +416,18 @@ function summarizeGroups(groups, report) {
       subtitle: 'Le reste peut être corrigé automatiquement.',
       listenCount,
       fixCount,
+      optionalCount,
+    };
+  }
+  if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
+    return {
+      tone: 'ok',
+      icon: 'check',
+      title: `Pack conforme, avec ${optionalCount} ajustement${optionalCount > 1 ? 's' : ''} facultatif${optionalCount > 1 ? 's' : ''}`,
+      subtitle: 'Les pauses longues peuvent être conservées telles quelles.',
+      listenCount,
+      fixCount,
+      optionalCount,
     };
   }
   return {
@@ -397,6 +437,7 @@ function summarizeGroups(groups, report) {
     subtitle: 'Aucun point manuel détecté.',
     listenCount,
     fixCount,
+    optionalCount,
   };
 }
 
@@ -438,7 +479,7 @@ function recordDetailHtml(record) {
     </div>
     <div>
       <div class="tech-title">Ce qui est proposé</div>
-      ${record.issues.map((issue) => html`<div class="tech-action">
+      ${(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue) => html`<div class="tech-action">
         ${icon(issue.autoFixAvailable ? 'wrench' : 'info')}
         <div>
           <strong>${escapeHtml(issue.autoFixDescription || issue.message)}</strong>
@@ -460,7 +501,7 @@ function problemGroupHtml(group, open = false) {
         </span>
         <span>${escapeHtml(group.action)}</span>
       </span>
-      <span class="group-count"><strong>${group.count}</strong><small>${group.count > 1 ? 'fichiers' : 'fichier'}</small></span>
+      <span class="group-count"><strong>${group.count}</strong><small>${group.bucket === 'optional' ? (group.count > 1 ? 'suggestions' : 'suggestion') : (group.count > 1 ? 'fichiers' : 'fichier')}</small></span>
     </summary>
     <div class="group-body">
       <div class="mini-list">
@@ -863,6 +904,7 @@ function reportStyles() {
     .group--fix[open] { border-color: var(--warning-border); }
     .group--listen[open] { border-color: var(--listen-border); }
     .group--quality[open] { border-color: var(--danger-border); }
+    .group--optional[open] { border-color: var(--success-border); }
     .group--ok[open] { border-color: var(--success-border); }
     .group-head {
       display: flex;
@@ -882,6 +924,8 @@ function reportStyles() {
     .group--fix .group-badge { background: var(--warning-bg); color: var(--warning-text); border-color: var(--warning-border); }
     .group--quality .group-icon,
     .group--quality .group-badge { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+    .group--optional .group-icon,
+    .group--optional .group-badge { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
     .group--ok .group-icon,
     .group--ok .group-badge { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
     .group-copy {
@@ -928,6 +972,7 @@ function reportStyles() {
     .group--fix .group-count strong { color: var(--warning-text); }
     .group--listen .group-count strong { color: var(--listen-text); }
     .group--quality .group-count strong { color: var(--danger-text); }
+    .group--optional .group-count strong { color: var(--success-text); }
     .group--ok .group-count strong { color: var(--success-text); }
     .group-count small { color: var(--muted); font-size: 10px; }
     .group-body { padding: 0 14px 12px; }
@@ -1117,6 +1162,7 @@ export function formatHtmlReport(report) {
   if (!report) return '';
   const groups = buildProblemGroups(report);
   const summary = summarizeGroups(groups, report);
+  const correctionCounts = packCorrectionCounts(report);
   const saturatedCount = saturatedFileCount(groups);
   const conformingGroups = buildConformingGroups(report);
   const audio = categoryStats(report.audioSummary);
@@ -1158,7 +1204,7 @@ export function formatHtmlReport(report) {
         </div>
         <div class="report-callout">
           ${icon('info')}
-          <span><strong>${summary.listenCount}</strong> à écouter · <strong>${summary.fixCount}</strong> corrections proposées</span>
+          <span><strong>${summary.listenCount}</strong> à écouter · <strong>${correctionCounts.automatic}</strong> automatiques · <strong>${correctionCounts.optional}</strong> facultatives</span>
         </div>
       </div>
       <div class="summary-tiles" aria-label="Résumé du pack">
@@ -1225,7 +1271,9 @@ export function formatReadableReport(report) {
   lines.push(`- Avertissements : ${report.summary?.warnings ?? 0}`);
   lines.push(`- Informations : ${report.summary?.infos ?? 0}`);
   lines.push(`- Éléments conformes : ${report.summary?.ok ?? 0}`);
-  lines.push(`- Corrections automatiques disponibles : ${report.correctionsAvailable ?? 0}`);
+  const correctionCounts = packCorrectionCounts(report);
+  lines.push(`- Corrections automatiques disponibles : ${correctionCounts.automatic}`);
+  lines.push(`- Suggestions facultatives : ${correctionCounts.optional}`);
   lines.push('');
   lines.push(`## Résumé`);
   lines.push('');
@@ -1245,7 +1293,10 @@ export function formatReadableReport(report) {
       lines.push(`- ${severityLabel(issue.severity)} · ${issue.label} : ${issue.message}`);
       if (issue.filePath) lines.push(`  Fichier : ${issue.filePath}`);
       if (issue.technicalDetails) lines.push(`  Détail : ${issue.technicalDetails}`);
-      if (issue.autoFixDescription) lines.push(`  Correction : ${issue.autoFixDescription}`);
+      if (issue.autoFixDescription) {
+        const prefix = isOptionalSilenceIssue(issue) ? 'Suggestion facultative' : 'Correction';
+        lines.push(`  ${prefix} : ${issue.autoFixDescription}`);
+      }
     }
   }
   lines.push('');
