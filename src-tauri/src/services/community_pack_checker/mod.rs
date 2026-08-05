@@ -6,7 +6,9 @@ mod zip_doc;
 #[cfg(test)]
 mod tests;
 
-pub use models::{FixedPackResult, PackMetadataPatch, PackValidationReport};
+pub use models::{
+    FixedPackResult, PackCorrectionSelection, PackMetadataPatch, PackValidationReport,
+};
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -21,10 +23,12 @@ use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
 
 use models::{
-    issue, AudioValidationItem, CategorySummary, FixedPackResult as FixedPackResultModel,
-    ImageValidationItem, NightModeSummary, PackMetadataPatch as PackMetadataPatchModel,
-    PackValidationIssue, PackValidationReport as ReportModel, PackValidationSeverity,
-    PackValidationVerdict, StructureSummary, ValidationSummary,
+    issue, AudioSilenceEdge, AudioValidationItem, CategorySummary, FixDisposition,
+    FixedPackResult as FixedPackResultModel, ImageValidationItem, NightModeSummary,
+    PackCorrectionSelection as PackCorrectionSelectionModel,
+    PackMetadataPatch as PackMetadataPatchModel, PackValidationIssue,
+    PackValidationReport as ReportModel, PackValidationSeverity, PackValidationVerdict,
+    StructureSummary, ValidationSummary,
 };
 use zip_doc::{read_pack_doc, read_zip_entry_bytes, update_story_asset_refs, LoadedPackDoc};
 
@@ -69,16 +73,24 @@ pub fn create_fixed_pack(
     zip_path: &Path,
     metadata_patch: Option<PackMetadataPatchModel>,
 ) -> Result<FixedPackResultModel, String> {
-    create_fixed_pack_with_log(zip_path, None, metadata_patch, &|_| {})
+    create_fixed_pack_with_log(zip_path, None, metadata_patch, None, &|_| {})
 }
 
 pub fn create_fixed_pack_with_log(
     zip_path: &Path,
     output_dir: Option<&Path>,
     metadata_patch: Option<PackMetadataPatchModel>,
+    correction_selection: Option<PackCorrectionSelectionModel>,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
-    create_fixed_pack_with_source_log(zip_path, zip_path, output_dir, metadata_patch, emit)
+    create_fixed_pack_with_source_log(
+        zip_path,
+        zip_path,
+        output_dir,
+        metadata_patch,
+        correction_selection,
+        emit,
+    )
 }
 
 pub(crate) fn create_fixed_pack_with_source_log(
@@ -86,16 +98,20 @@ pub(crate) fn create_fixed_pack_with_source_log(
     source_path: &Path,
     output_dir: Option<&Path>,
     metadata_patch: Option<PackMetadataPatchModel>,
+    correction_selection: Option<PackCorrectionSelectionModel>,
     emit: &dyn Fn(&str),
 ) -> Result<FixedPackResultModel, String> {
     emit("Analyse préparatoire du pack source...");
     let report = analyze_pack_with_log(zip_path, emit);
-    let audio_items: Vec<AudioValidationItem> = report
-        .audio_items
+    let correction_selection = correction_selection.unwrap_or_default();
+    let optional_audio_silences_fixed = correction_selection
+        .optional_audio_silences
         .iter()
-        .filter(|item| item.auto_fix_available)
         .cloned()
-        .collect();
+        .collect::<HashSet<_>>()
+        .len();
+    let automatic_corrections_applied = report.corrections_available;
+    let audio_items = build_audio_fix_plans(&report, correction_selection)?;
     let image_items: Vec<ImageValidationItem> = report
         .image_items
         .iter()
@@ -112,7 +128,9 @@ pub(crate) fn create_fixed_pack_with_source_log(
     }
 
     emit(&format!(
-        "Corrections à appliquer : {} audio, {} image, métadonnées {}.",
+        "Corrections à appliquer : {} automatique(s), {} suggestion(s) facultative(s) sélectionnée(s) ; {} audio, {} image, métadonnées {}.",
+        automatic_corrections_applied,
+        optional_audio_silences_fixed,
         audio_items.len(),
         image_items.len(),
         if metadata_will_change { "oui" } else { "non" }
@@ -204,11 +222,62 @@ pub(crate) fn create_fixed_pack_with_source_log(
             audio_fixed: audio_items.len(),
             image_fixed: image_items.len(),
             metadata_fixed: metadata_will_change,
+            automatic_corrections_applied,
+            optional_audio_silences_fixed,
         })
     })();
 
     let _ = fs::remove_dir_all(&temp_dir);
     fixed_result
+}
+
+#[derive(Debug, Clone)]
+struct PlannedAudioFix {
+    item: AudioValidationItem,
+    plan: audio::AudioFixPlan,
+}
+
+fn build_audio_fix_plans(
+    report: &ReportModel,
+    selection: PackCorrectionSelectionModel,
+) -> Result<Vec<PlannedAudioFix>, String> {
+    let selected: HashSet<_> = selection.optional_audio_silences.into_iter().collect();
+    for requested in &selected {
+        let expected_code = match requested.edge {
+            AudioSilenceEdge::Leading => "audioLeadingSilenceLong",
+            AudioSilenceEdge::Trailing => "audioTrailingSilenceLong",
+        };
+        let is_current_suggestion = report.issues.iter().any(|issue| {
+            issue.file_path.as_deref() == Some(requested.file_path.as_str())
+                && issue.code.as_deref() == Some(expected_code)
+                && issue.fix_disposition == FixDisposition::Optional
+                && issue.auto_fix_available
+        });
+        if !is_current_suggestion {
+            return Err(format!(
+                "Suggestion audio inconnue ou obsolète : {} ({:?}).",
+                requested.file_path, requested.edge
+            ));
+        }
+    }
+
+    let mut planned = Vec::new();
+    for item in &report.audio_items {
+        let mut plan = audio::automatic_fix_plan(item, &report.issues);
+        plan.rebuild_leading_silence |= selected.iter().any(|requested| {
+            requested.file_path == item.file_path && requested.edge == AudioSilenceEdge::Leading
+        });
+        plan.rebuild_trailing_silence |= selected.iter().any(|requested| {
+            requested.file_path == item.file_path && requested.edge == AudioSilenceEdge::Trailing
+        });
+        if plan.has_operations() {
+            planned.push(PlannedAudioFix {
+                item: item.clone(),
+                plan,
+            });
+        }
+    }
+    Ok(planned)
 }
 
 enum PreparedFixedAsset {
@@ -227,7 +296,7 @@ enum PreparedFixedAsset {
 fn prepare_fixed_assets_parallel(
     zip_path: &Path,
     temp_dir: &Path,
-    audio_items: &[AudioValidationItem],
+    audio_items: &[PlannedAudioFix],
     image_items: &[ImageValidationItem],
     ffmpeg: Option<&Path>,
     emit: &dyn Fn(&str),
@@ -247,9 +316,9 @@ fn prepare_fixed_assets_parallel(
         let worker_tx = progress_tx.clone();
         let handle = scope.spawn(move || {
             run_in_correction_pool(|| {
-                let audio_results = audio_items.par_iter().enumerate().map(|(index, item)| {
+                let audio_results = audio_items.par_iter().enumerate().map(|(index, planned)| {
                     let tx = worker_tx.clone();
-                    prepare_one_fixed_audio(zip_path, temp_dir, ffmpeg, index, item, &tx)
+                    prepare_one_fixed_audio(zip_path, temp_dir, ffmpeg, index, planned, &tx)
                 });
                 let image_results = image_items.par_iter().map(|item| {
                     let tx = worker_tx.clone();
@@ -275,9 +344,10 @@ fn prepare_one_fixed_audio(
     temp_dir: &Path,
     ffmpeg: Option<&Path>,
     index: usize,
-    item: &AudioValidationItem,
+    planned: &PlannedAudioFix,
     progress_tx: &mpsc::Sender<String>,
 ) -> Result<PreparedFixedAsset, String> {
+    let item = &planned.item;
     let Some(short_name) = item.file_path.strip_prefix("assets/") else {
         return Err(format!("Chemin audio inattendu : {}", item.file_path));
     };
@@ -298,6 +368,7 @@ fn prepare_one_fixed_audio(
         &input_path,
         &output_path,
         item,
+        planned.plan,
     )?;
     let fixed_bytes =
         fs::read(&output_path).map_err(|e| format!("Lecture audio corrigé impossible : {}", e))?;
@@ -1005,7 +1076,12 @@ fn finalize_report(mut report: ReportModel, fatal: bool) -> ReportModel {
     report.corrections_available = report
         .issues
         .iter()
-        .filter(|issue| issue.auto_fix_available)
+        .filter(|issue| issue.fix_disposition == FixDisposition::Automatic)
+        .count();
+    report.optional_corrections_available = report
+        .issues
+        .iter()
+        .filter(|issue| issue.fix_disposition == FixDisposition::Optional)
         .count();
     let structure_has_errors = report.issues.iter().any(|issue| {
         issue.severity == PackValidationSeverity::Error && issue.category == "structure"
@@ -1051,6 +1127,7 @@ fn empty_report(pack_name: &str, zip_path: &str) -> ReportModel {
         structure_summary: StructureSummary::default(),
         night_mode: NightModeSummary::default(),
         corrections_available: 0,
+        optional_corrections_available: 0,
         issues: Vec::new(),
         audio_items: Vec::new(),
         image_items: Vec::new(),

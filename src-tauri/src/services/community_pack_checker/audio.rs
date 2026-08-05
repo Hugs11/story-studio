@@ -2,9 +2,10 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::support::audio_norm::{
-    build_edge_silence_filters, build_loudness_filters, loudness_in_validation_window,
-    measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, LoudnessAction,
-    EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB, NEAR_MUTE_LUFS, TARGET_LUFS,
+    build_edge_silence_filters, build_loudness_filters, build_selected_edge_silence_filters,
+    loudness_in_validation_window, measure_edge_silence, measure_loudness_ebur128,
+    plan_loudness_fix, EdgeMeasure, EdgeSilenceSelection, LoudnessAction, EDGE_SILENCE_SEC,
+    EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB, NEAR_MUTE_LUFS, TARGET_LUFS,
     VALIDATION_WINDOW_LUFS,
 };
 
@@ -23,9 +24,61 @@ const CLIP_SAMPLE_MIN_COUNT: u64 = 32;
 use crate::support::ffmpeg::apply_no_window;
 
 use super::models::{
-    issue, round_secs, AudioValidationItem, PackValidationIssue, PackValidationSeverity,
-    AUDIO_MAX_EDGE_SILENCE_SECONDS, AUDIO_MIN_EDGE_SILENCE_SECONDS,
+    issue, round_secs, AudioValidationItem, FixDisposition, PackValidationIssue,
+    PackValidationSeverity, AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS,
+    AUDIO_MAX_EDGE_SILENCE_SECONDS,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EdgeSilenceClassification {
+    TooShort,
+    Accepted,
+    LongSuggestion,
+    Unreadable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AudioEdge {
+    Leading,
+    Trailing,
+}
+
+impl AudioEdge {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Leading => "début",
+            Self::Trailing => "fin",
+        }
+    }
+
+    fn short_code(self) -> &'static str {
+        match self {
+            Self::Leading => "audioLeadingSilenceTooShort",
+            Self::Trailing => "audioTrailingSilenceTooShort",
+        }
+    }
+
+    fn long_code(self) -> &'static str {
+        match self {
+            Self::Leading => "audioLeadingSilenceLong",
+            Self::Trailing => "audioTrailingSilenceLong",
+        }
+    }
+}
+
+pub(crate) fn classify_edge_silence(measured: Option<f64>) -> EdgeSilenceClassification {
+    let Some(measured) = measured.filter(|value| value.is_finite() && *value >= 0.0) else {
+        return EdgeSilenceClassification::Unreadable;
+    };
+    let minimum = EDGE_SILENCE_SEC - AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS;
+    if measured + f64::EPSILON * 8.0 < minimum {
+        EdgeSilenceClassification::TooShort
+    } else if measured > AUDIO_MAX_EDGE_SILENCE_SECONDS {
+        EdgeSilenceClassification::LongSuggestion
+    } else {
+        EdgeSilenceClassification::Accepted
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 struct AudioProbe {
@@ -40,6 +93,70 @@ struct AudioProbe {
     true_peak_db: Option<f64>,
     clipped_samples: Option<u64>,
     total_samples: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct AudioFixPlan {
+    pub fix_format_or_channels: bool,
+    pub fix_loudness: bool,
+    pub rebuild_leading_silence: bool,
+    pub rebuild_trailing_silence: bool,
+}
+
+impl AudioFixPlan {
+    pub(crate) fn has_operations(self) -> bool {
+        self.fix_format_or_channels
+            || self.fix_loudness
+            || self.rebuild_leading_silence
+            || self.rebuild_trailing_silence
+    }
+}
+
+pub(crate) fn automatic_fix_plan(
+    item: &AudioValidationItem,
+    issues: &[PackValidationIssue],
+) -> AudioFixPlan {
+    let automatic_issues: Vec<&PackValidationIssue> = issues
+        .iter()
+        .filter(|issue| issue.file_path.as_deref() == Some(item.file_path.as_str()))
+        .filter(|issue| issue.fix_disposition == FixDisposition::Automatic)
+        .collect();
+    if automatic_issues.is_empty() {
+        return AudioFixPlan::default();
+    }
+
+    let extension_is_mp3 = Path::new(&item.file_path)
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.eq_ignore_ascii_case("mp3"));
+    let codec_is_mp3 = item
+        .codec
+        .as_deref()
+        .is_some_and(|value| value.to_ascii_lowercase().contains("mp3"));
+    let format_invalid = !extension_is_mp3
+        || !codec_is_mp3
+        || item.sample_rate != Some(44_100)
+        || !item
+            .channels
+            .as_deref()
+            .is_some_and(|value| value.eq_ignore_ascii_case("mono"));
+    let loudness_is_correctable = match (item.integrated_lufs, item.true_peak_db) {
+        (Some(lufs), Some(peak)) if !loudness_in_validation_window(lufs) => {
+            plan_loudness_fix(lufs, peak).is_correctable()
+        }
+        _ => false,
+    };
+
+    AudioFixPlan {
+        fix_format_or_channels: format_invalid,
+        fix_loudness: loudness_is_correctable,
+        rebuild_leading_silence: automatic_issues
+            .iter()
+            .any(|issue| issue.code.as_deref() == Some("audioLeadingSilenceTooShort")),
+        rebuild_trailing_silence: automatic_issues
+            .iter()
+            .any(|issue| issue.code.as_deref() == Some("audioTrailingSilenceTooShort")),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -185,7 +302,7 @@ pub(crate) fn analyze_audio_file(
             &mut status,
             &mut fix_parts,
             target,
-            "début",
+            AudioEdge::Leading,
             probe.leading_silence_secs,
         );
         add_silence_issue(
@@ -193,7 +310,7 @@ pub(crate) fn analyze_audio_file(
             &mut status,
             &mut fix_parts,
             target,
-            "fin",
+            AudioEdge::Trailing,
             probe.trailing_silence_secs,
         );
     }
@@ -343,6 +460,7 @@ pub(crate) fn analyze_audio_file(
         for issue in &mut issues {
             issue.auto_fix_available = false;
             issue.auto_fix_description = None;
+            issue.fix_disposition = FixDisposition::None;
         }
     }
     let fix_summary = if auto_fix_available {
@@ -381,27 +499,41 @@ pub(crate) fn fix_audio_file(
     input: &Path,
     output: &Path,
     item: &AudioValidationItem,
+    plan: AudioFixPlan,
 ) -> Result<(), String> {
-    let rebuild_leading = item.leading_silence_secs.is_some();
-    let rebuild_trailing = item.trailing_silence_secs.is_some();
+    if !plan.has_operations() {
+        return Err(format!(
+            "Plan de correction audio vide : {}",
+            item.file_path
+        ));
+    }
+    let rebuild_leading = plan.rebuild_leading_silence;
+    let rebuild_trailing = plan.rebuild_trailing_silence;
     let trim_start = item.leading_silence_secs.unwrap_or(0.0);
     let trim_trailing = item.trailing_silence_secs.unwrap_or(0.0);
 
-    let mut pre_filters = Vec::new();
+    let selected_trim = if rebuild_leading { trim_start } else { 0.0 }
+        + if rebuild_trailing { trim_trailing } else { 0.0 };
     if let Some(duration) = item.duration_secs {
-        if trim_start + trim_trailing >= duration - 0.05 {
+        if selected_trim >= duration - 0.05 {
             return Err(format!(
                 "Audio trop court après ajustement des silences : {}",
                 item.file_path
             ));
         }
     }
-    let edge_filters = build_edge_silence_filters(trim_start, trim_trailing, EDGE_SILENCE_SEC);
-    if rebuild_leading || rebuild_trailing {
-        pre_filters.extend(edge_filters.pre_filters);
-    }
+    let edge_filters = build_selected_edge_silence_filters(
+        trim_start,
+        trim_trailing,
+        EDGE_SILENCE_SEC,
+        EdgeSilenceSelection {
+            leading: rebuild_leading,
+            trailing: rebuild_trailing,
+        },
+    );
+    let mut output_filters = edge_filters.pre_filters;
 
-    if pre_filters
+    if output_filters
         .iter()
         .any(|filter| filter.starts_with("atrim="))
     {
@@ -415,22 +547,19 @@ pub(crate) fn fix_audio_file(
         }
     }
 
-    pre_filters.push("aformat=channel_layouts=mono".to_string());
+    output_filters.push("aformat=channel_layouts=mono".to_string());
 
-    let mut filters = pre_filters;
-    // On corrige le niveau quand il est hors fenêtre, ou — si l'harmonisation
-    // opt-in est demandée — quand il est dans la fenêtre mais hors bande morte.
-    let should_fix_loudness = item
-        .integrated_lufs
-        .map(|value| !loudness_in_validation_window(value))
-        .unwrap_or(false);
-    if should_fix_loudness {
-        let measure = measure_loudness_ebur128(ffmpeg, input, &filters).map_err(|e| {
-            format!(
-                "Mesure de niveau impossible pendant la correction de {} : {}",
-                item.file_path, e
-            )
-        })?;
+    if plan.fix_loudness {
+        let mut measurement_filters =
+            build_edge_silence_filters(trim_start, trim_trailing, EDGE_SILENCE_SEC).pre_filters;
+        measurement_filters.push("aformat=channel_layouts=mono".to_string());
+        let measure =
+            measure_loudness_ebur128(ffmpeg, input, &measurement_filters).map_err(|e| {
+                format!(
+                    "Mesure de niveau impossible pendant la correction de {} : {}",
+                    item.file_path, e
+                )
+            })?;
         let action = plan_loudness_fix(measure.integrated_lufs, measure.true_peak_db);
         if matches!(action, LoudnessAction::Uncorrectable { .. }) {
             return Err(format!(
@@ -439,15 +568,10 @@ pub(crate) fn fix_audio_file(
                 loudness_action_reason(&action)
             ));
         }
-        filters.extend(build_loudness_filters(&action));
+        output_filters.extend(build_loudness_filters(&action));
     }
 
-    if rebuild_leading {
-        filters.push(format!("adelay={}", (EDGE_SILENCE_SEC * 1000.0).round()));
-    }
-    if rebuild_trailing {
-        filters.push(format!("apad=pad_dur={}", format_seconds(EDGE_SILENCE_SEC)));
-    }
+    output_filters.extend(edge_filters.post_filters);
 
     let mut cmd = Command::new(ffmpeg);
     cmd.arg("-y")
@@ -457,7 +581,7 @@ pub(crate) fn fix_audio_file(
         .arg("-map")
         .arg("0:a:0")
         .arg("-af")
-        .arg(filters.join(","))
+        .arg(output_filters.join(","))
         .arg("-ar")
         .arg("44100")
         .arg("-ac")
@@ -665,71 +789,80 @@ fn add_silence_issue(
     status: &mut PackValidationSeverity,
     fix_parts: &mut Vec<&'static str>,
     target: AudioIssueTarget<'_>,
-    side: &str,
+    edge: AudioEdge,
     measured: Option<f64>,
 ) {
-    let Some(measured) = measured else {
-        push_audio_issue(
-            issues,
-            PackValidationSeverity::Warning,
-            target,
-            format!("Le silence de {} n'a pas pu être mesuré.", side),
-            None,
-            false,
-            None,
-        );
-        if *status == PackValidationSeverity::Ok {
-            *status = PackValidationSeverity::Warning;
+    let side = edge.label();
+    match classify_edge_silence(measured) {
+        EdgeSilenceClassification::Unreadable => {
+            push_audio_issue(
+                issues,
+                PackValidationSeverity::Warning,
+                target,
+                format!("Le silence de {} n'a pas pu être mesuré.", side),
+                None,
+                false,
+                None,
+            );
+            raise_status(status, PackValidationSeverity::Warning);
         }
-        return;
-    };
-    if measured < AUDIO_MIN_EDGE_SILENCE_SECONDS {
-        let missing = EDGE_SILENCE_SEC - measured;
-        push_audio_issue(
-            issues,
-            PackValidationSeverity::Warning,
-            target,
-            format!("Le silence au {} est trop court.", side),
-            Some(format!(
-                "Détecté : {:.2} s. Accepté : {:.2} à {:.2} s. Correction proposée : ajouter {:.2} s.",
-                measured,
-                AUDIO_MIN_EDGE_SILENCE_SECONDS,
-                AUDIO_MAX_EDGE_SILENCE_SECONDS,
-                missing.max(0.0)
-            )),
-            true,
-            Some(format!(
-                "Ajouter du silence au {} pour atteindre {:.2} s.",
-                side, EDGE_SILENCE_SEC
-            )),
-        );
-        if *status != PackValidationSeverity::Error {
-            *status = PackValidationSeverity::Warning;
+        EdgeSilenceClassification::TooShort => {
+            let measured = measured.unwrap_or_default();
+            let mut entry = make_audio_issue(
+                PackValidationSeverity::Error,
+                target,
+                format!("Le silence au {} est trop court.", side),
+                Some(format!(
+                    "Détecté : {:.2} s. Minimum attendu : {:.2} s (tolérance de mesure : {:.2} s). Correction proposée : atteindre {:.2} s.",
+                    measured,
+                    EDGE_SILENCE_SEC,
+                    AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS,
+                    EDGE_SILENCE_SEC
+                )),
+                true,
+                Some(format!("Ajouter du silence au {} pour atteindre {:.2} s.", side, EDGE_SILENCE_SEC)),
+            );
+            entry.code = Some(edge.short_code().to_string());
+            entry.fix_disposition = FixDisposition::Automatic;
+            issues.push(entry);
+            raise_status(status, PackValidationSeverity::Error);
+            fix_parts.push("ajuster les silences");
         }
-        fix_parts.push("ajuster les silences");
-    } else if measured > AUDIO_MAX_EDGE_SILENCE_SECONDS {
-        push_audio_issue(
-            issues,
-            PackValidationSeverity::Warning,
-            target,
-            format!("Le silence au {} est trop long.", side),
-            Some(format!(
-                "Détecté : {:.2} s. Accepté : {:.2} à {:.2} s. Correction proposée : ramener à {:.2} s.",
-                measured,
-                AUDIO_MIN_EDGE_SILENCE_SECONDS,
-                AUDIO_MAX_EDGE_SILENCE_SECONDS,
-                EDGE_SILENCE_SEC
-            )),
-            true,
-            Some(format!(
-                "Réduire le silence au {} à {:.2} s.",
-                side, EDGE_SILENCE_SEC
-            )),
-        );
-        if *status != PackValidationSeverity::Error {
-            *status = PackValidationSeverity::Warning;
+        EdgeSilenceClassification::LongSuggestion => {
+            let measured = measured.unwrap_or_default();
+            let mut entry = make_audio_issue(
+                PackValidationSeverity::Info,
+                target,
+                format!("Le silence au {} est long.", side),
+                Some(format!(
+                    "Détecté : {:.2} s. Au-delà de {:.2} s, Story Studio propose facultativement de ramener ce bord à {:.2} s.",
+                    measured, AUDIO_MAX_EDGE_SILENCE_SECONDS, EDGE_SILENCE_SEC
+                )),
+                true,
+                Some(format!("Ramener facultativement le silence au {} à {:.2} s.", side, EDGE_SILENCE_SEC)),
+            );
+            entry.code = Some(edge.long_code().to_string());
+            entry.fix_disposition = FixDisposition::Optional;
+            issues.push(entry);
+            raise_status(status, PackValidationSeverity::Info);
+            fix_parts.push("ajuster les silences");
         }
-        fix_parts.push("ajuster les silences");
+        EdgeSilenceClassification::Accepted => {}
+    }
+}
+
+fn severity_rank(severity: PackValidationSeverity) -> u8 {
+    match severity {
+        PackValidationSeverity::Ok => 0,
+        PackValidationSeverity::Info => 1,
+        PackValidationSeverity::Warning => 2,
+        PackValidationSeverity::Error => 3,
+    }
+}
+
+fn raise_status(status: &mut PackValidationSeverity, severity: PackValidationSeverity) {
+    if severity_rank(severity) > severity_rank(*status) {
+        *status = severity;
     }
 }
 
@@ -742,13 +875,35 @@ fn push_audio_issue(
     auto_fix_available: bool,
     auto_fix_description: Option<String>,
 ) {
+    let entry = make_audio_issue(
+        severity,
+        target,
+        message,
+        technical_details,
+        auto_fix_available,
+        auto_fix_description,
+    );
+    issues.push(entry);
+}
+
+fn make_audio_issue(
+    severity: PackValidationSeverity,
+    target: AudioIssueTarget<'_>,
+    message: impl Into<String>,
+    technical_details: Option<String>,
+    auto_fix_available: bool,
+    auto_fix_description: Option<String>,
+) -> PackValidationIssue {
     let mut entry = issue(severity, "audio", target.label, message);
     entry.technical_details = technical_details;
     entry.file_path = Some(target.file_path.to_string());
     entry.item_type = Some(target.item_type.to_string());
     entry.auto_fix_available = auto_fix_available;
+    if auto_fix_available {
+        entry.fix_disposition = FixDisposition::Automatic;
+    }
     entry.auto_fix_description = auto_fix_description;
-    issues.push(entry);
+    entry
 }
 
 fn unique_join(parts: &[&str]) -> String {
@@ -759,16 +914,6 @@ fn unique_join(parts: &[&str]) -> String {
         }
     }
     out.join(", ")
-}
-
-fn format_seconds(value: f64) -> String {
-    let formatted = format!("{:.3}", value);
-    let trimmed = formatted.trim_end_matches('0').trim_end_matches('.');
-    if trimmed.is_empty() {
-        "0".to_string()
-    } else {
-        trimmed.to_string()
-    }
 }
 
 fn compact_ffmpeg_error(stderr: &[u8]) -> String {
@@ -795,6 +940,84 @@ fn loudness_action_reason(action: &LoudnessAction) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn edge_silence_classification_respects_contract_boundaries() {
+        assert_eq!(
+            classify_edge_silence(Some(0.34)),
+            EdgeSilenceClassification::TooShort
+        );
+        assert_eq!(
+            classify_edge_silence(Some(0.35)),
+            EdgeSilenceClassification::Accepted
+        );
+        assert_eq!(
+            classify_edge_silence(Some(0.40)),
+            EdgeSilenceClassification::Accepted
+        );
+        assert_eq!(
+            classify_edge_silence(Some(1.00)),
+            EdgeSilenceClassification::Accepted
+        );
+        assert_eq!(
+            classify_edge_silence(Some(1.01)),
+            EdgeSilenceClassification::LongSuggestion
+        );
+        assert_eq!(
+            classify_edge_silence(None),
+            EdgeSilenceClassification::Unreadable
+        );
+    }
+
+    #[test]
+    fn silence_issues_expose_edge_codes_and_fix_dispositions() {
+        let target = AudioIssueTarget {
+            label: "Audio",
+            file_path: "assets/test.mp3",
+            item_type: "story",
+        };
+        let mut issues = Vec::new();
+        let mut status = PackValidationSeverity::Ok;
+        let mut fixes = Vec::new();
+        add_silence_issue(
+            &mut issues,
+            &mut status,
+            &mut fixes,
+            target,
+            AudioEdge::Leading,
+            Some(0.34),
+        );
+        add_silence_issue(
+            &mut issues,
+            &mut status,
+            &mut fixes,
+            target,
+            AudioEdge::Trailing,
+            Some(1.01),
+        );
+
+        assert_eq!(status, PackValidationSeverity::Error);
+        assert_eq!(
+            issues[0].code.as_deref(),
+            Some("audioLeadingSilenceTooShort")
+        );
+        assert_eq!(issues[0].fix_disposition, FixDisposition::Automatic);
+        assert_eq!(issues[0].severity, PackValidationSeverity::Error);
+        assert_eq!(issues[1].code.as_deref(), Some("audioTrailingSilenceLong"));
+        assert_eq!(issues[1].fix_disposition, FixDisposition::Optional);
+        assert_eq!(issues[1].severity, PackValidationSeverity::Info);
+    }
+
+    #[test]
+    fn audio_status_keeps_highest_severity() {
+        let mut status = PackValidationSeverity::Ok;
+        raise_status(&mut status, PackValidationSeverity::Info);
+        raise_status(&mut status, PackValidationSeverity::Warning);
+        raise_status(&mut status, PackValidationSeverity::Info);
+        raise_status(&mut status, PackValidationSeverity::Error);
+        raise_status(&mut status, PackValidationSeverity::Warning);
+        assert_eq!(status, PackValidationSeverity::Error);
+    }
 
     #[test]
     fn flags_clipping_only_on_sustained_full_scale_runs() {
