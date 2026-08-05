@@ -10,7 +10,8 @@ use uuid::Uuid;
 
 use super::super::{
     build_asset_notes, canonicalize_project, sanitize_stage_label, scoped_label_id, CanonicalEntry,
-    CanonicalProject, NativeAssetPreparationReport, NativeAssetStats, PreparedAsset,
+    CanonicalProject, NativeAssetPreparationReport, NativeAssetStats, NativeGenerationWarning,
+    PreparedAsset,
 };
 use super::audio::{prepare_audio_asset, AudioPreparation};
 use super::image::{
@@ -43,6 +44,7 @@ pub(crate) struct AssetRequest {
 struct PreprocessedRequest {
     role: String,
     asset: PreprocessedAsset,
+    warnings: Vec<NativeGenerationWarning>,
     /// Temps wall-clock passe dans la phase preprocess pour cette request
     /// (utile pour le cumul CPU par categorie). Peut etre 0 pour les
     /// passes triviales (image as-is, audio passthrough).
@@ -71,30 +73,34 @@ fn preprocess_request(
     processed_audio_dir: &Path,
 ) -> Result<PreprocessedRequest, String> {
     let start = Instant::now();
-    let asset = match request.source_kind {
+    let (asset, warnings) = match request.source_kind {
         AssetSourceKind::Zip => {
             let canonical = ensure_studio_pack_zip(&request.source_path)?
                 .to_string_lossy()
                 .to_string();
-            PreprocessedAsset::Zip {
-                canonical_zip_path: canonical,
-            }
+            (
+                PreprocessedAsset::Zip {
+                    canonical_zip_path: canonical,
+                },
+                Vec::new(),
+            )
         }
         AssetSourceKind::Image => {
             let raw = fs::read(&request.source_path)
                 .map_err(|e| format!("Lecture image '{}' : {}", request.role, e))?;
-            match ensure_image_320x240(&raw, &request.role)? {
+            let asset = match ensure_image_320x240(&raw, &request.role)? {
                 None => PreprocessedAsset::ImageAsIs {
                     source_path: request.source_path.clone(),
                 },
                 Some(png_bytes) => PreprocessedAsset::ImageResized { png_bytes },
-            }
+            };
+            (asset, Vec::new())
         }
         AssetSourceKind::Audio => {
             let ffmpeg = ffmpeg.ok_or_else(|| {
                 "ffmpeg requis pour la preparation audio native mais introuvable.".to_string()
             })?;
-            match prepare_audio_asset(
+            let prepared = prepare_audio_asset(
                 &request.source_path,
                 ffmpeg,
                 processed_audio_dir,
@@ -102,19 +108,22 @@ fn preprocess_request(
                 request.leading_silence_sec,
                 request.trailing_silence_sec,
                 &request.role,
-            )? {
+            )?;
+            let asset = match prepared.preparation {
                 AudioPreparation::Encoded { output } => PreprocessedAsset::AudioProcessed {
                     prepared_source: output,
                 },
                 AudioPreparation::Verbatim { source } => PreprocessedAsset::AudioPassthrough {
                     prepared_source: source,
                 },
-            }
+            };
+            (asset, prepared.warnings)
         }
     };
     Ok(PreprocessedRequest {
         role: request.role.clone(),
         asset,
+        warnings,
         preprocess_ms: start.elapsed().as_millis(),
     })
 }
@@ -260,6 +269,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
     let mut audio_processing_ms: u128 = 0;
     let mut audio_passthrough_ms: u128 = 0;
     let mut image_resize_count: usize = 0;
+    let mut warnings = Vec::new();
 
     if should_cancel() {
         return Err("Génération annulée.".to_string());
@@ -270,6 +280,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
         if should_cancel() {
             return Err("Génération annulée.".to_string());
         }
+        warnings.extend(pre.warnings);
         match pre.asset {
             PreprocessedAsset::Zip { canonical_zip_path } => {
                 emit(&format!("  📦 ZIP fusion natif : {}", pre.role));
@@ -377,6 +388,12 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
         zip_ms,
     ));
     emit("  Aucun ZIP final n'est encore genere a ce stade.");
+    if !warnings.is_empty() {
+        emit(&format!(
+            "  ⚠️  {} avertissement(s) audio seront joints au résultat.",
+            warnings.len()
+        ));
+    }
 
     stage_guard.disarm();
     Ok(NativeAssetPreparationReport {
@@ -388,6 +405,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
         imported_zips,
         stats,
         notes,
+        warnings,
     })
 }
 

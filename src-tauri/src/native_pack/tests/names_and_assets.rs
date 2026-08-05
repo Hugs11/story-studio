@@ -338,3 +338,26 @@ fn builds_audio_filters_with_configured_silence_duration() {
         "aformat=channel_layouts=mono,adelay=1000,apad=pad_dur=1"
     );
 }
+
+#[test]
+fn generation_result_serializes_the_frontend_warning_contract() {
+    let value = serde_json::to_value(NativePackGenerationResult {
+        zip_path: "/tmp/pack.zip".to_string(),
+        warnings: vec![NativeGenerationWarning {
+            code: "AUDIO_STRONG_LIMITING".to_string(),
+            role: "root/Histoire#id/storyAudio".to_string(),
+            label: "Histoire".to_string(),
+            message: "Traitement audio fort.".to_string(),
+            initial_integrated_lufs: -32.0,
+            final_integrated_lufs: Some(-14.2),
+            gain_db: 18.0,
+            expected_limiting_db: 20.0,
+        }],
+    })
+    .expect("serialize generation result");
+
+    assert_eq!(value["zipPath"], "/tmp/pack.zip");
+    assert_eq!(value["warnings"][0]["code"], "AUDIO_STRONG_LIMITING");
+    assert_eq!(value["warnings"][0]["finalIntegratedLufs"], -14.2);
+    assert_eq!(value["warnings"][0]["expectedLimitingDb"], 20.0);
+}

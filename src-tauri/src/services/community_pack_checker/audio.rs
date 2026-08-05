@@ -4,7 +4,7 @@ use std::process::{Command, Stdio};
 use crate::support::audio_norm::{
     build_edge_silence_filters, build_loudness_filters, loudness_in_validation_window,
     measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, LoudnessAction,
-    EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, NEAR_MUTE_LUFS, TARGET_LUFS,
+    EDGE_SILENCE_SEC, EXPECTED_FINAL_TRUE_PEAK_DBTP, MAX_LIMITING_DB, NEAR_MUTE_LUFS, TARGET_LUFS,
     VALIDATION_WINDOW_LUFS,
 };
 
@@ -200,17 +200,29 @@ pub(crate) fn analyze_audio_file(
 
     match probe.integrated_lufs {
         Some(lufs) if lufs < NEAR_MUTE_LUFS => {
+            let action = probe.true_peak_db.map(|peak| plan_loudness_fix(lufs, peak));
+            let can_normalize = action
+                .as_ref()
+                .map(LoudnessAction::is_correctable)
+                .unwrap_or(false);
             push_audio_issue(
                 &mut issues,
-                PackValidationSeverity::Error,
+                PackValidationSeverity::Warning,
                 target,
                 "Cet audio semble presque muet.",
-                Some(format!("Volume moyen mesuré : {:.1} LUFS.", lufs)),
-                false,
-                None,
+                Some(format!(
+                    "Volume moyen mesuré : {:.1} LUFS. Story Studio peut l'amplifier fortement, mais le bruit de fond peut devenir plus audible.",
+                    lufs
+                )),
+                can_normalize,
+                can_normalize.then(|| "Amplifier et normaliser le volume.".to_string()),
             );
-            status = PackValidationSeverity::Error;
-            manual_block = true;
+            if status != PackValidationSeverity::Error {
+                status = PackValidationSeverity::Warning;
+            }
+            if can_normalize {
+                fix_parts.push("normaliser le volume");
+            }
         }
         Some(lufs) if !loudness_in_validation_window(lufs) => {
             let direction = if lufs < VALIDATION_WINDOW_LUFS.0 {
@@ -225,15 +237,28 @@ pub(crate) fn analyze_audio_file(
                     reason: "crête vraie non mesurée".to_string(),
                 });
             let can_normalize = action.is_correctable();
+            let strong_limiting = matches!(
+                &action,
+                LoudnessAction::GainLimit {
+                    expected_limiting_db,
+                    ..
+                } if *expected_limiting_db > MAX_LIMITING_DB
+            );
             let details = if can_normalize {
-                format!(
+                let mut details = format!(
                     "Volume moyen mesuré : {:.1} LUFS. Fenêtre valide : {:.0} à {:.0} LUFS. Correction visée : {:.0} LUFS, crête MP3 attendue ≈ {:.1} dBTP.",
                     lufs,
                     VALIDATION_WINDOW_LUFS.0,
                     VALIDATION_WINDOW_LUFS.1,
                     TARGET_LUFS,
                     EXPECTED_FINAL_TRUE_PEAK_DBTP
-                )
+                );
+                if strong_limiting {
+                    details.push_str(
+                        " La mise à niveau demandera une forte limitation : certaines pointes peuvent sembler comprimées.",
+                    );
+                }
+                details
             } else {
                 format!(
                     "Volume moyen mesuré : {:.1} LUFS, crête vraie : {:.1} dBTP. Fenêtre valide : {:.0} à {:.0} LUFS. Normalisation automatique indisponible : {}.",
