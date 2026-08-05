@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) const AUDIO_MIN_EDGE_SILENCE_SECONDS: f64 = 0.35;
+pub(crate) const AUDIO_EDGE_SILENCE_MEASUREMENT_TOLERANCE_SECONDS: f64 = 0.05;
 pub(crate) const AUDIO_MAX_EDGE_SILENCE_SECONDS: f64 = 1.0;
 
 pub(crate) const IMAGE_TARGET_WIDTH: u32 = 320;
@@ -35,6 +35,14 @@ pub enum PackValidationVerdict {
     Invalid,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FixDisposition {
+    None,
+    Automatic,
+    Optional,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidationSummary {
@@ -57,6 +65,9 @@ pub struct PackValidationIssue {
     pub file_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    pub fix_disposition: FixDisposition,
     pub auto_fix_available: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_fix_description: Option<String>,
@@ -153,6 +164,7 @@ pub struct PackValidationReport {
     pub structure_summary: StructureSummary,
     pub night_mode: NightModeSummary,
     pub corrections_available: usize,
+    pub optional_corrections_available: usize,
     pub issues: Vec<PackValidationIssue>,
     pub audio_items: Vec<AudioValidationItem>,
     pub image_items: Vec<ImageValidationItem>,
@@ -168,6 +180,8 @@ pub struct FixedPackResult {
     pub audio_fixed: usize,
     pub image_fixed: usize,
     pub metadata_fixed: bool,
+    pub automatic_corrections_applied: usize,
+    pub optional_audio_silences_fixed: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -184,6 +198,27 @@ pub struct PackMetadataPatch {
     pub naming_mode: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AudioSilenceEdge {
+    Leading,
+    Trailing,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OptionalAudioSilenceSelection {
+    pub file_path: String,
+    pub edge: AudioSilenceEdge,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PackCorrectionSelection {
+    #[serde(default)]
+    pub optional_audio_silences: Vec<OptionalAudioSilenceSelection>,
+}
+
 pub(crate) fn issue(
     severity: PackValidationSeverity,
     category: &str,
@@ -198,6 +233,8 @@ pub(crate) fn issue(
         technical_details: None,
         file_path: None,
         item_type: None,
+        code: None,
+        fix_disposition: FixDisposition::None,
         auto_fix_available: false,
         auto_fix_description: None,
     }

@@ -23,6 +23,11 @@ import { useCommunityPackChecker } from './useCommunityPackChecker';
 import { Download, FolderOpen, House, Package, TriangleAlert, Wrench } from '../icons/LucideLocal';
 import { getLastExportDir, saveLastExportDir } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
+import {
+  optionalSilenceSelectionKey,
+  packCorrectionCounts,
+  serializeOptionalSilenceSelection,
+} from './packCheckerIssueClassification';
 import './CommunityPackChecker.css';
 import './CommunityPackCheckerFunnel.css';
 
@@ -53,15 +58,17 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [localError, setLocalError] = useState('');
+  const [selectedOptionalSilences, setSelectedOptionalSilences] = useState(() => new Set());
 
   const busy = phase === 'analyzing' || phase === 'fixing' || checker.status === 'analyzing' || checker.status === 'fixing';
-  const canFix = useMemo(() => (
-    (checker.report?.correctionsAvailable > 0 || titleNeedsCorrection(checker.report))
+  const correctionCounts = useMemo(() => packCorrectionCounts(checker.report), [checker.report]);
+  const canCreateFixedPack = useMemo(() => (
+    (correctionCounts.automatic > 0 || titleNeedsCorrection(checker.report) || selectedOptionalSilences.size > 0)
     && !busy
-  ), [checker.report, busy]);
+  ), [checker.report, correctionCounts.automatic, selectedOptionalSilences, busy]);
   const needsMetadata = titleNeedsCorrection(checker.report);
   const canOpenReport = !!checker.report;
-  const canOpenCorrection = canOpenReport && canFix;
+  const canOpenCorrection = canOpenReport && (canCreateFixedPack || correctionCounts.optional > 0);
   const error = localError || checker.error;
 
   async function analyzePath(path) {
@@ -69,6 +76,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     if (!selected) return;
     setLocalError('');
     setResult(null);
+    setSelectedOptionalSilences(new Set());
     setPhase('analyzing');
     const report = await checker.analyzePath(selected);
     setPhase('collect');
@@ -106,7 +114,15 @@ export function CommunityPackCheckerFunnel({ onClose }) {
       return;
     }
     setPhase('fixing');
-    const fixed = await checker.fixPack(metadataPatch, { outputDir: selectedOutputDir });
+    const fixed = await checker.fixPack(metadataPatch, {
+      outputDir: selectedOutputDir,
+      correctionSelection: {
+        optionalAudioSilences: serializeOptionalSilenceSelection(
+          checker.report,
+          selectedOptionalSilences,
+        ),
+      },
+    });
     setPhase(fixed ? 'done' : 'collect');
     if (fixed) setResult(fixed);
   }
@@ -119,7 +135,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
       return;
     }
     if (step === 1) {
-      if (!canFix) {
+      if (!canOpenCorrection) {
         onClose();
         return;
       }
@@ -139,8 +155,19 @@ export function CommunityPackCheckerFunnel({ onClose }) {
   const primaryLabel = step === 0
     ? 'Analyser'
     : step === 1
-      ? (canFix ? 'Corriger le pack' : 'Terminer')
+      ? (canCreateFixedPack ? 'Corriger le pack' : (correctionCounts.optional > 0 ? 'Voir les suggestions' : 'Terminer'))
       : 'Créer le pack corrigé';
+
+  function toggleOptionalSilence(issue) {
+    const key = optionalSilenceSelectionKey(issue);
+    if (!key) return;
+    setSelectedOptionalSilences((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   return (
     <FunnelShell
@@ -165,7 +192,7 @@ export function CommunityPackCheckerFunnel({ onClose }) {
           stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
           onPrimary={handlePrimary}
           primaryLabel={primaryLabel}
-          primaryDisabled={busy || (step === 0 && !checker.zipPath)}
+          primaryDisabled={busy || (step === 0 && !checker.zipPath) || (step === 2 && !canCreateFixedPack)}
         />
       )}
     >
@@ -238,11 +265,13 @@ export function CommunityPackCheckerFunnel({ onClose }) {
               <ReportView
                 report={checker.report}
                 busy={busy}
-                canFix={canFix}
+                canFix={canCreateFixedPack}
                 onExportReport={checker.exportReport}
                 onFixPack={(metadataPatch) => fixPack(metadataPatch)}
                 onStartFix={() => setStep(2)}
                 showFixButton={false}
+                selectedOptionalSilences={selectedOptionalSilences}
+                onToggleOptionalSilence={toggleOptionalSilence}
               />
               <TechnicalLog
                 report={checker.report}
@@ -258,7 +287,11 @@ export function CommunityPackCheckerFunnel({ onClose }) {
                 title="Voici ce qui va être corrigé"
                 description="Le clic final ouvrira le choix du dossier de sortie, puis créera le ZIP corrigé."
               />
-              <FixableCorrectionsList report={checker.report} />
+              <FixableCorrectionsList
+                report={checker.report}
+                selectedOptionalSilences={selectedOptionalSilences}
+                onToggleOptionalSilence={toggleOptionalSilence}
+              />
               {checker.exportNotice ? <div className="info-box">{checker.exportNotice}</div> : null}
               {error ? <div className="funnel-error" role="alert">{error}</div> : null}
               <div className="pack-checker-inline-actions">
