@@ -663,6 +663,10 @@
   color: var(--danger-text);
 }
 
+.checker-measure--info .checker-measure-icon {
+  color: var(--success-text);
+}
+
 .checker-measure strong {
   color: var(--text);
   font-family: var(--font-mono);
