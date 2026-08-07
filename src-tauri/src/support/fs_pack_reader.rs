@@ -1,7 +1,7 @@
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum FsPackVariant {
@@ -153,13 +153,57 @@ fn read_asset(
         .map_err(|e| format!("Nom asset invalide : {}", e))?
         .trim_matches('\0')
         .replace('\\', "/");
-    let mut path = asset_folder.join(&name);
-    if variant == FsPackVariant::Plain && path.extension().is_none() {
-        path.set_extension(plain_extension);
-    }
+    let path = resolve_asset_path(asset_folder, &name, variant, plain_extension)?;
     let raw = std::fs::read(&path)
         .map_err(|e| format!("Asset introuvable {} : {}", path.display(), e))?;
     Ok(variant.decode(&raw))
+}
+
+fn resolve_asset_path(
+    asset_folder: &Path,
+    name: &str,
+    variant: FsPackVariant,
+    plain_extension: &str,
+) -> Result<PathBuf, String> {
+    let relative = Path::new(name);
+    if name.is_empty()
+        || relative
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(format!("Chemin d'asset invalide dans l'index : {name}"));
+    }
+
+    let mut path = asset_folder.join(relative);
+    if variant == FsPackVariant::Plain && path.extension().is_none() {
+        path.set_extension(plain_extension);
+    }
+
+    let metadata = std::fs::symlink_metadata(&path)
+        .map_err(|e| format!("Asset introuvable {} : {}", path.display(), e))?;
+    if !metadata.file_type().is_file() {
+        return Err(format!(
+            "Asset refusé car il n'est pas un fichier régulier : {}",
+            path.display()
+        ));
+    }
+
+    let canonical_root = std::fs::canonicalize(asset_folder).map_err(|e| {
+        format!(
+            "Dossier d'assets inaccessible {} : {}",
+            asset_folder.display(),
+            e
+        )
+    })?;
+    let canonical_path = std::fs::canonicalize(&path)
+        .map_err(|e| format!("Asset inaccessible {} : {}", path.display(), e))?;
+    if !canonical_path.starts_with(&canonical_root) {
+        return Err(format!(
+            "Chemin d'asset hors du dossier autorisé : {}",
+            path.display()
+        ));
+    }
+    Ok(canonical_path)
 }
 
 pub fn read_fs_pack_to_studio_zip(
@@ -520,6 +564,38 @@ mod tests {
         assert_eq!(audio_bytes, audio);
 
         fs::remove_dir_all(dir).expect("cleanup plain fixture");
+    }
+
+    #[test]
+    fn asset_paths_stay_confined_to_their_pack_folder() {
+        let dir = temp_dir("asset_path_confinement");
+        let asset_dir = dir.join("sf");
+        let nested_dir = asset_dir.join("000");
+        fs::create_dir_all(&nested_dir).expect("create asset directory");
+        let expected = nested_dir.join("SOUND001.mp3");
+        fs::write(&expected, b"audio").expect("write asset");
+
+        let resolved = resolve_asset_path(&asset_dir, "000/SOUND001", FsPackVariant::Plain, "mp3")
+            .expect("resolve asset inside pack");
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&expected).expect("canonical expected asset")
+        );
+
+        let traversal = resolve_asset_path(&asset_dir, "../evil.mp3", FsPackVariant::Plain, "mp3")
+            .expect_err("parent traversal must be rejected");
+        assert!(traversal.contains("Chemin d'asset invalide"));
+
+        let absolute_name = if cfg!(windows) {
+            "C:/evil.mp3"
+        } else {
+            "/tmp/x.mp3"
+        };
+        let absolute = resolve_asset_path(&asset_dir, absolute_name, FsPackVariant::Plain, "mp3")
+            .expect_err("absolute asset path must be rejected");
+        assert!(absolute.contains("Chemin d'asset invalide"));
+
+        fs::remove_dir_all(dir).expect("cleanup confinement fixture");
     }
 
     #[test]
