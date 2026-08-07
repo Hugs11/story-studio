@@ -10,6 +10,17 @@ use crate::support::audio_norm::{edges_from_envelope, parse_rms_envelope, EdgeMe
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 
 #[test]
+fn pack_checker_workspaces_are_unique_per_operation() {
+    let first = unique_pack_workspace("checker");
+    let second = unique_pack_workspace("checker");
+    let correction = unique_pack_workspace("fix");
+
+    assert_ne!(first, second);
+    assert_ne!(first, correction);
+    assert_eq!(first.parent(), Some(std::env::temp_dir().as_path()));
+}
+
+#[test]
 fn report_counts_automatic_and_optional_corrections_separately() {
     let mut report = empty_report("silences", "/tmp/silences.zip");
     let mut long = models::issue(
