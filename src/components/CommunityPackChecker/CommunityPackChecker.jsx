@@ -33,6 +33,7 @@ import {
   automaticCorrectionCount,
   categoryConformanceStats,
   isAutomaticSilenceIssue,
+  isAutomaticVolumeIssue,
   isOptionalSilenceIssue,
   optionalSilenceSelectionKey,
   silenceEdgeForIssue,
@@ -94,7 +95,7 @@ const PROBLEM_SECTIONS = [
     Icon: Music,
     explanation: 'Le niveau moyen est trop faible ou trop fort par rapport au reste.',
     action: 'On normalise le volume au bon niveau.',
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('volume'),
+    match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',

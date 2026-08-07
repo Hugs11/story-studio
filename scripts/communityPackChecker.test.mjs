@@ -11,6 +11,7 @@ import {
 import {
   automaticCorrectionCount,
   categoryConformanceStats,
+  isAutomaticVolumeIssue,
   isOptionalSilenceIssue,
   optionalSilenceIssues,
   optionalSilenceSelectionKey,
@@ -137,4 +138,16 @@ test('automatic correction counts stay scoped to their displayed group', () => {
     issues: [silenceIssue, volumeIssue],
     sectionIssues: [silenceIssue],
   }), 1);
+});
+
+test('near-mute audio is classified as an automatic volume correction', () => {
+  assert.equal(isAutomaticVolumeIssue({
+    severity: 'warning',
+    category: 'audio',
+    message: 'Cet audio semble presque muet.',
+    technicalDetails: 'Volume moyen mesuré : -50.0 LUFS.',
+    autoFixDescription: 'Amplifier et normaliser le volume.',
+    autoFixAvailable: true,
+    fixDisposition: 'automatic',
+  }), true);
 });

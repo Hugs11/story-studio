@@ -28,6 +28,14 @@ export function isOptionalSilenceIssue(issue) {
     && LONG_CODES.has(issue?.code);
 }
 
+export function isAutomaticVolumeIssue(issue) {
+  const searchableText = `${issue?.message || ''} ${issue?.autoFixDescription || ''} ${issue?.technicalDetails || ''}`
+    .toLowerCase();
+  return issue?.category === 'audio'
+    && issue?.autoFixAvailable === true
+    && searchableText.includes('volume');
+}
+
 export function silenceEdgeForIssue(issue) {
   if (issue?.code === SILENCE_ISSUE_CODES.leadingShort || issue?.code === SILENCE_ISSUE_CODES.leadingLong) {
     return 'leading';
