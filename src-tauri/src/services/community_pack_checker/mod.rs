@@ -47,11 +47,7 @@ pub fn analyze_pack_with_log(zip_path: &Path, emit: &dyn Fn(&str)) -> ReportMode
         .technical_log
         .push(format!("[OK] Analyse demandée pour {}", pack_name));
 
-    let temp_dir = std::env::temp_dir().join(format!(
-        "story_studio_pack_checker_{}_{}",
-        std::process::id(),
-        now_millis()
-    ));
+    let temp_dir = unique_pack_workspace("checker");
     if let Err(err) = fs::create_dir_all(&temp_dir) {
         report.issues.push(issue(
             PackValidationSeverity::Error,
@@ -136,11 +132,7 @@ pub(crate) fn create_fixed_pack_with_source_log(
         if metadata_will_change { "oui" } else { "non" }
     ));
     let mut doc = read_pack_doc(zip_path)?;
-    let temp_dir = std::env::temp_dir().join(format!(
-        "story_studio_pack_fix_{}_{}",
-        std::process::id(),
-        now_millis()
-    ));
+    let temp_dir = unique_pack_workspace("fix");
     fs::create_dir_all(&temp_dir)
         .map_err(|e| format!("Impossible de créer le dossier temporaire : {}", e))?;
 
@@ -229,6 +221,16 @@ pub(crate) fn create_fixed_pack_with_source_log(
 
     let _ = fs::remove_dir_all(&temp_dir);
     fixed_result
+}
+
+fn unique_pack_workspace(kind: &str) -> PathBuf {
+    std::env::temp_dir().join(format!(
+        "story_studio_pack_{}_{}_{}_{}",
+        kind,
+        std::process::id(),
+        now_millis(),
+        uuid::Uuid::new_v4()
+    ))
 }
 
 #[derive(Debug, Clone)]
