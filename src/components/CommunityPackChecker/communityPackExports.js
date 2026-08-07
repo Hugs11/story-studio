@@ -15,6 +15,7 @@ import {
   automaticCorrectionCount,
   categoryConformanceStats,
   isAutomaticSilenceIssue,
+  isAutomaticVolumeIssue,
   isOptionalSilenceIssue,
   packCorrectionCounts,
   silenceEdgeForIssue,
@@ -183,7 +184,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     icon: 'audio',
     action: 'On normalise le volume au bon niveau.',
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issueText(issue).includes('volume'),
+    match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',
