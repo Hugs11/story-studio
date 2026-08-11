@@ -774,10 +774,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires STORY_STUDIO_PACK_ARCHIVE"]
     fn concurrent_external_pack_conversion_when_configured() {
-        let Some(archive) = std::env::var_os("STORY_STUDIO_PACK_ARCHIVE") else {
-            return;
-        };
+        let archive = std::env::var_os("STORY_STUDIO_PACK_ARCHIVE")
+            .expect("STORY_STUDIO_PACK_ARCHIVE must point to an external pack archive");
         let archive = fs::canonicalize(archive).expect("canonical external archive");
         let cache_key = cache_key_for_source(&archive).expect("external archive cache key");
         let cached_zip = std::env::temp_dir()
@@ -885,10 +885,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires a bundled or installed 7-Zip executable"]
     fn extracts_small_seven_zip_fixture_when_tool_is_available() {
-        let Ok(seven_zip) = resolve_7z_path() else {
-            return;
-        };
+        let seven_zip =
+            resolve_7z_path().expect("7-Zip is required for this local integration test");
         let dir = temp_import_dir("seven_zip_fixture").join("Dossier Été");
         let source_dir = dir.join("source avec espaces");
         let archive = dir.join("Pack Été.7z");
@@ -1323,6 +1323,43 @@ mod tests {
         }
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject Windows reparse link");
+        assert!(error.contains("reanalyse") || error.contains("lien"));
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn studio_directory_zip_rejects_windows_directory_junction() {
+        let dir = temp_import_dir("studio_directory_windows_junction");
+        let pack_dir = dir.join("pack");
+        let target_dir = pack_dir.join("real-directory");
+        let junction = pack_dir.join("assets/junction");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack assets");
+        fs::create_dir_all(&target_dir).expect("create junction target");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack","stageNodes":[]}"#,
+        )
+        .expect("write story");
+
+        let output = Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "& { param($link, $target) New-Item -ItemType Junction -Path $link -Target $target | Out-Null }",
+            ])
+            .arg(&junction)
+            .arg(&target_dir)
+            .output()
+            .expect("launch PowerShell junction creation");
+        assert!(
+            output.status.success(),
+            "create Windows junction: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let error = cache_key_for_source(&pack_dir).expect_err("reject Windows junction");
         assert!(error.contains("reanalyse") || error.contains("lien"));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }

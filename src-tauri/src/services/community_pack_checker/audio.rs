@@ -1059,10 +1059,9 @@ mod tests {
     ///   SS_CHECK_ASSETS = chemins MP3 séparés par `|`
     ///   SS_FFMPEG       = chemin de ffmpeg.exe
     #[test]
+    #[ignore = "requires SS_CHECK_ASSETS and SS_FFMPEG"]
     fn check_assets_from_env() {
-        let Ok(assets) = std::env::var("SS_CHECK_ASSETS") else {
-            return;
-        };
+        let assets = std::env::var("SS_CHECK_ASSETS").expect("SS_CHECK_ASSETS");
         let ffmpeg = std::env::var("SS_FFMPEG").expect("SS_FFMPEG");
         let ffmpeg = std::path::PathBuf::from(ffmpeg);
         for (i, path) in assets.split('|').enumerate() {

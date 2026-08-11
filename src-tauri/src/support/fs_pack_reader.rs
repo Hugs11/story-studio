@@ -599,10 +599,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires STORY_STUDIO_PLAIN_PACK_DIR"]
     fn converts_external_plain_pack_when_configured() {
-        let Some(pack_dir) = std::env::var_os("STORY_STUDIO_PLAIN_PACK_DIR") else {
-            return;
-        };
+        let pack_dir = std::env::var_os("STORY_STUDIO_PLAIN_PACK_DIR")
+            .expect("STORY_STUDIO_PLAIN_PACK_DIR must point to an external plain pack");
         let dir = temp_dir("external_plain_conversion");
         let cache_dir = dir.join("cache");
         let output_zip = crate::support::imported_pack::ensure_studio_pack_zip_from_dir(

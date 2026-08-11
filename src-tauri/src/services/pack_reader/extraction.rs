@@ -2177,12 +2177,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires STORY_STUDIO_PLAN16_GRAPH_PACK"]
     fn plan16_graph_pack_from_env_is_read_only_without_native_graph() {
-        let Some(zip_path) = std::env::var_os("STORY_STUDIO_PLAN16_GRAPH_PACK") else {
-            eprintln!("[PLAN16] SKIP - definir STORY_STUDIO_PLAN16_GRAPH_PACK vers un ZIP graphe");
-            return;
-        };
+        let zip_path = std::env::var_os("STORY_STUDIO_PLAN16_GRAPH_PACK")
+            .expect("STORY_STUDIO_PLAN16_GRAPH_PACK must point to a graph ZIP");
         let zip_path = PathBuf::from(zip_path);
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
         assert!(
@@ -2326,14 +2324,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires STORY_STUDIO_SUZANNE_PACK"]
     fn suzanne_pack_from_env_stays_authoring_editable() {
-        let Some(zip_path) = std::env::var_os("STORY_STUDIO_SUZANNE_PACK") else {
-            eprintln!(
-                "[SUZANNE] SKIP - definir STORY_STUDIO_SUZANNE_PACK vers le ZIP Suzanne et Gaston"
-            );
-            return;
-        };
+        let zip_path = std::env::var_os("STORY_STUDIO_SUZANNE_PACK")
+            .expect("STORY_STUDIO_SUZANNE_PACK must point to the external ZIP");
         let zip_path = PathBuf::from(zip_path);
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
         assert!(
@@ -2354,12 +2348,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires STORY_STUDIO_AUTHORING_PACK"]
     fn authoring_pack_from_env_is_editable() {
-        let Some(zip_path) = std::env::var_os("STORY_STUDIO_AUTHORING_PACK") else {
-            eprintln!("[AUTHORING] SKIP - definir STORY_STUDIO_AUTHORING_PACK vers le ZIP");
-            return;
-        };
+        let zip_path = std::env::var_os("STORY_STUDIO_AUTHORING_PACK")
+            .expect("STORY_STUDIO_AUTHORING_PACK must point to the external ZIP");
         let zip_path = PathBuf::from(zip_path);
         let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("ok");
         eprintln!(

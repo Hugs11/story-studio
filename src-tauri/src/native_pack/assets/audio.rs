@@ -882,10 +882,9 @@ mod tests {
     ///   SS_REENCODE_OUTDIR = dossier de sortie (new_<i>.mp3)
     ///   SS_FFMPEG          = chemin de ffmpeg.exe
     #[test]
+    #[ignore = "requires SS_REENCODE_INPUTS, SS_REENCODE_OUTDIR and SS_FFMPEG"]
     fn reencode_sample_from_env() {
-        let Ok(inputs) = std::env::var("SS_REENCODE_INPUTS") else {
-            return;
-        };
+        let inputs = std::env::var("SS_REENCODE_INPUTS").expect("SS_REENCODE_INPUTS");
         let outdir = std::env::var("SS_REENCODE_OUTDIR").expect("SS_REENCODE_OUTDIR");
         let ffmpeg = std::env::var("SS_FFMPEG").expect("SS_FFMPEG");
         let ffmpeg = PathBuf::from(ffmpeg);

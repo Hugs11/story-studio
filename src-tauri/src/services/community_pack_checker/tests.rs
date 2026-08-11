@@ -11,13 +11,15 @@ use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 
 #[test]
 fn pack_checker_workspaces_are_unique_per_operation() {
-    let first = unique_pack_workspace("checker");
-    let second = unique_pack_workspace("checker");
-    let correction = unique_pack_workspace("fix");
+    let workspaces = (0..100)
+        .map(|index| unique_pack_workspace(if index % 2 == 0 { "checker" } else { "fix" }))
+        .collect::<Vec<_>>();
+    let unique = workspaces.iter().collect::<std::collections::HashSet<_>>();
 
-    assert_ne!(first, second);
-    assert_ne!(first, correction);
-    assert_eq!(first.parent(), Some(std::env::temp_dir().as_path()));
+    assert_eq!(unique.len(), 100);
+    assert!(workspaces
+        .iter()
+        .all(|path| path.parent() == Some(std::env::temp_dir().as_path())));
 }
 
 #[test]

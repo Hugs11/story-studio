@@ -153,9 +153,10 @@ mod tests {
     #[test]
     #[ignore = "requires network access and the prepared native FFmpeg"]
     fn live_linux_uses_embedded_runtime_and_generates_all_catalog_voices() {
-        if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            return;
-        }
+        assert!(
+            std::env::consts::OS == "linux" && std::env::consts::ARCH == "x86_64",
+            "this external suite must run on Linux x86_64"
+        );
 
         let root =
             std::env::temp_dir().join(format!("story_studio_piper_live_été_{}", Uuid::new_v4()));

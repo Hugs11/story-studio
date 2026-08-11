@@ -42,6 +42,7 @@
     "convert:legacy-project": "node scripts/convert-legacy-project.mjs",
     "check:version": "node scripts/checkVersionConsistency.mjs",
     "check:blank-lines": "node scripts/check-blank-lines.mjs",
+    "regression:preflight": "node scripts/regression-preflight.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
