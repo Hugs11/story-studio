@@ -1,8 +1,6 @@
-use sha1::{Digest, Sha1};
 use std::ffi::OsStr;
 use std::fs;
-use std::io::Write;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::services::project_files::{validate_existing_dir_path, validate_existing_file_path};
@@ -11,6 +9,13 @@ use crate::support::ffmpeg::{apply_no_window, now_millis};
 use crate::support::tool_resolver::{
     path_dirs, push_candidate, push_development_candidates, push_path_candidates,
     push_resource_candidates, resolve_regular_file, resource_dir,
+};
+
+mod source_tree;
+
+use source_tree::{
+    archive_entry_name, cache_key_for_source as source_cache_key, revalidate_regular_entry,
+    validated_directory_tree,
 };
 
 pub(crate) const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
@@ -85,6 +90,14 @@ pub(crate) fn ensure_studio_pack_zip(path: &str) -> Result<PathBuf, String> {
     }
     conversion_result?;
 
+    if cache_key_for_source(&source)? != cache_key {
+        let _ = fs::remove_dir_all(&workspace);
+        return Err(format!(
+            "La source importee a change pendant sa conversion : {}",
+            source.display()
+        ));
+    }
+
     let publish_result = publish_cached_zip(&converted_zip, &cached_zip);
     let _ = fs::remove_dir_all(&workspace);
     publish_result?;
@@ -136,6 +149,14 @@ pub(crate) fn ensure_studio_pack_zip_from_dir(
         let _ = fs::remove_dir_all(&workspace);
     }
     conversion_result?;
+
+    if cache_key_for_source(&source)? != cache_key {
+        let _ = fs::remove_dir_all(&workspace);
+        return Err(format!(
+            "Le dossier importe a change pendant sa conversion : {}",
+            source.display()
+        ));
+    }
 
     let publish_result = publish_cached_zip(&converted_zip, &cached_zip);
     let _ = fs::remove_dir_all(&workspace);
@@ -223,28 +244,7 @@ fn pack_extension(path: &Path) -> Option<String> {
 }
 
 fn cache_key_for_source(path: &Path) -> Result<String, String> {
-    let metadata = fs::metadata(path).map_err(|e| {
-        format!(
-            "Impossible de lire les metadonnees de {} : {}",
-            path.display(),
-            e
-        )
-    })?;
-    let modified = metadata
-        .modified()
-        .ok()
-        .and_then(|value| value.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|value| value.as_secs())
-        .unwrap_or_default();
-    let mut hasher = Sha1::new();
-    // Version du format de conversion : à incrémenter quand le story.json généré change
-    // (ici : ajout de l'UUID racine pour les packs natifs), pour invalider les caches
-    // convertis avant le changement.
-    hasher.update(CONVERSION_FORMAT_VERSION.as_bytes());
-    hasher.update(path.to_string_lossy().as_bytes());
-    hasher.update(metadata.len().to_string().as_bytes());
-    hasher.update(modified.to_string().as_bytes());
-    Ok(format!("{:x}", hasher.finalize()))
+    source_cache_key(path, CONVERSION_FORMAT_VERSION)
 }
 
 fn fallback_pack_title(source: &Path) -> String {
@@ -602,41 +602,27 @@ fn looks_like_fs_pack_directory(dir: &Path) -> bool {
 }
 
 fn zip_directory_to_file(source_dir: &Path, output_zip: &Path) -> Result<(), String> {
+    let entries = validated_directory_tree(source_dir)?;
     let out_file = fs::File::create(output_zip)
         .map_err(|e| format!("Impossible de creer {} : {}", output_zip.display(), e))?;
     let mut writer = zip::ZipWriter::new(out_file);
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
-    let mut stack = vec![source_dir.to_path_buf()];
 
-    while let Some(current) = stack.pop() {
-        for entry in fs::read_dir(&current)
-            .map_err(|e| format!("Impossible de lire {} : {}", current.display(), e))?
-        {
-            let entry = entry.map_err(|e| format!("Lecture dossier impossible : {}", e))?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-                continue;
-            }
-            let relative = path
-                .strip_prefix(source_dir)
-                .map_err(|e| format!("Chemin archive invalide {} : {}", path.display(), e))?;
-            let entry_name = relative
-                .components()
-                .filter_map(component_to_archive_part)
-                .collect::<Vec<_>>()
-                .join("/");
-
-            let bytes = fs::read(&path)
-                .map_err(|e| format!("Impossible de lire {} : {}", path.display(), e))?;
-            writer
-                .start_file(entry_name, options)
-                .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
-            writer
-                .write_all(&bytes)
-                .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
-        }
+    for entry in entries.into_iter().filter(|entry| !entry.is_dir) {
+        // Les API standard ne permettent pas une ouverture relative sans suivi de lien sur les
+        // trois plateformes. On revalide donc type, taille, canonique et confinement au plus pres
+        // de l'ouverture, puis l'empreinte est recalculee avant publication pour detecter une
+        // divergence restante.
+        revalidate_regular_entry(source_dir, &entry)?;
+        let entry_name = archive_entry_name(&entry.relative)?;
+        let mut input = fs::File::open(&entry.absolute)
+            .map_err(|e| format!("Impossible de lire {} : {}", entry.absolute.display(), e))?;
+        writer
+            .start_file(entry_name, options)
+            .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
+        std::io::copy(&mut input, &mut writer)
+            .map_err(|e| format!("Impossible d'ecrire ZIP {} : {}", output_zip.display(), e))?;
     }
 
     writer.finish().map_err(|e| {
@@ -647,13 +633,6 @@ fn zip_directory_to_file(source_dir: &Path, output_zip: &Path) -> Result<(), Str
         )
     })?;
     Ok(())
-}
-
-fn component_to_archive_part(component: Component<'_>) -> Option<String> {
-    match component {
-        Component::Normal(value) => Some(value.to_string_lossy().replace('\\', "/")),
-        _ => None,
-    }
 }
 
 fn convert_fs_pack_directory_to_zip(
@@ -667,6 +646,7 @@ fn convert_fs_pack_directory_to_zip(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
     use std::sync::{Arc, Barrier};
 
     fn temp_import_dir(name: &str) -> PathBuf {
@@ -691,6 +671,15 @@ mod tests {
             writer.write_all(bytes).expect("write zip file");
         }
         writer.finish().expect("finish zip");
+    }
+
+    fn read_zip_entry(path: &Path, name: &str) -> Vec<u8> {
+        let file = fs::File::open(path).expect("open zip");
+        let mut archive = zip::ZipArchive::new(file).expect("read zip");
+        let mut entry = archive.by_name(name).expect("find zip entry");
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).expect("read zip entry");
+        bytes
     }
 
     fn minimal_plain_node_index() -> Vec<u8> {
@@ -1114,6 +1103,227 @@ mod tests {
         assert_eq!(zip.parent(), Some(cache_dir.as_path()));
         assert!(zip_contains_story_json(&zip).expect("converted zip has story.json"));
 
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn directory_cache_reconversion_uses_same_size_mutated_content() {
+        let dir = temp_import_dir("directory_cache_reconversion");
+        let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
+        let story = pack_dir.join("story.json");
+        let first_story = br#"{"title":"AAAA","stageNodes":[]}"#;
+        let second_story = br#"{"title":"BBBB","stageNodes":[]}"#;
+        fs::write(&story, first_story).expect("write first story");
+
+        let first =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("pack path utf8"), &cache_dir)
+                .expect("first conversion");
+        assert_eq!(read_zip_entry(&first, "story.json"), first_story);
+
+        fs::write(&story, second_story).expect("mutate story");
+        let second =
+            ensure_studio_pack_zip_from_dir(pack_dir.to_str().expect("pack path utf8"), &cache_dir)
+                .expect("second conversion");
+        assert_ne!(first, second);
+        assert_eq!(read_zip_entry(&second, "story.json"), second_story);
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn twenty_five_concurrent_directory_conversions_publish_one_complete_zip() {
+        let dir = temp_import_dir("directory_concurrency_25");
+        let pack_dir = dir.join("pack");
+        let cache_dir = dir.join("cache");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Concurrent","stageNodes":[]}"#,
+        )
+        .expect("write story");
+
+        let worker_count = 25;
+        let barrier = Arc::new(Barrier::new(worker_count));
+        let pack_path = Arc::new(pack_dir.to_str().expect("pack path utf8").to_string());
+        let cache_path = Arc::new(cache_dir);
+        let handles = (0..worker_count)
+            .map(|_| {
+                let barrier = Arc::clone(&barrier);
+                let pack_path = Arc::clone(&pack_path);
+                let cache_path = Arc::clone(&cache_path);
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    ensure_studio_pack_zip_from_dir(&pack_path, &cache_path)
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let converted = handles
+            .into_iter()
+            .map(|handle| {
+                handle
+                    .join()
+                    .expect("conversion worker panicked")
+                    .expect("concurrent conversion succeeds")
+            })
+            .collect::<Vec<_>>();
+        assert!(converted.windows(2).all(|paths| paths[0] == paths[1]));
+        assert!(zip_contains_story_json(&converted[0]).expect("complete shared cache zip"));
+        assert!(fs::read_dir(cache_path.as_ref())
+            .expect("read cache")
+            .all(|entry| !entry
+                .expect("cache entry")
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".tmp")));
+
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn directory_cache_key_changes_after_same_size_internal_mutation() {
+        let dir = temp_import_dir("directory_fingerprint_mutation");
+        let pack_dir = dir.join("pack");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack dir");
+        let story = pack_dir.join("story.json");
+        fs::write(&story, br#"{"title":"AAAA","stageNodes":[]}"#).expect("write first story");
+
+        let first = cache_key_for_source(&pack_dir).expect("first directory key");
+        fs::write(&story, br#"{"title":"BBBB","stageNodes":[]}"#).expect("mutate story");
+        let second = cache_key_for_source(&pack_dir).expect("second directory key");
+
+        assert_ne!(
+            first, second,
+            "same-size content mutation must invalidate cache"
+        );
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[test]
+    fn archive_cache_key_changes_after_same_size_content_mutation() {
+        let dir = temp_import_dir("archive_fingerprint_mutation");
+        fs::create_dir_all(&dir).expect("create temp dir");
+        let archive = dir.join("pack.7z");
+        fs::write(&archive, b"archive-AAAA").expect("write first archive");
+        let first = cache_key_for_source(&archive).expect("first archive key");
+        fs::write(&archive, b"archive-BBBB").expect("mutate archive");
+        let second = cache_key_for_source(&archive).expect("second archive key");
+
+        assert_ne!(
+            first, second,
+            "same-size archive mutation must invalidate cache"
+        );
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn studio_directory_zip_rejects_file_and_directory_symlinks() {
+        use std::os::unix::fs::symlink;
+
+        let dir = temp_import_dir("studio_directory_symlinks");
+        let pack_dir = dir.join("pack");
+        let outside_dir = dir.join("outside");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack assets");
+        fs::create_dir_all(&outside_dir).expect("create outside dir");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack","stageNodes":[]}"#,
+        )
+        .expect("write story");
+        fs::write(outside_dir.join("secret.txt"), b"outside").expect("write outside file");
+        symlink(
+            outside_dir.join("secret.txt"),
+            pack_dir.join("assets/file-link.txt"),
+        )
+        .expect("create file symlink");
+        symlink(&outside_dir, pack_dir.join("assets/dir-link")).expect("create dir symlink");
+
+        let error = cache_key_for_source(&pack_dir).expect_err("reject source symlinks");
+        assert!(error.contains("lien") || error.contains("symbolique"));
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn studio_directory_zip_rejects_symlink_loop_without_recursing() {
+        use std::os::unix::fs::symlink;
+
+        let dir = temp_import_dir("studio_directory_symlink_loop");
+        let pack_dir = dir.join("pack");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack assets");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack","stageNodes":[]}"#,
+        )
+        .expect("write story");
+        symlink(&pack_dir, pack_dir.join("assets/loop")).expect("create loop symlink");
+
+        let error = cache_key_for_source(&pack_dir).expect_err("reject symlink loop");
+        assert!(error.contains("lien") || error.contains("symbolique"));
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn studio_directory_zip_rejects_broken_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let dir = temp_import_dir("studio_directory_broken_symlink");
+        let pack_dir = dir.join("pack");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack assets");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack","stageNodes":[]}"#,
+        )
+        .expect("write story");
+        symlink(
+            dir.join("missing-target"),
+            pack_dir.join("assets/broken-link"),
+        )
+        .expect("create broken symlink");
+
+        let error = cache_key_for_source(&pack_dir).expect_err("reject broken symlink");
+        assert!(error.contains("lien") || error.contains("symbolique"));
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn studio_directory_zip_rejects_windows_reparse_links_when_creatable() {
+        use std::os::windows::fs::{symlink_dir, symlink_file};
+
+        let dir = temp_import_dir("studio_directory_windows_reparse");
+        let pack_dir = dir.join("pack");
+        let outside_dir = dir.join("outside");
+        fs::create_dir_all(pack_dir.join("assets")).expect("create pack assets");
+        fs::create_dir_all(&outside_dir).expect("create outside dir");
+        fs::write(
+            pack_dir.join("story.json"),
+            br#"{"title":"Pack","stageNodes":[]}"#,
+        )
+        .expect("write story");
+        let outside_file = outside_dir.join("secret.txt");
+        fs::write(&outside_file, b"outside").expect("write outside file");
+
+        let file_link = pack_dir.join("assets/file-link.txt");
+        let dir_link = pack_dir.join("assets/dir-link");
+        let file_result = symlink_file(&outside_file, &file_link);
+        let dir_result = symlink_dir(&outside_dir, &dir_link);
+        if file_result.is_err() && dir_result.is_err() {
+            eprintln!(
+                "SKIP windows reparse link creation: file={:?}; directory={:?}",
+                file_result.err(),
+                dir_result.err()
+            );
+            fs::remove_dir_all(dir).expect("cleanup temp import dir");
+            return;
+        }
+
+        let error = cache_key_for_source(&pack_dir).expect_err("reject Windows reparse link");
+        assert!(error.contains("reanalyse") || error.contains("lien"));
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
