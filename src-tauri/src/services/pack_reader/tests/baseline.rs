@@ -243,13 +243,13 @@ fn run_metrics(label: &str, path: &Path) {
 }
 
 #[test]
-#[ignore]
+#[ignore = "requires STORY_STUDIO_BASELINE_DIR"]
 fn baseline_import_metrics() {
     let packs = baseline_story_paths();
-    if packs.is_empty() {
-        println!("[BASELINE] SKIP - definir STORY_STUDIO_BASELINE_DIR");
-        return;
-    }
+    assert!(
+        !packs.is_empty(),
+        "STORY_STUDIO_BASELINE_DIR must contain at least one story.json"
+    );
     for (label, path) in packs {
         run_metrics(&label, &path);
     }

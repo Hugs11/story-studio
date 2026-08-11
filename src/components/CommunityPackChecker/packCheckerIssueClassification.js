@@ -1,4 +1,4 @@
-export const SILENCE_ISSUE_CODES = Object.freeze({
+const SILENCE_ISSUE_CODES = Object.freeze({
   leadingShort: 'audioLeadingSilenceTooShort',
   trailingShort: 'audioTrailingSilenceTooShort',
   leadingLong: 'audioLeadingSilenceLong',
