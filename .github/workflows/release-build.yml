@@ -102,6 +102,9 @@ jobs:
           restore-keys: |
             ${{ matrix.cache }}-downloads-
 
+      - name: Remove stale Tauri bundles restored from cache
+        run: node scripts/clean-tauri-bundles.mjs
+
       - name: Install dependencies
         run: npm ci
 
