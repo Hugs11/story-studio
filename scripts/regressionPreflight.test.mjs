@@ -26,3 +26,14 @@ test('les alternatives de fidélité acceptent fichier ou dossier sans exposer l
   assert.deepEqual(readiness, { ready: true, missing: [] });
   assert.equal(JSON.stringify(readiness).includes(secretPath), false);
 });
+
+test('la baseline externe expose séparément import et juge de fidélité', () => {
+  const baselineSuites = EXTERNAL_SUITES.filter(({ allOf }) => (
+    allOf?.includes('STORY_STUDIO_BASELINE_DIR')
+  ));
+  assert.deepEqual(
+    baselineSuites.map(({ id }) => id),
+    ['baseline-import', 'baseline-judge'],
+  );
+  assert.ok(baselineSuites.every(({ command }) => command.includes('--ignored')));
+});

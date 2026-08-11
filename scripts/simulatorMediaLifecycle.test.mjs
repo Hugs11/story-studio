@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createMediaRequestLifecycle } from '../src/tabs/EmulatorTab/mediaRequestLifecycle.js';
+import {
+  createMediaRequestKey,
+  createMediaRequestLifecycle,
+} from '../src/tabs/EmulatorTab/mediaRequestLifecycle.js';
 
 function controlledPromise() {
   let resolve;
@@ -108,4 +111,16 @@ test('100 interleavings inversés ne laissent appliquer que la dernière requêt
     await first;
     assert.deepEqual(harness.applied, [`new-${iteration}`]);
   }
+});
+
+test('deux écrans qui partagent le même audio gardent des clés de lecture distinctes', () => {
+  const request = { kind: 'local', path: 'C:/media/shared.mp3' };
+  const cover = createMediaRequestKey(request, ['cover', 'root', null, 0]);
+  const menu = createMediaRequestKey(request, ['browse', 'menu-1', null, 0]);
+  assert.notEqual(cover, menu);
+  assert.equal(
+    createMediaRequestKey({ ...request }, ['cover', 'root', null, 0]),
+    cover,
+    'un simple changement de référence objet ne doit pas relancer la lecture',
+  );
 });

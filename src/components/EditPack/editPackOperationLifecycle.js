@@ -3,9 +3,11 @@ export function createEditPackOperationLifecycle() {
   let generation = 0;
   let running = false;
   let completionClaimed = false;
+  let active = true;
+  let session = 0;
 
   function begin() {
-    if (running) return null;
+    if (!active || running) return null;
     running = true;
     completionClaimed = false;
     generation += 1;
@@ -16,6 +18,26 @@ export function createEditPackOperationLifecycle() {
     generation += 1;
     running = false;
     completionClaimed = false;
+  }
+
+  function activate() {
+    if (active) return;
+    active = true;
+    session += 1;
+  }
+
+  function deactivate() {
+    active = false;
+    session += 1;
+    invalidate();
+  }
+
+  function captureSession() {
+    return active ? session : null;
+  }
+
+  function isSessionCurrent(token) {
+    return active && token !== null && token === session;
   }
 
   function isCurrent(token) {
@@ -38,7 +60,23 @@ export function createEditPackOperationLifecycle() {
     return running;
   }
 
-  return { begin, claimCompletion, finish, invalidate, isCurrent, isRunning };
+  function isActive() {
+    return active;
+  }
+
+  return {
+    activate,
+    begin,
+    captureSession,
+    claimCompletion,
+    deactivate,
+    finish,
+    invalidate,
+    isActive,
+    isCurrent,
+    isRunning,
+    isSessionCurrent,
+  };
 }
 
 export async function runEditPackImportOperation({
@@ -50,6 +88,7 @@ export async function runEditPackImportOperation({
   beforeLand = () => {},
   land,
 }) {
+  if (!lifecycle.isActive()) return { status: 'cancelled' };
   const token = lifecycle.begin();
   if (token === null) return { status: 'busy' };
 

@@ -857,6 +857,7 @@ fn classify_external_packs_with_judge() {
         "=== CLASSEMENT JUGE DE FIDÉLITÉ ({} packs) ===",
         packs.len()
     );
+    let mut panicked_packs = Vec::new();
     for (pack_id, story_path) in packs {
         // Un pack qui panique (modèle inattendu) ne doit pas masquer les autres verdicts.
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -864,8 +865,14 @@ fn classify_external_packs_with_judge() {
         }));
         if outcome.is_err() {
             eprintln!("[{pack_id}] PANIC pendant le classement (voir trace ci-dessus)");
+            panicked_packs.push(pack_id);
         }
     }
+    assert!(
+        panicked_packs.is_empty(),
+        "classification panicked for: {}",
+        panicked_packs.join(", ")
+    );
 }
 
 /// Écrit un `story.json` synthétique + ses assets dans un zip temporaire (round-trips de motifs).

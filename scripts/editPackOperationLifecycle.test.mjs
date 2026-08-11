@@ -48,6 +48,34 @@ test('une nouvelle ouverture ne reconnaît aucun jeton antérieur', () => {
   assert.equal(lifecycle.isCurrent(nextToken), true);
 });
 
+test('un résultat de sélecteur arrivé après fermeture ne peut pas démarrer une opération', () => {
+  const lifecycle = createEditPackOperationLifecycle();
+  const pickerSession = lifecycle.captureSession();
+  lifecycle.deactivate();
+  assert.equal(lifecycle.isSessionCurrent(pickerSession), false);
+  assert.equal(lifecycle.begin(), null);
+
+  lifecycle.activate();
+  assert.equal(lifecycle.isSessionCurrent(pickerSession), false);
+  assert.notEqual(lifecycle.captureSession(), pickerSession);
+});
+
+test('une opération demandée sur un funnel désactivé ne produit aucun effet', async () => {
+  const lifecycle = createEditPackOperationLifecycle();
+  lifecycle.deactivate();
+  let calls = 0;
+  const result = await runEditPackImportOperation({
+    lifecycle,
+    path: 'late-folder',
+    isFolder: true,
+    convertFolder: async () => { calls += 1; return 'pack.zip'; },
+    classify: async () => { calls += 1; return { authoringEditable: true }; },
+    land: async () => { calls += 1; },
+  });
+  assert.deepEqual(result, { status: 'cancelled' });
+  assert.equal(calls, 0);
+});
+
 test('démontage pendant conversion: classification et onLand ne sont jamais appelés', async () => {
   const lifecycle = createEditPackOperationLifecycle();
   const conversion = controlledPromise();

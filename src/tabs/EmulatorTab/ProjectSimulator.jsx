@@ -22,7 +22,7 @@ import {
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
-import { createMediaRequestLifecycle } from './mediaRequestLifecycle';
+import { createMediaRequestKey, createMediaRequestLifecycle } from './mediaRequestLifecycle';
 
 const END_NODE_ID = 'end-node';
 
@@ -373,11 +373,12 @@ export function ProjectSimulator({
   } else if (state === 'endnode' && project.nightModeAudio) {
     audioRequest = { kind: 'local', path: project.nightModeAudio };
   }
-  const audioRequestKey = audioRequest
-    ? [audioRequest.kind, audioRequest.path, audioRequest.zipPath, audioRequest.assetHash]
-      .map((value) => value ?? '')
-      .join('\u0000')
-    : '';
+  const audioRequestKey = createMediaRequestKey(audioRequest, [
+    state,
+    currentEntry?.id ?? null,
+    simpleStory?.id ?? null,
+    sequenceIndex,
+  ]);
 
   useEffect(() => {
     const lifecycle = audioLifecycleRef.current;
