@@ -14,8 +14,8 @@ use crate::support::tool_resolver::{
 mod source_tree;
 
 use source_tree::{
-    archive_entry_name, cache_key_for_source as source_cache_key, revalidate_regular_entry,
-    validated_directory_tree,
+    archive_entry_name, cache_key_for_source as source_cache_key, is_link_or_reparse,
+    revalidate_regular_entry, validated_directory_tree,
 };
 
 pub(crate) const IMPORTED_PACK_CACHE_DIR: &str = "story_studio_imported_pack_cache";
@@ -413,7 +413,7 @@ fn extract_7z_archive(source: &Path, output_dir: &Path) -> Result<(), String> {
 
 fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
     let mut stack = vec![root.to_path_buf()];
-    let mut file_count = 0_usize;
+    let mut entry_count = 0_usize;
     let mut total_bytes = 0_u64;
 
     while let Some(dir) = stack.pop() {
@@ -424,10 +424,17 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
             let path = entry.path();
             let metadata = fs::symlink_metadata(&path)
                 .map_err(|e| format!("Metadonnees inaccessibles {} : {}", path.display(), e))?;
-            if metadata.file_type().is_symlink() {
+            if is_link_or_reparse(&metadata) {
                 return Err(format!(
-                    "Archive refusee : lien symbolique extrait interdit ({})",
+                    "Archive refusee : lien symbolique ou point de reanalyse extrait interdit ({})",
                     path.display()
+                ));
+            }
+            entry_count += 1;
+            if entry_count > ARCHIVE_MAX_ENTRIES {
+                return Err(format!(
+                    "Archive trop volumineuse apres extraction : plus de {} entrees.",
+                    ARCHIVE_MAX_ENTRIES
                 ));
             }
             if metadata.is_dir() {
@@ -438,14 +445,6 @@ fn validate_extracted_tree_limits(root: &Path) -> Result<(), String> {
                 return Err(format!(
                     "Archive refusee : entree extraite non reguliere ({})",
                     path.display()
-                ));
-            }
-
-            file_count += 1;
-            if file_count > ARCHIVE_MAX_ENTRIES {
-                return Err(format!(
-                    "Archive trop volumineuse apres extraction : plus de {} fichiers.",
-                    ARCHIVE_MAX_ENTRIES
                 ));
             }
             ensure_extracted_entry_size(&path.to_string_lossy(), metadata.len())?;
@@ -705,6 +704,26 @@ mod tests {
             cwd: None,
             path_dirs: Vec::new(),
         }
+    }
+
+    #[cfg(windows)]
+    fn create_windows_junction(link: &Path, target: &Path) {
+        let output = Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "& { param($link, $target) New-Item -ItemType Junction -Path $link -Target $target | Out-Null }",
+            ])
+            .arg(link)
+            .arg(target)
+            .output()
+            .expect("launch PowerShell junction creation");
+        assert!(
+            output.status.success(),
+            "create Windows junction: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 
     #[test]
@@ -1021,6 +1040,21 @@ mod tests {
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn extracted_tree_validation_rejects_windows_junctions() {
+        let dir = temp_import_dir("seven_zip_junction");
+        let extracted = dir.join("extracted");
+        let target = dir.join("target");
+        fs::create_dir_all(&extracted).expect("create extracted tree");
+        fs::create_dir_all(&target).expect("create junction target");
+        create_windows_junction(&extracted.join("linked"), &target);
+
+        let error = validate_extracted_tree_limits(&extracted).expect_err("reject junction");
+        assert!(error.contains("reanalyse") || error.contains("lien"));
+        fs::remove_dir_all(dir).expect("cleanup temp import dir");
+    }
+
     #[test]
     fn ensure_studio_pack_zip_returns_valid_studio_zip_source() {
         let dir = temp_import_dir("studio_zip");
@@ -1198,6 +1232,7 @@ mod tests {
             first, second,
             "same-size content mutation must invalidate cache"
         );
+        assert_eq!(second.len(), 64, "cache fingerprint must be SHA-256");
         fs::remove_dir_all(dir).expect("cleanup temp import dir");
     }
 
@@ -1336,22 +1371,7 @@ mod tests {
         )
         .expect("write story");
 
-        let output = Command::new("powershell.exe")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                "& { param($link, $target) New-Item -ItemType Junction -Path $link -Target $target | Out-Null }",
-            ])
-            .arg(&junction)
-            .arg(&target_dir)
-            .output()
-            .expect("launch PowerShell junction creation");
-        assert!(
-            output.status.success(),
-            "create Windows junction: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        create_windows_junction(&junction, &target_dir);
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject Windows junction");
         assert!(error.contains("reanalyse") || error.contains("lien"));

@@ -1,11 +1,11 @@
-use sha1::{Digest, Sha1};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use crate::support::archive_limits::{ARCHIVE_MAX_ENTRIES, ARCHIVE_MAX_FILE_BYTES};
 
-const SOURCE_FINGERPRINT_VERSION: &str = "v1-content-tree";
+const SOURCE_FINGERPRINT_VERSION: &str = "v2-sha256-content-tree";
 const MAX_TOTAL_SOURCE_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 
 #[derive(Debug)]
@@ -28,7 +28,7 @@ pub(super) fn cache_key_for_source(
         )
     })?;
     reject_link_or_reparse(path, &metadata)?;
-    let mut hasher = Sha1::new();
+    let mut hasher = Sha256::new();
     hash_field(
         &mut hasher,
         b"conversion",
@@ -80,7 +80,7 @@ pub(super) fn validated_directory_tree(
         .map_err(|e| format!("Impossible de canoniser {} : {}", root.display(), e))?;
     let mut stack = vec![canonical_root.clone()];
     let mut validated = Vec::new();
-    let mut file_count = 0_usize;
+    let mut entry_count = 0_usize;
     let mut total_bytes = 0_u64;
 
     while let Some(dir) = stack.pop() {
@@ -92,6 +92,7 @@ pub(super) fn validated_directory_tree(
             let metadata = fs::symlink_metadata(&path)
                 .map_err(|e| format!("Metadonnees inaccessibles {} : {}", path.display(), e))?;
             reject_link_or_reparse(&path, &metadata)?;
+            entry_count = checked_source_entry_count(entry_count)?;
             if !metadata.is_dir() && !metadata.is_file() {
                 return Err(format!(
                     "Dossier importe refuse : entree non reguliere ({})",
@@ -114,13 +115,6 @@ pub(super) fn validated_directory_tree(
             if metadata.is_dir() {
                 stack.push(canonical.clone());
             } else {
-                file_count += 1;
-                if file_count > ARCHIVE_MAX_ENTRIES {
-                    return Err(format!(
-                        "Dossier importe trop volumineux : plus de {} fichiers.",
-                        ARCHIVE_MAX_ENTRIES
-                    ));
-                }
                 ensure_source_entry_size(&relative, metadata.len())?;
                 total_bytes = total_bytes.checked_add(metadata.len()).ok_or_else(|| {
                     "Taille totale du dossier importe trop volumineuse.".to_string()
@@ -151,6 +145,19 @@ pub(super) fn validated_directory_tree(
             .cmp(&archive_entry_name(&right.relative).expect("validated archive path"))
     });
     Ok(validated)
+}
+
+fn checked_source_entry_count(current: usize) -> Result<usize, String> {
+    let next = current
+        .checked_add(1)
+        .ok_or_else(|| "Dossier importe trop volumineux : trop d'entrees.".to_string())?;
+    if next > ARCHIVE_MAX_ENTRIES {
+        return Err(format!(
+            "Dossier importe trop volumineux : plus de {} entrees.",
+            ARCHIVE_MAX_ENTRIES
+        ));
+    }
+    Ok(next)
 }
 
 pub(super) fn revalidate_regular_entry(
@@ -225,13 +232,17 @@ fn ensure_source_entry_size(path: &Path, size: u64) -> Result<(), String> {
 }
 
 fn reject_link_or_reparse(path: &Path, metadata: &fs::Metadata) -> Result<(), String> {
-    if metadata.file_type().is_symlink() || is_reparse_point(metadata) {
+    if is_link_or_reparse(metadata) {
         return Err(format!(
             "Dossier importe refuse : lien symbolique ou point de reanalyse interdit ({})",
             path.display()
         ));
     }
     Ok(())
+}
+
+pub(super) fn is_link_or_reparse(metadata: &fs::Metadata) -> bool {
+    metadata.file_type().is_symlink() || is_reparse_point(metadata)
 }
 
 #[cfg(windows)]
@@ -246,14 +257,14 @@ fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
     false
 }
 
-fn hash_field(hasher: &mut Sha1, label: &[u8], value: &[u8]) {
+fn hash_field(hasher: &mut Sha256, label: &[u8], value: &[u8]) {
     hasher.update((label.len() as u64).to_be_bytes());
     hasher.update(label);
     hasher.update((value.len() as u64).to_be_bytes());
     hasher.update(value);
 }
 
-fn hash_path_field(hasher: &mut Sha1, label: &[u8], path: &Path) -> Result<(), String> {
+fn hash_path_field(hasher: &mut Sha256, label: &[u8], path: &Path) -> Result<(), String> {
     let value = path.to_str().ok_or_else(|| {
         format!(
             "Chemin non Unicode impossible a representer dans un pack : {}",
@@ -265,7 +276,7 @@ fn hash_path_field(hasher: &mut Sha1, label: &[u8], path: &Path) -> Result<(), S
 }
 
 fn hash_regular_file(
-    hasher: &mut Sha1,
+    hasher: &mut Sha256,
     path: &Path,
     metadata: &fs::Metadata,
 ) -> Result<(), String> {
@@ -283,4 +294,20 @@ fn hash_regular_file(
         hasher.update(&buffer[..count]);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_entry_limit_counts_directories_as_well_as_files() {
+        assert_eq!(
+            checked_source_entry_count(ARCHIVE_MAX_ENTRIES - 1).expect("last allowed entry"),
+            ARCHIVE_MAX_ENTRIES
+        );
+        let error = checked_source_entry_count(ARCHIVE_MAX_ENTRIES)
+            .expect_err("directory beyond entry limit must be rejected");
+        assert!(error.contains("entrees"));
+    }
 }

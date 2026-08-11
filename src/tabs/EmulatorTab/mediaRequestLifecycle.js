@@ -44,3 +44,17 @@ export function createMediaRequestLifecycle({
 
   return { invalidate, request };
 }
+
+/**
+ * Clé stable d'une requête média dans son contexte logique. Deux écrans distincts
+ * qui réutilisent le même fichier doivent tout de même relancer la lecture.
+ */
+export function createMediaRequestKey(request, context = []) {
+  return JSON.stringify([
+    ...context,
+    request?.kind ?? null,
+    request?.path ?? null,
+    request?.zipPath ?? null,
+    request?.assetHash ?? null,
+  ]);
+}

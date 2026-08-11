@@ -42,17 +42,24 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
     operationLifecycleRef.current = createEditPackOperationLifecycle();
   }
 
-  useEffect(() => () => operationLifecycleRef.current.invalidate(), []);
+  useEffect(() => {
+    operationLifecycleRef.current.activate();
+    return () => operationLifecycleRef.current.deactivate();
+  }, []);
 
-  function handleClose() {
-    if (operationLifecycleRef.current.isRunning()) return;
-    operationLifecycleRef.current.invalidate();
+  function closeFunnel() {
+    operationLifecycleRef.current.deactivate();
     onClose();
   }
 
+  function handleClose() {
+    if (operationLifecycleRef.current.isRunning()) return;
+    closeFunnel();
+  }
+
   async function processPack(path, kind) {
-    if (!path) return;
     const operation = operationLifecycleRef.current;
+    if (!path || !operation.isActive()) return;
     setError('');
     setBusy({ title: 'Vérification du pack…', hint: 'Un instant.' });
     setPhase('busy');
@@ -70,7 +77,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       land: (zipPath) => onLand({ zipPath, packLabel }),
     });
     if (result.status === 'landed') {
-      onClose();
+      closeFunnel();
     } else if (result.status === 'classified') {
       setPending({ zipPath: result.zipPath, packLabel, report: result.report });
       setPhase(result.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
@@ -81,8 +88,18 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
   }
 
   const handleDrop = (paths) => processPack(paths?.[0], 'auto');
-  const handleBrowseFile = async () => { const p = await pickZip(); if (p) processPack(p, 'file'); };
-  const handleBrowseFolder = async () => { const p = await pickFolder(); if (p) processPack(p, 'folder'); };
+  const handleBrowseFile = async () => {
+    const operation = operationLifecycleRef.current;
+    const session = operation.captureSession();
+    const path = await pickZip();
+    if (path && operation.isSessionCurrent(session)) processPack(path, 'file');
+  };
+  const handleBrowseFolder = async () => {
+    const operation = operationLifecycleRef.current;
+    const session = operation.captureSession();
+    const path = await pickFolder();
+    if (path && operation.isSessionCurrent(session)) processPack(path, 'folder');
+  };
 
   async function handleSimulate() {
     if (!pending) return;
@@ -96,7 +113,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       await onSimulate(pending);
       if (!operation.isCurrent(token)) return;
       operation.finish(token);
-      onClose();
+      closeFunnel();
     } catch (e) {
       if (!operation.isCurrent(token)) return;
       operation.finish(token);
@@ -117,7 +134,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       await onLand({ ...pending, allowUnsupported: true });
       if (!operation.isCurrent(token)) return;
       operation.finish(token);
-      onClose();
+      closeFunnel();
     } catch (e) {
       if (!operation.isCurrent(token)) return;
       operation.finish(token);

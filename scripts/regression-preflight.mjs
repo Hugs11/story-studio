@@ -18,9 +18,14 @@ export const EXTERNAL_SUITES = Object.freeze([
     command: 'cargo test fidelity_external_packs_from_env -- --ignored --nocapture',
   },
   {
-    id: 'baseline',
+    id: 'baseline-import',
     allOf: ['STORY_STUDIO_BASELINE_DIR'],
     command: 'cargo test baseline_import_metrics -- --ignored --nocapture',
+  },
+  {
+    id: 'baseline-judge',
+    allOf: ['STORY_STUDIO_BASELINE_DIR'],
+    command: 'cargo test classify_external_packs_with_judge -- --ignored --nocapture',
   },
   {
     id: 'audio-reencode',
