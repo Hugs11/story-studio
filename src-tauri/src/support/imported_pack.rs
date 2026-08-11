@@ -1292,6 +1292,7 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
+    #[ignore = "requires Windows symbolic-link creation privilege"]
     fn studio_directory_zip_rejects_windows_reparse_links_when_creatable() {
         use std::os::windows::fs::{symlink_dir, symlink_file};
 
@@ -1310,17 +1311,10 @@ mod tests {
 
         let file_link = pack_dir.join("assets/file-link.txt");
         let dir_link = pack_dir.join("assets/dir-link");
-        let file_result = symlink_file(&outside_file, &file_link);
-        let dir_result = symlink_dir(&outside_dir, &dir_link);
-        if file_result.is_err() && dir_result.is_err() {
-            eprintln!(
-                "SKIP windows reparse link creation: file={:?}; directory={:?}",
-                file_result.err(),
-                dir_result.err()
-            );
-            fs::remove_dir_all(dir).expect("cleanup temp import dir");
-            return;
-        }
+        symlink_file(&outside_file, &file_link)
+            .expect("Windows symbolic-link privilege is required for the file link");
+        symlink_dir(&outside_dir, &dir_link)
+            .expect("Windows symbolic-link privilege is required for the directory link");
 
         let error = cache_key_for_source(&pack_dir).expect_err("reject Windows reparse link");
         assert!(error.contains("reanalyse") || error.contains("lien"));
