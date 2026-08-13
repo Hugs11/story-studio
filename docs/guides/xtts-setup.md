@@ -2,9 +2,9 @@
 
 # Setup guide — AI voice (XTTS)
 
-> **Scope**: Story Studio 0.9.6 · Windows 10/11. Linux users should follow the
+> **Scope**: Story Studio 0.9.7 · Windows 10/11. Linux users should follow the
 > [Linux CPU-only guide](xtts-setup-linux.md). XTTS is not validated on macOS
-> for 0.9.6.
+> for 0.9.7.
 
 XTTS is a text-to-speech engine that runs **on your computer**. It can speak in French, English, Spanish, German, Italian and Portuguese, with natural-sounding voices.
 
