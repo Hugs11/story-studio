@@ -44,7 +44,7 @@ jobs:
               src-tauri/target/release/bundle/dmg/**/*
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify Apple Silicon runner
         if: runner.os == 'macOS'
@@ -74,7 +74,7 @@ jobs:
             xz-utils
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: "npm"
@@ -83,7 +83,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -95,7 +95,7 @@ jobs:
             ${{ matrix.cache }}-cargo-
 
       - name: Cache verified build downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: src-tauri/tools/.download-cache
           key: ${{ matrix.cache }}-downloads-${{ hashFiles('scripts/verified-download.mjs', 'scripts/prepare-platform-tools.mjs', 'scripts/build-piper-runtime.mjs', 'scripts/piper-runtime-manifest.mjs', 'scripts/patch-linux-appimage.mjs') }}
@@ -142,7 +142,7 @@ jobs:
         run: node scripts/patch-linux-appimage.mjs src-tauri/target/release/bundle/appimage
 
       - name: Upload platform bundles
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifactPath }}
