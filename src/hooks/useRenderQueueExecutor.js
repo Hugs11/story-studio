@@ -94,10 +94,17 @@ export function useRenderQueueExecutor({ jobs, updateJob, appendLog }) {
 
     (async () => {
       try {
-        const resultPath = await invoke('generate_pack', {
+        const generationResult = await invoke('generate_pack', {
           projectJson: nextJob.projectJson,
           outputFolder: nextJob.outputFolder,
         });
+        const resultPath = typeof generationResult === 'string'
+          ? generationResult
+          : generationResult?.zipPath ?? null;
+        const warnings = Array.isArray(generationResult?.warnings)
+          ? generationResult.warnings
+          : [];
+        if (!resultPath) throw new Error('Le moteur n’a renvoyé aucun chemin de ZIP.');
 
         const currentJob = jobsRef.current.find(j => j.id === nextJob.id);
         if (currentJob?.cancelRequested) {
@@ -105,7 +112,11 @@ export function useRenderQueueExecutor({ jobs, updateJob, appendLog }) {
           appendLog(nextJob.id, '⏹ Génération annulée.');
           return;
         }
-        updateJob(nextJob.id, { status: 'done', resultPath: resultPath ?? null });
+        updateJob(nextJob.id, {
+          status: 'done',
+          resultPath,
+          warnings,
+        });
         playNotification('done');
       } catch (err) {
         const message = String(err);

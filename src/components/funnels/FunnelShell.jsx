@@ -18,6 +18,7 @@ import './funnels.css';
  * @param {string}      props.title
  * @param {string}      [props.subtitle]
  * @param {Function}    props.onClose
+ * @param {boolean}     [props.closeDisabled=false] Désactive Escape et le bouton fermer.
  * @param {boolean}     [props.showChrome=true]  Affiche stepper + footer.
  * @param {boolean}     [props.fitContent=false] Modale a hauteur du contenu (pour
  *   un funnel mono-ecran) au lieu de la hauteur fixe du chassis.
@@ -31,6 +32,7 @@ export function FunnelShell({
   title,
   subtitle,
   onClose,
+  closeDisabled = false,
   showChrome = true,
   fitContent = false,
   size = 'default',
@@ -39,7 +41,7 @@ export function FunnelShell({
   ariaLabel,
   children,
 }) {
-  useEscapeKey(true, onClose);
+  useEscapeKey(!closeDisabled, onClose);
 
   return (
     <AppModalPortal>
@@ -56,7 +58,13 @@ export function FunnelShell({
             <span className="funnel-head-title">{title}</span>
             {subtitle ? <span className="funnel-head-subtitle">{subtitle}</span> : null}
           </span>
-          <button type="button" className="funnel-icon-btn" aria-label="Fermer" onClick={onClose}>
+          <button
+            type="button"
+            className="funnel-icon-btn"
+            aria-label="Fermer"
+            onClick={onClose}
+            disabled={closeDisabled}
+          >
             <X />
           </button>
         </header>

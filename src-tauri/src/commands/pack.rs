@@ -142,6 +142,7 @@ pub async fn create_fixed_community_pack(
     zip_path: String,
     output_dir: Option<String>,
     metadata_patch: Option<community_pack_checker::PackMetadataPatch>,
+    correction_selection: Option<community_pack_checker::PackCorrectionSelection>,
 ) -> Result<community_pack_checker::FixedPackResult, String> {
     log::info!(target: "pack_checker", "create_fixed_community_pack: '{}'", zip_path);
     let zip_path_for_log = zip_path.clone();
@@ -163,6 +164,7 @@ pub async fn create_fixed_community_pack(
                 &source,
                 safe_output_dir.as_deref(),
                 metadata_patch,
+                correction_selection,
                 &emit,
             );
         }
@@ -170,6 +172,7 @@ pub async fn create_fixed_community_pack(
             &analysis_zip,
             safe_output_dir.as_deref(),
             metadata_patch,
+            correction_selection,
             &emit,
         )
     })

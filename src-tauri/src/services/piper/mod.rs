@@ -37,13 +37,17 @@ pub struct PiperGenerateRequest {
 pub struct PiperVoiceInfo {
     pub id: String,
     pub label: String,
+    pub language: String,
     pub quality: String,
+    #[serde(rename = "isDefault")]
+    pub is_default: bool,
     pub installed: bool,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PiperStatus {
+    pub default_language: String,
     pub default_voice: String,
     pub binary_installed: bool,
     pub voices: Vec<PiperVoiceInfo>,
@@ -78,8 +82,16 @@ mod tests {
     #[test]
     fn catalog_voice_urls_are_official_https() {
         for voice in VOICES {
-            assert!(voice.onnx_url().starts_with("https://huggingface.co/"));
-            assert!(voice.json_url().ends_with(".onnx.json?download=true"));
+            assert!(crate::support::network::require_public_download_url(
+                voice.onnx_url(),
+                "Piper test",
+            )
+            .is_ok());
+            assert!(crate::support::network::require_public_download_url(
+                voice.json_url(),
+                "Piper test",
+            )
+            .is_ok());
         }
     }
 
@@ -153,9 +165,10 @@ mod tests {
     #[test]
     #[ignore = "requires network access and the prepared native FFmpeg"]
     fn live_linux_uses_embedded_runtime_and_generates_all_catalog_voices() {
-        if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            return;
-        }
+        assert!(
+            std::env::consts::OS == "linux" && std::env::consts::ARCH == "x86_64",
+            "this external suite must run on Linux x86_64"
+        );
 
         let root =
             std::env::temp_dir().join(format!("story_studio_piper_live_été_{}", Uuid::new_v4()));

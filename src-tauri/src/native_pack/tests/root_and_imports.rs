@@ -385,8 +385,10 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
 
     assert!(pack_a_stage.control_settings.wheel);
     assert!(!pack_a_stage.control_settings.autoplay);
+    assert!(pack_a_stage.home_transition.is_none());
     assert!(pack_b_stage.control_settings.wheel);
     assert!(!pack_b_stage.control_settings.autoplay);
+    assert!(pack_b_stage.home_transition.is_none());
     assert_eq!(
         document
             .stage_nodes
@@ -459,6 +461,148 @@ fn wraps_imported_zips_when_multiple_root_entries_are_selectable() {
         "unexpected orphaned actions: {:?}",
         orphaned_actions
     );
+    validate_document_for_studio_compat(&document)
+        .expect("STUdio-compatible direct root ZIP aggregation");
+}
+
+#[test]
+fn imported_zip_wrapper_inside_menu_returns_home_to_parent_selector() {
+    let imported = StoryDocument {
+        title: "Imported".to_string(),
+        version: 1,
+        description: String::new(),
+        format: "v1".to_string(),
+        night_mode_available: false,
+        action_nodes: vec![ActionNode {
+            id: "import-root-action".to_string(),
+            name: "Action node".to_string(),
+            options: vec!["import-content".to_string()],
+            position: zero_position(),
+        }],
+        stage_nodes: vec![
+            StageNode {
+                uuid: "import-cover".to_string(),
+                name: "Imported cover".to_string(),
+                stage_type: "stage".to_string(),
+                square_one: true,
+                audio: None,
+                image: None,
+                control_settings: ControlSettings {
+                    wheel: false,
+                    ok: true,
+                    home: false,
+                    pause: false,
+                    autoplay: false,
+                },
+                home_transition: None,
+                ok_transition: Some(transition("import-root-action", 0)),
+                position: zero_position(),
+            },
+            StageNode {
+                uuid: "import-content".to_string(),
+                name: "Imported content".to_string(),
+                stage_type: "stage".to_string(),
+                square_one: false,
+                audio: None,
+                image: None,
+                control_settings: playback_controls(),
+                home_transition: None,
+                ok_transition: None,
+                position: zero_position(),
+            },
+        ],
+    };
+
+    let report = report_for(
+        CanonicalProject {
+            name: "Nested imported ZIP".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some("root.png".to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions {
+                silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
+                auto_next: false,
+                night_mode: false,
+                end_message_autoplay: true,
+            },
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                name: "Parent selector".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                auto_black_image: true,
+                children: vec![CanonicalEntry::Zip(CanonicalZip {
+                    name: "Imported child".to_string(),
+                    zip_path: Some("imported.zip".to_string()),
+                    ..Default::default()
+                })],
+                ..Default::default()
+            })],
+            shared_entries: Vec::new(),
+        },
+        vec![
+            prepared_asset("rootAudio", "cover.mp3"),
+            prepared_asset("rootImage", "cover.png"),
+            prepared_asset("root/Parent selector/menuAudio", "menu.mp3"),
+        ],
+        vec![imported_zip_bundle(
+            "root/Parent selector/Imported child/zip",
+            "import-cover",
+            "import-root-action",
+            "import-content",
+            "import-cover",
+            imported,
+        )],
+    );
+
+    let document = build_story_document(&report).expect("nested imported ZIP document");
+    let parent = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Parent selector")
+        .expect("parent selector stage");
+    let wrapper = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Imported child")
+        .expect("imported ZIP wrapper");
+    let imported_content = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Imported content")
+        .expect("imported ZIP content");
+    let home = wrapper
+        .home_transition
+        .as_ref()
+        .expect("wrapper Home transition");
+    let home_target = document
+        .action_nodes
+        .iter()
+        .find(|action| action.id == home.action_node)
+        .and_then(|action| action.options.get(home.option_index as usize))
+        .expect("wrapper Home target");
+
+    assert_eq!(home_target, &parent.uuid);
+    assert_ne!(home_target, &wrapper.uuid);
+
+    let content_home = imported_content
+        .home_transition
+        .as_ref()
+        .expect("imported content Home transition");
+    let content_home_target = document
+        .action_nodes
+        .iter()
+        .find(|action| action.id == content_home.action_node)
+        .and_then(|action| action.options.get(content_home.option_index as usize))
+        .expect("imported content Home target");
+    assert_eq!(content_home_target, &wrapper.uuid);
+    validate_document_for_studio_compat(&document).expect("STUdio-compatible nested ZIP wrapper");
 }
 
 #[test]

@@ -219,6 +219,13 @@ test('GitHub workflows pin the Windows runner required by the Piper build', asyn
   assert.match(ci, /python3-venv/);
   assert.match(ci, /cmake==3\.31\.10/);
   assert.match(ci, /ninja==1\.13\.0/);
+  assert.match(release, /name: Remove stale Tauri bundles restored from cache/);
+  assert.match(release, /node scripts\/clean-tauri-bundles\.mjs/);
+  assert.ok(
+    release.indexOf('Remove stale Tauri bundles restored from cache')
+      < release.indexOf('Build Tauri bundles'),
+    'stale bundles must be removed before the release build',
+  );
 });
 
 test('frontend-visible temporary files use the app-owned cache instead of the system temp dir', async () => {

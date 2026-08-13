@@ -4,11 +4,9 @@ use std::process::{Command, Stdio};
 use crate::support::ffmpeg::apply_no_window;
 
 use super::types::{
-    LoudnessAction, LoudnessMeasure, DEADBAND_LUFS, LIMITER_SAMPLE_PEAK_DBFS, MAX_LIMITING_DB,
-    NEAR_MUTE_LUFS, TARGET_LUFS, VALIDATION_WINDOW_LUFS,
+    LoudnessAction, LoudnessMeasure, DEADBAND_LUFS, LIMITER_SAMPLE_PEAK_DBFS, TARGET_LUFS,
+    VALIDATION_WINDOW_LUFS,
 };
-
-const VALIDATION_FLOOR_SAFETY_LU: f64 = 0.5;
 
 pub(crate) fn measure_loudness_ebur128(
     ffmpeg: &Path,
@@ -83,36 +81,15 @@ pub(crate) fn plan_loudness_fix(integrated_lufs: f64, true_peak_db: f64) -> Loud
             reason: "mesure de niveau invalide".to_string(),
         };
     }
-    if integrated_lufs < NEAR_MUTE_LUFS {
-        return LoudnessAction::Uncorrectable {
-            reason: "audio presque muet".to_string(),
-        };
-    }
     // 1) Gain (niveau) — découplé du contrôle de crête. Dans la bande morte on ne
-    //    touche pas au volume ; sinon on vise -14 LUFS en **plafonnant le gain
-    //    montant** pour ne jamais avoir à limiter plus de MAX_LIMITING_DB de signal
-    //    *amplifié* (sinon on pomperait une source réellement faible et dynamique).
-    //    Un gain montant n'est jamais transformé en atténuation.
+    //    touche pas au volume ; sinon on vise -14 LUFS avec un gain statique. Une
+    //    source très dynamique peut demander une limitation forte : ce n'est plus
+    //    un motif de refus, car l'utilisateur a explicitement demandé
+    //    l'harmonisation. Le générateur la traite et remonte un avertissement.
     let gain_db = if in_range(integrated_lufs, DEADBAND_LUFS) {
         0.0
     } else {
-        let ideal_gain = TARGET_LUFS - integrated_lufs;
-        if ideal_gain <= 0.0 {
-            ideal_gain
-        } else {
-            let max_boost = (LIMITER_SAMPLE_PEAK_DBFS + MAX_LIMITING_DB - true_peak_db).max(0.0);
-            let capped = ideal_gain.min(max_boost);
-            // Trop faible pour être remontée : même le gain plafonné n'atteint pas
-            // le plancher de la fenêtre de validation.
-            if capped < ideal_gain
-                && integrated_lufs + capped < VALIDATION_WINDOW_LUFS.0 + VALIDATION_FLOOR_SAFETY_LU
-            {
-                return LoudnessAction::Uncorrectable {
-                    reason: "audio trop dynamique/faible pour monter sans écraser".to_string(),
-                };
-            }
-            capped
-        }
+        TARGET_LUFS - integrated_lufs
     };
 
     // 2) Plafond de crête — **toujours** enforcé quand la crête (après gain) dépasse
@@ -256,42 +233,53 @@ mod tests {
     }
 
     #[test]
-    fn caps_gain_when_target_exceeds_limiting_budget_but_window_is_reachable() {
+    fn reaches_target_even_when_strong_limiting_is_required() {
         assert_eq!(
             plan_loudness_fix(-22.0, 0.0),
             LoudnessAction::GainLimit {
-                gain_db: 4.0,
-                expected_limiting_db: 6.0,
-            }
-        );
-    }
-
-    #[test]
-    fn limits_valid_but_clipped_audio_without_changing_level() {
-        // Niveau valide hors bande morte (-16) mais source écrêtée (+8 dBFS) : on ne
-        // remonte pas (le gain montant est plafonné à 0 par la crête) mais on enforce
-        // le plafond — on ne laisse jamais passer l'écrêtage.
-        assert_eq!(
-            plan_loudness_fix(-16.0, 8.0),
-            LoudnessAction::GainLimit {
-                gain_db: 0.0,
+                gain_db: 8.0,
                 expected_limiting_db: 10.0,
             }
         );
     }
 
     #[test]
-    fn marks_uncorrectable_when_even_validation_floor_is_unreachable() {
-        assert!(matches!(
-            plan_loudness_fix(-32.0, 0.0),
-            LoudnessAction::Uncorrectable { .. }
-        ));
+    fn harmonizes_valid_but_clipped_audio_and_enforces_ceiling() {
+        // Niveau valide hors bande morte (-16) mais source écrêtée (+8 dBFS) :
+        // l'harmonisation demandée vise quand même -14 LUFS et le limiteur
+        // maintient le plafond de sortie.
+        assert_eq!(
+            plan_loudness_fix(-16.0, 8.0),
+            LoudnessAction::GainLimit {
+                gain_db: 2.0,
+                expected_limiting_db: 12.0,
+            }
+        );
     }
 
     #[test]
-    fn marks_uncorrectable_when_capped_gain_lands_on_validation_floor() {
+    fn reaches_target_for_very_dynamic_weak_audio() {
+        assert_eq!(
+            plan_loudness_fix(-32.0, 0.0),
+            LoudnessAction::GainLimit {
+                gain_db: 18.0,
+                expected_limiting_db: 20.0,
+            }
+        );
+    }
+
+    #[test]
+    fn reaches_target_for_near_mute_but_measurable_audio() {
+        assert_eq!(
+            plan_loudness_fix(-50.0, -55.0),
+            LoudnessAction::Gain { gain_db: 36.0 }
+        );
+    }
+
+    #[test]
+    fn rejects_only_invalid_measurements() {
         assert!(matches!(
-            plan_loudness_fix(-28.5, -4.5),
+            plan_loudness_fix(f64::NAN, -3.0),
             LoudnessAction::Uncorrectable { .. }
         ));
     }

@@ -25,7 +25,7 @@ function silenceModePresentation(leadingSeconds, trailingSeconds) {
   };
 }
 
-const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Un son quasi-muet ou impossible à corriger sans saturer bloque la génération. Si désactivé : le volume d'origine de chaque fichier est conservé.";
+const HARMONIZE_LOUDNESS_HELP = "Aligne le volume de toutes les histoires sur un même niveau (-14 LUFS) à la génération (recommandé si tes fichiers audio ne sont pas déjà préparés pour la Lunii). Une source très faible ou dynamique est quand même mise à niveau ; Story Studio signale après génération si le traitement a dû être particulièrement fort. Si désactivé : le volume d'origine de chaque fichier est conservé.";
 
 export function PackOptionsPopover({
   open,

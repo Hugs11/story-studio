@@ -168,14 +168,14 @@ pub(super) fn ensure_voice(
     emit(&format!("Préparation de la voix « {} »…", voice.label));
     let (onnx_path, json_path) = voice_paths(home, voice.id);
 
-    let onnx_bytes = download_bytes(&voice.onnx_url(), MAX_VOICE_MODEL_BYTES, "de la voix", emit)?;
+    let onnx_bytes = download_bytes(voice.onnx_url(), MAX_VOICE_MODEL_BYTES, "de la voix", emit)?;
     if onnx_bytes.len() < 1024 * 1024 {
         return Err("Modèle de voix incomplet ou corrompu.".to_string());
     }
     verify_sha256(&onnx_bytes, voice.onnx_sha256, "du modèle de voix")?;
 
     let json_bytes = download_bytes(
-        &voice.json_url(),
+        voice.json_url(),
         MAX_VOICE_CONFIG_BYTES,
         "de la configuration de voix",
         emit,

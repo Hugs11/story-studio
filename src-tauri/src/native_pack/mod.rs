@@ -35,6 +35,20 @@ pub(crate) struct NativeAssetPreparationReport {
     pub(crate) imported_zips: Vec<ImportedZipBundle>,
     pub(crate) stats: NativeAssetStats,
     pub(crate) notes: Vec<String>,
+    pub(crate) warnings: Vec<NativeGenerationWarning>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeGenerationWarning {
+    pub(crate) code: String,
+    pub(crate) role: String,
+    pub(crate) label: String,
+    pub(crate) message: String,
+    pub(crate) initial_integrated_lufs: f64,
+    pub(crate) final_integrated_lufs: Option<f64>,
+    pub(crate) gain_db: f64,
+    pub(crate) expected_limiting_db: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]

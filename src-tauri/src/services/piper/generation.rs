@@ -25,11 +25,14 @@ pub fn list_voices_sync(home: &Path) -> Result<PiperStatus, String> {
         .map(|voice| PiperVoiceInfo {
             id: voice.id.to_string(),
             label: voice.label.to_string(),
+            language: voice.language.to_string(),
             quality: voice.quality.to_string(),
+            is_default: voice.is_default,
             installed: super::provision::is_voice_installed(home, voice.id),
         })
         .collect();
     Ok(PiperStatus {
+        default_language: super::catalog::DEFAULT_LANGUAGE.to_string(),
         default_voice: super::catalog::DEFAULT_VOICE.to_string(),
         binary_installed: true,
         voices,

@@ -2,12 +2,13 @@
 
 # Installation de XTTS CPU sous Linux
 
-> Cible : Story Studio 0.9.6 · Linux x86_64 · CPU uniquement
+> Cible : Story Studio 0.9.7 · Linux x86_64 · CPU uniquement
 
 XTTS est optionnel. Story Studio fonctionne aussi avec des audios importés et
-les voix Piper embarquées. La configuration XTTS Linux validée pour la 0.9.6
-utilise volontairement le CPU uniquement : aucun pilote NVIDIA, toolkit CUDA
-ou paquet Python GPU n'est requis. Prévoyez environ 8 Go une fois
+les voix Piper embarquées. La configuration XTTS Linux a été validée pour la
+0.9.6 et reste inchangée en 0.9.7. Elle utilise volontairement le CPU
+uniquement : aucun pilote NVIDIA, toolkit CUDA ou paquet Python GPU n'est
+requis. Prévoyez environ 8 Go une fois
 l'environnement Python et le modèle installés.
 
 ## Arborescence requise
@@ -50,5 +51,5 @@ Dans Story Studio, activez XTTS, sélectionnez le dossier XTTS, conservez l'URL
 `http://127.0.0.1:8020`, activez si besoin le démarrage automatique et cochez
 **Forcer le CPU**. Testez puis actualisez les voix avant toute génération.
 
-XTTS n'a pas été installé ni validé manuellement sous macOS pour la 0.9.6. Ce
+XTTS n'a pas été installé ni validé manuellement sous macOS pour la 0.9.7. Ce
 guide Linux ne constitue pas une promesse de prise en charge macOS.

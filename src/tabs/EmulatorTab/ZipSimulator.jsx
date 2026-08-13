@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '../../utils/logger';
 import { ZipImage } from './ZipImage';
@@ -8,6 +8,7 @@ import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { toPackAssetName } from '../../utils/zipAssetName';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
+import { createMediaRequestLifecycle } from './mediaRequestLifecycle';
 
 export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dragHandleProps = null }) {
   const [graph, setGraph] = useState(null);   // { stageNodes: Map, actionNodes: Map, squareOneId, title }
@@ -17,11 +18,38 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
   const [context, setContext] = useState(null); // { actionNodeId, optionIdx }
   const audioRef = useRef(null);
   const mountedRef = useRef(true);
-  const playSeqRef = useRef(0); // guard contre les charges audio tardives
   const [paused, setPaused] = useState(false);
   const { timeline, seekTo } = useAudioTimeline(audioRef);
   const chromeControls = useLuniiChromeControls();
   const { autoPlaybackEnabled } = chromeControls;
+  const audioLifecycleRef = useRef(null);
+  if (!audioLifecycleRef.current) {
+    audioLifecycleRef.current = createMediaRequestLifecycle({
+      clearCurrent() {
+        disposeAudioPlayerRef(audioRef);
+      },
+      async load({ zipPath: requestedZipPath, assetHash }) {
+        const assetName = toPackAssetName(assetHash);
+        const bytes = await invoke('get_pack_asset', { zipPath: requestedZipPath, assetName });
+        return { assetHash, bytes };
+      },
+      createResource({ assetHash, bytes }) {
+        const ext = assetHash.split('.').pop().toLowerCase();
+        const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'audio/mpeg' });
+        return createAudioPlayer(URL.createObjectURL(blob), { revokeSourceOnDestroy: true });
+      },
+      applyResource(audio) {
+        audioRef.current = audio;
+        audio.play().catch(e => logger.error('zip-simulator:audio-play-error', e));
+      },
+      discardResource(audio) {
+        audio.destroy();
+      },
+      onError(error, request) {
+        logger.error('zip-simulator:play-audio-error', request?.assetHash, error);
+      },
+    });
+  }
 
   // ── Chargement story.json ──
   useEffect(() => {
@@ -93,32 +121,14 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
   const currentStage = graph?.stageNodes.get(stageId);
 
   // ── Audio ──
-  const playZipAudio = useCallback(async (assetHash) => {
-    disposeAudioPlayerRef(audioRef);
-    setPaused(false);
-    if (!assetHash || !zipPath) return;
-    const seq = ++playSeqRef.current; // numéro de séquence pour détecter les charges tardives
-    try {
-      const assetName = toPackAssetName(assetHash);
-      const bytes = await invoke('get_pack_asset', { zipPath, assetName });
-      // Ignorer si démontage ou si une autre lecture a démarré entre-temps
-      if (!mountedRef.current || seq !== playSeqRef.current) return;
-      const ext = assetHash.split('.').pop().toLowerCase();
-      const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      const audio = createAudioPlayer(url, { revokeSourceOnDestroy: true });
-      audio.play().catch(e => logger.error('zip-simulator:audio-play-error', e));
-      audioRef.current = audio;
-    } catch (e) { logger.error('zip-simulator:play-audio-error', assetHash, e); }
-  }, [zipPath]);
-
-  // reason: recharger l'audio uniquement au changement de stage ; currentStage et playZipAudio
-  // derivent de stageId/graph et restent stables tant que le stage ne bouge pas.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (currentStage?.audio) playZipAudio(currentStage.audio);
-    else disposeAudioPlayerRef(audioRef);
-  }, [stageId]);
+    const lifecycle = audioLifecycleRef.current;
+    setPaused(false);
+    lifecycle.request(currentStage?.audio && zipPath
+      ? { zipPath, assetHash: currentStage.audio }
+      : null);
+    return () => lifecycle.invalidate();
+  }, [currentStage?.audio, stageId, zipPath]);
 
   // Auto-avance sur les nœuds autoplay (comportement Lunii réel) :
   // affiche le nœud + joue l'audio, puis avance automatiquement à la fin de l'audio.
@@ -182,7 +192,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      disposeAudioPlayerRef(audioRef);
+      audioLifecycleRef.current.invalidate();
     };
   }, []);
 

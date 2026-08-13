@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.6" src="https://img.shields.io/badge/version-0.9.6-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.7" src="https://img.shields.io/badge/version-0.9.7-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -44,13 +44,12 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.6 brings the complete desktop editor to Linux x86_64 and
-macOS Apple Silicon alongside Windows x64. It also adds native Piper 1.6
-runtimes, hardens cross-platform file and tool handling, and fixes several
-audio, image and pack-import regressions.
+Story Studio 0.9.7 adds multilingual Piper voices, improves compatibility with
+community pack layouts and strengthens the checker, import and simulator
+workflows. It also hardens temporary workspaces and filesystem boundaries.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.6 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.6)
+- [Read the v0.9.7 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.7)
 - [See the full changelog](CHANGELOG.md)
 
 ## Demo packs
@@ -230,7 +229,7 @@ Do not disable Gatekeeper globally.
 
 AI integrations are optional. XTTS is validated on Linux in CPU-only mode and
 does not require an NVIDIA driver; it has not been installed or manually
-validated on macOS for 0.9.6. ComfyUI is manually validated on Windows only:
+validated on macOS for 0.9.7. ComfyUI is manually validated on Windows only:
 manual Linux and macOS tests have not been run.
 
 To build from source or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).

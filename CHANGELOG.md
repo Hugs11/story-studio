@@ -12,6 +12,55 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.7] - 2026-08-13
+
+Story Studio v0.9.7 expands local voice generation, improves compatibility
+with community packs and makes long-running import, checking and simulation
+workflows safer and more predictable.
+
+### Added
+
+- Added a language-aware Piper catalogue for French, British English,
+  American English and Italian, with per-language defaults and nine
+  integrity-pinned voices.
+- Added optional leading and trailing silence corrections to the community
+  pack checker, with clearer issue classification and correction summaries.
+- Added an explicit override for audio harmonization warnings when the user
+  chooses to apply the compatible corrections anyway.
+
+### Changed
+
+- Extended imported-pack discovery and reconstruction to support more wrapper
+  folders, source trees and community-pack layouts without weakening path
+  validation or native navigation fidelity.
+- Improved the checker audio pipeline, correction reporting and export flow
+  for quiet, near-muted and differently encoded assets.
+- Invalidated stale asynchronous results when an edit-pack operation or
+  simulator media request is replaced, closed or restarted.
+- Expanded regression preflight reporting so optional private pack and tool
+  suites are listed honestly without exposing their paths or fixture values.
+
+### Fixed
+
+- Fixed navigation reconstruction for packs contained in an extra wrapper
+  directory and for nested imported source layouts.
+- Fixed correction counts, silence status and near-mute measurements displayed
+  by the community pack checker.
+- Fixed filesystem pack assets escaping their selected source root through
+  unsafe paths, traversal or cache reuse.
+- Fixed temporary checker workspaces and imported-pack caches being shared or
+  reused beyond the operation that created them.
+### Platform notes
+
+- Supported targets remain Windows x64, Linux x86_64 and macOS Apple Silicon.
+- macOS builds remain ad-hoc signed and not notarized; Gatekeeper may require
+  an explicit first launch.
+- XTTS remains CPU-only on Linux and was not installed or manually validated
+  on macOS. ComfyUI remains manually validated on Windows only; manual Linux
+  and macOS ComfyUI tests were not run for this release.
+
+---
+
 ## [0.9.6] - 2026-07-30
 
 Story Studio v0.9.6 brings the complete desktop editor to Linux x86_64 and

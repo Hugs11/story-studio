@@ -17,6 +17,24 @@ const PANEL_MIN_HEIGHT = 120;
 const PANEL_BOTTOM_OFFSET = 33;
 const PANEL_TOP_MARGIN = 72;
 
+function warningDetails(warning) {
+  const measurements = [
+    Number.isFinite(warning?.initialIntegratedLufs)
+      ? `départ ${warning.initialIntegratedLufs.toFixed(1)} LUFS`
+      : null,
+    Number.isFinite(warning?.finalIntegratedLufs)
+      ? `sortie ${warning.finalIntegratedLufs.toFixed(1)} LUFS`
+      : null,
+    Number.isFinite(warning?.gainDb)
+      ? `gain ${warning.gainDb >= 0 ? '+' : ''}${warning.gainDb.toFixed(1)} dB`
+      : null,
+    Number.isFinite(warning?.expectedLimitingDb) && warning.expectedLimitingDb > 0
+      ? `limitation ${warning.expectedLimitingDb.toFixed(1)} dB`
+      : null,
+  ].filter(Boolean);
+  return measurements.length > 0 ? measurements.join(' · ') : '';
+}
+
 function clampPanelHeight(value) {
   const maxHeight = typeof window === 'undefined'
     ? PANEL_DEFAULT_HEIGHT
@@ -46,7 +64,16 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
   }, []);
 
   const folderName = basename(job.outputFolder);
-  const allText = [...job.logs, ...(job.errorMessage ? [job.errorMessage] : [])].join('\n');
+  const warnings = Array.isArray(job.warnings) ? job.warnings : [];
+  const allText = [
+    ...job.logs,
+    ...warnings.map((warning) => `${warning.message}${warningDetails(warning) ? ` (${warningDetails(warning)})` : ''}`),
+    ...(job.errorMessage ? [job.errorMessage] : []),
+  ].join('\n');
+  const hasWarnings = job.status === 'done' && warnings.length > 0;
+  const statusLabel = hasWarnings
+    ? `Terminé · ${warnings.length} avertissement${warnings.length > 1 ? 's' : ''}`
+    : STATUS_LABEL[job.status];
 
   async function handleCopyLogs() {
     try {
@@ -74,7 +101,7 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
   }
 
   return (
-    <div className={`rq-job rq-job-${job.status}`}>
+    <div className={`rq-job rq-job-${job.status}${hasWarnings ? ' rq-job-has-warnings' : ''}`}>
       <div className="rq-job-header" onClick={onToggle} role="button">
         <div className="rq-job-meta">
           <span className="rq-job-name">{job.projectName}</span>
@@ -82,9 +109,9 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
           <span className="rq-job-time">{formatTime(job.createdAt)}</span>
         </div>
         <div className="rq-job-right">
-          <span className={`rq-badge rq-badge-${job.status}`}>
+          <span className={`rq-badge rq-badge-${hasWarnings ? 'warning' : job.status}`}>
             {job.status === 'running' && <span className="rq-spinner" />}
-            {job.cancelRequested ? 'Annulation…' : STATUS_LABEL[job.status]}
+            {job.cancelRequested ? 'Annulation…' : statusLabel}
           </span>
           {(job.status === 'pending' || job.status === 'running') && (
             <Button
@@ -121,6 +148,22 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
             )}
             <div ref={logsEndRef} />
           </div>
+          {hasWarnings && (
+            <div className="rq-job-warnings" role="status">
+              <div className="rq-job-warnings-title">
+                Pack généré avec {warnings.length} avertissement{warnings.length > 1 ? 's' : ''} audio
+              </div>
+              {warnings.map((warning, index) => (
+                <div className="rq-job-warning" key={`${warning.code || 'audio'}-${warning.role || index}`}>
+                  <span>{warning.message}</span>
+                  {warningDetails(warning) ? <small>{warningDetails(warning)}</small> : null}
+                </div>
+              ))}
+              <div className="rq-job-warning-advice">
+                Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.
+              </div>
+            </div>
+          )}
           <div className="rq-job-actions">
             {job.logs.length > 0 && (
               <Button size="sm" onClick={handleCopyLogs}>
