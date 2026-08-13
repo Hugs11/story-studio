@@ -3,6 +3,25 @@ import { KEYS, read as readSetting, write as writeSetting } from './persistentSe
 // Voix Piper par défaut — doit correspondre au catalogue Rust
 // (`services/piper/catalog.rs`).
 export const PIPER_DEFAULT_VOICE = 'fr_FR-siwis-medium';
+export const PIPER_DEFAULT_LANGUAGE = 'fr_FR';
+
+export const PIPER_LANGUAGE_OPTIONS = [
+  { value: 'fr_FR', label: 'Français', defaultVoice: PIPER_DEFAULT_VOICE },
+  { value: 'en_GB', label: 'English UK', defaultVoice: 'en_GB-jenny_dioco-medium' },
+  { value: 'en_US', label: 'English US', defaultVoice: 'en_US-kristin-medium' },
+  { value: 'it_IT', label: 'Italiano', defaultVoice: 'it_IT-serena-medium' },
+];
+
+export function piperDefaultVoiceForLanguage(voices, language) {
+  const catalogDefault = voices.find((voice) => voice.language === language && voice.isDefault);
+  if (catalogDefault) return catalogDefault.id;
+  const configuredDefault = PIPER_LANGUAGE_OPTIONS.find((option) => option.value === language)?.defaultVoice;
+  return configuredDefault || PIPER_DEFAULT_VOICE;
+}
+
+export function piperLanguageForVoice(voices, voiceId, fallback = PIPER_DEFAULT_LANGUAGE) {
+  return voices.find((voice) => voice.id === voiceId)?.language || fallback;
+}
 
 const DEFAULT_XTTS_SETTINGS = {
   // Moteur TTS actif. Piper est le défaut zéro-config ; XTTS reste
@@ -16,6 +35,7 @@ const DEFAULT_XTTS_SETTINGS = {
   language: 'fr',
   favoriteVoices: [],
   // Réglages Piper.
+  piperLanguage: PIPER_DEFAULT_LANGUAGE,
   piperVoice: PIPER_DEFAULT_VOICE,
   piperSpeed: 1.0,
 };
@@ -23,6 +43,10 @@ const DEFAULT_XTTS_SETTINGS = {
 function withoutLegacyPiperSettings(settings) {
   const portable = { ...(settings ?? {}) };
   delete portable.piperSentenceSilence;
+  if (portable.piperVoice === 'fr_FR-gilles-low') {
+    portable.piperLanguage = PIPER_DEFAULT_LANGUAGE;
+    portable.piperVoice = PIPER_DEFAULT_VOICE;
+  }
   return portable;
 }
 
@@ -34,8 +58,12 @@ export function loadXttsSettings() {
       ...DEFAULT_XTTS_SETTINGS,
       ...withoutLegacyPiperSettings(JSON.parse(raw)),
     };
+    const piperLanguage = PIPER_LANGUAGE_OPTIONS.some(({ value }) => value === parsed.piperLanguage)
+      ? parsed.piperLanguage
+      : PIPER_DEFAULT_LANGUAGE;
     return {
       ...parsed,
+      piperLanguage,
       favoriteVoices: Array.isArray(parsed.favoriteVoices) ? parsed.favoriteVoices : [],
     };
   } catch {
