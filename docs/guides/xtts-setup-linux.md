@@ -2,11 +2,12 @@
 
 # XTTS CPU setup on Linux
 
-> Target: Story Studio 0.9.6 · Linux x86_64 · CPU only
+> Target: Story Studio 0.9.7 · Linux x86_64 · CPU only
 
 XTTS is optional. Story Studio also works with imported audio and its bundled
-Piper voices. The Linux XTTS configuration validated for 0.9.6 deliberately
-uses CPU only: no NVIDIA driver, CUDA toolkit or GPU Python package is required.
+Piper voices. The Linux XTTS configuration was validated for 0.9.6 and remains
+unchanged in 0.9.7. It deliberately uses CPU only: no NVIDIA driver, CUDA
+toolkit or GPU Python package is required.
 Expect roughly 8 GB of disk usage once the Python environment and model are
 installed.
 
@@ -49,5 +50,5 @@ In Story Studio, enable XTTS, select the XTTS directory, keep the server URL at
 `http://127.0.0.1:8020`, enable automatic startup if desired and enable
 **Force CPU**. Test and refresh the voices before generating audio.
 
-XTTS was not installed or manually validated on macOS for 0.9.6. This Linux
+XTTS was not installed or manually validated on macOS for 0.9.7. This Linux
 guide must not be used as a promise of macOS support.
