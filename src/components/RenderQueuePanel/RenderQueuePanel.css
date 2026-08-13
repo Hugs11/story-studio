@@ -212,6 +212,12 @@
   border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
 }
 
+.rq-badge-warning {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+}
+
 .rq-badge-error {
   color: #e57373;
   background: rgba(229, 115, 115, 0.12);
@@ -275,6 +281,34 @@
   color: var(--muted);
   font-style: italic;
   font-family: inherit;
+}
+
+.rq-job-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.rq-job-warnings-title {
+  font-weight: 700;
+}
+
+.rq-job-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rq-job-warning small,
+.rq-job-warning-advice {
+  opacity: 0.82;
 }
 
 .rq-job-actions {

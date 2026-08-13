@@ -11,6 +11,15 @@ import {
   titleConforming,
 } from './packCheckerFormat.js';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing.js';
+import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
+  isAutomaticSilenceIssue,
+  isAutomaticVolumeIssue,
+  isOptionalSilenceIssue,
+  packCorrectionCounts,
+  silenceEdgeForIssue,
+} from './packCheckerIssueClassification.js';
 
 const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
 
@@ -74,16 +83,6 @@ const ICONS = {
 
 function icon(name) {
   return ICONS[name] || ICONS.info;
-}
-
-function categoryStats(summary) {
-  const total = summary?.total ?? 0;
-  const ok = summary?.ok ?? 0;
-  return {
-    total,
-    ok,
-    needsFix: Math.max(0, total - ok),
-  };
 }
 
 function issueText(issue) {
@@ -158,7 +157,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'listen',
     icon: 'info',
     action: 'Écoute ou vérifie ces fichiers avant de valider le pack.',
-    match: (issue) => !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
+    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
   },
   {
     id: 'silence',
@@ -167,7 +166,16 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     icon: 'wrench',
     action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issueText(issue).includes('silence'),
+    match: isAutomaticSilenceIssue,
+  },
+  {
+    id: 'optionalSilence',
+    title: 'Suggestions facultatives',
+    badge: 'Facultatif',
+    bucket: 'optional',
+    icon: 'info',
+    action: `Ces silences longs peuvent être volontaires. Le pack reste conforme ; ils peuvent être ramenés à ${EDGE_SILENCE_LABEL}.`,
+    match: isOptionalSilenceIssue,
   },
   {
     id: 'volume',
@@ -176,7 +184,7 @@ const PROBLEM_SECTIONS = [
     bucket: 'fix',
     icon: 'audio',
     action: 'On normalise le volume au bon niveau.',
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issueText(issue).includes('volume'),
+    match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',
@@ -227,7 +235,7 @@ function buildProblemGroups(report) {
   const files = itemMap(report);
   const used = new Set();
   const relevantIssues = (report.issues || []).filter((issue) => (
-    issue.severity === 'error' || issue.severity === 'warning'
+    issue.severity === 'error' || issue.severity === 'warning' || isOptionalSilenceIssue(issue)
   ));
 
   return PROBLEM_SECTIONS.map((section) => {
@@ -236,7 +244,9 @@ function buildProblemGroups(report) {
     for (const issue of relevantIssues) {
       if (used.has(issue) || !section.match(issue)) continue;
       used.add(issue);
-      const key = uniqueIssueKey(issue);
+      const key = section.id === 'optionalSilence'
+        ? `${uniqueIssueKey(issue)}:${issue.code}`
+        : uniqueIssueKey(issue);
       if (seen.has(key)) continue;
       seen.add(key);
       const fileIssues = issue.filePath ? (byFile.get(issue.filePath) || [issue]) : [issue];
@@ -256,19 +266,22 @@ function buildProblemGroups(report) {
       count: records.length,
       fixCount: section.id === 'title'
         ? records.length
-        : records.reduce((sum, record) => (
-          sum + record.issues.filter((issue) => issue.autoFixAvailable).length
-        ), 0),
+        : records.reduce((sum, record) => sum + automaticCorrectionCount(record), 0),
+      optionalCount: section.id === 'optionalSilence' ? records.length : 0,
     };
   }).filter((group) => group.count > 0);
 }
 
 function silenceSummaryParts(issues, item) {
   const hasStart = issues.some((issue) => {
+    if (silenceEdgeForIssue(issue) === 'leading') return true;
     const message = (issue.message || '').toLowerCase();
     return message.includes('début') || message.includes('debut');
   });
-  const hasEnd = issues.some((issue) => (issue.message || '').toLowerCase().includes('fin'));
+  const hasEnd = issues.some((issue) => (
+    silenceEdgeForIssue(issue) === 'trailing'
+    || (issue.message || '').toLowerCase().includes('fin')
+  ));
   const parts = [];
   if (hasStart) parts.push(`Silence début = ${formatSeconds(item?.leadingSilenceSecs)}`);
   if (hasEnd) parts.push(`Silence fin = ${formatSeconds(item?.trailingSilenceSecs)}`);
@@ -341,6 +354,9 @@ function summarizeGroups(groups, report) {
   const fixCount = groups
     .filter((group) => group.bucket === 'fix')
     .reduce((sum, group) => sum + group.fixCount, 0);
+  const optionalCount = groups
+    .filter((group) => group.bucket === 'optional')
+    .reduce((sum, group) => sum + group.optionalCount, 0);
   const saturatedCount = saturatedFileCount(groups);
   const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
@@ -354,6 +370,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Aucun problème automatique ou manuel détecté.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (hasBlocking) {
@@ -364,6 +381,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Certains points demandent une vérification manuelle.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (saturatedCount > 0) {
@@ -376,6 +394,7 @@ function summarizeGroups(groups, report) {
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (listenCount > 0) {
@@ -388,6 +407,18 @@ function summarizeGroups(groups, report) {
       subtitle: 'Le reste peut être corrigé automatiquement.',
       listenCount,
       fixCount,
+      optionalCount,
+    };
+  }
+  if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
+    return {
+      tone: 'ok',
+      icon: 'check',
+      title: `Pack conforme, avec ${optionalCount} ajustement${optionalCount > 1 ? 's' : ''} facultatif${optionalCount > 1 ? 's' : ''}`,
+      subtitle: 'Les pauses longues peuvent être conservées telles quelles.',
+      listenCount,
+      fixCount,
+      optionalCount,
     };
   }
   return {
@@ -397,6 +428,7 @@ function summarizeGroups(groups, report) {
     subtitle: 'Aucun point manuel détecté.',
     listenCount,
     fixCount,
+    optionalCount,
   };
 }
 
@@ -414,11 +446,11 @@ function roleLabel(kind) {
   return 'Fichier';
 }
 
-function measureRowsHtml(rows, badKeys = new Set()) {
+function measureRowsHtml(rows, badKeys = new Set(), infoKeys = new Set()) {
   return rows.map((row) => {
-    const status = badKeys.has(row.key) ? 'bad' : 'ok';
+    const status = infoKeys.has(row.key) ? 'info' : (badKeys.has(row.key) ? 'bad' : 'ok');
     return html`<div class="measure measure--${status}">
-      <span>${icon(status === 'bad' ? 'warning' : 'check')}${escapeHtml(row.label)}</span>
+      <span>${icon(status === 'bad' ? 'warning' : (status === 'info' ? 'info' : 'check'))}${escapeHtml(row.label)}</span>
       <strong>${escapeHtml(row.value)}</strong>
     </div>`;
   }).join('');
@@ -430,15 +462,19 @@ function recordDetailHtml(record) {
   if (record.kind === 'audio') rows = audioMeasureRows(item);
   else if (record.kind === 'image') rows = [...imageMeasureRows(item), { key: 'expected', label: 'Attendu', value: '320×240' }];
   else rows = [{ key: 'category', label: 'Catégorie', value: record.issue.category || 'Info' }];
-  const badKeys = new Set(rows.filter((row) => hasMeasureIssue(record.issues, row.key)).map((row) => row.key));
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
+  const flaggedKeys = new Set(rows.filter((row) => hasMeasureIssue(scopedIssues, row.key)).map((row) => row.key));
+  const optional = record.issue.fixDisposition === 'optional';
+  const badKeys = optional ? new Set() : flaggedKeys;
+  const infoKeys = optional ? flaggedKeys : new Set();
   return html`<div class="tech-detail">
     <div>
       <div class="tech-title">Mesures</div>
-      ${measureRowsHtml(rows, badKeys)}
+      ${measureRowsHtml(rows, badKeys, infoKeys)}
     </div>
     <div>
       <div class="tech-title">Ce qui est proposé</div>
-      ${record.issues.map((issue) => html`<div class="tech-action">
+      ${(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue) => html`<div class="tech-action">
         ${icon(issue.autoFixAvailable ? 'wrench' : 'info')}
         <div>
           <strong>${escapeHtml(issue.autoFixDescription || issue.message)}</strong>
@@ -460,7 +496,7 @@ function problemGroupHtml(group, open = false) {
         </span>
         <span>${escapeHtml(group.action)}</span>
       </span>
-      <span class="group-count"><strong>${group.count}</strong><small>${group.count > 1 ? 'fichiers' : 'fichier'}</small></span>
+      <span class="group-count"><strong>${group.count}</strong><small>${group.bucket === 'optional' ? (group.count > 1 ? 'suggestions' : 'suggestion') : (group.count > 1 ? 'fichiers' : 'fichier')}</small></span>
     </summary>
     <div class="group-body">
       <div class="mini-list">
@@ -863,6 +899,7 @@ function reportStyles() {
     .group--fix[open] { border-color: var(--warning-border); }
     .group--listen[open] { border-color: var(--listen-border); }
     .group--quality[open] { border-color: var(--danger-border); }
+    .group--optional[open] { border-color: var(--success-border); }
     .group--ok[open] { border-color: var(--success-border); }
     .group-head {
       display: flex;
@@ -882,6 +919,8 @@ function reportStyles() {
     .group--fix .group-badge { background: var(--warning-bg); color: var(--warning-text); border-color: var(--warning-border); }
     .group--quality .group-icon,
     .group--quality .group-badge { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+    .group--optional .group-icon,
+    .group--optional .group-badge { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
     .group--ok .group-icon,
     .group--ok .group-badge { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
     .group-copy {
@@ -928,6 +967,7 @@ function reportStyles() {
     .group--fix .group-count strong { color: var(--warning-text); }
     .group--listen .group-count strong { color: var(--listen-text); }
     .group--quality .group-count strong { color: var(--danger-text); }
+    .group--optional .group-count strong { color: var(--success-text); }
     .group--ok .group-count strong { color: var(--success-text); }
     .group-count small { color: var(--muted); font-size: 10px; }
     .group-body { padding: 0 14px 12px; }
@@ -1016,6 +1056,7 @@ function reportStyles() {
     .measure svg { width: 12px; height: 12px; }
     .measure--ok svg { color: var(--success-text); }
     .measure--bad svg { color: var(--danger-text); }
+    .measure--info svg { color: var(--success-text); }
     .measure strong {
       font-family: var(--mono);
       font-size: 11px;
@@ -1117,11 +1158,12 @@ export function formatHtmlReport(report) {
   if (!report) return '';
   const groups = buildProblemGroups(report);
   const summary = summarizeGroups(groups, report);
+  const correctionCounts = packCorrectionCounts(report);
   const saturatedCount = saturatedFileCount(groups);
   const conformingGroups = buildConformingGroups(report);
-  const audio = categoryStats(report.audioSummary);
-  const images = categoryStats(report.imageSummary);
-  const title = categoryStats(report.titleSummary);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
@@ -1158,7 +1200,7 @@ export function formatHtmlReport(report) {
         </div>
         <div class="report-callout">
           ${icon('info')}
-          <span><strong>${summary.listenCount}</strong> à écouter · <strong>${summary.fixCount}</strong> corrections proposées</span>
+          <span><strong>${summary.listenCount}</strong> à écouter · <strong>${correctionCounts.automatic}</strong> automatiques · <strong>${correctionCounts.optional}</strong> facultatives</span>
         </div>
       </div>
       <div class="summary-tiles" aria-label="Résumé du pack">
@@ -1225,12 +1267,16 @@ export function formatReadableReport(report) {
   lines.push(`- Avertissements : ${report.summary?.warnings ?? 0}`);
   lines.push(`- Informations : ${report.summary?.infos ?? 0}`);
   lines.push(`- Éléments conformes : ${report.summary?.ok ?? 0}`);
-  lines.push(`- Corrections automatiques disponibles : ${report.correctionsAvailable ?? 0}`);
+  const correctionCounts = packCorrectionCounts(report);
+  lines.push(`- Corrections automatiques disponibles : ${correctionCounts.automatic}`);
+  lines.push(`- Suggestions facultatives : ${correctionCounts.optional}`);
   lines.push('');
   lines.push(`## Résumé`);
   lines.push('');
-  lines.push(`- Audio : ${report.audioSummary?.ok ?? 0}/${report.audioSummary?.total ?? 0} conformes`);
-  lines.push(`- Images : ${report.imageSummary?.ok ?? 0}/${report.imageSummary?.total ?? 0} conformes`);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  lines.push(`- Audio : ${audio.ok}/${audio.total} conformes`);
+  lines.push(`- Images : ${images.ok}/${images.total} conformes`);
   lines.push(`- Structure Lunii : ${report.structureSummary?.luniiCompatible ? 'valide' : 'à corriger'}`);
   lines.push(`- Édition Story Studio : ${report.structureSummary?.storyStudioEditable ? 'supportée' : 'non supportée ou à vérifier'}`);
   lines.push(`- Mode nuit : ${report.nightMode?.detected ? 'détecté' : 'absent'}`);
@@ -1245,7 +1291,10 @@ export function formatReadableReport(report) {
       lines.push(`- ${severityLabel(issue.severity)} · ${issue.label} : ${issue.message}`);
       if (issue.filePath) lines.push(`  Fichier : ${issue.filePath}`);
       if (issue.technicalDetails) lines.push(`  Détail : ${issue.technicalDetails}`);
-      if (issue.autoFixDescription) lines.push(`  Correction : ${issue.autoFixDescription}`);
+      if (issue.autoFixDescription) {
+        const prefix = isOptionalSilenceIssue(issue) ? 'Suggestion facultative' : 'Correction';
+        lines.push(`  ${prefix} : ${issue.autoFixDescription}`);
+      }
     }
   }
   lines.push('');

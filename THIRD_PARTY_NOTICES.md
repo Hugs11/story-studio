@@ -307,16 +307,39 @@ provenance manifest. The build downloads every source/runtime archive over
 HTTPS, verifies its pinned SHA-256 before extraction and rejects an unexpected
 platform architecture or loader path.
 
-The three French voice models are not bundled. They remain downloaded on first
-use from <https://huggingface.co/rhasspy/piper-voices> tag `v1.0.0`, with their
-existing pinned hashes. Each model carries its own license:
+The voice models are not bundled. They are downloaded on first use into the
+user's writable app-data directory and are verified against the SHA-256 values
+pinned in `src-tauri/src/services/piper/catalog.rs`. They are not covered by
+Story Studio's MIT license. The upstream model cards record the following
+dataset licenses and attribution requirements:
 
 - `fr_FR-siwis-medium`: **CC BY 4.0** —
-  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/siwis/medium/MODEL_CARD>
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/siwis/medium/MODEL_CARD>.
 - `fr_FR-tom-medium`: **AGPL v3** —
-  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/tom/medium/MODEL_CARD>
-- `fr_FR-gilles-low`: **CC0** —
-  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/gilles/low/MODEL_CARD>
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/fr/fr_FR/tom/medium/MODEL_CARD>.
+- `en_GB-jenny_dioco-medium`: custom attribution terms. The voice must be
+  identified as **Jenny**, and as **Jenny (Dioco)** wherever practical;
+  commercial use is permitted. Story Studio uses the preferred full name in
+  its interface — <https://github.com/dioco-group/jenny-tts-dataset>.
+- `en_GB-alba-medium`: **CC BY 4.0** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/en/en_GB/alba/medium/MODEL_CARD>.
+- `en_US-kristin-medium`: dataset recordings declared **public domain** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/en/en_US/kristin/medium/MODEL_CARD>.
+- `en_US-ljspeech-medium`: dataset declared **public domain** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/v1.0.0/en/en_US/ljspeech/medium/MODEL_CARD>.
+- `it_IT-serena-medium` and `it_IT-serena-high`: **CC BY 4.0** —
+  <https://huggingface.co/rhasspy/piper-voices/blob/ea046e8458f6acd997706d6e6066a022b42f6fb1/it/it_IT/serena/medium/MODEL_CARD>.
+
+`fr_FR-beatrice-medium` is mirrored byte-for-byte from `DantSu/Telmi-Sync`
+commit `0d0cd1906cf7cc5565fdfb1d27cc8de8e74044bb`, with redistribution authorized
+by DantSu. The upstream repository declares **GPL-3.0-only**. Story Studio
+publishes the model and configuration under that license in the versioned,
+SHA-256-pinned `piper-beatrice-v1.0.0` release of
+<https://github.com/Hugs11/story-studio-voice-assets>. The release includes the
+GPL-3.0 text, provenance record and integrity manifest. The same GPL-3.0 text is
+already included in every Story Studio bundle under `tools/licenses/` for the
+Piper runtime; this notice also identifies its application to the separately
+downloaded Béatrice model.
 
 ## Distribution notes
 

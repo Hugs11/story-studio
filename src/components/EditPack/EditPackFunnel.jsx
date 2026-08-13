@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   FunnelShell,
@@ -11,6 +11,10 @@ import { Eye, FolderOpen, Package, TriangleAlert, Undo2, Upload } from '../icons
 import { pickFolder, pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
 import { KEYS, read as readSetting } from '../../store/persistentSettings';
+import {
+  createEditPackOperationLifecycle,
+  runEditPackImportOperation,
+} from './editPackOperationLifecycle';
 
 const ARCHIVE_RE = /\.(zip|7z)$/i;
 
@@ -33,45 +37,86 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null); // { zipPath, packLabel }
   const allowUnsupportedExtraction = readSetting(KEYS.ALLOW_UNSUPPORTED_PACK_EXTRACTION) === 'true';
+  const operationLifecycleRef = useRef(null);
+  if (!operationLifecycleRef.current) {
+    operationLifecycleRef.current = createEditPackOperationLifecycle();
+  }
+
+  useEffect(() => {
+    operationLifecycleRef.current.activate();
+    return () => operationLifecycleRef.current.deactivate();
+  }, []);
+
+  function closeFunnel() {
+    operationLifecycleRef.current.deactivate();
+    onClose();
+  }
+
+  function handleClose() {
+    if (operationLifecycleRef.current.isRunning()) return;
+    closeFunnel();
+  }
 
   async function processPack(path, kind) {
-    if (!path) return;
+    const operation = operationLifecycleRef.current;
+    if (!path || !operation.isActive()) return;
     setError('');
     setBusy({ title: 'Vérification du pack…', hint: 'Un instant.' });
     setPhase('busy');
-    try {
-      const packLabel = basename(path);
-      const isFolder = kind === 'folder' || (kind === 'auto' && !ARCHIVE_RE.test(path));
-      const zipPath = isFolder
-        ? await invoke('convert_folder_pack_to_zip', { folderPath: path })
-        : path;
-      const report = await invoke('classify_pack_editability', { zipPath });
-      if (!report?.authoringEditable) {
-        setPending({ zipPath, packLabel, report });
-        setPhase(report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
-        return;
-      }
-      setBusy({ title: 'Décompression du pack…', hint: 'Ne ferme pas la fenêtre.' });
-      await onLand({ zipPath, packLabel });
-      onClose();
-    } catch (e) {
-      setError(`Ce pack n'a pas pu être ouvert : ${e?.message ?? e}`);
+    const packLabel = basename(path);
+    const isFolder = kind === 'folder' || (kind === 'auto' && !ARCHIVE_RE.test(path));
+    const result = await runEditPackImportOperation({
+      lifecycle: operation,
+      path,
+      isFolder,
+      convertFolder: (folderPath) => invoke('convert_folder_pack_to_zip', { folderPath }),
+      classify: (zipPath) => invoke('classify_pack_editability', { zipPath }),
+      beforeLand: () => {
+        setBusy({ title: 'Décompression du pack…', hint: 'Ne ferme pas la fenêtre.' });
+      },
+      land: (zipPath) => onLand({ zipPath, packLabel }),
+    });
+    if (result.status === 'landed') {
+      closeFunnel();
+    } else if (result.status === 'classified') {
+      setPending({ zipPath: result.zipPath, packLabel, report: result.report });
+      setPhase(result.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
+    } else if (result.status === 'error') {
+      setError(`Ce pack n'a pas pu être ouvert : ${result.error?.message ?? result.error}`);
       setPhase('collect');
     }
   }
 
   const handleDrop = (paths) => processPack(paths?.[0], 'auto');
-  const handleBrowseFile = async () => { const p = await pickZip(); if (p) processPack(p, 'file'); };
-  const handleBrowseFolder = async () => { const p = await pickFolder(); if (p) processPack(p, 'folder'); };
+  const handleBrowseFile = async () => {
+    const operation = operationLifecycleRef.current;
+    const session = operation.captureSession();
+    const path = await pickZip();
+    if (path && operation.isSessionCurrent(session)) processPack(path, 'file');
+  };
+  const handleBrowseFolder = async () => {
+    const operation = operationLifecycleRef.current;
+    const session = operation.captureSession();
+    const path = await pickFolder();
+    if (path && operation.isSessionCurrent(session)) processPack(path, 'folder');
+  };
 
   async function handleSimulate() {
     if (!pending) return;
+    const operation = operationLifecycleRef.current;
+    const token = operation.begin();
+    if (token === null) return;
     setBusy({ title: 'Préparation du simulateur…', hint: 'Un instant.' });
     setPhase('busy');
     try {
+      if (!operation.claimCompletion(token)) return;
       await onSimulate(pending);
-      onClose();
+      if (!operation.isCurrent(token)) return;
+      operation.finish(token);
+      closeFunnel();
     } catch (e) {
+      if (!operation.isCurrent(token)) return;
+      operation.finish(token);
       setError(`Le simulateur n'a pas pu s'ouvrir : ${e?.message ?? e}`);
       setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
     }
@@ -79,12 +124,20 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
 
   async function handleForceExtract() {
     if (!pending || !allowUnsupportedExtraction) return;
+    const operation = operationLifecycleRef.current;
+    const token = operation.begin();
+    if (token === null) return;
     setBusy({ title: 'Extraction forcée du pack…', hint: 'La structure récupérée peut être incomplète.' });
     setPhase('busy');
     try {
+      if (!operation.claimCompletion(token)) return;
       await onLand({ ...pending, allowUnsupported: true });
-      onClose();
+      if (!operation.isCurrent(token)) return;
+      operation.finish(token);
+      closeFunnel();
     } catch (e) {
+      if (!operation.isCurrent(token)) return;
+      operation.finish(token);
       setError(`L’extraction forcée a échoué : ${e?.message ?? e}`);
       setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
     }
@@ -94,7 +147,8 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
     <FunnelShell
       icon={<Package />}
       title="Modifier un pack"
-      onClose={onClose}
+      onClose={handleClose}
+      closeDisabled={phase === 'busy'}
       showChrome={false}
       fitContent
       ariaLabel="Modifier un pack"

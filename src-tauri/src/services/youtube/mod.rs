@@ -264,9 +264,10 @@ mod tests {
     #[test]
     #[ignore = "requires live GitHub and YouTube access plus the prepared native FFmpeg"]
     fn live_linux_updates_lists_and_downloads_with_native_tools() {
-        if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            return;
-        }
+        assert!(
+            std::env::consts::OS == "linux" && std::env::consts::ARCH == "x86_64",
+            "this external suite must run on Linux x86_64"
+        );
 
         let root =
             std::env::temp_dir().join(format!("story_studio_youtube_live_été_{}", Uuid::new_v4()));

@@ -3,7 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { KEYS, read, write } from '../../store/persistentSettings';
-import { PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
+import {
+  PIPER_DEFAULT_LANGUAGE,
+  PIPER_DEFAULT_VOICE,
+  PIPER_LANGUAGE_OPTIONS,
+  piperDefaultVoiceForLanguage,
+} from '../../store/xttsSettings';
 import { formatFrenchCount } from '../../utils/frenchText.js';
 import { Button } from '../common/Button';
 import './GenerateVoiceModal.css';
@@ -109,6 +114,9 @@ function PiperVoiceModal({
   const [text, setText] = useState(initialText);
   const [voices, setVoices] = useState([]);
   const [binaryInstalled, setBinaryInstalled] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    xttsSettings.piperLanguage || PIPER_DEFAULT_LANGUAGE,
+  );
   const [selectedVoice, setSelectedVoice] = useState(() => (
     xttsSettings.piperVoice || read(KEYS.PIPER_LAST_VOICE) || PIPER_DEFAULT_VOICE
   ));
@@ -124,6 +132,10 @@ function PiperVoiceModal({
     () => voices.find((voice) => voice.id === selectedVoice) || null,
     [voices, selectedVoice],
   );
+  const visibleVoices = useMemo(
+    () => voices.filter((voice) => voice.language === selectedLanguage),
+    [voices, selectedLanguage],
+  );
   const needsProvision = !binaryInstalled || (selectedVoiceInfo ? !selectedVoiceInfo.installed : true);
 
   // reason: chargement one-shot du catalogue de voix Piper au montage.
@@ -136,10 +148,15 @@ function PiperVoiceModal({
         const list = status?.voices || [];
         setVoices(list);
         setBinaryInstalled(!!status?.binaryInstalled);
-        setSelectedVoice((current) => {
-          if (list.some((voice) => voice.id === current)) return current;
-          return status?.defaultVoice || list[0]?.id || PIPER_DEFAULT_VOICE;
-        });
+        const currentVoice = list.find((voice) => voice.id === selectedVoice);
+        const language = currentVoice?.language
+          || xttsSettings.piperLanguage
+          || status?.defaultLanguage
+          || PIPER_DEFAULT_LANGUAGE;
+        setSelectedLanguage(language);
+        setSelectedVoice(currentVoice?.language === language
+          ? currentVoice.id
+          : piperDefaultVoiceForLanguage(list, language));
       })
       .catch((e) => {
         if (!cancelled) setError(String(e));
@@ -192,7 +209,11 @@ function PiperVoiceModal({
         request: { text, voice: selectedVoice, speed, savePath, filenameHint },
       });
       write(KEYS.PIPER_LAST_VOICE, selectedVoice);
-      onUpdateXttsSettings?.({ piperVoice: selectedVoice, piperSpeed: speed });
+      onUpdateXttsSettings?.({
+        piperLanguage: selectedLanguage,
+        piperVoice: selectedVoice,
+        piperSpeed: speed,
+      });
       onClose();
     } catch (e) {
       setError(`${e}\nRéessaie, ou passe à XTTS dans les Préférences si le problème persiste.`);
@@ -224,6 +245,27 @@ function PiperVoiceModal({
     >
       <div className="tts-grid">
         <label className="tts-field">
+          <span>Langue</span>
+          <select
+            className="tts-input"
+            value={selectedLanguage}
+            onChange={(e) => {
+              const language = e.target.value;
+              const voice = piperDefaultVoiceForLanguage(voices, language);
+              setSelectedLanguage(language);
+              setSelectedVoice(voice);
+              write(KEYS.PIPER_LAST_VOICE, voice);
+              onUpdateXttsSettings?.({ piperLanguage: language, piperVoice: voice });
+            }}
+            disabled={submitting || voices.length === 0}
+          >
+            {PIPER_LANGUAGE_OPTIONS.map(({ value, label: optionLabel }) => (
+              <option key={value} value={value}>{optionLabel}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="tts-field">
           <span>Voix</span>
           <select
             className="tts-input"
@@ -231,12 +273,15 @@ function PiperVoiceModal({
             onChange={(e) => {
               setSelectedVoice(e.target.value);
               write(KEYS.PIPER_LAST_VOICE, e.target.value);
-              onUpdateXttsSettings?.({ piperVoice: e.target.value });
+              onUpdateXttsSettings?.({
+                piperLanguage: selectedLanguage,
+                piperVoice: e.target.value,
+              });
             }}
-            disabled={submitting || voices.length === 0}
+            disabled={submitting || visibleVoices.length === 0}
           >
-            {voices.length === 0 && <option value="">Chargement des voix…</option>}
-            {voices.map((voice) => (
+            {visibleVoices.length === 0 && <option value="">Chargement des voix…</option>}
+            {visibleVoices.map((voice) => (
               <option key={voice.id} value={voice.id}>
                 {voice.label}{voice.installed ? '' : ' — à télécharger'}
               </option>

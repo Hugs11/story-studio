@@ -1,7 +1,50 @@
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FsPackVariant {
+    Encrypted,
+    Plain,
+}
+
+impl FsPackVariant {
+    fn index_name(self, base: &str) -> String {
+        match self {
+            Self::Encrypted => base.to_string(),
+            Self::Plain => format!("{base}.plain"),
+        }
+    }
+
+    fn decode(self, bytes: &[u8]) -> Vec<u8> {
+        match self {
+            Self::Encrypted => decipher_common_key(bytes),
+            Self::Plain => bytes.to_vec(),
+        }
+    }
+}
+
+pub(crate) fn detect_fs_pack_variant(pack_dir: &Path) -> Option<FsPackVariant> {
+    if !pack_dir.join("ni").is_file()
+        || !pack_dir.join("rf").is_dir()
+        || !pack_dir.join("sf").is_dir()
+    {
+        return None;
+    }
+
+    let has_indexes = |suffix: &str| {
+        ["ri", "si", "li"]
+            .iter()
+            .all(|name| pack_dir.join(format!("{name}{suffix}")).is_file())
+    };
+
+    match (has_indexes(""), has_indexes(".plain")) {
+        (true, false) => Some(FsPackVariant::Encrypted),
+        (false, true) => Some(FsPackVariant::Plain),
+        _ => None,
+    }
+}
 
 // XXTEA common key (hardcoded in STUdio)
 const COMMON_KEY: [u8; 16] = [
@@ -92,7 +135,13 @@ struct StageRecord {
     autoplay: bool,
 }
 
-fn read_asset(index_data: &[u8], asset_folder: &Path, index: i32) -> Result<Vec<u8>, String> {
+fn read_asset(
+    index_data: &[u8],
+    asset_folder: &Path,
+    index: i32,
+    variant: FsPackVariant,
+    plain_extension: &str,
+) -> Result<Vec<u8>, String> {
     if index < 0 {
         return Err(format!("Index asset négatif : {}", index));
     }
@@ -104,10 +153,57 @@ fn read_asset(index_data: &[u8], asset_folder: &Path, index: i32) -> Result<Vec<
         .map_err(|e| format!("Nom asset invalide : {}", e))?
         .trim_matches('\0')
         .replace('\\', "/");
-    let path = asset_folder.join(&name);
+    let path = resolve_asset_path(asset_folder, &name, variant, plain_extension)?;
     let raw = std::fs::read(&path)
         .map_err(|e| format!("Asset introuvable {} : {}", path.display(), e))?;
-    Ok(decipher_common_key(&raw))
+    Ok(variant.decode(&raw))
+}
+
+fn resolve_asset_path(
+    asset_folder: &Path,
+    name: &str,
+    variant: FsPackVariant,
+    plain_extension: &str,
+) -> Result<PathBuf, String> {
+    let relative = Path::new(name);
+    if name.is_empty()
+        || relative
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(format!("Chemin d'asset invalide dans l'index : {name}"));
+    }
+
+    let mut path = asset_folder.join(relative);
+    if variant == FsPackVariant::Plain && path.extension().is_none() {
+        path.set_extension(plain_extension);
+    }
+
+    let metadata = std::fs::symlink_metadata(&path)
+        .map_err(|e| format!("Asset introuvable {} : {}", path.display(), e))?;
+    if !metadata.file_type().is_file() {
+        return Err(format!(
+            "Asset refusé car il n'est pas un fichier régulier : {}",
+            path.display()
+        ));
+    }
+
+    let canonical_root = std::fs::canonicalize(asset_folder).map_err(|e| {
+        format!(
+            "Dossier d'assets inaccessible {} : {}",
+            asset_folder.display(),
+            e
+        )
+    })?;
+    let canonical_path = std::fs::canonicalize(&path)
+        .map_err(|e| format!("Asset inaccessible {} : {}", path.display(), e))?;
+    if !canonical_path.starts_with(&canonical_root) {
+        return Err(format!(
+            "Chemin d'asset hors du dossier autorisé : {}",
+            path.display()
+        ));
+    }
+    Ok(canonical_path)
 }
 
 pub fn read_fs_pack_to_studio_zip(
@@ -122,17 +218,22 @@ pub fn read_fs_pack_to_studio_zip(
     let pack_uuid = dir_name.split('.').next().unwrap_or(dir_name).to_string();
     let night_mode = pack_dir.join("nm").exists();
 
-    let ri = decipher_common_key(
-        &std::fs::read(pack_dir.join("ri"))
-            .map_err(|e| format!("Impossible de lire ri : {}", e))?,
-    );
-    let si = decipher_common_key(
-        &std::fs::read(pack_dir.join("si"))
-            .map_err(|e| format!("Impossible de lire si : {}", e))?,
-    );
-    let li_raw =
-        std::fs::read(pack_dir.join("li")).map_err(|e| format!("Impossible de lire li : {}", e))?;
-    let li = decipher_common_key(&li_raw);
+    let variant = detect_fs_pack_variant(pack_dir).ok_or_else(|| {
+        format!(
+            "Dossier de pack filesystem non reconnu : {}",
+            pack_dir.display()
+        )
+    })?;
+
+    let read_index = |name: &str| {
+        let index_name = variant.index_name(name);
+        std::fs::read(pack_dir.join(&index_name))
+            .map(|bytes| variant.decode(&bytes))
+            .map_err(|e| format!("Impossible de lire {index_name} : {e}"))
+    };
+    let ri = read_index("ri")?;
+    let si = read_index("si")?;
+    let li = read_index("li")?;
 
     let ni =
         std::fs::read(pack_dir.join("ni")).map_err(|e| format!("Impossible de lire ni : {}", e))?;
@@ -238,7 +339,7 @@ pub fn read_fs_pack_to_studio_zip(
 
     for (stage_idx, (stage, stage_uuid)) in stages.iter().zip(stage_uuids.iter()).enumerate() {
         let audio_name: Option<String> = if stage.sound_index >= 0 {
-            let bytes = read_asset(&si, &sf_dir, stage.sound_index)
+            let bytes = read_asset(&si, &sf_dir, stage.sound_index, variant, "mp3")
                 .map_err(|e| format!("Audio stage {} : {}", stage_idx, e))?;
             let name = sha1_hex(&bytes) + ".mp3";
             assets.entry(name.clone()).or_insert(bytes);
@@ -248,7 +349,7 @@ pub fn read_fs_pack_to_studio_zip(
         };
 
         let image_name: Option<String> = if stage.image_index >= 0 {
-            let img_bytes = read_asset(&ri, &rf_dir, stage.image_index)
+            let img_bytes = read_asset(&ri, &rf_dir, stage.image_index, variant, "bmp")
                 .map_err(|e| format!("Image stage {} : {}", stage_idx, e))?;
             let name = sha1_hex(&img_bytes) + ".bmp";
             assets.entry(name.clone()).or_insert(img_bytes);
@@ -348,4 +449,180 @@ pub fn read_fs_pack_to_studio_zip(
         .finish()
         .map_err(|e| format!("Finalisation ZIP : {}", e))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::io::Read;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(name: &str) -> std::path::PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "story_studio_fs_pack_reader_{name}_{}_{}",
+            std::process::id(),
+            nonce
+        ))
+    }
+
+    fn write_common_pack_shape(pack_dir: &Path) {
+        fs::create_dir_all(pack_dir.join("rf/000")).expect("create image directory");
+        fs::create_dir_all(pack_dir.join("sf/000")).expect("create audio directory");
+        fs::write(pack_dir.join("ni"), [0_u8; 512]).expect("write node index");
+    }
+
+    fn write_plain_pack(pack_dir: &Path) -> (Vec<u8>, Vec<u8>) {
+        write_common_pack_shape(pack_dir);
+
+        let mut ni = vec![0_u8; 512 + 44];
+        ni[2..4].copy_from_slice(&1_i16.to_le_bytes());
+        ni[8..12].copy_from_slice(&44_u32.to_le_bytes());
+        ni[12..16].copy_from_slice(&1_u32.to_le_bytes());
+        let stage = &mut ni[512..];
+        stage[0..4].copy_from_slice(&0_i32.to_le_bytes());
+        stage[4..8].copy_from_slice(&0_i32.to_le_bytes());
+        for offset in [8, 12, 16, 20, 24, 28] {
+            stage[offset..offset + 4].copy_from_slice(&(-1_i32).to_le_bytes());
+        }
+        fs::write(pack_dir.join("ni"), ni).expect("write node index");
+        fs::write(pack_dir.join("ri.plain"), b"000\\IMAGE001").expect("write image index");
+        fs::write(pack_dir.join("si.plain"), b"000\\SOUND001").expect("write audio index");
+        fs::write(pack_dir.join("li.plain"), []).expect("write link index");
+
+        let image = b"BMsynthetic-image".to_vec();
+        let audio = b"ID3synthetic-audio".to_vec();
+        fs::write(pack_dir.join("rf/000/IMAGE001.bmp"), &image).expect("write image asset");
+        fs::write(pack_dir.join("sf/000/SOUND001.mp3"), &audio).expect("write audio asset");
+        (image, audio)
+    }
+
+    #[test]
+    fn detects_complete_encrypted_and_plain_pack_shapes() {
+        let dir = temp_dir("detect_variants");
+        let encrypted = dir.join("encrypted");
+        let plain = dir.join("plain");
+        let mixed = dir.join("mixed");
+        let ambiguous = dir.join("ambiguous");
+        for pack_dir in [&encrypted, &plain, &mixed, &ambiguous] {
+            write_common_pack_shape(pack_dir);
+        }
+        for name in ["ri", "si", "li"] {
+            fs::write(encrypted.join(name), []).expect("write encrypted index");
+            fs::write(plain.join(format!("{name}.plain")), []).expect("write plain index");
+            fs::write(ambiguous.join(name), []).expect("write ambiguous encrypted index");
+            fs::write(ambiguous.join(format!("{name}.plain")), [])
+                .expect("write ambiguous plain index");
+        }
+        fs::write(mixed.join("ri.plain"), []).expect("write mixed image index");
+        fs::write(mixed.join("si.plain"), []).expect("write mixed audio index");
+        fs::write(mixed.join("li"), []).expect("write mixed link index");
+
+        assert_eq!(
+            detect_fs_pack_variant(&encrypted),
+            Some(FsPackVariant::Encrypted)
+        );
+        assert_eq!(detect_fs_pack_variant(&plain), Some(FsPackVariant::Plain));
+        assert_eq!(detect_fs_pack_variant(&mixed), None);
+        assert_eq!(detect_fs_pack_variant(&ambiguous), None);
+
+        fs::remove_dir_all(dir).expect("cleanup variant fixtures");
+    }
+
+    #[test]
+    fn converts_plain_pack_without_deciphering_indexes_or_assets() {
+        let dir = temp_dir("plain_conversion");
+        let pack_dir = dir.join("synthetic-pack");
+        let output_zip = dir.join("converted.zip");
+        let (image, audio) = write_plain_pack(&pack_dir);
+
+        read_fs_pack_to_studio_zip(&pack_dir, &output_zip, "Synthetic pack")
+            .expect("convert plain pack");
+
+        let file = fs::File::open(&output_zip).expect("open converted zip");
+        let mut archive = zip::ZipArchive::new(file).expect("read converted zip");
+        let image_name = format!("assets/{}.bmp", sha1_hex(&image));
+        let audio_name = format!("assets/{}.mp3", sha1_hex(&audio));
+        let mut image_bytes = Vec::new();
+        archive
+            .by_name(&image_name)
+            .expect("image entry")
+            .read_to_end(&mut image_bytes)
+            .expect("read image entry");
+        let mut audio_bytes = Vec::new();
+        archive
+            .by_name(&audio_name)
+            .expect("audio entry")
+            .read_to_end(&mut audio_bytes)
+            .expect("read audio entry");
+
+        assert_eq!(image_bytes, image);
+        assert_eq!(audio_bytes, audio);
+
+        fs::remove_dir_all(dir).expect("cleanup plain fixture");
+    }
+
+    #[test]
+    fn asset_paths_stay_confined_to_their_pack_folder() {
+        let dir = temp_dir("asset_path_confinement");
+        let asset_dir = dir.join("sf");
+        let nested_dir = asset_dir.join("000");
+        fs::create_dir_all(&nested_dir).expect("create asset directory");
+        let expected = nested_dir.join("SOUND001.mp3");
+        fs::write(&expected, b"audio").expect("write asset");
+
+        let resolved = resolve_asset_path(&asset_dir, "000/SOUND001", FsPackVariant::Plain, "mp3")
+            .expect("resolve asset inside pack");
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&expected).expect("canonical expected asset")
+        );
+
+        let traversal = resolve_asset_path(&asset_dir, "../evil.mp3", FsPackVariant::Plain, "mp3")
+            .expect_err("parent traversal must be rejected");
+        assert!(traversal.contains("Chemin d'asset invalide"));
+
+        let absolute_name = if cfg!(windows) {
+            "C:/evil.mp3"
+        } else {
+            "/tmp/x.mp3"
+        };
+        let absolute = resolve_asset_path(&asset_dir, absolute_name, FsPackVariant::Plain, "mp3")
+            .expect_err("absolute asset path must be rejected");
+        assert!(absolute.contains("Chemin d'asset invalide"));
+
+        fs::remove_dir_all(dir).expect("cleanup confinement fixture");
+    }
+
+    #[test]
+    #[ignore = "requires STORY_STUDIO_PLAIN_PACK_DIR"]
+    fn converts_external_plain_pack_when_configured() {
+        let pack_dir = std::env::var_os("STORY_STUDIO_PLAIN_PACK_DIR")
+            .expect("STORY_STUDIO_PLAIN_PACK_DIR must point to an external plain pack");
+        let dir = temp_dir("external_plain_conversion");
+        let cache_dir = dir.join("cache");
+        let output_zip = crate::support::imported_pack::ensure_studio_pack_zip_from_dir(
+            Path::new(&pack_dir)
+                .to_str()
+                .expect("external pack path utf8"),
+            &cache_dir,
+        )
+        .expect("convert configured external plain pack through folder import");
+        let file = fs::File::open(&output_zip).expect("open converted external zip");
+        let mut archive = zip::ZipArchive::new(file).expect("read converted external zip");
+        assert!(archive.by_name("story.json").is_ok());
+        drop(archive);
+
+        let report = crate::services::pack_reader::classify_pack_editability(
+            output_zip.to_str().expect("external zip path utf8"),
+        )
+        .expect("classify converted external pack");
+        assert!(report.authoring_editable, "{}", report.reason);
+
+        fs::remove_dir_all(dir).expect("cleanup external conversion output");
+    }
 }

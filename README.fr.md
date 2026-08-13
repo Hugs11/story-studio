@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-builds%20desktop-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.6" src="https://img.shields.io/badge/version-0.9.6-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.7" src="https://img.shields.io/badge/version-0.9.7-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -40,13 +40,13 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.6 apporte l'éditeur desktop complet à Linux x86_64 et macOS
-Apple Silicon aux côtés de Windows x64. Cette version ajoute aussi les runtimes
-natifs Piper 1.6, renforce la gestion multiplateforme des fichiers et outils,
-et corrige plusieurs régressions audio, image et import de packs.
+Story Studio 0.9.7 ajoute des voix Piper multilingues, améliore la compatibilité
+avec les packs communautaires et fiabilise les parcours de vérification,
+d'import et de simulation. Cette version renforce aussi l'isolation des
+espaces temporaires et la sécurité des chemins.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.6](https://github.com/Hugs11/story-studio/releases/tag/v0.9.6)
+- [Lire les notes de version 0.9.7](https://github.com/Hugs11/story-studio/releases/tag/v0.9.7)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## Packs de démonstration
@@ -232,7 +232,7 @@ Ne désactivez pas Gatekeeper globalement.
 
 Les intégrations IA sont optionnelles. XTTS est validé sous Linux en mode CPU
 uniquement et ne nécessite aucun pilote NVIDIA ; il n'a pas été installé ni
-validé manuellement sous macOS pour la 0.9.6. ComfyUI est validé manuellement
+validé manuellement sous macOS pour la 0.9.7. ComfyUI est validé manuellement
 uniquement sous Windows : les tests manuels Linux et macOS n'ont pas été
 exécutés.
 

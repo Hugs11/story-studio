@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { KEYS, write } from '../../store/persistentSettings';
-import { PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
+import {
+  PIPER_DEFAULT_LANGUAGE,
+  PIPER_DEFAULT_VOICE,
+  piperDefaultVoiceForLanguage,
+  piperLanguageForVoice,
+} from '../../store/xttsSettings';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   const [piperVoices, setPiperVoices] = useState([]);
   const [piperProvision, setPiperProvision] = useState({ state: 'idle', message: '' });
 
+  const piperLanguage = xttsSettings.piperLanguage || PIPER_DEFAULT_LANGUAGE;
   const piperVoice = xttsSettings.piperVoice || PIPER_DEFAULT_VOICE;
   const piperSpeed = Number.isFinite(Number(xttsSettings.piperSpeed)) && Number(xttsSettings.piperSpeed) > 0
     ? Number(xttsSettings.piperSpeed)
@@ -19,8 +25,23 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   useEffect(() => {
     if (!isTauriRuntime()) return;
     invoke('piper_list_voices')
-      .then((status) => setPiperVoices(status?.voices || []))
+      .then((status) => {
+        const voices = status?.voices || [];
+        setPiperVoices(voices);
+        const selected = voices.find((voice) => voice.id === piperVoice);
+        const language = selected?.language || piperLanguage;
+        const voice = selected?.language === language
+          ? selected.id
+          : piperDefaultVoiceForLanguage(voices, language);
+        if (language !== piperLanguage || voice !== piperVoice) {
+          write(KEYS.PIPER_LAST_VOICE, voice);
+          onUpdateXttsSettings({ piperLanguage: language, piperVoice: voice });
+        }
+      })
       .catch(() => {});
+    // Le catalogue est chargé une fois ; les valeurs initiales servent uniquement
+    // à réconcilier une ancienne préférence avec le nouveau catalogue multilingue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reflète les messages discrets du provisionnement Piper (téléchargement).
@@ -38,9 +59,16 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
     return () => { cancelled = true; if (unlisten) unlisten(); };
   }, []);
 
-  function updatePiperVoice(voice) {
+  function updatePiperLanguage(language) {
+    const voice = piperDefaultVoiceForLanguage(piperVoices, language);
     write(KEYS.PIPER_LAST_VOICE, voice);
-    onUpdateXttsSettings({ piperVoice: voice });
+    onUpdateXttsSettings({ piperLanguage: language, piperVoice: voice });
+  }
+
+  function updatePiperVoice(voice) {
+    const language = piperLanguageForVoice(piperVoices, voice, piperLanguage);
+    write(KEYS.PIPER_LAST_VOICE, voice);
+    onUpdateXttsSettings({ piperLanguage: language, piperVoice: voice });
   }
 
   function updatePiperSpeed(rawValue) {
@@ -66,8 +94,10 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   return {
     piperVoices,
     piperProvision,
+    piperLanguage,
     piperVoice,
     piperSpeed,
+    updatePiperLanguage,
     updatePiperVoice,
     updatePiperSpeed,
     preparePiperVoice,

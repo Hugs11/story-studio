@@ -3,13 +3,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use super::super::{sanitize_stage_label, CanonicalOptions};
+use super::super::{sanitize_stage_label, CanonicalOptions, NativeGenerationWarning};
 use crate::domain::project::SilenceMode;
 use crate::services::project_files::validate_existing_file_path;
 use crate::support::audio_norm::{
     build_edge_silence_filters_with_targets, build_loudness_filters, measure_edge_silence,
     measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, EdgeSilenceFilters, LoudnessAction,
-    EDGE_SILENCE_SEC,
+    EDGE_SILENCE_SEC, MAX_LIMITING_DB, NEAR_MUTE_LUFS,
 };
 use crate::support::ffmpeg::{apply_no_window, now_millis};
 
@@ -35,6 +35,23 @@ pub(crate) enum AudioPreparation {
     Verbatim { source: PathBuf },
     /// Asset ré-encodé en MP3 dans `processed_audio_dir`.
     Encoded { output: PathBuf },
+}
+
+pub(crate) struct AudioPreparationResult {
+    pub(crate) preparation: AudioPreparation,
+    pub(crate) warnings: Vec<NativeGenerationWarning>,
+}
+
+struct GenerationLoudnessPlan {
+    action: LoudnessAction,
+    pending_warning: Option<PendingAudioWarning>,
+}
+
+struct PendingAudioWarning {
+    code: &'static str,
+    initial_integrated_lufs: f64,
+    gain_db: f64,
+    expected_limiting_db: f64,
 }
 
 pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
@@ -85,7 +102,7 @@ pub(crate) fn prepare_audio_asset(
     leading_silence_sec: f64,
     trailing_silence_sec: f64,
     role: &str,
-) -> Result<AudioPreparation, String> {
+) -> Result<AudioPreparationResult, String> {
     let source = validate_existing_file_path(source_path, role)?;
     let edge_plan = edge_plan_for_generation(
         ffmpeg,
@@ -98,23 +115,27 @@ pub(crate) fn prepare_audio_asset(
     let mut measure_filters = edge_plan.measure_pre_filters.clone();
     measure_filters.push("aformat=channel_layouts=mono".to_string());
 
-    let action = loudness_action_for_generation(
+    let loudness_plan = loudness_action_for_generation(
         ffmpeg,
         &source,
         &measure_filters,
         options.harmonize_loudness,
         role,
     )?;
+    let action = &loudness_plan.action;
 
     if audio_can_copy_verbatim(
         &source,
-        &action,
+        action,
         edge_plan.measured_edges,
         options,
         leading_silence_sec,
         trailing_silence_sec,
     )? {
-        return Ok(AudioPreparation::Verbatim { source });
+        return Ok(AudioPreparationResult {
+            preparation: AudioPreparation::Verbatim { source },
+            warnings: Vec::new(),
+        });
     }
 
     let output = encode_audio_asset(
@@ -124,11 +145,19 @@ pub(crate) fn prepare_audio_asset(
         options,
         leading_silence_sec,
         trailing_silence_sec,
-        &action,
+        action,
         edge_plan.output_filters.as_ref(),
         role,
     )?;
-    Ok(AudioPreparation::Encoded { output })
+    let warnings = loudness_plan
+        .pending_warning
+        .map(|pending| build_generation_audio_warning(ffmpeg, &output, role, pending))
+        .into_iter()
+        .collect();
+    Ok(AudioPreparationResult {
+        preparation: AudioPreparation::Encoded { output },
+        warnings,
+    })
 }
 
 /// Décide si l'asset peut être copié verbatim (aucun ré-encodage) : MP3 natif
@@ -406,17 +435,21 @@ fn edge_plan_for_generation(
 /// - Harmonisation désactivée → aucune mesure ni correction (`None`) : le volume
 ///   d'origine est conservé et un audio quasi-muet/incorrigible ne bloque pas la
 ///   génération.
-/// - Harmonisation activée → mesure EBU R128 + plan de correction ; un niveau
-///   incorrigible fait échouer la préparation (comportement historique).
+/// - Harmonisation activée → mesure EBU R128 + gain vers −14 LUFS. Une source
+///   très dynamique ou presque muette reste traitée et produit un avertissement
+///   non bloquant ; seule une mesure techniquement invalide fait échouer ce plan.
 fn loudness_action_for_generation(
     ffmpeg: &Path,
     source: &Path,
     measure_filters: &[String],
     harmonize: bool,
     role: &str,
-) -> Result<LoudnessAction, String> {
+) -> Result<GenerationLoudnessPlan, String> {
     if !harmonize {
-        return Ok(LoudnessAction::None);
+        return Ok(GenerationLoudnessPlan {
+            action: LoudnessAction::None,
+            pending_warning: None,
+        });
     }
     let measure = measure_loudness_ebur128(ffmpeg, source, measure_filters)
         .map_err(|e| format!("Mesure audio native échouée pour {} : {}", role, e))?;
@@ -428,7 +461,111 @@ fn loudness_action_for_generation(
             loudness_action_reason(&action)
         ));
     }
-    Ok(action)
+    let pending_warning = pending_audio_warning(measure.integrated_lufs, &action);
+    Ok(GenerationLoudnessPlan {
+        action,
+        pending_warning,
+    })
+}
+
+fn pending_audio_warning(
+    integrated_lufs: f64,
+    action: &LoudnessAction,
+) -> Option<PendingAudioWarning> {
+    let (gain_db, expected_limiting_db) = loudness_action_amounts(action);
+    if integrated_lufs < NEAR_MUTE_LUFS {
+        Some(PendingAudioWarning {
+            code: "AUDIO_NEAR_MUTE_BOOST",
+            initial_integrated_lufs: integrated_lufs,
+            gain_db,
+            expected_limiting_db,
+        })
+    } else if expected_limiting_db > MAX_LIMITING_DB {
+        Some(PendingAudioWarning {
+            code: "AUDIO_STRONG_LIMITING",
+            initial_integrated_lufs: integrated_lufs,
+            gain_db,
+            expected_limiting_db,
+        })
+    } else {
+        None
+    }
+}
+
+fn loudness_action_amounts(action: &LoudnessAction) -> (f64, f64) {
+    match action {
+        LoudnessAction::Gain { gain_db } => (*gain_db, 0.0),
+        LoudnessAction::GainLimit {
+            gain_db,
+            expected_limiting_db,
+        } => (*gain_db, *expected_limiting_db),
+        LoudnessAction::None | LoudnessAction::Uncorrectable { .. } => (0.0, 0.0),
+    }
+}
+
+fn build_generation_audio_warning(
+    ffmpeg: &Path,
+    output: &Path,
+    role: &str,
+    pending: PendingAudioWarning,
+) -> NativeGenerationWarning {
+    let label = generation_audio_label(role);
+    let final_integrated_lufs = measure_prepared_output_loudness(ffmpeg, output);
+    let message = if pending.code == "AUDIO_NEAR_MUTE_BOOST" {
+        format!(
+            "L'audio « {} » était presque muet et a été fortement amplifié ; le bruit de fond peut être plus audible.",
+            label
+        )
+    } else {
+        format!(
+            "L'audio « {} » a nécessité une forte limitation pour être harmonisé ; certaines pointes peuvent sembler comprimées.",
+            label
+        )
+    };
+    NativeGenerationWarning {
+        code: pending.code.to_string(),
+        role: role.to_string(),
+        label,
+        message,
+        initial_integrated_lufs: pending.initial_integrated_lufs,
+        final_integrated_lufs,
+        gain_db: pending.gain_db,
+        expected_limiting_db: pending.expected_limiting_db,
+    }
+}
+
+fn measure_prepared_output_loudness(ffmpeg: &Path, output: &Path) -> Option<f64> {
+    let mut filters = match measure_edge_silence(ffmpeg, output).ok()? {
+        EdgeMeasure::Measured { leading, trailing } => {
+            build_edge_silence_filters_with_targets(leading, trailing, 0.0, 0.0).pre_filters
+        }
+        EdgeMeasure::AllSilence | EdgeMeasure::Unreadable => Vec::new(),
+    };
+    filters.push("aformat=channel_layouts=mono".to_string());
+    measure_loudness_ebur128(ffmpeg, output, &filters)
+        .ok()
+        .map(|measure| measure.integrated_lufs)
+}
+
+fn generation_audio_label(role: &str) -> String {
+    match role {
+        "rootAudio" => return "Accueil du pack".to_string(),
+        "nightModeAudio" => return "Mode nuit".to_string(),
+        _ => {}
+    }
+    let without_field = role
+        .rsplit_once('/')
+        .map(|(prefix, _)| prefix)
+        .unwrap_or(role);
+    without_field
+        .rsplit('/')
+        .next()
+        .unwrap_or(without_field)
+        .split('#')
+        .next()
+        .filter(|label| !label.trim().is_empty())
+        .unwrap_or(role)
+        .to_string()
 }
 
 fn loudness_action_reason(action: &LoudnessAction) -> &str {
@@ -553,8 +690,8 @@ mod tests {
     #[test]
     fn harmonize_off_skips_loudness_action() {
         // Harmonisation désactivée : aucune mesure ffmpeg, aucune correction,
-        // même pour ce qui serait sinon un niveau incorrigible.
-        let action = loudness_action_for_generation(
+        // même pour un niveau qui demanderait sinon un traitement très fort.
+        let plan = loudness_action_for_generation(
             Path::new("ffmpeg"),
             Path::new("inexistant.mp3"),
             &Vec::<String>::new(),
@@ -562,7 +699,90 @@ mod tests {
             "test",
         )
         .expect("aucune erreur quand l'harmonisation est désactivée");
-        assert_eq!(action, LoudnessAction::None);
+        assert_eq!(plan.action, LoudnessAction::None);
+        assert!(plan.pending_warning.is_none());
+    }
+
+    #[test]
+    fn strong_limiting_becomes_a_non_blocking_warning() {
+        let action = plan_loudness_fix(-32.0, 0.0);
+        let warning = pending_audio_warning(-32.0, &action).expect("avertissement attendu");
+        assert_eq!(warning.code, "AUDIO_STRONG_LIMITING");
+        assert_eq!(warning.gain_db, 18.0);
+        assert_eq!(warning.expected_limiting_db, 20.0);
+    }
+
+    #[test]
+    fn near_mute_audio_becomes_a_non_blocking_warning() {
+        let action = plan_loudness_fix(-50.0, -55.0);
+        let warning = pending_audio_warning(-50.0, &action).expect("avertissement attendu");
+        assert_eq!(warning.code, "AUDIO_NEAR_MUTE_BOOST");
+        assert_eq!(warning.gain_db, 36.0);
+    }
+
+    #[test]
+    fn generation_warning_label_hides_internal_role_identifiers() {
+        assert_eq!(
+            generation_audio_label(
+                "root/L Offensive des Cyborgs#ae2bedd3-34a0-4618-b1ef-2091f2671ad0/storyAudio"
+            ),
+            "L Offensive des Cyborgs"
+        );
+    }
+
+    #[test]
+    fn real_strongly_dynamic_audio_is_encoded_with_a_warning() {
+        let Ok(ffmpeg) = crate::support::ffmpeg::get_ffmpeg_path() else {
+            return;
+        };
+        let temp_dir = std::env::temp_dir().join(format!(
+            "story_studio_audio_warning_test_{}_{}",
+            now_millis(),
+            uuid::Uuid::new_v4()
+        ));
+        let processed_dir = temp_dir.join("processed");
+        fs::create_dir_all(&processed_dir).expect("create audio warning test dir");
+        let input = temp_dir.join("strongly-dynamic.wav");
+        let source = "aevalsrc=0.025*sin(2*PI*440*t)+if(lt(mod(t\\,2)\\,0.001)\\,0.8*sin(2*PI*880*t)\\,0):s=44100:d=8";
+        let status = Command::new(&ffmpeg)
+            .args(["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i"])
+            .arg(source)
+            .arg("-y")
+            .arg(&input)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .expect("run ffmpeg fixture generation");
+        assert!(status.success(), "generate strongly dynamic fixture");
+
+        let options = CanonicalOptions {
+            silence_mode: SilenceMode::Off,
+            harmonize_loudness: true,
+            ..Default::default()
+        };
+        let prepared = prepare_audio_asset(
+            input.to_string_lossy().as_ref(),
+            &ffmpeg,
+            &processed_dir,
+            &options,
+            EDGE_SILENCE_SEC,
+            EDGE_SILENCE_SEC,
+            "root/Histoire dynamique#test/storyAudio",
+        )
+        .expect("strongly dynamic audio must not block generation");
+        let warning = prepared.warnings.first().expect("audio warning expected");
+        let final_lufs = warning
+            .final_integrated_lufs
+            .expect("final loudness should be measured");
+        assert_eq!(warning.code, "AUDIO_STRONG_LIMITING");
+        assert!(warning.expected_limiting_db > MAX_LIMITING_DB);
+        assert!((-20.0..=-10.0).contains(&final_lufs), "final={final_lufs}");
+        assert!(matches!(
+            prepared.preparation,
+            AudioPreparation::Encoded { .. }
+        ));
+
+        let _ = fs::remove_dir_all(&temp_dir);
     }
 
     #[test]
@@ -662,10 +882,9 @@ mod tests {
     ///   SS_REENCODE_OUTDIR = dossier de sortie (new_<i>.mp3)
     ///   SS_FFMPEG          = chemin de ffmpeg.exe
     #[test]
+    #[ignore = "requires SS_REENCODE_INPUTS, SS_REENCODE_OUTDIR and SS_FFMPEG"]
     fn reencode_sample_from_env() {
-        let Ok(inputs) = std::env::var("SS_REENCODE_INPUTS") else {
-            return;
-        };
+        let inputs = std::env::var("SS_REENCODE_INPUTS").expect("SS_REENCODE_INPUTS");
         let outdir = std::env::var("SS_REENCODE_OUTDIR").expect("SS_REENCODE_OUTDIR");
         let ffmpeg = std::env::var("SS_FFMPEG").expect("SS_FFMPEG");
         let ffmpeg = PathBuf::from(ffmpeg);
@@ -694,7 +913,7 @@ mod tests {
             )
             .unwrap_or_else(|e| panic!("prepare {path} failed: {e}"));
             let dest = outdir.join(format!("new_{i}.mp3"));
-            let src = match prep {
+            let src = match prep.preparation {
                 AudioPreparation::Encoded { output } => output,
                 AudioPreparation::Verbatim { source } => source,
             };

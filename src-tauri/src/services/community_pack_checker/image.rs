@@ -4,8 +4,8 @@ use std::path::Path;
 use image::{guess_format, ImageFormat};
 
 use super::models::{
-    issue, ImageValidationItem, PackValidationIssue, PackValidationSeverity, IMAGE_TARGET_HEIGHT,
-    IMAGE_TARGET_WIDTH,
+    issue, FixDisposition, ImageValidationItem, PackValidationIssue, PackValidationSeverity,
+    IMAGE_TARGET_HEIGHT, IMAGE_TARGET_WIDTH,
 };
 
 /// Formats d'image acceptés par la Lunii / le format STUdio pour les visuels.
@@ -132,6 +132,7 @@ pub(crate) fn analyze_image_bytes(
         IMAGE_TARGET_HEIGHT
     ));
     image_issue.auto_fix_available = true;
+    image_issue.fix_disposition = FixDisposition::Automatic;
     image_issue.auto_fix_description = Some(fix_description);
 
     (

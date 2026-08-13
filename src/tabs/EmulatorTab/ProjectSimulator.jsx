@@ -22,6 +22,7 @@ import {
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
 import { toPackAssetName } from '../../utils/zipAssetName';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
+import { createMediaRequestKey, createMediaRequestLifecycle } from './mediaRequestLifecycle';
 
 const END_NODE_ID = 'end-node';
 
@@ -35,7 +36,6 @@ export function ProjectSimulator({
 }) {
   const audioRef = useRef(null);
   const mountedRef = useRef(true);
-  const playSeqRef = useRef(0);
   const [state, setState] = useState('cover');
   const [sequenceIndex, setSequenceIndex] = useState(0);
   const [menuPath, setMenuPath] = useState([]);
@@ -44,6 +44,38 @@ export function ProjectSimulator({
   const { timeline, seekTo } = useAudioTimeline(audioRef);
   const chromeControls = useLuniiChromeControls();
   const { autoPlaybackEnabled } = chromeControls;
+  const audioLifecycleRef = useRef(null);
+  if (!audioLifecycleRef.current) {
+    audioLifecycleRef.current = createMediaRequestLifecycle({
+      clearCurrent() {
+        disposeAudioPlayerRef(audioRef);
+      },
+      async load(request) {
+        if (request.kind === 'local') {
+          return { kind: 'local', url: await getLocalUrl(request.path) };
+        }
+        const assetName = toPackAssetName(request.assetHash);
+        const bytes = await invoke('get_pack_asset', { zipPath: request.zipPath, assetName });
+        return { kind: 'zip', assetHash: request.assetHash, bytes };
+      },
+      createResource(loaded) {
+        if (loaded.kind === 'local') {
+          return loaded.url ? createAudioPlayer(loaded.url) : null;
+        }
+        const ext = loaded.assetHash.split('.').pop().toLowerCase();
+        const blob = new Blob([new Uint8Array(loaded.bytes)], { type: MIME[ext] || 'audio/mpeg' });
+        return createAudioPlayer(URL.createObjectURL(blob), { revokeSourceOnDestroy: true });
+      },
+      applyResource(audio) {
+        if (!audio) return;
+        audioRef.current = audio;
+        audio.play().catch(() => {});
+      },
+      discardResource(audio) {
+        audio?.destroy();
+      },
+    });
+  }
 
   const isSimple = project.projectType === 'simple';
   const rootEntries = !isSimple ? (project.rootEntries ?? []) : [];
@@ -301,37 +333,6 @@ export function ProjectSimulator({
     return true;
   }, [currentEntry, currentMenu, isSimple, project, rootEntries, simpleStory]);
 
-  const playAudio = useCallback(async (path) => {
-    disposeAudioPlayerRef(audioRef);
-    setPaused(false);
-    const seq = ++playSeqRef.current;
-    const url = await getLocalUrl(path);
-    if (!mountedRef.current || seq !== playSeqRef.current) return;
-    if (url) {
-      const audio = createAudioPlayer(url);
-      audio.play().catch(() => {});
-      audioRef.current = audio;
-    }
-  }, []);
-
-  const playZipItemAudio = useCallback(async (zipPath, assetHash) => {
-    disposeAudioPlayerRef(audioRef);
-    setPaused(false);
-    if (!zipPath || !assetHash) return;
-    const seq = ++playSeqRef.current;
-    try {
-      const assetName = toPackAssetName(assetHash);
-      const bytes = await invoke('get_pack_asset', { zipPath, assetName });
-      // Si le composant a été démonté pendant l'await, ne pas créer l'Audio
-      if (!mountedRef.current || seq !== playSeqRef.current) return;
-      const ext = assetHash.split('.').pop().toLowerCase();
-      const blob = new Blob([new Uint8Array(bytes)], { type: MIME[ext] || 'audio/mpeg' });
-      const audio = createAudioPlayer(URL.createObjectURL(blob), { revokeSourceOnDestroy: true });
-      audio.play().catch(() => {});
-      audioRef.current = audio;
-    } catch {}
-  }, []);
-
   function handlePause() {
     if (!audioRef.current) return;
     if (paused) { audioRef.current.play().catch(() => {}); setPaused(false); }
@@ -344,33 +345,50 @@ export function ProjectSimulator({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      disposeAudioPlayerRef(audioRef);
+      audioLifecycleRef.current.invalidate();
     };
   }, []);
 
+  let audioRequest = null;
+  if (state === 'cover' && project.rootAudio) {
+    audioRequest = { kind: 'local', path: project.rootAudio };
+  } else if (state === 'browse' && currentEntry?.type === 'menu' && currentEntry.audio) {
+    audioRequest = { kind: 'local', path: currentEntry.audio };
+  } else if (state === 'browse' && currentEntry?.type === 'zip' && currentEntry.coverAudio) {
+    audioRequest = {
+      kind: 'zip',
+      zipPath: currentEntry.zipPath,
+      assetHash: currentEntry.coverAudio,
+    };
+  } else if (state === 'browse' && currentEntry?.type === 'story' && currentEntry.itemAudio) {
+    audioRequest = { kind: 'local', path: currentEntry.itemAudio };
+  } else if (state === 'playing') {
+    const path = isSimple ? simpleStory?.audio : currentEntry?.audio;
+    if (path) audioRequest = { kind: 'local', path };
+  } else if (state === 'postplay') {
+    const path = isSimple ? simpleStory?.afterPlaybackPromptAudio : currentEntry?.afterPlaybackPromptAudio;
+    if (path) audioRequest = { kind: 'local', path };
+  } else if (state === 'sequence' && activeSequenceStep?.audio) {
+    audioRequest = { kind: 'local', path: activeSequenceStep.audio };
+  } else if (state === 'endnode' && project.nightModeAudio) {
+    audioRequest = { kind: 'local', path: project.nightModeAudio };
+  }
+  const audioRequestKey = createMediaRequestKey(audioRequest, [
+    state,
+    currentEntry?.id ?? null,
+    simpleStory?.id ?? null,
+    sequenceIndex,
+  ]);
+
   useEffect(() => {
-    if (state === 'cover') playAudio(project.rootAudio);
-    else if (state === 'browse') {
-      if (currentEntry?.type === 'menu') playAudio(currentEntry?.audio);
-      else if (currentEntry?.type === 'zip' && currentEntry?.coverAudio) playZipItemAudio(currentEntry.zipPath, currentEntry.coverAudio);
-      else if (currentEntry?.type === 'story') playAudio(currentEntry?.itemAudio);
-    }
-    else if (state === 'playing') playAudio(isSimple ? simpleStory?.audio : currentEntry?.audio);
-    else if (state === 'postplay') {
-      playAudio(isSimple ? simpleStory?.afterPlaybackPromptAudio : currentEntry?.afterPlaybackPromptAudio);
-    }
-    else if (state === 'sequence') {
-      playAudio(activeSequenceStep?.audio);
-    }
-    else if (state === 'endnode') playAudio(project.nightModeAudio);
-  // reason: re-jouer l'audio uniquement sur changement d'etat logique du simulateur.
-  // On depend d'identifiants stables (id du noeud, index de sequence) et non des
-  // objets currentEntry / simpleStory / activeSequenceStep, dont la reference change
-  // a chaque edition du projet (frappe dans un champ) et relancerait l'audio.
-  // Les helpers playAudio / playZipItemAudio capturent les valeurs courantes via
-  // closures stables.
+    const lifecycle = audioLifecycleRef.current;
+    setPaused(false);
+    lifecycle.request(audioRequest);
+    return () => lifecycle.invalidate();
+  // reason: audioRequestKey représente les primitives du contexte média sans
+  // relancer la lecture à chaque changement de référence du projet.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, currentEntry?.id, simpleStory?.id, sequenceIndex]);
+  }, [audioRequestKey]);
 
   // On ne pousse la selection vers l'arbre que lorsque le noeud actif du
   // simulateur change reellement (navigation), pas a chaque re-rendu provoque

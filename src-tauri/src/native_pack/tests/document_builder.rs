@@ -1356,6 +1356,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
             imported_zip_count: 0,
         },
         notes: Vec::new(),
+        warnings: Vec::new(),
     };
 
     let zip_path = write_native_pack_zip(

@@ -2,9 +2,9 @@
 
 # Guide d'installation — Voix IA (XTTS)
 
-> **Périmètre** : Story Studio 0.9.6 · Windows 10/11. Sous Linux, suivez le
+> **Périmètre** : Story Studio 0.9.7 · Windows 10/11. Sous Linux, suivez le
 > [guide Linux en mode CPU](xtts-setup-linux.fr.md). XTTS n'est pas validé sous
-> macOS pour la 0.9.6.
+> macOS pour la 0.9.7.
 
 XTTS est un moteur de synthèse vocale qui tourne **sur ton ordinateur**. Il peut parler en français, anglais, espagnol, allemand, italien et portugais, avec des voix naturelles.
 

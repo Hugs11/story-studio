@@ -139,6 +139,7 @@ impl<'a> StoryBuilder<'a> {
                         zip,
                         &scoped_label_id(&menu_label, &zip.id, &zip.name),
                         transition(&menu_action_id, child_index as i32),
+                        Some(menu_replay_transition.clone()),
                         true,
                     )?);
                 }

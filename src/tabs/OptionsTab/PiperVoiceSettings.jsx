@@ -1,14 +1,22 @@
 import { Button } from '../../components/common/Button';
+import { PIPER_LANGUAGE_OPTIONS } from '../../store/xttsSettings';
 
 export function PiperVoiceSettings({
   piperVoices,
   piperProvision,
+  piperLanguage,
   piperVoice,
   piperSpeed,
+  updatePiperLanguage,
   updatePiperVoice,
   updatePiperSpeed,
   preparePiperVoice,
 }) {
+  const visibleVoices = piperVoices.filter((voice) => voice.language === piperLanguage);
+  const voiceOptions = visibleVoices.length > 0
+    ? visibleVoices
+    : [{ id: piperVoice, label: piperVoice, installed: false }];
+
   return (
     <div className="xtts-settings">
       <div className="opts-row-sub" style={{ marginBottom: 8 }}>
@@ -17,13 +25,28 @@ export function PiperVoiceSettings({
       </div>
       <div className="xtts-grid">
         <label className="xtts-label">
+          Langue
+          <select
+            className="xtts-input"
+            value={piperLanguage}
+            onChange={(e) => updatePiperLanguage(e.target.value)}
+            disabled={piperVoices.length === 0}
+          >
+            {PIPER_LANGUAGE_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="xtts-label">
           Voix
           <select
             className="xtts-input"
             value={piperVoice}
             onChange={(e) => updatePiperVoice(e.target.value)}
+            disabled={piperVoices.length === 0}
           >
-            {(piperVoices.length > 0 ? piperVoices : [{ id: piperVoice, label: piperVoice, installed: false }]).map((voice) => (
+            {voiceOptions.map((voice) => (
               <option key={voice.id} value={voice.id}>
                 {voice.label}{voice.installed ? '' : ' — à télécharger'}
               </option>
@@ -46,7 +69,10 @@ export function PiperVoiceSettings({
       </div>
 
       <div className="xtts-actions">
-        <Button onClick={preparePiperVoice} disabled={piperProvision.state === 'loading'}>
+        <Button
+          onClick={preparePiperVoice}
+          disabled={piperProvision.state === 'loading' || piperVoices.length === 0}
+        >
           {piperProvision.state === 'loading' ? 'Téléchargement…' : 'Préparer la voix maintenant'}
         </Button>
         <span className="opts-row-sub">

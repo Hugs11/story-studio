@@ -8,12 +8,23 @@ import {
   formatTechnicalLog,
   reportBaseName,
 } from '../src/components/CommunityPackChecker/communityPackExports.js';
+import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
+  isAutomaticVolumeIssue,
+  isOptionalSilenceIssue,
+  optionalSilenceIssues,
+  optionalSilenceSelectionKey,
+  packCorrectionCounts,
+  serializeOptionalSilenceSelection,
+} from '../src/components/CommunityPackChecker/packCheckerIssueClassification.js';
 
 const report = {
   packName: 'Le voyage de Milo.zip',
   verdict: 'needsFix',
   summary: { errors: 1, warnings: 2, infos: 1, ok: 4 },
   correctionsAvailable: 2,
+  optionalCorrectionsAvailable: 1,
   audioSummary: { ok: 3, total: 4 },
   imageSummary: { ok: 1, total: 1 },
   structureSummary: { luniiCompatible: false, storyStudioEditable: true },
@@ -26,6 +37,20 @@ const report = {
     filePath: 'assets/intro.mp3',
     technicalDetails: 'Détecté : 0.30 s.',
     autoFixDescription: 'Ajouter du silence.',
+    autoFixAvailable: true,
+    code: 'audioLeadingSilenceTooShort',
+    fixDisposition: 'automatic',
+  }, {
+    severity: 'info',
+    category: 'audio',
+    label: 'Introduction',
+    message: 'Le silence à la fin est long.',
+    filePath: 'assets/intro.mp3',
+    technicalDetails: 'Détecté : 1.50 s.',
+    autoFixDescription: 'Ramener facultativement le silence à la fin à 0,40 s.',
+    autoFixAvailable: true,
+    code: 'audioTrailingSilenceLong',
+    fixDisposition: 'optional',
   }],
   technicalLog: ['[OK] Lecture du ZIP', '[WARN] intro.mp3 silence court'],
 };
@@ -39,6 +64,8 @@ test('formatReadableReport includes verdict, issues and technical log', () => {
   assert.match(text, /Pack analysé : Le voyage de Milo\.zip/);
   assert.match(text, /Verdict : Pack à corriger avant validation/);
   assert.match(text, /Introduction : Le silence au début est trop court/);
+  assert.match(text, /Suggestions facultatives : 1/);
+  assert.match(text, /Suggestion facultative : Ramener facultativement/);
   assert.match(text, /\[WARN\] intro\.mp3 silence court/);
 });
 
@@ -57,4 +84,70 @@ test('formatHtmlReport builds a standalone browser document', () => {
   assert.match(text, /Vérifier un pack/);
   assert.match(text, /Le voyage de Milo\.zip/);
   assert.match(text, /Imprimer \/ PDF/);
+  assert.match(text, /Suggestions facultatives/);
+  assert.match(text, /<strong>1<\/strong> facultatives/);
+});
+
+test('optional silence classification and counters stay separate from automatic fixes', () => {
+  const suggestions = optionalSilenceIssues(report);
+  assert.equal(suggestions.length, 1);
+  assert.equal(isOptionalSilenceIssue(suggestions[0]), true);
+  assert.deepEqual(packCorrectionCounts(report), { automatic: 2, optional: 1 });
+});
+
+test('optional silence selection is empty by default and serializes exact file edges', () => {
+  assert.deepEqual(serializeOptionalSilenceSelection(report, new Set()), []);
+  const suggestion = optionalSilenceIssues(report)[0];
+  const selected = new Set([optionalSilenceSelectionKey(suggestion)]);
+  assert.deepEqual(serializeOptionalSilenceSelection(report, selected), [{
+    filePath: 'assets/intro.mp3',
+    edge: 'trailing',
+  }]);
+});
+
+test('suggestion-only reports stay visibly conforming', () => {
+  const suggestionOnly = {
+    ...report,
+    verdict: 'valid',
+    correctionsAvailable: 0,
+    optionalCorrectionsAvailable: 1,
+    summary: { errors: 0, warnings: 0, infos: 1, ok: 4 },
+    audioSummary: { total: 1, ok: 0, infos: 1, warnings: 0, errors: 0 },
+    issues: [report.issues[1]],
+  };
+  const html = formatHtmlReport(suggestionOnly);
+  assert.match(html, /Pack conforme, avec 1 ajustement facultatif/);
+  assert.match(html, /class="measure measure--info"/);
+  assert.doesNotMatch(html, /class="measure measure--bad"/);
+  assert.deepEqual(categoryConformanceStats(suggestionOnly.audioSummary), {
+    total: 1,
+    ok: 1,
+    needsFix: 0,
+  });
+  assert.match(formatReadableReport(suggestionOnly), /Audio : 1\/1 conformes/);
+});
+
+test('automatic correction counts stay scoped to their displayed group', () => {
+  const silenceIssue = report.issues[0];
+  const volumeIssue = {
+    ...silenceIssue,
+    code: null,
+    message: 'Le volume moyen de cet audio est trop faible.',
+  };
+  assert.equal(automaticCorrectionCount({
+    issues: [silenceIssue, volumeIssue],
+    sectionIssues: [silenceIssue],
+  }), 1);
+});
+
+test('near-mute audio is classified as an automatic volume correction', () => {
+  assert.equal(isAutomaticVolumeIssue({
+    severity: 'warning',
+    category: 'audio',
+    message: 'Cet audio semble presque muet.',
+    technicalDetails: 'Volume moyen mesuré : -50.0 LUFS.',
+    autoFixDescription: 'Amplifier et normaliser le volume.',
+    autoFixAvailable: true,
+    fixDisposition: 'automatic',
+  }), true);
 });

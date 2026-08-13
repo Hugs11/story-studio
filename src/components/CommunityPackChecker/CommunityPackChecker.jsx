@@ -29,6 +29,15 @@ import {
 } from './packCheckerMeasures';
 import { ConformingSection } from './CommunityPackConforming';
 import { formatPackAudioEdgeSilence } from '../../config/audioProcessing';
+import {
+  automaticCorrectionCount,
+  categoryConformanceStats,
+  isAutomaticSilenceIssue,
+  isAutomaticVolumeIssue,
+  isOptionalSilenceIssue,
+  optionalSilenceSelectionKey,
+  silenceEdgeForIssue,
+} from './packCheckerIssueClassification';
 import './CommunityPackChecker.css';
 
 const EDGE_SILENCE_LABEL = formatPackAudioEdgeSilence();
@@ -56,7 +65,7 @@ const PROBLEM_SECTIONS = [
     Icon: Info,
     explanation: "L'outil ne sait pas corriger ce point tout seul.",
     action: "Écoute ou vérifie ces fichiers avant de valider le pack.",
-    match: (issue) => !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
+    match: (issue) => !isOptionalSilenceIssue(issue) && !issue.autoFixAvailable && issue.category !== 'structure' && issue.category !== 'title',
   },
   {
     id: 'silence',
@@ -66,7 +75,17 @@ const PROBLEM_SECTIONS = [
     Icon: Scissors,
     explanation: 'Le blanc avant ou après la voix sort de la fenêtre attendue.',
     action: `On ajuste le silence vers ${EDGE_SILENCE_LABEL}.`,
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('silence'),
+    match: isAutomaticSilenceIssue,
+  },
+  {
+    id: 'optionalSilence',
+    title: 'Suggestions facultatives',
+    badge: 'Facultatif',
+    bucket: 'optional',
+    Icon: Scissors,
+    explanation: 'Ces silences longs peuvent être volontaires. Le pack reste conforme.',
+    action: `Chaque bord peut être ramené à ${EDGE_SILENCE_LABEL} si tu le souhaites.`,
+    match: isOptionalSilenceIssue,
   },
   {
     id: 'volume',
@@ -76,7 +95,7 @@ const PROBLEM_SECTIONS = [
     Icon: Music,
     explanation: 'Le niveau moyen est trop faible ou trop fort par rapport au reste.',
     action: 'On normalise le volume au bon niveau.',
-    match: (issue) => issue.autoFixAvailable && issue.category === 'audio' && issue.message.toLowerCase().includes('volume'),
+    match: isAutomaticVolumeIssue,
   },
   {
     id: 'audioFormat',
@@ -181,10 +200,14 @@ function measuredIssueSummary(issue, item, kind) {
 
 function silenceSummaryParts(issues, item) {
   const hasStart = issues.some((issue) => {
+    if (silenceEdgeForIssue(issue) === 'leading') return true;
     const message = (issue.message || '').toLowerCase();
     return message.includes('début') || message.includes('debut');
   });
-  const hasEnd = issues.some((issue) => (issue.message || '').toLowerCase().includes('fin'));
+  const hasEnd = issues.some((issue) => (
+    silenceEdgeForIssue(issue) === 'trailing'
+    || (issue.message || '').toLowerCase().includes('fin')
+  ));
   const parts = [];
   if (hasStart) parts.push(`Silence début = ${formatSeconds(item?.leadingSilenceSecs)}`);
   if (hasEnd) parts.push(`Silence fin = ${formatSeconds(item?.trailingSilenceSecs)}`);
@@ -229,7 +252,8 @@ function issueText(issue) {
 }
 
 function hasMeasureIssue(record, key) {
-  const messages = record.issues.map(issueText);
+  const scopedIssues = record.sectionIssues?.length ? record.sectionIssues : record.issues;
+  const messages = scopedIssues.map(issueText);
   switch (key) {
     case 'format':
       return messages.some((message) => message.includes('format') || message.includes('mono'));
@@ -291,7 +315,7 @@ function buildProblemGroups(report) {
   const itemMap = buildItemMap(report);
   const used = new Set();
   const relevantIssues = (report.issues || []).filter((issue) => (
-    issue.severity === 'error' || issue.severity === 'warning'
+    issue.severity === 'error' || issue.severity === 'warning' || isOptionalSilenceIssue(issue)
   ));
 
   return PROBLEM_SECTIONS.map((section) => {
@@ -300,7 +324,9 @@ function buildProblemGroups(report) {
     for (const issue of relevantIssues) {
       if (used.has(issue) || !section.match(issue)) continue;
       used.add(issue);
-      const key = uniqueIssueKey(issue);
+      const key = section.id === 'optionalSilence'
+        ? `${uniqueIssueKey(issue)}:${issue.code}`
+        : uniqueIssueKey(issue);
       if (seen.has(key)) continue;
       seen.add(key);
       const itemEntry = issue.filePath ? itemMap.get(issue.filePath) : null;
@@ -320,9 +346,8 @@ function buildProblemGroups(report) {
       count: records.length,
       fixCount: section.id === 'title'
         ? records.length
-        : records.reduce((sum, record) => (
-          sum + record.issues.filter((issue) => issue.autoFixAvailable).length
-        ), 0),
+        : records.reduce((sum, record) => sum + automaticCorrectionCount(record), 0),
+      optionalCount: section.id === 'optionalSilence' ? records.length : 0,
     };
   }).filter((group) => group.count > 0);
 }
@@ -340,6 +365,9 @@ function summarizeGroups(groups, report) {
   const fixCount = groups
     .filter((group) => group.bucket === 'fix')
     .reduce((sum, group) => sum + group.fixCount, 0);
+  const optionalCount = groups
+    .filter((group) => group.bucket === 'optional')
+    .reduce((sum, group) => sum + group.optionalCount, 0);
   const saturatedCount = saturatedFileCount(groups);
   const hasBlocking = report?.verdict === 'invalid' || groups.some((group) => (
     group.bucket === 'listen' && group.records.some((record) => record.issue.severity === 'error')
@@ -353,6 +381,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Aucun problème automatique ou manuel détecté.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (hasBlocking) {
@@ -363,6 +392,7 @@ function summarizeGroups(groups, report) {
       subtitle: 'Certains points demandent une vérification manuelle.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   // Audio saturé : défaut de qualité que la correction ne résout pas → on ne
@@ -378,6 +408,7 @@ function summarizeGroups(groups, report) {
         : 'Nous conseillons de refaire le pack depuis une source audio propre.',
       listenCount,
       fixCount,
+      optionalCount,
     };
   }
   if (listenCount > 0) {
@@ -390,6 +421,18 @@ function summarizeGroups(groups, report) {
       subtitle: 'Le reste peut être corrigé automatiquement.',
       listenCount,
       fixCount,
+      optionalCount,
+    };
+  }
+  if (fixCount === 0 && listenCount === 0 && optionalCount > 0) {
+    return {
+      tone: 'ok',
+      Icon: CircleCheck,
+      title: `Pack conforme, avec ${optionalCount} ajustement${optionalCount > 1 ? 's' : ''} facultatif${optionalCount > 1 ? 's' : ''}`,
+      subtitle: 'Les pauses longues peuvent être conservées telles quelles.',
+      listenCount,
+      fixCount,
+      optionalCount,
     };
   }
   return {
@@ -399,16 +442,7 @@ function summarizeGroups(groups, report) {
     subtitle: 'Aucun point manuel détecté.',
     listenCount,
     fixCount,
-  };
-}
-
-function categoryStats(summary) {
-  const total = summary?.total ?? 0;
-  const ok = summary?.ok ?? 0;
-  return {
-    total,
-    ok,
-    needsFix: Math.max(0, total - ok),
+    optionalCount,
   };
 }
 
@@ -440,9 +474,9 @@ function SplitStat({ ok, needsFix }) {
 }
 
 function SummaryTiles({ report, saturatedCount = 0 }) {
-  const audio = categoryStats(report.audioSummary);
-  const images = categoryStats(report.imageSummary);
-  const title = categoryStats(report.titleSummary);
+  const audio = categoryConformanceStats(report.audioSummary);
+  const images = categoryConformanceStats(report.imageSummary);
+  const title = categoryConformanceStats(report.titleSummary);
   const titleOk = title.total > 0 && title.needsFix === 0;
   const structureOk = report.structureSummary?.luniiCompatible && report.structureSummary?.storyStudioEditable;
   const nightMode = Boolean(report.nightMode?.detected);
@@ -488,7 +522,9 @@ function TechnicalDetail({ record }) {
               key={row.key}
               label={row.label}
               value={row.value}
-              status={hasMeasureIssue(record, row.key) ? 'bad' : 'ok'}
+              status={hasMeasureIssue(record, row.key)
+                ? (record.issue.fixDisposition === 'optional' ? 'info' : 'bad')
+                : 'ok'}
             />
           ))
         ) : record.kind === 'image' ? (
@@ -509,7 +545,7 @@ function TechnicalDetail({ record }) {
       </div>
       <div>
         <div className="checker-tech-title">Ce qu'on va faire</div>
-        {record.issues.map((issue, index) => (
+        {(record.sectionIssues?.length ? record.sectionIssues : record.issues).map((issue, index) => (
           <div className="checker-tech-action" key={`${issue.message}-${index}`}>
             <IconFrame Icon={issue.autoFixAvailable ? Wrench : Info} />
             <div>
@@ -546,7 +582,15 @@ function MiniFile({ record, open, onToggle }) {
   );
 }
 
-function ProblemGroupCard({ group, expanded, onToggle, countValue = group.count, countLabel = null }) {
+function ProblemGroupCard({
+  group,
+  expanded,
+  onToggle,
+  countValue = group.count,
+  countLabel = null,
+  selectedOptionalSilences = new Set(),
+  onToggleOptionalSilence,
+}) {
   const [openFile, setOpenFile] = useState(null);
   const Icon = group.Icon;
   const displayedCountLabel = countLabel || (countValue > 1 ? 'fichiers' : 'fichier');
@@ -571,12 +615,23 @@ function ProblemGroupCard({ group, expanded, onToggle, countValue = group.count,
         <div className="checker-group-body">
           <div className="checker-mini-list">
             {group.records.map((record) => (
-              <MiniFile
-                key={record.id}
-                record={record}
-                open={openFile === record.id}
-                onToggle={() => setOpenFile(openFile === record.id ? null : record.id)}
-              />
+              <div key={record.id} className="checker-optional-record">
+                {group.bucket === 'optional' ? (
+                  <label className="checker-optional-choice">
+                    <input
+                      type="checkbox"
+                      checked={selectedOptionalSilences.has(optionalSilenceSelectionKey(record.issue))}
+                      onChange={() => onToggleOptionalSilence?.(record.issue)}
+                    />
+                    <span>{record.issue.autoFixDescription || `Ramener ce silence à ${EDGE_SILENCE_LABEL}`}</span>
+                  </label>
+                ) : null}
+                <MiniFile
+                  record={record}
+                  open={openFile === record.id}
+                  onToggle={() => setOpenFile(openFile === record.id ? null : record.id)}
+                />
+              </div>
             ))}
           </div>
           {group.bucket === 'listen' ? (
@@ -591,9 +646,9 @@ function ProblemGroupCard({ group, expanded, onToggle, countValue = group.count,
   );
 }
 
-export function FixableCorrectionsList({ report }) {
+export function FixableCorrectionsList({ report, selectedOptionalSilences, onToggleOptionalSilence }) {
   const groups = useMemo(
-    () => buildProblemGroups(report).filter((group) => group.bucket === 'fix'),
+    () => buildProblemGroups(report).filter((group) => group.bucket === 'fix' || group.bucket === 'optional'),
     [report],
   );
 
@@ -614,15 +669,29 @@ export function FixableCorrectionsList({ report }) {
           group={group}
           expanded
           onToggle={() => {}}
-          countValue={group.fixCount}
-          countLabel={group.fixCount > 1 ? 'corrections' : 'correction'}
+          countValue={group.bucket === 'optional' ? group.count : group.fixCount}
+          countLabel={group.bucket === 'optional'
+            ? (group.count > 1 ? 'suggestions' : 'suggestion')
+            : (group.fixCount > 1 ? 'corrections' : 'correction')}
+          selectedOptionalSilences={selectedOptionalSilences}
+          onToggleOptionalSilence={onToggleOptionalSilence}
         />
       ))}
     </div>
   );
 }
 
-export function ReportView({ report, busy, canFix, onExportReport, onFixPack, onStartFix, showFixButton = true }) {
+export function ReportView({
+  report,
+  busy,
+  canFix,
+  onExportReport,
+  onFixPack,
+  onStartFix,
+  showFixButton = true,
+  selectedOptionalSilences,
+  onToggleOptionalSilence,
+}) {
   const groups = useMemo(() => buildProblemGroups(report), [report]);
   const summary = useMemo(() => summarizeGroups(groups, report), [groups, report]);
   const saturatedCount = useMemo(() => saturatedFileCount(groups), [groups]);
@@ -650,7 +719,7 @@ export function ReportView({ report, busy, canFix, onExportReport, onFixPack, on
         </div>
         <div className="checker-report-callout">
           <Info className="checker-icon" aria-hidden="true" />
-          <span><strong>{summary.listenCount}</strong> à écouter · <strong>{summary.fixCount}</strong> corrections proposées</span>
+          <span><strong>{summary.listenCount}</strong> à écouter · <strong>{summary.fixCount}</strong> automatiques · <strong>{summary.optionalCount}</strong> facultatives</span>
         </div>
       </div>
 
@@ -669,6 +738,8 @@ export function ReportView({ report, busy, canFix, onExportReport, onFixPack, on
               group={group}
               expanded={expanded === group.id}
               onToggle={() => setExpanded(expanded === group.id ? null : group.id)}
+              selectedOptionalSilences={selectedOptionalSilences}
+              onToggleOptionalSilence={onToggleOptionalSilence}
             />
           ))}
         </div>
@@ -677,7 +748,7 @@ export function ReportView({ report, busy, canFix, onExportReport, onFixPack, on
       <ConformingSection report={report} />
 
       <div className="checker-report-footer">
-        <span><strong>{summary.fixCount}</strong> corrections prêtes.</span>
+        <span><strong>{summary.fixCount}</strong> corrections prêtes · <strong>{summary.optionalCount}</strong> suggestions.</span>
         <Button size="sm" onClick={() => onExportReport('report')}>
           <Download className="checker-button-icon" aria-hidden="true" />
           Exporter le rapport

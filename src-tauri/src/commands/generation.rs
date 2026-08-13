@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::domain::project::Project;
 use crate::domain::validation::validate_project_for_generation;
+use crate::native_pack::{NativeGenerationWarning, NativePackGenerationResult};
 use crate::support::lunii_zip_validator::validate_lunii_zip;
 
 #[derive(Default)]
@@ -19,7 +20,7 @@ pub async fn generate_pack(
     cancel_state: State<'_, Arc<GenerationCancelState>>,
     project_json: String,
     output_folder: String,
-) -> Result<String, String> {
+) -> Result<NativePackGenerationResult, String> {
     let project: Project = serde_json::from_str(&project_json).map_err(|e| {
         log::error!(target: "generation", "generate_pack: JSON invalide : {}", e);
         format!("JSON invalide : {}", e)
@@ -58,13 +59,13 @@ fn run_generate_pack_sync(
     cancel_state: Arc<GenerationCancelState>,
     project: Project,
     output_folder: String,
-) -> Result<String, String> {
+) -> Result<NativePackGenerationResult, String> {
     let started = Instant::now();
     let emit = |msg: &str| {
         let _ = app.emit("generate-log", msg.to_string());
     };
     let should_cancel = || cancel_state.cancelled.load(Ordering::SeqCst);
-    let zip_path = match crate::native_pack::generate_native_pack_v1_with_cancel(
+    let result = match crate::native_pack::generate_native_pack_v1_with_cancel(
         &project,
         &output_folder,
         &emit,
@@ -79,16 +80,45 @@ fn run_generate_pack_sync(
             return Err(err);
         }
     };
-    let zip_size = std::fs::metadata(&zip_path).map(|m| m.len()).unwrap_or(0);
+    let zip_size = std::fs::metadata(&result.zip_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
     log::info!(target: "generation",
         "generate_pack done in {} ms: zip='{}' size={} bytes",
-        started.elapsed().as_millis(), zip_path, zip_size,
+        started.elapsed().as_millis(), result.zip_path, zip_size,
     );
     if should_cancel() {
         return Err("Génération annulée.".to_string());
     }
-    validate_zip_and_emit(&zip_path, &emit);
-    Ok(zip_path)
+    validate_zip_and_emit(&result.zip_path, &emit);
+    emit_audio_warnings(&result.warnings, &emit);
+    Ok(result)
+}
+
+fn emit_audio_warnings(warnings: &[NativeGenerationWarning], emit: &dyn Fn(&str)) {
+    if warnings.is_empty() {
+        return;
+    }
+    emit(&format!(
+        "⚠️  Pack généré avec {} avertissement(s) audio :",
+        warnings.len()
+    ));
+    for warning in warnings {
+        emit(&format!("  ⚠️  {}", warning.message));
+        log::warn!(target: "generation_audio",
+            "{} role='{}' initial={:.1} LUFS final={} gain={:.1} dB limiting={:.1} dB",
+            warning.code,
+            warning.role,
+            warning.initial_integrated_lufs,
+            warning
+                .final_integrated_lufs
+                .map(|value| format!("{value:.1} LUFS"))
+                .unwrap_or_else(|| "non mesuré".to_string()),
+            warning.gain_db,
+            warning.expected_limiting_db,
+        );
+    }
+    emit("   Le ZIP est utilisable ; vérifiez de préférence ces passages sur la Lunii.");
 }
 
 fn validate_zip_and_emit(zip_path: &str, emit: &dyn Fn(&str)) {

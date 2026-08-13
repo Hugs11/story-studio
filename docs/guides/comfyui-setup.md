@@ -2,8 +2,8 @@
 
 # Setup guide — AI images (ComfyUI)
 
-> **Scope**: Story Studio 0.9.6 · Windows 10/11. ComfyUI remains portable in
-> the application, but manual Linux and macOS validation was not run for 0.9.6.
+> **Scope**: Story Studio 0.9.7 · Windows 10/11. ComfyUI remains portable in
+> the application, but manual Linux and macOS validation was not run for 0.9.7.
 
 ComfyUI is an AI image generation tool (based on Stable Diffusion). It produces illustrations for your stories from text descriptions, directly on your computer.
 

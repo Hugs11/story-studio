@@ -2,9 +2,9 @@
 
 # Guide d'installation — Images IA (ComfyUI)
 
-> **Périmètre** : Story Studio 0.9.6 · Windows 10/11. Le code ComfyUI reste
+> **Périmètre** : Story Studio 0.9.7 · Windows 10/11. Le code ComfyUI reste
 > portable, mais les validations manuelles Linux et macOS n'ont pas été
-> exécutées pour la 0.9.6.
+> exécutées pour la 0.9.7.
 
 ComfyUI est un outil de génération d'images par intelligence artificielle (basé sur Stable Diffusion). Il produit des illustrations pour tes histoires à partir de descriptions textuelles, directement sur ton ordinateur.
 

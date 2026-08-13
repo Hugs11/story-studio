@@ -598,14 +598,13 @@ fn fidelity_pack_paths_from_env() -> Vec<(String, String)> {
 }
 
 #[test]
+#[ignore = "requires LUNII_FIDELITY_PACK or LUNII_FIDELITY_PACK_DIR"]
 fn fidelity_external_packs_from_env() {
     let packs = fidelity_pack_paths_from_env();
-    if packs.is_empty() {
-        eprintln!(
-                "[FIDELITY] SKIP - definir LUNII_FIDELITY_PACK ou LUNII_FIDELITY_PACK_DIR pour tester des packs externes"
-            );
-        return;
-    }
+    assert!(
+        !packs.is_empty(),
+        "define LUNII_FIDELITY_PACK or LUNII_FIDELITY_PACK_DIR with at least one archive"
+    );
 
     let structural_only = std::env::var_os("LUNII_FIDELITY_STRUCTURAL").is_some();
     for (pack_id, path) in packs {
@@ -847,19 +846,18 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
 }
 
 #[test]
-#[ignore]
+#[ignore = "requires STORY_STUDIO_BASELINE_DIR"]
 fn classify_external_packs_with_judge() {
     let packs = baseline_story_packs_from_env();
-    if packs.is_empty() {
-        eprintln!(
-            "[CLASSEMENT] SKIP - definir STORY_STUDIO_BASELINE_DIR (dossier de <pack>/story.json)"
-        );
-        return;
-    }
+    assert!(
+        !packs.is_empty(),
+        "STORY_STUDIO_BASELINE_DIR must contain at least one <pack>/story.json"
+    );
     eprintln!(
         "=== CLASSEMENT JUGE DE FIDÉLITÉ ({} packs) ===",
         packs.len()
     );
+    let mut panicked_packs = Vec::new();
     for (pack_id, story_path) in packs {
         // Un pack qui panique (modèle inattendu) ne doit pas masquer les autres verdicts.
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -867,8 +865,14 @@ fn classify_external_packs_with_judge() {
         }));
         if outcome.is_err() {
             eprintln!("[{pack_id}] PANIC pendant le classement (voir trace ci-dessus)");
+            panicked_packs.push(pack_id);
         }
     }
+    assert!(
+        panicked_packs.is_empty(),
+        "classification panicked for: {}",
+        panicked_packs.join(", ")
+    );
 }
 
 /// Écrit un `story.json` synthétique + ses assets dans un zip temporaire (round-trips de motifs).

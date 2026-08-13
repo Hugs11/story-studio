@@ -135,15 +135,23 @@ export function useCommunityPackChecker() {
         zipPath,
         outputDir: options.outputDir || null,
         metadataPatch,
+        correctionSelection: options.correctionSelection || null,
       });
       appendLiveLog(`ZIP corrigé créé : ${result.fixedZipPath}`);
       appendLiveLog('Réanalyse automatique du ZIP corrigé...');
       // La réanalyse réinitialise fixedResult (via analyzePath) : on positionne
       // donc le résultat APRÈS, pour que la bannière « ZIP corrigé » persiste.
-      await analyzePath(result.fixedZipPath, {
+      const correctedReport = await analyzePath(result.fixedZipPath, {
         appendLog: true,
         label: 'Analyse du ZIP corrigé...',
       });
+      if (correctedReport) {
+        const correctionLine = `[OK] Correction appliquée : ${result.automaticCorrectionsApplied ?? 0} automatique(s), ${result.optionalAudioSilencesFixed ?? 0} suggestion(s) facultative(s) sélectionnée(s).`;
+        setReport({
+          ...correctedReport,
+          technicalLog: [...(correctedReport.technicalLog || []), correctionLine],
+        });
+      }
       setFixedResult(result);
       statusRef.current = 'idle';
       setStatus('idle');
