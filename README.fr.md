@@ -230,11 +230,10 @@ Contrôle-clic sur l'app puis choisissez **Ouvrir**, ou utilisez
 **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**.
 Ne désactivez pas Gatekeeper globalement.
 
-Les intégrations IA sont optionnelles. XTTS est validé sous Linux en mode CPU
-uniquement et ne nécessite aucun pilote NVIDIA ; il n'a pas été installé ni
-validé manuellement sous macOS pour la 0.9.7. ComfyUI est validé manuellement
-uniquement sous Windows : les tests manuels Linux et macOS n'ont pas été
-exécutés.
+Les intégrations IA sont optionnelles. XTTS a été testé sous Linux en mode CPU ;
+le mode GPU n'a pas été validé pour la 0.9.7. Il n'a pas été installé ni validé
+manuellement sous macOS. ComfyUI est validé manuellement uniquement sous
+Windows : les tests manuels Linux et macOS n'ont pas été exécutés.
 
 Pour compiler depuis les sources ou contribuer, voir
 [CONTRIBUTING.md](CONTRIBUTING.md).

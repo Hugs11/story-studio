@@ -227,10 +227,10 @@ may therefore block its first launch. In Finder, Control-click the app and
 choose **Open**, or use **System Settings → Privacy & Security → Open Anyway**.
 Do not disable Gatekeeper globally.
 
-AI integrations are optional. XTTS is validated on Linux in CPU-only mode and
-does not require an NVIDIA driver; it has not been installed or manually
-validated on macOS for 0.9.7. ComfyUI is manually validated on Windows only:
-manual Linux and macOS tests have not been run.
+AI integrations are optional. XTTS was tested on Linux in CPU mode; GPU mode
+was not validated for 0.9.7. It has not been installed or manually validated
+on macOS. ComfyUI is manually validated on Windows only: manual Linux and
+macOS tests have not been run.
 
 To build from source or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
