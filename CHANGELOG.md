@@ -55,10 +55,6 @@ workflows safer and more predictable.
 - Supported targets remain Windows x64, Linux x86_64 and macOS Apple Silicon.
 - macOS builds remain ad-hoc signed and not notarized; Gatekeeper may require
   an explicit first launch.
-- XTTS remains CPU-only on Linux and was not installed or manually validated
-  on macOS. ComfyUI remains manually validated on Windows only; manual Linux
-  and macOS ComfyUI tests were not run for this release.
-
 ---
 
 ## [0.9.6] - 2026-07-30
