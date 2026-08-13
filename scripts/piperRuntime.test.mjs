@@ -151,3 +151,28 @@ test('public notices cover every distributed Piper build input', async () => {
     assert.ok(notices.includes(target.onnxruntime.sha256));
   }
 });
+
+test('public notices cover the complete Piper voice catalog and attribution', async () => {
+  const notices = await readFile(
+    new URL('../THIRD_PARTY_NOTICES.md', import.meta.url),
+    'utf8',
+  );
+  for (const marker of [
+    'fr_FR-siwis-medium',
+    'fr_FR-beatrice-medium',
+    'fr_FR-tom-medium',
+    'en_GB-jenny_dioco-medium',
+    'Jenny (Dioco)',
+    'en_GB-alba-medium',
+    'en_US-kristin-medium',
+    'en_US-ljspeech-medium',
+    'it_IT-serena-medium',
+    'it_IT-serena-high',
+    'piper-beatrice-v1.0.0',
+    'Hugs11/story-studio-voice-assets',
+    '0d0cd1906cf7cc5565fdfb1d27cc8de8e74044bb',
+  ]) {
+    assert.ok(notices.includes(marker), `missing voice notice marker: ${marker}`);
+  }
+  assert.doesNotMatch(notices, /fr_FR-gilles-low/);
+});
