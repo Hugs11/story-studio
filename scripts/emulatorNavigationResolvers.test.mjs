@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  getMenuBrowseState,
   normalizeHomeTarget,
   resolveSequenceTarget,
   resolveStoryHomeTarget,
   resolveStoryReturnTarget,
+  resolveStoryTitleHomeTarget,
 } from '../src/tabs/EmulatorTab/navigationResolvers.js';
 
 test('sequence destinations preserve direct story playback', () => {
@@ -39,4 +41,37 @@ test('imported story Home preserves direct playback targets', () => {
   };
 
   assert.equal(resolveStoryHomeTarget(story, null, null), 'story_play:target');
+});
+
+test('story title Home returns to its immediate folder while a root story returns to the cover', () => {
+  const nestedStory = { id: 'nested', type: 'story' };
+  const nestedMenu = { id: 'nested-menu', type: 'menu', children: [nestedStory] };
+  const parentMenu = { id: 'parent-menu', type: 'menu', children: [nestedMenu] };
+
+  assert.equal(resolveStoryTitleHomeTarget(nestedStory, nestedMenu, [parentMenu]), 'nested-menu');
+  assert.deepEqual(getMenuBrowseState([parentMenu], 'nested-menu'), {
+    menuPath: ['parent-menu'],
+    entryIdx: 0,
+  });
+  assert.equal(resolveStoryTitleHomeTarget(nestedStory, null, [nestedStory]), null);
+});
+
+test('story title Home preserves explicit imported targets and next-story fallback', () => {
+  const first = { id: 'first', type: 'story', titleReturnOnHome: 'next_story' };
+  const second = { id: 'second', type: 'story' };
+  const menu = { id: 'menu', type: 'menu', children: [first, second] };
+
+  assert.equal(resolveStoryTitleHomeTarget(first, menu), 'story:second');
+  assert.equal(
+    resolveStoryTitleHomeTarget({ ...second, titleReturnOnHome: 'next_story' }, menu),
+    'menu',
+  );
+  assert.equal(
+    resolveStoryTitleHomeTarget({ ...first, titleReturnOnHome: 'story_play:second' }, menu),
+    'story_play:second',
+  );
+  assert.equal(
+    resolveStoryTitleHomeTarget({ ...first, titleReturnOnHomeNone: true }, menu),
+    null,
+  );
 });

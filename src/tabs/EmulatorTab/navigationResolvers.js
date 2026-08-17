@@ -100,6 +100,31 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
   return resolveStoryReturnTarget(entry, parentMenu, project);
 }
 
+// Home depuis l'ecran de selection/titre d'une histoire. Le generateur Rust
+// revient par defaut au stage du dossier qui contient l'histoire ; une histoire
+// placee directement a la racine n'a pas de transition Home et revient donc a
+// la couverture. Les cibles importees restent preservees telles quelles.
+export function resolveStoryTitleHomeTarget(entry, parentMenu, rootEntries = []) {
+  if (entry?.type !== 'story' || !parentMenu) return null;
+  if (entry.titleReturnOnHomeNone) return null;
+
+  const fallbackTarget = parentMenu.id ?? null;
+  const target = normalizeNavigationTarget(entry.titleReturnOnHome);
+  if (!target) return fallbackTarget;
+  if (isRootNavigationTarget(target)) return 'root';
+  if (isCurrentMenuNavigationTarget(target)) return fallbackTarget;
+  if (isNextStoryNavigationTarget(target)) {
+    const siblings = parentMenu.children ?? rootEntries;
+    const currentIndex = siblings.findIndex((candidate) => candidate.id === entry.id);
+    const nextStory = currentIndex >= 0
+      ? siblings.slice(currentIndex + 1).find((candidate) => candidate.type === 'story')
+      : null;
+    return nextStory?.id ? encodeStoryNavigationTarget(nextStory.id) : fallbackTarget;
+  }
+  if (isStoryNavigationTarget(target)) return target;
+  return decodeNavigationMenuId(target);
+}
+
 export function normalizeHomeTarget(target, options = {}) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return null;
