@@ -17,6 +17,7 @@ import {
   resolveEndNodeHomeTarget,
   resolvePromptHomeAction,
   resolveStoryHomeTarget,
+  resolveStoryTitleHomeTarget,
   shouldAutoAdvanceEndMessage,
 } from './navigationResolvers';
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
@@ -676,6 +677,13 @@ export function ProjectSimulator({
       navigateHomeFromStory();
       return;
     }
+    if (!isSimple && state === 'browse' && currentEntry?.type === 'story') {
+      if (currentEntry.titleControlSettings?.home === false) return;
+      const target = resolveStoryTitleHomeTarget(currentEntry, currentMenu, rootEntries);
+      if (target && navigateToTarget(target)) return;
+      goToCover();
+      return;
+    }
     setState('cover');
     setMenuPath([]);
     setEntryIdx(0);
@@ -739,6 +747,9 @@ export function ProjectSimulator({
       ? activeSequenceStep?.controlSettings?.home === false
       : state === 'postplay'
       ? activeStory?.afterPlaybackPromptControlSettings?.home === false
+      :
+    state === 'browse' && currentEntry?.type === 'story'
+      ? currentEntry?.titleControlSettings?.home === false
       :
     isSimple && state === 'playing'
       ? simpleStory?.controlSettings?.home === false
