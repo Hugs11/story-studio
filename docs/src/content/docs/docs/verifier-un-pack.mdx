@@ -1,0 +1,51 @@
+---
+title: Vérifier un pack
+description: Analyser un ZIP ou un 7z, comprendre le rapport et produire une copie corrigée.
+---
+
+L’entrée **Vérifier un pack** analyse une archive existante sans l’ouvrir comme projet. Elle contrôle
+sa structure, ses médias et plusieurs conventions utiles à la compatibilité.
+
+![Rapport du vérificateur de pack](/story-studio/assets/screenshots/pack-checker-dark.png)
+
+## Lancer l’analyse
+
+Dépose un ZIP ou un 7z. Story Studio inspecte notamment :
+
+- la structure, les références et la compatibilité Lunii ;
+- les dimensions et formats des images ;
+- le format, le niveau sonore, les crêtes et les silences des audios ;
+- le nom, les métadonnées et l’identifiant du pack ;
+- la présence éventuelle d’un parcours de mode nuit.
+
+## Lire le rapport
+
+Le rapport distingue les résultats conformes, les corrections automatiques possibles, les
+suggestions facultatives et les éléments à écouter manuellement.
+
+Une mesure automatique ne décide pas à ta place qu’un long silence est inutile. De même, un audio
+déjà saturé peut être signalé mais ses détails perdus ne peuvent pas être reconstruits.
+
+## Corriger et réanalyser
+
+Choisis uniquement les corrections souhaitées, relis les métadonnées puis sélectionne un dossier de
+sortie. Story Studio crée un nouveau ZIP sans écraser la source et peut analyser immédiatement ce
+résultat.
+
+Le rapport lisible s’exporte en **HTML** (imprimable en PDF) ou en **Markdown**. Le journal technique
+en texte et le diagnostic **JSON** donnent davantage de détails pour rechercher un défaut. Aucun de
+ces fichiers n’embarque les médias, mais ils peuvent contenir leurs noms ou des chemins locaux :
+relis-les avant un partage public.
+
+Les corrections facultatives, comme le traitement de certains silences, restent à sélectionner
+explicitement. Avant le clic final, l’étape récapitulative indique ce qui sera modifié et les
+métadonnées à confirmer. La nouvelle archive peut ensuite être réanalysée sans toucher à l’original.
+
+:::tip[Astuce]
+Conserve toujours le ZIP original jusqu’à avoir écouté la copie corrigée. Pour un problème de
+saturation ou de montage, repars du meilleur fichier audio source dans l’Éditeur libre plutôt que
+d’enchaîner plusieurs corrections automatiques.
+:::
+
+[Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) ·
+[Résoudre un blocage](/story-studio/docs/resoudre-un-blocage-generation/)

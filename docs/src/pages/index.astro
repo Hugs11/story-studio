@@ -1,3 +1,6 @@
+---
+import '../styles/landing.css';
+---
 <!doctype html>
 <html lang="fr">
   <head>
@@ -35,7 +38,7 @@
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
-    <script type="application/ld+json">
+    <script type="application/ld+json" is:inline>
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
@@ -63,544 +66,7 @@
     </script>
 
     <link rel="icon" type="image/svg+xml" href="logostory.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
 
-    <style>
-      :root {
-        --bg: #0c1227;
-        --bg-elev: #131a35;
-        --bg-elev-2: #1a2347;
-        --border: #2a3566;
-        --text: #e7ecff;
-        --muted: #99a3c9;
-        --accent: #f5ae23;
-        --accent-hover: #ffc14d;
-        --violet: #6b7bff;
-        --violet-deep: #4c5cd6;
-        --success: #34d399;
-        --radius: 14px;
-        --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
-        background-image:
-          radial-gradient(1200px 600px at 80% -10%, rgba(107, 123, 255, 0.18), transparent 60%),
-          radial-gradient(900px 500px at 0% 10%, rgba(245, 174, 35, 0.08), transparent 60%);
-        background-attachment: fixed;
-      }
-
-      a {
-        color: var(--violet);
-        text-decoration: none;
-      }
-      a:hover {
-        color: #93a0ff;
-        text-decoration: underline;
-      }
-
-      .container {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 0 24px;
-      }
-
-      header.site {
-        padding: 28px 0 8px;
-      }
-      header.site .container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-      }
-      header.site .badge {
-        align-self: flex-end;
-        margin-bottom: 10px;
-      }
-      header.site img.logo {
-        height: 56px;
-        width: auto;
-      }
-      header.site .brand {
-        font-weight: 700;
-        font-size: 18px;
-        letter-spacing: 0.2px;
-      }
-
-      .hero {
-        padding: 16px 0 40px;
-        text-align: center;
-      }
-      .hero h1 {
-        font-size: clamp(24px, 2.3vw, 32px);
-        line-height: 1.3;
-        margin: 0 0 24px;
-        font-weight: 700;
-      }
-      .hero p.tagline {
-        font-size: clamp(13px, 1.2vw, 15px);
-        line-height: 1.6;
-        color: var(--muted);
-        max-width: 780px;
-        margin: 0 auto 10px;
-      }
-      .hero p.tagline:last-of-type {
-        margin-bottom: 28px;
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 12px;
-        background: var(--bg-elev);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        font-size: 13px;
-        color: var(--muted);
-      }
-      .badge .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--success);
-        box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18);
-        animation: pulse 2s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18); }
-        50% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.08); }
-      }
-
-      .cta-group {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        margin-top: 8px;
-      }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 16px 28px;
-        background: var(--accent);
-        color: #1a1408;
-        font-weight: 700;
-        font-size: 17px;
-        border: 0;
-        border-radius: 12px;
-        cursor: pointer;
-        text-decoration: none;
-        transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
-        box-shadow: 0 8px 28px rgba(245, 174, 35, 0.25);
-      }
-      .btn:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        color: #1a1408;
-        text-decoration: none;
-      }
-      .btn:disabled {
-        background: var(--bg-elev-2);
-        color: var(--muted);
-        cursor: not-allowed;
-        box-shadow: none;
-      }
-      .btn svg {
-        width: 20px;
-        height: 20px;
-      }
-
-      .cta-meta {
-        font-size: 13px;
-        color: var(--muted);
-      }
-
-      .cta-meta a {
-        color: var(--muted);
-        text-decoration: underline;
-      }
-      .cta-meta a:hover {
-        color: var(--text);
-      }
-
-      .hero-links {
-        display: flex;
-        justify-content: center;
-        gap: 16px;
-        flex-wrap: wrap;
-        font-size: 14px;
-      }
-
-      .hero-links a {
-        color: var(--muted);
-        text-decoration: underline;
-      }
-
-      .hero-links a:hover {
-        color: var(--text);
-      }
-
-      .release-card {
-        max-width: 820px;
-        margin: 26px auto 0;
-        padding: 20px 24px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: rgba(19, 26, 53, 0.82);
-        text-align: left;
-      }
-
-      .release-card h2 {
-        margin: 0 0 12px;
-        font-size: 18px;
-      }
-
-      .release-card ul {
-        margin: 0;
-        padding-left: 20px;
-        color: var(--muted);
-        font-size: 14.5px;
-      }
-
-      .release-card li + li {
-        margin-top: 6px;
-      }
-
-      .demo-card {
-        max-width: 820px;
-        margin: 16px auto 0;
-        padding: 20px 24px;
-        border: 1px solid rgba(245, 174, 35, 0.35);
-        border-radius: 12px;
-        background: rgba(245, 174, 35, 0.07);
-        text-align: left;
-      }
-
-      .demo-card h2 {
-        margin: 0 0 8px;
-        font-size: 18px;
-      }
-
-      .demo-card p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 14.5px;
-      }
-
-      .demo-links {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-        margin: 16px 0 12px;
-      }
-
-      .demo-link {
-        display: grid;
-        grid-template-columns: 56px minmax(0, 1fr);
-        align-items: center;
-        gap: 14px;
-        padding: 10px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--bg-elev);
-        color: var(--text);
-        font-weight: 650;
-        text-decoration: none;
-      }
-
-      .demo-cover {
-        display: block;
-        width: 56px;
-        height: 56px;
-        border-radius: 8px;
-        object-fit: cover;
-      }
-
-      .demo-link-copy {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-      }
-
-      .demo-link:hover {
-        border-color: var(--accent);
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      .demo-link-source {
-        color: var(--muted);
-        font-size: 12px;
-        white-space: nowrap;
-      }
-
-      .demo-note {
-        font-size: 12.5px !important;
-      }
-
-      .demo-steps {
-        margin: 14px 0 12px;
-        padding-left: 22px;
-        color: var(--muted);
-        font-size: 14px;
-        line-height: 1.65;
-      }
-
-      .demo-steps strong {
-        color: var(--text);
-      }
-
-      section {
-        padding: 48px 0;
-      }
-      section h2 {
-        font-size: clamp(24px, 3vw, 32px);
-        font-weight: 700;
-        margin: 0 0 28px;
-        letter-spacing: -0.2px;
-      }
-
-      .hero-shot {
-        margin: 36px auto 0;
-        max-width: 1080px;
-        padding: 0 24px;
-      }
-      .hero-shot img {
-        width: 100%;
-        height: auto;
-        display: block;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow-lg);
-      }
-
-      .journey-intro {
-        max-width: 760px;
-        margin: -12px 0 42px;
-        color: var(--muted);
-        font-size: 17px;
-      }
-
-      .journey {
-        display: flex;
-        flex-direction: column;
-        gap: 72px;
-      }
-
-      .journey-step {
-        display: flex;
-        flex-direction: column;
-        gap: 22px;
-      }
-
-      .journey-copy {
-        max-width: 780px;
-      }
-
-      .journey-number {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        margin-bottom: 12px;
-        border-radius: 50%;
-        background: var(--accent);
-        color: #1a1408;
-        font-size: 14px;
-        font-weight: 800;
-        box-shadow: 0 4px 14px rgba(245, 174, 35, 0.24);
-      }
-
-      .journey-copy h3 {
-        margin: 0 0 10px;
-        font-size: clamp(21px, 2.5vw, 27px);
-        letter-spacing: -0.2px;
-      }
-
-      .journey-copy p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 16px;
-      }
-
-      .journey-media,
-      .media-pair figure {
-        margin: 0;
-      }
-
-      .journey-media img,
-      .media-pair img {
-        width: 100%;
-        height: auto;
-        display: block;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-      }
-
-      .journey-media--compact {
-        max-width: 680px;
-        margin-inline: auto;
-      }
-
-      .media-pair {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
-        align-items: start;
-      }
-
-      .media-pair--settings {
-        grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.75fr);
-      }
-
-      .media-pair figcaption {
-        margin-top: 9px;
-        color: var(--muted);
-        font-size: 13px;
-        text-align: center;
-      }
-
-      @media (max-width: 760px) {
-        .journey {
-          gap: 52px;
-        }
-        .media-pair,
-        .media-pair--settings {
-          grid-template-columns: 1fr;
-        }
-        .journey-media--compact {
-          max-width: 100%;
-        }
-      }
-
-      .steps {
-        counter-reset: step;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 16px;
-      }
-      .step {
-        background: var(--bg-elev);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 24px;
-        position: relative;
-      }
-      .step::before {
-        counter-increment: step;
-        content: counter(step);
-        position: absolute;
-        top: -14px;
-        left: 24px;
-        width: 32px;
-        height: 32px;
-        background: var(--accent);
-        color: #1a1408;
-        font-weight: 700;
-        font-size: 15px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 14px rgba(245, 174, 35, 0.3);
-      }
-      .step h3 {
-        margin: 8px 0 6px;
-        font-size: 17px;
-        font-weight: 600;
-      }
-      .step p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 14.5px;
-      }
-
-      .origin {
-        max-width: 820px;
-      }
-
-      .origin p {
-        color: var(--muted);
-        font-size: 16px;
-        margin: 0 0 14px;
-      }
-
-      footer.site {
-        padding: 36px 0 48px;
-        border-top: 1px solid var(--border);
-        margin-top: 32px;
-        color: var(--muted);
-        font-size: 14px;
-      }
-      footer.site .container {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-      }
-      footer.site .disclaimer {
-        max-width: 560px;
-      }
-      footer.site .links {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-
-      .error {
-        color: #ffb4b4;
-      }
-
-      @media (max-width: 560px) {
-        header.site {
-          padding-top: 20px;
-        }
-        .hero {
-          padding: 12px 0 24px;
-        }
-        section {
-          padding: 36px 0;
-        }
-        .release-card {
-          padding: 18px;
-        }
-        .demo-card {
-          padding: 18px;
-        }
-        .demo-links {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
   </head>
   <body>
     <header class="site">
@@ -625,7 +91,7 @@
           </p>
           <p class="tagline">
             Si vous cherchez un outil pour créer des histoires pour la Lunii,
-            Studio Story est fait pour vous. Le projet reste local, gratuit et
+            Story Studio est fait pour vous. Le projet reste local, gratuit et
             pensé pour créer facilement et visuellement vos histoires audio.
           </p>
 
@@ -646,6 +112,7 @@
               Windows x64 · Linux x86_64 · macOS Apple Silicon
             </div>
             <div class="hero-links">
+              <a href="docs/">Documentation</a>
               <a href="https://github.com/Hugs11/story-studio/releases/latest">Notes de version</a>
               <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog complet</a>
               <a href="https://github.com/Hugs11/story-studio">Code source</a>
@@ -824,7 +291,7 @@
                 <h3>Organiser, visualiser et tester le projet</h3>
                 <p>
                   Construisez les menus et les histoires dans l'arbre, puis
-                  réglez chaque nœud dans le panneau central. Le diagramme donne
+                  réglez chaque nœud dans le panneau Réglages. Le diagramme donne
                   une vue d'ensemble de la structure, des retours et des
                   enchaînements du pack.
                 </p>
@@ -957,6 +424,7 @@
           <strong>Il n'est pas affilié, soutenu ou sponsorisé par Lunii.</strong>
         </div>
         <div class="links">
+          <a href="docs/">Documentation</a>
           <a href="https://github.com/Hugs11/story-studio">Code source (GitHub)</a>
           <a href="https://github.com/Hugs11/story-studio/issues">Signaler un bug</a>
           <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog</a>
@@ -964,7 +432,7 @@
       </div>
     </footer>
 
-    <script>
+    <script is:inline>
       (function () {
         var REPO = "Hugs11/story-studio";
         var API = "https://api.github.com/repos/" + REPO + "/releases/latest";

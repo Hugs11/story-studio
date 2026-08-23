@@ -1,0 +1,69 @@
+---
+title: Éditeur libre
+description: Créer un pack avec plusieurs Histoires, des Dossiers et une navigation personnalisée.
+---
+
+Choisis **Éditeur libre** pour construire un pack dont tu contrôles entièrement la structure. Ce
+mode convient aux collections d’Histoires, aux menus imbriqués et aux parcours qui utilisent des
+retours ou des destinations personnalisées.
+
+## Commencer le pack
+
+Le nouveau projet contient un Menu racine. Renseigne d’abord son nom, son image et son Titre audio :
+ils présentent le pack dans le menu principal de la Lunii.
+
+Ajoute ensuite directement des Histoires ou crée des Dossiers pour organiser plusieurs niveaux de
+choix. L’ordre visible dans l’Arbre devient l’ordre parcouru avec la molette.
+
+Tu peux partir d’une structure minimale puis la développer :
+
+```text
+Menu racine « Les voyages de Mina »
+├── Dossier « À la montagne »
+│   ├── Histoire « Le refuge enneigé »
+│   ├── Histoire « La marmotte curieuse »
+│   └── Histoire « Le lac secret »
+└── Dossier « Au bord de la mer »
+    ├── Histoire « Le phare endormi »
+    ├── Histoire « Le dauphin messager »
+    └── Histoire « La régate des étoiles »
+```
+
+Chaque Dossier est un choix réel. Si tu veux seulement classer tes fichiers sans ajouter d’étape
+pour l’enfant, utilise plutôt des tags dans le Gestionnaire de médias.
+
+## Construire la structure
+
+Depuis l’Arbre, tu peux ajouter, renommer, dupliquer, copier ou déplacer les éléments. Les Réglages
+adaptent les médias et la navigation de la sélection. Le Diagramme permet de contrôler les chemins
+de lecture et les retours.
+
+La barre **Ajouter** permet aussi d’importer plusieurs audios, un dossier récursif, un podcast ou
+du contenu YouTube, d’enregistrer une Histoire au microphone ou d’en créer une avec une voix locale.
+Relis toujours la structure produite : un sous-dossier importé devient un Dossier parcouru par
+l’enfant.
+
+La sélection multiple est utile pour appliquer une couleur, déplacer une série d’éléments ou
+générer des images-titres et des audios depuis leurs noms. Elle ne fusionne pas les réglages de
+navigation incompatibles : vérifie ensuite les Histoires dont la fin doit rester particulière.
+
+Utilise le simulateur régulièrement, notamment après un déplacement de Dossier ou une modification
+des actions **OK**, **Accueil** et **Après la lecture**.
+
+## Enregistrer et générer
+
+Le projet commence dans une session temporaire. Utilise **Enregistrer comme projet** pour créer son
+fichier `.mbah`, puis corrige les éléments signalés par la pastille de validation avant de générer
+le ZIP final.
+
+Avant l’export, rejoue au minimum le premier choix, la dernière Histoire de chaque Dossier et toute
+Histoire possédant un Message de fin ou une destination personnalisée.
+
+:::tip[Astuce]
+Pour introduire une collection par une question comme « Quelle histoire allons-nous écouter ? »,
+crée un Dossier portant cet audio puis place les Histoires ou les ZIP concernés à l’intérieur. Le
+Dossier devient une véritable étape avant les choix.
+:::
+
+[Découvrir l’espace d’édition](/story-studio/docs/espace-d-edition/) ·
+[Comparer des structures](/story-studio/docs/exemples-de-structures/)

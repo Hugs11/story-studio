@@ -1,0 +1,126 @@
+---
+title: ComfyUI
+description: Installer, connecter et utiliser un service ComfyUI local pour générer des illustrations.
+---
+
+ComfyUI est une intégration avancée et facultative. Story Studio lui envoie un workflow et une
+description, suit la génération, puis récupère les images dans le travail courant. Tu peux toujours
+importer, recadrer ou créer une image-titre sans ComfyUI.
+
+## Validation par plateforme
+
+| Plateforme Story Studio | État de validation de l’intégration |
+|---|---|
+| Windows x64 | lancement manuel et usage fonctionnel validés |
+| Linux x86_64 | chemins, scripts et absence du serveur couverts par tests ; aucun test manuel ComfyUI exécuté |
+| macOS Apple Silicon | frontières portables couvertes par le code ; aucun test manuel ComfyUI exécuté |
+
+Les possibilités annoncées par ComfyUI pour un système ne prouvent pas à elles seules l’intégration
+Story Studio sur ce système. Les validations manuelles Linux et macOS restent explicitement non
+exécutées pour la version documentée.
+
+## Installer et lancer ComfyUI
+
+Sous Windows, la méthode la plus directe pour l’intégration testée est le paquet portable officiel :
+
+1. télécharge une version depuis la
+   [documentation officielle ComfyUI Portable](https://docs.comfy.org/installation/comfyui_portable_windows) ;
+2. extrais l’archive dans un dossier durable ;
+3. installe les modèles et nœuds exigés par le workflow que tu souhaites utiliser ;
+4. lance le script fourni, par exemple `run_nvidia_gpu.bat` ou `run_cpu.bat` ;
+5. vérifie que l’interface répond sur `http://127.0.0.1:8188`.
+
+Sous Linux, les paquets Desktop préconstruits ne sont pas disponibles selon la
+[documentation officielle Linux](https://docs.comfy.org/installation/desktop/linux) : ComfyUI
+propose une installation manuelle. Sous macOS, consulte les options locales officielles. Dans les
+deux cas, cette documentation externe explique ComfyUI, pas une validation manuelle de son
+intégration dans Story Studio.
+
+:::note[Modèles et licences]
+Un workflow ne fournit pas automatiquement tous ses modèles ou nœuds. Installe uniquement les
+dépendances qu’il réclame, depuis une source que tu as vérifiée, et respecte leurs licences. Aucun
+modèle ou workflow privé n’est distribué par cette documentation.
+:::
+
+## Connecter Story Studio
+
+Dans **Préférences → Génération d’images IA — ComfyUI** :
+
+1. active **Génération d’images IA** ;
+2. conserve normalement l’URL `http://127.0.0.1:8188` ;
+3. indique éventuellement le **Script de démarrage ComfyUI** ;
+4. active le démarrage automatique seulement si ce script est fiable ;
+5. clique sur **Tester ComfyUI**.
+
+Avec le démarrage automatique, Story Studio attend jusqu’à **3 minutes** que ComfyUI réponde. Le
+script doit être un fichier régulier. Sous Windows, les fichiers `.bat` et `.cmd` sont acceptés ;
+sous Linux et macOS, utilise un script `.sh` ou un exécutable adapté. Un lien symbolique est refusé.
+
+Si tu utilises ComfyUI Desktop ou un serveur déjà lancé, laisse le démarrage automatique désactivé
+et renseigne seulement l’URL.
+
+## Loopback et réseau local
+
+Story Studio accepte seulement localhost, les adresses loopback et les IP privées du LAN. Une URL
+publique est refusée.
+
+Pour un serveur sur une autre machine du réseau privé :
+
+- lance ComfyUI sur cette machine et autorise explicitement l’écoute réseau ;
+- renseigne son IP privée dans Story Studio ;
+- laisse le démarrage automatique désactivé, car le script configuré s’exécute sur la machine de
+  Story Studio ;
+- protège ce réseau : les descriptions et images de référence sont envoyées à ce serveur.
+
+## Workflows intégrés et personnalisés
+
+Story Studio liste les workflows intégrés disponibles dans son bundle. Chaque workflow expose
+seulement les paramètres utiles à sa génération.
+
+Pour ajouter un workflow personnalisé :
+
+1. prépare et teste le graphe dans ComfyUI ;
+2. exporte-le au **format API** (`*-api.json`) ;
+3. prépare le fichier Story Studio correspondant (`*.config.json`) ;
+4. choisis les deux fichiers dans les Préférences, puis clique sur **Importer**.
+
+Le fichier de configuration décrit les paramètres que Story Studio peut remplacer dans le workflow.
+Un JSON visuel ordinaire ne remplace pas l’export API. Les workflows personnalisés restent sur ta
+machine et peuvent être supprimés depuis la même section.
+
+## Générer une illustration
+
+Une fois l’intégration activée :
+
+1. clique sur **Générer IA** sous un champ image ;
+2. choisis un workflow ;
+3. renseigne la description et les paramètres proposés ;
+4. ajoute l’image de référence si ce workflow l’exige ;
+5. lance la tâche.
+
+La **File IA** affiche la progression, le résultat et les erreurs éventuelles. Les images récupérées
+sont placées dans les médias gérés du travail courant. Tu peux les prévisualiser, les recadrer en
+320 × 240 et les réutiliser comme tout autre média.
+
+## Résoudre les erreurs courantes
+
+**ComfyUI inaccessible**
+: Lance-le manuellement et ouvre son URL dans un navigateur. Si cela fonctionne, vérifie l’URL dans
+Story Studio et désactive temporairement le démarrage automatique.
+
+**Le démarrage dépasse 3 minutes**
+: Lance le script toi-même afin de lire ses journaux. Un modèle volumineux, une dépendance absente
+ou un chemin de script incorrect peut empêcher le serveur d’être prêt.
+
+**Aucun workflow disponible**
+: Vérifie le bundle de l’application ou importe une paire API/config valide.
+
+**Le workflow est refusé ou échoue**
+: Confirme qu’il s’agit d’un export API et que ses modèles, nœuds et noms de fichiers existent dans
+ton installation ComfyUI.
+
+**Aucune image n’est récupérée**
+: Consulte la File IA. Le workflow doit terminer sur une sortie image que ComfyUI expose dans son
+historique.
+
+[Préparer et réutiliser les images](/story-studio/docs/gestionnaire-de-medias/)

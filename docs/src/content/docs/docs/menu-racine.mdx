@@ -1,0 +1,93 @@
+---
+title: Menu racine
+description: Comprendre le point d’entrée d’un pack, ses médias, ses choix et sa différence avec un Dossier.
+---
+
+Le **Menu racine** est la racine structurelle du pack. Son image et son Titre audio présentent le
+pack dans le menu principal de la Lunii. Tant que l’enfant n’a pas validé ce pack avec **OK**, il
+n’a pas encore commencé son parcours interne.
+
+Après **OK**, la navigation ouvre le premier élément contenu dans le Menu racine. Ses enfants
+forment alors le premier niveau de choix du pack.
+
+## Avant d’entrer dans le parcours
+
+Quand le pack est sélectionné dans le menu principal, l’enfant retrouve :
+
+- l’**Image Lunii**, adaptée au format 320 × 240 lors de l’export ;
+- le **Titre audio**, entendu dans le menu principal ;
+- puis, après validation du pack avec **OK**, son premier choix interne.
+
+Après cet appui sur **OK**, si plusieurs éléments sont placés directement sous le Menu racine, la
+molette permet de parcourir leurs écrans de sélection. Leur ordre dans l’arbre détermine leur ordre
+de parcours.
+
+:::note[Sélection du pack ou premier choix]
+Revenir à la **sélection du pack** signifie réafficher sa couverture dans le menu principal de la
+Lunii. Revenir au **premier choix du pack** signifie au contraire être déjà entré dans sa navigation
+interne. Une nouvelle validation du pack avec **OK** relie ces deux moments.
+:::
+
+## Ce que le Menu racine peut contenir
+
+Dans un Pack créé avec l’**Éditeur libre**, il peut contenir directement :
+
+- des [Histoires](/story-studio/docs/histoire/) ;
+- des [Dossiers](/story-studio/docs/dossier/) ;
+- des **ZIP**, pour conserver des packs complets comme choix du nouveau pack ;
+- ou une combinaison de ces éléments.
+
+Un ZIP peut être simulé ou [extrait en éléments modifiables](/story-studio/docs/importer-et-extraire-un-pack/)
+si sa structure est prise en charge. Des structures importées peuvent aussi afficher des éléments
+**Lien** pour préserver une convergence ou un retour avancé. Aucun de ces éléments ne transforme le
+Menu racine en Dossier.
+
+## Menu racine et Dossier ne jouent pas le même rôle
+
+Le Menu racine existe une seule fois. Il porte la présentation du pack dans le menu principal et
+contient ses premiers choix. Un Dossier est un choix placé dans cette structure : il apparaît après
+la sélection du pack et ajoute un niveau que l’enfant doit parcourir.
+
+```text
+Menu racine                     Menu racine
+├── Histoire A                  ├── Dossier « Animaux »
+└── Histoire B                  │   ├── Histoire A
+                                │   └── Histoire B
+                                └── Histoire C
+```
+
+À gauche, les Histoires sont immédiatement disponibles. À droite, l’enfant doit d’abord choisir
+« Animaux » : ce Dossier a donc un effet réel sur la navigation.
+
+## Histoire simple et Pack
+
+Dans l’**Éditeur simplifié**, Story Studio affiche **Mon histoire** plutôt qu’un Menu racine à
+remplir. L’image et le Titre audio servent à présenter cette unique histoire, puis **Récit complet**
+est joué après **OK**. L’interface ne montre pas un faux enfant « Histoire » supplémentaire.
+
+Dans un Pack, l’éditeur affiche **Menu racine** et le nombre d’éléments qu’il contient. Il peut
+présenter plusieurs choix et des Dossiers imbriqués.
+
+## Couverture, vignette et métadonnées
+
+Trois notions proches ont des destinations différentes :
+
+| Élément | Rôle |
+|---|---|
+| **Image Lunii** | image affichée sur la boîte pour présenter le pack |
+| **Vignette catalogue** | image utilisée par les bibliothèques compatibles, comme STUdio ou LuniiQt |
+| **Métadonnées du pack** | titre, auteur, version, âge et autres informations décrivant le pack exporté |
+
+Le réglage **Utiliser la même image pour la Lunii et la vignette catalogue** permet de partager un
+seul fichier visuel. Sans ce réglage, les deux images restent indépendantes.
+
+## Prévoir le premier parcours
+
+Le premier enfant du Menu racine est la destination initiale après la validation du pack. Si le
+pack ne contient qu’un seul Dossier, le générateur peut enchaîner automatiquement vers son contenu
+pour ne pas ajouter une validation inutile. Avec plusieurs entrées racine, leurs écrans restent de
+vrais choix.
+
+[Voir comment utiliser un Dossier introductif ou automatique](/story-studio/docs/dossier/#plusieurs-manières-dutiliser-un-dossier)
+
+[Voir comment la molette, OK et Accueil parcourent le pack](/story-studio/docs/navigation/)

@@ -1,0 +1,90 @@
+---
+title: Résoudre un blocage de génération
+description: Retrouver les fichiers manquants, corriger la validation et distinguer erreur et avertissement.
+---
+
+Commence par identifier le moment du blocage : ouverture du projet, validation, intégration externe
+ou génération du ZIP. Les actions utiles ne sont pas les mêmes.
+
+## Projet enregistré ou session temporaire
+
+Un nouveau travail peut afficher **Projet non enregistré**. Story Studio conserve ses médias dans
+une session temporaire et écrit une reprise de sécurité dès que le contenu devient utile. Après une
+fermeture inattendue, une carte **Projet récupérable** peut apparaître sur l’accueil. Ouvre-la puis
+enregistre le projet avant de poursuivre un travail important.
+
+[Comprendre les sessions temporaires et la récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
+
+## Médias introuvables
+
+Si un fichier a été déplacé, renommé ou si un disque externe n’est plus monté, la fenêtre **Médias
+introuvables** propose de relier les anciennes références aux fichiers actuels.
+
+1. reconnecte d’abord le disque ou le volume concerné ;
+2. choisis un dossier à analyser, ou recherche dans l’espace de travail ;
+3. vérifie les correspondances ambiguës ;
+4. clique sur **Appliquer et enregistrer** lorsque toutes les substitutions sont correctes.
+
+Le relink met à jour le projet, les tags et la bibliothèque Médias ensemble. Il ne fabrique pas un
+fichier absent. Si la source a réellement été supprimée, importe ou recrée le média.
+
+## Pastille « À corriger »
+
+Ouvre la pastille puis sélectionne chaque ligne. Elle conduit à l’élément concerné. Corrige d’abord
+les problèmes de structure, puis les médias :
+
+- **Audio ou Image à ajouter** : choisis un fichier pour le champ obligatoire ;
+- **Fichier introuvable** : relie ou remplace le média ;
+- **Histoire à ajouter** : complète le Dossier ou le pack vide ;
+- **destination introuvable** : choisis une destination existante ;
+- **Référence sans cible** : répare ou retire le Lien ;
+- **Archive ZIP à ajouter** : retrouve le fichier inclus.
+
+Les problèmes affichés par cette pastille empêchent tous la génération, même lorsqu’ils sont
+présentés avec une couleur d’avertissement.
+
+## Génération refusée après « Pack prêt »
+
+La validation visible est une aide précoce. Le moteur Rust refait les contrôles avant d’écrire le
+ZIP et peut détecter un problème plus tardif : fichier inaccessible, structure incohérente, sortie
+non autorisée ou divergence de fidélité avec un pack importé.
+
+Lis le message complet de la tâche dans la **File de rendu**. Ne contourne pas un refus de fidélité
+par une extraction forcée : repars du pack source ou simplifie volontairement le projet dans une
+nouvelle copie.
+
+## ZIP généré avec avertissements
+
+Un avertissement après génération n’est pas un échec. Le ZIP a été produit, mais un traitement audio
+a demandé une correction importante. Écoute les passages indiqués et vérifie-les sur la boîte à
+histoires avant diffusion.
+
+Si le résultat est trop faible, trop fort ou déjà saturé, repars du meilleur fichier source
+disponible. Une normalisation ne peut pas reconstruire les détails perdus par un écrêtage.
+
+## Piper, XTTS ou ComfyUI indisponible
+
+Une intégration externe en erreur n’empêche pas la sauvegarde ni l’édition du projet.
+
+- **Piper** : vérifie la connexion nécessaire au premier téléchargement de la voix ;
+- **XTTS** : teste le serveur et ses voix dans les Préférences ;
+- **ComfyUI** : lance le serveur manuellement, vérifie son URL puis le workflow ;
+- **Podcast ou YouTube** : vérifie l’URL, le réseau et les droits d’accès au contenu.
+
+Tu peux toujours importer un fichier existant et reprendre la génération externe plus tard.
+
+[Diagnostiquer Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/) ·
+[Diagnostiquer ComfyUI](/story-studio/docs/comfyui/)
+
+## Avant de signaler un bug
+
+Conserve une copie du projet et note :
+
+- l’action exacte qui échoue ;
+- le message complet ;
+- le système et la version de Story Studio ;
+- le type de source, sans publier de média, voix ou pack privé ;
+- les étapes minimales permettant de reproduire le problème.
+
+Tu peux ensuite [ouvrir une issue](https://github.com/Hugs11/story-studio/issues) sans joindre de
+contenu dont tu ne détiens pas les droits.

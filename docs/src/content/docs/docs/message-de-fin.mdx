@@ -1,0 +1,92 @@
+---
+title: Message de fin
+description: Comprendre l’étape audio facultative jouée entre la fin d’une Histoire et sa destination suivante.
+---
+
+Le **Message de fin** est une étape audio facultative et commune au pack. Lorsqu’il participe au
+parcours d’une Histoire, il est joué après son audio principal et avant sa destination finale.
+
+## Trois moments distincts
+
+```text
+1. fin du fichier « Histoire complète »
+                ↓
+2. lecture éventuelle du Message de fin
+                ↓
+3. destination suivante
+```
+
+La fin audio n’est donc ni le Message de fin, ni le retour vers un Dossier. Supprimer le Message de
+fin ne supprime pas la destination de l’Histoire ; cela retire seulement l’étape intermédiaire.
+
+## Une option, pas une obligation
+
+Le Message de fin est ajouté depuis le menu contextuel de la structure ou du diagramme. Il possède
+son propre nom et son propre **Audio de fin d’histoire**.
+
+Un Message de fin créé mais sans audio peut apparaître dans l’arbre et le diagramme pour préparer
+le parcours, mais la génération signale alors **Audio requis pour la génération**. Il ne devient
+une étape du pack exportable qu’avec un fichier audio valide.
+
+## Quelles Histoires l’utilisent
+
+Une Histoire utilise le message commun lorsqu’aucune fin locale ne le remplace et lorsque le
+parcours généré le prévoit. Les cas principaux qui l’écartent sont :
+
+- un **Message de fin personnalisé** propre à cette Histoire ;
+- un **Scénario de fin** local ;
+- l’option globale **Auto-next**, qui ignore messages, scénarios et retours de fin tant qu’elle est
+  active ;
+- certaines structures importées dont la navigation préservée possède une autre fin.
+
+L’éditeur du Message de fin liste les **Fins locales** détectées. Il permet de les examiner ou de les
+**Rattacher au message du pack**.
+
+## Automatiquement ou après OK
+
+Le réglage **Quand passer à la suite ?** possède deux comportements :
+
+- **Automatiquement** : la destination s’ouvre dès la fin de l’audio du message ;
+- **Après appui sur OK** : l’enfant reste sur le Message de fin jusqu’à la validation.
+
+Un pack importé peut conserver un réglage mixte : certaines Histoires continuent automatiquement,
+d’autres attendent **OK**, et une structure inhabituelle peut rester sur le message sans sortie
+automatique. Story Studio affiche alors ce mélange au lieu de le normaliser silencieusement.
+
+## La destination après le message
+
+Le champ **Retour après le message** peut imposer une destination commune. Lorsqu’il reste sur
+**Selon chaque histoire**, chaque trajet conserve la destination individuelle, héritée ou par
+défaut de son Histoire source.
+
+```text
+Histoire A → Message de fin → Dossier A
+Histoire B → Message de fin → Histoire suivante
+```
+
+Un même audio de fin peut ainsi précéder plusieurs destinations. Le Message de fin n’est pas, à lui
+seul, une destination.
+
+## Le bouton Accueil pendant le message
+
+**Bouton Accueil** possède une destination indépendante du retour **OK**. Sans destination
+explicite, il revient à la sélection du pack, c’est-à-dire à sa couverture dans le menu principal.
+Avec une cible configurée, il suit cette cible ; il ne copie pas automatiquement le retour après le
+message.
+
+Cette distinction est importante : deux boutons visibles sur le même message peuvent conduire à
+deux endroits différents.
+
+## Message de fin et mode nuit
+
+**Activer le mode nuit** associe le Message de fin au parcours nocturne du pack. Le mode nuit n’est
+pas un second fichier audio de fin et ne doit pas être confondu avec la simple présence du message.
+Le Message de fin peut exister sans mode nuit ; inversement, l’option n’est utilisable à l’export
+que lorsque l’audio requis est présent.
+
+Comme les autres fins, le mode nuit est neutralisé lorsque **Auto-next** est actif.
+
+Pour une fin propre à une seule Histoire ou une séquence en plusieurs étapes, consulte
+[Personnaliser la fin d’une Histoire](/story-studio/docs/histoire/#personnaliser-la-fin-dune-seule-histoire).
+
+[Voir comment le Message de fin s’insère dans la navigation](/story-studio/docs/navigation/#après-la-lecture-dune-histoire)

@@ -1,0 +1,71 @@
+---
+title: Préférences et raccourcis
+description: Retrouver les réglages généraux, personnaliser l’interface et connaître les raccourcis essentiels.
+---
+
+Les **Préférences** règlent le comportement général de Story Studio. Les Réglages de l’espace
+d’édition, eux, modifient l’élément sélectionné ou le pack courant. Ne change donc une préférence
+globale que si tu souhaites retrouver ce choix dans les prochains projets.
+
+## Repérer les sections
+
+| Section | Rôle principal |
+|---|---|
+| **Enregistrement** | enregistrement automatique et nombre de versions de sécurité |
+| **Interface** | thème, confort d’affichage et raccourcis personnalisables |
+| **Projets et médias** | workspace, copie des imports et consolidation |
+| **Voix locale** | Piper par défaut et connexion XTTS avancée |
+| **Images IA** | activation et connexion ComfyUI |
+| **Import et audio** | limites et comportements avancés d’import ou de traitement |
+| **YouTube (yt-dlp)** | état de l’outil utilisé par l’import YouTube |
+| **Diagnostic** | journal utile lors d’un problème reproductible |
+
+Les pages [Workspace et fichiers de projet](/story-studio/docs/workspace-et-fichiers-de-projet/),
+[Voix locales](/story-studio/docs/voix-locales-piper-xtts/) et
+[ComfyUI](/story-studio/docs/comfyui/) détaillent les réglages qui ont un effet sur les fichiers ou
+une intégration externe.
+
+## Enregistrement automatique et versions de sécurité
+
+Lorsqu’il est actif, l’enregistrement automatique écrit les modifications en attente toutes les
+cinq minutes. Avant chaque enregistrement automatique d’un projet déjà enregistré, Story Studio
+peut conserver plusieurs copies `.mbah` dans `versions-securite/`.
+
+Le nombre choisi est une limite de conservation, pas un nombre de modifications annulables. Les
+actions **Annuler/Rétablir** appartiennent à la session ouverte ; les versions de sécurité sont des
+fichiers à utiliser si le projet enregistré doit être récupéré.
+
+Un projet jamais enregistré reste traité comme une session temporaire et possède sa propre reprise.
+Consulte [Sessions temporaires et récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
+pour distinguer ces mécanismes.
+
+## Raccourcis essentiels
+
+| Action | Raccourci par défaut |
+|---|---|
+| enregistrer | `Ctrl+S` |
+| enregistrer sous | `Ctrl+Maj+S` |
+| annuler / rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |
+| afficher ou masquer Arbre, Réglages, Diagramme | `Ctrl+1`, `Ctrl+2`, `Ctrl+3` |
+| rechercher dans la structure | `Ctrl+F` |
+| ouvrir les options du pack | `Ctrl+,` |
+| ouvrir les Préférences | `Ctrl+Maj+O` |
+| ouvrir les problèmes de validation | `Ctrl+Maj+E` |
+| générer le pack | `Ctrl+G` |
+
+La fenêtre des raccourcis permet de modifier les associations configurables et de rétablir les
+valeurs d’origine. Si une combinaison agit dans un champ texte au lieu de l’application, quitte
+d’abord l’édition du champ puis réessaie.
+
+## Diagnostic et confidentialité
+
+Le journal de diagnostic enregistre les chargements, enregistrements, générations et erreurs utiles
+au dépannage. Relis-le avant de le partager : un diagnostic peut contenir des noms de fichiers ou
+des chemins locaux, même s’il ne contient pas volontairement les médias eux-mêmes.
+
+:::tip[Astuce]
+Avant de modifier plusieurs raccourcis, note ceux que tu utilises vraiment. Une petite liste stable
+est plus facile à mémoriser qu’une réaffectation complète du clavier.
+:::
+
+[Résoudre un blocage de génération](/story-studio/docs/resoudre-un-blocage-generation/)

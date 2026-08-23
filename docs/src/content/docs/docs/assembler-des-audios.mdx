@@ -1,0 +1,50 @@
+---
+title: Assembler des audios
+description: Réordonner plusieurs sons et créer une piste unique sans modifier les sources.
+---
+
+L’**Assemblage audio** réunit au moins deux fichiers dans une nouvelle piste. Il permet par exemple
+de réunir plusieurs chapitres, d’ajouter une introduction ou de construire un récit complet depuis
+plusieurs prises.
+
+![Assemblage de plusieurs fichiers audio réordonnables](/story-studio/assets/screenshots/Audio-assemble-light.png)
+
+## Choisir les sources
+
+Dans le Gestionnaire de médias, sélectionne plusieurs sons puis choisis **Assembler les audios**.
+Les images éventuellement présentes dans la sélection sont ignorées.
+
+L’outil peut aussi être proposé depuis plusieurs Histoires sélectionnées. Dans ce contexte, il
+indique explicitement si le résultat peut remplacer ces Histoires ou si le projet restera inchangé.
+
+## Définir l’ordre
+
+Fais glisser les lignes ou utilise les flèches pour définir l’ordre de lecture. Tu peux retirer une
+source de la liste tant qu’au moins deux audios restent présents.
+
+Écoute les fichiers individuellement avant l’assemblage. L’outil concatène leur contenu mais ne
+corrige pas automatiquement un décalage de niveau, un bruit ou une coupe mal placée.
+
+## Ajouter un silence
+
+Active **Ajouter un silence entre les fichiers** pour insérer la même pause entre chaque source. La
+durée accepte une valeur comprise entre 0 et 30 secondes.
+
+Pour un silence différent à chaque jonction, prépare plutôt des fichiers de silence séparés et
+place-les à l’endroit voulu dans la liste.
+
+## Créer le résultat
+
+Choisis le nom du fichier final puis lance l’assemblage. Story Studio crée une nouvelle piste FLAC
+dans `fichiers-importes/` de l’emplacement de travail actif.
+
+Les sources restent disponibles dans Médias. Depuis le gestionnaire, le nouveau fichier est ajouté
+à la bibliothèque sans remplacer leurs usages existants.
+
+Lorsque l’outil a été ouvert depuis des Histoires compatibles, **Assembler et remplacer** remplace
+la sélection par le résultat en une seule opération annulable. Relis ensuite le nom, l’image et les
+réglages de navigation de l’Histoire produite.
+
+[Ouvrir le Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/) ·
+[Modifier ensuite la piste](/story-studio/docs/editeur-audio/)
+

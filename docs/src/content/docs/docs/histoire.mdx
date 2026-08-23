@@ -1,0 +1,89 @@
+---
+title: Histoire
+description: Distinguer la présentation d’une Histoire, sa lecture principale, ses commandes et sa destination finale.
+---
+
+Une **Histoire** regroupe tout ce qui permet de la choisir, de l’écouter et de décider ce qui se
+passe ensuite. Son fichier audio principal n’est qu’une partie de ce parcours.
+
+## Présentation puis lecture
+
+Dans un Pack, une Histoire possède normalement deux moments :
+
+```text
+écran de sélection ou titre ── OK ou lancement automatique ──> lecture de l’Histoire
+```
+
+L’écran de sélection présente le titre avec son image et son audio. La lecture joue ensuite
+**Histoire complète**. Dans les réglages avancés, ce titre peut être explicitement silencieux ;
+l’absence accidentelle d’audio ne suffit pas à le rendre facultatif.
+
+Dans l’**Éditeur simplifié**, Story Studio rassemble cette présentation sous **Mon histoire** et le
+fichier principal sous **Récit complet**. Dans le menu principal de la Lunii, cette présentation
+sert à sélectionner le pack ; **OK** lance directement la lecture, sans ajouter un second écran
+titre identique.
+
+## Les trois médias à distinguer
+
+| Média | Moment d’utilisation |
+|---|---|
+| **Image** | affichée dans le menu de sélection |
+| **Audio de sélection** | entendu lorsque l’enfant parcourt les Histoires |
+| **Histoire complète** | audio principal joué après validation |
+
+L’image de sélection n’est pas une promesse d’affichage pendant tout le récit. Les médias de titre
+servent d’abord à choisir l’Histoire ; le son principal porte son contenu.
+
+Pour importer, recadrer, découper, assembler ou générer ces médias, consulte le
+[Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/).
+
+## Avant et pendant l’Histoire
+
+Sur l’écran de sélection, les réglages avancés peuvent autoriser la molette, **OK**, **Accueil**,
+Pause ou un lancement automatique. Par défaut, **OK** lance le récit et **Accueil** revient au
+Dossier qui contient l’Histoire — ou à la sélection du pack si elle est placée directement au Menu
+racine.
+
+Pendant **Histoire complète** :
+
+- le **Bouton Pause** peut interrompre et reprendre l’audio ;
+- le **Bouton Accueil** peut être activé ou désactivé et recevoir sa propre destination ;
+- la molette appartient normalement aux écrans de sélection, pas à la lecture principale ;
+- **OK** et l’enchaînement déterminent si la transition de sortie est déclenchée manuellement ou à
+  la fin de l’audio.
+
+## Fin audio et destination après lecture
+
+La fin audio est seulement l’instant où le fichier **Histoire complète** se termine. Le réglage
+**Après la lecture** décide de la suite :
+
+- **Rester sur l’écran** conserve l’écran de lecture et attend une commande disponible ;
+- **Enchaîner** suit automatiquement la destination calculée ;
+- un [Message de fin](/story-studio/docs/message-de-fin/) peut s’intercaler ;
+- **Auto-next** peut lancer directement l’Histoire suivante et ignorer les fins personnalisées.
+
+Selon la structure et les réglages, la destination finale peut être le Dossier courant, le titre
+d’une Histoire, sa lecture directe, l’Histoire suivante, le Menu racine ou une autre destination
+sélectionnée.
+
+:::note[Titre ou lecture directe]
+Choisir une Histoire comme destination revient sur son écran de sélection. Une destination libellée
+**Lecture directe – …** lance son audio principal sans repasser par le titre. **Histoire suivante**
+revient normalement au titre de la sœur suivante ; **Auto-next** lance au contraire sa lecture
+directe.
+:::
+
+## Personnaliser la fin d’une seule Histoire
+
+Les réglages avancés **Message de fin personnalisé** permettent de remplacer le message commun du
+pack pour une seule Histoire :
+
+- **Ajouter un audio de fin** crée une étape unique ;
+- **Ajouter un scénario de fin** crée plusieurs étapes enchaînées ;
+- chaque étape peut posséder ses destinations **OK** et **Accueil** ;
+- **Rattacher au message du pack** rétablit la fin commune.
+
+Ces fins locales interviennent après l’audio principal et avant leur destination. Elles restent
+distinctes du [Message de fin commun](/story-studio/docs/message-de-fin/).
+
+[Lire la synthèse complète des destinations](/story-studio/docs/navigation/)

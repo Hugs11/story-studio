@@ -1,0 +1,42 @@
+---
+title: Découper un audio
+description: Transformer un enregistrement long en plusieurs extraits réutilisables.
+---
+
+La **Découpe audio** produit plusieurs fichiers à partir d’une seule source. Elle est adaptée à un
+enregistrement qui contient plusieurs Histoires, chapitres ou prises à conserver séparément.
+
+![Découpe d’un enregistrement en plusieurs extraits préparés](/story-studio/assets/screenshots/Audio-decoupe-light.png)
+
+## Ouvrir l’outil
+
+Dans le Gestionnaire de médias, ouvre le menu d’un fichier audio puis choisis **Découper un audio**.
+La source reste inchangée pendant toute l’opération.
+
+## Préparer les extraits
+
+1. Place la sélection autour du premier passage à conserver.
+2. Écoute la sélection et ajuste ses limites.
+3. Ajoute l’extrait à la liste.
+4. Renomme-le si nécessaire.
+5. Recommence pour chaque passage utile.
+
+Les extraits peuvent se suivre ou provenir de zones éloignées du fichier. Vérifie leur début et
+leur fin individuellement avant de lancer la création.
+
+## Créer les fichiers
+
+Story Studio génère un fichier FLAC par extrait dans l’emplacement de travail actif. Les nouveaux
+sons rejoignent le Gestionnaire de médias avec les tags de la source et le tag **découpe**.
+
+La création des extraits n’affecte aucune Histoire automatiquement. Fais ensuite glisser chaque son
+vers le champ voulu, ou conserve-le dans la bibliothèque pour un usage futur.
+
+## Découpe ou édition audio ?
+
+| Besoin | Outil |
+|---|---|
+| retirer un passage d’un fichier et garder un seul résultat | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| produire plusieurs fichiers depuis un long enregistrement | **Découpe audio** |
+| réunir plusieurs fichiers dans un ordre choisi | [Assemblage audio](/story-studio/docs/assembler-des-audios/) |
+

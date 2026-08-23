@@ -1,0 +1,51 @@
+---
+title: Modifier un pack existant
+description: Contrôler un ZIP, un 7z ou un dossier d’histoire avant de l’ouvrir dans Story Studio.
+---
+
+L’entrée **Modifier un pack existant** sert à partir d’un pack déjà construit. Elle accepte un ZIP,
+un 7z ou un dossier d’histoire décompressé.
+
+## Choisir et contrôler la source
+
+Dépose le fichier ou utilise le sélecteur. Story Studio convertit si nécessaire le format, lit le
+graphe du pack puis évalue si sa structure peut être reconstruite fidèlement.
+
+Selon le résultat :
+
+- un pack **éditable** ouvre sa structure dans l’Éditeur libre ;
+- un pack **lisible mais non éditable** s’ouvre dans le simulateur ;
+- un pack **non supporté** affiche la raison du refus et, si l’option avancée est active, peut
+  proposer une extraction partielle.
+
+Ce contrôle protège la navigation. Un pack peut contenir des branches partagées, des cycles ou des
+retours qu’un arbre de Dossiers ne peut pas représenter fidèlement. Dans ce cas, la lecture seule est
+préférable à un projet qui semblerait éditable mais changerait de parcours au prochain export.
+
+## Relire avant de modifier
+
+Pour un pack éditable, compare l’Arbre, le Diagramme et le simulateur. Vérifie surtout les retours
+Accueil, les convergences, le mode nuit et les fins locales avant de changer la structure.
+
+Note quelques parcours avec leur point de départ et leur résultat, par exemple :
+
+```text
+Animaux → Forêt → Le Renard → fin → retour à Forêt
+Animaux → Mer → Le Phare → Accueil pendant la lecture → menu Animaux
+Dernière Histoire → Message de fin → OK → sélection du pack
+```
+
+Ces trajets servent de tests de non-régression après modification. Un simple comptage des Dossiers
+et des Histoires ne suffit pas à prouver que les retours ont été conservés.
+
+Le projet extrait commence dans une session temporaire. Enregistre-le sous un nouveau nom avant une
+modification importante et conserve toujours l’archive d’origine.
+
+:::tip[Astuce]
+Simule d’abord le pack source et note deux ou trois parcours importants. Après tes modifications,
+rejoue exactement ces parcours : c’est le moyen le plus simple de repérer un retour ou une fin qui
+aurait changé involontairement.
+:::
+
+[Comprendre l’import et l’extraction en détail](/story-studio/docs/importer-et-extraire-un-pack/) ·
+[Comprendre la navigation](/story-studio/docs/navigation/)
