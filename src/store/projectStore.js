@@ -4,15 +4,20 @@ import {
   appendEntries,
   clearMediaReferences,
   cutPasteEntries,
+  deepCloneEntry,
   createMenuEntry,
   createStoryEntry,
   createZipEntry,
   DEFAULT_PACK_METADATA,
   findEntryById,
+  findEntryPath,
   findParentMenuId,
   insertEntryAfter,
   moveEntryNextTo,
   moveEntriesToContainer,
+  getProjectMenuDepthDiagnostic,
+  MENU_DEPTH_LIMIT_CODE,
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
   normalizeProjectData,
   removeEntryCascadingRefs,
   removeEntriesCascadingRefs,
@@ -21,9 +26,10 @@ import {
   reorderTopLevelMenus,
   replaceEntryWithEntries,
   replaceStoriesWithAssembledStory,
-  shallowCloneEntry,
   updateEntry,
   updateProjectRootEntries,
+  validateMenuDepthMove,
+  validateMenuDepthPlacement,
 } from './projectModel';
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
@@ -122,10 +128,13 @@ function applyPromotedMenuDefaultsToChild(child, promotedMenu) {
 
 export function useProjectStore() {
   const [project, setProjectRaw] = useState(DEFAULT_PROJECT);
+  const projectMutationRef = useRef(project);
   const [selectedId, setSelectedId] = useState('root');
   const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
   const redoRef = useRef([]);
+  const [mutationError, setMutationError] = useState(null);
+  projectMutationRef.current = project;
   // canUndo / canRedo sont des derives purs des refs : on les recalcule au
   // rendu au lieu de les stocker en state. Toute mutation des refs est suivie
   // d'un setProjectRaw qui declenche un nouveau rendu, donc les valeurs restent
@@ -138,13 +147,47 @@ export function useProjectStore() {
 
   // Toute modification passe par ici pour alimenter l'historique
   const setProject = useCallback((updater) => {
+    const current = projectMutationRef.current;
+    const next = normalizeProjectData(
+      typeof updater === 'function' ? updater(current) : updater,
+    );
+    projectMutationRef.current = next;
     setProjectRaw(prev => {
       historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY_SIZE - 1)), prev];
       redoRef.current = [];
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      return normalizeProjectData(next);
+      return next;
     });
   }, []);
+
+  const clearMutationError = useCallback(() => setMutationError(null), []);
+
+  const rejectMenuDepthMutation = useCallback((diagnostic) => {
+    const rejection = {
+      ...diagnostic,
+      code: MENU_DEPTH_LIMIT_CODE,
+      message: MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+    };
+    setMutationError(rejection);
+    return rejection;
+  }, []);
+
+  const commitDepthMutation = useCallback((diagnostic, buildNextProject) => {
+    if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
+    const current = projectMutationRef.current;
+    const next = buildNextProject(current);
+    const finalDiagnostic = getProjectMenuDepthDiagnostic(next);
+    if (!finalDiagnostic.allowed) return rejectMenuDepthMutation(finalDiagnostic);
+    projectMutationRef.current = next;
+    setProject(next);
+    return { ...finalDiagnostic, project: next };
+  }, [rejectMenuDepthMutation, setProject]);
+
+  const setProjectWithDepthGuard = useCallback((updater) => {
+    const current = projectMutationRef.current;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+    const diagnostic = getProjectMenuDepthDiagnostic(next);
+    return commitDepthMutation(diagnostic, () => next);
+  }, [commitDepthMutation]);
 
   const undo = useCallback(() => {
     if (historyRef.current.length === 0) return;
@@ -152,6 +195,7 @@ export function useProjectStore() {
       const prev = historyRef.current[historyRef.current.length - 1];
       historyRef.current = historyRef.current.slice(0, -1);
       redoRef.current = [...redoRef.current, current];
+      projectMutationRef.current = prev;
       return prev;
     });
   }, []);
@@ -162,6 +206,7 @@ export function useProjectStore() {
       const next = redoRef.current[redoRef.current.length - 1];
       redoRef.current = redoRef.current.slice(0, -1);
       historyRef.current = [...historyRef.current, current];
+      projectMutationRef.current = next;
       return next;
     });
   }, []);
@@ -172,17 +217,23 @@ export function useProjectStore() {
     historyRef.current = [];
     redoRef.current = [];
     setProjectRaw(DEFAULT_PROJECT);
+    projectMutationRef.current = DEFAULT_PROJECT;
     setSelectedId('root');
     setSavePath(null);
     setMediaTagsRaw({});
   }, []);
 
   const loadProject = useCallback((data) => {
+    const diagnostic = getProjectMenuDepthDiagnostic(data);
+    if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
     historyRef.current = [];
     redoRef.current = [];
-    setProjectRaw(normalizeProjectData(data));
+    const normalized = normalizeProjectData(data);
+    projectMutationRef.current = normalized;
+    setProjectRaw(normalized);
     setSelectedId('root');
-  }, []);
+    return { ...diagnostic, project: normalized };
+  }, [rejectMenuDepthMutation]);
 
   const setMediaTags = useCallback((tags) => {
     setMediaTagsRaw(tags && typeof tags === 'object' ? tags : {});
@@ -239,11 +290,15 @@ export function useProjectStore() {
   }, []);
 
   const syncProjectWithoutHistory = useCallback((data) => {
+    const diagnostic = getProjectMenuDepthDiagnostic(data);
+    if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
+    const next = normalizeProjectData(data);
+    projectMutationRef.current = next;
     setProjectRaw((current) => {
-      const next = normalizeProjectData(data);
       return JSON.stringify(next) === JSON.stringify(current) ? current : next;
     });
-  }, []);
+    return diagnostic;
+  }, [rejectMenuDepthMutation]);
 
   const setProjectType = useCallback((type) => {
     setProject(p => {
@@ -325,10 +380,16 @@ export function useProjectStore() {
 
   const addMenu = useCallback((parentMenuId = null) => {
     const newMenu = createMenuEntry();
-    setProject(p => appendEntry(p, parentMenuId, newMenu));
+    const current = projectMutationRef.current;
+    const diagnostic = validateMenuDepthPlacement(current, parentMenuId, [newMenu]);
+    const outcome = commitDepthMutation(
+      diagnostic,
+      (value) => appendEntry(value, parentMenuId, newMenu),
+    );
+    if (!outcome.allowed) return null;
     setSelectedId(newMenu.id);
     return newMenu.id;
-  }, [setProject]);
+  }, [commitDepthMutation]);
 
   const updateMenu = useCallback((menuId, fields) => {
     setProject(p => updateEntry(p, menuId, fields));
@@ -370,7 +431,10 @@ export function useProjectStore() {
   }, [setProject]);
 
   const demoteRootToMenu = useCallback(() => {
-    setProject(p => {
+    const current = projectMutationRef.current;
+    const candidateMenu = { type: 'menu', children: current.rootEntries ?? [] };
+    const diagnostic = validateMenuDepthPlacement(current, null, [candidateMenu]);
+    const outcome = commitDepthMutation(diagnostic, (p) => {
       const currentEntries = p.rootEntries ?? [];
       if (!currentEntries.length) return p;
       const newMenu = createMenuEntry({
@@ -388,8 +452,10 @@ export function useProjectStore() {
         rootEntries: [newMenu],
       };
     });
+    if (!outcome.allowed) return outcome;
     setSelectedId('root');
-  }, [setProject]);
+    return outcome;
+  }, [commitDepthMutation]);
 
   // ── Items ─────────────────────────────────────────────────────────────────
 
@@ -462,26 +528,53 @@ export function useProjectStore() {
 
   // Remplace un ZIP par des entrées éditables (story/menu) issues de l'extraction
   const replaceZipWithEntries = useCallback((menuId, itemId, entries) => {
-    setProject(p => replaceEntryWithEntries(p, menuId, itemId, entries));
+    const current = projectMutationRef.current;
+    const diagnostic = validateMenuDepthPlacement(current, menuId, entries);
+    const outcome = commitDepthMutation(
+      diagnostic,
+      (value) => replaceEntryWithEntries(value, menuId, itemId, entries),
+    );
+    if (!outcome.allowed) return outcome;
     setSelectedId('root');
-  }, [setProject]);
+    return outcome;
+  }, [commitDepthMutation]);
 
   const pasteEntriesToMenu = useCallback((targetMenuId, entries) => {
-    setProject(p => appendEntries(p, targetMenuId, entries));
-  }, [setProject]);
+    const current = projectMutationRef.current;
+    const diagnostic = validateMenuDepthPlacement(current, targetMenuId, entries);
+    return commitDepthMutation(
+      diagnostic,
+      (value) => appendEntries(value, targetMenuId, entries),
+    );
+  }, [commitDepthMutation]);
 
   const cutPasteEntriesToMenu = useCallback((sourceIds, targetMenuId) => {
-    setProject(p => cutPasteEntries(p, sourceIds, targetMenuId));
-  }, [setProject]);
+    const current = projectMutationRef.current;
+    const targetPath = targetMenuId == null ? [] : (findEntryPath(current, targetMenuId) ?? []);
+    if (targetPath.some((entry) => sourceIds.includes(entry.id))) {
+      return { allowed: false, code: 'menu_cycle' };
+    }
+    const diagnostic = validateMenuDepthMove(current, sourceIds, targetMenuId);
+    return commitDepthMutation(
+      diagnostic,
+      (value) => cutPasteEntries(value, sourceIds, targetMenuId),
+    );
+  }, [commitDepthMutation]);
 
   const duplicateEntry = useCallback((nodeId) => {
-    setProject(p => {
-      const entry = findEntryById(p, nodeId);
-      if (!entry) return p;
-      const clone = shallowCloneEntry(entry);
-      return insertEntryAfter(p, nodeId, clone);
-    });
-  }, [setProject]);
+    const current = projectMutationRef.current;
+    const entry = findEntryById(current, nodeId);
+    if (!entry) return { allowed: false, code: 'entry_missing' };
+    const parentMenuId = findParentMenuId(current, nodeId);
+    // La duplication d'un Dossier conserve réellement tout son sous-arbre ; la
+    // garde de placement est donc calculée sur cette copie complète.
+    const clone = deepCloneEntry(entry);
+    const diagnostic = validateMenuDepthPlacement(current, parentMenuId, [clone]);
+    return commitDepthMutation(
+      diagnostic,
+      (value) => insertEntryAfter(value, nodeId, clone),
+    );
+  }, [commitDepthMutation]);
 
   const removeMediaReferences = useCallback((path) => {
     setProject(p => clearMediaReferences(p, path));
@@ -501,13 +594,24 @@ export function useProjectStore() {
 
   const moveItemToMenu = useCallback((itemIdOrIds, fromMenuId, toMenuId, anchorId = null, insertPosition = 'inside') => {
     const itemIds = Array.isArray(itemIdOrIds) ? itemIdOrIds : [itemIdOrIds];
-    if (itemIds.length === 0) return;
-    if (itemIds.length === 1 && anchorId && insertPosition !== 'inside') {
-      setProject(p => moveEntryNextTo(p, itemIds[0], anchorId, insertPosition));
-    } else {
-      setProject(p => moveEntriesToContainer(p, itemIds, toMenuId));
+    if (itemIds.length === 0) return { allowed: false, code: 'empty_selection' };
+    const current = projectMutationRef.current;
+    const targetPath = toMenuId == null ? [] : (findEntryPath(current, toMenuId) ?? []);
+    if (targetPath.some((entry) => itemIds.includes(entry.id))) {
+      return { allowed: false, code: 'menu_cycle' };
     }
-  }, [setProject]);
+    const diagnostic = validateMenuDepthMove(current, itemIds, toMenuId);
+    if (itemIds.length === 1 && anchorId && insertPosition !== 'inside') {
+      return commitDepthMutation(
+        diagnostic,
+        (value) => moveEntryNextTo(value, itemIds[0], anchorId, insertPosition),
+      );
+    }
+    return commitDepthMutation(
+      diagnostic,
+      (value) => moveEntriesToContainer(value, itemIds, toMenuId),
+    );
+  }, [commitDepthMutation]);
 
   // ── Sélection ─────────────────────────────────────────────────────────────
 
@@ -533,7 +637,8 @@ export function useProjectStore() {
   }, [project]);
 
   return {
-    project, setProject, loadProject, resetProject, syncProjectWithoutHistory,
+    project, setProject, setProjectWithDepthGuard, loadProject, resetProject, syncProjectWithoutHistory,
+    mutationError, clearMutationError,
     savePath, setSavePath,
     selectedId, setSelectedId,
     canUndo, undo, canRedo, redo,

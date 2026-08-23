@@ -26,7 +26,8 @@ export function ContextMenu({ x, y, onClose, actions }) {
   const itemCount = actions.filter(a => a !== 'sep' && a?.type !== 'sep' && a?.type !== 'node').length;
   const sepCount = actions.filter(a => a === 'sep' || a?.type === 'sep').length;
   const nodeCount = actions.filter(a => a?.type === 'node').length;
-  const menuH = itemCount * 30 + sepCount * 9 + nodeCount * 120 + 8;
+  const disabledHintCount = actions.filter((action) => action?.disabledReason).length;
+  const menuH = itemCount * 30 + disabledHintCount * 24 + sepCount * 9 + nodeCount * 120 + 8;
   const left = Math.min(x, window.innerWidth - 204);
   const top = Math.min(y, window.innerHeight - menuH - 8);
 
@@ -38,9 +39,21 @@ export function ContextMenu({ x, y, onClose, actions }) {
           : action?.type === 'node'
           ? <div key={i} className="ctx-node-item">{action.render()}</div>
           : (
-            <button key={i} className={`ctx-item${action.danger ? ' danger' : ''}`} onClick={() => { action.fn(); onClose(); }}>
+            <button
+              key={i}
+              className={`ctx-item${action.danger ? ' danger' : ''}${action.disabledReason ? ' is-disabled' : ''}`}
+              aria-disabled={action.disabledReason ? 'true' : undefined}
+              aria-label={action.disabledReason ? `${action.label}. ${action.disabledReason}` : undefined}
+              title={action.disabledReason || undefined}
+              onClick={() => {
+                if (action.disabledReason) return;
+                action.fn();
+                onClose();
+              }}
+            >
               <span className="ctx-icon">{action.icon}</span>
-              {action.label}
+              <span className="ctx-item-label">{action.label}</span>
+              {action.disabledReason ? <span className="ctx-disabled-hint">{action.disabledReason}</span> : null}
             </button>
           )
       )}

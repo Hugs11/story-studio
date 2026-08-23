@@ -48,6 +48,8 @@ import { StructureLevelSummaryNode } from './diagram/StructureLevelSummaryNode';
 import { StructureDiagramLayer } from './diagram/StructureDiagramLayer';
 import { IconMoon, IconStop } from '../TreePanel/TreeIcons';
 
+const NODE_REVEAL_MINIMUM_ZOOM = 0.5;
+
 export function CompleteDiagramTree({
   project,
   projectIndex,
@@ -419,7 +421,9 @@ export function CompleteDiagramTree({
       return;
     }
     const targetNode = nodeById.get(pendingRevealNodeId);
-    if (targetNode && centerViewportOnNode(targetNode)) {
+    if (targetNode && centerViewportOnNode(targetNode, {
+      minimumZoom: NODE_REVEAL_MINIMUM_ZOOM,
+    })) {
       setPendingRevealNodeId(null);
     }
   }, [
@@ -465,6 +469,7 @@ export function CompleteDiagramTree({
   const {
     draggingId,
     dragOverContainerId,
+    dragBlockedReason,
     dragPointer,
     handleDragPointerDown,
   } = useDiagramNodeDrag({
@@ -778,6 +783,7 @@ export function CompleteDiagramTree({
                   cutIds={cutIds}
                   draggingId={draggingId}
                   dragOverContainerId={dragOverContainerId}
+                  dragBlockedReason={dragBlockedReason}
                   onSelect={handleSelectNode}
                   onSelectionChange={onSelectionChange}
                   onContextMenu={handleContextMenu}

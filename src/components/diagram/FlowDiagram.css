@@ -1334,6 +1334,22 @@
     0 0 0 6px color-mix(in srgb, #5eb2ff 12%, transparent);
 }
 
+.fd-complete-node.is-drop-forbidden-depth {
+  border-color: var(--danger-text);
+  cursor: not-allowed;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--danger-text) 48%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--danger-bg) 70%, transparent);
+}
+
+.fd-complete-node.is-drop-forbidden-cycle {
+  border-color: var(--accent-2);
+  cursor: not-allowed;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-2) 48%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--accent-2-dim) 70%, transparent);
+}
+
 .fd-complete-node--root {
   width: var(--fd-node-root-width);
   border-color: var(--accent);

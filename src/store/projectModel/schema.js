@@ -5,6 +5,7 @@ import {
 } from '../../config/audioProcessing.js';
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
+import { assertProjectMenuDepth } from './menuDepth.js';
 
 // Forme canonique du projet :
 // - `rootEntries` porte l'arbre principal sauvegardé et manipulé à l'exécution.
@@ -510,6 +511,9 @@ export function migrateProjectData(rawData = {}, { savePath = null } = {}) {
 }
 
 export function normalizeBaseProject(project = {}) {
+  // Frontière de confiance partagée par le chargement, les snapshots et les
+  // mutations génériques : aucun normaliseur récursif ne reçoit un niveau 62.
+  assertProjectMenuDepth(project);
   const packMetadata = normalizePackMetadata(project.packMetadata ?? buildPackMetadataFromLegacy(project));
   const projectName = cleanProjectName(project.projectName || project.name, '');
   const shouldUseRootEntries = Array.isArray(project.rootEntries)

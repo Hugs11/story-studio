@@ -15,10 +15,17 @@ import {
   buildTopLevelMovePlan,
   wouldCreateMenuCycle,
 } from '../tree/treeOperations';
+import { validateMenuDepthMove } from '../../store/projectModel/menuDepth.js';
 
-const EMPTY_DROP_INFO = { targetId: null, position: 'inside', isContainer: false };
+const EMPTY_DROP_INFO = {
+  targetId: null,
+  position: 'inside',
+  isContainer: false,
+  invalidReason: null,
+};
 
 export function useTreeDnd({
+  project,
   projectIndex,
   selectedIds,
   flatNodes,
@@ -83,6 +90,36 @@ export function useTreeDnd({
     return { targetId, position: refY < overMidY ? 'before' : 'after', isContainer: false };
   }, [getEntry]);
 
+  const getCandidateIds = useCallback((activeEntryId) => (
+    selectedIds.size > 1 && selectedIds.has(activeEntryId)
+      ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
+      : [activeEntryId]
+  ), [flatNodes, selectedIds]);
+
+  const getTargetContainerId = useCallback((info) => {
+    if (!info || info.isContainer) return info?.targetId ?? null;
+    if (info.position === 'inside') {
+      const targetEntry = info.targetId ? getEntry(info.targetId) : null;
+      return targetEntry?.type === 'menu'
+        ? targetEntry.id
+        : getParentId(info.targetId);
+    }
+    return getParentId(info.targetId) ?? null;
+  }, [getEntry, getParentId]);
+
+  const withDropValidity = useCallback((info, activeEntryId) => {
+    if (!info || !activeEntryId) return info ?? EMPTY_DROP_INFO;
+    const targetContainerId = getTargetContainerId(info);
+    const candidateIds = getCandidateIds(activeEntryId);
+    const idsToMove = buildTopLevelMovePlan(candidateIds, getParentId, (id) => {
+      const entry = getEntry(id);
+      return entry && !wouldCreateMenuCycle(entry, targetContainerId, projectIndex);
+    });
+    if (idsToMove.length === 0) return { ...info, invalidReason: 'menu_cycle' };
+    const depth = validateMenuDepthMove(project, idsToMove, targetContainerId, projectIndex);
+    return { ...info, invalidReason: depth.allowed ? null : depth.code };
+  }, [getCandidateIds, getEntry, getParentId, getTargetContainerId, project, projectIndex]);
+
   const handleDragStart = useCallback((event) => {
     setActiveId(event.active.id);
   }, []);
@@ -90,14 +127,17 @@ export function useTreeDnd({
   const handleDragMove = useCallback((event) => {
     const { active, over } = event;
     const newInfo = over
-      ? computeDropInfo(over, active.rect.current?.translated ?? null)
+      ? withDropValidity(computeDropInfo(over, active.rect.current?.translated ?? null), active.id)
       : EMPTY_DROP_INFO;
     const prev = dropInfoRef.current;
-    if (prev.targetId !== newInfo.targetId || prev.position !== newInfo.position || prev.isContainer !== newInfo.isContainer) {
+    if (prev.targetId !== newInfo.targetId
+      || prev.position !== newInfo.position
+      || prev.isContainer !== newInfo.isContainer
+      || prev.invalidReason !== newInfo.invalidReason) {
       dropInfoRef.current = newInfo;
       setDropInfo(newInfo);
     }
-  }, [computeDropInfo]);
+  }, [computeDropInfo, withDropValidity]);
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
@@ -108,7 +148,7 @@ export function useTreeDnd({
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     const finalDropInfo = over
-      ? computeDropInfo(over, active.rect.current?.translated ?? null)
+      ? withDropValidity(computeDropInfo(over, active.rect.current?.translated ?? null), active.id)
       : null;
 
     setActiveId(null);
@@ -141,14 +181,18 @@ export function useTreeDnd({
       insertPosition = finalDropInfo.position;
     }
 
-    const candidateIds = selectedIds.size > 1 && selectedIds.has(active.id)
-      ? flatNodes.map((node) => node.id).filter((id) => id !== 'root' && selectedIds.has(id))
-      : [active.id];
+    const candidateIds = getCandidateIds(active.id);
     const idsToMove = buildTopLevelMovePlan(candidateIds, getParentId, (id) => {
       const entry = getEntry(id);
       return entry && !wouldCreateMenuCycle(entry, targetContainerId, projectIndex);
     });
     if (idsToMove.length === 0) return;
+
+    if (finalDropInfo.invalidReason === 'menu_depth_limit') {
+      // Le store refait le calcul et émet le message partagé, sans mutation.
+      onMoveToMenu(idsToMove, null, targetContainerId);
+      return;
+    }
 
     const moveIdSet = new Set(idsToMove);
     const fromContainerId = getParentId(idsToMove[0]);
@@ -196,6 +240,7 @@ export function useTreeDnd({
   }, [
     computeDropInfo,
     flatNodes,
+    getCandidateIds,
     getContainerEntries,
     getEntry,
     getParentId,
@@ -203,6 +248,7 @@ export function useTreeDnd({
     onReorder,
     projectIndex,
     selectedIds,
+    withDropValidity,
   ]);
 
   return {
