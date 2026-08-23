@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
+import { MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
 import { Tooltip } from '../common/Tooltip';
 import { ChevronDown, Eye } from '../icons/LucideLocal';
 import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
@@ -60,6 +61,7 @@ export function FullDiagramNode({
   cutIds,
   draggingId = null,
   dragOverContainerId = undefined,
+  dragBlockedReason = null,
   onSelect,
   onSelectionChange,
   onContextMenu,
@@ -89,6 +91,8 @@ export function FullDiagramNode({
   const sequenceCount = entry.type === 'story' ? (entry.afterPlaybackSequence?.length ?? 0) : 0;
   const containerId = isRoot ? null : entry.type === 'menu' ? entry.id : undefined;
   const isDropTarget = containerId === dragOverContainerId && draggingId !== null;
+  const isForbiddenDepth = isDropTarget && dragBlockedReason === 'menu_depth_limit';
+  const isForbiddenCycle = isDropTarget && dragBlockedReason === 'menu_cycle';
   const isDragging = draggingId === entry.id;
   const isSelected = selectedIds ? selectedIds.has(entry.id) : selectedId === entry.id;
   const isCut = cutIds?.has(entry.id);
@@ -96,7 +100,11 @@ export function FullDiagramNode({
   const canRegroupStories = (entry.type === 'menu' || entry.type === 'root') && hasExpandedStoryGroup;
   const collapseLabel = 'Replier les histoires';
   const dropLabel = isDropTarget
-    ? (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
+    ? isForbiddenDepth
+      ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
+      : isForbiddenCycle
+        ? 'Cycle de Dossiers interdit'
+        : (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
     : null;
 
   function handleClick(e) {
@@ -121,7 +129,7 @@ export function FullDiagramNode({
       ref={nodeRef}
       role="button"
       tabIndex={0}
-      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${hovered ? 'is-linked-hover' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''} ${nodeColor ? 'is-colored' : ''}`}
+      className={`fd-complete-node fd-complete-node--${entry.type} ${isSelected ? 'is-selected' : ''} ${hovered ? 'is-linked-hover' : ''} ${isDropTarget ? 'is-drop-target' : ''} ${isForbiddenDepth ? 'is-drop-forbidden-depth' : ''} ${isForbiddenCycle ? 'is-drop-forbidden-cycle' : ''} ${isDragging ? 'is-dragging' : ''} ${selectedIds && selectedIds.size > 1 && isSelected ? 'is-multi-selected' : ''} ${isCut ? 'is-cut' : ''} ${nodeColor ? 'is-colored' : ''}`}
       style={{
         ...(nodeColor ? { '--fd-node-color': nodeColor } : {}),
         ...(isCut ? { opacity: 0.4 } : {}),

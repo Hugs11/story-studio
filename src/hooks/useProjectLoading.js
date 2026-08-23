@@ -84,12 +84,26 @@ export function useProjectLoading({
   const handleLoad = useCallback(async () => {
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);
     if (!canContinue) return;
-    const result = await loadProject();
-    if (result) {
-      await onBeforeProjectReplaced?.();
-      await applyLoadedProject(result);
+    try {
+      const result = await loadProject();
+      if (result) {
+        await onBeforeProjectReplaced?.();
+        await applyLoadedProject(result);
+      }
+    } catch (error) {
+      logger.error(`load:error error=${error}`);
+      showErrorDialog({
+        title: error?.code === 'menu_depth_limit' ? 'Limite d’imbrication' : 'Ouverture du projet',
+        message: String(error?.message || error),
+      });
     }
-  }, [applyLoadedProject, confirmSaveBeforeLeaveCurrent, handleSaveProject, onBeforeProjectReplaced]);
+  }, [
+    applyLoadedProject,
+    confirmSaveBeforeLeaveCurrent,
+    handleSaveProject,
+    onBeforeProjectReplaced,
+    showErrorDialog,
+  ]);
 
   const handleLoadRecent = useCallback(async (path) => {
     const canContinue = await confirmSaveBeforeLeaveCurrent(handleSaveProject);

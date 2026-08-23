@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Tooltip } from '../common/Tooltip';
+import { MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
 import {
   IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon,
   IconReturn, IconStop, IconDiamond, IconArrowRight,
@@ -132,6 +133,8 @@ function TreeNodeInner({
   const showInsertBefore = isDragActive && dropTarget === 'before';
   const showInsertAfter = isDragActive && dropTarget === 'after';
   const showDropInside = isDragActive && dropTarget === 'inside';
+  const showForbiddenDepth = isDragActive && dropTarget === 'forbidden-depth';
+  const showForbiddenCycle = isDragActive && dropTarget === 'forbidden-cycle';
 
   const insertClass = showInsertBefore ? 'insert-before' : showInsertAfter ? 'insert-after' : '';
   const hasToggle = type === 'menu';
@@ -196,7 +199,15 @@ function TreeNodeInner({
         isHoverGuide ? 'hover-guide' : '',
         insertClass,
         showDropInside ? 'drop-target' : '',
+        showForbiddenDepth ? 'drop-forbidden-depth' : '',
+        showForbiddenCycle ? 'drop-forbidden-cycle' : '',
       ].filter(Boolean).join(' ')}
+      aria-label={type === 'menu' ? `${label}, Dossier niveau ${level}` : undefined}
+      title={showForbiddenDepth
+        ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
+        : showForbiddenCycle
+          ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre'
+          : undefined}
       data-tree-node-id={id}
       {...(type === 'story' || type === 'menu' || type === 'root'
         ? { 'data-media-node-id': id, 'data-media-node-type': type }
@@ -264,6 +275,9 @@ function TreeNodeInner({
           <span className="ti-label">{label}</span>
         )}
         {type === 'zip' && <span className="badge-zip">ZIP</span>}
+        {type === 'menu' && level > 6 ? (
+          <span className="badge-depth" title={`Dossier niveau ${level}`}>N{level}</span>
+        ) : null}
         {hasToggle && !expanded && childCount > 0 && (
           <span className="badge-count">{childCount}</span>
         )}

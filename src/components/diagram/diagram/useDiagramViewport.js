@@ -289,7 +289,11 @@ export function useDiagramViewport({
     lastFittedLayoutKeyRef.current = layoutKey;
   }, [containerWidth, containerHeight, scheduleViewportTransform]);
 
-  const centerViewportOnNode = useCallback((node) => {
+  const centerViewportOnNode = useCallback((node, { minimumZoom = 0 } = {}) => {
+    const requestedMinimum = Number.isFinite(minimumZoom) ? minimumZoom : 0;
+    if (zoomRef.current < requestedMinimum) {
+      zoomRef.current = clampZoom(requestedMinimum);
+    }
     const camera = centerDiagramNode({
       containerWidth,
       containerHeight,

@@ -1,4 +1,8 @@
 import { replaceEntryWithEntries } from './projectModel/operations.js';
+import {
+  ProjectMenuDepthError,
+  validateMenuDepthPlacement,
+} from './projectModel/menuDepth.js';
 import { basenameNoExt } from '../utils/fileUtils.js';
 import { parseConventionName } from '../utils/packConvention.js';
 import { sanitizeImportedName } from './importedNames.js';
@@ -85,6 +89,12 @@ export function buildProjectAfterZipUnpack({
 }) {
   const details = getUnpackedPackDetails({ result, zipPath, zipName });
   const shouldPromote = isBlankProjectForZipPromotion(project, menuId, { savedDuringUnpack });
+  const depthDiagnostic = validateMenuDepthPlacement(
+    project,
+    shouldPromote ? null : menuId,
+    entries,
+  );
+  if (!depthDiagnostic.allowed) throw new ProjectMenuDepthError(depthDiagnostic);
   const nextProject = shouldPromote
     ? {
         ...project,

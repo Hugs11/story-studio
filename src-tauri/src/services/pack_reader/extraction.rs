@@ -16,6 +16,7 @@ use crate::native_pack::{canonicalize_project, StoryDocument};
 use crate::support::imported_pack::ensure_studio_pack_zip;
 
 const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
+const PACK_EDITABILITY_STACK_BYTES: usize = 32 * 1024 * 1024;
 
 fn pack_uuid_from_doc(doc: &serde_json::Value) -> Option<&str> {
     let root_uuid = doc
@@ -162,6 +163,19 @@ impl PackEditabilityReport {
 /// Classe un pack en séparant fidélité round-trip, éditabilité authoring et
 /// inspection read-only. La fidélité seule ne rend jamais un pack éditable.
 pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport, String> {
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("story-studio-pack-editability".to_string())
+            .stack_size(PACK_EDITABILITY_STACK_BYTES)
+            .spawn_scoped(scope, || classify_pack_editability_inner(zip_path))
+            .map_err(|error| format!("Impossible de démarrer l'analyse du pack : {error}"))?;
+        worker.join().map_err(|_| {
+            "L'analyse d'éditabilité du pack s'est interrompue de façon inattendue.".to_string()
+        })?
+    })
+}
+
+fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityReport, String> {
     let zip_path = ensure_studio_pack_zip(zip_path)?;
     let story_json = read_story_json_from_zip(&zip_path)?;
     let doc: serde_json::Value =
@@ -987,8 +1001,8 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 mod tests {
     use super::{
         check_pack_editability, classify_pack_editability, extract_all_zip_assets,
-        extract_zip_thumbnail, unpack_zip_to_entries, unpack_zip_to_entries_unchecked,
-        unpack_zip_to_entries_with_policy,
+        extract_zip_thumbnail, project_from_imported_entries, unpack_zip_to_entries,
+        unpack_zip_to_entries_unchecked, unpack_zip_to_entries_with_policy,
     };
     use std::fs;
     use std::io::Write;
@@ -1149,6 +1163,128 @@ mod tests {
                 { "id": "play-action", "name": "Play", "options": ["play"] }
             ]
         })
+    }
+
+    fn nested_menu_story_json(depth: usize) -> serde_json::Value {
+        let selection_controls = serde_json::json!({
+            "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false
+        });
+        let mut stages = vec![serde_json::json!({
+            "uuid": "cover", "name": "Cover", "type": "stage", "squareOne": true,
+            "audio": "root.mp3", "image": "cover.png",
+            "controlSettings": selection_controls,
+            "okTransition": { "actionNode": "root-action", "optionIndex": 0 },
+            "homeTransition": null
+        })];
+        let mut actions = vec![serde_json::json!({
+            "id": "root-action", "name": "Racine", "options": ["menu-1"]
+        })];
+
+        for level in 1..=depth {
+            let stage_id = format!("menu-{level}");
+            let action_id = format!("menu-{level}-action");
+            let next_id = if level == depth {
+                "title".to_string()
+            } else {
+                format!("menu-{}", level + 1)
+            };
+            let side_id = format!("side-{level}");
+            stages.push(serde_json::json!({
+                "uuid": stage_id, "name": format!("Dossier {level}"), "type": "stage",
+                "squareOne": false, "audio": "menu.mp3", "image": "menu.png",
+                "controlSettings": selection_controls,
+                "okTransition": { "actionNode": action_id, "optionIndex": 0 },
+                "homeTransition": null
+            }));
+            stages.push(serde_json::json!({
+                "uuid": side_id, "name": format!("Histoire sœur {level}"), "type": "stage",
+                "squareOne": false, "audio": "story.mp3", "image": "item.png",
+                "controlSettings": {
+                    "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": false
+                },
+                "okTransition": null, "homeTransition": null
+            }));
+            actions.push(serde_json::json!({
+                "id": action_id, "name": format!("Choix {level}"), "options": [side_id, next_id]
+            }));
+        }
+
+        let return_action = if depth == 1 {
+            "root-action".to_string()
+        } else {
+            format!("menu-{}-action", depth - 1)
+        };
+        stages.extend([
+            serde_json::json!({
+                "uuid": "title", "name": "Titre", "type": "stage", "squareOne": false,
+                "audio": "item.mp3", "image": "item.png",
+                "controlSettings": selection_controls,
+                "okTransition": { "actionNode": "play-action", "optionIndex": 0 },
+                "homeTransition": { "actionNode": return_action, "optionIndex": 0 }
+            }),
+            serde_json::json!({
+                "uuid": "play", "name": "Lecture", "type": "stage", "squareOne": false,
+                "audio": "story.mp3", "image": null,
+                "controlSettings": {
+                    "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": false
+                },
+                "okTransition": null,
+                "homeTransition": { "actionNode": return_action, "optionIndex": 0 }
+            }),
+        ]);
+        actions.push(serde_json::json!({
+            "id": "play-action", "name": "Lecture", "options": ["play"]
+        }));
+
+        serde_json::json!({
+            "title": "Profondeur importée",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": stages,
+            "actionNodes": actions
+        })
+    }
+
+    fn nested_menu_assets() -> [&'static str; 7] {
+        [
+            "root.mp3",
+            "cover.png",
+            "menu.mp3",
+            "menu.png",
+            "item.mp3",
+            "item.png",
+            "story.mp3",
+        ]
+    }
+
+    #[test]
+    fn sixty_two_imported_folders_stay_simulable_but_read_only() {
+        let observed = crate::domain::project_limits::max_menu_depth() + 1;
+        let story = nested_menu_story_json(observed);
+        let imported =
+            super::walk_story_doc_to_entries(&story, &super::presence_faithful_asset_map(&story))
+                .expect("projection authoring");
+        let project = project_from_imported_entries(&imported, "Profondeur importée")
+            .expect("projet projeté");
+        let diagnostic = crate::domain::project_limits::project_menu_depth_diagnostic(&project)
+            .expect_err("la projection doit conserver les 62 niveaux");
+        assert_eq!(diagnostic.observed_depth, observed);
+
+        let dir = temp_dir("depth_62_read_only");
+        let zip_path = dir.join("depth-62.zip");
+        write_story_zip_with_assets(&zip_path, &story, &nested_menu_assets());
+        let report =
+            classify_pack_editability(zip_path.to_str().expect("utf8")).expect("verdict d'import");
+        assert!(!report.authoring_editable);
+        assert!(report.read_only_inspectable);
+        assert_eq!(
+            report.reason,
+            crate::domain::project_limits::project_menu_depth_error(observed)
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 
     fn nested_next_story_night_mode_story_json() -> serde_json::Value {

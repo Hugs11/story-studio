@@ -17,12 +17,19 @@ import {
 } from '../../store/endMessageHome.js';
 
 export function findEntryLocation(entries, targetId, menuPath = []) {
-  for (let index = 0; index < (entries?.length ?? 0); index += 1) {
-    const entry = entries[index];
-    if (entry.id === targetId) return { entry, menuPath, entryIdx: index };
-    if (entry.type === 'menu') {
-      const nested = findEntryLocation(entry.children ?? [], targetId, [...menuPath, entry.id]);
-      if (nested) return nested;
+  const stack = [];
+  for (let index = (entries?.length ?? 0) - 1; index >= 0; index -= 1) {
+    stack.push({ entry: entries[index], menuPath, entryIdx: index });
+  }
+  while (stack.length > 0) {
+    const location = stack.pop();
+    if (location.entry.id === targetId) return location;
+    if (location.entry.type === 'menu') {
+      const children = location.entry.children ?? [];
+      const childMenuPath = [...location.menuPath, location.entry.id];
+      for (let index = children.length - 1; index >= 0; index -= 1) {
+        stack.push({ entry: children[index], menuPath: childMenuPath, entryIdx: index });
+      }
     }
   }
   return null;

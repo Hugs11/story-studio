@@ -1,11 +1,10 @@
 const TREE_INDENT_BASE = 6;
-const TREE_INDENT_MAX_LEVEL = 6;
 const TREE_GUIDE_LEFT = 13;
 const TREE_GUIDE_STEP = 12;
 
 export function getTreeIndent(level) {
   const safeLevel = Math.max(level, 0);
-  return TREE_INDENT_BASE + Math.min(safeLevel, TREE_INDENT_MAX_LEVEL) * TREE_GUIDE_STEP;
+  return TREE_INDENT_BASE + safeLevel * TREE_GUIDE_STEP;
 }
 
 export function getTreeGuideStyleVars({ level, hoverGuideLevel }) {

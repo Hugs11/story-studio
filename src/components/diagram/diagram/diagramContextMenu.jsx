@@ -4,6 +4,10 @@ import { TREE_COLOR_PALETTE } from '../../tree/treeOperations';
 import { Copy, Scissors, ClipboardPaste, Trash2, FolderPlus, Music, Image as ImageIcon, Moon, House, FilePen, Play } from '../../icons/LucideLocal';
 import { END_NODE_ID } from '../flowDiagramLayout';
 import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../../store/mediaToolContext';
+import {
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  validateMenuDepthPlacement,
+} from '../../../store/projectModel/menuDepth.js';
 
 function setNodeColor({ nodeId, nodeType, color, onUpdateMedia, onUpdateMenu, onUpdateItem }) {
   const fields = { treeColor: color };
@@ -57,7 +61,18 @@ export function buildDiagramContextActions({
     : (findParentMenuId(project, nodeId, projectIndex) ?? null);
   const actions = [];
 
-  actions.push({ icon: <FolderPlus />, label: 'Ajouter un dossier', fn: () => onAddMenu?.(menuId) });
+  const addFolderDepth = validateMenuDepthPlacement(
+    project,
+    menuId,
+    [{ type: 'menu', children: [] }],
+    projectIndex,
+  );
+  actions.push({
+    icon: <FolderPlus />,
+    label: 'Ajouter un dossier',
+    fn: () => onAddMenu?.(menuId),
+    disabledReason: addFolderDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  });
   actions.push({ icon: <Music />, label: 'Importer audio ou archive', fn: () => onAddStory?.(menuId) });
 
   const hasEndNode = !!(project.nightModeAudio || project.globalOptions?.nightMode || project.globalOptions?.endNode);
@@ -91,7 +106,23 @@ export function buildDiagramContextActions({
 
   if (clipboardRef.current?.entries?.length) {
     if (!actions.some((action) => action === 'sep')) actions.push('sep');
-    actions.push({ icon: <ClipboardPaste />, label: 'Coller ici', fn: () => handlePaste(nodeId) });
+    const pasteDepth = validateMenuDepthPlacement(
+      project,
+      menuId,
+      clipboardRef.current.entries,
+      projectIndex,
+    );
+    const targetPath = menuId == null ? [] : (projectIndex?.pathById?.get(menuId) ?? []);
+    const pasteCreatesCycle = clipboardRef.current.isCut
+      && targetPath.some((pathEntry) => clipboardRef.current.sourceIds?.includes(pathEntry.id));
+    actions.push({
+      icon: <ClipboardPaste />,
+      label: 'Coller ici',
+      fn: () => handlePaste(nodeId),
+      disabledReason: pasteCreatesCycle
+        ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre.'
+        : pasteDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+    });
   }
 
   if ((nodeType === 'root' || nodeType === 'menu' || nodeType === 'story') && audioClipboard.get()) {
