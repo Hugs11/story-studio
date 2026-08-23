@@ -1,0 +1,128 @@
+---
+title: Préparer et exporter un pack
+description: Vérifier les métadonnées, la navigation et les médias avant de générer le ZIP final.
+---
+
+Un pack prêt combine une structure cohérente, des médias accessibles et des métadonnées relues.
+Story Studio t’aide à repérer les blocages, à parcourir la navigation puis à générer le ZIP.
+
+## 1. Conserver le projet source
+
+Le fichier **`.mbah`** est la source que tu peux rouvrir et modifier. Le ZIP généré est un résultat
+de diffusion : il ne remplace pas le projet.
+
+Enregistre le projet avant une vérification finale. Si la barre de titre affiche **Projet non
+enregistré**, utilise **Enregistrer comme projet** pour choisir son emplacement durable. Story
+Studio peut conserver une reprise temporaire d’une session interrompue, mais cette reprise ne
+remplace pas une sauvegarde volontaire. Consulte [Sessions temporaires et récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
+et [Workspace et fichiers de projet](/story-studio/docs/workspace-et-fichiers-de-projet/) pour
+comprendre où sont conservés le `.mbah` et ses médias.
+
+## 2. Relire le nom et les métadonnées
+
+La fenêtre de métadonnées prépare notamment :
+
+- le titre public du pack ;
+- l’auteur, le producteur, l’âge et la description ;
+- la version et l’identifiant du pack ;
+- le nom du fichier ZIP selon la convention choisie.
+
+Pour un pack importé, Story Studio peut proposer de renouveler l’identifiant lorsque tu crées une
+nouvelle révision. Garde l’identifiant d’origine uniquement si tu veux réellement remplacer cette
+même révision.
+
+## 3. Vérifier les options globales
+
+Les options du pack peuvent modifier tout le parcours : ajout ou normalisation des silences,
+harmonisation sonore, **Auto-next**, mode nuit et Message de fin. Relis-les avant l’export, surtout
+si plusieurs Histoires partagent le même comportement.
+
+L’option **Auto-next** prend temporairement la priorité sur certaines fins personnalisées. Consulte
+la page [Navigation](/story-studio/docs/navigation/) si la destination finale n’est pas celle que tu
+attends.
+
+## 4. Passer de « À corriger » à « Pack prêt »
+
+La pastille de validation possède trois états :
+
+- **Vérification…** : Story Studio contrôle encore l’accessibilité des fichiers ;
+- **À corriger** : au moins un point bloque la génération ;
+- **Pack prêt** : aucun problème bloquant connu n’est affiché.
+
+Ouvre **À corriger** pour voir les problèmes groupés par élément. Choisir une ligne amène à l’entrée
+concernée. Les causes courantes sont :
+
+- une image ou un audio obligatoire absent ;
+- un fichier déplacé ou supprimé ;
+- un Dossier vide ou un pack sans Histoire jouable ;
+- un ZIP inclus introuvable ;
+- une destination ou un Lien qui ne mène plus à un élément existant.
+
+Les mentions internes « avertissement » et « erreur » de cette liste restent toutes bloquantes dans
+l’interface actuelle. Elles décrivent la nature du problème, pas une permission de générer quand
+même.
+
+## 5. Lire le Diagramme
+
+Le **Diagramme** aide à contrôler l’arbre et les transitions calculées : choix, retours, liens,
+fins et parcours importés. Vérifie en particulier :
+
+- la première entrée atteinte après la sélection du pack ;
+- les retours **Accueil** depuis les Dossiers et les titres d’Histoires ;
+- la destination après la dernière Histoire d’une liste ;
+- le Message de fin et les fins locales ;
+- les convergences représentées par des Liens.
+
+Le diagramme montre le comportement préparé par Story Studio. Une position visuelle dans l’arbre ne
+suffit pas à prouver la destination d’une transition importée.
+
+## 6. Simuler depuis la racine ou un point choisi
+
+Le simulateur peut partir du début du projet ou d’un élément sélectionné. Teste au minimum :
+
+1. la molette au premier niveau et dans chaque Dossier important ;
+2. **OK** sur un Dossier puis sur le titre d’une Histoire ;
+3. **Accueil** avant, pendant et après la lecture ;
+4. la fin audio, le Message de fin et la destination suivante ;
+5. la dernière Histoire et les cas **Auto-next** ou mode nuit.
+
+Un ZIP importé non éditable peut aussi être simulé en lecture seule. Le simulateur est un excellent
+outil de diagnostic, mais un essai sur la boîte à histoires reste la validation matérielle finale.
+
+## 7. Générer le ZIP
+
+Clique sur **Générer le pack**. Story Studio :
+
+1. ouvre les métadonnées lorsqu’elles doivent être confirmées ;
+2. refuse de continuer si la validation est encore bloquante ;
+3. demande le dossier de sortie ;
+4. ajoute la génération à la **File de rendu** ;
+5. construit puis contrôle le ZIP.
+
+La génération applique la validation finale du moteur natif. Un projet importé dont la structure ne
+peut pas être reproduite fidèlement est bloqué plutôt que transformé silencieusement.
+
+## 8. Comprendre les avertissements après génération
+
+Une génération peut se terminer **avec avertissements**, notamment lorsqu’un traitement audio a dû
+amplifier ou limiter fortement une source. Dans ce cas, le ZIP existe et reste utilisable, mais
+écoute les passages signalés et vérifie-les de préférence sur la Lunii.
+
+Cette situation est différente de **À corriger** :
+
+| Moment | Effet |
+|---|---|
+| avant génération, **À corriger** | aucun ZIP n’est produit |
+| pendant la génération, erreur du moteur | la tâche échoue et explique la cause |
+| après génération, avertissement | le ZIP est produit ; une vérification ciblée est conseillée |
+
+## Contrôle final
+
+- garde le `.mbah` et ses médias ;
+- conserve une copie du ZIP validé ;
+- rouvre ou simule le ZIP si tu veux contrôler le fichier réellement produit ;
+- écoute les passages signalés ;
+- vérifie sur le matériel cible avant de partager largement le pack.
+
+Si la génération reste bloquée, consulte
+[Résoudre un blocage de génération](/story-studio/docs/resoudre-un-blocage-generation/).

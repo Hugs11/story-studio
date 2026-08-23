@@ -1,0 +1,308 @@
+---
+title: Exemples de structures
+description: Comparer plusieurs façons d’organiser des Histoires, avec leur parcours, leur fin et leurs compromis.
+---
+
+Ces exemples partent du choix vécu par l’enfant. Les noms sont illustratifs : ce sont le nombre de
+choix, leur ordre et leur destination qui déterminent la bonne structure.
+
+## 1. Une Histoire simple
+
+```text
+Mon histoire « Le Voyage du nuage »
+├── Image et Titre audio
+└── Récit complet
+```
+
+**Parcours.** Dans le menu principal, l’enfant sélectionne cette histoire, appuie sur **OK**, puis
+écoute le récit. À la fin, le comportement simple par défaut reste sur l’écran de lecture ;
+**Accueil** revient à la sélection du pack.
+
+**À choisir quand…** le pack contient un seul récit et n’a besoin ni de catégorie ni de navigation
+personnalisée.
+
+**Inconvénient.** Ce mode ne convient plus dès qu’un second récit ou un niveau de sélection devient
+nécessaire. L’interface le présente volontairement comme **Mon histoire**, et non comme un arbre
+artificiel « Menu racine → Histoire ».
+
+[Comprendre la présentation et la lecture](/story-studio/docs/histoire/#présentation-puis-lecture)
+
+## 2. Plusieurs Histoires directement au Menu racine
+
+```text
+Menu racine
+├── Histoire « La Cabane »
+├── Histoire « Le Cerf-volant »
+└── Histoire « La Rivière »
+```
+
+**Parcours.** L’enfant sélectionne le pack dans le menu principal et appuie sur **OK**. La molette
+parcourt alors directement les trois titres. **OK** lance l’Histoire affichée. Pour cet exemple,
+chaque sortie est configurée vers son propre titre : la molette permet ensuite d’en choisir une
+autre.
+
+**À choisir quand…** la liste est courte et toutes les Histoires ont le même niveau d’importance.
+
+**Inconvénient.** Une longue liste devient fatigante à parcourir et ne donne aucun repère de thème.
+
+**Fin.** Fin audio → retour automatique au titre de l’Histoire → nouveau choix à la molette.
+
+[Comprendre le Menu racine](/story-studio/docs/menu-racine/)
+
+## 3. Des Histoires regroupées par Dossiers
+
+```text
+Menu racine
+├── Dossier « Aventures »
+│   ├── Histoire « La Montagne »
+│   └── Histoire « Le Bateau »
+└── Dossier « Histoires calmes »
+    ├── Histoire « Le Jardin »
+    └── Histoire « La Lune »
+```
+
+**Parcours.** L’enfant choisit un thème, puis parcourt deux Histoires. À la fin d’un récit, le
+trajet revient au Dossier qui le contient.
+
+**À choisir quand…** deux catégories parlantes raccourcissent une liste et aident l’enfant à
+anticiper le contenu.
+
+**Inconvénient.** Avec seulement deux Histoires au total, ce premier choix ajoute probablement une
+étape sans bénéfice.
+
+**Fin.** Histoire → Dossier courant ; aucun Message de fin n’est nécessaire.
+
+[Savoir quand créer un Dossier](/story-studio/docs/dossier/)
+
+## 4. Plusieurs niveaux de Dossiers
+
+```text
+Menu racine
+└── Dossier « Thèmes »
+    ├── Dossier « Animaux »
+    │   ├── Histoire « Le Renard »
+    │   └── Histoire « Le Hibou »
+    └── Dossier « Véhicules »
+        ├── Histoire « Le Train »
+        └── Histoire « Le Bateau »
+```
+
+**Parcours.** L’enfant entre dans « Thèmes », choisit une famille, puis une Histoire. **Accueil**
+depuis le titre de « Le Renard » revient à « Animaux » ; pendant sa lecture, la destination Accueil
+reste celle configurée dans l’Histoire.
+
+**À choisir quand…** chaque niveau propose réellement plusieurs branches compréhensibles.
+
+**Inconvénient.** Si « Thèmes » est l’unique entrée du Menu racine, ce nom apporte peu : supprimer
+ce Dossier raccourcit le parcours sans perdre le classement Animaux/Véhicules, sauf s’il porte une
+introduction ou une transition réellement utile.
+
+**Fin.** Chaque Histoire revient à son Dossier immédiat, pas automatiquement au niveau le plus haut.
+
+[Comprendre les Dossiers imbriqués](/story-studio/docs/dossier/#plusieurs-niveaux-imbriqués)
+
+## 5. Une structure avec Message de fin
+
+```text
+Menu racine
+└── Dossier « Contes »
+    ├── Histoire « Le Géant » ─┐
+    └── Histoire « La Fée » ───┴─> Message de fin « À bientôt »
+                                      └─> Dossier « Contes »
+```
+
+**Parcours.** Après chaque récit, l’enfant entend « À bientôt ». Le message attend ici un appui sur
+**OK**, puis revient à « Contes ».
+
+**À choisir quand…** une conclusion commune a du sens pour plusieurs Histoires.
+
+**Inconvénient.** Un message identique après chaque récit peut devenir répétitif. Une fin locale est
+plus adaptée si une seule Histoire a besoin d’une conclusion particulière.
+
+**Fin.** Fin audio → Message de fin → attente OK → Dossier « Contes ».
+
+[Distinguer les trois moments de fin](/story-studio/docs/message-de-fin/#trois-moments-distincts)
+
+## 6. Sans Message de fin, avec retour direct
+
+```text
+Menu racine
+└── Dossier « Comptines »
+    ├── Histoire « Le Moulin » ──> Dossier « Comptines »
+    └── Histoire « La Ronde » ───> Dossier « Comptines »
+```
+
+**Parcours.** L’enfant choisit une comptine. Le réglage **Enchaîner** suit directement la destination
+du récit et réaffiche le Dossier à la fin du fichier.
+
+**À choisir quand…** le retour au choix suffit et aucun audio de conclusion n’apporte d’information.
+
+**Inconvénient.** La transition peut sembler abrupte si le récit ne possède pas sa propre phrase de
+conclusion.
+
+**Fin.** Fin audio → retour direct au Dossier, sans étape intermédiaire.
+
+[Choisir une destination après lecture](/story-studio/docs/navigation/#destinations-après-lecture)
+
+## 7. Un Dossier introductif transparent et automatique
+
+```text
+Menu racine : couverture du pack
+└── Dossier « Que veux-tu faire aujourd’hui ? »
+    ├── Écran transparent
+    ├── Audio de sélection introductif
+    ├── Lecture automatique
+    ├── Histoire « Se promener »
+    └── Histoire « Jouer à cache-cache »
+```
+
+**Parcours.** L’enfant sélectionne le pack et appuie sur **OK**. La couverture reste affichée
+pendant la question. À la fin de l’audio, le premier titre apparaît sans nouvel appui ; la molette
+permet de parcourir les autres Histoires.
+
+**À choisir quand…** une phrase doit introduire le contexte ou la question sans ajouter un nouvel
+écran visuel ni une validation supplémentaire.
+
+**Inconvénient.** Le retour par défaut d’une Histoire vers ce Dossier rejoue la question. Cet effet
+est utile pour un point de choix récurrent, mais répétitif si l’audio devait être entendu une seule
+fois.
+
+**Fin.** Histoire → Dossier transparent → question rejouée → retour automatique aux titres, sauf si
+une autre destination après lecture est configurée.
+
+[Découvrir les différents rôles d’un Dossier](/story-studio/docs/dossier/#plusieurs-manières-dutiliser-un-dossier)
+
+## 8. Une introduction jouée une fois avant un point de choix
+
+```text
+Menu racine
+└── Dossier transparent « Introduction »
+    └── Dossier transparent « Choisis un jeu »
+        ├── Histoire « Les couleurs »
+        └── Histoire « Les sons »
+```
+
+**Parcours.** Après la sélection du pack, l’enfant entend d’abord l’introduction, puis l’invitation
+à choisir un jeu. Les deux Dossiers avancent automatiquement. Après une Histoire, seule
+l’invitation du second Dossier est rejouée avant le nouveau choix.
+
+**À choisir quand…** une mise en situation doit être entendue une seule fois, mais qu’une question
+courte doit introduire chaque nouveau choix.
+
+**Inconvénient.** Les deux Dossiers sont difficiles à distinguer dans l’arbre si leurs noms ne
+décrivent pas clairement leurs rôles. Sans Lecture automatique, ils ajouteraient deux validations
+successives.
+
+**Fin.** Histoire → second Dossier → question rejouée → retour automatique aux titres. Le premier
+Dossier reste hors du trajet de retour.
+
+[Comprendre la séparation entre introduction et hub](/story-studio/docs/dossier/#séparer-une-introduction-unique-dune-question-répétée)
+
+## 9. Des options visibles qui ouvrent chacune un sous-parcours
+
+```text
+Dossier transparent et automatique « Choisis un univers »
+├── Dossier visible « Le ciel »
+│   └── Dossier transparent et automatique « Quel voyage veux-tu écouter ? »
+│       ├── Histoire « La Fusée »
+│       └── Histoire « Le Nuage »
+└── Dossier visible « La forêt »
+    └── Dossier transparent et automatique « Quel animal veux-tu suivre ? »
+        ├── Histoire « Le Renard »
+        └── Histoire « Le Hibou »
+```
+
+**Parcours.** Une question introduit les options illustrées « Le ciel » et « La forêt ». Le Dossier
+choisi ouvre une seconde question, puis la sélection des Histoires de ce sous-parcours.
+
+**À choisir quand…** chaque option de premier niveau doit posséder sa propre image ou son propre
+audio avant d’ouvrir une liste plus précise.
+
+**Inconvénient.** Les Dossiers visibles n’ont chacun qu’un enfant immédiat. Ils sont justifiés ici
+par leur rôle d’option et par le sous-parcours distinct qu’ils ouvrent ; sans média ni nouvelle
+question, ils ne feraient qu’allonger la navigation.
+
+**Fin.** Chaque Histoire revient à la question automatique de son sous-parcours, sans remonter à
+l’introduction commune sauf destination explicitement configurée.
+
+[Utiliser un Dossier comme porte vers un sous-parcours](/story-studio/docs/dossier/#ouvrir-un-sous-parcours-avec-une-option-visible)
+
+## 10. Un pack complet avec plusieurs niveaux et plusieurs retours
+
+Cet exemple rassemble les cas précédents dans un seul pack. Il permet de comparer un retour local,
+un retour au choix principal, une passerelle vers une autre branche et une sortie vers la
+couverture du pack.
+
+```text
+Menu racine « Le grand voyage »
+└── Dossier transparent automatique « Bienvenue »
+    └── Dossier transparent automatique « Où veux-tu partir ? »       ← HUB
+        ├── Dossier visible « La forêt »
+        │   └── Dossier transparent automatique « Quelle aventure en forêt ? »
+        │       ├── Histoire « Le renard et la lanterne » ── A
+        │       ├── Histoire « Le hibou cherchait la lune » ── B
+        │       └── Histoire « La cabane aux secrets » ────── C
+        └── Dossier visible « La mer »
+            └── Dossier transparent automatique « Quelle aventure en mer ? »
+                ├── Histoire « Le phare dans la tempête » ─── D
+                ├── Histoire « Le dauphin messager » ───────── E
+                └── Histoire « Le voilier des étoiles » ────── F
+
+A → Message de fin commun → question « forêt »
+B ─────────────────────────→ HUB « Où veux-tu partir ? »
+C ─────────────────────────→ titre D « Le phare dans la tempête »
+D → fin locale « Le phare est rallumé » → question « mer »
+E ─────────────────────────→ HUB « Où veux-tu partir ? »
+F ─────────────────────────→ sélection du pack « Le grand voyage »
+```
+
+### Premier parcours
+
+L’enfant choisit le pack, entend **Bienvenue**, puis **Où veux-tu partir ?**. Ces deux Dossiers sont
+automatiques : aucune validation supplémentaire n’est nécessaire. Il choisit ensuite **La forêt**,
+entend la question locale et parcourt trois Histoires avec la molette.
+
+L’introduction complète est ainsi jouée une seule fois. Les retours ordinaires peuvent viser la
+question locale ou le HUB sans la rejouer.
+
+### Six fins qui répondent à six intentions
+
+| Histoire | Suite choisie | Effet vécu |
+|---|---|---|
+| A — Renard | Message commun, puis question forêt | conclure puis choisir une autre Histoire de la même catégorie |
+| B — Hibou | HUB principal | changer d’univers sans ressortir du pack |
+| C — Cabane | titre du Phare | proposer explicitement une Histoire liée dans une autre branche |
+| D — Phare | fin locale, puis question mer | jouer une conclusion propre à ce récit |
+| E — Dauphin | HUB principal | revenir au choix Forêt/Mer |
+| F — Voilier | sélection du pack | terminer la session et retrouver la couverture |
+
+La passerelle C → D vise le **titre** du Phare : l’enfant voit et entend sa présentation avant
+d’appuyer sur **OK**. Une cible **Lecture directe – Le phare dans la tempête** sauterait cette étape
+et lancerait immédiatement le récit.
+
+### Accueil reste un réglage séparé
+
+Ces destinations décrivent la fin normale des Histoires. Elles ne définissent pas automatiquement
+le bouton **Accueil** pendant la lecture. Dans cet exemple, tu peux décider que :
+
+- Accueil sur le titre d’une Histoire revient à sa question locale, comportement courant ;
+- Accueil pendant les Histoires A à E revient au HUB principal ;
+- Accueil pendant F revient directement à la sélection du pack.
+
+Teste donc deux trajets pour chaque Histoire importante : laisser l’audio se terminer, puis
+recommencer et appuyer sur **Accueil** pendant la lecture. Les résultats peuvent être différents sans
+que la structure soit incohérente.
+
+### Quand choisir une structure aussi riche
+
+Ce montage convient à une collection dans laquelle l’enfant doit pouvoir rester dans une catégorie,
+changer de catégorie ou suivre une recommandation vers une autre branche. Il devient excessif si
+toutes les Histoires reviennent au même endroit : dans ce cas, garde deux Dossiers de catégories et
+un seul retour par défaut.
+
+[Utiliser la grille de test des retours](/story-studio/docs/navigation/#tester-un-retour-sans-se-perdre)
+
+:::tip[Comparer avant de remplir les médias]
+Crée d’abord l’arbre, puis utilise le diagramme et le simulateur depuis la racine. Tu peux ainsi
+compter les choix et les appuis sur **OK** avant de préparer chaque image et chaque audio.
+:::

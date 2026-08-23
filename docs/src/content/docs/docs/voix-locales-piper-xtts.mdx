@@ -1,0 +1,146 @@
+---
+title: "Voix locales : Piper et XTTS"
+description: Choisir Piper ou connecter un serveur XTTS compatible pour générer des voix localement.
+---
+
+Story Studio propose deux moteurs pour transformer un texte en audio. **Piper** convient à la
+plupart des projets. **XTTS** s’adresse aux personnes qui maintiennent déjà un environnement de
+synthèse vocale et, éventuellement, des voix de référence autorisées.
+
+## Quel moteur choisir ?
+
+| | Piper | XTTS |
+|---|---|---|
+| configuration | aucune installation de serveur | serveur Python externe à préparer |
+| usage conseillé | voix courantes et fiables | clonage ou modèles personnalisés |
+| démarrage | exécutable fourni avec Story Studio | manuel ou automatique depuis `server.py` |
+| voix | catalogue proposé par l’application | voix retournées par ton serveur |
+| disponibilité | moteur par défaut | intégration avancée facultative |
+
+Tu peux changer de moteur dans **Préférences → Génération de voix locale** sans redémarrer Story
+Studio.
+
+## Utiliser Piper
+
+Choisis **Piper (défaut)**, puis sélectionne une langue, une voix et sa vitesse. Le moteur Piper est
+fourni avec l’application. Le modèle de la voix choisie est téléchargé au premier usage ; une
+connexion réseau est donc nécessaire pour cette préparation initiale.
+
+Le bouton **Préparer la voix maintenant** permet d’effectuer ce téléchargement avant de commencer
+la rédaction. Ensuite, depuis un champ audio :
+
+1. clique sur **Générer une voix depuis un texte** ;
+2. saisis le texte et confirme la voix ;
+3. attends la fin de la tâche dans la **File IA** ;
+4. vérifie le résultat affecté au champ ou réutilise-le depuis les médias.
+
+Les voix Piper sont générées sur ta machine. Story Studio place les fichiers terminés dans le
+dossier géré **voix-générées** du travail courant.
+
+## Plateformes XTTS documentées
+
+| Plateforme Story Studio | Démarrage automatique attendu | Validation manuelle disponible |
+|---|---|---|
+| Windows x64 | `venv\Scripts\python.exe` | intégration Windows documentée ; pas de nouvelle campagne manuelle pendant cette phase éditoriale |
+| Linux x86_64 | `venv/bin/python` | mode CPU validé, avec **Forcer le CPU** |
+| macOS Apple Silicon | chemin POSIX prévu par le code | XTTS non installé ni validé manuellement ; aucune promesse de fonctionnement |
+
+Le support d’un chemin par le code ne remplace pas une validation réelle. Sous macOS, utilise Piper
+ou un audio importé dans la version documentée.
+
+## Ce que Story Studio attend d’une installation XTTS
+
+Story Studio n’installe ni Python, ni PyTorch, ni serveur XTTS. Il attend un environnement externe
+compatible, conservé hors du dépôt de l’application :
+
+```text
+XTTS/
+├── venv/
+│   ├── Scripts/python.exe    # Windows
+│   └── bin/python            # Linux
+├── server.py
+├── models/
+├── voices/
+└── output/
+```
+
+L’environnement Linux validé utilise Python 3.11 et des dépendances CPU verrouillées. Ne copie pas
+un `venv` Windows vers Linux : crée un environnement natif pour chaque système. Évite les commandes
+de mise à jour globale ou non épinglée ; conserve un fichier de versions correspondant au serveur
+que tu utilises.
+
+:::caution[Pas d’installateur XTTS universel]
+L’ancien guide recommandait un paquet Python non épinglé sans prouver qu’il exposait encore le
+contrat attendu. Cette commande n’est plus publiée. Utilise un `server.py` dont tu maîtrises les
+versions et qui fournit le test de santé, la liste des voix et la génération vers `output/` attendus
+par Story Studio.
+:::
+
+## Tester le serveur avant Story Studio
+
+Pour un diagnostic contrôlé, lance d’abord le serveur depuis son propre dossier et vérifie qu’il
+écoute sur `http://127.0.0.1:8020`. Son test de santé doit annoncer le modèle et l’appareil utilisé ;
+sa liste de voix doit contenir les profils attendus.
+
+Sous Linux, le mode validé est **CPU uniquement**. Le processus doit démarrer avec l’option `--cpu`
+et ne nécessite ni pilote NVIDIA propriétaire, ni CUDA. Laisse les modèles et voix privés hors des
+dépôts Git.
+
+Story Studio ne propose pas actuellement de bouton **Arrêter XTTS**. Si tu veux maîtriser
+explicitement son cycle de vie, démarre le serveur dans un terminal et arrête-le avec la commande
+prévue par ce terminal, généralement `Ctrl+C`.
+
+## Connecter XTTS dans les Préférences
+
+1. Ouvre **Préférences → Génération de voix locale**.
+2. Choisis **XTTS (avancé)**.
+3. Renseigne l’URL du serveur, normalement `http://127.0.0.1:8020`.
+4. Renseigne le dossier qui contient `server.py`, `venv`, `models`, `voices` et `output`.
+5. Active **Démarrer XTTS automatiquement** si cette arborescence est complète.
+6. Sous Linux, active **Forcer le CPU**.
+7. Clique sur **Tester et actualiser les voix**.
+
+Le test affiche le modèle, l’appareil CPU ou CUDA et les voix détectées. Les favoris servent
+uniquement à réduire la liste présentée dans la fenêtre de génération.
+
+Lorsque le démarrage automatique est actif, Story Studio lance `server.py` depuis le dossier XTTS,
+prépare les dossiers de modèles et attend jusqu’à environ 45 secondes que le test de santé réponde.
+
+## URL locale, réseau privé et confidentialité
+
+Le réglage le plus simple et le mieux validé reste l’adresse loopback `127.0.0.1`, sur la même
+machine que Story Studio. L’application refuse les serveurs XTTS publics et accepte seulement
+localhost, les adresses loopback et les IP privées du réseau local.
+
+Une URL du LAN est un usage avancé : Story Studio doit aussi pouvoir retrouver localement le fichier
+créé dans le dossier `output` configuré. Sans partage de fichiers cohérent, le test de connexion peut
+réussir alors que la récupération de l’audio échoue.
+
+Le texte envoyé, le nom de la voix et l’échantillon éventuel quittent alors l’ordinateur de Story
+Studio pour cette machine privée. Ils ne sont pas envoyés à un service public par l’intégration.
+
+## Erreurs fréquentes
+
+**Serveur XTTS indisponible**
+: Lance le serveur manuellement, ou active le démarrage automatique avec un dossier XTTS valide.
+
+**Python XTTS introuvable**
+: Vérifie l’arborescence du `venv` pour ton système. Un environnement créé sur un autre OS ne
+fonctionne pas.
+
+**`server.py` introuvable**
+: Le dossier renseigné n’est pas la racine XTTS attendue.
+
+**Aucune voix détectée**
+: Vérifie les réponses du serveur, le dossier `voices` et les journaux affichés sous le bouton de
+test. Une voix absente de la liste ne peut pas être sélectionnée.
+
+**Fichier attendu introuvable dans `output`**
+: Le serveur a répondu sans déposer exactement le fichier demandé dans le dossier `output` de
+l’installation configurée.
+
+**Génération lente**
+: Le mode CPU est sensiblement plus lent. Ce n’est pas une erreur si le serveur continue de
+répondre et produit un fichier valide.
+
+[Gérer les autres médias](/story-studio/docs/gestionnaire-de-medias/) · [Configurer ComfyUI](/story-studio/docs/comfyui/)

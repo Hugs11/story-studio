@@ -1,0 +1,64 @@
+---
+title: Créer un pack depuis un podcast
+description: Importer les épisodes d’un flux RSS comme Histoires dans un nouveau projet.
+---
+
+Cette entrée transforme une sélection d’épisodes de podcast en Histoires prêtes à être relues dans
+l’éditeur.
+
+![Sélection d’épisodes depuis un flux podcast](/story-studio/assets/screenshots/Podcast-import.png)
+
+## Charger le flux
+
+Colle l’adresse complète du flux RSS puis lance la recherche. Story Studio lit le titre, l’image et
+la liste des épisodes lorsque le serveur les fournit.
+
+Une page web de podcast n’est pas toujours un flux RSS. Si aucun épisode n’apparaît, recherche le
+lien RSS proposé par l’éditeur ou l’application qui héberge le podcast.
+
+## Choisir les épisodes
+
+Filtre la liste, sélectionne les épisodes utiles et vérifie leur ordre. Chaque épisode choisi
+devient une Histoire avec les informations et le fichier audio récupérables depuis le flux.
+
+Le téléchargement peut échouer pour un épisode supprimé, privé, sans fichier audio ou servi par une
+adresse inaccessible. Les autres épisodes sélectionnés restent utilisables lorsque leur import a
+réussi.
+
+## Relire dans l’éditeur
+
+À la fin de l’import, Story Studio ouvre le projet préparé. Relis pour chaque Histoire :
+
+- son nom et sa position dans l’Arbre ;
+- son image et son audio de sélection ;
+- le Récit complet téléchargé ;
+- son comportement après lecture.
+
+Le projet commence dans une session temporaire. Enregistre-le avant de déplacer ou de nettoyer les
+fichiers téléchargés.
+
+Pour six épisodes répartis en deux saisons, vise par exemple :
+
+```text
+Menu racine « Les enquêtes du mercredi »
+├── Dossier « Saison 1 »
+│   ├── Histoire « La clé disparue »
+│   ├── Histoire « Le message secret »
+│   └── Histoire « La cabane fermée »
+└── Dossier « Saison 2 »
+    ├── Histoire « Le train de minuit »
+    ├── Histoire « La carte déchirée »
+    └── Histoire « Le dernier indice »
+```
+
+L’import crée d’abord les Histoires sélectionnées ; les Dossiers sont une organisation éditoriale
+à construire ensuite. Vérifie aussi que l’image du flux reste lisible comme couverture et que chaque
+épisode possède un audio de sélection assez court.
+
+:::tip[Astuce]
+Pour une série longue, crée des Dossiers par saison, thème ou personnage plutôt qu’un seul menu de
+dizaines d’épisodes. L’enfant retrouve plus vite son choix et la molette reste agréable à utiliser.
+:::
+
+[Organiser avec des Dossiers](/story-studio/docs/dossier/) ·
+[Gérer les fichiers importés](/story-studio/docs/gestionnaire-de-medias/)

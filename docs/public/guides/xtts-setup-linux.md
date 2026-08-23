@@ -2,6 +2,10 @@
 
 # XTTS CPU setup on Linux
 
+> **Archived English guide.** This page is retained at its historical URL and describes Story
+> Studio 0.9.7. It is no longer the current user documentation. The maintained documentation is in
+> French: [Piper and XTTS local voices](https://hugs11.github.io/story-studio/docs/voix-locales-piper-xtts/).
+
 > Target: Story Studio 0.9.7 · Linux x86_64 · CPU only
 
 XTTS is optional. Story Studio also works with imported audio and its bundled

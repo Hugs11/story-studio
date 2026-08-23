@@ -1,0 +1,93 @@
+---
+title: Enregistrer et importer un audio
+description: Ajouter un son depuis un fichier ou le microphone, puis choisir l’outil adapté pour le préparer.
+---
+
+Chaque champ audio propose les mêmes chemins de départ : choisir un fichier, enregistrer au
+microphone ou générer une voix locale. Le son obtenu reste ensuite modifiable et réutilisable dans
+le projet.
+
+## Identifier le bon champ
+
+Avant d’enregistrer, vérifie le moment où le son sera joué :
+
+| Champ | Ce que l’enfant entend |
+|---|---|
+| **Titre audio** du Menu racine | présentation du pack dans le menu principal |
+| **Audio de sélection** d’un Dossier | catégorie, question ou introduction |
+| **Audio de sélection** d’une Histoire | titre entendu pendant le choix |
+| **Histoire complète** | récit principal après validation |
+| **Audio de fin d’histoire** | Message de fin facultatif |
+
+Un titre gagne à être court et facilement répétable. Une introduction ou un récit long doit plutôt
+occuper son propre Dossier ou une Histoire.
+
+## Importer un fichier
+
+Clique sur le champ vide, choisis un fichier compatible puis écoute-le directement dans les
+Réglages. Si la copie des imports est activée, Story Studio place une copie dans
+`fichiers-importes/` ; sinon, le projet conserve le chemin de la source.
+
+Tu peux aussi :
+
+- faire glisser un son depuis le Gestionnaire de médias vers un champ compatible ;
+- importer plusieurs fichiers ou un dossier depuis la barre **Ajouter** ;
+- importer un dossier récursif : ses sous-dossiers deviennent des Dossiers et ses audios des
+  Histoires, à relire avant de poursuivre ;
+- copier, couper ou coller un son entre deux champs avec leur menu contextuel.
+
+## Générer plusieurs titres audio depuis les noms
+
+Dans l’Arbre, sélectionne plusieurs Dossiers ou Histoires puis utilise la génération groupée des
+Réglages. Story Studio prépare, avec la voix locale configurée, un court audio prononçant le nom de
+chaque élément compatible. Les ZIP inclus dans la sélection sont ignorés.
+
+Cette action remplit les audios de sélection ; elle ne transforme pas les noms en Histoires
+complètes. Relis les noms avant de lancer le lot, puis écoute quelques résultats, notamment les
+sigles, nombres et noms propres. Avec XTTS, choisis d’abord une voix dans une génération unitaire ;
+Piper possède déjà une voix par défaut.
+
+## Enregistrer au microphone
+
+Depuis un champ, utilise **Enregistrer l’audio** ou **Remplacer par un enregistrement**. Depuis la
+barre **Ajouter**, **Enregistrer une histoire avec le micro** crée directement une nouvelle Histoire.
+
+1. choisis le microphone disponible ;
+2. lance l’enregistrement et laisse un court silence avant de parler ;
+3. arrête, réécoute puis recommence si nécessaire ;
+4. valide le fichier retenu.
+
+Story Studio conserve l’enregistrement dans `enregistrements/` du travail courant. Si le projet
+n’a encore ni fichier `.mbah` ni emplacement de travail, l’application demande d’abord de
+l’enregistrer afin de ne pas produire un son sans destination durable.
+
+Sous macOS, le premier enregistrement peut déclencher la demande d’autorisation du microphone. Un
+refus du système n’empêche pas d’importer un fichier déjà enregistré.
+
+## Choisir la correction suivante
+
+| Besoin | Outil |
+|---|---|
+| retirer un silence, une erreur ou adoucir une coupe | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| tirer plusieurs Histoires d’un long enregistrement | [Découper un audio](/story-studio/docs/decouper-un-audio/) |
+| réunir plusieurs prises dans un seul récit | [Assembler des audios](/story-studio/docs/assembler-des-audios/) |
+| transformer un texte en voix | [Piper ou XTTS](/story-studio/docs/voix-locales-piper-xtts/) |
+
+Les options globales de silence et d’harmonisation sont appliquées à la génération du pack. Elles
+ne remplacent pas l’écoute d’une coupe ni la correction d’une source saturée.
+
+## Remplacer sans perdre le précédent
+
+Quand un champ reçoit un nouveau son, l’ancien fichier reste visible dans **Médias → Non utilisés**
+tant qu’il appartient à la bibliothèque du projet. Tu peux ainsi le comparer ou le réaffecter.
+
+**Retirer** dissocie le son du champ. Une suppression physique n’est proposée que pour certains
+fichiers inutilisés créés ou gérés par Story Studio ; une source externe n’est pas effacée.
+
+:::tip[Astuce]
+Pour une session avec plusieurs récits, enregistre une prise longue, conserve-la comme original,
+puis découpe-la. Tu éviteras de multiplier les démarrages du microphone et garderas une source
+commune si une coupe doit être refaite.
+:::
+
+[Retrouver les fichiers dans le Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/)
