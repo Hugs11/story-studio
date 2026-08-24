@@ -192,6 +192,7 @@ pub fn run() {
             commands::podcast::fetch_podcast_feed,
             commands::podcast::download_podcast_media,
             commands::youtube::fetch_youtube_list,
+            commands::youtube::fetch_youtube_audio_languages,
             commands::youtube::download_youtube_audio,
             commands::youtube::update_ytdlp,
             commands::session::create_session_workspace,

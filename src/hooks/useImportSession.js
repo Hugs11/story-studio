@@ -485,6 +485,7 @@ export function useImportSession({
         videoUrl: entry.audioUrl,
         fileName: displayName,
         ytdlpPath,
+        audioLanguage: entry.audioLanguage || null,
       });
     }
     return invoke('download_podcast_media', { url: entry.audioUrl, fileName: displayName });

@@ -22,6 +22,7 @@ pub fn download_audio(
     custom: Option<&str>,
     video_url: &str,
     file_name: &str,
+    audio_language: Option<&str>,
     emit: &dyn Fn(&str),
 ) -> Result<String, String> {
     validate_youtube_url(video_url)?;
@@ -38,6 +39,7 @@ pub fn download_audio(
     let dest = output_dir.join(format!("{}.mp3", stem));
     // yt-dlp remplace `%(ext)s` ; après extraction MP3 le fichier est `<stem>.mp3`.
     let out_template = output_dir.join(format!("{}.%(ext)s", stem));
+    let format_selector = audio_format_selector(audio_language);
 
     emit("Téléchargement de l'audio…");
     let mut cmd = Command::new(&exe);
@@ -49,7 +51,7 @@ pub fn download_audio(
         "--max-filesize".as_ref(),
         MAX_FILESIZE.as_ref(),
         "-f".as_ref(),
-        "bestaudio/best".as_ref(),
+        format_selector.as_ref(),
         "-x".as_ref(),
         "--audio-format".as_ref(),
         "mp3".as_ref(),
@@ -79,6 +81,27 @@ pub fn download_audio(
         return Err("yt-dlp n'a produit aucun fichier audio.".to_string());
     }
     Ok(path_for_frontend(&dest))
+}
+
+/// Une langue explicitement choisie est préférée, puis le contrat historique
+/// reprend la main si YouTube ne l'expose plus au moment du téléchargement.
+/// La validation protège la syntaxe du sélecteur yt-dlp, même si la valeur vient
+/// normalement des métadonnées produites par ce même outil.
+fn audio_format_selector(language: Option<&str>) -> String {
+    let language = language.map(str::trim).filter(|value| {
+        !value.is_empty()
+            && value.len() <= 35
+            && value
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric())
+            && value
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+    });
+    language
+        .map(|value| format!("bestaudio[language={}]/bestaudio/best", value))
+        .unwrap_or_else(|| "bestaudio/best".to_string())
 }
 
 /// Radical de fichier sûr et unique dans `dir` (mêmes règles que le podcast :
@@ -147,7 +170,7 @@ fn cleanup_stem_files(dir: &Path, stem: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{cleanup_stem_files, unique_stem};
+    use super::{audio_format_selector, cleanup_stem_files, unique_stem};
     use std::path::PathBuf;
     use uuid::Uuid;
 
@@ -168,6 +191,18 @@ mod tests {
         std::fs::write(dir.join("partial.webm.part"), b"x").unwrap();
         assert_eq!(unique_stem(&dir, "partial"), "partial-1");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn selects_requested_language_with_historical_fallback() {
+        assert_eq!(
+            audio_format_selector(Some("fr-CA")),
+            "bestaudio[language=fr-CA]/bestaudio/best"
+        );
+        assert_eq!(audio_format_selector(None), "bestaudio/best");
+        assert_eq!(audio_format_selector(Some("fr]/best")), "bestaudio/best");
+        assert_eq!(audio_format_selector(Some("-fr")), "bestaudio/best");
+        assert_eq!(audio_format_selector(Some("  ")), "bestaudio/best");
     }
 
     #[test]
