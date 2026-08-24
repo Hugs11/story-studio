@@ -11,6 +11,10 @@ Story Studio t’aide à repérer les blocages, à parcourir la navigation puis 
 Le fichier **`.mbah`** est la source que tu peux rouvrir et modifier. Le ZIP généré est un résultat
 de diffusion : il ne remplace pas le projet.
 
+La page [Projet .mbah ou extraction du ZIP ?](/story-studio/docs/projet-mbah-ou-extraction-zip/)
+explique pourquoi le ZIP reste précieux comme version publiée, sans devenir pour autant la meilleure
+source pour les futures modifications.
+
 Enregistre le projet avant une vérification finale. Si la barre de titre affiche **Projet non
 enregistré**, utilise **Enregistrer comme projet** pour choisir son emplacement durable. Story
 Studio peut conserver une reprise temporaire d’une session interrompue, mais cette reprise ne
@@ -56,7 +60,7 @@ concernée. Les causes courantes sont :
 - un fichier déplacé ou supprimé ;
 - un Dossier vide ou un pack sans Histoire jouable ;
 - un ZIP inclus introuvable ;
-- une destination ou un Lien qui ne mène plus à un élément existant.
+- une destination qui ne mène plus à un élément existant.
 
 Les mentions internes « avertissement » et « erreur » de cette liste restent toutes bloquantes dans
 l’interface actuelle. Elles décrivent la nature du problème, pas une permission de générer quand
@@ -64,14 +68,14 @@ même.
 
 ## 5. Lire le Diagramme
 
-Le **Diagramme** aide à contrôler l’arbre et les transitions calculées : choix, retours, liens,
-fins et parcours importés. Vérifie en particulier :
+Le **Diagramme** aide à contrôler l’arbre et les transitions calculées : choix, retours, fins et
+parcours importés. Vérifie en particulier :
 
 - la première entrée atteinte après la sélection du pack ;
 - les retours **Accueil** depuis les Dossiers et les titres d’Histoires ;
 - la destination après la dernière Histoire d’une liste ;
 - le Message de fin et les fins locales ;
-- les convergences représentées par des Liens.
+- les retours qui conduisent vers une autre branche du pack.
 
 Le diagramme montre le comportement préparé par Story Studio. Une position visuelle dans l’arbre ne
 suffit pas à prouver la destination d’une transition importée.

@@ -1,0 +1,132 @@
+---
+title: Projet .mbah ou extraction du ZIP ?
+description: Choisir entre conserver le projet source et reprendre plus tard le pack ZIP déjà généré.
+---
+
+Il existe deux manières de reprendre un pack au fil du temps : conserver son projet `.mbah` avec
+ses médias, ou repartir du ZIP précédemment généré. Les deux fonctionnent, mais elles ne répondent
+pas au même besoin.
+
+**Conserver le projet `.mbah` est la méthode recommandée.** L’extraction d’un ZIP est surtout une
+solution de récupération, d’échange ou de modification lorsque le projet source n’est plus
+disponible.
+
+## Méthode 1 — Conserver le projet et les originaux
+
+Le fichier `.mbah` conserve la structure du pack, ses réglages, ses métadonnées et les références
+vers ses médias. Pour préparer une nouvelle édition :
+
+1. rouvre le projet existant ;
+2. ajoute, retire ou réorganise les épisodes ;
+3. mets à jour les métadonnées et la version du pack ;
+4. vérifie les parcours qui ont changé ;
+5. génère un nouveau ZIP.
+
+Cette méthode conserve les fichiers audio et image utilisés pendant la création. Si tu possèdes un
+enregistrement WAV, FLAC ou une autre source de bonne qualité, tu peux donc refaire un montage ou un
+encodage à partir de cette source plutôt qu’à partir du MP3 déjà placé dans le pack final.
+
+:::caution[Le fichier .mbah ne contient pas forcément tous les médias]
+Le `.mbah` peut référencer des fichiers situés ailleurs sur l’ordinateur. Copier uniquement ce
+fichier ne constitue donc pas toujours une sauvegarde complète. Utilise **Consolider le projet**
+avant un transfert ou une archive afin de regrouper le projet et ses médias référencés.
+:::
+
+### Avantages
+
+- les originaux de meilleure qualité restent disponibles ;
+- la structure et les réglages restent directement modifiables ;
+- l’ajout régulier de nouveaux épisodes est plus simple ;
+- tu évites de repartir inutilement d’un média déjà compressé ;
+- le ZIP publié reste un résultat de diffusion, distinct de la source de travail.
+
+### Point de vigilance
+
+Le projet dépend de ses médias. Sauvegarde ensemble le `.mbah`, le dossier consolidé et, si tu en
+possèdes, les masters audio ou images qui ne sont pas directement utilisés par Story Studio.
+
+## Méthode 2 — Extraire le ZIP généré
+
+Le ZIP contient tout ce dont la Lunii a besoin pour lire le pack : navigation, métadonnées et médias
+déjà préparés. Avec **Modifier un pack existant**, Story Studio peut analyser cette archive et, si
+son parcours est fidèlement reconstructible, l’ouvrir comme un nouveau projet éditable.
+
+Cette méthode est utile lorsque :
+
+- le `.mbah` ou son dossier de médias a été perdu ;
+- tu reçois un pack sans ses sources de création ;
+- tu veux apporter une petite correction à une ancienne publication ;
+- tu souhaites étudier ou récupérer les médias d’un pack existant.
+
+### Ce qui arrive aux audios
+
+L’extraction du ZIP **ne décompresse pas le son au sens audio et ne le réencode pas** : elle copie le
+fichier MP3 contenu dans l’archive. À ce stade, sa qualité ne change pas.
+
+En revanche, ce MP3 est déjà un fichier compressé avec perte. Lors de la nouvelle génération,
+Story Studio peut le recopier sans modification s’il est déjà compatible et si aucun traitement
+n’est nécessaire. Il doit toutefois le réencoder lorsqu’un changement de format, de canaux, de
+silences ou de niveau sonore est demandé. Une édition du son — coupe, fondu, assemblage ou autre
+traitement — produit également un nouveau fichier à partir de cette source déjà compressée.
+
+Chaque réencodage avec perte peut ajouter de petits défauts. Ils ne sont pas toujours audibles après
+une seule opération, mais répéter le cycle **ZIP → extraction → modification → ZIP** n’est pas une
+bonne méthode d’archivage pour un projet entretenu pendant plusieurs années.
+
+### Autres limites
+
+- certains graphes complexes ne peuvent être ouverts qu’en lecture seule ;
+- une extraction forcée peut récupérer des médias sans garantir une structure régénérable ;
+- les fichiers extraits ne remplacent pas les masters utilisés avant la première génération ;
+- il faut comparer les retours, les fins et le mode nuit avec le ZIP d’origine avant de republier.
+
+## Comparer rapidement les deux méthodes
+
+| Situation | Méthode conseillée |
+|---|---|
+| ajouter régulièrement de nouveaux épisodes | conserver et mettre à jour le `.mbah` |
+| refaire un montage ou améliorer le son | repartir des originaux du projet |
+| transférer le travail vers une autre machine | consolider le projet, puis copier le dossier obtenu |
+| diffuser ou installer une version terminée | conserver le ZIP généré |
+| le projet source est perdu | extraire le ZIP en conservant l’archive originale |
+| corriger rapidement un ancien pack reçu seul | extraire, vérifier l’éditabilité, modifier puis écouter le résultat |
+
+## Organisation recommandée
+
+Pour un pack suivi dans le temps, conserve trois niveaux distincts :
+
+```text
+Mon pack/
+├── Sources originales/
+│   ├── enregistrements WAV ou FLAC
+│   └── images de travail
+├── Projet Story Studio consolidé/
+│   ├── mon-pack.mbah
+│   └── médias utilisés par le projet
+└── Versions publiées/
+    ├── mon-pack-v1.zip
+    ├── mon-pack-v2.zip
+    └── mon-pack-v3.zip
+```
+
+Le projet consolidé est la source modifiable. Les ZIP permettent de retrouver exactement les
+versions diffusées. Les originaux offrent la meilleure base si un média doit être retravaillé.
+
+## Si tu ne possèdes plus que le ZIP
+
+1. conserve une copie intacte du ZIP d’origine ;
+2. ouvre **Modifier un pack existant** et vérifie le verdict d’éditabilité ;
+3. simule quelques parcours importants avant toute modification ;
+4. enregistre immédiatement le résultat extrait comme nouveau projet `.mbah` ;
+5. remplace les audios à modifier par de meilleurs originaux si tu peux les retrouver ;
+6. génère sous un nouveau nom et écoute les passages modifiés ;
+7. compare les retours et les fins avec l’archive d’origine.
+
+:::tip[En bref]
+Garde le `.mbah` consolidé pour continuer à créer. Garde chaque ZIP pour archiver ce qui a été
+publié. N’utilise l’extraction du ZIP comme source principale que lorsque le projet d’origine n’est
+plus disponible.
+:::
+
+[Consolider le projet et ses médias](/story-studio/docs/workspace-et-fichiers-de-projet/#consolider-un-projet/) ·
+[Importer et extraire un pack](/story-studio/docs/importer-et-extraire-un-pack/)

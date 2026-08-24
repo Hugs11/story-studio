@@ -40,14 +40,14 @@ fichier source reste inchangé dans les deux cas.
 ## Structure reconstruite et fidélité
 
 Un pack importé peut contenir des convergences, cycles, retours ou étapes partagées qui ne se
-résument pas à une arborescence. Story Studio conserve alors les informations nécessaires pour
-comparer le graphe régénéré à l’original.
+résument pas à une arborescence.
 
-Si la structure visible et le graphe préservé divergent, la génération est bloquée. La fidélité est
-prioritaire sur une conversion qui semblerait réussir mais modifierait silencieusement le parcours.
+Avant d’ouvrir un pack comme projet éditable, Story Studio construit une projection temporaire puis
+vérifie que sa navigation peut être régénérée fidèlement. Si le résultat ne correspond pas au pack
+d’origine, celui-ci reste en lecture seule dans le Simulateur.
 
-Les éléments **Lien** représentent certaines convergences sans dupliquer leur cible. Vérifie-les
-dans l’Arbre, le Diagramme et le simulateur avant de modifier les retours ou les fins.
+Cette vérification évite de présenter comme réussie une conversion qui modifierait silencieusement
+les choix ou les retours du pack.
 
 ## Extraction forcée
 
@@ -56,15 +56,15 @@ permet d’afficher une tentative supplémentaire.
 
 :::caution[Structure potentiellement incomplète]
 Une extraction forcée sert à récupérer des éléments ou des médias. Elle ne garantit ni une
-réimportation fidèle après un nouvel export, ni un projet immédiatement générable. Relis toute la structure et conserve
-toujours l’archive source.
+réimportation fidèle après un nouvel export, ni un projet immédiatement générable. Relis toute la
+structure et conserve toujours l’archive source.
 :::
 
 ## Vérifier le résultat
 
 1. Simule le pack original et note ses choix, retours et fins importants.
 2. Compare le résultat extrait dans l’Arbre et le Diagramme.
-3. Vérifie les médias manquants et les Liens.
+3. Vérifie les médias manquants ainsi que les étapes absentes ou inattendues.
 4. Modifie un seul point à la fois.
 5. Passe la validation et simule le projet avant de générer un nouveau ZIP.
 
