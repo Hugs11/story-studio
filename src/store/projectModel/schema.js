@@ -470,7 +470,10 @@ function buildPackMetadataFromLegacy(project = {}) {
   });
 }
 
-export function migrateProjectData(rawData = {}, { savePath = null } = {}) {
+export function migrateProjectData(rawData = {}, {
+  savePath = null,
+  preserveEmptyProjectName = false,
+} = {}) {
   const source = rawData && typeof rawData === 'object' ? rawData : {};
   const hasNewMetadata = source.packMetadata && typeof source.packMetadata === 'object';
   const packMetadata = normalizePackMetadata(
@@ -485,13 +488,16 @@ export function migrateProjectData(rawData = {}, { savePath = null } = {}) {
   );
 
   const saveStem = basenameNoExt(savePath);
+  const explicitProjectName = String(source.projectName ?? '').trim();
   const legacyName = String(source.name ?? '').trim();
   const legacyNameIsConvention = !!parseConventionName(legacyName);
   const localLegacyName = legacyName && !legacyNameIsConvention ? legacyName : '';
-  const projectName = cleanProjectName(
-    source.projectName || saveStem || localLegacyName,
-    'nouveau-projet',
-  );
+  const projectName = preserveEmptyProjectName && !explicitProjectName
+    ? ''
+    : cleanProjectName(
+        explicitProjectName || saveStem || localLegacyName,
+        'nouveau-projet',
+      );
 
   const {
     name: _name,
