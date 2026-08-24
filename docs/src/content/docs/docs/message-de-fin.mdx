@@ -1,92 +1,166 @@
 ---
 title: Message de fin
-description: Comprendre l’étape audio facultative jouée entre la fin d’une Histoire et sa destination suivante.
+description: Ajouter une conclusion commune jouée après les Histoires avant la suite du parcours.
 ---
 
-Le **Message de fin** est une étape audio facultative et commune au pack. Lorsqu’il participe au
-parcours d’une Histoire, il est joué après son audio principal et avant sa destination finale.
+Le **Message de fin** est un audio facultatif et commun au pack. Il permet de jouer la même
+conclusion après plusieurs Histoires, avant de revenir vers un choix ou de poursuivre le parcours.
 
-## Trois moments distincts
+Par exemple, toutes les Histoires d’un pack peuvent se terminer par :
 
-```text
-1. fin du fichier « Histoire complète »
-                ↓
-2. lecture éventuelle du Message de fin
-                ↓
-3. destination suivante
-```
+> « L’histoire est terminée. À bientôt pour une nouvelle aventure ! »
 
-La fin audio n’est donc ni le Message de fin, ni le retour vers un Dossier. Supprimer le Message de
-fin ne supprime pas la destination de l’Histoire ; cela retire seulement l’étape intermédiaire.
-
-## Une option, pas une obligation
-
-Le Message de fin est ajouté depuis le menu contextuel de la structure ou du diagramme. Il possède
-son propre nom et son propre **Audio de fin d’histoire**.
-
-Un Message de fin créé mais sans audio peut apparaître dans l’arbre et le diagramme pour préparer
-le parcours, mais la génération signale alors **Audio requis pour la génération**. Il ne devient
-une étape du pack exportable qu’avec un fichier audio valide.
-
-## Quelles Histoires l’utilisent
-
-Une Histoire utilise le message commun lorsqu’aucune fin locale ne le remplace et lorsque le
-parcours généré le prévoit. Les cas principaux qui l’écartent sont :
-
-- un **Message de fin personnalisé** propre à cette Histoire ;
-- un **Scénario de fin** local ;
-- l’option globale **Auto-next**, qui ignore messages, scénarios et retours de fin tant qu’elle est
-  active ;
-- certaines structures importées dont la navigation préservée possède une autre fin.
-
-L’éditeur du Message de fin liste les **Fins locales** détectées. Il permet de les examiner ou de les
-**Rattacher au message du pack**.
-
-## Automatiquement ou après OK
-
-Le réglage **Quand passer à la suite ?** possède deux comportements :
-
-- **Automatiquement** : la destination s’ouvre dès la fin de l’audio du message ;
-- **Après appui sur OK** : l’enfant reste sur le Message de fin jusqu’à la validation.
-
-Un pack importé peut conserver un réglage mixte : certaines Histoires continuent automatiquement,
-d’autres attendent **OK**, et une structure inhabituelle peut rester sur le message sans sortie
-automatique. Story Studio affiche alors ce mélange au lieu de le normaliser silencieusement.
-
-## La destination après le message
-
-Le champ **Retour après le message** peut imposer une destination commune. Lorsqu’il reste sur
-**Selon chaque histoire**, chaque trajet conserve la destination individuelle, héritée ou par
-défaut de son Histoire source.
+Le Message de fin est une étape distincte de l’Histoire elle-même et de la destination qui vient
+ensuite.
 
 ```text
-Histoire A → Message de fin → Dossier A
-Histoire B → Message de fin → Histoire suivante
+Histoire complète « Le Renard »
+        ↓ fin de l’audio
+Message de fin
+« L’histoire est terminée. À bientôt ! »
+        ↓
+Destination suivante
+Dossier « Animaux »
 ```
 
-Un même audio de fin peut ainsi précéder plusieurs destinations. Le Message de fin n’est pas, à lui
-seul, une destination.
+Supprimer le Message de fin retire seulement cette conclusion commune : le retour ou la destination
+prévue après l’Histoire reste configuré.
 
-## Le bouton Accueil pendant le message
+## Ajouter un Message de fin
 
-**Bouton Accueil** possède une destination indépendante du retour **OK**. Sans destination
-explicite, il revient à la sélection du pack, c’est-à-dire à sa couverture dans le menu principal.
-Avec une cible configurée, il suit cette cible ; il ne copie pas automatiquement le retour après le
-message.
+Le Message de fin peut être ajouté depuis le menu contextuel de la structure ou du diagramme.
 
-Cette distinction est importante : deux boutons visibles sur le même message peuvent conduire à
+Il possède :
+
+- un **Nom**, utilisé dans Story Studio ;
+- un **Audio de fin d’histoire**, entendu par l’enfant.
+
+L’audio est nécessaire pour générer le pack. Tu peux préparer le Message de fin avant de choisir
+son fichier, mais Story Studio affichera alors **Audio requis pour la génération**.
+
+## Quelles Histoires utilisent le Message de fin ?
+
+Lorsqu’un Message de fin commun est configuré, les Histoires l’utilisent normalement après leur
+audio principal.
+
+Une Histoire peut toutefois avoir sa propre fin. Dans ce cas, sa fin locale remplace le Message de
+fin commun pour cette Histoire.
+
+```text
+Histoire « Le Renard »
+        ↓
+Message de fin commun
+        ↓
+Dossier « Animaux »
+
+Histoire « Le Hibou »
+        ↓
+Fin personnalisée : « Bonne nuit, petit hibou ! »
+        ↓
+Dossier « Animaux »
+```
+
+Dans l’éditeur du Message de fin, la section **Fins locales** permet de retrouver ces exceptions.
+Tu peux examiner l’Histoire concernée ou utiliser **Rattacher au message du pack** pour lui faire
+utiliser de nouveau la fin commune.
+
+[Voir comment personnaliser la fin d’une Histoire](/story-studio/docs/histoire/#ajouter-un-message-de-fin)
+
+## Quand passer à la suite ?
+
+Le réglage **Quand passer à la suite ?** détermine ce qui se passe lorsque l’Audio de fin d’histoire
+est terminé.
+
+### Automatiquement
+
+Avec **Automatiquement**, Story Studio poursuit immédiatement vers la destination suivante.
+
+```text
+« À bientôt pour une nouvelle aventure ! »
+        ↓ fin de l’audio
+Dossier « Animaux »
+```
+
+### Après appui sur OK
+
+Avec **Après appui sur OK**, l’enfant reste sur le Message de fin après l’audio.
+
+Il doit appuyer sur **OK** pour poursuivre vers la destination prévue.
+
+```text
+« À bientôt pour une nouvelle aventure ! »
+        ↓
+attente
+        ↓ appui sur OK
+Dossier « Animaux »
+```
+
+## Choisir la destination après le message
+
+Le réglage **Retour après le message** détermine où conduit le Message de fin.
+
+Par défaut, il reste sur **Selon chaque histoire**. Chaque Histoire conserve alors sa propre
+destination, héritée de sa structure ou choisie dans ses réglages.
+
+```text
+Histoire « Le Renard »
+        ↓
+Message de fin
+        ↓
+Dossier « Animaux »
+
+Histoire « La Fusée »
+        ↓
+même Message de fin
+        ↓
+Dossier « Espace »
+```
+
+Le même audio peut donc être utilisé après plusieurs Histoires sans obliger toutes ces Histoires
+à revenir au même endroit.
+
+Si tu sélectionnes une destination explicite dans **Retour après le message**, elle remplace au
+contraire les destinations individuelles pour toutes les Histoires qui utilisent le Message de fin.
+
+:::tip
+Le **Message de fin n’est pas une destination**.
+
+Il s’insère entre la fin de l’Histoire et la destination suivante.
+:::
+
+## Bouton Accueil pendant le Message de fin
+
+Le **Bouton Accueil** du Message de fin possède sa propre destination.
+
+Cette destination est indépendante de **Retour après le message** :
+
+- selon le réglage choisi, la fin de l’audio ou **OK** suit **Retour après le message** ;
+- **Accueil** suit la destination configurée pour le bouton Accueil.
+
+Sans destination explicite, **Accueil** revient à la sélection du pack, c’est-à-dire à sa couverture
+dans le menu principal de la Lunii.
+
+Il est donc possible que **OK** et **Accueil**, utilisés sur le même Message de fin, conduisent à
 deux endroits différents.
+
+## Message de fin et Auto-next
+
+L’option globale **Auto-next** sert à lancer directement l’Histoire suivante.
+
+Lorsqu’Auto-next s’applique, il prend la priorité sur les fins habituelles : le Message de fin
+commun, les fins personnalisées et leurs retours ne sont pas joués dans ce parcours.
+
+Les réglages restent enregistrés dans le projet et redeviennent actifs si Auto-next est désactivé.
 
 ## Message de fin et mode nuit
 
-**Activer le mode nuit** associe le Message de fin au parcours nocturne du pack. Le mode nuit n’est
-pas un second fichier audio de fin et ne doit pas être confondu avec la simple présence du message.
-Le Message de fin peut exister sans mode nuit ; inversement, l’option n’est utilisable à l’export
-que lorsque l’audio requis est présent.
+Le réglage **Activer le mode nuit** associe le Message de fin au comportement nocturne du pack.
 
-Comme les autres fins, le mode nuit est neutralisé lorsque **Auto-next** est actif.
+Le **mode nuit** n’ajoute pas un second audio : il utilise l’**Audio de fin d’histoire** du Message
+de fin et modifie la manière dont cette étape est intégrée dans le pack généré.
 
-Pour une fin propre à une seule Histoire ou une séquence en plusieurs étapes, consulte
-[Personnaliser la fin d’une Histoire](/story-studio/docs/histoire/#personnaliser-la-fin-dune-seule-histoire).
+Le Message de fin peut parfaitement être utilisé sans activer le mode nuit.
+
+Comme les autres fins, ce comportement est neutralisé lorsqu’**Auto-next** prend la main.
 
 [Voir comment le Message de fin s’insère dans la navigation](/story-studio/docs/navigation/#après-la-lecture-dune-histoire)

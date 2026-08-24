@@ -1,174 +1,571 @@
 ---
 title: Navigation
-description: Prévoir l’effet de la molette, de OK, d’Accueil, d’Auto-next et des destinations après lecture.
+description: Comprendre comment la molette, OK, Accueil et les destinations font parcourir un pack.
 ---
 
-La navigation relie la structure de l’éditeur aux écrans parcourus sur la boîte. Pour la prévoir,
-observe toujours l’écran affiché, les commandes actives et la destination calculée.
+La **navigation** décrit le parcours de l’enfant dans le pack : l’écran sur lequel il se trouve,
+l’action qu’il effectue et l’endroit où cette action le conduit.
 
-## Du Menu racine au récit
+Pour comprendre un trajet, pose-toi toujours trois questions :
+
+1. **Où se trouve l’enfant ?**
+2. **Que fait-il ?** — molette, OK, Accueil ou fin d’un audio.
+3. **Où arrive-t-il ensuite ?**
+
+Par exemple :
 
 ```text
-menu principal de la Lunii
-pack sélectionné : image et Titre audio
-        ↓ OK pour choisir le pack
-premier choix du Menu racine
-        ↓ molette puis OK, selon la structure
-Dossier éventuel
-        ↓ audio puis Lecture automatique, ou molette et OK
-titre de l’Histoire
-        ↓ OK ou lancement automatique
-lecture de l’Histoire
+Dossier « Animaux »
+        ↓ l’enfant sélectionne une Histoire
+Histoire « Le Renard »
+        ↓ OK
+Lecture de l’Histoire « Le Renard »
+        ↓ fin du récit
+Retour au Dossier « Animaux »
+        ↓
+nouveau choix
 ```
 
-Une Histoire directement placée au Menu racine supprime l’étape Dossier. L’**Éditeur simplifié**
-rassemble la présentation du pack et de l’histoire sous **Mon histoire** : elle est affichée dans
-le menu principal, puis **OK** lance **Récit complet**.
+La même Histoire peut avoir un comportement différent si l’enfant appuie sur **Accueil** pendant sa
+lecture au lieu d’attendre la fin du récit.
 
-Le Menu racine n’est donc pas nécessairement un écran supplémentaire après la sélection du pack.
-C’est la racine structurelle qui porte sa présentation et contient ses premiers choix.
+## Du Menu racine à la lecture d’une Histoire
+
+Dans un pack classique, le parcours commence dans le menu principal de la Lunii.
+
+```text
+Sélection du pack
+Image Lunii + Titre audio
+        ↓ OK
+Premier choix du pack
+        ↓
+Dossier ou Histoire
+        ↓
+sélection avec la molette
+        ↓ OK
+Lecture de l’Histoire
+```
+
+Si une Histoire est placée directement sous le **Menu racine**, aucun Dossier intermédiaire n’est
+nécessaire.
+
+Avec un Dossier, le parcours peut par exemple être :
+
+```text
+Sélection du pack
+        ↓ OK
+Dossier « Animaux »
+Audio : « Quel animal veux-tu écouter ? »
+        ↓
+Histoire « Le Renard »
+        ↔ molette ↔
+Histoire « Le Hibou »
+        ↓ OK
+Lecture de l’Histoire choisie
+```
+
+Dans l’**Éditeur simplifié**, la présentation du pack et celle de l’unique Histoire sont réunies sous
+**Mon histoire** : l’enfant sélectionne le pack puis **OK** lance directement le **Récit complet**.
 
 ## Molette et OK
 
-La molette parcourt les options du niveau courant : Histoires et Dossiers frères. **OK** valide
-l’option affichée. Sur le titre d’une Histoire, il lance son audio principal ; sur un Dossier, il
-ouvre son contenu.
+La **molette** sert principalement à parcourir plusieurs options disponibles au même niveau.
 
-Un Dossier en **Lecture automatique** ouvre au contraire son contenu à la fin de son Audio de
-sélection. Lorsqu’il est l’unique entrée du Menu racine, Story Studio force ce comportement afin de
-ne pas demander un second appui sur **OK** juste après la sélection du pack. Avec **Écran
-transparent**, la couverture reste visible pendant cet audio.
-
-La configuration visible n’est pas toujours reproduite littéralement dans le pack généré. Lorsque
-le Menu racine ne contient qu’un seul Dossier, Story Studio peut entrer automatiquement dans son
-contenu. Lorsqu’il contient plusieurs entrées, ce Dossier reste au contraire un choix parcouru à la
-molette.
-
-## Accueil dépend de l’écran affiché
-
-| Contexte | Comportement courant |
-|---|---|
-| sélection du pack dans le menu principal | navigation interne pas encore commencée |
-| écran d’un Dossier créé dans l’éditeur | retour à la sélection du pack |
-| titre d’une Histoire dans un Dossier | retour à ce Dossier |
-| titre d’une Histoire au Menu racine | retour à la sélection du pack |
-| lecture principale | destination **Bouton Accueil** de l’Histoire, si le bouton est actif |
-| Message de fin | destination Accueil propre au message ; par défaut, sélection du pack |
-
-Une structure importée peut conserver des retours explicites différents. Story Studio les présente
-sans les remplacer par les valeurs usuelles.
-
-:::note[Accueil n’est pas OK]
-Sur un Message de fin ou une fin locale, une destination Accueil vide peut signifier un retour à la
-sélection du pack, alors que la destination OK suit la suite normale. Les deux boutons ne sont
-jamais supposés identiques simplement parce qu’ils apparaissent sur le même écran.
-:::
-
-## Après la lecture d’une Histoire
-
-Le fichier principal peut se terminer sans que l’écran change. Le réglage **Après la lecture**
-détermine si la navigation reste en attente ou suit une transition.
+Par exemple :
 
 ```text
-fin audio
-├── Rester sur l’écran → attendre une commande disponible
-├── Enchaîner → destination après l’Histoire
-├── Message de fin → automatique ou OK → destination finale
-└── Auto-next → lecture directe de l’Histoire suivante
+Dossier « Animaux »
+
+Histoire « Le Renard »
+        ↔ molette ↔
+Histoire « Le Hibou »
+        ↔ molette ↔
+Histoire « Le Lion »
 ```
 
-Un [Message de fin](/story-studio/docs/message-de-fin/) est donc une étape du
-trajet, jamais un synonyme de destination.
+**OK** valide l’élément actuellement présenté :
 
-## Destinations après lecture
+- sur le titre d’une Histoire, **OK** lance son récit ;
+- sur un Dossier, **OK** entre dans son contenu.
 
-Une destination peut viser :
+```text
+Dossier « Animaux »
+        ↓ OK
+contenu du Dossier
+        ↓
+Histoire « Le Renard »
+        ↓ OK
+Lecture de « Le Renard »
+```
 
-- le Dossier courant ou un autre Dossier ;
-- le premier choix du Menu racine ;
-- le titre d’une Histoire ;
+### Lecture automatique d’un Dossier
+
+Un Dossier peut être configuré en **Lecture automatique**.
+
+Dans ce cas, l’enfant n’a pas besoin d’appuyer sur **OK** après l’Audio de sélection du Dossier :
+
+```text
+Dossier « Choix du jour »
+Audio : « Que veux-tu écouter aujourd’hui ? »
+        ↓ fin de l’audio
+Lecture automatique
+        ↓
+première Histoire proposée
+        ↔ molette ↔
+autres Histoires
+```
+
+Lorsqu’un Dossier est l’unique élément directement placé sous le Menu racine, Story Studio entre
+automatiquement dans son contenu afin d’éviter un appui intermédiaire inutile.
+
+Avec **Écran transparent**, aucune nouvelle image n’est affichée pendant l’Audio de sélection du
+Dossier.
+
+[Comprendre les réglages d’un Dossier](/story-studio/docs/dossier/)
+
+## Accueil dépend de l’endroit où se trouve l’enfant
+
+Le bouton **Accueil** n’a pas une destination unique pour tout le pack.
+
+Son comportement dépend de l’écran sur lequel il est utilisé.
+
+| Où se trouve l’enfant ? | Comportement courant |
+|---|---|
+| sur l’écran d’un Dossier | retour à la sélection du pack, c’est-à-dire à sa couverture |
+| sur le titre d’une Histoire contenue dans un Dossier | retour au Dossier qui contient l’Histoire |
+| sur le titre d’une Histoire placée au Menu racine | retour à la sélection du pack, c’est-à-dire à sa couverture |
+| pendant la lecture d’une Histoire | destination **Bouton Accueil** configurée pour cette Histoire |
+| sur un Message de fin commun | destination Accueil propre au Message de fin |
+| sur une fin locale | destination Accueil propre à cette fin |
+
+Par exemple, une même Histoire peut avoir deux sorties différentes :
+
+```text
+Dossier « Forêt »
+        ↓ sélection
+Histoire « Le Hibou »
+        ↓ OK
+Lecture de « Le Hibou »
+```
+
+Si l’enfant laisse l’Histoire se terminer :
+
+```text
+Lecture de « Le Hibou »
+        ↓ fin du récit
+Retour au Dossier « Forêt »
+```
+
+Mais si **Bouton Accueil** est configuré vers le Dossier **Mer** :
+
+```text
+Lecture de « Le Hibou »
+        ↓ l’enfant appuie sur Accueil
+Dossier « Mer »
+```
+
+La **fin normale du récit** et le **bouton Accueil pendant la lecture** sont donc deux chemins
+indépendants.
+
+:::note[Accueil sur un Message de fin]
+Sur un Message de fin commun, **Accueil** possède sa propre destination.
+
+Si aucune destination n’est définie, le parcours revient à la sélection du pack, c’est-à-dire à sa
+couverture. Cela ne signifie pas que le bouton **OK** suit la même destination : OK ou la fin
+automatique du message suit le réglage **Retour après le message**.
+:::
+
+Une structure importée peut conserver des destinations différentes de ces comportements courants.
+
+## Que se passe-t-il à la fin d’une Histoire ?
+
+La fin du fichier **Histoire complète** n’implique pas forcément un changement d’écran.
+
+Plusieurs comportements sont possibles.
+
+### Rester sur l’écran
+
+Sans enchaînement automatique, l’écran reste affiché après la fin du récit.
+
+```text
+Lecture de « Le Renard »
+        ↓ fin du récit
+Rester sur l’écran
+        ↓
+attente d’une action de l’enfant
+```
+
+### Enchaîner vers une destination
+
+Avec **Enchaîner**, Story Studio suit automatiquement la destination prévue après l’Histoire.
+
+```text
+Dossier « Animaux »
+        ↓ sélection
+Histoire « Le Renard »
+        ↓ OK
+Lecture de « Le Renard »
+        ↓ fin du récit
+Enchaîner
+        ↓
+Retour au Dossier « Animaux »
+```
+
+### Passer par un Message de fin
+
+Si l’Histoire utilise le **Message de fin commun**, celui-ci s’intercale avant la destination.
+
+```text
+Lecture de « Le Renard »
+        ↓ fin du récit
+Message de fin commun
+Audio : « À bientôt pour une nouvelle aventure ! »
+        ↓ fin de l’audio ou OK
+Retour au Dossier « Animaux »
+```
+
+Une fin personnalisée ou un scénario de fin fonctionne de la même manière : cette étape vient après
+le récit et avant sa destination.
+
+### Auto-next
+
+Si **Auto-next** est actif, il prend la priorité et lance directement l’Histoire suivante lorsqu’elle
+existe.
+
+```text
+Lecture de « Le Renard »
+        ↓ fin du récit
+Auto-next
+        ↓
+Lecture directe de « Le Hibou »
+```
+
+Dans ce parcours, le Message de fin et les fins personnalisées ne sont pas joués.
+
+## Choisir une destination
+
+Une destination indique **où le parcours doit continuer**.
+
+Selon le contexte, Story Studio peut proposer notamment :
+
+- un **Dossier** ;
+- le premier choix interne du pack ;
+- le **titre d’une Histoire** ;
 - la **Lecture directe** d’une Histoire ;
 - **Histoire suivante** ;
-- une étape de fin disponible dans une structure avancée.
+- certaines destinations supplémentaires présentes dans des structures importées.
 
-**Histoire suivante** cherche la prochaine Histoire sœur dans le même niveau. S’il n’en existe pas,
-le trajet revient au Dossier parent. Pour une Histoire placée directement au Menu racine, le repli
-revient à son propre écran de sélection. Une destination vers une Histoire ouvre normalement son
-titre ; **Lecture directe – …** saute ce titre.
+### Revenir vers un Dossier
 
-## Auto-next
+C’est le comportement le plus courant après une Histoire contenue dans une catégorie.
 
-L’option globale **Auto-next** enchaîne directement les Histoires d’un même niveau. Elle lance la
-lecture principale de la sœur suivante. La dernière Histoire revient au Dossier parent ; au Menu
-racine, elle revient au premier choix du pack.
+```text
+Dossier « Animaux »
+        ↓
+Histoire « Le Renard »
+        ↓ OK
+Lecture du récit
+        ↓ fin
+Retour au Dossier « Animaux »
+        ↓
+nouveau choix
+```
 
-Tant qu’elle est active, Auto-next prend la main sur :
+### Aller vers le titre d’une Histoire
 
-- les retours personnalisés après lecture ;
+Choisir une Histoire comme destination présente d’abord son écran de sélection.
+
+```text
+Lecture de « La Cabane »
+        ↓ fin du récit
+Destination : Histoire « Le Phare »
+        ↓
+Image + Audio de sélection de « Le Phare »
+        ↓ OK
+Lecture de « Le Phare »
+```
+
+L’enfant conserve donc la possibilité de voir et d’entendre la présentation de la nouvelle Histoire
+avant de la lancer.
+
+### Lancer directement une Histoire
+
+Une destination **Lecture directe – …** saute cette présentation.
+
+```text
+Lecture de « La Cabane »
+        ↓ fin du récit
+Destination : Lecture directe – « Le Phare »
+        ↓
+Lecture de « Le Phare »
+```
+
+Cette différence est importante :
+
+```text
+Histoire « Le Phare »
+→ affiche son titre avant la lecture
+
+Lecture directe – « Le Phare »
+→ lance immédiatement le récit
+```
+
+[Comprendre la présentation et la lecture d’une Histoire](/story-studio/docs/histoire/)
+
+## Histoire suivante
+
+La destination **Histoire suivante** recherche la prochaine Histoire placée au même niveau.
+
+Avec :
+
+```text
+Dossier « Animaux »
+├── Histoire « Le Renard »
+├── Histoire « Le Hibou »
+└── Histoire « Le Lion »
+```
+
+si la fin de **Le Renard** utilise **Histoire suivante** :
+
+```text
+Lecture de « Le Renard »
+        ↓ fin du récit
+Histoire suivante
+        ↓
+Titre de « Le Hibou »
+        ↓ OK
+Lecture de « Le Hibou »
+```
+
+**Histoire suivante** conduit donc normalement au **titre** de l’Histoire suivante.
+
+S’il n’existe plus d’Histoire suivante, le parcours revient au niveau de repli prévu par la
+structure : généralement le Dossier qui contient l’Histoire. Pour une Histoire directement placée
+au Menu racine, **Histoire suivante** revient normalement à son propre écran de sélection.
+
+## Histoire suivante et Auto-next ne sont pas identiques
+
+Les deux options permettent de parcourir plusieurs Histoires dans leur ordre, mais elles ne produisent
+pas le même parcours.
+
+**Histoire suivante :**
+
+```text
+Lecture de « Le Renard »
+        ↓ fin
+Titre de « Le Hibou »
+        ↓ OK
+Lecture de « Le Hibou »
+```
+
+**Auto-next :**
+
+```text
+Lecture de « Le Renard »
+        ↓ fin
+Lecture directe de « Le Hibou »
+```
+
+Avec Auto-next, l’enfant ne repasse donc pas par l’écran de sélection de l’Histoire suivante.
+
+Auto-next prend également la priorité sur :
+
+- les destinations personnalisées après lecture ;
 - le Message de fin commun ;
-- les messages et scénarios de fin locaux.
+- les messages de fin locaux ;
+- les scénarios de fin locaux.
 
 Ces réglages restent enregistrés dans le projet et redeviennent actifs lorsque Auto-next est
 désactivé.
 
-## Diagramme et simulateur
+À la dernière Histoire d’un Dossier, Auto-next revient au Dossier qui contient la liste. Pour une
+liste directement placée au Menu racine, la fin de la dernière Histoire revient au premier choix
+interne du pack.
 
-Le **Diagramme** montre la structure et les transitions calculées. Les liens de fin peuvent passer
-par le Message de fin avant d’atteindre leur destination réelle.
+## Navigation avec un Message de fin
 
-Le **Simulateur** permet de parcourir le projet depuis la racine ou depuis un élément choisi. Teste
-au minimum la molette, **OK**, **Accueil**, la fin audio et la dernière Histoire d’une liste. Pour un
-ZIP importé, le simulateur lit le graphe contenu dans le pack ; pour un projet éditable, il suit la
-navigation générée à partir de l’arbre.
+Le Message de fin possède deux décisions distinctes :
 
-Le simulateur est un outil de vérification, pas une preuve matérielle à lui seul. La génération du
-pack et, pour une validation de publication, un essai sur le matériel cible restent les références
-complémentaires.
+1. **quand** poursuivre après son audio ;
+2. **où** poursuivre.
 
-## Tester un retour sans se perdre
-
-Sur une structure riche, ne demande pas seulement « Où revient cette Histoire ? ». Note l’instant
-et la commande : le titre, la lecture principale et le Message de fin peuvent avoir trois retours
-différents.
-
-Pour chaque Histoire importante, complète cette grille :
-
-| Test | Point de départ | Action | Résultat attendu |
-|---|---|---|---|
-| 1 | titre de l’Histoire | **Accueil** | Dossier qui contient le titre, sauf cible explicite |
-| 2 | titre de l’Histoire | **OK** | lecture principale |
-| 3 | lecture principale | laisser finir | comportement **Après la lecture** |
-| 4 | lecture principale | **Accueil** | destination Accueil propre à l’Histoire |
-| 5 | Message de fin | **OK** ou fin automatique | retour après le message |
-| 6 | Message de fin | **Accueil** | destination Accueil propre au message |
-
-Exemple avec deux catégories :
+Par exemple :
 
 ```text
-Dossier « Forêt »                         Dossier « Mer »
-├── Histoire « Le Renard » ── fin ──┐     ├── Histoire « Le Phare »
-└── Histoire « Le Hibou » ─── fin ──┴──> Dossier « Forêt »
-
-« Le Hibou » ── Accueil pendant la lecture ──> Dossier « Mer »
+Dossier « Contes »
+        ↓ sélection
+Histoire « Le Géant »
+        ↓ OK
+Lecture de « Le Géant »
+        ↓ fin du récit
+Message de fin
+Audio : « À bientôt ! »
+        ↓ attente
+        ↓ OK
+Retour au Dossier « Contes »
 ```
 
-La fin normale de **Le Hibou** revient ici à sa catégorie, tandis qu’Accueil pendant la lecture
-ouvre volontairement une autre catégorie. Le Diagramme doit montrer les deux flèches ; le
-simulateur permet de jouer séparément les deux actions.
+Ici :
+
+- **Quand passer à la suite ?** est réglé sur **Après appui sur OK** ;
+- **Retour après le message** conduit au Dossier **Contes**.
+
+Avec **Automatiquement**, le même parcours devient :
+
+```text
+Message de fin
+Audio : « À bientôt ! »
+        ↓ fin de l’audio
+Retour automatique au Dossier « Contes »
+```
+
+Le bouton **Accueil** du Message de fin reste une troisième décision indépendante.
+
+[Comprendre le Message de fin](/story-studio/docs/message-de-fin/)
+
+## Diagramme et Simulateur
+
+Pour une structure simple, l’arbre suffit souvent à comprendre le parcours.
+
+Dès que les Histoires possèdent des destinations personnalisées, utilise le **Diagramme** et le
+**Simulateur**.
+
+### Diagramme
+
+Le Diagramme permet de voir :
+
+- les éléments du pack ;
+- les relations entre les Dossiers et les Histoires ;
+- les transitions calculées ;
+- les retours qui ne suivent pas simplement l’arborescence.
+
+Une Histoire peut par exemple être rangée dans **Forêt** tout en envoyant volontairement l’enfant vers
+**Mer** à la fin de sa lecture. L’arbre montre où l’Histoire est rangée ; le Diagramme montre où son
+parcours conduit.
+
+### Simulateur
+
+Le Simulateur permet de jouer réellement ce parcours :
+
+```text
+ouvrir le Dossier
+        ↓
+tourner la molette
+        ↓
+valider avec OK
+        ↓
+laisser l’Histoire se terminer
+        ↓
+observer la destination
+```
+
+Rejoue ensuite le même trajet en utilisant **Accueil** pendant la lecture.
+
+Les deux résultats peuvent être différents sans qu’il y ait d’erreur.
+
+Pour un ZIP importé, le Simulateur suit le graphe contenu dans le pack. Pour un projet créé dans
+Story Studio, il suit la navigation générée à partir de la structure et de ses réglages.
+
+Le Simulateur reste un outil de vérification. Pour un pack destiné à être diffusé, un test sur la
+boîte cible reste utile avant publication.
+
+## Tester les retours d’une Histoire
+
+Sur une structure riche, évite de noter seulement :
+
+> « Le Renard revient dans Animaux. »
+
+Précise **à quel moment** et **avec quelle action**.
+
+Une même Histoire peut avoir :
+
+- un retour depuis son écran de sélection ;
+- une destination lorsque son récit se termine ;
+- une destination différente avec **Accueil** pendant la lecture ;
+- une autre destination encore depuis un Message de fin.
+
+Pour chaque Histoire importante, vérifie au minimum :
+
+| Point de départ | Action | Ce qu’il faut vérifier |
+|---|---|---|
+| titre de l’Histoire | **OK** | le bon récit démarre |
+| titre de l’Histoire | **Accueil** | le bon niveau de choix est retrouvé |
+| lecture du récit | laisser finir | la destination de fin est correcte |
+| lecture du récit | **Accueil** | la destination Accueil est correcte |
+| Message de fin, s’il existe | fin automatique ou **OK** | le retour après le message est correct |
+| Message de fin, s’il existe | **Accueil** | la destination Accueil du message est correcte |
+
+### Exemple : fin normale et Accueil différents
+
+Structure :
+
+```text
+Menu racine
+├── Dossier « Forêt »
+│   ├── Histoire « Le Renard »
+│   └── Histoire « Le Hibou »
+└── Dossier « Mer »
+    ├── Histoire « Le Phare »
+    └── Histoire « Le Dauphin »
+```
+
+Pour **Le Hibou**, imaginons :
+
+- fin normale → retour au Dossier **Forêt** ;
+- Accueil pendant la lecture → Dossier **Mer**.
+
+Premier test :
+
+```text
+Dossier « Forêt »
+        ↓ sélection
+Histoire « Le Hibou »
+        ↓ OK
+Lecture de « Le Hibou »
+        ↓ fin du récit
+Retour au Dossier « Forêt »
+```
+
+Second test :
+
+```text
+Dossier « Forêt »
+        ↓ sélection
+Histoire « Le Hibou »
+        ↓ OK
+Lecture de « Le Hibou »
+        ↓ bouton Accueil
+Dossier « Mer »
+```
+
+Ces deux parcours doivent être testés séparément.
 
 :::tip[Méthode rapide]
-Numérote les parcours à vérifier avant de lancer le simulateur : « Forêt → Renard → fin », « Forêt
-→ Hibou → Accueil », puis « Mer → dernière Histoire → fin ». Une liste courte évite de confondre le
-trajet que tu viens de jouer avec celui que tu voulais contrôler.
+Pour un pack complexe, note quelques trajets précis avant d’ouvrir le Simulateur :
+
+- « Forêt → Le Renard → fin »
+- « Forêt → Le Hibou → Accueil »
+- « Mer → dernière Histoire → fin »
+
+Il devient beaucoup plus facile de repérer un mauvais retour lorsque tu sais exactement quel trajet
+tu es en train de tester.
 :::
 
-## ZIP et Liens importés
+## ZIP inclus et packs importés
 
-Un **ZIP** conserve un pack inclus et peut ouvrir son propre parcours. Un **Lien** fait converger
-plusieurs trajets vers un élément existant sans le dupliquer. Ces structures sont surtout visibles
-après import et peuvent être simulables sans être entièrement modifiables.
+Un élément **ZIP** conserve un pack complet à l’intérieur du projet. Lorsqu’il est sélectionné, il
+ouvre son propre parcours avec ses choix, ses Histoires et ses retours.
 
-Ne déduis pas leur comportement de leur seule position dans l’arbre : suis leurs flèches dans le
-diagramme et vérifie leur parcours dans le simulateur.
+Lors de l’import d’un pack existant, Story Studio vérifie d’abord si sa navigation peut être
+reconstruite fidèlement avec des Dossiers et des Histoires modifiables. Si ce n’est pas le cas, le
+pack reste en lecture seule dans le Simulateur au lieu d’être présenté comme un projet éditable
+incomplet.
 
-[Comparer un pack complet avec plusieurs retours](/story-studio/docs/exemples-de-structures/#10-un-pack-complet-avec-plusieurs-niveaux-et-plusieurs-retours)
+Pour vérifier un ZIP inclus ou un pack importé :
+
+1. joue son parcours dans le **Simulateur** ;
+2. vérifie séparément **OK**, **Accueil** et la fin des audios ;
+3. si une structure éditable a été reconstruite, contrôle aussi ses transitions dans le
+   **Diagramme**.
+
+[Comparer un pack complet avec plusieurs types de retours](/story-studio/docs/exemples-de-structures/#10-un-pack-complet-avec-plusieurs-niveaux-et-plusieurs-retours)

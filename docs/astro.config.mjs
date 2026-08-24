@@ -35,7 +35,7 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: 'Comprendre un pack',
+          label: 'Où commencer',
           items: [
             { slug: 'docs/concept' },
             { slug: 'docs/menu-racine' },
@@ -78,6 +78,7 @@ export default defineConfig({
             { slug: 'docs/sessions-temporaires-et-recuperation' },
             { slug: 'docs/importer-et-extraire-un-pack' },
             { slug: 'docs/preparer-et-exporter' },
+            { slug: 'docs/projet-mbah-ou-extraction-zip' },
           ],
         },
         {

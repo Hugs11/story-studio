@@ -137,6 +137,7 @@ const requiredDocumentationRoutes = [
   'docs/sessions-temporaires-et-recuperation/index.html',
   'docs/importer-et-extraire-un-pack/index.html',
   'docs/preparer-et-exporter/index.html',
+  'docs/projet-mbah-ou-extraction-zip/index.html',
   'docs/voix-locales-piper-xtts/index.html',
   'docs/comfyui/index.html',
   'docs/preferences-et-raccourcis/index.html',
