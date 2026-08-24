@@ -76,7 +76,9 @@ export function useWorkSession({
         }
         const enriched = await Promise.all(recoveries.map(async (recovery) => {
           try {
-            const result = await loadProjectFromPath(recovery.snapshotPath);
+            const result = await loadProjectFromPath(recovery.snapshotPath, {
+              preserveEmptyProjectName: true,
+            });
             return {
               ...recovery,
               projectName: result.data?.projectName || 'Projet récupérable',
@@ -267,7 +269,9 @@ export function useWorkSession({
     if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
     resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
     try {
-      const result = await loadProjectFromPath(recovery.snapshotPath);
+      const result = await loadProjectFromPath(recovery.snapshotPath, {
+        preserveEmptyProjectName: true,
+      });
       store.loadProject(result.data);
       store.setMediaTags(result.mediaTags ?? {});
       store.setSavePath(null);

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { migrateProjectData, normalizeProjectData, projectToRustExport, projectToSerializable } from '../src/store/projectModel.js';
+import { getProjectFilePrefix, sanitizeProjectPrefix } from '../src/utils/projectPrefix.js';
 
 test('legacy end message stays automatic while an explicit new setting is preserved', () => {
   const legacy = normalizeProjectData({ globalOptions: {}, rootEntries: [] });
@@ -124,6 +125,33 @@ test('new structure remains idempotent', () => {
   assert.equal(migrated.projectName, 'Mini-loup');
   assert.equal(migrated.packMetadata.title, 'Mini-loup');
   assert.equal(migrated.packMetadata.version, 2);
+});
+
+test('session recovery preserves an empty project name instead of deriving its technical filename', () => {
+  const migrated = normalizeProjectData(migrateProjectData({
+    schemaVersion: 3,
+    projectName: '',
+    packMetadata: { title: 'Bestioles' },
+    projectType: 'pack',
+    globalOptions: {},
+    rootEntries: [],
+  }, {
+    savePath: '/cache/sessions/session-1/.session-recovery.mbah',
+    preserveEmptyProjectName: true,
+  }));
+
+  assert.equal(migrated.projectName, '');
+});
+
+test('durable media prefixes never inherit a hidden recovery name', () => {
+  assert.equal(sanitizeProjectPrefix('.session-recovery'), 'session-recovery');
+  assert.equal(
+    getProjectFilePrefix(
+      { projectName: 'Bestioles' },
+      '/workspace/sauvegardes/Bestioles.mbah',
+    ),
+    'bestioles',
+  );
 });
 
 test('rust export injects pack metadata without legacy model fields', () => {
