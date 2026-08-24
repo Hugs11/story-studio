@@ -12,6 +12,7 @@ import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import {
   findEntryLocation,
+  getCircularSelectionIndex,
   getMenuBrowseState,
   HOME_ACTION,
   resolveEndNodeHomeTarget,
@@ -769,10 +770,14 @@ export function ProjectSimulator({
       onOk={handleOk}
       onHome={handleHome}
       onLeft={() => {
-        if (state === 'browse') setEntryIdx((i) => Math.max(0, i - 1));
+        if (state === 'browse') {
+          setEntryIdx((index) => getCircularSelectionIndex(index, -1, currentEntries.length));
+        }
       }}
       onRight={() => {
-        if (state === 'browse') setEntryIdx((i) => Math.min(Math.max(currentEntries.length - 1, 0), i + 1));
+        if (state === 'browse') {
+          setEntryIdx((index) => getCircularSelectionIndex(index, 1, currentEntries.length));
+        }
       }}
       paused={paused}
       onPause={handlePause}

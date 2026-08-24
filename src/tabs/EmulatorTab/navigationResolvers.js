@@ -16,6 +16,11 @@ import {
   resolvePromptEndHome,
 } from '../../store/endMessageHome.js';
 
+export function getCircularSelectionIndex(currentIndex, direction, itemCount) {
+  if (!Number.isInteger(itemCount) || itemCount <= 0) return currentIndex;
+  return ((currentIndex + direction) % itemCount + itemCount) % itemCount;
+}
+
 export function findEntryLocation(entries, targetId, menuPath = []) {
   const stack = [];
   for (let index = (entries?.length ?? 0) - 1; index >= 0; index -= 1) {

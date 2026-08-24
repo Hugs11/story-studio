@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  getCircularSelectionIndex,
   getMenuBrowseState,
   normalizeHomeTarget,
   resolveSequenceTarget,
@@ -9,6 +10,18 @@ import {
   resolveStoryReturnTarget,
   resolveStoryTitleHomeTarget,
 } from '../src/tabs/EmulatorTab/navigationResolvers.js';
+
+test('wheel selection wraps in both directions', () => {
+  assert.equal(getCircularSelectionIndex(0, -1, 3), 2);
+  assert.equal(getCircularSelectionIndex(2, 1, 3), 0);
+  assert.equal(getCircularSelectionIndex(1, -1, 3), 0);
+  assert.equal(getCircularSelectionIndex(1, 1, 3), 2);
+});
+
+test('wheel selection stays stable when there is no selectable item', () => {
+  assert.equal(getCircularSelectionIndex(0, 1, 0), 0);
+  assert.equal(getCircularSelectionIndex(0, -1, 0), 0);
+});
 
 test('sequence destinations preserve direct story playback', () => {
   assert.equal(resolveSequenceTarget('story:target', null), 'story:target');
