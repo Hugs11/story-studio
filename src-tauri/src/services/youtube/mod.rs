@@ -30,6 +30,18 @@ pub struct YoutubeVideo {
     pub audio_url: String,
     pub duration: Option<String>,
     pub image_url: Option<String>,
+    /// Langues des formats audio déjà résolus. Vide pour les entrées d'une
+    /// playlist plate ; elles sont analysées à la demande après sélection.
+    pub audio_languages: Vec<String>,
+    pub audio_languages_resolved: bool,
+}
+
+/// Langues audio résolues pour une vidéo sélectionnée dans une playlist.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YoutubeAudioLanguages {
+    pub id: String,
+    pub languages: Vec<String>,
 }
 
 /// Résultat d'une URL YouTube, miroir de `PodcastFeed`.
@@ -46,14 +58,14 @@ pub struct YoutubeList {
 }
 
 pub use download::download_audio;
-pub use metadata::fetch_list;
+pub use metadata::{fetch_audio_languages, fetch_list};
 pub(crate) use provision::update_ytdlp as update_ytdlp_binary;
 
 #[cfg(test)]
 mod tests {
     use super::metadata::{
-        format_duration, is_channel_source, normalize_listing_url, page_window, parse_list_json,
-        reorder_numbered_series, validate_youtube_url,
+        format_duration, is_channel_source, normalize_listing_url, page_window,
+        parse_audio_language_lines, parse_list_json, reorder_numbered_series, validate_youtube_url,
     };
     use super::{download_audio, fetch_list, update_ytdlp_binary};
     use std::path::Path;
@@ -98,7 +110,42 @@ mod tests {
             "https://www.youtube.com/watch?v=vid123"
         );
         assert_eq!(list.videos[0].duration.as_deref(), Some("1:30"));
+        assert!(list.videos[0].audio_languages.is_empty());
+        assert!(!list.videos[0].audio_languages_resolved);
         assert!(!list.has_next);
+    }
+
+    #[test]
+    fn extracts_distinct_audio_languages_from_resolved_formats() {
+        let json = serde_json::json!({
+            "id": "multi123",
+            "title": "Vidéo multilingue",
+            "webpage_url": "https://www.youtube.com/watch?v=multi123",
+            "formats": [
+                { "format_id": "137", "vcodec": "avc1", "acodec": "none" },
+                { "format_id": "139-0", "vcodec": "none", "acodec": "mp4a", "language": "fr" },
+                { "format_id": "140-0", "vcodec": "none", "acodec": "mp4a", "language": "fr" },
+                { "format_id": "251-1", "vcodec": "none", "acodec": "opus", "language": "en-US" },
+                { "format_id": "18", "vcodec": "avc1", "acodec": "mp4a", "language": "en-US" },
+                { "format_id": "broken", "vcodec": "none", "acodec": "opus" }
+            ]
+        });
+        let list = parse_list_json(json, 1, 400);
+        assert_eq!(list.videos[0].audio_languages, vec!["fr", "en-US"]);
+        assert!(list.videos[0].audio_languages_resolved);
+    }
+
+    #[test]
+    fn parses_audio_language_json_lines_and_skips_noise() {
+        let output = br#"{"id":"one","formats":[{"vcodec":"none","acodec":"opus","language":"ja"}]}
+not-json
+{"id":"two","formats":[{"vcodec":"none","acodec":"opus","language":"en"},{"vcodec":"none","acodec":"opus","language":"fr"}]}
+"#;
+        let parsed = parse_audio_language_lines(output);
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0].id, "one");
+        assert_eq!(parsed[0].languages, vec!["ja"]);
+        assert_eq!(parsed[1].languages, vec!["en", "fr"]);
     }
 
     #[test]
@@ -315,6 +362,7 @@ mod tests {
             None,
             &video_url,
             "validation été avec espaces",
+            None,
             &emit,
         )
         .expect("download public video audio");

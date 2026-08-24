@@ -25,12 +25,37 @@ const STEPS = [
   { key: 'url', label: 'Adresse' },
   { key: 'videos', label: 'Vidéos' },
 ];
+const LANGUAGE_STEP = { key: 'language', label: 'Audio' };
 
 // Garde-fou de sélection : au-delà, on avertit (ton friendly, non bloquant).
 const SELECTION_SOFT_CAP = 50;
 
 function videoMeta(video) {
   return [video.duration].filter(Boolean).join(' · ');
+}
+
+function videoKey(video) {
+  return video.selectionKey || video.id || video.audioUrl;
+}
+
+function languageLabel(code) {
+  const descriptive = /-desc$/i.test(code);
+  const languageCode = descriptive ? code.replace(/-desc$/i, '') : code;
+  let label = languageCode;
+  try {
+    label = new Intl.DisplayNames(['fr'], { type: 'language' }).of(languageCode) || languageCode;
+  } catch {
+    // Les codes privés ou futurs de YouTube restent lisibles tels quels.
+  }
+  const normalized = label.charAt(0).toLocaleUpperCase('fr') + label.slice(1);
+  return descriptive ? `${normalized} (audiodescription)` : normalized;
+}
+
+function hasMultipleLanguages(languages) {
+  const families = new Set(
+    languages.map((language) => language.replace(/-desc$/i, '').toLowerCase()),
+  );
+  return families.size > 1;
 }
 
 /**
@@ -48,7 +73,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
 
   const [step, setStep] = useState(0);
   const [url, setUrl] = useState('');
-  // cgu | collect | loading (provisioning + listing) | importing | error
+  // cgu | collect | loading (provisioning + listing) | analyzing | importing | error
   const [phase, setPhase] = useState(cguAccepted ? 'collect' : 'cgu');
   const [list, setList] = useState(null);
   // La valeur complète est conservée afin que l'import couvre toutes les
@@ -59,10 +84,13 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
   const [importError, setImportError] = useState('');
   const [progress, setProgress] = useState(null);
   const [logMessage, setLogMessage] = useState('');
+  const [audioLanguageOptions, setAudioLanguageOptions] = useState([]);
+  const [audioLanguage, setAudioLanguage] = useState('');
   const pageCacheRef = useRef(new Map());
   const listingBusyRef = useRef(false);
 
-  const busy = phase === 'loading' || phase === 'importing';
+  const busy = phase === 'loading' || phase === 'analyzing' || phase === 'importing';
+  const steps = audioLanguageOptions.length > 1 ? [...STEPS, LANGUAGE_STEP] : STEPS;
 
   // Progression de provisionnement/téléchargement émise par le backend.
   useEffect(() => {
@@ -129,11 +157,19 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
     pageCacheRef.current.clear();
     setList(null);
     setSelected(new Map());
+    setAudioLanguageOptions([]);
+    setAudioLanguage('');
     await loadPage(1, { initial: true });
   }
 
+  function invalidateAudioChoice() {
+    setAudioLanguageOptions([]);
+    setAudioLanguage('');
+  }
+
   function toggleVideo(video) {
-    const key = video.selectionKey || video.id || video.audioUrl;
+    const key = videoKey(video);
+    invalidateAudioChoice();
     setSelected((current) => {
       const next = new Map(current);
       if (next.has(key)) next.delete(key);
@@ -143,10 +179,11 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
   }
 
   function selectAllVisible() {
+    invalidateAudioChoice();
     setSelected((current) => {
       const next = new Map(current);
       for (const video of visibleVideos) {
-        next.set(video.selectionKey || video.id || video.audioUrl, video);
+        next.set(videoKey(video), video);
       }
       return next;
     });
@@ -154,13 +191,50 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
 
   function clearSelection() {
     setSelected(new Map());
+    invalidateAudioChoice();
   }
 
-  async function handleImport() {
-    if (selected.size === 0 || busy) return;
-    const chosen = [...selected.values()].sort(
+  function chosenVideos() {
+    return [...selected.values()].sort(
       (left, right) => (left.sourceIndex ?? 0) - (right.sourceIndex ?? 0),
     );
+  }
+
+  async function resolveAudioLanguageOptions(chosen) {
+    const languagesById = new Map();
+    const unresolvedUrls = [];
+    for (const video of chosen) {
+      const languages = Array.isArray(video.audioLanguages)
+        ? [...new Set(video.audioLanguages.filter(Boolean))]
+        : [];
+      if (video.audioLanguagesResolved) languagesById.set(video.id, languages);
+      else unresolvedUrls.push(video.audioUrl);
+    }
+
+    if (unresolvedUrls.length > 0) {
+      const resolved = await invoke('fetch_youtube_audio_languages', {
+        videoUrls: unresolvedUrls,
+        ytdlpPath: ytDlpPath,
+      });
+      for (const video of resolved ?? []) {
+        if (video?.id && Array.isArray(video.languages)) {
+          languagesById.set(video.id, [...new Set(video.languages.filter(Boolean))]);
+        }
+      }
+    }
+
+    const options = new Set();
+    for (const video of chosen) {
+      const languages = languagesById.get(video.id) ?? [];
+      if (!hasMultipleLanguages(languages)) continue;
+      for (const language of languages) options.add(language);
+    }
+    return [...options].sort((left, right) => (
+      languageLabel(left).localeCompare(languageLabel(right), 'fr')
+    ));
+  }
+
+  async function runImport(chosen, selectedLanguage = '') {
     setError('');
     setImportError('');
     setLogMessage('');
@@ -168,12 +242,46 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
     setPhase('importing');
     try {
       // onImport route la progression dans cet écran et lève en cas d'échec total.
-      await onImport(chosen, list, setProgress);
+      const videosToImport = selectedLanguage
+        ? chosen.map((video) => ({ ...video, audioLanguage: selectedLanguage }))
+        : chosen;
+      await onImport(videosToImport, list, setProgress);
       onClose();
     } catch (err) {
       setImportError(String(err?.message ?? err));
       setPhase('error');
     }
+  }
+
+  async function handlePrepareImport() {
+    if (selected.size === 0 || busy) return;
+    const chosen = chosenVideos();
+    if (audioLanguageOptions.length > 1) {
+      setStep(2);
+      return;
+    }
+
+    setError('');
+    setLogMessage('');
+    setPhase('analyzing');
+    try {
+      const options = await resolveAudioLanguageOptions(chosen);
+      if (options.length > 1) {
+        setAudioLanguageOptions(options);
+        setAudioLanguage('');
+        setStep(2);
+        setPhase('collect');
+        return;
+      }
+    } catch {
+      // Métadonnées absentes/incomplètes : l'import historique reste utilisable.
+    }
+    await runImport(chosen);
+  }
+
+  function handleImport() {
+    if (selected.size === 0 || busy) return;
+    return runImport(chosenVideos(), audioLanguage);
   }
 
   const canOpenVideos = !!list;
@@ -203,20 +311,21 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
       ariaLabel="Créer un pack depuis YouTube"
       stepper={(
         <FunnelStepper
-          steps={STEPS}
+          steps={steps}
           current={step}
           onStepClick={(index) => {
             if (index === 1 && !canOpenVideos) return;
+            if (index === 2 && audioLanguageOptions.length <= 1) return;
             setStep(index);
           }}
         />
       )}
       footer={(
         <FunnelFooter
-          onBack={() => setStep(0)}
+          onBack={() => setStep((current) => Math.max(0, current - 1))}
           backDisabled={step === 0}
-          stepLabel={`Étape ${step + 1} / ${STEPS.length}`}
-          onPrimary={step === 0 ? handleLoadList : handleImport}
+          stepLabel={`Étape ${step + 1} / ${steps.length}`}
+          onPrimary={step === 0 ? handleLoadList : (step === 1 ? handlePrepareImport : handleImport)}
           primaryLabel={primaryLabel}
           primaryDisabled={primaryDisabled}
         />
@@ -248,6 +357,11 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
         <FunnelGenerationState
           title="Préparation…"
           hint={logMessage || 'Lecture des vidéos (yt-dlp se prépare au premier usage).'}
+        />
+      ) : phase === 'analyzing' ? (
+        <FunnelGenerationState
+          title="Analyse des pistes audio…"
+          hint={logMessage || 'Recherche des langues proposées par les vidéos sélectionnées.'}
         />
       ) : phase === 'importing' ? (
         <FunnelGenerationState
@@ -294,7 +408,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
           </p>
           {error && <div className="funnel-error" role="alert">{error}</div>}
         </div>
-      ) : (
+      ) : step === 1 ? (
         <div className="funnel-step-content youtube-funnel-step youtube-funnel-step--videos">
           <FunnelSectionHeader
             icon={<Youtube />}
@@ -341,13 +455,13 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
               </div>
             ) : (
               visibleVideos.map((video) => {
-                const videoKey = video.selectionKey || video.id || video.audioUrl;
-                const checked = selected.has(videoKey);
+                const currentVideoKey = videoKey(video);
+                const checked = selected.has(currentVideoKey);
                 const meta = videoMeta(video);
                 return (
                   <button
                     type="button"
-                    key={videoKey}
+                    key={currentVideoKey}
                     className={`youtube-funnel-row${checked ? ' is-selected' : ''}`}
                     aria-pressed={checked}
                     onClick={() => toggleVideo(video)}
@@ -384,6 +498,52 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
             </button>
           </nav>
           {error && <div className="funnel-error" role="alert">{error}</div>}
+        </div>
+      ) : (
+        <div className="funnel-step-content youtube-funnel-step youtube-funnel-step--audio">
+          <FunnelSectionHeader
+            icon={<Youtube />}
+            title="Piste audio"
+            description="Plusieurs langues sont disponibles dans au moins une vidéo sélectionnée."
+          />
+          <div className="youtube-funnel-language-list" role="radiogroup" aria-label="Piste audio à importer">
+            <label className={`youtube-funnel-language${audioLanguage === '' ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name="youtube-audio-language"
+                value=""
+                checked={audioLanguage === ''}
+                onChange={() => setAudioLanguage('')}
+              />
+              <span>
+                <strong>Piste par défaut de YouTube</strong>
+                <small>Conserve le comportement normal de l’import.</small>
+              </span>
+            </label>
+            {audioLanguageOptions.map((language) => (
+              <label
+                key={language}
+                className={`youtube-funnel-language${audioLanguage === language ? ' is-selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="youtube-audio-language"
+                  value={language}
+                  checked={audioLanguage === language}
+                  onChange={() => setAudioLanguage(language)}
+                />
+                <span>
+                  <strong>{languageLabel(language)}</strong>
+                  <small>{language}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="youtube-funnel-hint">
+            Ce choix s’applique aux vidéos qui proposent cette langue. Si une piste manque ou
+            change avant le téléchargement, Story Studio utilise automatiquement la piste YouTube
+            par défaut pour cette vidéo.
+          </p>
         </div>
       )}
     </FunnelShell>
