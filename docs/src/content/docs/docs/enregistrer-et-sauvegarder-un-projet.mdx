@@ -1,0 +1,111 @@
+---
+title: Enregistrer et sauvegarder un projet
+description: Comprendre ce que Story Studio enregistre, récupérer un travail interrompu et préparer un projet facile à déplacer ou archiver.
+---
+
+Un projet Story Studio repose sur deux éléments :
+
+- le fichier **`.mbah`**, qui contient la structure du projet et ses réglages ;
+- les **médias** utilisés par le projet : images, audios et archives.
+
+Le `.mbah` est donc la source à conserver pour continuer à modifier un pack, mais il ne contient pas ses médias.
+
+## Enregistrer un nouveau projet
+
+Un nouveau travail commence généralement comme **Projet non enregistré**.
+
+Tu peux immédiatement créer des Dossiers et des Histoires, importer des médias ou générer des voix : Story Studio utilise alors une session temporaire pour conserver les fichiers nécessaires sans te demander tout de suite où enregistrer le projet.
+
+Si **Utiliser un workspace pour les nouveaux projets** est activé dans les Préférences, ces fichiers sont placés immédiatement dans l'emplacement de travail. Le projet reste néanmoins non enregistré tant qu'aucun fichier `.mbah` n'a été créé.
+
+Dès que le projet mérite d'être conservé, ouvre le menu **Projet** et choisis **Enregistrer**.
+
+Story Studio crée alors le fichier `.mbah` et transfère les médias nécessaires vers l'emplacement de travail lorsque c'est nécessaire.
+
+:::tip
+N'attends pas la fin d'un gros pack pour effectuer le premier enregistrement. Une fois le projet enregistré, tu disposes d'une source de travail clairement identifiable et plus simple à sauvegarder.
+:::
+
+## Enregistrer les modifications suivantes
+
+Une fois le fichier `.mbah` créé :
+
+- **Projet → Enregistrer** met à jour le projet courant ;
+- **Projet → Enregistrer sous...** permet de choisir un autre fichier et de poursuivre le travail depuis celui-ci.
+
+Dans **Préférences → Enregistrement**, l'option **Enregistrement automatique** enregistre les modifications en attente toutes les cinq minutes. Le réglage **Versions de sécurité** détermine combien de copies `.mbah` antérieures sont conservées avant ces enregistrements automatiques.
+
+## Récupérer un projet après une interruption
+
+Pendant une session non enregistrée, Story Studio maintient une sauvegarde de reprise.
+
+Après une fermeture inattendue, une carte **Projet récupérable** peut apparaître sur l'écran d'accueil.
+
+Dans ce cas :
+
+1. ouvre le projet récupérable ;
+2. vérifie rapidement l'Arbre et les médias ;
+3. utilise **Projet → Enregistrer** pour le rendre durable.
+
+Ignorer cette reprise supprime la session correspondante.
+
+:::caution
+Une session temporaire n'est pas une archive. Les anciennes sessions abandonnées sont nettoyées automatiquement : utilise toujours un vrai fichier `.mbah` pour conserver un projet important.
+:::
+
+## Comprendre l'emplacement de travail
+
+Dans **Préférences → Gestion des projets et médias**, l'**Emplacement de travail** sert de référence pour les fichiers gérés par Story Studio.
+
+L'option **Copier les fichiers importés dans l'emplacement de travail** permet de copier les audios, images ou archives choisis au lieu de continuer à les utiliser depuis leur emplacement d'origine.
+
+C'est pratique si, par exemple, tu ajoutes à *Les aventures de Léo* un fichier audio situé dans `Téléchargements/` puis que tu veux pouvoir déplacer ou nettoyer ce dossier plus tard.
+
+Lorsque cette option est désactivée, Story Studio peut continuer à utiliser le fichier original. Si celui-ci est ensuite déplacé, renommé ou supprimé, le projet pourra te demander de le retrouver.
+
+## Le `.mbah` ne contient pas les médias
+
+Copier uniquement `les-aventures-de-leo.mbah` sur une autre machine ne garantit donc pas que le projet pourra être rouvert avec tous ses sons et images.
+
+Le fichier `.mbah` conserve les références vers les médias utilisés. Selon leur emplacement, ces références peuvent pointer vers :
+
+- des fichiers gérés par Story Studio ;
+- des fichiers placés à côté du projet ;
+- des fichiers externes restés ailleurs sur l'ordinateur.
+
+Pour travailler normalement sur une même machine, cette souplesse est pratique. Pour transférer ou archiver un projet, mieux vaut le **consolider**.
+
+## Consolider un projet
+
+Dans **Préférences → Gestion des projets et médias**, utilise **Consolider le projet**.
+
+Choisis un dossier de destination : Story Studio y crée une copie du projet et des médias qu'il référence.
+
+Les fichiers originaux ne sont pas supprimés.
+
+La consolidation est particulièrement utile pour :
+
+- transférer un projet vers un autre ordinateur ;
+- préparer une copie transportable du projet et de ses médias utilisés ;
+- archiver un projet terminé ;
+- regrouper des médias qui étaient dispersés dans plusieurs dossiers.
+
+Si certains fichiers sont introuvables, Story Studio les signale dans le résultat de la consolidation.
+
+## Que faut-il conserver ?
+
+Pour un pack que tu souhaites continuer à faire évoluer, conserve en priorité :
+
+1. le projet `.mbah` et ses médias, idéalement sous forme consolidée ;
+2. les fichiers sources de meilleure qualité que tu souhaites pouvoir retravailler ;
+3. les ZIP générés que tu veux garder comme versions publiées.
+
+Le **ZIP généré** est destiné à la lecture et à la diffusion. Il peut être rouvert par Story Studio dans certains cas, mais il ne remplace pas le projet source pour un travail suivi dans le temps.
+
+:::note
+Tu peux choisir de ne conserver que les ZIP si tu privilégies la simplicité. Pour un pack régulièrement retravaillé, conserver également le `.mbah` et les fichiers sources évite de repartir à chaque fois d'une version déjà préparée et éventuellement compressée.
+:::
+
+[Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) ·
+[Vérifier et générer un pack](/story-studio/docs/verifier-et-generer-un-pack/) ·
+[Gérer les images et les sons](/story-studio/docs/gestionnaire-de-medias/)

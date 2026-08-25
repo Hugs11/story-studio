@@ -1,90 +1,196 @@
 ---
 title: Résoudre un blocage de génération
-description: Retrouver les fichiers manquants, corriger la validation et distinguer erreur et avertissement.
+description: Comprendre pourquoi un pack ne peut pas être généré et corriger les problèmes signalés par Story Studio.
 ---
 
-Commence par identifier le moment du blocage : ouverture du projet, validation, intégration externe
-ou génération du ZIP. Les actions utiles ne sont pas les mêmes.
+Si Story Studio refuse de générer un pack, commence par regarder la pastille de validation en haut de l'éditeur.
 
-## Projet enregistré ou session temporaire
+Elle peut afficher :
 
-Un nouveau travail peut afficher **Projet non enregistré**. Story Studio conserve ses médias dans
-une session temporaire et écrit une reprise de sécurité dès que le contenu devient utile. Après une
-fermeture inattendue, une carte **Projet récupérable** peut apparaître sur l’accueil. Ouvre-la puis
-enregistre le projet avant de poursuivre un travail important.
+- **Vérification…** : Story Studio contrôle encore les fichiers du projet ;
+- **À corriger** : au moins un problème bloque la génération ;
+- **Pack prêt** : aucun problème bloquant n'a été détecté à ce stade.
 
-[Comprendre les sessions temporaires et la récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
+Dans la majorité des cas, tout se règle depuis **À corriger**.
 
-## Médias introuvables
+## Commencer par « À corriger »
 
-Si un fichier a été déplacé, renommé ou si un disque externe n’est plus monté, la fenêtre **Médias
-introuvables** propose de relier les anciennes références aux fichiers actuels.
+Clique sur la pastille pour afficher les problèmes détectés.
 
-1. reconnecte d’abord le disque ou le volume concerné ;
-2. choisis un dossier à analyser, ou recherche dans l’espace de travail ;
-3. vérifie les correspondances ambiguës ;
-4. clique sur **Appliquer et enregistrer** lorsque toutes les substitutions sont correctes.
+Les problèmes sont regroupés par élément ou emplacement du projet. Lorsqu'une ligne correspond à un élément du projet, clique dessus pour le sélectionner.
 
-Le relink met à jour le projet, les tags et la bibliothèque Médias ensemble. Il ne fabrique pas un
-fichier absent. Si la source a réellement été supprimée, importe ou recrée le média.
+Corrige-les un par un jusqu'à obtenir **Pack prêt**.
 
-## Pastille « À corriger »
+:::tip
+Tu peux aussi ouvrir la liste avec `Ctrl+Maj+E`.
+:::
 
-Ouvre la pastille puis sélectionne chaque ligne. Elle conduit à l’élément concerné. Corrige d’abord
-les problèmes de structure, puis les médias :
+## Comprendre les messages les plus courants
 
-- **Audio ou Image à ajouter** : choisis un fichier pour le champ obligatoire ;
-- **Fichier introuvable** : relie ou remplace le média ;
-- **Histoire à ajouter** : complète le Dossier ou le pack vide ;
-- **Destination introuvable** : choisis une destination existante ou retire l’élément importé
-  incomplet ;
-- **Archive ZIP à ajouter** : retrouve le fichier inclus.
+### Audio ou image à ajouter
 
-Les problèmes affichés par cette pastille empêchent tous la génération, même lorsqu’ils sont
-présentés avec une couleur d’avertissement.
+Un champ obligatoire est vide.
 
-## Génération refusée après « Pack prêt »
+Tu peux rencontrer par exemple :
 
-La validation visible est une aide précoce. Le moteur Rust refait les contrôles avant d’écrire le
-ZIP et peut détecter un problème plus tardif : fichier inaccessible, structure incohérente, sortie
-non autorisée ou divergence de fidélité avec un pack importé.
+- **Audio d'accueil à ajouter** sur le Menu racine ;
+- **Image de couverture à ajouter** ;
+- **Image bibliothèque à ajouter** ;
+- **Histoire à ajouter** ;
+- **Image à ajouter** ;
+- **Audio de sélection à ajouter** ;
+- **Archive ZIP à ajouter**.
 
-Lis le message complet de la tâche dans la **File de rendu**. Ne contourne pas un refus de fidélité
-par une extraction forcée : repars du pack source ou simplifie volontairement le projet dans une
-nouvelle copie.
+Sélectionne l'élément indiqué puis ajoute le média demandé.
 
-## ZIP généré avec avertissements
+Pour l'image bibliothèque du Menu racine, tu peux aussi activer **Utiliser la même image pour la Lunii et la vignette catalogue**.
 
-Un avertissement après génération n’est pas un échec. Le ZIP a été produit, mais un traitement audio
-a demandé une correction importante. Écoute les passages indiqués et vérifie-les sur la boîte à
-histoires avant diffusion.
+### Fichier introuvable
 
-Si le résultat est trop faible, trop fort ou déjà saturé, repars du meilleur fichier source
-disponible. Une normalisation ne peut pas reconstruire les détails perdus par un écrêtage.
+Le projet référence bien un média, mais Story Studio ne le retrouve plus sur le disque.
 
-## Piper, XTTS ou ComfyUI indisponible
+Cela arrive généralement après avoir :
 
-Une intégration externe en erreur n’empêche pas la sauvegarde ni l’édition du projet.
+- déplacé ou renommé un fichier ;
+- déplacé le projet ;
+- débranché un disque externe ;
+- supprimé un fichier utilisé par le pack.
 
-- **Piper** : vérifie la connexion nécessaire au premier téléchargement de la voix ;
-- **XTTS** : teste le serveur et ses voix dans les Préférences ;
-- **ComfyUI** : lance le serveur manuellement, vérifie son URL puis le workflow ;
-- **Podcast ou YouTube** : vérifie l’URL, le réseau et les droits d’accès au contenu.
+Si le fichier existe encore, relie-le à son nouvel emplacement. S'il a réellement disparu, remplace-le ou recrée-le.
 
-Tu peux toujours importer un fichier existant et reprendre la génération externe plus tard.
+## Plusieurs médias sont introuvables
 
-[Diagnostiquer Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/) ·
-[Diagnostiquer ComfyUI](/story-studio/docs/comfyui/)
+Lorsqu'un projet contient plusieurs références cassées, Story Studio peut ouvrir la fenêtre **Médias introuvables**.
+
+Elle permet de retrouver plusieurs fichiers en une seule fois :
+
+1. reconnecte d'abord un éventuel disque externe ;
+2. choisis le dossier dans lequel les médias ont été déplacés, ou recherche dans l'emplacement de travail ;
+3. si plusieurs fichiers portent le même nom, choisis la bonne correspondance ;
+4. vérifie les fichiers retrouvés ;
+5. clique sur **Appliquer et enregistrer**.
+
+Story Studio met alors à jour les chemins utilisés par le projet, les tags et le panneau Médias.
+
+:::caution
+Relier un média ne recrée pas un fichier supprimé. Si l'original n'existe plus, il faudra l'importer à nouveau ou le remplacer.
+:::
+
+## Histoire à ajouter
+
+Un Dossier vide ne peut pas être généré comme partie jouable du pack.
+
+Ajoute au moins une Histoire ou un autre contenu jouable dans le Dossier concerné, ou supprime ce Dossier s'il n'est plus utile.
+
+Le pack lui-même doit également contenir au moins un contenu jouable.
+
+## Destination introuvable ou vide
+
+Ces messages concernent la navigation.
+
+Une Histoire, un Dossier, le bouton **Accueil** ou une étape de fin essaie de rejoindre un élément qui :
+
+- n'existe plus ;
+- a été supprimé ;
+- ne contient plus aucune Histoire jouable.
+
+Sélectionne l'élément signalé et corrige sa destination dans les Réglages.
+
+Si tu ne vois pas immédiatement l'origine du problème, utilise le **Diagramme** : il est souvent plus simple d'y repérer une transition cassée.
+
+Voir [Comprendre la navigation](/story-studio/docs/navigation/).
+
+## Problèmes de structure plus rares
+
+Story Studio peut également signaler des problèmes internes comme :
+
+- **Identifiant dupliqué** ;
+- **Identifiant réservé à corriger** ;
+- **Référence sans cible** ;
+- **Type d'élément non pris en charge** ;
+- **Retour de fin introuvable**.
+
+Ils apparaissent surtout après l'import ou l'extraction d'un pack complexe.
+
+Dans ce cas, évite de chercher à contourner le contrôle. Vérifie la structure importée et, si nécessaire, recrée proprement l'élément concerné.
+
+Pour un pack extrait depuis un ZIP, compare aussi son comportement avec le pack d'origine dans le Simulateur.
+
+Voir [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/).
+
+## « Vérification… » ne disparaît pas immédiatement
+
+Avant la génération, Story Studio vérifie également que les fichiers référencés sont réellement accessibles.
+
+Pendant ce contrôle, la pastille affiche **Vérification…** et la génération est temporairement bloquée.
+
+Attends simplement la fin du contrôle. Si l'état persiste anormalement, vérifie qu'un disque externe ou un emplacement réseau utilisé par le projet est toujours accessible.
+
+## Le pack était « prêt », mais la génération échoue
+
+La validation affichée dans l'éditeur est un premier contrôle. Le moteur de génération refait ses propres vérifications au moment de construire le ZIP.
+
+Une erreur peut donc encore apparaître, par exemple si :
+
+- un fichier devient inaccessible entre-temps ;
+- une incohérence plus profonde est détectée dans la structure ;
+- un pack importé ne peut finalement pas être reconstruit correctement ;
+- une erreur survient pendant le traitement d'un média.
+
+Dans ce cas, ouvre la **File de rendu** et lis le message de la tâche en erreur.
+
+Le message du moteur est plus important que l'ancien état **Pack prêt** : corrige la cause indiquée puis relance la génération.
+
+:::tip
+Si l'erreur concerne un pack extrait ou importé, conserve toujours le ZIP original. Il peut servir de référence pour comparer la navigation ou recommencer l'extraction.
+:::
+
+## Génération réussie avec avertissements
+
+Une tâche peut également terminer correctement tout en affichant des **avertissements**.
+
+Dans ce cas, le ZIP a bien été créé. Story Studio attire simplement ton attention sur un traitement qui mérite d'être vérifié.
+
+Écoute les passages audio concernés avant de diffuser le pack, puis teste idéalement le ZIP sur la Lunii.
+
+Il faut donc distinguer :
+
+| État | Résultat |
+|---|---|
+| **À corriger** | la génération ne peut pas démarrer |
+| **Erreur dans la File de rendu** | la génération a échoué |
+| **Terminé · N avertissement(s)** | le ZIP existe, mais les passages audio signalés doivent être vérifiés |
+
+## Et si le problème vient de Piper, XTTS ou ComfyUI ?
+
+Une erreur de génération de voix ou d'image IA ne bloque pas le projet lui-même.
+
+Tu peux remplacer le média par un fichier existant ou reprendre la génération plus tard.
+
+Pour diagnostiquer ces outils, consulte directement :
+
+- [Voix locales : Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/) ;
+- [ComfyUI](/story-studio/docs/comfyui/).
 
 ## Avant de signaler un bug
 
-Conserve une copie du projet et note :
+Si le problème persiste alors que la liste **À corriger** est vide, conserve une copie du projet puis relève :
 
-- l’action exacte qui échoue ;
-- le message complet ;
-- le système et la version de Story Studio ;
-- le type de source, sans publier de média, voix ou pack privé ;
-- les étapes minimales permettant de reproduire le problème.
+- la version de Story Studio ;
+- le système utilisé ;
+- l'action exacte qui provoque l'erreur ;
+- le message complet affiché dans la File de rendu ;
+- les étapes permettant de reproduire le problème.
 
-Tu peux ensuite [ouvrir une issue](https://github.com/Hugs11/story-studio/issues) sans joindre de
-contenu dont tu ne détiens pas les droits.
+Si nécessaire, active la **Journalisation détaillée** dans **Préférences → Diagnostic** et joins les informations utiles à ton rapport.
+
+:::caution
+Le journal peut contenir des chemins locaux et des noms de fichiers. Vérifie son contenu avant de le publier.
+
+Ne joins pas de pack ou de média privé à une issue publique.
+:::
+
+Tu peux ensuite [ouvrir une issue](https://github.com/Hugs11/story-studio/issues).
+
+[Vérifier et générer un pack](/story-studio/docs/verifier-et-generer-un-pack/) ·
+[Préférences et raccourcis](/story-studio/docs/preferences-et-raccourcis/)

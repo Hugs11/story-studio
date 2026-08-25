@@ -1,0 +1,153 @@
+---
+title: Vérifier et générer un pack
+description: Contrôler la structure, les médias et les métadonnées avant de générer le ZIP final.
+---
+
+Lorsque ton pack est prêt, Story Studio peut vérifier les problèmes bloquants puis générer le ZIP destiné à la Lunii.
+
+Avant une version importante, commence par enregistrer le projet afin de conserver séparément ta source `.mbah` et le ZIP généré.
+
+Cette page concerne le projet actuellement ouvert. Pour analyser ou corriger techniquement un ZIP ou un 7z existant sans modifier sa structure éditoriale, utilise plutôt [**Vérifier un pack**](/story-studio/docs/verifier-un-pack/).
+
+## 1. Vérifier l'état du projet
+
+La pastille de validation peut afficher trois états :
+
+- **Vérification…** : Story Studio contrôle encore les fichiers du projet ;
+- **À corriger** : au moins un problème empêche la génération ;
+- **Pack prêt** : aucun problème bloquant connu n'est détecté.
+
+Si la pastille affiche **À corriger**, ouvre-la pour voir les éléments concernés.
+
+Cliquer sur un problème sélectionne l'élément correspondant lorsqu'il peut être localisé dans le projet.
+
+Les causes fréquentes sont par exemple :
+
+- un audio ou une image obligatoire manquant ;
+- un fichier qui a été déplacé ou supprimé ;
+- un Dossier vide ;
+- un pack sans Histoire jouable ;
+- un ZIP inclus qui n'est plus accessible ;
+- une transition qui ne mène plus vers un élément valide.
+
+Les problèmes affichés dans **À corriger** bloquent la génération tant qu'ils ne sont pas résolus.
+
+## 2. Relire les options globales
+
+Avant de générer, vérifie surtout les réglages de navigation qui influencent plusieurs Histoires :
+
+- **Auto-next** ;
+- le **Message de fin** ;
+- le mode nuit ;
+- les réglages **Après la lecture**.
+
+Un réglage global peut modifier la destination atteinte après plusieurs Histoires. Si le comportement te semble inattendu, consulte la page [Navigation](/story-studio/docs/navigation/).
+
+Relis également **Harmoniser le volume** et **Silence début / fin**. Ces options ne changent pas la navigation, mais elles peuvent traiter les audios lors de la génération.
+
+Voir [Comprendre le traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
+
+## 3. Contrôler le Diagramme
+
+Le **Diagramme** est utile pour vérifier la structure et les transitions calculées par Story Studio.
+
+Pour un pack comme *Les aventures de Léo*, contrôle notamment :
+
+- l'élément atteint depuis le Menu racine ;
+- les retours depuis les Dossiers ;
+- la destination après la dernière Histoire d'une liste ;
+- le Message de fin ;
+- les éventuels retours vers une autre branche.
+
+Le Diagramme représente la navigation réellement préparée par Story Studio. La position d'un élément dans l'Arbre ne suffit pas toujours à déterminer où mènera la lecture.
+
+## 4. Simuler les parcours importants
+
+Le Simulateur permet de démarrer depuis le début du pack ou depuis un élément choisi.
+
+Avant une publication, teste au minimum :
+
+1. la navigation dans les Dossiers principaux ;
+2. la sélection d'une Histoire ;
+3. le bouton **Accueil** à différents moments ;
+4. la fin d'une Histoire ;
+5. le passage à l'élément suivant ;
+6. les cas particuliers liés à **Auto-next**, au Message de fin ou au mode nuit.
+
+Par exemple :
+
+**Menu racine → Le château de sable → Histoire complète → Message de fin → retour attendu**
+
+Pour un gros pack, il n'est pas nécessaire de relire chaque seconde de chaque audio : concentre-toi surtout sur les parcours et les réglages qui ont changé depuis la version précédente.
+
+## 5. Vérifier les métadonnées
+
+Lorsque tu génères un pack, Story Studio te permet de confirmer notamment :
+
+- le titre ;
+- l'âge minimum ;
+- l'auteur ;
+- la version ;
+- le producteur ;
+- la description ;
+- l'UUID ;
+- le nom du ZIP généré.
+
+Pour un pack importé, Story Studio peut proposer de créer un nouvel UUID avant la génération.
+
+Un nouvel UUID permet de distinguer une nouvelle version indépendante. Conserve celui d'origine uniquement si tu veux réellement remplacer cette même révision.
+
+## 6. Générer le pack
+
+Clique sur **Générer le pack**.
+
+Story Studio :
+
+1. demande ou confirme les métadonnées ;
+2. vérifie qu'aucun problème bloquant ne subsiste ;
+3. demande le dossier de sortie ;
+4. ajoute la génération à la **File de rendu** ;
+5. construit le ZIP.
+
+Les générations sont exécutées l'une après l'autre dans l'ordre de la file.
+
+Si le moteur détecte une erreur pendant la création du pack, la tâche échoue et le ZIP n'est pas considéré comme généré correctement.
+
+## 7. Comprendre les avertissements après génération
+
+Une génération peut aussi réussir **avec avertissements**.
+
+Dans ce cas, le ZIP a bien été produit, mais Story Studio signale un point qui mérite une vérification ciblée, par exemple après un traitement audio important.
+
+Il faut distinguer :
+
+| Situation | Conséquence |
+|---|---|
+| **À corriger** avant génération | la génération est bloquée |
+| erreur pendant la génération | la tâche échoue |
+| avertissement après génération | le ZIP existe, mais une vérification est conseillée |
+
+Écoute les passages concernés et, pour une version destinée à être diffusée largement, teste aussi le ZIP sur le matériel cible.
+
+## Que conserver après la génération ?
+
+Le fichier `.mbah` reste la source à rouvrir pour continuer à modifier le projet.
+
+Le ZIP généré représente la version publiée ou installée. Garde les deux lorsque la version mérite d'être archivée.
+
+Pour un pack suivi dans le temps, une organisation simple suffit :
+
+```text
+Les aventures de Léo/
+├── Projet/
+│   └── projet Story Studio + médias
+└── Versions publiées/
+    ├── v1.zip
+    └── v2.zip
+```
+
+Si tu dois transférer ou archiver le projet, utilise **Consolider le projet** afin de regrouper le `.mbah` et les médias référencés.
+
+[Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/) ·
+[Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) ·
+[Résoudre un blocage de génération](/story-studio/docs/resoudre-un-blocage-generation/)

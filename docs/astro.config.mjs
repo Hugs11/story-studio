@@ -7,6 +7,13 @@ export default defineConfig({
   site: 'https://hugs11.github.io',
   base,
   trailingSlash: 'always',
+  redirects: {
+    '/docs/workspace-et-fichiers-de-projet': `${base}/docs/enregistrer-et-sauvegarder-un-projet`,
+    '/docs/sessions-temporaires-et-recuperation': `${base}/docs/enregistrer-et-sauvegarder-un-projet`,
+    '/docs/projet-mbah-ou-extraction-zip': `${base}/docs/enregistrer-et-sauvegarder-un-projet`,
+    '/docs/importer-et-extraire-un-pack': `${base}/docs/modifier-un-pack-existant`,
+    '/docs/preparer-et-exporter': `${base}/docs/verifier-et-generer-un-pack`,
+  },
   integrations: [
     starlight({
       title: 'Documentation Story Studio',
@@ -51,7 +58,6 @@ export default defineConfig({
           items: [
             { slug: 'docs/editeur-libre' },
             { slug: 'docs/editeur-simplifie' },
-            { slug: 'docs/modifier-un-pack-existant' },
             { slug: 'docs/creer-un-pack-depuis-un-podcast' },
             { slug: 'docs/creer-un-pack-depuis-youtube' },
             { slug: 'docs/agreger-des-packs' },
@@ -69,16 +75,15 @@ export default defineConfig({
             { slug: 'docs/editeur-audio' },
             { slug: 'docs/decouper-un-audio' },
             { slug: 'docs/assembler-des-audios' },
+            { slug: 'docs/traitement-audio-du-pack' },
           ],
         },
         {
           label: 'Projets, import et export',
           items: [
-            { slug: 'docs/workspace-et-fichiers-de-projet' },
-            { slug: 'docs/sessions-temporaires-et-recuperation' },
-            { slug: 'docs/importer-et-extraire-un-pack' },
-            { slug: 'docs/preparer-et-exporter' },
-            { slug: 'docs/projet-mbah-ou-extraction-zip' },
+            { slug: 'docs/enregistrer-et-sauvegarder-un-projet' },
+            { slug: 'docs/modifier-un-pack-existant' },
+            { slug: 'docs/verifier-et-generer-un-pack' },
           ],
         },
         {
