@@ -396,6 +396,25 @@ const layersNode = [
   ['path', { d: 'M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17' }],
 ];
 
+const unfoldVerticalNode = [
+  ['path', { d: 'M12 22v-6' }],
+  ['path', { d: 'M12 8V2' }],
+  ['path', { d: 'M4 12H2' }],
+  ['path', { d: 'M10 12H8' }],
+  ['path', { d: 'M16 12h-2' }],
+  ['path', { d: 'M22 12h-2' }],
+  ['path', { d: 'm15 19-3 3-3-3' }],
+  ['path', { d: 'm15 5-3-3-3 3' }],
+];
+
+const listTreeNode = [
+  ['path', { d: 'M8 5h13' }],
+  ['path', { d: 'M13 12h8' }],
+  ['path', { d: 'M13 19h8' }],
+  ['path', { d: 'M3 10a2 2 0 0 0 2 2h3' }],
+  ['path', { d: 'M3 5v12a2 2 0 0 0 2 2h3' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
 export const Mic = createLocalLucideIcon(micNode);
@@ -456,3 +475,5 @@ export const Youtube = createLocalLucideIcon(youtubeNode);
 export const Ellipsis = createLocalLucideIcon(ellipsisNode);
 export const ShieldCheck = createLocalLucideIcon(shieldCheckNode);
 export const Layers = createLocalLucideIcon(layersNode);
+export const UnfoldVertical = createLocalLucideIcon(unfoldVerticalNode);
+export const ListTree = createLocalLucideIcon(listTreeNode);

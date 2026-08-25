@@ -9,13 +9,15 @@ import {
   IconReturn, IconStop, IconDiamond, IconArrowRight,
   ICON_BY_KEY,
 } from './TreeIcons';
+import { ListTree, UnfoldVertical } from '../icons/LucideLocal';
 import { getTreeGuideStyleVars, getTreeIndent, resolveHoverGuide } from './treeGuides';
 import './TreePanel.css';
 import './TreeGuides.css';
 
 const BADGE_ICON_BY_KIND = {
   return: <IconReturn />,
-  'prompt-return': <IconReturn />,
+  'prompt-return': <UnfoldVertical />,
+  'sequence-return': <ListTree />,
   home: <IconHouse />,
   'home-implicit': <IconHouse />,
   'home-none': <IconHouse />,
