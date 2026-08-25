@@ -21,15 +21,15 @@ Les Préférences sont organisées en trois groupes.
 
 **Enregistrement**
 
-Active ou désactive l'enregistrement automatique et choisit le nombre de versions de sécurité à conserver.
+Active ou désactive l’enregistrement automatique et choisit le nombre de versions de sécurité à conserver.
 
 **Interface**
 
-Permet de choisir le thème **Système**, **Sombre** ou **Clair**, et d'ouvrir la personnalisation des raccourcis clavier.
+Permet de choisir le thème **Système**, **Sombre** ou **Clair**, et d’ouvrir la personnalisation des raccourcis clavier.
 
 **Projets et médias** — **Gestion des projets et médias**
 
-Regroupe l'emplacement de travail, la copie des fichiers importés et la consolidation d'un projet.
+Regroupe l’emplacement de travail, la copie des fichiers importés et la consolidation d’un projet.
 
 Voir [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/).
 
@@ -41,9 +41,9 @@ Permet de choisir entre **Piper**, recommandé et sans configuration, et **XTTS*
 
 Voir [Voix locales : Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/).
 
-**Images IA** — **Génération d'images IA — ComfyUI**
+**Images IA** — **Génération d’images IA — ComfyUI**
 
-Active la génération d'images avec un serveur **ComfyUI** et permet de gérer les workflows disponibles.
+Active la génération d’images avec un serveur **ComfyUI** et permet de gérer les workflows disponibles.
 
 Voir [ComfyUI](/story-studio/docs/comfyui/).
 
@@ -51,19 +51,19 @@ Voir [ComfyUI](/story-studio/docs/comfyui/).
 
 **Import et audio**
 
-Contient quelques réglages qu'il vaut mieux laisser par défaut sauf besoin précis :
+Contient quelques réglages qu’il vaut mieux laisser par défaut sauf besoin précis :
 
-- **Autoriser l'extraction des packs non supportés** permet de tenter une extraction partielle pour récupérer des médias ou des histoires, sans garantir la fidélité ni la régénération du pack ;
+- **Autoriser l’extraction des packs non supportés** permet de tenter une extraction partielle pour récupérer des médias ou des histoires, sans garantir la fidélité ni la régénération du pack ;
 - **Silence au début** et **Silence à la fin** définissent la durée de référence des silences
   de début et de fin utilisée lors du traitement audio.
 
 Voir [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/).
 
-Pour comprendre l'harmonisation du volume et le réglage des silences, voir [Traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
+Pour comprendre l’harmonisation du volume et le réglage des silences, voir [Traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
 
 **YouTube (yt-dlp)**
 
-Story Studio télécharge automatiquement `yt-dlp` lors du premier usage de l'import YouTube et le maintient à jour.
+Story Studio télécharge automatiquement `yt-dlp` lors du premier usage de l’import YouTube et le maintient à jour.
 
 Cette section permet surtout de :
 
@@ -72,9 +72,9 @@ Cette section permet surtout de :
 
 **Diagnostic**
 
-Permet d'activer une journalisation plus détaillée et de retrouver le fichier `story-studio.log`.
+Permet d’activer une journalisation plus détaillée et de retrouver le fichier `story-studio.log`.
 
-En temps normal, seuls les avertissements et les erreurs sont enregistrés. Active la journalisation détaillée lorsqu'un problème est reproductible et que tu souhaites fournir davantage d'informations pour le diagnostiquer.
+En temps normal, seuls les avertissements et les erreurs sont enregistrés. Active la journalisation détaillée lorsqu’un problème est reproductible et que tu souhaites fournir davantage d’informations pour le diagnostiquer.
 
 :::caution
 Le journal peut contenir des chemins locaux et des noms de fichiers. Vérifie son contenu avant de le publier dans une issue ou de le partager publiquement.
@@ -82,9 +82,9 @@ Le journal peut contenir des chemins locaux et des noms de fichiers. Vérifie so
 
 ## Enregistrement automatique
 
-L'**Enregistrement automatique** est activé par défaut.
+L’**Enregistrement automatique** est activé par défaut.
 
-S'il reste des modifications en attente, Story Studio enregistre le travail toutes les **5 minutes**.
+S’il reste des modifications en attente, Story Studio enregistre le travail toutes les **5 minutes**.
 
 Pour un projet déjà enregistré, les **Versions de sécurité** permettent également de conserver plusieurs copies `.mbah` précédentes. Elles servent de secours si le fichier de projet doit être récupéré.
 
@@ -93,7 +93,7 @@ Ce mécanisme ne remplace pas **Annuler / Rétablir** :
 - `Ctrl+Z` et `Ctrl+Maj+Z` reviennent sur les modifications de la session en cours ;
 - les versions de sécurité sont de véritables fichiers conservés sur le disque.
 
-Un travail qui n'a pas encore été enregistré dispose également d'un mécanisme de reprise en cas d'interruption. Il est expliqué dans [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/).
+Un travail qui n’a pas encore été enregistré dispose également d’un mécanisme de reprise en cas d’interruption. Il est expliqué dans [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/).
 
 ## Les raccourcis à retenir
 
@@ -101,7 +101,7 @@ Les principaux raccourcis globaux sont :
 
 | Action | Raccourci par défaut |
 |---|---|
-| Retour à l'accueil | `Ctrl+N` |
+| Retour à l’accueil | `Ctrl+N` |
 | Ouvrir un projet | `Ctrl+O` |
 | Enregistrer | `Ctrl+S` |
 | Enregistrer sous | `Ctrl+Maj+S` |
@@ -109,7 +109,7 @@ Les principaux raccourcis globaux sont :
 | Ajouter un Dossier | `Ctrl+Maj+N` |
 | Options du pack | `Ctrl+,` |
 | Rechercher dans la structure | `Ctrl+F` |
-| Afficher / masquer l'Arbre | `Ctrl+1` |
+| Afficher / masquer l’Arbre | `Ctrl+1` |
 | Afficher / masquer les Réglages | `Ctrl+2` |
 | Afficher / masquer le Diagramme | `Ctrl+3` |
 | Ouvrir les Préférences | `Ctrl+Maj+O` |
@@ -117,13 +117,13 @@ Les principaux raccourcis globaux sont :
 | Générer le pack | `Ctrl+G` |
 | Annuler / Rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |
 
-Lorsqu'un élément est sélectionné dans l'**Arbre** ou le **Diagramme**, les raccourcis habituels `Ctrl+C`, `Ctrl+X`, `Ctrl+V` et `Suppr` permettent également de copier, couper, coller ou supprimer la sélection.
+Lorsqu’un élément est sélectionné dans l’**Arbre** ou le **Diagramme**, les raccourcis habituels `Ctrl+C`, `Ctrl+X`, `Ctrl+V` et `Suppr` permettent également de copier, couper, coller ou supprimer la sélection.
 
 Dans le panneau **Médias**, `Ctrl+Maj+F` place le focus sur la recherche.
 
-## Raccourcis de l'éditeur audio
+## Raccourcis de l’éditeur audio
 
-L'éditeur audio possède ses propres raccourcis, particulièrement pratiques pour travailler sans multiplier les clics.
+L’éditeur audio possède ses propres raccourcis, particulièrement pratiques pour travailler sans multiplier les clics.
 
 | Action | Raccourci par défaut |
 |---|---|
@@ -131,15 +131,15 @@ L'éditeur audio possède ses propres raccourcis, particulièrement pratiques po
 | Lecture arrière / Pause / Lecture avant | `J` / `K` / `L` |
 | Reculer / avancer de 50 ms | `←` / `→` |
 | Aller au début / à la fin | `Début` / `Fin` |
-| Marquer le point d'entrée / de sortie | `I` / `O` |
-| Aller au point d'entrée / de sortie | `Maj+I` / `Maj+O` |
-| Effacer le point d'entrée / de sortie | `Ctrl+I` / `Ctrl+O` |
+| Marquer le point d’entrée / de sortie | `I` / `O` |
+| Aller au point d’entrée / de sortie | `Maj+I` / `Maj+O` |
+| Effacer le point d’entrée / de sortie | `Ctrl+I` / `Ctrl+O` |
 | Garder la sélection | `Ctrl+K` |
 | Supprimer la sélection | `Ctrl+X` |
 | Annuler la dernière modification | `Ctrl+Z` |
 | Zoomer / dézoomer | `Ctrl++` / `Ctrl+-` |
 
-`Échap` ferme l'éditeur audio ou l'éditeur d'image.
+`Échap` ferme l’éditeur audio ou l’éditeur d’image.
 
 ## Personnaliser les raccourcis
 
@@ -152,14 +152,14 @@ La fenêtre regroupe les raccourcis par contexte :
 - Diagramme ;
 - Panneau Médias ;
 - Éditeur audio ;
-- Éditeur d'image ;
+- Éditeur d’image ;
 - Navigation standard.
 
 Tu peux rechercher une action, cliquer sur son raccourci puis appuyer sur la nouvelle combinaison.
 
 Story Studio refuse une combinaison déjà utilisée par une autre action dans le même contexte. Tu peux aussi **réinitialiser une section** ou **tout réinitialiser** pour revenir aux valeurs par défaut.
 
-Les raccourcis de **Navigation standard** sont affichés pour information mais ne peuvent pas être modifiés. Ils correspondent aux conventions habituelles de navigation au clavier et d'accessibilité.
+Les raccourcis de **Navigation standard** sont affichés pour information mais ne peuvent pas être modifiés. Ils correspondent aux conventions habituelles de navigation au clavier et d’accessibilité.
 
 [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/) ·
 [Voix locales : Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/) ·
