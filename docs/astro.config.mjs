@@ -47,7 +47,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Créer ou reprendre',
+          label: 'Créer, importer ou reprendre',
           items: [
             { slug: 'docs/editeur-libre' },
             { slug: 'docs/editeur-simplifie' },
@@ -60,7 +60,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Éditer et préparer les médias',
+          label: 'Préparer et éditer les médias',
           items: [
             { slug: 'docs/espace-d-edition' },
             { slug: 'docs/gestionnaire-de-medias' },

@@ -3,49 +3,77 @@ title: Vérifier un pack
 description: Analyser un ZIP ou un 7z, comprendre le rapport et produire une copie corrigée.
 ---
 
-L’entrée **Vérifier un pack** analyse une archive existante sans l’ouvrir comme projet. Elle contrôle
-sa structure, ses médias et plusieurs conventions utiles à la compatibilité.
+L’entrée **Vérifier un pack** analyse un pack existant sans l’ouvrir dans l’Éditeur libre.
+
+Elle permet de repérer des problèmes de structure ou de médias et, lorsque c’est possible, de créer automatiquement une **copie corrigée**.
 
 ![Rapport du vérificateur de pack](/story-studio/assets/screenshots/pack-checker-dark.png)
 
-## Lancer l’analyse
+## 1. Analyser le pack
 
-Dépose un ZIP ou un 7z. Story Studio inspecte notamment :
+Choisis ou dépose un fichier `.zip` ou `.7z`.
 
-- la structure, les références et la compatibilité Lunii ;
-- les dimensions et formats des images ;
-- le format, le niveau sonore, les crêtes et les silences des audios ;
-- le nom, les métadonnées et l’identifiant du pack ;
-- la présence éventuelle d’un parcours de mode nuit.
+Le fichier source reste intact pendant l’analyse.
 
-## Lire le rapport
+Story Studio vérifie notamment :
 
-Le rapport distingue les résultats conformes, les corrections automatiques possibles, les
-suggestions facultatives et les éléments à écouter manuellement.
+- la structure du pack et sa compatibilité ;
+- les audios : format MP3, 44,1 kHz, mono, volume, crêtes et silences ;
+- les images : format et dimensions 320 × 240 px ;
+- le titre, la convention de nommage et les principales métadonnées du pack ;
+- la présence éventuelle d’un mode nuit.
 
-Une mesure automatique ne décide pas à ta place qu’un long silence est inutile. De même, un audio
-déjà saturé peut être signalé mais ses détails perdus ne peuvent pas être reconstruits.
+## 2. Lire le rapport
 
-## Corriger et réanalyser
+Le rapport distingue plusieurs types de résultats :
 
-Choisis uniquement les corrections souhaitées, relis les métadonnées puis sélectionne un dossier de
-sortie. Story Studio crée un nouveau ZIP sans écraser la source et peut analyser immédiatement ce
-résultat.
+- les éléments **conformes** ;
+- les problèmes pouvant être **corrigés automatiquement** ;
+- les **suggestions facultatives** ;
+- les problèmes qui nécessitent une vérification ou une correction manuelle.
 
-Le rapport lisible s’exporte en **HTML** (imprimable en PDF) ou en **Markdown**. Le journal technique
-en texte et le diagnostic **JSON** donnent davantage de détails pour rechercher un défaut. Aucun de
-ces fichiers n’embarque les médias, mais ils peuvent contenir leurs noms ou des chemins locaux :
-relis-les avant un partage public.
+Par exemple, Story Studio peut convertir un audio au mauvais format, ajuster son volume ou ajouter un silence de bord trop court.
 
-Les corrections facultatives, comme le traitement de certains silences, restent à sélectionner
-explicitement. Avant le clic final, l’étape récapitulative indique ce qui sera modifié et les
-métadonnées à confirmer. La nouvelle archive peut ensuite être réanalysée sans toucher à l’original.
+À l’inverse, un silence particulièrement long est seulement proposé comme correction facultative : son utilité dépend du contenu de l’Histoire.
 
-:::tip[Astuce]
-Conserve toujours le ZIP original jusqu’à avoir écouté la copie corrigée. Pour un problème de
-saturation ou de montage, repars du meilleur fichier audio source dans l’Éditeur libre plutôt que
-d’enchaîner plusieurs corrections automatiques.
+:::note[Une analyse automatique a ses limites]
+Un fichier audio illisible, silencieux ou déjà fortement écrêté ne peut pas toujours être réparé correctement.
+
+Dans ce cas, il vaut mieux remplacer le média depuis sa source plutôt que chercher à le corriger automatiquement.
+:::
+
+## 3. Créer une copie corrigée
+
+Si des corrections sont disponibles, ouvre l’étape **Correction**.
+
+Story Studio affiche ce qui sera modifié avant la génération. Les corrections automatiques sont appliquées, tandis que certaines suggestions — comme la réduction d’un silence trop long — restent à sélectionner manuellement.
+
+Si nécessaire, tu peux également confirmer ou modifier les métadonnées du pack.
+
+Choisis ensuite le dossier de sortie : Story Studio crée un **nouveau ZIP** sans écraser l’archive d’origine.
+
+Le ZIP corrigé est automatiquement réanalysé afin d’afficher son nouveau rapport.
+
+:::tip[Écouter la copie corrigée]
+Conserve l’archive originale jusqu’à avoir écouté la copie corrigée. Une normalisation peut améliorer le niveau sonore, mais elle ne restaure pas un audio déjà saturé ou dégradé.
+:::
+
+## Exporter le rapport
+
+Le diagnostic peut être exporté sous plusieurs formes :
+
+- **HTML**, pratique à lire ou à imprimer en PDF ;
+- **Markdown**, pour conserver un rapport texte lisible ;
+- **TXT**, pour le journal technique ;
+- **JSON**, pour le diagnostic détaillé.
+
+Ces rapports n’intègrent pas les médias eux-mêmes, mais peuvent contenir leurs noms ou certains chemins locaux. Vérifie leur contenu avant de les publier.
+
+:::tip[Vérifier ou modifier ?]
+Utilise **Vérifier un pack** pour diagnostiquer et corriger des problèmes techniques sans toucher à sa structure éditoriale.
+
+Si tu veux déplacer des Histoires, modifier la navigation ou ajouter du contenu, utilise plutôt [**Modifier un pack existant**](/story-studio/docs/modifier-un-pack-existant/).
 :::
 
 [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) ·
-[Résoudre un blocage](/story-studio/docs/resoudre-un-blocage-generation/)
+[Résoudre un blocage de génération](/story-studio/docs/resoudre-un-blocage-generation/)

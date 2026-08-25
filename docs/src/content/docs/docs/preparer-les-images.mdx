@@ -1,74 +1,94 @@
 ---
 title: Préparer les images
-description: Choisir le bon rôle, recadrer une image en 320 × 240 et créer une image-titre réutilisable.
+description: Recadrer les images en 320 × 240 et créer des visuels lisibles sur la Lunii.
 ---
 
-Les images servent d’abord à identifier un choix. Une couverture présente le pack dans le menu
-principal ; l’image d’un Dossier ou d’une Histoire aide ensuite l’enfant à reconnaître l’option
-affichée. Prépare chaque visuel pour le moment où il sera réellement vu.
+Les images servent surtout à identifier rapidement un choix. La couverture présente le pack,
+puis les images des Dossiers et des Histoires aident l’enfant à reconnaître ce qu’il peut
+sélectionner.
 
 ![Recadrage, niveaux et filtres d’une image](/story-studio/assets/screenshots/image-editor-dark.png)
 
-## Couverture, vignette et images de choix
+## Quel rôle pour chaque image ?
 
 | Emplacement | Rôle |
 |---|---|
-| **Image Lunii** du Menu racine | couverture affichée sur la boîte pour choisir le pack |
-| **Vignette catalogue** | présentation dans les bibliothèques compatibles |
-| image d’un **Dossier** | catégorie ou option intermédiaire |
-| image d’une **Histoire** | titre choisi avant la lecture |
+| **Image Lunii** du Menu racine | visuel affiché sur la Lunii pour choisir le pack |
+| **Vignette catalogue** | présentation dans STUdio, LuniiQt et les bibliothèques compatibles |
+| image d’un **Dossier** | représente une catégorie ou un choix intermédiaire |
+| image d’une **Histoire** | représente l’Histoire avant sa lecture |
 
-L’Image Lunii est adaptée en **320 × 240** à l’export. La vignette catalogue peut conserver un
-autre cadrage ; active **Utiliser la même image pour la Lunii et la vignette catalogue** seulement
-si le même visuel convient aux deux usages.
+L’**Image Lunii** est adaptée en **320 × 240 px (4:3)** à l’export. La **Vignette catalogue** peut
+conserver une autre taille et un autre cadrage. Active **Utiliser la même image pour la Lunii et la
+vignette catalogue** lorsque le même visuel convient aux deux usages.
+
+## Concevoir une image lisible sur la Lunii
+
+Une image réussie sur un écran d’ordinateur peut devenir confuse en 320 × 240. Pour les visuels
+destinés à la Lunii, privilégie donc une composition très simple. La couleur reste possible, mais
+une palette limitée et fortement contrastée est souvent plus lisible à cette taille :
+
+- travaille directement en **320 × 240 px** lorsque c’est possible ;
+- privilégie un **fond noir**, avec un sujet clair et nettement détaché ;
+- limite le nombre de couleurs et évite les nuances trop proches ;
+- utilise des silhouettes, pictogrammes ou formes immédiatement reconnaissables ;
+- garde des traits épais et évite les petits détails ;
+- recherche un contraste très fort ;
+- évite les dégradés, textures fines, ombres délicates et détails décoratifs ;
+- évite le texte dans les illustrations finales, surtout s’il est petit.
+
+Une bonne vérification consiste à regarder l’image en miniature : si « Le Renard » ou
+« Le château de sable » reste identifiable immédiatement, le visuel a de bonnes chances de
+fonctionner sur la Lunii.
 
 ## Importer et recadrer
 
 Clique sur un champ image ou fais glisser une image depuis le
-[Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/). Story Studio ouvre l’éditeur
-avant d’affecter une nouvelle source :
+[Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/). Pour une nouvelle source,
+Story Studio ouvre l’éditeur avant de l’affecter :
 
-1. **Ajuster** remplit le cadre 4:3 et peut rogner les bords ;
-2. **Centrer** conserve l’image entière, quitte à laisser de l’espace autour ;
-3. fais glisser l’image pour déplacer le sujet ;
+1. **Ajuster** remplit le cadre 4:3 et rogne les bords si nécessaire ;
+2. **Centrer** conserve l’image entière, avec de l’espace si ses proportions diffèrent ;
+3. fais glisser l’image pour repositionner le sujet ;
 4. utilise la molette pour régler le zoom ;
 5. valide avec **Utiliser cette image**.
 
-Une miniature très détaillée devient vite illisible sur la boîte. Vérifie à petite taille que le
-sujet principal reste reconnaissable et qu’aucun texte important n’est coupé.
+L’éditeur produit un fichier **PNG 320 × 240**. Le fichier source choisi sur ton ordinateur n’est
+pas écrasé.
 
-## Corriger sans perdre la source
+## Corriger une image
 
-Le bouton **Éditer** rouvre le cadrage et les réglages mémorisés. Luminosité, contraste, saturation,
-niveaux et vignettage permettent une correction légère ; ils ne remplacent pas une source de bonne
-qualité.
+Le bouton **Éditer** rouvre l’éditeur. Pour un dérivé déjà créé avec Story Studio, le cadrage et les
+réglages mémorisés sont réutilisés. Tu peux notamment ajuster la luminosité, le contraste, la
+saturation, les niveaux, l’épaisseur, le vignettage ou passer l’image en niveaux de gris.
 
-L’image produite est un dérivé géré par Story Studio. Le fichier source choisi ailleurs sur le
-disque n’est pas écrasé. **Retirer** enlève l’image du champ sans effacer cette source externe.
+Ces outils sont surtout utiles pour simplifier ou renforcer un visuel existant. Ils ne remplacent
+pas une image pensée dès le départ pour rester lisible à petite taille.
 
-## Générer une image-titre depuis le nom
+Depuis **Médias**, **Modifier l’image…** permet également de créer un nouveau dérivé sans remplacer
+automatiquement les utilisations actuelles de la source.
 
-**Générer une image-titre** crée un visuel typographique à partir du nom du Menu racine, du Dossier
-ou de l’Histoire. Ce choix est pratique pour préparer rapidement un projet cohérent avant de créer
-des illustrations définitives.
+## Générer rapidement une image-titre
 
-Avec une sélection multiple, **Générer à partir des noms** peut préparer plusieurs images-titres en
-une fois. Relis ensuite les titres longs : un nom clair dans l’Arbre n’est pas toujours lisible sur
-une image 320 × 240.
+**Générer une image-titre** crée un visuel typographique à partir du nom du Menu racine, d’un
+Dossier ou d’une Histoire. C’est pratique pour construire rapidement un projet avant de réaliser
+les illustrations définitives.
+
+Avec une sélection multiple compatible, **Générer à partir des noms** permet de créer plusieurs
+images-titres en une fois.
+
+Les images-titres restent volontairement une solution simple : pour le visuel final destiné à un
+jeune enfant, une illustration ou un pictogramme identifiable sans lecture sera généralement plus
+efficace.
 
 ## Générer avec ComfyUI
 
-Lorsque l’intégration est activée, **Générer IA** envoie une description au serveur ComfyUI local ou
-privé configuré. Le résultat rejoint la File IA puis les médias du projet. Recadre-le et vérifie-le
-exactement comme une image importée.
+Si l’intégration est activée, **Générer IA** envoie la demande au serveur ComfyUI configuré. Le
+résultat rejoint la **File IA** puis **Médias**.
 
-ComfyUI reste facultatif : l’import, l’image-titre et l’éditeur d’image fonctionnent sans ce
-service. Consulte [Configurer ComfyUI](/story-studio/docs/comfyui/) pour ses prérequis et ses limites.
+ComfyUI reste facultatif. Quelle que soit l’origine de l’image, applique les mêmes règles :
+recadrage 4:3, sujet simple, fort contraste et vérification en miniature.
 
-:::tip[Astuce]
-Construis d’abord toute la structure avec des images-titres simples. Une fois les choix et les
-retours validés dans le simulateur, remplace seulement les visuels réellement conservés.
-:::
+[Configurer ComfyUI](/story-studio/docs/comfyui/) pour connaître ses prérequis et ses limites.
 
 [Réutiliser et classer les images](/story-studio/docs/gestionnaire-de-medias/)
-
