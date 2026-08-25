@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
@@ -19,6 +19,8 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
   const isSimple = projectType === 'simple';
   const simpleStoryName = node.packMetadata?.title || node.projectName || '';
   const rootTitle = isSimple ? simpleStoryName : (node.rootName || node.packMetadata?.title || node.projectName || '');
+  const [simpleNameDraft, setSimpleNameDraft] = useState(simpleStoryName);
+  const isEditingSimpleNameRef = useRef(false);
 
   const [simpleInfoDismissed, setSimpleInfoDismissed] = useState(
     () => read(KEYS.SIMPLE_MODE_INFO_DISMISS) === '1',
@@ -29,13 +31,26 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
     setSimpleInfoDismissed(read(KEYS.SIMPLE_MODE_INFO_DISMISS) === '1');
   }, [isSimple]);
 
+  useEffect(() => {
+    if (!isEditingSimpleNameRef.current) setSimpleNameDraft(simpleStoryName);
+  }, [simpleStoryName]);
+
   function dismissSimpleInfo() {
     setSimpleInfoDismissed(true);
     write(KEYS.SIMPLE_MODE_INFO_DISMISS, '1');
   }
 
   function handleSimpleNameChange(nextValue) {
+    // Le modèle normalise les noms à chaque mutation et retire donc l'espace
+    // final avant la frappe suivante. Le brouillon garde la saisie exacte à
+    // l'écran, tandis que le store reste canonique pour l'autosave et l'export.
+    setSimpleNameDraft(nextValue);
     onUpdateRoot({ projectName: nextValue, packMetadata: { title: nextValue } });
+  }
+
+  function handleSimpleNameBlur() {
+    isEditingSimpleNameRef.current = false;
+    setSimpleNameDraft(simpleStoryName);
   }
 
   function setSameImage(v) {
@@ -163,8 +178,10 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
               <input
                 id="root-simple-name"
                 className="field-input simple-name-input"
-                value={simpleStoryName}
+                value={simpleNameDraft}
+                onFocus={() => { isEditingSimpleNameRef.current = true; }}
                 onChange={(e) => handleSimpleNameChange(e.target.value)}
+                onBlur={handleSimpleNameBlur}
                 placeholder="Le loup et l'agneau"
               />
               <span className="simple-name-hint">Apparaît dans le catalogue Lunii et donne son nom au fichier ZIP exporté.</span>
