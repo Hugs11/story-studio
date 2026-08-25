@@ -1,39 +1,31 @@
 ---
 title: Menu racine
-description: Comprendre le point d’entrée d’un pack, ses médias, ses premiers choix et sa différence avec un Dossier.
+description: Comprendre le point de départ d’un pack, sa présentation sur la Lunii et les premiers éléments de son parcours.
 ---
 
-Le **Menu racine** est le point de départ obligatoire de chaque pack. Il présente le pack dans le
-menu principal de la Lunii et contient les premiers éléments de son parcours.
+Le **Menu racine** est le point de départ de la structure d’un pack dans Story Studio.
 
-Avant d’entrer dans le pack, l’enfant voit son **Image Lunii** et entend son **Titre audio**.
-Lorsqu’il valide avec **OK**, il entre dans la navigation interne et découvre les éléments placés
-directement sous le Menu racine.
+Il remplit deux rôles :
+
+- il définit la **présentation du pack** dans le menu principal de la Lunii, avec son **Image Lunii** et son **Titre audio** ;
+- il contient les premiers **Dossiers**, **Histoires** ou packs auxquels l’enfant accède après avoir ouvert le pack.
+
+Le parcours ressemble donc généralement à ceci :
 
 ```text
-Sélection du pack
-        ↓
-Image Lunii affichée + Titre audio joué
+Menu principal de la Lunii
+
+Image Lunii + Titre audio du pack
         ↓ OK
-Premier choix du pack
+
+Entrée dans le pack
+        ↓
+Premier élément sous le Menu racine
         ↔ molette ↔
-Autres choix du même niveau
+Autres éléments du même niveau
 ```
 
-L’ordre de ces éléments dans l’arbre détermine leur ordre de parcours avec la molette.
-
-Si un Dossier est l’unique élément du Menu racine et ne contient lui-même qu’un élément, Story Studio
-entre automatiquement dans son contenu afin d’éviter une validation intermédiaire inutile. S’il
-contient plusieurs éléments, il devient au contraire un véritable écran de choix et ses réglages de
-molette et de lecture automatique sont respectés. Son Audio de sélection peut dans les deux cas
-servir d’introduction.
-
-:::note[Sélection du pack ou premier choix]
-La **sélection du pack** correspond à sa couverture dans le menu principal de la Lunii.
-
-Le **premier choix du pack** se trouve après avoir validé cette couverture avec **OK** : l’enfant
-est alors entré dans la navigation interne du pack.
-:::
+L’ordre des éléments placés sous le Menu racine détermine leur ordre de parcours avec la molette.
 
 ## Ce que le Menu racine peut contenir
 
@@ -45,7 +37,7 @@ Dans un pack créé avec l’**Éditeur libre**, le Menu racine peut contenir di
 - ou une combinaison de ces éléments.
 
 Une archive peut être utilisée directement ou
-[extrait en éléments modifiables](/story-studio/docs/modifier-un-pack-existant/#extraire-un-pack-déjà-présent-dans-larbre)
+[extraite en éléments modifiables](/story-studio/docs/modifier-un-pack-existant/#extraire-un-pack-déjà-présent-dans-larbre)
 si sa structure est prise en charge.
 
 ## Menu racine et Dossier
@@ -53,20 +45,43 @@ si sa structure est prise en charge.
 Le **Menu racine** et un **Dossier** peuvent tous les deux contenir plusieurs éléments, mais ils
 n’ont pas le même rôle.
 
-Le Menu racine est unique : il représente le pack et contient le premier niveau de son parcours.
-Un Dossier est un élément de ce parcours et peut ajouter une étape supplémentaire.
+Le Menu racine est unique : il représente le pack et son premier niveau de navigation.
 
-### Sans Dossier
+Un Dossier est au contraire un élément du parcours. Il permet de regrouper des Histoires, de créer
+un niveau de choix, de poser une question ou d’ajouter une transition.
+
+### Histoires directement sous le Menu racine
+
+Avec :
 
 ```text
 Menu racine
 ├── Histoire « Le Renard »
-└── Histoire « Le Hibou »
+├── Histoire « Le Hibou »
+└── Histoire « Le Lion »
 ```
 
-L’enfant entre dans le pack et peut immédiatement choisir entre les deux Histoires avec la molette.
+l’enfant voit d’abord l’Image Lunii du pack et entend son Titre audio dans le menu principal de la
+Lunii.
 
-### Avec un Dossier
+Après avoir appuyé sur **OK**, il peut immédiatement choisir entre les trois Histoires avec la
+molette.
+
+```text
+Image Lunii + Titre audio du pack
+        ↓ OK
+Histoire « Le Renard »
+        ↔ molette ↔
+Histoire « Le Hibou »
+        ↔ molette ↔
+Histoire « Le Lion »
+```
+
+Aucun Dossier intermédiaire n’est nécessaire.
+
+### Un seul Dossier sous le Menu racine
+
+Avec :
 
 ```text
 Menu racine
@@ -75,20 +90,66 @@ Menu racine
     └── Histoire « Le Hibou »
 ```
 
-L’enfant entre d’abord dans le Dossier **Animaux**, puis choisit entre les deux Histoires.
+le Dossier **Animaux** constitue le premier niveau du parcours.
 
-Le Dossier ajoute donc une étape dans le parcours. Il est utile lorsqu’il sert à regrouper des
-Histoires, poser une question, introduire une partie du pack ou créer une transition.
+Comme il est l’unique élément du Menu racine, Story Studio l’atteint automatiquement après
+l’ouverture du pack. Son **Audio de sélection** peut alors présenter ce choix ou poser une question,
+par exemple :
 
-[Découvrir les différents usages d’un Dossier](/story-studio/docs/dossier/)
+> « Quel animal veux-tu écouter ? »
+
+L’enfant peut ensuite parcourir les Histoires du Dossier avec la molette.
+
+```text
+Image Lunii + Titre audio du pack
+        ↓ OK
+Dossier « Animaux »
+« Quel animal veux-tu écouter ? »
+        ↓
+Histoire « Le Renard »
+        ↔ molette ↔
+Histoire « Le Hibou »
+```
+
+Si ce Dossier ne contient lui-même qu’un seul élément, Story Studio simplifie davantage le parcours
+afin d’éviter une validation intermédiaire inutile. La **Lecture automatique** est alors imposée et
+la **Molette de sélection** désactivée.
+
+[Découvrir les différents usages et réglages d’un Dossier](/story-studio/docs/dossier/)
+
+### Plusieurs éléments sous le Menu racine
+
+Un Dossier peut également être proposé parmi d’autres choix :
+
+```text
+Menu racine
+├── Dossier « Animaux »
+├── Dossier « Espace »
+└── Histoire « Le Voyage du nuage »
+```
+
+Après avoir ouvert le pack, l’enfant choisit alors entre ces éléments avec la molette.
+
+S’il sélectionne **Animaux** et appuie sur **OK**, il entre dans ce Dossier et découvre les Histoires
+qu’il contient.
+
+Chaque Dossier ajoute donc un niveau au parcours lorsqu’il sert réellement de choix ou de transition.
 
 ## Dans l’Éditeur simplifié
 
-L’**Éditeur simplifié** est destiné aux packs contenant une seule histoire. Story Studio masque donc
+L’**Éditeur simplifié** est destiné aux packs contenant une seule Histoire. Story Studio masque donc
 la structure habituelle du Menu racine et affiche directement **Mon histoire**.
 
-Son image et son **Titre audio** présentent l’histoire dans le menu principal de la Lunii. Après
-validation avec **OK**, le **Récit complet** est joué.
+Son image et son **Titre audio** présentent le pack dans le menu principal de la Lunii. Après
+validation avec **OK**, le **Récit complet** est joué directement.
+
+```text
+Image + Titre audio du pack
+        ↓ OK
+Récit complet
+```
+
+Il n’y a donc pas de second écran de sélection entre la présentation du pack et son récit.
 
 Si tu veux créer plusieurs choix, utiliser des Dossiers ou personnaliser la navigation, passe à
 l’[Éditeur libre](/story-studio/docs/editeur-libre/).
@@ -99,8 +160,8 @@ Plusieurs éléments servent à présenter le pack, mais ils n’ont pas la mêm
 
 | Élément | Rôle |
 |---|---|
-| **Image Lunii** | image affichée sur la boîte à histoires pour présenter le pack |
-| **Titre audio** | son entendu lorsque le pack est sélectionné dans le menu principal |
+| **Image Lunii** | image affichée dans le menu principal de la Lunii lorsque le pack est sélectionné |
+| **Titre audio** | son joué au même moment pour annoncer le pack |
 | **Vignette catalogue** | image utilisée par les bibliothèques compatibles, comme STUdio ou LuniiQt |
 | **Métadonnées du pack** | titre, auteur, version, âge et autres informations décrivant le pack exporté |
 

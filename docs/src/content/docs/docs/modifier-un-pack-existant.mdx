@@ -1,19 +1,19 @@
 ---
 title: Modifier un pack existant
-description: Ouvrir un ZIP, un 7z ou un dossier d'histoire existant, puis comprendre ce que Story Studio peut réellement modifier.
+description: Ouvrir un ZIP, un 7z ou un dossier d’histoire existant, puis comprendre ce que Story Studio peut réellement modifier.
 ---
 
 Si tu possèdes déjà un pack mais pas son projet `.mbah`, Story Studio peut essayer de reconstruire une version modifiable à partir du pack lui-même.
 
-Depuis l'écran d'accueil, choisis **Modifier un pack existant**.
+Depuis l’écran d’accueil, choisis **Modifier un pack existant**.
 
 Tu peux sélectionner :
 
 - un fichier `.zip` ;
 - un fichier `.7z` ;
-- un dossier d'histoire déjà décompressé.
+- un dossier d’histoire déjà décompressé.
 
-Story Studio analyse d'abord le pack avant de l'ouvrir.
+Story Studio analyse d’abord le pack avant de l’ouvrir.
 
 ## Trois résultats possibles
 
@@ -21,28 +21,28 @@ Selon sa structure, un pack peut être :
 
 | Résultat | Ce que tu peux faire |
 |---|---|
-| **Éditable** | ouvrir le pack dans l'éditeur, le modifier puis le générer à nouveau |
-| **Lecture seule** | le parcourir dans le Simulateur ou, si l'option avancée est active, tenter une extraction partielle |
-| **Non supporté** | choisir une autre source ou, si l'option avancée est active, tenter une extraction partielle |
+| **Éditable** | ouvrir le pack dans l’éditeur, le modifier puis le générer à nouveau |
+| **Lecture seule** | le parcourir dans le Simulateur ou, si l’option avancée est active, tenter une extraction partielle |
+| **Non supporté** | choisir une autre source ou, si l’option avancée est active, tenter une extraction partielle |
 
-Story Studio ne se contente pas de vérifier que l'archive est valide. Il contrôle aussi que la navigation du pack peut être reconstruite de manière suffisamment fidèle pour être modifiée puis générée à nouveau.
+Story Studio ne se contente pas de vérifier que l’archive est valide. Il contrôle aussi que la navigation du pack peut être reconstruite de manière suffisamment fidèle pour être modifiée puis générée à nouveau.
 
 Un pack comportant des parcours complexes, des étapes partagées ou certaines transitions particulières peut donc rester uniquement simulable.
 
-## Modifier un pack depuis l'accueil
+## Modifier un pack depuis l’accueil
 
 Le parcours normal est le suivant :
 
 1. clique sur **Modifier un pack existant** ;
 2. choisis ou dépose le ZIP, le 7z ou le dossier ;
 3. laisse Story Studio vérifier son éditabilité ;
-4. si le pack est éditable, il s'ouvre dans l'éditeur ;
-5. vérifie sa navigation avant d'effectuer des modifications importantes.
+4. si le pack est éditable, il s’ouvre dans l’éditeur ;
+5. vérifie sa navigation avant d’effectuer des modifications importantes.
 
 Le pack importé commence comme un nouveau travail. Si tu souhaites le conserver, utilise ensuite **Projet → Enregistrer** pour créer un fichier `.mbah`.
 
 :::tip[ZIP ou projet .mbah ?]
-Il est tout à fait possible de conserver uniquement le **ZIP**, puis de l'extraire dans Story Studio chaque fois que tu veux le modifier, tant que sa structure reste éditable par Story Studio. C'est simple et cela suffit pour beaucoup de packs.
+Il est tout à fait possible de conserver uniquement le **ZIP**, puis de l’extraire dans Story Studio chaque fois que tu veux le modifier, tant que sa structure reste éditable par Story Studio. C’est simple et cela suffit pour beaucoup de packs.
 
 Pour un projet que tu comptes faire évoluer régulièrement, conserve toutefois aussi le **projet
 `.mbah` et ses fichiers sources**.
@@ -59,54 +59,54 @@ Le ZIP sauvegarde la **version publiée** ; le `.mbah` sauvegarde le **travail d
 
 ## Pack non éditable mais simulable
 
-Lorsqu'un pack ne peut pas être reconstruit de manière suffisamment fiable, Story Studio peut proposer **Simuler le pack**.
+Lorsqu’un pack ne peut pas être reconstruit de manière suffisamment fiable, Story Studio peut proposer **Simuler le pack**.
 
 Le Simulateur lit alors la navigation réelle du pack sans prétendre la convertir en structure modifiable.
 
 Cette possibilité est utile pour :
 
-- vérifier le contenu d'un ancien pack ;
+- vérifier le contenu d’un ancien pack ;
 - comprendre son parcours ;
 - comparer son comportement avec une nouvelle version ;
 - retrouver une Histoire ou un média avant de recréer manuellement une partie du pack.
 
-## Tenter une extraction d'un pack non supporté
+## Tenter une extraction d’un pack non supporté
 
-Une option avancée permet d'autoriser une tentative d'extraction même lorsque Story Studio considère le pack comme non éditable.
+Une option avancée permet d’autoriser une tentative d’extraction même lorsque Story Studio considère le pack comme non éditable.
 
 Elle se trouve dans :
 
-**Préférences → Avancé → Import et audio → Autoriser l'extraction des packs non supportés**
+**Préférences → Avancé → Import et audio → Autoriser l’extraction des packs non supportés**
 
 Cette extraction sert surtout à récupérer des éléments ou des médias.
 
 :::caution[Résultat potentiellement incomplet]
 Un pack extrait de force peut perdre une partie de sa navigation ou produire un projet impossible à générer tel quel.
 
-Conserve toujours le pack d'origine et vérifie soigneusement le résultat avant de republier quoi que ce soit.
+Conserve toujours le pack d’origine et vérifie soigneusement le résultat avant de republier quoi que ce soit.
 :::
 
-## Extraire un pack déjà présent dans l'Arbre
+## Extraire un pack déjà présent dans l’Arbre
 
-Dans l'Éditeur libre, un élément **ZIP** peut représenter un pack inclus dans ton projet.
+Dans l’Éditeur libre, un élément **ZIP** peut représenter un pack inclus dans ton projet.
 
 Un clic droit sur cet élément propose notamment :
 
-- **Simuler ce pack…** : parcourir le pack tel qu'il existe ;
-- **Extraire l'histoire** : tenter de remplacer le ZIP par des Dossiers et des Histoires modifiables.
+- **Simuler ce pack…** : parcourir le pack tel qu’il existe ;
+- **Extraire l’histoire** : tenter de remplacer le ZIP par des Dossiers et des Histoires modifiables.
 
-Si l'élément ZIP se trouve dans un projet déjà construit, son extraction remplace uniquement cet élément.
+Si l’élément ZIP se trouve dans un projet déjà construit, son extraction remplace uniquement cet élément.
 
-Dans un projet vierge, l'extraction peut au contraire devenir la structure principale du nouveau projet.
+Dans un projet vierge, l’extraction peut au contraire devenir la structure principale du nouveau projet.
 
 Le ZIP source reste inchangé.
 
-## Après l'extraction
+## Après l’extraction
 
 Avant de modifier fortement un pack extrait :
 
 1. simule quelques parcours importants ;
-2. compare les Dossiers, Histoires et retours avec le pack d'origine ;
+2. compare les Dossiers, Histoires et retours avec le pack d’origine ;
 3. vérifie les médias signalés comme manquants ;
 4. enregistre le résultat comme nouveau projet `.mbah` ;
 5. passe ensuite par la validation avant de générer un nouveau ZIP.
