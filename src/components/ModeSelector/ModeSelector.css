@@ -186,15 +186,19 @@
   line-height: 1.4;
 }
 
-/* ---- Préférences (bouton fantôme isolé) ---- */
-.mode-home-prefs {
+/* ---- Liens secondaires ---- */
+.mode-home-links {
   margin-top: 22px;
+  display: flex;
+  gap: 10px;
 }
 
 .mode-ghost-button {
+  width: 150px;
   min-height: 40px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 0 15px;
   border: 1px solid var(--borderLt);
@@ -203,6 +207,7 @@
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 650;
+  text-decoration: none;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, transform 0.12s;
 }

@@ -10,6 +10,10 @@ const titleBarSource = await readFile(
   new URL('../src/components/layout/TitleBar.jsx', import.meta.url),
   'utf8',
 );
+const modeSelectorSource = await readFile(
+  new URL('../src/components/ModeSelector/ModeSelector.jsx', import.meta.url),
+  'utf8',
+);
 const defaultCapability = JSON.parse(await readFile(
   new URL('../src-tauri/capabilities/default.json', import.meta.url),
   'utf8',
@@ -31,4 +35,14 @@ test('la modale À propos route la documentation selon le runtime', () => {
 test('le bouton d’aide et la permission opener restent accessibles', () => {
   assert.match(titleBarSource, /aria-label="Aide et à propos"/);
   assert.ok(defaultCapability.permissions.includes('opener:default'));
+});
+
+test('l’accueil propose un accès direct à la documentation', () => {
+  assert.match(
+    modeSelectorSource,
+    /const DOCUMENTATION_URL = 'https:\/\/hugs11\.github\.io\/story-studio\/docs\/'/,
+  );
+  assert.match(modeSelectorSource, /await openUrl\(DOCUMENTATION_URL\);/);
+  assert.match(modeSelectorSource, /href=\{DOCUMENTATION_URL\}/);
+  assert.match(modeSelectorSource, />Documentation<\/span>/);
 });
