@@ -3,66 +3,163 @@ title: Éditeur libre
 description: Créer un pack avec plusieurs Histoires, des Dossiers et une navigation personnalisée.
 ---
 
-Choisis **Éditeur libre** pour construire un pack dont tu contrôles entièrement la structure. Ce
-mode convient aux collections d’Histoires, aux menus imbriqués et aux parcours qui utilisent des
-retours ou des destinations personnalisées.
+L’**Éditeur libre** permet de construire soi-même la structure d’un pack.
 
-## Commencer le pack
+Tu peux placer quelques Histoires directement dans le **Menu racine**, les organiser dans des
+**Dossiers**, ajouter plusieurs niveaux de choix et définir ce qui se passe après chaque lecture.
+Ce mode convient aussi bien à une petite collection qu’à un parcours plus élaboré.
 
-Le nouveau projet contient un Menu racine. Renseigne d’abord son nom, son image et son Titre audio :
-ils présentent le pack dans le menu principal de la Lunii.
+:::note[Un espace de création complet]
+L’Éditeur libre est l’espace de création le plus complet de Story Studio. Les autres modes de
+création proposent des parcours simplifiés pour certains besoins : une Histoire unique, un podcast,
+des vidéos YouTube ou l’agrégation de packs. Mais toutes ces opérations sont disponibles dans
+l’Éditeur libre avec plus de liberté.
+:::
 
-Ajoute ensuite directement des Histoires ou crée des Dossiers pour organiser plusieurs niveaux de
-choix. L’ordre visible dans l’Arbre devient l’ordre parcouru avec la molette.
+## Quand choisir l’Éditeur libre ?
 
-Tu peux partir d’une structure minimale puis la développer :
+Choisis ce mode si tu veux notamment :
+
+- proposer plusieurs Histoires dans le même pack ;
+- regrouper les Histoires avec des Dossiers ;
+- créer plusieurs niveaux de choix ;
+- utiliser un Message de fin commun ou une fin propre à certaines Histoires ;
+- personnaliser les retours après lecture ou l’action du bouton **Accueil** ;
+- créer des enchaînements avec **Histoire suivante**, **Lecture directe** ou **Auto-next**.
+- Quand tu maitrise l'application, et que les raccourcis ne te sont plus d'utilité
+
+
+## Commencer par le Menu racine
+
+Un nouveau projet ouvert dans l’Éditeur libre contient un **Menu racine** vide. Il représente le
+pack et contient le premier niveau de son parcours.
+
+Commence par préparer sa présentation :
+
+- le **Nom** identifie le Menu racine dans Story Studio ;
+- l’**Image Lunii** présente le pack sur la boîte à histoires ;
+- la **Vignette catalogue** est utilisée par les logiciels et bibliothèques compatibles ;
+- le **Titre audio** est entendu lorsque l’enfant parcourt ses packs sur la Lunii.
+
+Tu peux utiliser la même image pour la Lunii et la vignette catalogue, ou choisir deux visuels
+différents. Ajoute ensuite des Histoires directement au Menu racine ou crée des Dossiers pour
+organiser les choix.
+
+## Construire l’arborescence
+
+L’**Arbre** montre ce qui contient quoi et dans quel ordre les choix sont présentés.
 
 ```text
 Menu racine « Les voyages de Mina »
 ├── Dossier « À la montagne »
 │   ├── Histoire « Le refuge enneigé »
-│   ├── Histoire « La marmotte curieuse »
-│   └── Histoire « Le lac secret »
+│   └── Histoire « La marmotte curieuse »
 └── Dossier « Au bord de la mer »
     ├── Histoire « Le phare endormi »
-    ├── Histoire « Le dauphin messager »
-    └── Histoire « La régate des étoiles »
+    └── Histoire « Le dauphin messager »
 ```
 
-Chaque Dossier est un choix réel. Si tu veux seulement classer tes fichiers sans ajouter d’étape
-pour l’enfant, utilise plutôt des tags dans le Gestionnaire de médias.
+Dans cet exemple, l’enfant choisit d’abord un lieu, puis une Histoire dans le Dossier sélectionné.
+L’ordre des éléments dans l’Arbre correspond à l’ordre parcouru avec la molette.
 
-## Construire la structure
+Un Dossier n’est donc pas seulement un moyen de ranger le projet : il devient une véritable étape
+du parcours. Pour classer des fichiers dans Story Studio sans ajouter de choix sur la Lunii, utilise
+plutôt les tags du **Gestionnaire de médias**.
 
-Depuis l’Arbre, tu peux ajouter, renommer, dupliquer, copier ou déplacer les éléments. Les Réglages
-adaptent les médias et la navigation de la sélection. Le Diagramme permet de contrôler les chemins
-de lecture et les retours.
+Depuis l’Arbre, tu peux ajouter, renommer, dupliquer, copier ou déplacer les éléments. La sélection
+multiple permet notamment d’appliquer une couleur, de déplacer une série d’éléments ou de générer
+des images-titres et des audios depuis leurs noms. Elle ne fusionne pas les réglages de navigation
+incompatibles : vérifie ensuite les Histoires dont la fin doit rester particulière.
 
-La barre **Ajouter** permet aussi d’importer plusieurs audios, un dossier récursif, un podcast ou
-du contenu YouTube, d’enregistrer une Histoire au microphone ou d’en créer une avec une voix locale.
-Relis toujours la structure produite : un sous-dossier importé devient un Dossier parcouru par
-l’enfant.
+## Ajouter du contenu
 
-La sélection multiple est utile pour appliquer une couleur, déplacer une série d’éléments ou
-générer des images-titres et des audios depuis leurs noms. Elle ne fusionne pas les réglages de
-navigation incompatibles : vérifie ensuite les Histoires dont la fin doit rester particulière.
+La barre **Ajouter** enrichit directement la structure courante.
 
-Utilise le simulateur régulièrement, notamment après un déplacement de Dossier ou une modification
-des actions **OK**, **Accueil** et **Après la lecture**.
+| Action | Résultat |
+| --- | --- |
+| **Importer audio, ZIP ou 7z** | transforme les audios en Histoires et ajoute les archives comme packs incorporés |
+| **Créer un dossier** | ajoute un nouveau Dossier vide |
+| **Importer un dossier** | reproduit le dossier choisi et ses sous-dossiers dans l’Arbre |
+| **Ajouter un podcast** | importe des épisodes comme Histoires |
+| **Importer depuis YouTube** | importe l’audio de vidéos comme Histoires |
+| **Enregistrer une histoire avec le micro** | crée une nouvelle Histoire enregistrée |
+| **Créer une histoire avec TTS** | génère une Histoire à partir d’un texte et d’une voix locale |
 
-## Enregistrer et générer
+Lors de l’import d’un dossier, chaque sous-dossier devient lui aussi un Dossier dans Story Studio.
+Relis toujours la structure obtenue : un niveau utile pour classer des fichiers sur le disque ne
+constitue pas nécessairement un choix intéressant pour l’enfant.
 
-Le projet commence dans une session temporaire. Utilise **Enregistrer comme projet** pour créer son
-fichier `.mbah`, puis corrige les éléments signalés par la pastille de validation avant de générer
-le ZIP final.
+## Structure, réglages et parcours
 
-Avant l’export, rejoue au minimum le premier choix, la dernière Histoire de chaque Dossier et toute
-Histoire possédant un Message de fin ou une destination personnalisée.
+Il est utile de distinguer trois choses :
 
-:::tip[Astuce]
-Pour introduire une collection par une question comme « Quelle histoire allons-nous écouter ? »,
-crée un Dossier portant cet audio puis place les Histoires ou les ZIP concernés à l’intérieur. Le
-Dossier devient une véritable étape avant les choix.
+- l’**Arbre** indique ce qui contient quoi ;
+- les **Réglages** déterminent ce qui se passe après une validation, une fin de lecture ou un appui
+  sur **Accueil** ;
+- le **Diagramme** et le **Simulateur** permettent de vérifier le parcours obtenu.
+
+Par exemple, l’Arbre peut contenir :
+
+```text
+Menu racine « Les aventures du soir »
+└── Dossier « Animaux »
+    ├── Histoire « Le Renard »
+    └── Histoire « Le Hibou »
+```
+
+Le parcours peut alors être :
+
+```text
+Couverture du pack
+        ↓ OK
+Dossier « Animaux »
+Audio : « Choisis ton animal pour ce soir. »
+        ↔ choix avec la molette
+Histoire « Le Renard »
+        ↓ OK
+Lecture de « Le Renard »
+        ↓ fin du récit
+Message de fin commun
+        ↓ retour
+Dossier « Animaux »
+```
+
+Les destinations restent ainsi des réglages et des liaisons : déplacer visuellement une Histoire
+ne suffit pas à prouver où elle conduit après sa lecture. Pour comprendre les destinations
+disponibles, consulte [**Navigation**](/story-studio/docs/navigation/).
+
+## Faire évoluer le pack progressivement
+
+Commence par la structure principale et un seul parcours complet. Ajoute les médias, vérifie ce
+premier trajet, puis configure les retours et les comportements particuliers.
+
+Le **Diagramme** aide à repérer les destinations et les enchaînements. Le **Simulateur** reproduit le
+parcours prévu afin de contrôler **OK**, **Accueil** et les fins de lecture. Après un déplacement
+important dans l’Arbre, rejoue les chemins concernés. Un essai sur la boîte à histoires reste la
+validation matérielle finale.
+
+## Enregistrer et préparer l’export
+
+Par défaut, un nouveau travail commence dans une **session temporaire**. Utilise **Enregistrer comme
+projet** pour créer le fichier `.mbah` et conserver durablement ton travail. Si l’utilisation directe
+du workspace est activée dans les préférences, le projet emploie immédiatement cet emplacement.
+
+Le fichier `.mbah` conserve la structure et les réglages ; les médias restent des fichiers séparés.
+Pour comprendre leur organisation, consulte
+[**Workspace et fichiers de projet**](/story-studio/docs/workspace-et-fichiers-de-projet/).
+
+Avant de générer le ZIP final, corrige les éléments signalés par la **Validation** et rejoue au
+minimum :
+
+1. le premier choix du pack ;
+2. la dernière Histoire de chaque Dossier ;
+3. toute Histoire avec un Message de fin ou une destination personnalisée ;
+4. les parcours utilisant **Auto-next** ou **Lecture directe**.
+
+:::tip[Commencer simple]
+Même pour un gros pack, fais d’abord fonctionner un trajet complet : Menu racine → Dossier →
+Histoire → fin → retour. Il est plus facile de repérer une erreur de navigation avant de remplir
+toute la structure.
 :::
 
 [Découvrir l’espace d’édition](/story-studio/docs/espace-d-edition/) ·

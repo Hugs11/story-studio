@@ -22,9 +22,11 @@ Autres choix du même niveau
 
 L’ordre de ces éléments dans l’arbre détermine leur ordre de parcours avec la molette.
 
-Si un Dossier est l’unique élément du Menu racine, Story Studio entre automatiquement dans son
-contenu afin d’éviter une validation intermédiaire inutile. Son Audio de sélection peut néanmoins
-servir d’introduction avant le premier choix.
+Si un Dossier est l’unique élément du Menu racine et ne contient lui-même qu’un élément, Story Studio
+entre automatiquement dans son contenu afin d’éviter une validation intermédiaire inutile. S’il
+contient plusieurs éléments, il devient au contraire un véritable écran de choix et ses réglages de
+molette et de lecture automatique sont respectés. Son Audio de sélection peut dans les deux cas
+servir d’introduction.
 
 :::note[Sélection du pack ou premier choix]
 La **sélection du pack** correspond à sa couverture dans le menu principal de la Lunii.
@@ -97,7 +99,7 @@ Plusieurs éléments servent à présenter le pack, mais ils n’ont pas la mêm
 
 | Élément | Rôle |
 |---|---|
-| **Image Lunii** | image affichée sur la boîte pour présenter le pack |
+| **Image Lunii** | image affichée sur la boîte à histoire pour présenter le pack |
 | **Titre audio** | son entendu lorsque le pack est sélectionné dans le menu principal |
 | **Vignette catalogue** | image utilisée par les bibliothèques compatibles, comme STUdio ou LuniiQt |
 | **Métadonnées du pack** | titre, auteur, version, âge et autres informations décrivant le pack exporté |
@@ -105,6 +107,6 @@ Plusieurs éléments servent à présenter le pack, mais ils n’ont pas la mêm
 L’**Image Lunii** est adaptée au format **320 × 240 px** lors de l’export.
 
 Le réglage **Utiliser la même image pour la Lunii et la vignette catalogue** permet d’utiliser un
-seul visuel pour les deux. Sans ce réglage, les deux images peuvent être choisies indépendamment.
+seul visuel pour les deux. Sans ce réglage, les deux images doivent être choisies indépendamment.
 
 [Voir comment la molette, OK et Accueil parcourent le pack](/story-studio/docs/navigation/)

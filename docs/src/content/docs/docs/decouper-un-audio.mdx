@@ -3,40 +3,57 @@ title: Découper un audio
 description: Transformer un enregistrement long en plusieurs extraits réutilisables.
 ---
 
-La **Découpe audio** produit plusieurs fichiers à partir d’une seule source. Elle est adaptée à un
-enregistrement qui contient plusieurs Histoires, chapitres ou prises à conserver séparément.
+L’outil **Découper un audio** crée plusieurs fichiers à partir d’une seule source. Il est utile après un
+long enregistrement contenant plusieurs Histoires, chapitres ou prises que tu veux conserver
+séparément, ou quand tu veux extraire une introduction de l'histoire pour utiliser dans l'audio titre par exemple.
 
 ![Découpe d’un enregistrement en plusieurs extraits préparés](/story-studio/assets/screenshots/Audio-decoupe-light.png)
 
 ## Ouvrir l’outil
 
-Dans le Gestionnaire de médias, ouvre le menu d’un fichier audio puis choisis **Découper un audio**.
-La source reste inchangée pendant toute l’opération.
+Dans le catalogue **Médias**, ouvre l’aperçu d’un fichier audio puis choisis
+**Découper un audio**.
+
+Tu peux aussi faire un clic droit sur une Histoire dans l’**Arbre** ou le **Diagramme**, puis choisir
+**Découper l’audio dans Médias…**. L’outil utilise alors l’audio **Histoire complète** comme source,
+mais **l’Histoire n’est pas modifiée automatiquement**.
+
+La source reste inchangée : la découpe crée de nouveaux fichiers.
 
 ## Préparer les extraits
 
-1. Place la sélection autour du premier passage à conserver.
-2. Écoute la sélection et ajuste ses limites.
-3. Ajoute l’extrait à la liste.
-4. Renomme-le si nécessaire.
-5. Recommence pour chaque passage utile.
+La zone bleue de la forme d’onde représente le passage sélectionné.
 
-Les extraits peuvent se suivre ou provenir de zones éloignées du fichier. Vérifie leur début et
-leur fin individuellement avant de lancer la création.
+1. Place le début et la fin autour du premier passage à conserver.
+2. Utilise **Prévisualiser** pour vérifier la sélection.
+3. Clique sur **Ajouter l’extrait**.
+4. Modifie son nom dans la liste si nécessaire.
+5. Recommence pour les autres passages.
 
-## Créer les fichiers
+Chaque extrait mémorise ses propres points d’entrée et de sortie. Les plages peuvent se suivre,
+être éloignées ou même se chevaucher.
 
-Story Studio génère un fichier FLAC par extrait dans l’emplacement de travail actif. Les nouveaux
-sons rejoignent le Gestionnaire de médias avec les tags de la source et le tag **découpe**.
+Pour ajuster précisément une limite, tu peux utiliser **I** et **O**, les flèches **← / →** pour
+avancer ou reculer de 50 ms, ainsi que le zoom. Chaque extrait ajouté peut ensuite être
+prévisualisé ou retiré avant la génération.
 
-La création des extraits n’affecte aucune Histoire automatiquement. Fais ensuite glisser chaque son
-vers le champ voulu, ou conserve-le dans la bibliothèque pour un usage futur.
+## Générer les fichiers
 
-## Découpe ou édition audio ?
+Lorsque la liste est prête, clique sur **Générer**.
+
+Story Studio crée chaque extrait au format **FLAC** dans `fichiers-importes/` de l’**emplacement de
+travail**, puis l’ajoute au catalogue **Médias**. Les tags présents sur la source sont recopiés et
+le tag **découpe** est ajouté automatiquement.
+
+Les nouveaux fichiers ne sont affectés à aucune Histoire. Fais-les ensuite glisser depuis
+**Médias** vers les champs souhaités.
+
+## Découpe ou Éditeur audio ?
 
 | Besoin | Outil |
 |---|---|
-| retirer un passage d’un fichier et garder un seul résultat | [Éditeur audio](/story-studio/docs/editeur-audio/) |
-| produire plusieurs fichiers depuis un long enregistrement | **Découpe audio** |
-| réunir plusieurs fichiers dans un ordre choisi | [Assemblage audio](/story-studio/docs/assembler-des-audios/) |
+| garder un seul résultat après avoir retiré ou corrigé un passage | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| produire plusieurs fichiers depuis une même source | **Découper un audio** |
+| réunir plusieurs fichiers dans un seul audio | [Assembler des audios](/story-studio/docs/assembler-des-audios/) |
 
+[Retrouver les extraits dans Médias](/story-studio/docs/gestionnaire-de-medias/)

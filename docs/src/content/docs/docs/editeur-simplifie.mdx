@@ -3,54 +3,128 @@ title: Éditeur simplifié
 description: Créer rapidement un pack composé d’une seule Histoire.
 ---
 
-Choisis **Éditeur simplifié** lorsque le pack doit lancer une seule Histoire sans menu de choix ni
-navigation avancée. L’interface rassemble les champs utiles sous **Mon histoire**.
+L’**Éditeur simplifié** permet de créer un pack contenant **une seule Histoire**, sans Dossier ni
+menu de choix supplémentaire.
 
-## Préparer la présentation
+Il rassemble sur un même écran tout ce qui est nécessaire pour présenter l’Histoire sur la Lunii,
+puis lancer son récit. Il convient notamment à un conte enregistré au microphone, un récit importé
+depuis un fichier audio, un livre audio ou une Histoire créée avec une voix locale.
 
-Le nom, l’image et le Titre audio présentent le pack dans le menu principal de la Lunii. Le Titre
-audio doit rester court : l’enfant l’entend avant de valider avec **OK**.
+:::note[Un parcours volontairement guidé]
+L’Éditeur simplifié présente uniquement les champs nécessaires à un pack composé d’une seule
+Histoire. L’Éditeur libre permet de construire le même type de contenu avec davantage de réglages et
+de possibilités d’évolution.
+:::
 
-Le champ **Récit complet** contient ensuite l’audio principal. Tu peux importer un fichier,
-enregistrer au microphone ou générer une voix locale selon ton usage.
+## Ce que contient une Histoire simple
+
+L’interface regroupe les éléments principaux sous **Mon histoire**.
+
+### Nom de l’histoire
+
+Le **Nom de l’histoire** identifie le projet dans Story Studio, apparaît dans le catalogue Lunii et
+sert également à nommer le ZIP exporté.
+
+Si le nom est encore vide lorsque tu importes le Récit complet, Story Studio peut le remplir
+automatiquement à partir du nom du fichier audio.
+
+### Image
+
+L’image présente l’Histoire lorsque l’enfant la retrouve sur sa Lunii. Tu peux utiliser :
+
+- une **Image Lunii**, adaptée en 320 × 240 px lors de l’export ;
+- une **Vignette catalogue**, utilisée par les logiciels et bibliothèques compatibles.
+
+Pour ne préparer qu’un seul visuel, active **Utiliser la même image pour la Lunii et la vignette
+catalogue**.
+
+### Titre audio
+
+Le **Titre audio** est entendu lorsque l’enfant sélectionne l’Histoire sur sa Lunii. Il doit surtout
+permettre de l’identifier rapidement.
+
+Pour une Histoire appelée **Le Voyage du nuage**, un Titre audio disant simplement « Le Voyage du
+nuage » est généralement suffisant. Garde la véritable introduction pour le Récit complet.
+
+### Récit complet
+
+Le bloc **Récit complet** contient l’Histoire elle-même. C’est cet audio qui est lancé lorsque
+l’enfant valide avec **OK**.
+
+## Le parcours de l’enfant
+
+Le parcours est volontairement très court :
+
+```text
+Sélection de l’Histoire sur la Lunii
+Image + Titre audio : « Le Voyage du nuage »
+        ↓ OK
+Lecture du Récit complet
+        ↓ fin de l’audio
+Fin du récit
+        ↓ Accueil
+Retour à la couverture
+```
+
+À la fin du récit, aucun autre choix n’est lancé automatiquement. Le bouton **Accueil** permet de
+revenir à la couverture du pack.
+
+Il n’y a ni Dossier ni deuxième écran de sélection entre le choix du pack et le début du récit.
+Dans l’Éditeur libre, le Menu racine peut au contraire mener vers plusieurs Histoires ou Dossiers.
+
+## Préparer les audios
+
+Pour le **Titre audio** comme pour le **Récit complet**, tu peux :
+
+- importer un fichier audio ;
+- enregistrer ta voix avec le microphone ;
+- générer une voix depuis un texte avec une solution TTS locale ;
+- écouter et modifier l’audio avec les outils de Story Studio.
+
+Tu peux ainsi créer une Histoire simple sans avoir préparé tous les fichiers à l’avance.
+
+:::tip[Plusieurs récits dans le même fichier ?]
+Commence directement dans l’Éditeur libre. Importe l’enregistrement dans le Gestionnaire de médias,
+[découpe-le en extraits](/story-studio/docs/decouper-un-audio/), puis affecte chaque extrait à une
+Histoire distincte.
+:::
 
 ## Vérifier l’Histoire
 
-Écoute séparément le Titre audio et le Récit complet. Recadre l’image, corrige éventuellement
-l’audio, puis utilise le simulateur pour vérifier la sélection et le lancement du récit.
+Avant de générer le pack, vérifie séparément :
 
-Le résultat reste un vrai pack compatible. Story Studio masque simplement les éléments de
-navigation qui ne sont pas nécessaires à une seule Histoire.
+- la **sélection** : l’image est reconnaissable et le Titre audio identifie rapidement l’Histoire ;
+- le **récit** : le Récit complet démarre correctement, son volume est agréable et ses extrémités ne
+  sont pas coupées ;
+- le **parcours** : dans le Simulateur, **OK** lance le bon récit et **Accueil** revient à la
+  couverture.
 
-```text
-Mon histoire « Le Voyage du nuage »
-├── Image et Titre audio : présentation dans le menu principal
-└── Récit complet : lecture après OK
-```
+La **Validation** signale les éléments indispensables manquants, notamment l’Image Lunii, le Titre
+audio ou le Récit complet.
 
-Le Titre audio et le Récit complet ne doivent pas contenir la même chose. Le premier aide à choisir
-le pack ; le second porte toute l’Histoire. Si le titre répète une longue introduction, l’enfant
-l’entendra à chaque passage dans le menu principal.
+## Quand choisir l’Éditeur libre ?
 
-## Quand passer à l’Éditeur libre
+Utilise plutôt l’Éditeur libre pour :
 
-L’Éditeur simplifié reste adapté tant que le pack contient un seul récit et une fin simple. Passe à
-l’Éditeur libre si tu dois :
-
-- ajouter une deuxième Histoire ;
+- ajouter plusieurs Histoires ;
+- organiser les récits dans des Dossiers ;
 - poser une question avant plusieurs choix ;
-- organiser les récits par Dossiers ;
-- utiliser un Message de fin commun ou des retours personnalisés ;
-- inclure ou extraire un ZIP.
+- définir des retours particuliers ou des étapes de navigation ;
+- inclure, agréger ou extraire des archives ZIP ou 7z.
 
-Le changement de mode conserve le projet dans le même modèle. Vérifie néanmoins la présentation et
-la destination après lecture lorsque tu développes une Histoire simple en véritable collection.
+Le choix entre Éditeur simplifié et Éditeur libre se fait lors de la création du projet. L’interface
+ne propose actuellement pas de conversion directe entre les deux modes. Si tu sais déjà que le pack
+doit évoluer vers plusieurs Histoires ou Dossiers, commence avec l’Éditeur libre.
 
-:::tip[Astuce]
-Si ton enregistrement contient plusieurs récits, commence par
-[le découper en extraits](/story-studio/docs/decouper-un-audio/), puis utilise l’Éditeur libre pour
-placer chaque extrait dans sa propre Histoire.
-:::
+## Enregistrer et générer
 
-[Comprendre une Histoire](/story-studio/docs/histoire/) ·
+Comme avec l’Éditeur libre, un nouveau travail commence par défaut dans une **session temporaire**.
+Utilise **Enregistrer comme projet** pour créer le fichier `.mbah` et conserver durablement ton
+travail.
+
+Lorsque l’image, le Titre audio et le Récit complet sont prêts et que la Validation ne signale plus
+de problème, tu peux générer le ZIP destiné à la Lunii.
+
+[Comprendre le fonctionnement d’une Histoire](/story-studio/docs/histoire/) ·
+[Découvrir l’Éditeur libre](/story-studio/docs/editeur-libre/) ·
 [Préparer et exporter le pack](/story-studio/docs/preparer-et-exporter/)

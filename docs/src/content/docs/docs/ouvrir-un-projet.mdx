@@ -3,41 +3,57 @@ title: Ouvrir un projet
 description: Reprendre un fichier .mbah, un projet récent ou une session récupérable.
 ---
 
-L’entrée **Ouvrir un projet** charge un fichier `.mbah` déjà enregistré. Les projets utilisés
-récemment apparaissent également sur l’accueil pour une reprise plus rapide.
+L’entrée **Ouvrir un projet** permet de reprendre un projet Story Studio déjà enregistré au format `.mbah`.
 
-## Choisir le projet
+## Ouvrir un fichier `.mbah`
 
-Sélectionne le fichier `.mbah`. Story Studio charge sa structure, ses réglages, son catalogue Médias
-et les chemins vers les fichiers associés.
+Depuis l’accueil, choisis **Ouvrir un projet** puis sélectionne le fichier `.mbah`.
 
-Un ZIP généré n’est pas le projet source : utilise **Modifier un pack existant** si tu ne disposes
-que de l’archive finale.
+Tu peux aussi ouvrir directement l’un des **Projets récents** affichés sur l’accueil.
 
-## Retrouver les médias
+:::note[Un ZIP n’est pas un projet]
+Le fichier `.mbah` contient le projet éditable de Story Studio.
 
-Si un fichier a été déplacé, renommé ou se trouve sur un disque non monté, la fenêtre **Médias
-introuvables** propose de rechercher et relier les références. Vérifie les correspondances avant de
-les appliquer et d’enregistrer.
+Un ZIP généré est le pack destiné à la Lunii. Si tu ne possèdes plus que ce ZIP, utilise plutôt [**Modifier un pack existant**](/story-studio/docs/modifier-un-pack-existant/).
+:::
 
-Un projet peut référencer des fichiers externes ou des copies placées dans son workspace. Le fichier
-`.mbah` seul ne suffit donc pas toujours pour transférer tout le projet vers une autre machine.
+## Si des médias sont introuvables
 
-## Projet récent ou récupérable
+Le `.mbah` enregistre les références vers les audios, images et ZIP utilisés, mais n’embarque pas nécessairement ces fichiers.
 
-Les projets récents affichés sur l’accueil pointent vers leur dernier emplacement connu. Une carte
-**Projet récupérable** correspond au contraire à une session non enregistrée retrouvée après une
-interruption.
+Si certains ont été déplacés, renommés ou se trouvent sur un disque non monté, Story Studio affiche **Médias introuvables**.
 
-Ouvre cette reprise, vérifie son contenu puis utilise **Enregistrer comme projet**. Ignorer la carte
-supprime la reprise temporaire concernée.
+Tu peux alors :
 
-:::tip[Astuce]
-Avant de déplacer un projet vers une autre machine, utilise **Préférences → Gestion des projets et
-médias → Consolider le projet**. Le `.mbah` et tous ses médias référencés seront copiés ensemble sans
-supprimer les originaux.
+- rechercher les fichiers dans un autre dossier ;
+- relier plusieurs médias en indiquant leur nouvel emplacement ;
+- choisir manuellement un fichier lorsqu’une correspondance est ambiguë.
+
+Lorsque tu appliques les correspondances, Story Studio met à jour les chemins et enregistre le projet.
+
+## Projets récents et sessions récupérables
+
+Les **Projets récents** sont des raccourcis vers les derniers fichiers `.mbah` ouverts ou enregistrés.
+
+Une carte **Projet récupérable** est différente : elle correspond à une session temporaire retrouvée après une fermeture inattendue de Story Studio.
+
+Ouvre-la, vérifie son contenu puis utilise **Enregistrer comme projet** pour créer un véritable fichier `.mbah`.
+
+Si tu choisis **Ignorer cette reprise**, Story Studio supprime la session temporaire correspondante.
+
+## Déplacer un projet vers une autre machine
+
+Copier uniquement le `.mbah` ne copie pas les médias.
+
+Pour préparer un projet complet, utilise :
+
+**Préférences → Gestion des projets et médias → Consolider le projet**
+
+Story Studio crée un nouveau fichier `.mbah` consolidé et copie dans le dossier cible tous les médias référencés qu’il retrouve, sans supprimer les originaux. Les éventuels fichiers encore introuvables sont signalés.
+
+:::tip[À retenir]
+Pour archiver ou transférer un projet, préfère toujours une **consolidation** plutôt qu’une copie du fichier `.mbah`.
 :::
 
 [Workspace et fichiers de projet](/story-studio/docs/workspace-et-fichiers-de-projet/) ·
 [Sessions temporaires et récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
-

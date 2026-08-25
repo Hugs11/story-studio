@@ -80,12 +80,17 @@ Dossier « Une journée avec Léo »
 L’enfant entend l’introduction puis arrive directement au choix des Histoires.
 
 :::note[Dossier unique sous le Menu racine]
-Lorsqu’un Dossier est l’unique élément placé directement sous le Menu racine, Story Studio enchaîne
-automatiquement vers son contenu dans le pack généré afin d’éviter une validation intermédiaire
-inutile.
+Lorsqu’un Dossier est l’unique élément placé directement sous le Menu racine, son comportement dépend
+de son contenu :
 
-S’il partage le Menu racine avec d’autres éléments ou s’il est imbriqué dans un autre Dossier,
-son réglage **Lecture automatique** est respecté normalement.
+- avec plusieurs éléments, il constitue un véritable écran de choix : ses réglages **Molette de
+  sélection** et **Lecture automatique** sont respectés ;
+- avec un seul élément, Story Studio conserve un parcours linéaire sans validation intermédiaire :
+  le pack généré active la **Lecture automatique** et désactive la **Molette de sélection**. Ces deux
+  valeurs sont alors affichées comme imposées dans l’éditeur.
+
+S’il partage le Menu racine avec d’autres éléments ou s’il est imbriqué dans un autre Dossier, ses
+réglages sont également respectés normalement.
 :::
 
 ## Écran transparent
@@ -185,7 +190,7 @@ Un Dossier dispose de plusieurs éléments permettant de définir son comporteme
 |---|---|
 | **Image** | image affichée pour présenter le Dossier |
 | **Audio de sélection** | présente le Dossier, pose une question ou raconte une introduction |
-| **Écran transparent** | n’affiche pas de nouvelle image pendant l’Audio de sélection |
+| **Écran transparent** | n’affiche pas d'image pendant l’Audio de sélection |
 | **Molette de sélection** | permet de parcourir les éléments contenus dans le Dossier |
 | **Lecture automatique** | poursuit le parcours après l’audio sans attendre **OK** |
 | **Bouton Pause** | permet de mettre en pause l’Audio de sélection |

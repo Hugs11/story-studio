@@ -1,59 +1,86 @@
 ---
 title: Éditeur audio
-description: Rogner, couper, écouter et appliquer des fondus sans perdre le fichier de départ.
+description: Rogner, supprimer un passage et appliquer des fondus avant de valider un audio.
 ---
 
-L’éditeur audio sert à corriger un son déjà choisi : retirer un silence inutile, supprimer un
-passage, adoucir une entrée ou vérifier précisément une transition.
+L’**Éditeur audio** sert à corriger un son déjà choisi : retirer un silence trop
+long, supprimer une erreur, adoucir une entrée ou ajuster précisément une coupe.
 
 ![Éditeur audio avec forme d’onde, sélection et contrôles de lecture](/story-studio/assets/screenshots/audio-editor-dark.png)
 
-## Ouvrir un son
+## Ouvrir l’Éditeur audio
 
-Ouvre l’éditeur depuis un champ audio dans les Réglages, depuis le Gestionnaire de médias ou depuis
-un assistant qui propose l’outil. Le titre de la fenêtre rappelle le fichier en cours.
+Dans les Réglages, utilise le bouton **Éditer l’audio** d’un champ qui contient déjà un fichier.
+L’Éditeur audio travaille sur **un seul audio à la fois**.
 
-L’éditeur travaille sur un seul audio. Pour produire plusieurs extraits, utilise
-[Découper un audio](/story-studio/docs/decouper-un-audio/). Pour réunir plusieurs sources, utilise
+Dans l’assistant **Agréger des packs**, le bouton **Édition audio** permet aussi de modifier
+l’**Audio du menu**.
+
+Le catalogue **Médias** propose directement ses propres outils de découpe et d’assemblage ; il
+n’ouvre pas l’Éditeur audio général.
+
+Pour transformer une longue prise en plusieurs fichiers, utilise
+[Découper un audio](/story-studio/docs/decouper-un-audio/). Pour réunir plusieurs prises, consulte
 [Assembler des audios](/story-studio/docs/assembler-des-audios/).
 
-## Se déplacer dans la forme d’onde
+## Sélectionner précisément un passage
 
-- clique dans la forme d’onde pour déplacer la tête de lecture ;
-- utilise lecture, pause et arrêt pour contrôler le passage ;
-- zoome pour placer plus précisément le début et la fin de la sélection ;
-- utilise les commandes de lecture lente ou rapide pour écouter autour d’une coupe.
+La zone bleue de la forme d’onde correspond à la sélection courante. Déplace ses poignées pour
+définir le point d’entrée et le point de sortie.
 
-La zone sélectionnée détermine l’action préparée. Écoute toujours quelques secondes avant et après
-la limite choisie.
+Les commandes principales permettent aussi de :
 
-## Rogner ou couper
+- cliquer dans la forme d’onde pour déplacer la tête de lecture ;
+- utiliser **I** et **O** pour placer l’entrée et la sortie à la position courante ;
+- utiliser **←** et **→** pour avancer ou reculer de **50 ms** avec un court aperçu ;
+- avancer ou reculer de **5 s** avec les boutons dédiés ;
+- zoomer avec le curseur, `Ctrl` + molette ou les raccourcis `Ctrl` + `+` et `Ctrl` + `-` ;
+- utiliser **J / K / L** pour la lecture arrière, la pause et la lecture avant accélérée jusqu’à ×8.
 
-**Rogner** conserve uniquement la sélection. Cette action convient par exemple pour retirer un long
-silence au début et à la fin d’un enregistrement.
+Le bouton **Prévisualiser l’extrait** lit uniquement la sélection. Il est utile pour vérifier une
+limite avant de lancer une modification.
 
-**Couper** retire la sélection et rapproche les deux parties restantes. Un fondu court autour du
-raccord peut éviter un clic ou une transition trop brutale.
+## Garder ou supprimer la sélection
 
-L’action est d’abord préparée sous forme d’aperçu. Tu peux l’écouter, l’annuler ou ajuster les
-limites avant de valider le fichier final.
+Deux actions couvrent l’essentiel des corrections :
+
+**Garder la sélection** conserve uniquement la zone choisie. Utilise-la par exemple pour retirer
+un long silence au début et à la fin d’une Histoire complète.
+
+**Supprimer la sélection** enlève au contraire la zone choisie et raccorde ce qui se trouve avant
+et après. C’est pratique pour retirer une hésitation, une toux ou une phrase ratée au milieu d’une
+prise.
+
+Story Studio génère d’abord un **aperçu** de la modification. La forme d’onde est alors rechargée
+avec ce résultat : tu peux l’écouter, poursuivre les corrections ou fermer l’éditeur sans valider.
 
 ## Ajouter des fondus
 
-Le fondu d’entrée augmente progressivement le niveau au début du résultat. Le fondu de sortie le
-réduit à la fin. Lors d’une coupe interne, un fondu de raccord agit autour de la jonction.
+Les boutons **↗** et **↘** ajoutent respectivement un fondu d’entrée et un fondu de sortie. Leur
+durée peut être ajustée avant validation.
 
-Un fondu ne répare pas une source saturée et ne remplace pas un vrai silence lorsque le récit en a
-besoin.
+Après la suppression d’un passage interne, un **fondu de raccord** peut également adoucir la
+jonction entre les deux parties restantes. Il est surtout utile lorsqu’une coupe nette produit un
+clic ou une transition trop brutale.
 
-## Valider et restaurer
+Un fondu ne corrige pas une source saturée et ne remplace pas un silence volontaire dans le récit.
 
-La validation applique l’aperçu au fichier géré par Story Studio et actualise le champ ou le média
-concerné. Lorsqu’une sauvegarde originale gérée est disponible, l’éditeur permet de revenir à cette
-version.
+## Valider les modifications
 
-Fermer sans valider abandonne l’aperçu en cours. Les options globales de silence et
-d’harmonisation restent séparées : elles sont appliquées lors de la génération du pack.
+Tant qu’aucune modification n’est préparée, le bouton final affiche **Aucune modification**.
+Lorsqu’un aperçu est prêt, **Valider les modifications** crée ou met à jour le fichier de travail
+et actualise automatiquement le champ ou l’audio concerné.
 
-[Retrouver le résultat dans le Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/)
+Une source externe n’est pas écrasée : Story Studio crée un résultat géré dans l’emplacement de travail.
+Selon le format et l’emplacement du fichier, un média déjà géré peut être mis à jour directement.
 
+Lorsqu’une sauvegarde de la version d’origine est disponible, le bouton **Restaurer l’original**
+permet de revenir au fichier avant édition. Fermer avec **Annuler** ou `Échap` abandonne simplement
+les modifications encore en aperçu.
+
+:::note
+Les réglages globaux de silence et d’harmonisation du pack restent indépendants de cet outil.
+L’Éditeur audio sert à corriger le contenu du fichier lui-même.
+:::
+
+[Retrouver et réutiliser les audios dans Médias](/story-studio/docs/gestionnaire-de-medias/)
