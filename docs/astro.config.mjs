@@ -61,6 +61,7 @@ export default defineConfig({
             { slug: 'docs/creer-un-pack-depuis-un-podcast' },
             { slug: 'docs/creer-un-pack-depuis-youtube' },
             { slug: 'docs/agreger-des-packs' },
+            { slug: 'docs/modifier-un-pack-existant' },
             { slug: 'docs/verifier-un-pack' },
             { slug: 'docs/ouvrir-un-projet' },
           ],
@@ -79,10 +80,9 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Projets, import et export',
+          label: 'Enregistrer et exporter',
           items: [
             { slug: 'docs/enregistrer-et-sauvegarder-un-projet' },
-            { slug: 'docs/modifier-un-pack-existant' },
             { slug: 'docs/verifier-et-generer-un-pack' },
           ],
         },
