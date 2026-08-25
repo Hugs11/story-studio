@@ -133,15 +133,20 @@ const requiredDocumentationRoutes = [
   'docs/editeur-audio/index.html',
   'docs/decouper-un-audio/index.html',
   'docs/assembler-des-audios/index.html',
+  'docs/enregistrer-et-sauvegarder-un-projet/index.html',
+  'docs/verifier-et-generer-un-pack/index.html',
+  'docs/voix-locales-piper-xtts/index.html',
+  'docs/comfyui/index.html',
+  'docs/preferences-et-raccourcis/index.html',
+  'docs/resoudre-un-blocage-generation/index.html',
+];
+
+const redirectedDocumentationRoutes = [
   'docs/workspace-et-fichiers-de-projet/index.html',
   'docs/sessions-temporaires-et-recuperation/index.html',
   'docs/importer-et-extraire-un-pack/index.html',
   'docs/preparer-et-exporter/index.html',
   'docs/projet-mbah-ou-extraction-zip/index.html',
-  'docs/voix-locales-piper-xtts/index.html',
-  'docs/comfyui/index.html',
-  'docs/preferences-et-raccourcis/index.html',
-  'docs/resoudre-un-blocage-generation/index.html',
 ];
 
 const preservedGuidePaths = [
@@ -154,6 +159,7 @@ const preservedGuidePaths = [
 ];
 
 for (const route of requiredDocumentationRoutes) requireFile(route, `page documentaire ${route}`);
+for (const route of redirectedDocumentationRoutes) requireFile(route, `redirection documentaire ${route}`);
 for (const guide of preservedGuidePaths) requireFile(guide, `ancien guide préservé ${guide}`);
 
 const files = await walk(outputDirectory);
@@ -193,7 +199,10 @@ for (const htmlFile of htmlFiles) {
 const sitemap = await readFile(path.join(outputDirectory, 'sitemap.xml'), 'utf8');
 const sitemapUrls = htmlFiles
   .map((file) => path.relative(outputDirectory, file).split(path.sep).join('/'))
-  .filter((relativePath) => !['404.html', 'docs/index.html'].includes(relativePath))
+  .filter((relativePath) => (
+    !['404.html', 'docs/index.html'].includes(relativePath)
+    && !redirectedDocumentationRoutes.includes(relativePath)
+  ))
   .map((relativePath) => {
     const route = relativePath.replace(/index\.html$/, '').replace(/\.html$/, '/');
     return `${publicOrigin}${basePath}/${route}`;

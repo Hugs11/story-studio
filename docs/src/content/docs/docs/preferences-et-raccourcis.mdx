@@ -1,71 +1,163 @@
 ---
 title: Préférences et raccourcis
-description: Retrouver les réglages généraux, personnaliser l’interface et connaître les raccourcis essentiels.
+description: Régler le comportement général de Story Studio et retrouver les principaux raccourcis clavier.
 ---
 
-Les **Préférences** règlent le comportement général de Story Studio. Les Réglages de l’espace
-d’édition, eux, modifient l’élément sélectionné ou le pack courant. Ne change donc une préférence
-globale que si tu souhaites retrouver ce choix dans les prochains projets.
+Les **Préférences** concernent Story Studio dans son ensemble : enregistrement automatique, apparence, gestion des projets, génération IA ou options avancées.
 
-## Repérer les sections
+Elles sont différentes des **Options du pack**, qui modifient le pack actuellement ouvert.
 
-| Section | Rôle principal |
-|---|---|
-| **Enregistrement** | enregistrement automatique et nombre de versions de sécurité |
-| **Interface** | thème, confort d’affichage et raccourcis personnalisables |
-| **Projets et médias** | workspace, copie des imports et consolidation |
-| **Voix locale** | Piper par défaut et connexion XTTS avancée |
-| **Images IA** | activation et connexion ComfyUI |
-| **Import et audio** | limites et comportements avancés d’import ou de traitement |
-| **YouTube (yt-dlp)** | état de l’outil utilisé par l’import YouTube |
-| **Diagnostic** | journal utile lors d’un problème reproductible |
+:::tip
+Pour un usage classique, tu peux conserver presque tous les réglages par défaut. Les sections **Projets et médias**, **Voix locale**, **Images IA** et **Avancé** deviennent surtout utiles lorsque tu veux adapter Story Studio à ta façon de travailler.
+:::
 
-Les pages [Workspace et fichiers de projet](/story-studio/docs/workspace-et-fichiers-de-projet/),
-[Voix locales](/story-studio/docs/voix-locales-piper-xtts/) et
-[ComfyUI](/story-studio/docs/comfyui/) détaillent les réglages qui ont un effet sur les fichiers ou
-une intégration externe.
+## Les différentes sections
 
-## Enregistrement automatique et versions de sécurité
+Les Préférences sont organisées en trois groupes.
 
-Lorsqu’il est actif, l’enregistrement automatique écrit les modifications en attente toutes les
-cinq minutes. Avant chaque enregistrement automatique d’un projet déjà enregistré, Story Studio
-peut conserver plusieurs copies `.mbah` dans `versions-securite/`.
+### Général
 
-Le nombre choisi est une limite de conservation, pas un nombre de modifications annulables. Les
-actions **Annuler/Rétablir** appartiennent à la session ouverte ; les versions de sécurité sont des
-fichiers à utiliser si le projet enregistré doit être récupéré.
+**Enregistrement**
 
-Un projet jamais enregistré reste traité comme une session temporaire et possède sa propre reprise.
-Consulte [Sessions temporaires et récupération](/story-studio/docs/sessions-temporaires-et-recuperation/)
-pour distinguer ces mécanismes.
+Active ou désactive l'enregistrement automatique et choisit le nombre de versions de sécurité à conserver.
 
-## Raccourcis essentiels
+**Interface**
+
+Permet de choisir le thème **Système**, **Sombre** ou **Clair**, et d'ouvrir la personnalisation des raccourcis clavier.
+
+**Projets et médias**
+
+Regroupe l'emplacement de travail, la copie des fichiers importés et la consolidation d'un projet.
+
+Voir [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/).
+
+### Intelligence artificielle
+
+**Voix locale**
+
+Permet de choisir entre **Piper**, recommandé et sans configuration, et **XTTS**, destiné aux installations avancées.
+
+Voir [Voix locales : Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/).
+
+**Images IA**
+
+Active la génération d'images avec un serveur **ComfyUI** et permet de gérer les workflows disponibles.
+
+Voir [ComfyUI](/story-studio/docs/comfyui/).
+
+### Avancé
+
+**Import et audio**
+
+Contient quelques réglages qu'il vaut mieux laisser par défaut sauf besoin précis :
+
+- **Autoriser l'extraction des packs non supportés** permet de tenter une extraction partielle pour récupérer des médias ou des histoires, sans garantir la fidélité ni la régénération du pack ;
+- **Silence au début** et **Silence à la fin** règlent la durée ajoutée aux audios lors de la préparation du pack.
+
+Voir [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/).
+
+Pour comprendre l'harmonisation du volume et le réglage des silences, voir [Traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
+
+**YouTube (yt-dlp)**
+
+Story Studio télécharge automatiquement `yt-dlp` lors du premier usage de l'import YouTube et le maintient à jour.
+
+Cette section permet surtout de :
+
+- forcer une mise à jour si YouTube refuse une ancienne version ;
+- utiliser ton propre exécutable `yt-dlp` à la place de celui géré par Story Studio.
+
+**Diagnostic**
+
+Permet d'activer une journalisation plus détaillée et de retrouver le fichier `story-studio.log`.
+
+En temps normal, seuls les avertissements et les erreurs sont enregistrés. Active la journalisation détaillée lorsqu'un problème est reproductible et que tu souhaites fournir davantage d'informations pour le diagnostiquer.
+
+:::caution
+Le journal peut contenir des chemins locaux et des noms de fichiers. Vérifie son contenu avant de le publier dans une issue ou de le partager publiquement.
+:::
+
+## Enregistrement automatique
+
+L'**Enregistrement automatique** est activé par défaut.
+
+S'il reste des modifications en attente, Story Studio enregistre le travail toutes les **5 minutes**.
+
+Pour un projet déjà enregistré, les **Versions de sécurité** permettent également de conserver plusieurs copies `.mbah` précédentes. Elles servent de secours si le fichier de projet doit être récupéré.
+
+Ce mécanisme ne remplace pas **Annuler / Rétablir** :
+
+- `Ctrl+Z` et `Ctrl+Maj+Z` reviennent sur les modifications de la session en cours ;
+- les versions de sécurité sont de véritables fichiers conservés sur le disque.
+
+Un travail qui n'a pas encore été enregistré dispose également d'un mécanisme de reprise en cas d'interruption. Il est expliqué dans [Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/).
+
+## Les raccourcis à retenir
+
+Les principaux raccourcis globaux sont :
 
 | Action | Raccourci par défaut |
 |---|---|
-| enregistrer | `Ctrl+S` |
-| enregistrer sous | `Ctrl+Maj+S` |
-| annuler / rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |
-| afficher ou masquer Arbre, Réglages, Diagramme | `Ctrl+1`, `Ctrl+2`, `Ctrl+3` |
-| rechercher dans la structure | `Ctrl+F` |
-| ouvrir les options du pack | `Ctrl+,` |
-| ouvrir les Préférences | `Ctrl+Maj+O` |
-| ouvrir les problèmes de validation | `Ctrl+Maj+E` |
-| générer le pack | `Ctrl+G` |
+| Retour à l'accueil | `Ctrl+N` |
+| Ouvrir un projet | `Ctrl+O` |
+| Enregistrer | `Ctrl+S` |
+| Enregistrer sous | `Ctrl+Maj+S` |
+| Importer des histoires | `Ctrl+I` |
+| Ajouter un Dossier | `Ctrl+Maj+N` |
+| Options du pack | `Ctrl+,` |
+| Rechercher dans la structure | `Ctrl+F` |
+| Afficher / masquer l'Arbre | `Ctrl+1` |
+| Afficher / masquer les Réglages | `Ctrl+2` |
+| Afficher / masquer le Diagramme | `Ctrl+3` |
+| Ouvrir les Préférences | `Ctrl+Maj+O` |
+| Ouvrir les éléments à corriger | `Ctrl+Maj+E` |
+| Générer le pack | `Ctrl+G` |
+| Annuler / Rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |
 
-La fenêtre des raccourcis permet de modifier les associations configurables et de rétablir les
-valeurs d’origine. Si une combinaison agit dans un champ texte au lieu de l’application, quitte
-d’abord l’édition du champ puis réessaie.
+Lorsqu'un élément est sélectionné dans l'**Arbre** ou le **Diagramme**, les raccourcis habituels `Ctrl+C`, `Ctrl+X`, `Ctrl+V` et `Suppr` permettent également de copier, couper, coller ou supprimer la sélection.
 
-## Diagnostic et confidentialité
+Dans le panneau **Médias**, `Ctrl+Maj+F` place le focus sur la recherche.
 
-Le journal de diagnostic enregistre les chargements, enregistrements, générations et erreurs utiles
-au dépannage. Relis-le avant de le partager : un diagnostic peut contenir des noms de fichiers ou
-des chemins locaux, même s’il ne contient pas volontairement les médias eux-mêmes.
+## Raccourcis de l'éditeur audio
 
-:::tip[Astuce]
-Avant de modifier plusieurs raccourcis, note ceux que tu utilises vraiment. Une petite liste stable
-est plus facile à mémoriser qu’une réaffectation complète du clavier.
-:::
+L'éditeur audio possède ses propres raccourcis, particulièrement pratiques pour travailler sans multiplier les clics.
 
-[Résoudre un blocage de génération](/story-studio/docs/resoudre-un-blocage-generation/)
+| Action | Raccourci par défaut |
+|---|---|
+| Lecture / Pause | `Espace` |
+| Lecture arrière / Pause / Lecture avant | `J` / `K` / `L` |
+| Reculer / avancer de 50 ms | `←` / `→` |
+| Aller au début / à la fin | `Début` / `Fin` |
+| Marquer le point d'entrée / de sortie | `I` / `O` |
+| Aller au point d'entrée / de sortie | `Maj+I` / `Maj+O` |
+| Effacer le point d'entrée / de sortie | `Ctrl+I` / `Ctrl+O` |
+| Garder la sélection | `Ctrl+K` |
+| Supprimer la sélection | `Ctrl+X` |
+| Annuler la dernière modification | `Ctrl+Z` |
+| Zoomer / dézoomer | `Ctrl++` / `Ctrl+-` |
+
+`Échap` ferme l'éditeur audio ou l'éditeur d'image.
+
+## Personnaliser les raccourcis
+
+Ouvre **Préférences → Interface → Raccourcis clavier → Modifier**.
+
+La fenêtre regroupe les raccourcis par contexte :
+
+- Général ;
+- Arbre du projet ;
+- Diagramme ;
+- Panneau Médias ;
+- Éditeur audio ;
+- Éditeur d'image ;
+- Navigation standard.
+
+Tu peux rechercher une action, cliquer sur son raccourci puis appuyer sur la nouvelle combinaison.
+
+Story Studio refuse une combinaison déjà utilisée par une autre action dans le même contexte. Tu peux aussi **réinitialiser une section** ou **tout réinitialiser** pour revenir aux valeurs par défaut.
+
+Les raccourcis de **Navigation standard** sont affichés pour information mais ne peuvent pas être modifiés. Ils correspondent aux conventions habituelles de navigation au clavier et d'accessibilité.
+
+[Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/) ·
+[Voix locales : Piper et XTTS](/story-studio/docs/voix-locales-piper-xtts/) ·
+[ComfyUI](/story-studio/docs/comfyui/)

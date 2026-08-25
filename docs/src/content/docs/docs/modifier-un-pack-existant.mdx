@@ -1,105 +1,115 @@
 ---
 title: Modifier un pack existant
-description: Ouvrir un pack Lunii existant, vérifier son éditabilité puis le reprendre dans Story Studio.
+description: Ouvrir un ZIP, un 7z ou un dossier d'histoire existant, puis comprendre ce que Story Studio peut réellement modifier.
 ---
 
-L’entrée **Modifier un pack existant** permet de partir d’un pack Lunii déjà construit au lieu de
-recréer sa structure depuis zéro.
+Si tu possèdes déjà un pack mais pas son projet `.mbah`, Story Studio peut essayer de reconstruire une version modifiable à partir du pack lui-même.
 
-Story Studio accepte :
+Depuis l'écran d'accueil, choisis **Modifier un pack existant**.
+
+Tu peux sélectionner :
 
 - un fichier `.zip` ;
 - un fichier `.7z` ;
-- un **dossier d’histoire déjà décompressé**.
+- un dossier d'histoire déjà décompressé.
 
-Le pack est d’abord analysé pour déterminer si sa structure peut devenir un projet modifiable sans
-changer silencieusement son fonctionnement.
-
-## Ouvrir le pack
-
-Depuis l’accueil de Story Studio :
-
-1. choisis **Modifier un pack existant** ;
-2. dépose ton pack ou utilise **Importer zip/7z** ou **Importer un dossier** ;
-3. laisse Story Studio vérifier sa structure ;
-4. modifie le pack.
-
-
-## Pourquoi vérifier l’éditabilité ?
-
-Un pack Lunii n’est pas forcément une simple arborescence de Dossiers et d’Histoires. Il peut
-contenir :
-
-- plusieurs branches qui convergent vers la même étape ;
-- des boucles ou des éléments partagés ;
-- des retours **Accueil** particuliers ;
-- des comportements de molette ou de navigation native que Story Studio ne peut pas représenter
-  fidèlement.
-
-Story Studio lit donc la navigation, tente de la représenter dans son modèle puis vérifie si elle
-peut être régénérée sans modifier le parcours de l’enfant. Cette protection évite d’ouvrir un projet
-qui semblerait correct dans l’Arbre mais produirait ensuite un ZIP différent de l’original.
+Story Studio analyse d'abord le pack avant de l'ouvrir.
 
 ## Trois résultats possibles
 
-### Pack éditable
+Selon sa structure, un pack peut être :
 
-Si la reconstruction est jugée suffisamment fidèle, le pack est décompressé puis ouvert dans
-l’**Éditeur libre**.
+| Résultat | Ce que tu peux faire |
+|---|---|
+| **Éditable** | ouvrir le pack dans l'éditeur, le modifier puis le générer à nouveau |
+| **Lecture seule** | le parcourir dans le Simulateur ou, si l'option avancée est active, tenter une extraction partielle |
+| **Non supporté** | choisir une autre source ou, si l'option avancée est active, tenter une extraction partielle |
 
-Tu retrouves son Menu racine, ses Dossiers, ses Histoires et les réglages de navigation que Story
-Studio peut représenter. Tu peux ensuite modifier les médias, déplacer des éléments, ajouter des
-Histoires ou adapter le parcours.
+Story Studio ne se contente pas de vérifier que l'archive est valide. Il contrôle aussi que la navigation du pack peut être reconstruite de manière suffisamment fidèle pour être modifiée puis générée à nouveau.
 
-:::note[Une nouvelle version du pack]
-Lors de la première génération après l’import, Story Studio reprend les métadonnées du pack et
-propose une **version incrémentée** afin de distinguer le nouveau ZIP de l’original.
+Un pack comportant des parcours complexes, des étapes partagées ou certaines transitions particulières peut donc rester uniquement simulable.
+
+## Modifier un pack depuis l'accueil
+
+Le parcours normal est le suivant :
+
+1. clique sur **Modifier un pack existant** ;
+2. choisis ou dépose le ZIP, le 7z ou le dossier ;
+3. laisse Story Studio vérifier son éditabilité ;
+4. si le pack est éditable, il s'ouvre dans l'éditeur ;
+5. vérifie sa navigation avant d'effectuer des modifications importantes.
+
+Le pack importé commence comme un nouveau travail. Si tu souhaites le conserver, utilise ensuite **Projet → Enregistrer** pour créer un fichier `.mbah`.
+
+:::tip[ZIP ou projet .mbah ?]
+Il est tout à fait possible de conserver uniquement le **ZIP**, puis de l'extraire dans Story Studio chaque fois que tu veux le modifier, tant que sa structure reste éditable par Story Studio. C'est simple et cela suffit pour beaucoup de packs.
+
+Pour un projet que tu comptes faire évoluer régulièrement, je recommande toutefois de conserver aussi le **projet `.mbah` et ses fichiers sources**.
+
+Un ZIP est une version déjà préparée pour la Lunii : certains médias ont pu être compressés ou transformés lors de sa génération. Enchaîner plusieurs cycles **ZIP → extraction → modification → nouveau ZIP** peut donc entraîner une perte progressive de qualité, notamment sur les audios.
+
+En résumé :
+
+- **ZIP uniquement** : plus simple à conserver et à partager ;
+- **`.mbah` + fichiers sources** : préférable pour retravailler et faire évoluer un pack dans le temps.
+
+Le ZIP sauvegarde la **version publiée** ; le `.mbah` sauvegarde le **travail de création**.
 :::
 
-### Pack non éditable mais simulable
+## Pack non éditable mais simulable
 
-Certains packs peuvent être lus correctement sans pouvoir devenir un projet modifiable suffisamment
-fiable. La fenêtre affiche alors **Pack non éditable** et explique la raison du refus.
+Lorsqu'un pack ne peut pas être reconstruit de manière suffisamment fiable, Story Studio peut proposer **Simuler le pack**.
 
-Choisis **Simuler le pack** pour parcourir sa navigation en lecture seule. Le Simulateur lit le pack
-sélectionné, ou sa copie temporaire préparée pour l’analyse, sans passer par une arborescence
-reconstruite.
+Le Simulateur lit alors la navigation réelle du pack sans prétendre la convertir en structure modifiable.
 
-### Pack non supporté
+Cette possibilité est utile pour :
 
-Si Story Studio ne peut pas lire correctement le pack, même pour le Simulateur, la fenêtre affiche
-**Pack non supporté** et précise la raison détectée. La structure peut être incomprise ou certains
-fichiers indispensables peuvent manquer.
+- vérifier le contenu d'un ancien pack ;
+- comprendre son parcours ;
+- comparer son comportement avec une nouvelle version ;
+- retrouver une Histoire ou un média avant de recréer manuellement une partie du pack.
 
-Dans ce cas, le pack ne peut pas être ouvert normalement dans l’éditeur.
+## Tenter une extraction d'un pack non supporté
 
-## Extraction forcée
+Une option avancée permet d'autoriser une tentative d'extraction même lorsque Story Studio considère le pack comme non éditable.
 
-Une option avancée permet de tenter de récupérer le contenu d’un pack non éditable ou non supporté :
+Elle se trouve dans :
 
-**Préférences → Avancé → Import et audio → Autoriser l’extraction des packs non supportés**
+**Préférences → Avancé → Import et audio → Autoriser l'extraction des packs non supportés**
 
-Lorsqu’elle est activée, la fenêtre peut proposer **Extraire quand même** ou **Tenter l’extraction**.
+Cette extraction sert surtout à récupérer des éléments ou des médias.
 
-:::caution[Une extraction forcée n’est pas une conversion fiable]
-Cette fonction sert surtout à récupérer des Histoires, des images ou une partie de la structure. Le
-projet obtenu peut être incomplet, contenir des transitions non représentées ou ne pas être
-générable immédiatement.
+:::caution[Résultat potentiellement incomplet]
+Un pack extrait de force peut perdre une partie de sa navigation ou produire un projet impossible à générer tel quel.
 
-Ne considère jamais une extraction forcée comme une copie fidèle du pack d’origine.
+Conserve toujours le pack d'origine et vérifie soigneusement le résultat avant de republier quoi que ce soit.
 :::
 
-Pour une modification normale, il vaut mieux laisser Story Studio refuser l’édition plutôt que
-travailler sur une structure incomplète sans le savoir.
+## Extraire un pack déjà présent dans l'Arbre
 
-:::tip[Importer depuis l’Éditeur libre]
-Tu peux aussi importer un ZIP ou un 7z directement dans un projet ouvert avec l’Éditeur libre, grâce
-à **Importer audio ou archive**.
+Dans l'Éditeur libre, un élément **ZIP** peut représenter un pack inclus dans ton projet.
 
-Le pack apparaît d’abord comme un élément ZIP. Utilise ensuite **Extraire l’histoire** pour le
-remplacer par des Dossiers et des Histoires modifiables.
-:::
+Un clic droit sur cet élément propose notamment :
 
-[Comprendre l’import et l’extraction en détail](/story-studio/docs/importer-et-extraire-un-pack/) ·
+- **Simuler ce pack…** : parcourir le pack tel qu'il existe ;
+- **Extraire l'histoire** : tenter de remplacer le ZIP par des Dossiers et des Histoires modifiables.
+
+Si l'élément ZIP se trouve dans un projet déjà construit, son extraction remplace uniquement cet élément.
+
+Dans un projet vierge, l'extraction peut au contraire devenir la structure principale du nouveau projet.
+
+Le ZIP source reste inchangé.
+
+## Après l'extraction
+
+Avant de modifier fortement un pack extrait :
+
+1. simule quelques parcours importants ;
+2. compare les Dossiers, Histoires et retours avec le pack d'origine ;
+3. vérifie les médias signalés comme manquants ;
+4. enregistre le résultat comme nouveau projet `.mbah` ;
+5. passe ensuite par la validation avant de générer un nouveau ZIP.
+
+[Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/) ·
 [Comprendre la navigation](/story-studio/docs/navigation/) ·
-[Découvrir l’Éditeur libre](/story-studio/docs/editeur-libre/)
+[Vérifier et générer un pack](/story-studio/docs/verifier-et-generer-un-pack/)
