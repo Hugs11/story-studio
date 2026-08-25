@@ -62,7 +62,7 @@ export function CreditsModal({ appVersion, onClose }) {
             </a>
           </section>
           <div className="credits-line credits-thanks">
-            Grâce au travail de<br />
+            Remerciements<br />
             <strong>Jersou</strong>, <strong>Dantsu</strong>, <strong>o.Daneel</strong> et{' '}
             <strong>LuckyTheCookie</strong>
           </div>
