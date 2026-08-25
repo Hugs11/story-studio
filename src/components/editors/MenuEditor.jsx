@@ -6,6 +6,7 @@ import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { Trash2 } from '../icons/LucideLocal';
 import { formatFrenchCount } from '../../utils/frenchText.js';
+import { getGeneratedMenuControls } from '../../store/generatedPlayback.js';
 import './EditorPanel.css';
 
 const MENU_BEHAVIOR_CONTROLS = [
@@ -29,11 +30,13 @@ const MENU_BEHAVIOR_CONTROLS = [
   },
 ];
 
-export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete }) {
+export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, onUpdate, onDelete }) {
   const isImportedContinuation = !!node.importedContinuation;
   const nativeGraph = node.nativeGraph ?? null;
   const nativeGraphStageCount = nativeGraph?.stageCount ?? nativeGraph?.document?.stageNodes?.length ?? 0;
   const nativeGraphActionCount = nativeGraph?.actionCount ?? nativeGraph?.document?.actionNodes?.length ?? 0;
+  const generatedControls = getGeneratedMenuControls(node, parentMenu, project);
+  const hasForcedLinearRootControls = generatedControls.forceAutoplay;
   const [textImgModal, setTextImgModal] = useState(null);
 
   function handleRegenerate() {
@@ -162,6 +165,15 @@ export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete })
           </div>
         </div>
 
+        {hasForcedLinearRootControls ? (
+          <div className="info-box menu-behavior-info">
+            Tant que ce Dossier reste l’unique élément du Menu racine et ne contient pas plusieurs
+            éléments, le pack généré impose la Lecture automatique et désactive la Molette. Place
+            au moins deux éléments dans ce Dossier, ou ajoute un autre élément au Menu racine, pour
+            modifier ces deux réglages.
+          </div>
+        ) : null}
+
         <div className="menu-behavior-stack">
           <label className="sequence-control menu-behavior-control">
           <Toggle
@@ -176,19 +188,27 @@ export const MenuEditor = memo(function MenuEditor({ node, onUpdate, onDelete })
               </span>
             </div>
           </label>
-          {MENU_BEHAVIOR_CONTROLS.map(({ key, label, desc, def }) => (
-            <label key={key} className="sequence-control menu-behavior-control">
-              <Toggle
-                on={node.controlSettings?.[key] ?? def}
-                onChange={(v) => onUpdate({ controlSettings: { ...node.controlSettings, [key]: v } })}
-                ariaLabel={label}
-              />
-              <div className="menu-behavior-copy">
-                <span className="during-play-control-title">{label}</span>
-                <span className="menu-behavior-desc">{desc}</span>
-              </div>
-            </label>
-          ))}
+          {MENU_BEHAVIOR_CONTROLS.map(({ key, label, desc, def }) => {
+            const isForced = hasForcedLinearRootControls && (key === 'wheel' || key === 'autoplay');
+            return (
+              <label
+                key={key}
+                className={`sequence-control menu-behavior-control${isForced ? ' menu-behavior-control--forced' : ''}`}
+              >
+                <Toggle
+                  on={isForced ? generatedControls[key] : (node.controlSettings?.[key] ?? def)}
+                  onChange={(v) => onUpdate({ controlSettings: { ...node.controlSettings, [key]: v } })}
+                  disabled={isForced}
+                  ariaLabel={`${label}${isForced ? ' — imposé par la structure' : ''}`}
+                />
+                <div className="menu-behavior-copy">
+                  <span className="during-play-control-title">{label}</span>
+                  {isForced ? <span className="menu-behavior-state">Imposé</span> : null}
+                  <span className="menu-behavior-desc">{desc}</span>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </div>
 

@@ -1588,8 +1588,83 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
         Some(0)
     );
     assert!(menu_stage.control_settings.autoplay);
+    assert!(!menu_stage.control_settings.wheel);
     assert!(title_stage.control_settings.wheel);
     assert!(play_stage.control_settings.autoplay);
+}
+
+#[test]
+fn single_root_menu_with_multiple_children_preserves_choice_controls() {
+    let report = report_for(
+        CanonicalProject {
+            name: "Choice pack".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some("root.png".to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions {
+                silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
+                auto_next: false,
+                night_mode: false,
+                end_message_autoplay: true,
+            },
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                name: "Introduction".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                image: Some("menu.png".to_string()),
+                wheel: true,
+                autoplay: false,
+                children: vec![
+                    CanonicalEntry::Story(CanonicalStory {
+                        name: "Forest".to_string(),
+                        audio: Some("forest-story.mp3".to_string()),
+                        item_audio: Some("forest-title.mp3".to_string()),
+                        item_image: Some("forest.png".to_string()),
+                        ..Default::default()
+                    }),
+                    CanonicalEntry::Story(CanonicalStory {
+                        name: "Sea".to_string(),
+                        audio: Some("sea-story.mp3".to_string()),
+                        item_audio: Some("sea-title.mp3".to_string()),
+                        item_image: Some("sea.png".to_string()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+            shared_entries: Vec::new(),
+        },
+        vec![
+            prepared_asset("rootAudio", "cover.mp3"),
+            prepared_asset("rootImage", "cover.png"),
+            prepared_asset("root/Introduction/menuAudio", "menu.mp3"),
+            prepared_asset("root/Introduction/menuImage", "menu.png"),
+            prepared_asset("root/Introduction/Forest/itemAudio", "forest-title.mp3"),
+            prepared_asset("root/Introduction/Forest/itemImage", "forest.png"),
+            prepared_asset("root/Introduction/Forest/storyAudio", "forest-story.mp3"),
+            prepared_asset("root/Introduction/Sea/itemAudio", "sea-title.mp3"),
+            prepared_asset("root/Introduction/Sea/itemImage", "sea.png"),
+            prepared_asset("root/Introduction/Sea/storyAudio", "sea-story.mp3"),
+        ],
+        Vec::new(),
+    );
+
+    let document = build_story_document(&report).expect("root choice menu document");
+    let menu_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Introduction")
+        .expect("root menu stage");
+
+    assert!(menu_stage.control_settings.wheel);
+    assert!(!menu_stage.control_settings.autoplay);
 }
 
 #[test]
