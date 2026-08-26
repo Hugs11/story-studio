@@ -2,10 +2,10 @@
 
 Story Studio is MIT-licensed, but its desktop bundles also redistribute
 standalone third-party programs under their own licenses. This document covers
-the binaries shipped with Story Studio 0.9.7.
+the binaries shipped with Story Studio 0.9.8.
 
-The `v0.9.7` GitHub release includes a
-`story-studio-v0.9.7-corresponding-sources.zip` asset. It contains the pinned
+The `v0.9.8` GitHub release includes a
+`story-studio-v0.9.8-corresponding-sources.zip` asset. It contains the pinned
 Piper and eSpeak NG sources, the Story Studio Piper patch and build recipe,
 the FFmpeg source releases matching each bundled major/minor version, the
 embedded FFmpeg build configurations, the 7-Zip 25.01 source, the AppImage
@@ -53,7 +53,7 @@ squashfuse, zstd and zlib projects and their source locations.
 
 ## Source request
 
-For at least three years after the publication of Story Studio 0.9.7, the
+For at least three years after the publication of Story Studio 0.9.8, the
 maintainer will provide the corresponding source and the available build
 information for these redistributed binaries at no charge other than the
 reasonable cost of physical transfer. Requests can be opened on the public
