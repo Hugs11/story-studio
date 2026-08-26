@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI : builds desktop" src="https://img.shields.io/badge/CI-builds%20desktop-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#configuration-requise"><img alt="Plateformes : Windows, Linux et macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.7" src="https://img.shields.io/badge/version-0.9.7-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.8" src="https://img.shields.io/badge/version-0.9.8-2F80ED.svg"></a>
   <a href="#statut-beta"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -40,13 +40,13 @@ issues.
 
 ## Dernière version
 
-Story Studio 0.9.7 ajoute des voix Piper multilingues, améliore la compatibilité
-avec les packs communautaires et fiabilise les parcours de vérification,
-d'import et de simulation. Cette version renforce aussi l'isolation des
-espaces temporaires et la sécurité des chemins.
+Story Studio 0.9.8 ajoute une documentation utilisateur complète et
+recherchable, améliore la navigation dans les Dossiers et le simulateur, et
+permet de choisir la langue audio des imports YouTube. Cette version clarifie
+aussi la reprise des sessions et les fins personnalisées.
 
 - [Télécharger la dernière version](https://github.com/Hugs11/story-studio/releases/latest)
-- [Lire les notes de version 0.9.7](https://github.com/Hugs11/story-studio/releases/tag/v0.9.7)
+- [Lire les notes de version 0.9.8](https://github.com/Hugs11/story-studio/releases/tag/v0.9.8)
 - [Voir le changelog complet](CHANGELOG.md)
 
 ## Packs de démonstration
@@ -231,7 +231,7 @@ Contrôle-clic sur l'app puis choisissez **Ouvrir**, ou utilisez
 Ne désactivez pas Gatekeeper globalement.
 
 Les intégrations IA sont optionnelles. XTTS a été testé sous Linux en mode CPU ;
-le mode GPU n'a pas été validé pour la 0.9.7. Il n'a pas été installé ni validé
+le mode GPU n'a pas été validé pour la 0.9.8. Il n'a pas été installé ni validé
 manuellement sous macOS. ComfyUI est validé manuellement uniquement sous
 Windows : les tests manuels Linux et macOS n'ont pas été exécutés.
 
