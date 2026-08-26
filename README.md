@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.7" src="https://img.shields.io/badge/version-0.9.7-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.8" src="https://img.shields.io/badge/version-0.9.8-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -45,12 +45,12 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.7 adds multilingual Piper voices, improves compatibility with
-community pack layouts and strengthens the checker, import and simulator
-workflows. It also hardens temporary workspaces and filesystem boundaries.
+Story Studio 0.9.8 adds comprehensive searchable user documentation, improves
+folder and simulator navigation, and lets YouTube imports select an available
+audio language. It also makes recovered sessions and custom endings clearer.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.7 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.7)
+- [Read the v0.9.8 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.8)
 - [See the full changelog](CHANGELOG.md)
 
 ## Demo packs
@@ -229,7 +229,7 @@ choose **Open**, or use **System Settings → Privacy & Security → Open Anyway
 Do not disable Gatekeeper globally.
 
 AI integrations are optional. XTTS was tested on Linux in CPU mode; GPU mode
-was not validated for 0.9.7. It has not been installed or manually validated
+was not validated for 0.9.8. It has not been installed or manually validated
 on macOS. ComfyUI is manually validated on Windows only: manual Linux and
 macOS tests have not been run.
 

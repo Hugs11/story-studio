@@ -32,6 +32,12 @@
   width: auto;
 }
 
+@media (max-width: 50rem) {
+  .site-title span {
+    display: none;
+  }
+}
+
 .hero .tagline {
   max-width: 52rem;
 }
