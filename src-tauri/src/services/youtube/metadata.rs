@@ -2,7 +2,7 @@
 //! pas les formats). Le parsing JSON est isolé (`parse_list_json`, pur et testé) ;
 //! l'exécution du binaire reste fine.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
@@ -11,13 +11,15 @@ use serde_json::Value;
 
 use super::process::run_command_with_timeout;
 use super::provision::ensure_ytdlp;
-use super::{YoutubeList, YoutubeVideo};
+use super::{YoutubeAudioLanguages, YoutubeList, YoutubeVideo};
 use crate::support::ffmpeg::apply_no_window;
 
 /// Taille fixe d'une page. La borne protège chaque appel sans imposer de
 /// plafond global : l'UI peut demander autant de pages que nécessaire.
 pub(super) const LIST_PAGE_SIZE: usize = 400;
 const LIST_TIMEOUT: Duration = Duration::from_secs(120);
+const AUDIO_LANGUAGE_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+const AUDIO_LANGUAGE_CHUNK_SIZE: usize = 25;
 
 /// Valide qu'une URL est bien une URL YouTube (HTTP/HTTPS sur un domaine YouTube).
 /// Évite d'utiliser yt-dlp comme téléchargeur générique d'un site arbitraire.
@@ -88,6 +90,85 @@ pub fn fetch_list(
         return Err("Aucune vidéo exploitable trouvée pour cette URL.".to_string());
     }
     Ok(list)
+}
+
+/// Résout les formats uniquement pour les vidéos retenues par l'utilisateur.
+/// Le listing initial reste ainsi plat et rapide, même pour une grosse chaîne.
+/// Plusieurs URL sont traitées par un même processus yt-dlp pour amortir son
+/// démarrage, avec des lots bornés pour éviter une ligne de commande excessive.
+pub fn fetch_audio_languages(
+    home: &Path,
+    custom: Option<&str>,
+    video_urls: &[String],
+    emit: &dyn Fn(&str),
+) -> Result<Vec<YoutubeAudioLanguages>, String> {
+    let mut seen_urls = HashSet::new();
+    let mut urls = Vec::new();
+    for url in video_urls {
+        validate_youtube_url(url)?;
+        let trimmed = url.trim();
+        if seen_urls.insert(trimmed.to_string()) {
+            urls.push(trimmed.to_string());
+        }
+    }
+    if urls.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let exe = ensure_ytdlp(home, custom, emit)?;
+    emit("Analyse des pistes audio…");
+    let mut resolved = Vec::new();
+    let mut last_error = None;
+
+    for chunk in urls.chunks(AUDIO_LANGUAGE_CHUNK_SIZE) {
+        let mut cmd = Command::new(&exe);
+        apply_no_window(&mut cmd);
+        cmd.args([
+            "--dump-json",
+            "--no-playlist",
+            "--no-warnings",
+            "--ignore-config",
+            "--ignore-errors",
+            "--",
+        ]);
+        cmd.args(chunk);
+
+        match run_command_with_timeout(cmd, AUDIO_LANGUAGE_TIMEOUT, "Analyse audio YouTube") {
+            Ok(output) => {
+                let mut parsed = parse_audio_language_lines(&output.stdout);
+                if !output.status.success() && parsed.is_empty() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    last_error = Some(format!(
+                        "Analyse des pistes audio impossible : {}",
+                        stderr.trim().lines().last().unwrap_or("erreur inconnue")
+                    ));
+                }
+                resolved.append(&mut parsed);
+            }
+            Err(error) => last_error = Some(error),
+        }
+    }
+
+    if resolved.is_empty() {
+        if let Some(error) = last_error {
+            return Err(error);
+        }
+    }
+    Ok(resolved)
+}
+
+pub(super) fn parse_audio_language_lines(output: &[u8]) -> Vec<YoutubeAudioLanguages> {
+    output
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
+        .filter_map(|value| {
+            let id = value.get("id").and_then(Value::as_str)?.to_string();
+            Some(YoutubeAudioLanguages {
+                id,
+                languages: audio_language_codes(&value),
+            })
+        })
+        .collect()
 }
 
 /// Une playlist explicite porte un ordre éditorial que Story Studio ne doit pas
@@ -269,6 +350,7 @@ fn build_video(entry: &Value) -> Option<YoutubeVideo> {
         .map(str::to_string)
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "Vidéo".to_string());
+    let audio_languages_resolved = entry.get("formats").and_then(Value::as_array).is_some();
     Some(YoutubeVideo {
         id: id.unwrap_or("").to_string(),
         selection_key: String::new(),
@@ -277,7 +359,31 @@ fn build_video(entry: &Value) -> Option<YoutubeVideo> {
         audio_url,
         duration: format_duration(entry.get("duration").and_then(Value::as_f64)),
         image_url: pick_image(entry, id),
+        audio_languages: audio_language_codes(entry),
+        audio_languages_resolved,
     })
+}
+
+fn audio_language_codes(entry: &Value) -> Vec<String> {
+    let mut seen = HashSet::new();
+    entry
+        .get("formats")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|format| {
+            format.get("vcodec").and_then(Value::as_str) == Some("none")
+                && format
+                    .get("acodec")
+                    .and_then(Value::as_str)
+                    .is_some_and(|codec| codec != "none")
+        })
+        .filter_map(|format| format.get("language").and_then(Value::as_str))
+        .map(str::trim)
+        .filter(|language| !language.is_empty())
+        .filter(|language| seen.insert((*language).to_string()))
+        .map(str::to_string)
+        .collect()
 }
 
 fn assign_selection_keys(videos: &mut [YoutubeVideo], first_source_index: usize) {

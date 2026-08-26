@@ -7,7 +7,11 @@ import {
   sanitizeImportedEntries,
   sanitizeImportedName,
 } from '../store/projectStore';
-import { findEntryById } from '../store/projectModel';
+import {
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  findEntryById,
+  validateMenuHeightPlacement,
+} from '../store/projectModel';
 import { buildProjectAfterZipUnpack } from '../store/unpackProject';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
@@ -200,9 +204,27 @@ export function useImportSession({
     return 1;
   }
 
+  function getImportFolderMenuHeight(node) {
+    if (!node || typeof node !== 'object') return 0;
+    const stack = [{ node, parentHeight: 0 }];
+    let height = 0;
+    while (stack.length > 0) {
+      const current = stack.pop();
+      const isFolder = current.node?.type === 'folder';
+      const currentHeight = current.parentHeight + (isFolder ? 1 : 0);
+      height = Math.max(height, currentHeight);
+      if (!isFolder) continue;
+      for (const child of current.node.children ?? []) {
+        stack.push({ node: child, parentHeight: currentHeight });
+      }
+    }
+    return height;
+  }
+
   async function processFolderNode(node, parentMenuId, counter, total) {
     if (node.type === 'folder') {
       const menuId = store.addMenu(parentMenuId);
+      if (!menuId) throw new Error(MENU_DEPTH_LIMIT_REACHED_MESSAGE);
       store.updateMenu(menuId, { name: node.name });
       for (const child of (node.children ?? [])) {
         await processFolderNode(child, menuId, counter, total);
@@ -244,6 +266,19 @@ export function useImportSession({
         title: 'Import dossier',
         message: 'Aucun fichier audio ou archive trouvé dans ce dossier.',
         variant: 'info',
+      });
+      return;
+    }
+    const depthDiagnostic = validateMenuHeightPlacement(
+      store.project,
+      targetMenuId,
+      getImportFolderMenuHeight(tree),
+      projectIndex,
+    );
+    if (!depthDiagnostic.allowed) {
+      showErrorDialog({
+        title: 'Limite d’imbrication',
+        message: MENU_DEPTH_LIMIT_REACHED_MESSAGE,
       });
       return;
     }
@@ -333,7 +368,8 @@ export function useImportSession({
         });
         return;
       }
-      store.setProject(transformed.project);
+      const depthOutcome = store.setProjectWithDepthGuard(transformed.project);
+      if (!depthOutcome.allowed) return;
       store.setSelectedId('root');
       // Extraire un pack qui promeut le projet vierge = importer un pack à modifier :
       // on marque la méta comme « à confirmer » pour que la génération force la modal
@@ -354,8 +390,10 @@ export function useImportSession({
       }
     } catch (e) {
       showErrorDialog({
-        title: 'Extraction du pack',
-        message: `Erreur lors de l'extraction : ${e}`,
+        title: e?.code === 'menu_depth_limit' ? 'Limite d’imbrication' : 'Extraction du pack',
+        message: e?.code === 'menu_depth_limit'
+          ? e.message
+          : `Erreur lors de l'extraction : ${e}`,
       });
     } finally {
       setUnpacking(null);
@@ -447,6 +485,7 @@ export function useImportSession({
         videoUrl: entry.audioUrl,
         fileName: displayName,
         ytdlpPath,
+        audioLanguage: entry.audioLanguage || null,
       });
     }
     return invoke('download_podcast_media', { url: entry.audioUrl, fileName: displayName });

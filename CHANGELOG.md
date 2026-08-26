@@ -12,6 +12,41 @@ public version; this file stays as the concise project history.
 
 ---
 
+## [0.9.8] - 2026-08-26
+
+Story Studio v0.9.8 introduces the complete public user documentation and
+polishes project navigation, imports and recovery before release.
+
+### Added
+
+- Added a structured French user guide built with Astro Starlight, with local
+  Pagefind search, deep links from the landing page and the application, and
+  coverage of project structure, media workflows, export and integrations.
+- Added selectable audio languages to YouTube imports when several tracks are
+  available.
+- Added an explicit shared limit of 61 nested folders, enforced consistently
+  by the editor, project loading, simulation and native generation.
+
+### Changed
+
+- Preserved folder choice controls when a single root folder contains several
+  entries, while keeping linear one-entry folders automatic.
+- Wrapped simulator wheel navigation and clarified custom ending indicators in
+  the project tree.
+- Expanded and refreshed user-facing screenshots, examples and navigation
+  explanations across the landing page and documentation.
+
+### Fixed
+
+- Fixed recovered-session media promotion so restored projects retain their
+  managed files when they are saved.
+- Fixed Home navigation from story titles and aligned the simulator with the
+  generated pack behavior.
+- Fixed simple-story titles containing spaces and aligned the displayed
+  ComfyUI startup timeout with the actual three-minute wait.
+
+---
+
 ## [0.9.7] - 2026-08-13
 
 Story Studio v0.9.7 expands local voice generation, improves compatibility

@@ -18,6 +18,7 @@ import {
   getGeneratedStoryNavigation,
   summarizeEffectiveStoryEnds,
 } from '../../store/generatedNavigation';
+import { getGeneratedMenuControls } from '../../store/generatedPlayback';
 import { isStoryNavigationTarget } from '../../store/navigationTargets';
 import {
   canShowTextImageBatchAction,
@@ -105,6 +106,13 @@ export const MultiEditor = memo(function MultiEditor({
   const onlyMenus = menuCount === nodes.length && menuCount > 0;
   const allSameType = onlyStories || onlyMenus;
   const hasEndNode = !!project?.nightModeAudio || !!project?.globalOptions?.nightMode || !!project?.globalOptions?.endNode;
+  const forcedLinearRootMenuIds = new Set(
+    onlyMenus
+      ? editableNodes
+        .filter((entry) => getGeneratedMenuControls(entry, getParentMenu(entry), project).forceAutoplay)
+        .map((entry) => entry.id)
+      : [],
+  );
 
   const bannerParts = [];
   if (storyCount > 0) bannerParts.push(`${storyCount} histoire${storyCount > 1 ? 's' : ''}`);
@@ -114,7 +122,10 @@ export const MultiEditor = memo(function MultiEditor({
   if (endNodeCount > 0) bannerParts.push(project?.endNodeName || 'message de fin');
 
   function handleControlChange(key, value) {
-    onBulkUpdateItems(editableIds, (entry) => ({
+    const targetIds = (key === 'wheel' || key === 'autoplay')
+      ? editableIds.filter((id) => !forcedLinearRootMenuIds.has(id))
+      : editableIds;
+    onBulkUpdateItems(targetIds, (entry) => ({
       controlSettings: { ...entry.controlSettings, [key]: value },
     }));
   }
@@ -503,6 +514,13 @@ export const MultiEditor = memo(function MultiEditor({
         <div className="card-title-row">
           <div className="card-title">{playbackControlTitle}</div>
         </div>
+        {forcedLinearRootMenuIds.size > 0 ? (
+          <div className="info-box menu-behavior-info">
+            Le Dossier linéaire placé seul sous le Menu racine conserve ses valeurs imposées :
+            Lecture automatique activée et Molette désactivée. Les modifications groupées de ces
+            deux réglages s’appliquent uniquement aux autres Dossiers sélectionnés.
+          </div>
+        ) : null}
         <div className="editor-setting-stack">
         {onlyMenus && (() => {
           const vals = editableNodes.map((n) => !!n.autoBlackImage);
@@ -528,7 +546,10 @@ export const MultiEditor = memo(function MultiEditor({
           );
         })()}
         {playbackControlKeys.map(({ key, label, desc }) => {
-          const vals = editableNodes.map((n) => n.controlSettings?.[key] ?? getDefaults(n.type)[key] ?? false);
+          const controlNodes = (key === 'wheel' || key === 'autoplay')
+            ? editableNodes.filter((entry) => !forcedLinearRootMenuIds.has(entry.id))
+            : editableNodes;
+          const vals = controlNodes.map((n) => n.controlSettings?.[key] ?? getDefaults(n.type)[key] ?? false);
           const unique = [...new Set(vals)];
           const isMixed = unique.length > 1;
           const value = isMixed ? false : unique[0];

@@ -5,9 +5,61 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::domain::project::Project;
+use crate::domain::project_limits::validate_project_menu_depth;
 use crate::domain::validation::validate_project_for_generation;
 use crate::native_pack::{NativeGenerationWarning, NativePackGenerationResult};
 use crate::support::lunii_zip_validator::validate_lunii_zip;
+
+const MAX_PROJECT_JSON_NESTING: usize = 192;
+
+fn ensure_bounded_json_nesting(input: &str) -> Result<(), String> {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for byte in input.bytes() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        match byte {
+            b'"' => in_string = true,
+            b'{' | b'[' => {
+                depth += 1;
+                if depth > MAX_PROJECT_JSON_NESTING {
+                    return Err(format!(
+                        "JSON invalide : imbrication technique supérieure à {MAX_PROJECT_JSON_NESTING}."
+                    ));
+                }
+            }
+            b'}' | b']' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn parse_project_json(project_json: &str) -> Result<Project, String> {
+    ensure_bounded_json_nesting(project_json)?;
+    let mut deserializer = serde_json::Deserializer::from_str(project_json);
+    deserializer.disable_recursion_limit();
+    let project = serde::Deserialize::deserialize(&mut deserializer).map_err(|error| {
+        log::error!(target: "generation", "generate_pack: JSON invalide : {}", error);
+        format!("JSON invalide : {error}")
+    })?;
+    deserializer
+        .end()
+        .map_err(|error| format!("JSON invalide : {error}"))?;
+    validate_project_menu_depth(&project)?;
+    Ok(project)
+}
 
 #[derive(Default)]
 pub struct GenerationCancelState {
@@ -21,10 +73,7 @@ pub async fn generate_pack(
     project_json: String,
     output_folder: String,
 ) -> Result<NativePackGenerationResult, String> {
-    let project: Project = serde_json::from_str(&project_json).map_err(|e| {
-        log::error!(target: "generation", "generate_pack: JSON invalide : {}", e);
-        format!("JSON invalide : {}", e)
-    })?;
+    let project = parse_project_json(&project_json)?;
     validate_project_for_generation(&project).map_err(|e| {
         log::error!(target: "generation", "generate_pack: validation refusee : {}", e);
         e
@@ -165,5 +214,89 @@ fn validate_zip_and_emit(zip_path: &str, emit: &dyn Fn(&str)) {
         }
         log::warn!(target: "lunii_validator",
             "post-gen finished with non-blocking errors: errors={} warnings={}", err_count, warn_count);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::project_limits::{max_menu_depth, project_menu_depth_error};
+
+    fn nested_project_json(depth: usize) -> String {
+        let mut entry = r#"{
+            "id":"story","type":"story","name":"Histoire complète",
+            "audio":"story.mp3","image":"story.png",
+            "itemAudio":"title.mp3","itemImage":"title.png",
+            "controlSettings":{"autoplay":false,"wheel":false,"pause":true,"ok":true,"home":true},
+            "titleControlSettings":{"autoplay":false,"wheel":true,"pause":false,"ok":true,"home":true},
+            "returnAfterPlay":"root","returnOnHome":"root","titleReturnOnHome":"root",
+            "afterPlaybackPromptAudio":"prompt.mp3",
+            "afterPlaybackPromptControlSettings":{"autoplay":true,"wheel":false,"pause":false,"ok":true,"home":true},
+            "afterPlaybackPromptOkTarget":"root","afterPlaybackPromptHomeTarget":"root",
+            "afterPlaybackSequence":[{
+                "id":"step","name":"Étape","audio":"step.mp3","image":"step.png",
+                "controlSettings":{"autoplay":true,"wheel":false,"pause":false,"ok":true,"home":true},
+                "okTarget":"root","okChoiceTargets":["root"],"homeTarget":"root",
+                "homeFollowsOk":false,"homeNone":false
+            }],
+            "afterPlaybackHomeStep":{
+                "id":"home-step","name":"Retour","audio":"home.mp3","image":"home.png",
+                "controlSettings":{"autoplay":true,"wheel":false,"pause":false,"ok":true,"home":true},
+                "okTarget":"root","okChoiceTargets":[],"homeTarget":"root",
+                "homeFollowsOk":false,"homeNone":false
+            }
+        }"#.to_string();
+        for level in (1..=depth).rev() {
+            entry = format!(
+                r#"{{"id":"folder-{level}","type":"menu","name":"Dossier {level}","children":[{entry}]}}"#
+            );
+        }
+        format!(
+            r#"{{"name":"Profondeur","projectType":"pack","rootEntries":[{entry}],"globalOptions":{{"autoNext":false,"nightMode":false}}}}"#
+        )
+    }
+
+    #[test]
+    fn project_parser_accepts_the_complete_sixty_one_level_shape() {
+        let project = parse_project_json(&nested_project_json(max_menu_depth()))
+            .expect("la profondeur fonctionnelle maximale doit être parsable");
+        assert_eq!(project.root_entries.len(), 1);
+    }
+
+    #[test]
+    fn project_parser_reports_the_functional_limit_before_generation() {
+        let observed = max_menu_depth() + 1;
+        let error = match parse_project_json(&nested_project_json(observed)) {
+            Ok(_) => panic!("la profondeur fonctionnelle doit être refusée"),
+            Err(error) => error,
+        };
+        assert_eq!(error, project_menu_depth_error(observed));
+    }
+
+    #[test]
+    fn project_parser_keeps_an_independent_technical_json_bound() {
+        let excessive = format!(
+            "{}0{}",
+            "[".repeat(MAX_PROJECT_JSON_NESTING + 1),
+            "]".repeat(MAX_PROJECT_JSON_NESTING + 1)
+        );
+        let error = ensure_bounded_json_nesting(&excessive)
+            .expect_err("une structure JSON arbitrairement profonde doit être refusée");
+        assert!(error.contains("imbrication technique"));
+    }
+
+    #[test]
+    fn project_parser_accepts_the_exact_technical_json_bound() {
+        let nested_unknown = format!(
+            "{}0{}",
+            "[".repeat(MAX_PROJECT_JSON_NESTING - 1),
+            "]".repeat(MAX_PROJECT_JSON_NESTING - 1)
+        );
+        let project_json = format!(
+            r#"{{"name":"Borne technique","projectType":"pack","rootEntries":[],"globalOptions":{{"autoNext":false,"nightMode":false}},"unknown":{nested_unknown}}}"#
+        );
+        ensure_bounded_json_nesting(&project_json).expect("la borne exacte doit être acceptée");
+        parse_project_json(&project_json)
+            .expect("le parseur doit supporter toute sa borne déclarée");
     }
 }

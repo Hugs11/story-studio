@@ -12,11 +12,13 @@ import { useAudioTimeline } from './useAudioTimeline';
 import { useLuniiChromeControls } from './useLuniiChromeControls';
 import {
   findEntryLocation,
+  getCircularSelectionIndex,
   getMenuBrowseState,
   HOME_ACTION,
   resolveEndNodeHomeTarget,
   resolvePromptHomeAction,
   resolveStoryHomeTarget,
+  resolveStoryTitleHomeTarget,
   shouldAutoAdvanceEndMessage,
 } from './navigationResolvers';
 import { END_HOME_NONE, resolveEndHomeTarget } from '../../store/endMessageHome';
@@ -676,6 +678,13 @@ export function ProjectSimulator({
       navigateHomeFromStory();
       return;
     }
+    if (!isSimple && state === 'browse' && currentEntry?.type === 'story') {
+      if (currentEntry.titleControlSettings?.home === false) return;
+      const target = resolveStoryTitleHomeTarget(currentEntry, currentMenu, rootEntries);
+      if (target && navigateToTarget(target)) return;
+      goToCover();
+      return;
+    }
     setState('cover');
     setMenuPath([]);
     setEntryIdx(0);
@@ -740,6 +749,9 @@ export function ProjectSimulator({
       : state === 'postplay'
       ? activeStory?.afterPlaybackPromptControlSettings?.home === false
       :
+    state === 'browse' && currentEntry?.type === 'story'
+      ? currentEntry?.titleControlSettings?.home === false
+      :
     isSimple && state === 'playing'
       ? simpleStory?.controlSettings?.home === false
       : state === 'playing' && currentEntry?.type === 'story'
@@ -758,10 +770,14 @@ export function ProjectSimulator({
       onOk={handleOk}
       onHome={handleHome}
       onLeft={() => {
-        if (state === 'browse') setEntryIdx((i) => Math.max(0, i - 1));
+        if (state === 'browse') {
+          setEntryIdx((index) => getCircularSelectionIndex(index, -1, currentEntries.length));
+        }
       }}
       onRight={() => {
-        if (state === 'browse') setEntryIdx((i) => Math.min(Math.max(currentEntries.length - 1, 0), i + 1));
+        if (state === 'browse') {
+          setEntryIdx((index) => getCircularSelectionIndex(index, 1, currentEntries.length));
+        }
       }}
       paused={paused}
       onPause={handlePause}

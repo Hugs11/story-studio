@@ -471,14 +471,39 @@ test('menu autoplay disabled is preserved when the menu is a real root choice', 
 });
 
 test('single root menu is forced to autoplay even when its local autoplay is disabled', () => {
-  const menu = { id: 'menu-1', type: 'menu', name: 'Menu', controlSettings: { autoplay: false }, children: [story('a')] };
+  const menu = {
+    id: 'menu-1',
+    type: 'menu',
+    name: 'Menu',
+    controlSettings: { autoplay: false, wheel: true },
+    children: [story('a')],
+  };
   const p = project([menu]);
 
   const controls = getGeneratedMenuControls(menu, null, p);
 
   assert.equal(controls.isChoiceNode, false);
+  assert.equal(controls.wheel, false);
   assert.equal(controls.autoplay, true);
   assert.equal(controls.forceAutoplay, true);
+});
+
+test('single root menu with multiple children preserves its choice controls', () => {
+  const menu = {
+    id: 'menu-1',
+    type: 'menu',
+    name: 'Menu',
+    controlSettings: { autoplay: false, wheel: true },
+    children: [story('a'), story('b')],
+  };
+  const p = project([menu]);
+
+  const controls = getGeneratedMenuControls(menu, null, p);
+
+  assert.equal(controls.isChoiceNode, true);
+  assert.equal(controls.wheel, true);
+  assert.equal(controls.autoplay, false);
+  assert.equal(controls.forceAutoplay, false);
 });
 
 test('default story inside a menu auto-continues when Rust forces playback autoplay', () => {

@@ -294,6 +294,92 @@ test('computeBadgesData : message de fin expose fin et Home pendant histoire par
   );
 });
 
+test('computeBadgesData : scénario de fin local expose un badge distinct du retour direct', () => {
+  const entry = {
+    id: 'story-a',
+    type: 'story',
+    name: 'A',
+    audio: 'a.mp3',
+    itemAudio: 'a-title.mp3',
+    afterPlaybackSequence: [{ id: 'step-1', audio: 'end.mp3' }],
+    controlSettings: {},
+  };
+  const menu = {
+    id: 'menu-1',
+    type: 'menu',
+    name: 'Menu',
+    children: [entry],
+  };
+  const project = { rootEntries: [menu] };
+
+  assert.deepEqual(
+    computeBadgesData(entry, menu, new Map(), project, project.rootEntries, { showDefaultReturns: true }),
+    [
+      { kind: 'sequence-return', status: 'default', targetId: 'menu-1', isDefault: true },
+      { kind: 'home', status: 'default', targetId: 'menu-1', isInactive: false, isDefault: true },
+    ],
+  );
+});
+
+test('computeBadgesData : message individuel reste distinct en présence du message global', () => {
+  const entry = {
+    id: 'story-a',
+    type: 'story',
+    name: 'A',
+    audio: 'a.mp3',
+    itemAudio: 'a-title.mp3',
+    afterPlaybackPromptAudio: 'local-end.mp3',
+    afterPlaybackPromptControlSettings: {},
+    controlSettings: {},
+  };
+  const menu = {
+    id: 'menu-1',
+    type: 'menu',
+    name: 'Menu',
+    children: [entry],
+  };
+  const project = {
+    rootEntries: [menu],
+    nightModeAudio: 'global-end.mp3',
+    globalOptions: { nightMode: true },
+  };
+
+  assert.equal(
+    computeBadgesData(entry, menu, new Map(), project, project.rootEntries, { showDefaultReturns: true })[0]?.kind,
+    'prompt-return',
+  );
+});
+
+test('computeBadgesData : projection locale équivalente conserve le badge du message global', () => {
+  const entry = {
+    id: 'story-a',
+    type: 'story',
+    name: 'A',
+    audio: 'a.mp3',
+    itemAudio: 'a-title.mp3',
+    afterPlaybackPromptAudio: 'global-end.mp3',
+    afterPlaybackPromptHomeNone: true,
+    afterPlaybackPromptControlSettings: {},
+    controlSettings: {},
+  };
+  const menu = {
+    id: 'menu-1',
+    type: 'menu',
+    name: 'Menu',
+    children: [entry],
+  };
+  const project = {
+    rootEntries: [menu],
+    nightModeAudio: 'global-end.mp3',
+    globalOptions: { nightMode: true },
+  };
+
+  assert.equal(
+    computeBadgesData(entry, menu, new Map(), project, project.rootEntries, { showDefaultReturns: true })[0]?.kind,
+    'end-night',
+  );
+});
+
 test('computeBadgesData : message de fin sans cible explicite expose la destination effective par défaut', () => {
   const entry = {
     id: 'story-a',
@@ -414,6 +500,20 @@ test('formatBadgeTitle : prompt-return décrit le trajet via le message de fin',
   assert.doesNotMatch(ui.title, /par défaut|modifié/i);
 });
 
+test('formatBadgeTitle : sequence-return décrit le scénario de fin personnalisé', () => {
+  const projectIndex = makeProjectIndexStub([
+    { id: 'menu-target', type: 'menu', name: 'Menu parent' },
+  ]);
+  const ui = formatBadgeTitle({
+    kind: 'sequence-return',
+    status: 'default',
+    targetId: 'menu-target',
+    isDefault: true,
+  }, projectIndex);
+  assert.equal(ui.kind, 'sequence-return');
+  assert.match(ui.title, /scénario de fin personnalisé → « Menu parent »/);
+});
+
 test('formatBadgeTitle : home (configure, isInactive false) -> décrit le bouton Accueil', () => {
   const projectIndex = makeProjectIndexStub([
     { id: 'story-home', type: 'story', name: 'Maison' },
@@ -475,8 +575,9 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
   const allowedFieldsByKind = {
     graph: new Set(['kind']),
     continuation: new Set(['kind', 'sourceStoryName']), // legitime : vient de l'entry directement
-    return: new Set(['kind', 'status', 'targetId', 'isDefault', 'flow']),
+    return: new Set(['kind', 'status', 'targetId', 'isDefault']),
     'prompt-return': new Set(['kind', 'status', 'targetId', 'isDefault', 'isInactive']),
+    'sequence-return': new Set(['kind', 'status', 'targetId', 'isDefault']),
     'home-none': new Set(['kind', 'status', 'isDefault']),
     'home-implicit': new Set(['kind', 'status', 'targetId', 'isDefault']),
     home: new Set(['kind', 'status', 'targetId', 'isInactive', 'isDefault']),
@@ -486,8 +587,9 @@ test('Invariant : computeBadgesData ne stocke aucun nom textuel', () => {
   const samples = [
     { kind: 'graph' },
     { kind: 'continuation', sourceStoryName: 'X' },
-    { kind: 'return', status: null, targetId: 'X', isDefault: false, flow: 'sequence' },
+    { kind: 'return', status: null, targetId: 'X', isDefault: false },
     { kind: 'prompt-return', status: null, targetId: 'X', isDefault: false, isInactive: false },
+    { kind: 'sequence-return', status: null, targetId: 'X', isDefault: false },
     { kind: 'home-none', status: null, isDefault: false },
     { kind: 'home-implicit', status: null, targetId: 'menu-1', isDefault: false },
     { kind: 'home', status: null, targetId: 'X', isInactive: false, isDefault: false },

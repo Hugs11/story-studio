@@ -11,6 +11,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+docs/.astro/
 
 # Story Studio local projects, generated assets and diagnostic dumps
 *.mbah

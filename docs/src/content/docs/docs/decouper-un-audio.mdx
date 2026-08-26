@@ -1,0 +1,60 @@
+---
+title: Découper un audio
+description: Transformer un enregistrement long en plusieurs extraits réutilisables.
+---
+
+L’outil **Découper un audio** crée plusieurs fichiers à partir d’une seule source. Il est utile après un
+long enregistrement contenant plusieurs Histoires, chapitres ou prises que tu veux conserver
+séparément, ou lorsque tu veux extraire l’introduction d’une Histoire pour l’utiliser, par exemple,
+comme **Audio de sélection**.
+
+![Découpe d’un enregistrement en plusieurs extraits préparés](/story-studio/assets/screenshots/Audio-decoupe-light.png)
+
+## Ouvrir l’outil
+
+Dans le catalogue **Médias**, ouvre l’aperçu d’un fichier audio puis choisis
+**Découper un audio**.
+
+Tu peux aussi faire un clic droit sur une Histoire dans l’**Arbre** ou le **Diagramme**, puis choisir
+**Découper l’audio dans Médias…**. L’outil utilise alors l’audio **Histoire complète** comme source,
+mais **l’Histoire n’est pas modifiée automatiquement**.
+
+La source reste inchangée : la découpe crée de nouveaux fichiers.
+
+## Préparer les extraits
+
+La zone bleue de la forme d’onde représente le passage sélectionné.
+
+1. Place le début et la fin autour du premier passage à conserver.
+2. Utilise **Prévisualiser** pour vérifier la sélection.
+3. Clique sur **Ajouter l’extrait**.
+4. Modifie son nom dans la liste si nécessaire.
+5. Recommence pour les autres passages.
+
+Chaque extrait mémorise ses propres points d’entrée et de sortie. Les plages peuvent se suivre,
+être éloignées ou même se chevaucher.
+
+Pour ajuster précisément une limite, tu peux utiliser **I** et **O**, les flèches **← / →** pour
+avancer ou reculer de 50 ms, ainsi que le zoom. Chaque extrait ajouté peut ensuite être
+prévisualisé ou retiré avant la génération.
+
+## Générer les fichiers
+
+Lorsque la liste est prête, clique sur **Générer**.
+
+Story Studio crée chaque extrait au format **FLAC** dans `fichiers-importes/` de l’**emplacement de
+travail**, puis l’ajoute au catalogue **Médias**. Les tags présents sur la source sont recopiés et
+le tag **découpe** est ajouté automatiquement.
+
+Les nouveaux fichiers ne sont affectés à aucune Histoire. Fais-les ensuite glisser depuis
+**Médias** vers les champs souhaités.
+
+## Découpe ou Éditeur audio ?
+
+| Besoin | Outil |
+|---|---|
+| garder un seul résultat après avoir retiré ou corrigé un passage | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| produire plusieurs fichiers depuis une même source | **Découper un audio** |
+| réunir plusieurs fichiers dans un seul audio | [Assembler des audios](/story-studio/docs/assembler-des-audios/) |
+
+[Retrouver les extraits dans Médias](/story-studio/docs/gestionnaire-de-medias/)

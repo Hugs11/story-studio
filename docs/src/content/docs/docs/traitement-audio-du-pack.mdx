@@ -1,0 +1,213 @@
+---
+title: Traitement audio du pack
+description: Comprendre comment Story Studio harmonise le volume et ajuste les silences lors de la génération du pack.
+---
+
+Story Studio peut préparer automatiquement les audios au moment de **générer le pack** afin d’obtenir une écoute plus régulière sur la Lunii.
+
+Ces réglages se trouvent dans **Options du pack → Traitement audio du pack**.
+
+![Options du pack ouvertes sur le traitement audio](/story-studio/assets/screenshots/Pack-settings.png)
+
+Par défaut, Story Studio :
+
+- **harmonise le volume** des différents audios ;
+- **ajuste les silences** au début et à la fin à environ **0,4 seconde**.
+
+:::note
+Les fichiers sources de ton projet ne sont pas modifiés. Le traitement est appliqué aux fichiers préparés pour le ZIP généré.
+:::
+
+## Pourquoi traiter les audios ?
+
+Un pack peut mélanger des sources très différentes : enregistrements personnels, podcasts, voix de synthèse, anciens MP3…
+
+Sans préparation, une Histoire peut être beaucoup plus forte que la suivante, tandis que certaines commencent immédiatement et d’autres après plusieurs secondes de silence.
+
+Le traitement audio cherche donc deux choses :
+
+1. un **volume perçu cohérent** d’un audio à l’autre ;
+2. des **débuts et fins réguliers**, sans couper la voix.
+
+Les deux traitements sont indépendants : modifier les silences ne change pas le volume, et inversement.
+
+## Harmoniser le volume
+
+L’option **Harmoniser le volume** est activée par défaut.
+
+Story Studio mesure le volume moyen réellement perçu de chaque audio et vise environ **−14 LUFS**, un niveau proche de celui observé sur des packs Lunii officiels.
+
+Il ne cherche donc pas simplement à pousser chaque fichier « aussi fort que possible ».
+
+### Ce que Story Studio fait réellement
+
+Avant de mesurer le volume, Story Studio ignore les silences détectés au début et à la fin. Une longue pause ne peut ainsi pas faire croire qu’un audio est plus faible qu’il ne l’est réellement.
+
+Ensuite :
+
+- si le volume est déjà dans la zone cible et que ses pointes restent sous le plafond, il n’est pas modifié ;
+- sinon, Story Studio applique un **gain fixe** à l’ensemble de l’audio pour se rapprocher de −14 LUFS ;
+- si certaines pointes deviennent trop fortes, un **limiteur** intervient uniquement sur ces pointes.
+
+La narration n’est donc pas continuellement compressée : son relief et ses différences naturelles entre passages calmes et forts sont préservés autant que possible.
+
+:::tip
+Un audio déjà situé autour de la cible n’est pas retouché inutilement. Story Studio utilise une petite zone de tolérance autour de −14 LUFS afin d’éviter un traitement sans bénéfice audible.
+:::
+
+### Si la source est très faible ou très dynamique
+
+Lorsque l’harmonisation est activée, Story Studio essaie tout de même de ramener l’audio au niveau souhaité.
+
+Si cela demande une amplification ou une limitation particulièrement forte, le pack peut être généré mais un **avertissement** apparaît dans la File de rendu.
+
+Le ZIP reste utilisable : l’avertissement t’invite simplement à écouter le passage concerné, car :
+
+- une source presque muette peut révéler davantage son bruit de fond après amplification ;
+- une source très dynamique peut perdre un peu de relief sur ses pointes les plus fortes.
+
+### Une source saturée reste une source saturée
+
+Le limiteur empêche une source trop forte d’aggraver son écrêtage pendant la préparation du pack, mais il ne peut pas reconstruire un signal déjà dégradé.
+
+:::caution
+Si un enregistrement est déjà saturé ou fortement écrêté, **Harmoniser le volume ne le répare pas**.
+
+Le vérificateur de packs peut signaler ce type de source. Lorsque c’est possible, repars d’un fichier de meilleure qualité.
+:::
+
+### Désactiver l’harmonisation
+
+Si tu désactives **Harmoniser le volume**, Story Studio conserve le niveau d’origine de chaque fichier.
+
+Cela peut être utile si tous tes audios ont déjà été préparés ensemble avec le niveau souhaité.
+
+Les autres opérations nécessaires à la création du pack restent indépendantes : conversion au format attendu par la Lunii ou traitement des silences, par exemple.
+
+## Silence début / fin
+
+Une courte pause avant et après la voix rend les démarrages moins secs et les enchaînements plus confortables.
+
+La valeur par défaut est **0,4 seconde au début et à la fin**.
+
+Story Studio propose trois comportements : **Ajuster**, **Ajouter** ou **Ne rien faire**.
+
+### Ajuster — recommandé
+
+**Ajuster** est le mode par défaut.
+
+Story Studio commence par **mesurer le silence déjà présent** dans chaque fichier.
+
+Il ramène ensuite le début et la fin à la durée configurée :
+
+- si le silence est trop court, il le complète ;
+- s’il est trop long, il retire l’excédent ;
+- s’il est déjà correct, aucun ajustement inutile n’est effectué.
+
+Par exemple :
+
+```text
+Source : 1,8 s de silence → Ajuster → environ 0,4 s
+Source : 0,1 s de silence → Ajuster → environ 0,4 s
+Source : 0,4 s de silence → Ajuster → reste inchangé
+```
+
+C’est généralement le meilleur choix lorsque les audios viennent de sources différentes.
+
+### Comment le silence est-il repéré ?
+
+Story Studio ne considère pas simplement qu’un son « faible » est du silence.
+
+Il analyse le niveau de chaque fichier et adapte automatiquement son seuil au bruit de fond de la source. Le début de la voix doit également être présent pendant plusieurs dizaines de millisecondes avant d’être considéré comme du contenu.
+
+Cela permet notamment :
+
+- d’ignorer un petit clic isolé avant la narration ;
+- de mieux fonctionner avec un enregistrement légèrement bruité ;
+- de conserver une attaque de voix douce.
+
+Story Studio garde en plus une petite marge avant le contenu détecté afin de ne pas couper le début d’un mot.
+
+Une fois le traitement du volume terminé, le silence manquant est ajouté sous forme de **silence numérique propre**.
+
+:::note
+Le silence est ajouté **après** l’harmonisation du volume. Il ne fausse donc pas la mesure du volume et ne peut pas être amplifié avec la narration.
+:::
+
+### Ajouter
+
+Le mode **Ajouter** ne tient pas compte des silences existants pour les ajuster.
+
+Il ajoute simplement la durée configurée au début et à la fin du fichier.
+
+```text
+Source : 0 s   → Ajouter 0,4 s → 0,4 s
+Source : 0,5 s → Ajouter 0,4 s → 0,9 s
+Source : 1,5 s → Ajouter 0,4 s → 1,9 s
+```
+
+Ce mode est utile si tu sais que tes fichiers sont déjà coupés au plus près du contenu et que tu souhaites uniquement ajouter une marge fixe.
+
+Pour des fichiers provenant de plusieurs sources, **Ajuster** est généralement préférable : les silences déjà présents ne s’accumulent pas.
+
+### Ne rien faire
+
+Avec **Ne rien faire**, Story Studio conserve les silences de début et de fin tels qu’ils existent dans les fichiers sources.
+
+L’harmonisation du volume peut toujours fonctionner indépendamment si elle est activée.
+
+Choisis ce mode lorsque tes audios ont déjà été préparés avec les silences exacts que tu souhaites conserver.
+
+## Modifier la durée des silences
+
+Les **0,4 seconde** sont la valeur recommandée et utilisée par défaut.
+
+Si tu as un besoin particulier, tu peux modifier séparément la durée du début et de la fin dans :
+
+**Préférences → Import et audio**
+
+Les nouvelles valeurs seront affichées directement dans **Options du pack → Silence début / fin**.
+
+:::tip
+Pour la plupart des packs, conserve **0,4 s** et le mode **Ajuster**. Les valeurs personnalisées sont surtout utiles si tu suis déjà une convention audio précise.
+:::
+
+## Éviter les réencodages inutiles
+
+La génération prépare les audios au format attendu par la Lunii : **MP3 mono, 44,1 kHz**.
+
+Story Studio essaie toutefois de ne pas réencoder un fichier lorsque ce n’est pas nécessaire. Si un MP3 est déjà compatible, que son volume ne demande aucune correction et que ses silences correspondent au réglage choisi, il peut être **copié tel quel** dans le pack.
+
+Lorsqu’un traitement est nécessaire, les différentes opérations sont regroupées avant l’encodage afin d’éviter plusieurs compressions successives.
+
+C’est aussi pour cette raison qu’il reste préférable de conserver les **fichiers sources du projet** plutôt que de repartir systématiquement du ZIP déjà généré.
+
+## Et dans le vérificateur de packs ?
+
+Le [vérificateur de packs](/story-studio/docs/verifier-un-pack/) utilise les mêmes principes de mesure, mais il ne considère pas qu’un pack doit forcément avoir **exactement** 0,4 seconde de silence.
+
+Pour les silences de bord :
+
+- moins d’environ **0,35 s** est considéré comme trop court et peut être corrigé automatiquement ;
+- de **0,35 à 1 seconde** est accepté ;
+- au-delà de **1 seconde**, Story Studio propose simplement de ramener ce silence à 0,4 s.
+
+Un silence long est donc une **suggestion facultative**, pas une raison de déclarer le pack invalide.
+
+Pour le volume, le vérificateur signale également les audios nettement trop faibles ou trop forts et peut proposer leur mise à niveau. Une source déjà saturée est signalée séparément, sans prétendre la réparer.
+
+## Réglage conseillé
+
+Pour un pack composé de fichiers que tu n’as pas tous préparés toi-même :
+
+```text
+Harmoniser le volume : activé
+Silence début / fin : Ajuster
+Durée : 0,4 s au début et à la fin
+```
+
+C’est le réglage par défaut de Story Studio : il vise un pack homogène tout en évitant de modifier inutilement les audios qui sont déjà correctement préparés.
+
+[Éditer un audio](/story-studio/docs/editeur-audio/) ·
+[Vérifier un pack](/story-studio/docs/verifier-un-pack/) ·
+[Préférences et raccourcis](/story-studio/docs/preferences-et-raccourcis/)

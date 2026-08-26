@@ -228,6 +228,17 @@ test('GitHub workflows pin the Windows runner required by the Piper build', asyn
   );
 });
 
+test('the reproducible Linux bundle image provides Piper build dependencies', async () => {
+  const [containerfile, containerignore] = await Promise.all([
+    readFile(new URL('../packaging/linux/Containerfile', import.meta.url), 'utf8'),
+    readFile(new URL('../.containerignore', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(containerfile, /^\s+git \\/m);
+  assert.match(containerfile, /npm run build:piper-runtime/);
+  assert.match(containerignore, /^!THIRD_PARTY_SOURCE_OFFER\.md$/m);
+});
+
 test('frontend-visible temporary files use the app-owned cache instead of the system temp dir', async () => {
   const [
     textImages,

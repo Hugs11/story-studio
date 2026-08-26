@@ -24,7 +24,7 @@ export function AiImagesSection({ className, sectionRef, sdSettings, onUpdateSdS
     const launching = sdSettings?.autoStart && sdSettings?.launcherPath;
     setSdProbe({
       state: 'loading',
-      message: launching ? 'Démarrage de ComfyUI en cours… (peut prendre jusqu\'à 60s)' : 'Connexion à ComfyUI en cours…',
+      message: launching ? 'Démarrage de ComfyUI en cours… (peut prendre jusqu\'à 3 minutes)' : 'Connexion à ComfyUI en cours…',
     });
     try {
       await invoke('comfyui_check', { settings: sdSettings });

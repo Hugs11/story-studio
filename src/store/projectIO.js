@@ -564,7 +564,7 @@ export async function loadProject() {
   return loadProjectFromPath(path);
 }
 
-export async function loadProjectFromPath(path) {
+export async function loadProjectFromPath(path, { preserveEmptyProjectName = false } = {}) {
   const text = await readTextFile(path);
   const mbahDir = getProjectDir(path);
   const rawData = JSON.parse(text);
@@ -575,7 +575,10 @@ export async function loadProjectFromPath(path) {
     ? await Promise.all(rawData.mediaLibraryPaths.map((p) => resolveLoadedProjectPath(p, mbahDir, workspaceDir, compatibilityCache)))
     : [];
   const withAbsolutePaths = await resolveLoadedProjectPaths(rawData, mbahDir, workspaceDir, compatibilityCache);
-  const migrated = migrateProjectData(withAbsolutePaths, { savePath: path });
+  const migrated = migrateProjectData(withAbsolutePaths, {
+    savePath: path,
+    preserveEmptyProjectName,
+  });
   const data = normalizeProjectData(migrated);
   return {
     data,

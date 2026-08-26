@@ -1,0 +1,96 @@
+---
+title: Créer un pack depuis un podcast
+description: Importer les épisodes d’un flux RSS comme Histoires dans un nouveau projet.
+---
+
+L’entrée **Créer un pack depuis un podcast** transforme rapidement une sélection d’épisodes en
+Histoires dans un nouveau projet Story Studio.
+
+![Sélection d’épisodes depuis un flux podcast](/story-studio/assets/screenshots/Podcast-import.png)
+
+## Charger le podcast
+
+Colle l’adresse complète du **flux RSS**, puis choisis **Charger les épisodes**. Story Studio récupère
+le titre du podcast, sa couverture lorsqu’elle est disponible et la liste des épisodes.
+
+:::note[Une page web n’est pas forcément un flux RSS]
+Si aucun épisode n’apparaît, vérifie que tu as utilisé l’adresse du flux RSS et non simplement la
+page du podcast sur son site ou une plateforme d’écoute.
+:::
+
+## Choisir les épisodes
+
+Tu peux filtrer la liste, sélectionner les épisodes souhaités puis lancer l’import.
+
+Pour chaque épisode, Story Studio télécharge son fichier audio. Il utilise en priorité la vignette
+propre à l’épisode lorsqu’elle existe. À défaut, il reprend la couverture du podcast, puis recherche
+éventuellement une image intégrée au fichier audio.
+
+Lorsque l’import est lancé depuis l’accueil, chaque épisode importé devient une **Histoire** placée
+directement dans le **Menu racine**.
+
+Si certains téléchargements échouent, les épisodes importés avec succès sont conservés et Story
+Studio indique combien n’ont pas pu être récupérés.
+
+## Ce qui est préparé automatiquement
+
+Le titre et la couverture du podcast préremplissent la présentation du pack lorsqu’ils sont
+disponibles.
+
+Après l’import, tu obtiens par exemple :
+
+```text
+Menu racine « Les enquêtes du mercredi »
+├── Histoire « La clé disparue »
+├── Histoire « Le message secret »
+└── Histoire « La cabane fermée »
+```
+
+Le fichier audio téléchargé devient l’**Histoire complète** de chaque épisode.
+
+L’import ne crée pas automatiquement les **Audios de sélection**. Pense à les enregistrer ou à les
+générer avant l’export :
+
+```text
+Histoire « La clé disparue »
+Audio de sélection : « La clé disparue »
+        ↓ OK
+Lecture de l’épisode complet
+```
+
+:::tip[Importer dans un projet existant]
+L’import Podcast est aussi disponible depuis la barre **Ajouter** de l’Éditeur libre.
+
+Les épisodes sélectionnés sont alors ajoutés au Dossier courant, ou au Menu racine si aucun Dossier
+n’est sélectionné, sans créer un nouveau projet.
+:::
+
+## Finaliser dans l’Éditeur libre
+
+Une fois l’import lancé depuis l’accueil terminé, Story Studio ouvre le nouveau projet dans
+l’**Éditeur libre**.
+
+Vérifie surtout :
+
+- le **Titre audio** du pack ;
+- l’image de couverture ;
+- les Audios de sélection des Histoires ;
+- l’ordre des épisodes ;
+- le comportement après lecture.
+
+Pour une longue série, crée des **Dossiers** par saison ou par thème afin d’éviter une liste trop
+longue à parcourir avec la molette.
+
+Le projet commence par défaut dans une session temporaire. Utilise **Projet → Enregistrer**
+avant de poursuivre un travail important.
+
+:::tip[Podcast ou import manuel ?]
+Utilise l’import Podcast lorsque plusieurs épisodes proviennent du même flux RSS : Story Studio se
+charge de récupérer leurs fichiers audio et leurs images.
+
+Si tu possèdes déjà les fichiers audio sur ton ordinateur, importe-les directement dans
+l’[**Éditeur libre**](/story-studio/docs/editeur-libre/).
+:::
+
+[Organiser avec des Dossiers](/story-studio/docs/dossier/) ·
+[Gérer les fichiers importés](/story-studio/docs/gestionnaire-de-medias/)

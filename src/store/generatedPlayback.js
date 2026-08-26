@@ -67,7 +67,8 @@ export function getGeneratedMenuControls(menu, parentMenu, project) {
   const controls = menu?.controlSettings ?? {};
   const isRootMenu = !parentMenu;
   const rootHasMultipleEntries = (project?.rootEntries?.length ?? 0) > 1;
-  const forceChoiceNode = isRootMenu && rootHasMultipleEntries;
+  const hasMultipleChildren = (menu?.children?.length ?? 0) > 1;
+  const forceChoiceNode = isRootMenu && (rootHasMultipleEntries || hasMultipleChildren);
   const isChoiceNode = !!(
     hasNonEmptyValue(menu?.returnOnHome)
     || parentMenu

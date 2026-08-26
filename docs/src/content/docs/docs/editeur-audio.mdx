@@ -1,0 +1,86 @@
+---
+title: Éditeur audio
+description: Rogner, supprimer un passage et appliquer des fondus avant de valider un audio.
+---
+
+L’**Éditeur audio** sert à corriger un son déjà choisi : retirer un silence trop
+long, supprimer une erreur, adoucir une entrée ou ajuster précisément une coupe.
+
+![Éditeur audio avec forme d’onde, sélection et contrôles de lecture](/story-studio/assets/screenshots/audio-editor-dark.png)
+
+## Ouvrir l’Éditeur audio
+
+Dans les Réglages, utilise le bouton **Éditer l’audio** d’un champ qui contient déjà un fichier.
+L’Éditeur audio travaille sur **un seul audio à la fois**.
+
+Dans l’assistant **Agréger des packs**, le bouton **Édition audio** permet aussi de modifier
+l’**Audio du menu**.
+
+Le catalogue **Médias** propose directement ses propres outils de découpe et d’assemblage ; il
+n’ouvre pas l’Éditeur audio général.
+
+Pour transformer une longue prise en plusieurs fichiers, utilise
+[Découper un audio](/story-studio/docs/decouper-un-audio/). Pour réunir plusieurs prises, consulte
+[Assembler des audios](/story-studio/docs/assembler-des-audios/).
+
+## Sélectionner précisément un passage
+
+La zone bleue de la forme d’onde correspond à la sélection courante. Déplace ses poignées pour
+définir le point d’entrée et le point de sortie.
+
+Les commandes principales permettent aussi de :
+
+- cliquer dans la forme d’onde pour déplacer la tête de lecture ;
+- utiliser **I** et **O** pour placer l’entrée et la sortie à la position courante ;
+- utiliser **←** et **→** pour avancer ou reculer de **50 ms** avec un court aperçu ;
+- avancer ou reculer de **5 s** avec les boutons dédiés ;
+- zoomer avec le curseur, `Ctrl` + molette ou les raccourcis `Ctrl` + `+` et `Ctrl` + `-` ;
+- utiliser **J / K / L** pour la lecture arrière, la pause et la lecture avant accélérée jusqu’à ×8.
+
+Le bouton **Prévisualiser l’extrait** lit uniquement la sélection. Il est utile pour vérifier une
+limite avant de lancer une modification.
+
+## Garder ou supprimer la sélection
+
+Deux actions couvrent l’essentiel des corrections :
+
+**Garder la sélection** conserve uniquement la zone choisie. Utilise-la par exemple pour retirer
+un long silence au début et à la fin d’une Histoire complète.
+
+**Supprimer la sélection** enlève au contraire la zone choisie et raccorde ce qui se trouve avant
+et après. C’est pratique pour retirer une hésitation, une toux ou une phrase ratée au milieu d’une
+prise.
+
+Story Studio génère d’abord un **aperçu** de la modification. La forme d’onde est alors rechargée
+avec ce résultat : tu peux l’écouter, poursuivre les corrections ou fermer l’éditeur sans valider.
+
+## Ajouter des fondus
+
+Les boutons **↗** et **↘** ajoutent respectivement un fondu d’entrée et un fondu de sortie. Leur
+durée peut être ajustée avant validation.
+
+Après la suppression d’un passage interne, un **fondu de raccord** peut également adoucir la
+jonction entre les deux parties restantes. Il est surtout utile lorsqu’une coupe nette produit un
+clic ou une transition trop brutale.
+
+Un fondu ne corrige pas une source saturée et ne remplace pas un silence volontaire dans le récit.
+
+## Valider les modifications
+
+Tant qu’aucune modification n’est préparée, le bouton final affiche **Aucune modification**.
+Lorsqu’un aperçu est prêt, **Valider les modifications** crée ou met à jour le fichier de travail
+et actualise automatiquement le champ ou l’audio concerné.
+
+Une source externe n’est pas écrasée : Story Studio crée un résultat géré dans l’emplacement de travail.
+Selon le format et l’emplacement du fichier, un média déjà géré peut être mis à jour directement.
+
+Lorsqu’une sauvegarde de la version d’origine est disponible, le bouton **Restaurer l’original**
+permet de revenir au fichier avant édition. Fermer avec **Annuler** ou `Échap` abandonne simplement
+les modifications encore en aperçu.
+
+:::note
+Les réglages globaux de silence et d’harmonisation du pack restent indépendants de cet outil.
+L’Éditeur audio sert à corriger le contenu du fichier lui-même.
+:::
+
+[Retrouver et réutiliser les audios dans Médias](/story-studio/docs/gestionnaire-de-medias/)

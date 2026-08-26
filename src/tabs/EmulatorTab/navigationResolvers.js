@@ -16,13 +16,25 @@ import {
   resolvePromptEndHome,
 } from '../../store/endMessageHome.js';
 
+export function getCircularSelectionIndex(currentIndex, direction, itemCount) {
+  if (!Number.isInteger(itemCount) || itemCount <= 0) return currentIndex;
+  return ((currentIndex + direction) % itemCount + itemCount) % itemCount;
+}
+
 export function findEntryLocation(entries, targetId, menuPath = []) {
-  for (let index = 0; index < (entries?.length ?? 0); index += 1) {
-    const entry = entries[index];
-    if (entry.id === targetId) return { entry, menuPath, entryIdx: index };
-    if (entry.type === 'menu') {
-      const nested = findEntryLocation(entry.children ?? [], targetId, [...menuPath, entry.id]);
-      if (nested) return nested;
+  const stack = [];
+  for (let index = (entries?.length ?? 0) - 1; index >= 0; index -= 1) {
+    stack.push({ entry: entries[index], menuPath, entryIdx: index });
+  }
+  while (stack.length > 0) {
+    const location = stack.pop();
+    if (location.entry.id === targetId) return location;
+    if (location.entry.type === 'menu') {
+      const children = location.entry.children ?? [];
+      const childMenuPath = [...location.menuPath, location.entry.id];
+      for (let index = children.length - 1; index >= 0; index -= 1) {
+        stack.push({ entry: children[index], menuPath: childMenuPath, entryIdx: index });
+      }
     }
   }
   return null;
@@ -98,6 +110,31 @@ export function resolveStoryHomeTarget(entry, parentMenu, project = null) {
     }
   }
   return resolveStoryReturnTarget(entry, parentMenu, project);
+}
+
+// Home depuis l'ecran de selection/titre d'une histoire. Le generateur Rust
+// revient par defaut au stage du dossier qui contient l'histoire ; une histoire
+// placee directement a la racine n'a pas de transition Home et revient donc a
+// la couverture. Les cibles importees restent preservees telles quelles.
+export function resolveStoryTitleHomeTarget(entry, parentMenu, rootEntries = []) {
+  if (entry?.type !== 'story' || !parentMenu) return null;
+  if (entry.titleReturnOnHomeNone) return null;
+
+  const fallbackTarget = parentMenu.id ?? null;
+  const target = normalizeNavigationTarget(entry.titleReturnOnHome);
+  if (!target) return fallbackTarget;
+  if (isRootNavigationTarget(target)) return 'root';
+  if (isCurrentMenuNavigationTarget(target)) return fallbackTarget;
+  if (isNextStoryNavigationTarget(target)) {
+    const siblings = parentMenu.children ?? rootEntries;
+    const currentIndex = siblings.findIndex((candidate) => candidate.id === entry.id);
+    const nextStory = currentIndex >= 0
+      ? siblings.slice(currentIndex + 1).find((candidate) => candidate.type === 'story')
+      : null;
+    return nextStory?.id ? encodeStoryNavigationTarget(nextStory.id) : fallbackTarget;
+  }
+  if (isStoryNavigationTarget(target)) return target;
+  return decodeNavigationMenuId(target);
 }
 
 export function normalizeHomeTarget(target, options = {}) {

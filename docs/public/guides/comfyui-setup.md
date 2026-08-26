@@ -2,6 +2,10 @@
 
 # Setup guide — AI images (ComfyUI)
 
+> **Archived English guide.** This page is retained at its historical URL and describes Story
+> Studio 0.9.7. It is no longer the current user documentation. The maintained documentation is in
+> French: [ComfyUI](https://hugs11.github.io/story-studio/docs/comfyui/).
+
 > **Scope**: Story Studio 0.9.7 · Windows 10/11. ComfyUI remains portable in
 > the application, but manual Linux and macOS validation was not run for 0.9.7.
 
@@ -100,7 +104,7 @@ If all is well: **"ComfyUI reachable and ready."**
 
 With **"Start ComfyUI automatically"** enabled and the `.bat` path filled in, Story Studio launches ComfyUI itself if necessary when you request an image.
 
-> **Note**: ComfyUI typically takes 30–90 seconds to start. Story Studio waits up to 60 seconds before showing an error.
+> **Note**: ComfyUI typically takes 30–90 seconds to start. Story Studio waits up to 3 minutes before showing an error.
 
 ---
 
@@ -158,7 +162,7 @@ A model is probably missing in `models\checkpoints\`.
 The model isn't suitable, or the prompt is too vague.
 → Try a different model, or specify the style in the prompt (e.g. "children book illustration, flat colors, simple background").
 
-**"Starting… (may take up to 60s)" then an error**
+**"Starting… (may take up to 3 minutes)" then an error**
 ComfyUI takes too long to start, or the `.bat` is incorrect.
 → Check the `.bat` path in Options. Launch it manually to see if errors appear in the CMD window.
 

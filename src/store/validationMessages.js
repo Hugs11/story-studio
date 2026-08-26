@@ -2,6 +2,11 @@
 // Rust remains the final generation contract and may reject additional cases.
 // All helpers below use a unified em-dash separator and consistent French wording.
 
+export {
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  formatProjectMenuDepthError,
+} from './projectModel/menuDepth.js';
+
 const SEPARATOR = ' — ';
 
 const FIELD_LABELS = Object.freeze({

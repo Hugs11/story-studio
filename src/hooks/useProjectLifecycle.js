@@ -96,7 +96,10 @@ export function useProjectLifecycle({
             },
           }
         : transformed.project;
-      store.setProject(landedProject);
+      const depthOutcome = store.setProjectWithDepthGuard(landedProject);
+      if (!depthOutcome.allowed) {
+        throw new Error(depthOutcome.message || 'Limite d’imbrication des Dossiers atteinte.');
+      }
       store.setSelectedId('root');
       importedPackPendingMetaRef.current = true;
       if (transformed.advancedTransitionsDetected) {

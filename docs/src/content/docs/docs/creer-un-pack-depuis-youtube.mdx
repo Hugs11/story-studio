@@ -1,0 +1,82 @@
+---
+title: Créer un pack depuis YouTube
+description: Importer l’audio d’une vidéo, d’une playlist ou d’une chaîne dans Story Studio.
+---
+
+L’entrée **Créer un pack depuis YouTube** transforme l’audio de vidéos YouTube en Histoires dans un nouveau projet.
+
+Elle accepte notamment l’URL d’une **vidéo**, d’une **playlist** ou d’une **chaîne**.
+
+## Avant le premier import
+
+Au premier usage, Story Studio affiche un rappel concernant les conditions d’utilisation de YouTube et les droits d’auteur.
+
+Il télécharge ensuite automatiquement **yt-dlp**, l’outil utilisé pour lire les vidéos et récupérer leur audio. Story Studio recherche périodiquement une mise à jour et peut aussi utiliser un exécutable personnalisé défini dans les Préférences.
+
+:::caution[Contenus tiers]
+Importe uniquement des contenus que tu as le droit de télécharger et d’utiliser. Cette fonction ne modifie ni les conditions de YouTube ni les droits attachés aux vidéos.
+:::
+
+## Choisir les vidéos
+
+Colle l’adresse YouTube puis choisis **Charger les vidéos**.
+
+![Sélection des vidéos d’une playlist YouTube avant leur import](/story-studio/assets/screenshots/youtube-video-selection-dark.png)
+
+Story Studio affiche les vidéos disponibles et permet de :
+
+- filtrer la page affichée ;
+- sélectionner une ou plusieurs vidéos ;
+- naviguer entre les pages d’une longue liste.
+
+La sélection est conservée lorsque tu changes de page. Les playlists gardent leur ordre ; pour les chaînes, Story Studio peut remettre dans l’ordre certaines séries clairement numérotées.
+
+## Choisir la langue audio
+
+Si Story Studio détecte plusieurs langues parmi les vidéos sélectionnées, une étape **Audio** apparaît avant l’import.
+
+![Choix de la langue ou de la piste audio pour les vidéos YouTube](/story-studio/assets/screenshots/youtube-audio-language-dark.png)
+
+Tu peux conserver la **Piste par défaut de YouTube** ou choisir une langue, par exemple **Français**.
+
+Ce choix s’applique aux vidéos qui proposent cette langue. Si la piste choisie n’est finalement pas disponible au téléchargement, Story Studio utilise automatiquement la piste par défaut pour la vidéo concernée.
+
+## Ce qui est importé
+
+Chaque vidéo sélectionnée devient une **Histoire** avec :
+
+- le titre de la vidéo comme nom ;
+- son audio extrait en MP3 comme **Histoire complète** ;
+- sa miniature lorsqu’elle peut être récupérée.
+
+Depuis l’accueil, le titre et l’image de la vidéo, de la playlist ou de la chaîne servent également à préremplir le Menu racine lorsqu’ils sont disponibles.
+
+Tu obtiens par exemple :
+
+```text
+Menu racine « Les histoires de Léo »
+├── Histoire « La cabane secrète »
+├── Histoire « Le trésor du jardin »
+└── Histoire « La nuit des étoiles »
+```
+
+Comme pour l’import Podcast, les **Audios de sélection** des Histoires ne sont pas créés automatiquement. Pense à les enregistrer ou à les générer avant l’export.
+
+## Finaliser dans l’Éditeur libre
+
+Une fois l’import terminé, vérifie surtout les noms, les miniatures, les Audios de sélection et l’ordre des Histoires.
+
+Les titres YouTube peuvent contenir un numéro, un nom de chaîne ou une mention promotionnelle inutile. Tu peux renommer les Histoires après l’import sans modifier les fichiers sources.
+
+Pour une longue playlist ou une chaîne, crée des **Dossiers** par série, saison ou thème plutôt que de laisser des dizaines d’Histoires au même niveau.
+
+Une vidéo privée, supprimée, géobloquée ou dont l’audio n’est pas accessible peut échouer. Si seulement certaines vidéos échouent, les autres restent importées.
+
+:::tip[Ajouter des vidéos à un projet existant]
+L’import YouTube est également disponible depuis l’**Éditeur libre**.
+
+Dans ce cas, Story Studio ne crée pas un nouveau projet : les Histoires sont ajoutées au Dossier courant, ou au Menu racine si aucun Dossier n’est sélectionné.
+:::
+
+[Découvrir l’Éditeur libre](/story-studio/docs/editeur-libre/) ·
+[Comprendre les médias importés](/story-studio/docs/gestionnaire-de-medias/)

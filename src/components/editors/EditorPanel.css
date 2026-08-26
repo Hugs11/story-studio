@@ -1373,9 +1373,17 @@
   min-width: 0;
 }
 
+.menu-behavior-info {
+  margin-bottom: 11px;
+}
+
 .menu-behavior-control {
   justify-content: flex-start;
   align-items: center;
+}
+
+.menu-behavior-control--forced {
+  background: var(--control-disabled-bg);
 }
 
 .menu-behavior-copy {
@@ -1388,6 +1396,18 @@
 
 .menu-behavior-copy .during-play-control-title {
   flex: 0 0 auto;
+}
+
+.menu-behavior-state {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid var(--control-disabled-border);
+  border-radius: var(--radius-pill);
+  color: var(--control-disabled-text);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  text-transform: uppercase;
 }
 
 .menu-behavior-desc {

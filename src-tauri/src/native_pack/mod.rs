@@ -73,6 +73,12 @@ pub(crate) struct ImportedZipBundle {
     pub(crate) document: StoryDocument,
 }
 
+// La profondeur authoring maximale doit rester générable avec des branches
+// sœurs réalistes, y compris depuis les workers à petite pile utilisés par
+// Tauri et les tests. Le builder conserve sa logique commune et s'exécute sur
+// une pile bornée explicitement, indépendante de la plateforme appelante.
+const NATIVE_DOCUMENT_BUILDER_STACK_BYTES: usize = 16 * 1024 * 1024;
+
 fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDocument, String> {
     if active_native_graph(report.project.native_graph.as_ref()).is_some() {
         let fidelity = fidelity_judge::canonical_roundtrip_is_faithful(&report.project)?;
@@ -101,8 +107,19 @@ fn build_story_document(report: &NativeAssetPreparationReport) -> Result<StoryDo
 fn build_canonical_story_document(
     report: &NativeAssetPreparationReport,
 ) -> Result<StoryDocument, String> {
-    let mut builder = StoryBuilder::new(report);
-    builder.build()
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("story-studio-native-document".to_string())
+            .stack_size(NATIVE_DOCUMENT_BUILDER_STACK_BYTES)
+            .spawn_scoped(scope, || {
+                let mut builder = StoryBuilder::new(report);
+                builder.build()
+            })
+            .map_err(|error| format!("Impossible de démarrer la génération native : {error}"))?;
+        worker.join().map_err(|_| {
+            "La construction du document natif s'est interrompue de façon inattendue.".to_string()
+        })?
+    })
 }
 
 #[cfg(test)]

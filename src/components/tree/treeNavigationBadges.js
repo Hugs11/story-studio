@@ -112,19 +112,18 @@ export function computeBadgesData(entry, parentMenu, issuesById, project, rootEn
         isImportedPrompt: navigation.endNodeReturn.isImportedPrompt,
       });
     }
-  } else if (navigation.hasSequence) {
+  } else if (navigation.endMessage.presentationKind === 'local_sequence') {
     const targetId = sequenceReturnTarget(entry, parentMenu, rootEntries, navigation.directReturn.targetId);
     const isDefault = !(entry.afterPlaybackSequence ?? []).at(-1)?.okTarget;
     if (shouldShowDefault(isDefault)) {
       pushTargetBadge(out, {
-        kind: 'return',
+        kind: 'sequence-return',
         status: statusWithDefault(returnStatus, isDefault),
         targetId,
         isDefault,
-        flow: 'sequence',
       });
     }
-  } else if (navigation.hasPrompt) {
+  } else if (navigation.endMessage.presentationKind === 'local_prompt') {
     const isDefault = !navigation.promptReturn.isConfigured;
     if (shouldShowDefault(isDefault)) {
       pushTargetBadge(out, {
@@ -201,15 +200,22 @@ export function formatBadgeTitle(data, projectIndex) {
       };
     case 'return': {
       const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
-      const flow = data.flow === 'sequence'
-        ? "À la fin de l'histoire : passage par le scénario de fin"
-        : "À la fin de l'histoire";
       return {
         key: `return:${data.targetId}:${returnName}`,
         kind: 'return',
         status: data.status,
         label: '↩',
-        title: `${flow} → « ${returnName} »`,
+        title: `À la fin de l'histoire → « ${returnName} »`,
+      };
+    }
+    case 'sequence-return': {
+      const returnName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
+      return {
+        key: `sequence-return:${data.targetId}:${returnName}`,
+        kind: 'sequence-return',
+        status: data.status,
+        label: '▤',
+        title: `À la fin de l'histoire : passage par le scénario de fin personnalisé → « ${returnName} »`,
       };
     }
     case 'prompt-return': {

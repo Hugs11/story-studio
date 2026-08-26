@@ -9,6 +9,7 @@ import { useLuniiChromeControls } from './useLuniiChromeControls';
 import { toPackAssetName } from '../../utils/zipAssetName';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { createMediaRequestLifecycle } from './mediaRequestLifecycle';
+import { getCircularSelectionIndex } from './navigationResolvers';
 
 export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dragHandleProps = null }) {
   const [graph, setGraph] = useState(null);   // { stageNodes: Map, actionNodes: Map, squareOneId, title }
@@ -233,7 +234,7 @@ export function ZipSimulator({ zipPath, fromProject, onExit, onClose = null, dra
     if (!context || !graph) return;
     const an = graph.actionNodes.get(context.actionNodeId);
     if (!an?.options?.length) return;
-    const newIdx = Math.max(0, Math.min(an.options.length - 1, context.optionIdx + dir));
+    const newIdx = getCircularSelectionIndex(context.optionIdx, dir, an.options.length);
     if (newIdx === context.optionIdx) return;
     setStageId(an.options[newIdx]);
     setContext({ ...context, optionIdx: newIdx });

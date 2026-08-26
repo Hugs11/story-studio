@@ -1,0 +1,116 @@
+---
+title: Enregistrer et importer un audio
+description: Ajouter un son depuis un fichier, le microphone ou une voix générée, puis le réutiliser dans le projet.
+---
+
+Story Studio permet d’ajouter un audio directement depuis les Réglages : tu peux importer un
+fichier existant, enregistrer avec le microphone ou générer une voix locale. Le son peut ensuite
+être écouté, remplacé et réutilisé ailleurs dans le projet.
+
+## Choisir le bon emplacement
+
+Avant d’ajouter un son, vérifie à quel moment l’enfant doit l’entendre :
+
+| Emplacement | Rôle |
+|---|---|
+| **Titre audio** du Menu racine | présente le pack dans le menu principal |
+| **Audio de sélection** d’un Dossier | présente le Dossier ou invite à choisir |
+| **Audio de sélection** d’une Histoire | annonce l’Histoire pendant la sélection |
+| **Histoire complète** | récit lancé après validation |
+| **Message de fin** | message commun joué à la fin des Histoires qui l’utilisent |
+
+Pour les Audios de sélection, privilégie des phrases courtes et immédiatement compréhensibles :
+« Les animaux », « Le Renard » ou « Choisis ton histoire ».
+
+## Importer un fichier audio
+
+Clique sur un champ audio vide pour choisir un fichier. Story Studio accepte les formats
+**MP3, OGG, WAV, M4A, WebM et FLAC**.
+
+Une fois le fichier affecté, le lecteur intégré permet de l’écouter et de se déplacer dans la
+piste sans quitter les Réglages.
+
+Selon tes préférences, Story Studio peut copier les fichiers importés dans le dossier
+`fichiers-importes/` de l’emplacement de travail. Si cette copie est désactivée, le projet conserve une
+référence vers le fichier à son emplacement d’origine.
+
+Tu peux également faire glisser un audio depuis **Médias** vers un champ compatible, ou utiliser
+les commandes copier/couper/coller du menu contextuel.
+
+:::note[Importer plusieurs fichiers]
+L’action **Importer audio, ZIP ou 7z** de l’Arbre crée directement une Histoire pour chaque audio
+sélectionné. **Importer un dossier** peut également reproduire une arborescence complète de
+Dossiers et d’Histoires.
+
+À l’inverse, importer des fichiers depuis **Médias** les ajoute seulement au catalogue, sans créer
+de structure.
+:::
+
+## Enregistrer avec le microphone
+
+Le bouton microphone d’un champ vide est nommé **Enregistrer l’audio**. Si le champ contient déjà
+un fichier, la même action devient **Remplacer par un enregistrement**.
+
+L’enregistrement se déroule ainsi :
+
+1. ouvre l’enregistreur : un compte à rebours de **3 secondes** démarre ;
+2. Story Studio utilise ensuite le **microphone par défaut du système** et commence automatiquement
+   l’enregistrement ;
+3. clique sur **Arrêter** lorsque la prise est terminée ;
+4. écoute le résultat, modifie éventuellement le nom du fichier ou choisis **Recommencer** ;
+5. clique sur **Utiliser** pour affecter l’enregistrement au champ.
+
+Story Studio ne propose pas de sélecteur de microphone dans cette fenêtre. Si plusieurs entrées
+audio sont disponibles, choisis donc le microphone souhaité comme périphérique d’entrée par défaut
+dans le système avant d’enregistrer.
+
+Le système d’exploitation peut demander l’autorisation d’utiliser le microphone lors de la
+première utilisation.
+
+## Où est enregistré le fichier ?
+
+Les prises réalisées par Story Studio sont enregistrées au format **WebM/Opus** dans le dossier
+`enregistrements/` de l’emplacement de travail courant.
+
+Une session temporaire possède déjà son propre emplacement de travail. Dans les rares cas où aucun
+emplacement n’est disponible, Story Studio demande d’enregistrer le projet avant de créer le
+fichier.
+
+Depuis la barre **Ajouter** de l’Arbre, **Enregistrer une histoire avec le micro** utilise le même
+enregistreur puis crée directement une nouvelle Histoire avec la prise obtenue.
+
+## Générer une voix plutôt que l’enregistrer
+
+Le bouton TTS d’un champ permet de générer un audio à partir d’un texte avec Piper par défaut, ou
+avec XTTS lorsque cette intégration est configurée. Story Studio propose aussi une génération
+groupée pour créer les Audios de sélection de plusieurs Dossiers ou Histoires à partir de leurs
+noms.
+
+Piper possède une voix par défaut. Avec XTTS, choisis d’abord une voix dans une génération unitaire
+avant de lancer une génération groupée.
+
+Cette fonction est pratique pour des titres courts comme « La clé disparue », mais écoute toujours
+le résultat avant de l’utiliser, notamment pour les nombres, sigles et noms propres.
+
+Consulte [Piper ou XTTS](/story-studio/docs/voix-locales-piper-xtts/) pour la configuration des voix.
+
+## Corriger ou réutiliser l’audio
+
+Après l’import ou l’enregistrement, choisis l’outil selon le besoin :
+
+| Besoin | Outil |
+|---|---|
+| retirer une erreur, raccourcir le début ou la fin, ajouter un fondu | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| créer plusieurs extraits depuis une longue prise | [Découper un audio](/story-studio/docs/decouper-un-audio/) |
+| réunir plusieurs prises dans un seul fichier | [Assembler des audios](/story-studio/docs/assembler-des-audios/) |
+
+:::tip[Astuce]
+Pour enregistrer plusieurs récits, tu peux réaliser une prise longue puis la découper. Tu conserves
+ainsi une source commune si un extrait doit être refait.
+:::
+
+Quand tu remplaces un audio déjà utilisé, l’ancien fichier reste disponible dans **Médias** et peut
+être retrouvé avec le filtre **Non utilisés**. **Retirer** enlève seulement l’affectation du champ :
+une source externe n’est pas supprimée du disque.
+
+[Retrouver et classer les audios dans Médias](/story-studio/docs/gestionnaire-de-medias/)

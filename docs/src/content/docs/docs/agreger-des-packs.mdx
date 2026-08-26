@@ -1,0 +1,91 @@
+---
+title: Agréger des packs
+description: Réunir plusieurs ZIP ou 7z sous un Menu racine commun et générer un nouveau pack.
+---
+
+L’assistant **Agréger des packs** réunit plusieurs packs existants dans un nouveau pack commun.
+
+Chaque archive devient un choix du **Menu racine**, tout en conservant sa propre navigation interne.
+
+## 1. Ajouter les packs
+
+Depuis l’accueil, ouvre **Agréger des packs** puis ajoute tes fichiers `.zip` ou `.7z`.
+
+Story Studio lit leur titre, leur couverture et leur audio de présentation lorsqu’ils sont disponibles. Tu peux ensuite modifier leur ordre avec les flèches : cet ordre sera celui proposé à l’enfant.
+
+Une archive illisible est ignorée sans empêcher l’ajout des autres packs.
+
+Le parcours obtenu ressemble à ceci :
+
+```text
+Menu racine « Mes histoires du soir »
+        ↓ l’enfant choisit un pack
+Pack « Les aventures de Léo »
+Image + audio de présentation du pack d’origine
+        ↓ OK
+Navigation interne du pack « Les aventures de Léo »
+```
+
+Story Studio réutilise donc la présentation et la navigation des packs sources derrière un nouveau menu commun.
+
+## 2. Préparer le Menu racine
+
+L’assistant demande ensuite les médias qui présenteront la nouvelle collection.
+
+### Audio du menu
+
+Tu peux :
+
+- choisir un fichier audio ;
+- enregistrer ta voix ;
+- générer une voix avec le TTS local s’il est configuré ;
+- modifier l’audio avec l’Éditeur audio.
+
+Par exemple :
+
+> « Quelle histoire veux-tu écouter ce soir ? »
+
+### Image de couverture
+
+Tu peux choisir une image, la retoucher ou générer une image-titre. Elle est adaptée en **320 × 240 px** lors de la génération.
+
+L’audio et l’image du nouveau Menu racine sont nécessaires pour générer le pack.
+
+## 3. Renseigner les métadonnées
+
+La dernière étape permet de définir le titre, l’auteur, la version, l’âge et les autres métadonnées du nouveau pack.
+
+Story Studio propose des valeurs préremplies que tu peux modifier avant de générer.
+
+Le dossier de sortie est choisi au moment de la génération.
+
+## Ce qui est conservé
+
+L’agrégation ne transforme pas les packs sources en Histoires ou Dossiers éditables.
+
+Story Studio réintègre leur structure et leurs médias dans le nouveau pack afin de conserver leur fonctionnement interne. Les médias des packs sources sont repris tels quels ; le traitement audio de Story Studio concerne le nouvel audio du Menu racine.
+
+Les archives d’origine ne sont pas modifiées.
+
+L’agrégation ne corrige pas les éventuels défauts des packs sources.
+
+:::note[Agrégation ou Éditeur libre ?]
+Utilise **Agréger des packs** lorsque tu veux simplement réunir plusieurs packs derrière un nouveau menu.
+
+Si tu veux modifier leurs Histoires, déplacer leur contenu ou reconstruire leur navigation, passe plutôt par [**Modifier un pack existant**](/story-studio/docs/modifier-un-pack-existant/) ou l’[**Éditeur libre**](/story-studio/docs/editeur-libre/).
+:::
+
+:::tip[Ajouter un niveau intermédiaire]
+L’agrégation place directement tous les packs sous le Menu racine. Si tu veux ajouter une étape comme « Quelle histoire allons-nous écouter ? », crée plutôt un projet dans l’**Éditeur libre**, ajoute un Dossier portant cette question puis place les ZIP à l’intérieur.
+:::
+
+## Générer le pack
+
+Une fois les packs, l’audio, l’image et les métadonnées prêts, lance la génération.
+
+Story Studio produit directement le nouveau ZIP et affiche les éventuels avertissements. Cette opération ne crée pas de projet `.mbah` intermédiaire.
+
+Conserve les archives sources si tu souhaites modifier ou régénérer plus tard la collection.
+
+[Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) ·
+[Découvrir l’Éditeur libre](/story-studio/docs/editeur-libre/)

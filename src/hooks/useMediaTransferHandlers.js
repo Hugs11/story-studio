@@ -175,6 +175,10 @@ export function useMediaTransferHandlers({
 
     const artifactCopies = [];
     const knownCopies = new Map();
+    // Un Save As transmet déjà le projet et le chemin nouvellement nommés. Ne pas
+    // relire le store précédent ici : pendant une promotion de session, il peut
+    // encore porter le nom technique du snapshot de récupération.
+    const projectPrefix = getProjectFilePrefix(project, savePath);
     const transferResult = await transferProjectFilesToProject(
       project,
       savePath,
@@ -185,7 +189,7 @@ export function useMediaTransferHandlers({
           sourcePath,
           targetWorkspace,
           FICHIERS_IMPORTES,
-          getProjectFilePrefix(store.project, savePathRef.current),
+          projectPrefix,
           { artifactCopies, knownCopies },
         );
       },
@@ -215,10 +219,8 @@ export function useMediaTransferHandlers({
     copyImportedFilesEnabled,
     dismissedTransferPromptRef,
     pathAudit,
-    savePathRef,
     setWorkspaceDirState,
     showErrorDialog,
-    store,
     workspaceDir,
   ]);
 

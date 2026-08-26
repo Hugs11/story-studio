@@ -1,0 +1,20 @@
+---
+const target = '/story-studio/docs/concept/';
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={target} />
+    <title>Documentation Story Studio</title>
+    <script is:inline define:vars={{ target }}>
+      window.location.replace(target);
+    </script>
+  </head>
+  <body>
+    <a href={target}>Ouvrir la documentation Story Studio</a>
+  </body>
+</html>
