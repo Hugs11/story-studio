@@ -45,6 +45,7 @@ export default defineConfig({
           label: 'Où commencer',
           items: [
             { slug: 'docs/concept' },
+            { slug: 'docs/premiers-pas' },
             { slug: 'docs/menu-racine' },
             { slug: 'docs/dossier' },
             { slug: 'docs/histoire' },
