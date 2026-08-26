@@ -290,8 +290,10 @@ pub fn read_fs_pack_to_studio_zip(
 
     // li as int32 array
     let li_ints: Vec<i32> = li
-        .chunks_exact(4)
-        .map(|c| i32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| i32::from_le_bytes(*chunk))
         .collect();
 
     // Discover action nodes in stage iteration order (mirrors Java LinkedHashMap behaviour)

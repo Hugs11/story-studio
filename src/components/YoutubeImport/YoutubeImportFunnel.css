@@ -327,6 +327,63 @@
   height: 26px;
 }
 
+.youtube-funnel-step--audio {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.youtube-funnel-language-list {
+  display: grid;
+  gap: 9px;
+}
+
+.youtube-funnel-language {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg0);
+  cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.youtube-funnel-language:hover,
+.youtube-funnel-language.is-selected {
+  border-color: var(--accent-2-border);
+}
+
+.youtube-funnel-language.is-selected {
+  background: color-mix(in srgb, var(--accent-2-dim) 72%, var(--bg0));
+}
+
+.youtube-funnel-language input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.youtube-funnel-language span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.youtube-funnel-language strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+}
+
+.youtube-funnel-language small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 @media (max-width: 720px) {
   .youtube-funnel-toolbar {
     align-items: stretch;

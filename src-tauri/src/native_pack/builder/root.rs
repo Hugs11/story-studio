@@ -146,7 +146,7 @@ impl<'a> StoryBuilder<'a> {
                 &scoped_label_id("root", &menu.id, &menu.name),
                 transition(root_action_id, root_index as i32),
                 None,
-                root_has_multiple_entries,
+                root_has_multiple_entries || menu.children.len() > 1,
             ),
             CanonicalEntry::Zip(zip) => self.build_imported_zip_branch(
                 zip,

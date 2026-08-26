@@ -1,0 +1,238 @@
+---
+title: Dossier
+description: Utiliser un Dossier pour créer un choix, une introduction, une transition ou un point de retour.
+---
+
+Un **Dossier** est à la fois un conteneur et une étape de navigation.
+
+Il regroupe des Histoires ou d’autres Dossiers, mais il ne sert pas seulement à ranger
+l’arborescence : son image, son Audio de sélection et ses réglages déterminent ce que l’enfant voit,
+entend et peut faire à cette étape du parcours.
+
+Dans son usage le plus courant, un Dossier crée un **niveau de choix**. Il peut aussi servir
+d’introduction, de transition automatique ou de point de retour après une Histoire.
+
+## Créer un niveau de choix
+
+Un Dossier permet de regrouper plusieurs éléments sous un choix commun : un personnage, un thème,
+une série ou un moment de la journée, par exemple.
+
+```text
+Menu racine
+├── Dossier « Histoires du jour »
+│   ├── Histoire « Le Cerf-volant »
+│   └── Histoire « La Cabane »
+└── Dossier « Histoires du soir »
+    ├── Histoire « La Lune »
+    └── Histoire « Le Hibou »
+```
+
+L’enfant choisit d’abord entre **Histoires du jour** et **Histoires du soir**, puis parcourt les
+Histoires contenues dans le Dossier sélectionné.
+
+Chaque Dossier ajouté à l’arborescence crée donc potentiellement une nouvelle étape dans le parcours.
+
+## Utiliser l’Audio de sélection
+
+L’**Audio de sélection** présente le Dossier lorsqu’il est ouvert.
+
+Il peut simplement annoncer son nom :
+
+> « Histoires du soir »
+
+mais aussi poser une question ou donner une consigne :
+
+> « Quelle histoire veux-tu écouter ? »
+
+L’enfant entend cet audio avant de parcourir les éléments contenus dans le Dossier.
+
+```text
+Dossier « Quelle aventure veux-tu écouter ? »
+├── Histoire « La Cabane »
+└── Histoire « La Rivière »
+
+question
+   ↓
+première Histoire affichée ← molette → autre Histoire
+   ↓ OK
+lecture
+```
+
+L’Audio de sélection peut également être plus long et servir de véritable introduction narrative.
+
+## Lecture automatique
+
+Avec la **Lecture automatique**, Story Studio poursuit le parcours à la fin de l’Audio de sélection,
+sans demander un appui supplémentaire sur **OK**.
+
+Cela permet par exemple de créer une introduction :
+
+```text
+Dossier « Une journée avec Léo »
+├── Réglages
+│   ├── Audio de sélection : « Où Léo va-t-il passer sa journée ? »
+│   └── Lecture automatique : activée
+└── Contenu
+    ├── Histoire « Au jardin »
+    └── Histoire « Dans la cabane »
+```
+
+L’enfant entend l’introduction puis arrive directement au choix des Histoires.
+
+:::note[Dossier unique sous le Menu racine]
+Lorsqu’un Dossier est l’unique élément placé directement sous le Menu racine, son comportement dépend
+de son contenu :
+
+- avec plusieurs éléments, il constitue un véritable écran de choix : ses réglages **Molette de
+  sélection** et **Lecture automatique** sont disponibles ;
+- avec un seul élément, la **Lecture automatique** est activée et la **Molette de sélection** est
+  désactivée. Ces deux valeurs sont alors affichées comme imposées dans l’éditeur.
+
+S’il partage le Menu racine avec d’autres éléments ou s’il est imbriqué dans un autre Dossier, ses
+réglages restent modifiables.
+:::
+
+## Écran transparent
+
+Le réglage **Écran transparent** permet de ne pas afficher de nouvelle image pendant l’Audio de
+sélection du Dossier.
+
+Associé à la **Lecture automatique**, il permet de créer une transition presque invisible :
+
+```text
+Couverture du pack
+        ↓ OK
+« Que veux-tu écouter aujourd’hui ? »
+        ↓
+première Histoire ← molette → autres Histoires
+```
+
+Aucune image propre au Dossier n’est nécessaire : l’audio sert simplement de liaison avant le choix.
+
+:::tip
+**Écran transparent** et **Lecture automatique** sont indépendants.
+
+Un Dossier automatique peut conserver une image, et un Dossier transparent peut attendre une action
+de l’enfant.
+:::
+
+## Revenir vers un Dossier après une Histoire
+
+Après une Histoire, le retour par défaut vise le Dossier qui la contient.
+
+Le Dossier devient alors naturellement un **point de retour** permettant à l’enfant de choisir une
+nouvelle Histoire.
+
+```text
+Dossier « Que veux-tu écouter maintenant ? »
+├── Histoire « La Lune » ─────┐
+└── Histoire « Le Hibou » ────┴──> retour au Dossier
+                                      ↓
+                              nouveau choix
+```
+
+L’Audio de sélection du Dossier est alors rejoué.
+
+Pour un point de retour fréquent, préfère donc une phrase courte et naturelle à réécouter.
+Une longue introduction destinée à être entendue une seule fois peut devenir répétitive.
+
+Si nécessaire, les destinations après lecture d’une Histoire peuvent être personnalisées.
+
+### Séparer une introduction unique d’une question répétée
+
+Une introduction longue destinée à être entendue une seule fois peut être placée dans un premier
+Dossier automatique, suivi d’un second Dossier contenant la question à répéter.
+
+Après une Histoire, le retour peut ainsi viser uniquement le second Dossier sans rejouer toute
+l’introduction.
+
+Un exemple complet de cette organisation est présenté dans les
+[exemples de structures](/story-studio/docs/exemples-de-structures/).
+
+[Comprendre les retours et les destinations de navigation](/story-studio/docs/navigation/)
+
+## Ce qu’un Dossier peut contenir
+
+Un Dossier peut contenir :
+
+- des [Histoires](/story-studio/docs/histoire/) ;
+- d’autres **Dossiers** ;
+- des archives **ZIP** ou **7z**.
+
+Les Dossiers peuvent donc être imbriqués pour créer plusieurs niveaux de choix.
+
+Une archive reste un pack inclus dans le projet. Elle peut être simulée directement ou, si sa
+structure est prise en charge, extraite en Dossiers et Histoires modifiables.
+
+```text
+Menu racine
+└── Dossier « Animaux »
+    ├── Dossier « Forêt »
+    │   ├── Histoire « Le Renard »
+    │   └── Histoire « Le Hibou »
+    └── Dossier « Savane »
+        ├── Histoire « Le Lion »
+        └── Histoire « L’Éléphant »
+```
+
+Chaque niveau supplémentaire doit cependant avoir une utilité pour l’enfant : proposer un choix,
+introduire une partie du parcours ou assurer une transition.
+
+Un Dossier qui ne contient qu’un seul élément peut être parfaitement utile s’il possède ce rôle.
+Sinon, il ajoute simplement une étape supplémentaire.
+
+## Image, audio et réglages
+
+Un Dossier dispose de plusieurs éléments permettant de définir son comportement :
+
+![Réglages d’un Dossier avec son Audio de sélection et ses options de navigation](/story-studio/assets/screenshots/folder-settings-dark.png)
+
+| Réglage | Effet |
+|---|---|
+| **Image** | image affichée pour présenter le Dossier |
+| **Audio de sélection** | présente le Dossier, pose une question ou raconte une introduction |
+| **Écran transparent** | n’affiche pas d’image pendant l’Audio de sélection |
+| **Molette de sélection** | permet de parcourir les éléments contenus dans le Dossier |
+| **Lecture automatique** | poursuit le parcours après l’audio sans attendre **OK** |
+| **Bouton Pause** | permet de mettre en pause l’Audio de sélection |
+
+Les images utilisées sur la Lunii sont adaptées au format **320 × 240 px** lors de l’export.
+
+## Molette, OK et Accueil
+
+Dans un Dossier classique :
+
+- la **molette** permet de parcourir les éléments qu’il contient ;
+- **OK** valide l’élément affiché ;
+- la **Lecture automatique** peut supprimer l’attente d’un appui sur **OK** après l’Audio de sélection ;
+- le **Bouton Pause** peut interrompre cet audio.
+
+Le comportement du bouton **Accueil** dépend de l’écran actuellement affiché.
+
+Depuis le Dossier lui-même, il revient normalement à la sélection du pack. Depuis une Histoire
+contenue dans ce Dossier, il peut au contraire revenir au Dossier.
+
+[Voir le fonctionnement détaillé de la molette, OK et Accueil](/story-studio/docs/navigation/)
+
+## Plusieurs niveaux de Dossiers
+
+Story Studio permet d’imbriquer les Dossiers sur plusieurs niveaux.
+
+```text
+Menu racine
+└── Dossier « Thèmes »
+    └── Dossier « Animaux »
+        └── Dossier « Forêt »
+            └── Histoire « Le Renard »
+```
+
+Une structure profonde n’est pas un problème si chaque niveau apporte quelque chose au parcours.
+En revanche, plusieurs Dossiers successifs sans choix, média ou rôle narratif rendent simplement
+la navigation plus longue.
+
+:::note[Limite]
+Un même chemin peut contenir jusqu’à **61 Dossiers imbriqués**. Le Menu racine ne compte pas dans
+cette limite.
+:::
+
+[Comparer plusieurs organisations de packs](/story-studio/docs/exemples-de-structures/)

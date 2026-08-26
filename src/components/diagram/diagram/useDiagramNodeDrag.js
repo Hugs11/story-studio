@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findParentMenuId } from '../../../store/projectModel';
-import { buildTopLevelMovePlan } from '../../tree/treeOperations';
+import {
+  buildTopLevelMovePlan,
+  filterTopLevelSelectedIds,
+  getMoveEntryToContainerStatus,
+} from '../../tree/treeOperations';
 import { DRAG_START_DISTANCE, canMoveEntryToContainer } from '../flowDiagramLayout';
 
 export function useDiagramNodeDrag({
@@ -14,6 +18,7 @@ export function useDiagramNodeDrag({
 }) {
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverContainerId, setDragOverContainerId] = useState(undefined);
+  const [dragBlockedReason, setDragBlockedReason] = useState(null);
   const [dragPointerId, setDragPointerId] = useState(null);
   const [dragPointer, setDragPointer] = useState(null);
   const projectRef = useRef(project);
@@ -25,6 +30,7 @@ export function useDiagramNodeDrag({
   const onDragSelectRef = useRef(onDragSelect);
   const draggingIdRef = useRef(null);
   const dragOverContainerIdRef = useRef(undefined);
+  const dragBlockedReasonRef = useRef(null);
   const dragStartRef = useRef({ pointerId: null, entryId: null, startX: 0, startY: 0 });
   const dragPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
 
@@ -44,14 +50,20 @@ export function useDiagramNodeDrag({
     dragOverContainerIdRef.current = dragOverContainerId;
   }, [dragOverContainerId]);
 
+  useEffect(() => {
+    dragBlockedReasonRef.current = dragBlockedReason;
+  }, [dragBlockedReason]);
+
   const clearDragState = useCallback(() => {
     draggingIdRef.current = null;
     dragOverContainerIdRef.current = undefined;
+    dragBlockedReasonRef.current = null;
     dragStartRef.current = { pointerId: null, entryId: null, startX: 0, startY: 0 };
     dragPointerRef.current = { pointerId: null, x: 0, y: 0 };
     setDragPointerId(null);
     setDraggingId(null);
     setDragOverContainerId(undefined);
+    setDragBlockedReason(null);
     setDragPointer(null);
   }, []);
 
@@ -63,18 +75,40 @@ export function useDiagramNodeDrag({
       const dropNode = hit?.closest?.('[data-fd-drop-container]');
       if (!dropNode) {
         dragOverContainerIdRef.current = undefined;
+        dragBlockedReasonRef.current = null;
         setDragOverContainerId(undefined);
+        setDragBlockedReason(null);
         return;
       }
       const rawId = dropNode.getAttribute('data-fd-drop-container');
       const containerId = rawId === 'root' ? null : rawId;
+      const status = getMoveEntryToContainerStatus(
+        projectRef.current,
+        projectIndexRef.current,
+        activeId,
+        containerId,
+      );
+      if (!status.allowed) {
+        const visibleReason = status.reason === 'menu_depth_limit' || status.reason === 'menu_cycle'
+          ? status.reason
+          : null;
+        dragOverContainerIdRef.current = visibleReason ? containerId : undefined;
+        dragBlockedReasonRef.current = visibleReason;
+        setDragOverContainerId(visibleReason ? containerId : undefined);
+        setDragBlockedReason(visibleReason);
+        return;
+      }
       if (!canMoveEntryToContainer(projectRef.current, projectIndexRef.current, activeId, containerId)) {
         dragOverContainerIdRef.current = undefined;
+        dragBlockedReasonRef.current = null;
         setDragOverContainerId(undefined);
+        setDragBlockedReason(null);
         return;
       }
       dragOverContainerIdRef.current = containerId;
+      dragBlockedReasonRef.current = null;
       setDragOverContainerId(containerId);
+      setDragBlockedReason(null);
     }
 
     function handleWindowPointerMove(event) {
@@ -110,6 +144,18 @@ export function useDiagramNodeDrag({
             .filter((id) => currentSelectedIds.has(id))
           : [activeId];
         const getParentId = (id) => findParentMenuId(snapshot, id, snapshotIndex) ?? null;
+        if (dragBlockedReasonRef.current === 'menu_depth_limit') {
+          const topLevelIds = filterTopLevelSelectedIds(orderedCandidates, getParentId);
+          onMoveToMenuRef.current?.(topLevelIds, null, targetContainerId);
+          clearDragState();
+          event.preventDefault();
+          return;
+        }
+        if (dragBlockedReasonRef.current === 'menu_cycle') {
+          clearDragState();
+          event.preventDefault();
+          return;
+        }
         const idsToMove = buildTopLevelMovePlan(orderedCandidates, getParentId, (id) => (
           canMoveEntryToContainer(snapshot, snapshotIndex, id, targetContainerId)
         ));
@@ -162,6 +208,7 @@ export function useDiagramNodeDrag({
   return {
     draggingId,
     dragOverContainerId,
+    dragBlockedReason,
     dragPointer,
     handleDragPointerDown,
   };

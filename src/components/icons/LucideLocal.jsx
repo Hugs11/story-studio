@@ -354,6 +354,15 @@ const infoNode = [
   ['path', { d: 'M12 8h.01' }],
 ];
 
+const bookOpenTextNode = [
+  ['path', { d: 'M12 5v16' }],
+  ['path', { d: 'M16 13h2' }],
+  ['path', { d: 'M16 9h2' }],
+  ['path', { d: 'M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z' }],
+  ['path', { d: 'M6 13h2' }],
+  ['path', { d: 'M6 9h2' }],
+];
+
 const searchNode = [
   ['circle', { cx: '11', cy: '11', r: '8' }],
   ['path', { d: 'm21 21-4.3-4.3' }],
@@ -385,6 +394,25 @@ const layersNode = [
   ['path', { d: 'M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z' }],
   ['path', { d: 'M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12' }],
   ['path', { d: 'M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17' }],
+];
+
+const unfoldVerticalNode = [
+  ['path', { d: 'M12 22v-6' }],
+  ['path', { d: 'M12 8V2' }],
+  ['path', { d: 'M4 12H2' }],
+  ['path', { d: 'M10 12H8' }],
+  ['path', { d: 'M16 12h-2' }],
+  ['path', { d: 'M22 12h-2' }],
+  ['path', { d: 'm15 19-3 3-3-3' }],
+  ['path', { d: 'm15 5-3-3-3 3' }],
+];
+
+const listTreeNode = [
+  ['path', { d: 'M8 5h13' }],
+  ['path', { d: 'M13 12h8' }],
+  ['path', { d: 'M13 19h8' }],
+  ['path', { d: 'M3 10a2 2 0 0 0 2 2h3' }],
+  ['path', { d: 'M3 5v12a2 2 0 0 0 2 2h3' }],
 ];
 
 export const FilePen = createLocalLucideIcon(filePenNode);
@@ -440,9 +468,12 @@ export const X = createLocalLucideIcon(xNode);
 export const TriangleAlert = createLocalLucideIcon(triangleAlertNode);
 export const Speech = createLocalLucideIcon(speechNode);
 export const Info = createLocalLucideIcon(infoNode);
+export const BookOpenText = createLocalLucideIcon(bookOpenTextNode);
 export const Search = createLocalLucideIcon(searchNode);
 export const Rss = createLocalLucideIcon(rssNode);
 export const Youtube = createLocalLucideIcon(youtubeNode);
 export const Ellipsis = createLocalLucideIcon(ellipsisNode);
 export const ShieldCheck = createLocalLucideIcon(shieldCheckNode);
 export const Layers = createLocalLucideIcon(layersNode);
+export const UnfoldVertical = createLocalLucideIcon(unfoldVerticalNode);
+export const ListTree = createLocalLucideIcon(listTreeNode);

@@ -78,6 +78,14 @@ async function askSaveBeforeLeave(work, savedSnapshot, onSave, showChoiceDialog)
 function AppContent() {
   const store = useProjectStore();
   const { showErrorDialog, showConfirmDialog, showChoiceDialog } = useErrorDialog();
+  useEffect(() => {
+    if (!store.mutationError) return;
+    showErrorDialog({
+      title: 'Limite d’imbrication',
+      message: store.mutationError.message,
+    });
+    store.clearMutationError();
+  }, [showErrorDialog, store.clearMutationError, store.mutationError]);
   const renderQueue = useRenderQueueStore();
   const [saveToast, setSaveToast] = useState(null); // null | 'ok' | 'error'
   const [, setAutoSavedPath] = useState(null); // path of last autosave (display only)

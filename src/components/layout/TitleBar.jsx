@@ -135,7 +135,7 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
 
       <div className="chrome-window-controls">
         {onOpenCredits ? (
-          <button type="button" className="chrome-window-btn" onClick={onOpenCredits} title="À propos">
+          <button type="button" className="chrome-window-btn" onClick={onOpenCredits} title="Aide et à propos" aria-label="Aide et à propos">
             <HelpIcon />
           </button>
         ) : null}

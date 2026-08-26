@@ -12,7 +12,7 @@
   <a href=".github/workflows/ci.yml"><img alt="CI: desktop builds" src="https://img.shields.io/badge/CI-desktop%20builds-2ea44f.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#requirements"><img alt="Platforms: Windows, Linux and macOS" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D4.svg"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.9.7" src="https://img.shields.io/badge/version-0.9.7-2F80ED.svg"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.9.8" src="https://img.shields.io/badge/version-0.9.8-2F80ED.svg"></a>
   <a href="#beta-status"><img alt="Status: beta" src="https://img.shields.io/badge/status-beta-f59e0b.svg"></a>
   <a href="https://tauri.app/"><img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB.svg"></a>
   <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB.svg"></a>
@@ -21,8 +21,9 @@
 ## Tu cherches a creer des histoires pour la Lunii ?
 
 Story Studio pour Lunii est un editeur desktop open source pour creer, importer,
-verifier et exporter des packs d'histoires compatibles Lunii. La documentation
-francaise est disponible ici : [README.fr.md](README.fr.md).
+verifier et exporter des packs d'histoires compatibles Lunii. La
+[documentation utilisateur en ligne](https://hugs11.github.io/story-studio/docs/)
+est actuellement disponible en français ; ce README reste la présentation anglaise du projet.
 
 Story Studio for Lunii lets you create, import, organize, test and export
 Lunii-compatible story packs in a visual desktop workspace. Everything
@@ -44,12 +45,12 @@ GitHub issues.
 
 ## Latest Release
 
-Story Studio 0.9.7 adds multilingual Piper voices, improves compatibility with
-community pack layouts and strengthens the checker, import and simulator
-workflows. It also hardens temporary workspaces and filesystem boundaries.
+Story Studio 0.9.8 adds comprehensive searchable user documentation, improves
+folder and simulator navigation, and lets YouTube imports select an available
+audio language. It also makes recovered sessions and custom endings clearer.
 
 - [Download the latest release](https://github.com/Hugs11/story-studio/releases/latest)
-- [Read the v0.9.7 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.7)
+- [Read the v0.9.8 release notes](https://github.com/Hugs11/story-studio/releases/tag/v0.9.8)
 - [See the full changelog](CHANGELOG.md)
 
 ## Demo packs
@@ -60,12 +61,12 @@ simulator and adapt in the editor:
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L"><img src="docs/assets/demo-packs/leo-la-licorne.png" width="130" alt="Léo la licorne cover"></a><br>
+      <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L"><img src="docs/public/assets/demo-packs/leo-la-licorne.png" width="130" alt="Léo la licorne cover"></a><br>
       <strong>Léo la licorne</strong><br>
       <a href="https://drive.proton.me/urls/5ND49D487R#IxRa3Bd0Lm8L">Download from Proton Drive</a>
     </td>
     <td align="center" width="50%">
-      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF"><img src="docs/assets/demo-packs/toudou-cache-cache.png" width="130" alt="Toudou mon doudou and Cache-Cache cover"></a><br>
+      <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF"><img src="docs/public/assets/demo-packs/toudou-cache-cache.png" width="130" alt="Toudou mon doudou and Cache-Cache cover"></a><br>
       <strong>Toudou mon doudou + Cache-Cache — complete collection</strong><br>
       <a href="https://drive.proton.me/urls/H7ZTBC8S14#aj2WBn39jDRF">Download from Proton Drive</a>
     </td>
@@ -106,7 +107,7 @@ Start however you like, reopen saved work, edit an existing ZIP/7z pack, or
 start from a podcast or YouTube source. Dedicated guided flows also let you
 aggregate several packs or inspect a community pack.
 
-![Story Studio guided home screen](docs/assets/screenshots/home-dark.png)
+![Story Studio guided home screen](docs/public/assets/screenshots/home-dark.png)
 
 ### 2. Prepare the audio
 
@@ -114,11 +115,11 @@ Import or record audio, then adjust it before using it in a story. A long
 recording can be split into reusable clips, while several files can be reordered
 and assembled into a single track without changing the originals.
 
-![Editing an audio waveform in Story Studio](docs/assets/screenshots/audio-editor-dark.png)
+![Editing an audio waveform in Story Studio](docs/public/assets/screenshots/audio-editor-dark.png)
 
 | Split one recording into clips | Assemble several files into one track |
 |---|---|
-| ![Audio splitter with several prepared clips](docs/assets/screenshots/Audio-decoupe-light.png) | ![Audio assembly with reorderable source files](docs/assets/screenshots/Audio-assemble-light.png) |
+| ![Audio splitter with several prepared clips](docs/public/assets/screenshots/Audio-decoupe-light.png) | ![Audio assembly with reorderable source files](docs/public/assets/screenshots/Audio-assemble-light.png) |
 
 ### 3. Create voices, generate artwork and adapt images
 
@@ -128,12 +129,12 @@ voice and image jobs followed from Story Studio's generation queues.
 
 | Generate a voice locally with Piper or XTTS | Generate an illustration with ComfyUI |
 |---|---|
-| ![Local voice generation with Piper](docs/assets/screenshots/voice-generation-dark.png) | ![Illustration generation with a ComfyUI workflow](docs/assets/screenshots/comfyui-generation-dark.png) |
+| ![Local voice generation with Piper](docs/public/assets/screenshots/voice-generation-dark.png) | ![Illustration generation with a ComfyUI workflow](docs/public/assets/screenshots/comfyui-generation-dark.png) |
 
 Images can then be cropped, resized and adjusted for the 320x240 story-box
 format.
 
-![Cropping and adjusting an image for the story box](docs/assets/screenshots/image-editor-dark.png)
+![Cropping and adjusting an image for the story box](docs/public/assets/screenshots/image-editor-dark.png)
 
 ### 4. Organize the story and test its navigation
 
@@ -141,17 +142,17 @@ Build menus and stories in the tree, assign their images and audio, and define
 what the buttons do during and after playback. The Media explorer keeps used
 and unused files available alongside the project.
 
-![Unified workspace with the tree, story settings and diagram](docs/assets/screenshots/workspace-dark.png)
+![Unified workspace with the tree, story settings and diagram](docs/public/assets/screenshots/workspace-dark.png)
 
 Open the diagram full-screen to understand the complete structure, story groups
 and return paths without losing the level-by-level organization.
 
-![Full level-based diagram of a large story pack](docs/assets/screenshots/diagram-full-dark.png)
+![Full level-based diagram of a large story pack](docs/public/assets/screenshots/diagram-full-dark.png)
 
 The floating simulator then lets you play through the same navigation directly
 on top of the diagram before exporting.
 
-![Full project diagram tested with the built-in simulator](docs/assets/screenshots/diagram-simulator-dark.png)
+![Full project diagram tested with the built-in simulator](docs/public/assets/screenshots/diagram-simulator-dark.png)
 
 ### 5. Review the settings and generate the pack
 
@@ -161,13 +162,13 @@ Lunii-compatible ZIP from the same workspace.
 
 | Review pack metadata before export | Adjust pack-wide generation settings |
 |---|---|
-| ![Pack metadata and generated filename](docs/assets/screenshots/pack-metadata-dark.png) | ![Pack audio and navigation settings](docs/assets/screenshots/Pack-settings.png) |
+| ![Pack metadata and generated filename](docs/public/assets/screenshots/pack-metadata-dark.png) | ![Pack audio and navigation settings](docs/public/assets/screenshots/Pack-settings.png) |
 
 Existing community packs can also be analyzed separately. The checker groups
 structural, image and audio findings, proposes safe corrections and can export
 a detailed report.
 
-![Community pack checker with proposed corrections](docs/assets/screenshots/pack-checker-dark.png)
+![Community pack checker with proposed corrections](docs/public/assets/screenshots/pack-checker-dark.png)
 
 ## Features
 
@@ -228,7 +229,7 @@ choose **Open**, or use **System Settings → Privacy & Security → Open Anyway
 Do not disable Gatekeeper globally.
 
 AI integrations are optional. XTTS was tested on Linux in CPU mode; GPU mode
-was not validated for 0.9.7. It has not been installed or manually validated
+was not validated for 0.9.8. It has not been installed or manually validated
 on macOS. ComfyUI is manually validated on Windows only: manual Linux and
 macOS tests have not been run.
 
@@ -264,9 +265,9 @@ project or media library reference only.
 
 ## Documentation
 
-- [XTTS setup guide](docs/guides/xtts-setup.md)
-- [XTTS CPU setup guide for Linux](docs/guides/xtts-setup-linux.md)
-- [ComfyUI setup guide](docs/guides/comfyui-setup.md)
+- [Online user documentation](https://hugs11.github.io/story-studio/docs/) — currently available in French
+- [Piper and XTTS local voices](https://hugs11.github.io/story-studio/docs/voix-locales-piper-xtts/) — French
+- [ComfyUI integration](https://hugs11.github.io/story-studio/docs/comfyui/) — French
 - [Security model](SECURITY.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Changelog](CHANGELOG.md)

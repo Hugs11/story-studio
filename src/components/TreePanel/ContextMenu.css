@@ -29,6 +29,29 @@
   background: var(--bg2);
 }
 
+.ctx-item.is-disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  flex-wrap: wrap;
+}
+
+.ctx-item.is-disabled:hover {
+  background: transparent;
+}
+
+.ctx-item-label {
+  min-width: 0;
+}
+
+.ctx-disabled-hint {
+  flex-basis: 100%;
+  padding-left: 24px;
+  color: var(--danger-text);
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
 .ctx-item:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;

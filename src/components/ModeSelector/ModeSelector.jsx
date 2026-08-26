@@ -1,9 +1,14 @@
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
+import { BookOpenText, FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
+import { useErrorDialog } from '../common/Dialog';
 import { Tooltip } from '../common/Tooltip';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { loadProjectFromPath } from '../../store/projectIO';
+import { isTauriRuntime } from '../../utils/tauriRuntime';
+
+const DOCUMENTATION_URL = 'https://hugs11.github.io/story-studio/docs/';
 
 function formatRecentDate(updatedAt) {
   if (!updatedAt) return '';
@@ -51,10 +56,25 @@ export function ModeSelector({
   onRecoverSession,
   onIgnoreSessionRecovery,
 }) {
+  const { showErrorDialog } = useErrorDialog();
   const [loadedThumbnails, setLoadedThumbnails] = useState({});
   const visibleRecentProjects = useMemo(() => recentProjects.slice(0, 6), [recentProjects]);
   const visibleRecoveries = useMemo(() => sessionRecoveries.slice(0, 2), [sessionRecoveries]);
   const hasProjects = visibleRecentProjects.length > 0 || visibleRecoveries.length > 0;
+
+  async function handleDocumentationClick(event) {
+    // En développement web, laisser le lien HTTPS suivre son comportement natif.
+    if (!isTauriRuntime()) return;
+    event.preventDefault();
+    try {
+      await openUrl(DOCUMENTATION_URL);
+    } catch (error) {
+      showErrorDialog({
+        title: 'Documentation inaccessible',
+        message: `Impossible d’ouvrir la documentation dans le navigateur : ${error}`,
+      });
+    }
+  }
 
   const editors = [
     {
@@ -193,11 +213,21 @@ export function ModeSelector({
               ))}
             </div>
 
-            <div className="mode-home-prefs">
+            <div className="mode-home-links">
               <button type="button" className="mode-ghost-button" onClick={onOpenPreferences}>
                 <SlidersHorizontal className="mode-ghost-icon" strokeWidth={1.9} />
                 <span>Préférences</span>
               </button>
+              <a
+                className="mode-ghost-button"
+                href={DOCUMENTATION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleDocumentationClick}
+              >
+                <BookOpenText className="mode-ghost-icon" strokeWidth={1.9} />
+                <span>Documentation</span>
+              </a>
             </div>
           </div>
 

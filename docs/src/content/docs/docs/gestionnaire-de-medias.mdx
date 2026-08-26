@@ -1,0 +1,102 @@
+---
+title: Gestionnaire de médias
+description: Retrouver, classer, prévisualiser et réutiliser les médias d’un projet.
+---
+
+Le panneau **Médias** sert de catalogue au projet. Il rassemble les images, les audios et les
+archives connus de Story Studio : médias déjà utilisés dans la structure, fichiers importés pour
+plus tard, enregistrements et résultats générés par les outils de l’application.
+
+Ajouter un fichier à **Médias** ne l’affecte pas automatiquement à une Histoire et ne crée aucun
+Dossier. Le catalogue permet justement de préparer et d’organiser les fichiers avant de les utiliser.
+
+## Ouvrir le catalogue Médias
+
+Le catalogue se trouve dans le panneau inférieur de l’espace d’édition. Clique sur **Médias** dans
+la barre inférieure pour l’ouvrir. Le panneau peut être redimensionné ou réduit lorsque tu n’en as
+plus besoin.
+
+![Catalogue Médias en vue liste avec recherche, filtres, tags et utilisations](/story-studio/assets/screenshots/media-manager-dark.png)
+
+Deux affichages sont disponibles :
+
+- la **vue grille**, pratique pour parcourir rapidement les médias et leurs aperçus ;
+- la **vue liste**, qui peut afficher les colonnes **Nom**, **Usage**, **Taille**, **Dimensions**,
+  **Durée**, **Format**, **Date**, **Chemin** et **Tags**.
+
+En vue liste, tu peux choisir les colonnes visibles, modifier leur largeur et trier les médias en
+cliquant sur l’en-tête d’une colonne.
+
+## Ajouter des médias sans modifier la structure
+
+**Importer des médias** permet de sélectionner plusieurs images, audios ou archives ZIP/7z.
+**Importer un dossier** parcourt quant à lui le dossier choisi et ajoute récursivement les médias
+qu’il contient au catalogue. Tu peux aussi déposer des fichiers directement dans le panneau
+**Médias**.
+
+Ces imports alimentent uniquement le catalogue. Ils ne créent pas de Dossiers ni d’Histoires dans
+l’Arbre.
+
+:::note[Deux actions différentes]
+**Importer un dossier** dans **Médias** ajoute les fichiers au catalogue.
+
+**Importer un dossier** depuis l’Arbre reproduit au contraire la structure du dossier dans le
+projet et crée les Dossiers, Histoires et archives correspondants.
+:::
+
+## Rechercher, filtrer et classer
+
+La recherche porte sur le nom du fichier, son chemin et les éléments du projet qui l’utilisent.
+
+Les filtres disponibles sont **Tout**, **Images**, **Audio**, **ZIP**, **IA**, **Importés**,
+**Enreg.** et **Non utilisés**. Story Studio masque les catégories qui ne contiennent aucun média.
+Plusieurs filtres peuvent être combinés.
+
+Le filtre **Non utilisés** est particulièrement utile : lorsqu’un média perd sa dernière
+affectation dans le projet, Story Studio le conserve dans le catalogue afin que tu puisses le
+réutiliser ou le supprimer plus tard.
+
+Tu peux également ajouter des **tags** aux médias puis les utiliser comme filtres. En
+multi-sélection, un même tag peut être appliqué à plusieurs fichiers en une seule fois. Ces tags
+font partie du projet et sont enregistrés avec lui.
+
+## Prévisualiser et retrouver une utilisation
+
+Un clic sélectionne un média ; un double-clic ouvre son aperçu rapide. Les images sont affichées
+directement et les audios disposent d’un lecteur avec déplacement dans la piste.
+
+Le badge d’utilisation indique combien de fois le fichier est référencé dans le projet. Pour un
+audio affecté à un Dossier ou à une Histoire, l’aperçu propose aussi **Voir l’utilisation dans le
+projet** afin de rejoindre l’élément concerné dans les Réglages.
+
+Un fichier référencé par le projet mais introuvable sur le disque reste visible dans le catalogue
+avec un avertissement, ce qui évite de confondre un lien cassé avec un média simplement inutilisé.
+
+## Réutiliser et préparer un média
+
+Une image ou un audio du catalogue peut être glissé vers un champ compatible dans les Réglages.
+Les audios peuvent aussi être copiés ou coupés depuis **Médias** pour être réutilisés ailleurs dans
+la structure.
+
+Le catalogue donne également accès aux outils adaptés au média sélectionné :
+
+- [préparer une image](/story-studio/docs/preparer-les-images/) en enregistrant le résultat comme
+  nouveau média ;
+- [découper un audio](/story-studio/docs/decouper-un-audio/) en plusieurs extraits ;
+- sélectionner plusieurs audios pour les [assembler](/story-studio/docs/assembler-des-audios/).
+
+Les fichiers créés par ces outils sont ajoutés à **Médias** et restent disponibles pour la suite.
+
+## Retirer ou supprimer un média
+
+Un média encore utilisé dans le projet ne peut pas être retiré du catalogue : enlève d’abord ses
+affectations dans les Réglages concernés.
+
+Pour un média inutilisé, **Retirer de la médiathèque** retire seulement sa référence de **Médias** ;
+le fichier reste sur le disque.
+
+**Supprimer définitivement du disque** n’est proposé que pour les fichiers placés dans les dossiers
+gérés par Story Studio. Un fichier externe choisi ailleurs sur l’ordinateur peut être retiré du
+catalogue, mais Story Studio ne le supprime pas du disque.
+
+[Comprendre l’espace d’édition](/story-studio/docs/espace-d-edition/)

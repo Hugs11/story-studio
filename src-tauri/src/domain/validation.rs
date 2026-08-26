@@ -1,4 +1,5 @@
 use crate::domain::project::{Project, ProjectEntry};
+use crate::domain::project_limits::validate_project_menu_depth;
 use crate::services::project_files::{validate_existing_file_path, validate_existing_pack_path};
 use std::collections::{HashMap, HashSet};
 
@@ -828,6 +829,8 @@ fn validate_project_for_generation_with_mode(
     project: &Project,
     file_validation: FileValidation,
 ) -> Result<(), String> {
+    validate_project_menu_depth(project)?;
+
     let mut errors = Vec::new();
     let is_simple = project.project_type.as_deref() == Some("simple");
     let root_entries = project_root_entries(project);
@@ -1089,6 +1092,39 @@ mod tests {
             children,
             ..ProjectEntry::default()
         }
+    }
+
+    fn project_with_nested_menus(depth: usize) -> Project {
+        let mut entry = root_entry_story("Profonde");
+        for level in (1..=depth).rev() {
+            entry = menu_with(
+                &format!("folder-{level}"),
+                &format!("Dossier {level}"),
+                vec![entry],
+            );
+        }
+        let mut project = base_project("pack");
+        project.root_entries = vec![entry];
+        project
+    }
+
+    #[test]
+    fn generation_validation_enforces_the_shared_menu_depth_first() {
+        let limit = crate::domain::project_limits::max_menu_depth();
+        let accepted_errors =
+            validate_project_structure_for_generation(&project_with_nested_menus(limit))
+                .err()
+                .unwrap_or_default();
+        assert!(!accepted_errors.contains("Dossiers imbriqués"));
+
+        let observed = limit + 1;
+        let rejected =
+            validate_project_structure_for_generation(&project_with_nested_menus(observed))
+                .expect_err("le niveau supplémentaire doit être bloquant");
+        assert_eq!(
+            rejected,
+            crate::domain::project_limits::project_menu_depth_error(observed)
+        );
     }
 
     #[test]

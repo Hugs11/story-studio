@@ -1,5 +1,6 @@
 import { isSameMediaPath, makeId, normalizeBaseProject, normalizeEntry } from './schema.js';
 import { extractEntry, findEntryById, findIncomingRefs } from './index.js';
+import { getProjectMenuDepthDiagnostic } from './menuDepth.js';
 
 function replaceEntryTree(entries, entryId, replacer) {
   return entries.map((entry) => {
@@ -133,7 +134,12 @@ function replaceContainerChildren(entries, containerId, visibleEntries) {
 }
 
 export function updateProjectRootEntries(project, nextRootEntries) {
-  return normalizeBaseProject({ ...project, rootEntries: nextRootEntries });
+  const candidate = { ...project, rootEntries: nextRootEntries };
+  // Dernier garde-fou commun à toutes les opérations d'arbre : les wrappers UI
+  // fournissent le diagnostic, mais cette frontière garantit l'atomicité même
+  // pour un consommateur futur ou un appel direct.
+  if (!getProjectMenuDepthDiagnostic(candidate).allowed) return project;
+  return normalizeBaseProject(candidate);
 }
 
 export function appendEntry(project, containerId, entry) {
@@ -200,9 +206,12 @@ export function appendEntries(project, containerId, entries) {
 
 export function cutPasteEntries(project, sourceIds, targetMenuId) {
   const entries = sourceIds.map((id) => findEntryById(project, id)).filter(Boolean);
-  let p = project;
-  for (const id of sourceIds) p = removeEntry(p, id);
-  return appendEntries(p, targetMenuId, entries);
+  const sourceIdSet = new Set(sourceIds);
+  const withoutEntries = removeEntriesTree(project.rootEntries ?? [], sourceIdSet);
+  const movedEntries = appendEntriesToContainer(withoutEntries, targetMenuId, entries);
+  // Retrait et insertion forment une seule transaction : si la profondeur
+  // finale est refusée, updateProjectRootEntries rend le projet original.
+  return updateProjectRootEntries(project, movedEntries);
 }
 
 export function updateEntry(project, entryId, fields) {

@@ -1,0 +1,76 @@
+---
+title: Assembler des audios
+description: Réordonner plusieurs sons et créer une piste unique sans modifier les sources.
+---
+
+L’outil **Assembler des audios** réunit au moins deux fichiers dans une seule piste audio. Il permet par exemple
+de réunir plusieurs chapitres, plusieurs prises d’un même récit ou une introduction suivie d’une
+Histoire.
+
+![Assemblage de plusieurs fichiers audio réordonnables](/story-studio/assets/screenshots/Audio-assemble-light.png)
+
+## Choisir les audios
+
+Dans le catalogue **Médias**, sélectionne au moins deux fichiers audio puis choisis
+**Assembler les audios**. Si ta sélection contient aussi des images ou des archives, elles sont
+simplement ignorées et l’outil indique combien de médias non audio ont été écartés.
+
+L’assemblage peut également être lancé depuis plusieurs Histoires sélectionnées dans l’**Arbre**
+ou le **Diagramme**. Story Studio ouvre alors **Médias** avec leurs audios **Histoire complète** et
+vérifie si elles peuvent être remplacées proprement par le résultat.
+
+## Définir l’ordre
+
+Les fichiers sont assemblés dans l’ordre affiché dans la fenêtre. Fais glisser les lignes ou utilise
+les flèches **↑** et **↓** pour les réordonner. Tu peux aussi retirer un élément tant qu’au moins
+deux audios restent dans la liste.
+
+Écoute les sources avant l’assemblage si nécessaire : Story Studio prépare leurs formats pour les
+rendre compatibles, mais ne corrige pas automatiquement un volume irrégulier, un bruit de fond ou
+une coupe mal placée.
+
+## Ajouter un silence
+
+Active **Ajouter un silence entre les fichiers** pour insérer la même pause entre chaque source.
+La durée peut être réglée entre **0 et 30 secondes**.
+
+Par exemple, une pause de `0,5 s` peut rendre plus naturelle la jonction entre deux prises qui
+s’enchaînent trop rapidement.
+
+## Créer le résultat
+
+Story Studio propose un nom à partir des fichiers ou des Histoires sélectionnés. Tu peux le
+modifier avant de lancer l’assemblage.
+
+Le résultat est créé au format **FLAC** dans `fichiers-importes/` de l’**emplacement de travail**,
+puis ajouté au catalogue **Médias**. Les fichiers sources restent disponibles et ne sont ni
+modifiés ni supprimés.
+
+## Assembler et remplacer des Histoires
+
+Lorsque l’outil est ouvert depuis plusieurs Histoires, Story Studio vérifie que leur remplacement
+est sans ambiguïté. Elles doivent notamment être consécutives au même niveau de l’Arbre, directement
+sous le Menu racine ou dans le même Dossier. Leur navigation ne doit pas dépendre d’une Histoire qui
+disparaîtrait.
+
+Si le remplacement est sûr, le bouton devient **Assembler et remplacer**. Une seule Histoire reste
+alors dans l’Arbre : elle utilise l’audio assemblé et conserve l’identifiant, la position, l’image et
+l’**Audio de sélection** de la première Histoire. Son nom devient celui choisi pour le fichier final,
+et elle reprend les contrôles de lecture et les réglages de fin de la dernière.
+
+Le remplacement dans l’Arbre peut être annulé avec l’historique du projet. Le fichier FLAC créé
+reste toutefois disponible dans **Médias**.
+
+Si ces conditions ne sont pas réunies, Story Studio indique pourquoi le remplacement est
+impossible. **Assembler** crée tout de même le nouveau fichier dans **Médias**, sans modifier la
+structure du projet.
+
+## Quel outil choisir ?
+
+| Besoin | Outil |
+|---|---|
+| corriger un seul fichier | [Éditeur audio](/story-studio/docs/editeur-audio/) |
+| créer plusieurs extraits depuis une longue source | [Découper un audio](/story-studio/docs/decouper-un-audio/) |
+| réunir plusieurs fichiers dans une seule piste | **Assembler des audios** |
+
+[Retrouver le résultat dans Médias](/story-studio/docs/gestionnaire-de-medias/)

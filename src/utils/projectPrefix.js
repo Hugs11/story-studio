@@ -2,6 +2,10 @@ export function sanitizeProjectPrefix(name) {
   return String(name || '').trim()
     .replace(/[<>:"/\\|?*\[\]+]/g, '_')
     .replace(/\s+/g, '-')
+    // Les fichiers commençant par un point sont cachés sur POSIX et ne sont pas
+    // couverts par le scope générique Tauri. Un nom de projet ne doit jamais
+    // transformer ses médias durables en fichiers techniques cachés.
+    .replace(/^\.+/, '')
     .toLowerCase()
     .slice(0, 40);
 }

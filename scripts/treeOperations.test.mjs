@@ -10,6 +10,7 @@ import {
   containsMenu,
   countDescendants,
   filterTopLevelSelectedIds,
+  getMoveEntryToContainerStatus,
   hasSelectedAncestor,
   resolveDropContainerId,
   resolveDropTargetForNode,
@@ -52,6 +53,28 @@ test('canMoveEntryToContainer shares the same tree move guard for panels', () =>
   const index = buildProjectIndex(project);
   assert.equal(canMoveEntryToContainer(project, index, 'menu-a', 'menu-b'), false);
   assert.equal(canMoveEntryToContainer(project, index, 'story-1', 'menu-c'), true);
+});
+
+test('move status distinguishes a depth refusal from a menu cycle', () => {
+  let children = [{ id: 'leaf', type: 'story', name: 'Leaf' }];
+  for (let level = 61; level >= 1; level -= 1) {
+    children = [{ id: `deep-${level}`, type: 'menu', name: `Deep ${level}`, children }];
+  }
+  const depthProject = {
+    rootEntries: [
+      ...children,
+      { id: 'branch', type: 'menu', name: 'Branch', children: [] },
+    ],
+  };
+  const index = buildProjectIndex(depthProject);
+  assert.equal(
+    getMoveEntryToContainerStatus(depthProject, index, 'branch', 'deep-61').reason,
+    'menu_depth_limit',
+  );
+  assert.equal(
+    getMoveEntryToContainerStatus(depthProject, index, 'deep-1', 'deep-2').reason,
+    'menu_cycle',
+  );
 });
 
 test('TREE_COLOR_PALETTE exposes 7 distinct colors', () => {

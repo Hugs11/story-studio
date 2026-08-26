@@ -21,10 +21,31 @@ use super::story_entry::{
 use super::transitions::{has_transition_target, transition_target_stage_id};
 use crate::native_pack::StoryDocument;
 
+// La projection authoring reste récursive jusqu'à la borne de graphe existante.
+// Une pile dédiée évite que la petite pile des workers (notamment celle du
+// harness de tests) devienne une limite fonctionnelle inférieure à maxMenuDepth.
+const IMPORT_PROJECTION_STACK_BYTES: usize = 16 * 1024 * 1024;
+
 /// Convertit le document story.json en `{ rootAudio, rootImage, entries }`.
 /// rootAudio/rootImage = assets du squareOne (cover du pack).
 /// entries = entrées éditables (story/menu) issues de la navigation.
 pub(super) fn walk_story_doc_to_entries(
+    doc: &serde_json::Value,
+    assets: &HashMap<String, PathBuf>,
+) -> Result<serde_json::Value, String> {
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("story-studio-pack-projection".to_string())
+            .stack_size(IMPORT_PROJECTION_STACK_BYTES)
+            .spawn_scoped(scope, || walk_story_doc_to_entries_inner(doc, assets))
+            .map_err(|error| format!("Impossible de démarrer la projection du pack : {error}"))?;
+        worker.join().map_err(|_| {
+            "La projection du pack s'est interrompue de façon inattendue.".to_string()
+        })?
+    })
+}
+
+fn walk_story_doc_to_entries_inner(
     doc: &serde_json::Value,
     assets: &HashMap<String, PathBuf>,
 ) -> Result<serde_json::Value, String> {

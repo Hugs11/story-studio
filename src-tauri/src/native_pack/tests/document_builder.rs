@@ -1588,8 +1588,83 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
         Some(0)
     );
     assert!(menu_stage.control_settings.autoplay);
+    assert!(!menu_stage.control_settings.wheel);
     assert!(title_stage.control_settings.wheel);
     assert!(play_stage.control_settings.autoplay);
+}
+
+#[test]
+fn single_root_menu_with_multiple_children_preserves_choice_controls() {
+    let report = report_for(
+        CanonicalProject {
+            name: "Choice pack".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("root.mp3".to_string()),
+            root_image: Some("root.png".to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions {
+                silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
+                auto_next: false,
+                night_mode: false,
+                end_message_autoplay: true,
+            },
+            entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+                name: "Introduction".to_string(),
+                audio: Some("menu.mp3".to_string()),
+                image: Some("menu.png".to_string()),
+                wheel: true,
+                autoplay: false,
+                children: vec![
+                    CanonicalEntry::Story(CanonicalStory {
+                        name: "Forest".to_string(),
+                        audio: Some("forest-story.mp3".to_string()),
+                        item_audio: Some("forest-title.mp3".to_string()),
+                        item_image: Some("forest.png".to_string()),
+                        ..Default::default()
+                    }),
+                    CanonicalEntry::Story(CanonicalStory {
+                        name: "Sea".to_string(),
+                        audio: Some("sea-story.mp3".to_string()),
+                        item_audio: Some("sea-title.mp3".to_string()),
+                        item_image: Some("sea.png".to_string()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            })],
+            shared_entries: Vec::new(),
+        },
+        vec![
+            prepared_asset("rootAudio", "cover.mp3"),
+            prepared_asset("rootImage", "cover.png"),
+            prepared_asset("root/Introduction/menuAudio", "menu.mp3"),
+            prepared_asset("root/Introduction/menuImage", "menu.png"),
+            prepared_asset("root/Introduction/Forest/itemAudio", "forest-title.mp3"),
+            prepared_asset("root/Introduction/Forest/itemImage", "forest.png"),
+            prepared_asset("root/Introduction/Forest/storyAudio", "forest-story.mp3"),
+            prepared_asset("root/Introduction/Sea/itemAudio", "sea-title.mp3"),
+            prepared_asset("root/Introduction/Sea/itemImage", "sea.png"),
+            prepared_asset("root/Introduction/Sea/storyAudio", "sea-story.mp3"),
+        ],
+        Vec::new(),
+    );
+
+    let document = build_story_document(&report).expect("root choice menu document");
+    let menu_stage = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.name == "Introduction")
+        .expect("root menu stage");
+
+    assert!(menu_stage.control_settings.wheel);
+    assert!(!menu_stage.control_settings.autoplay);
 }
 
 #[test]
@@ -1737,6 +1812,189 @@ fn builds_recursive_menu_story_tree() {
         Some(top_menu_action.id.as_str())
     );
     assert!(play_stage.control_settings.autoplay);
+}
+
+#[test]
+fn builds_the_supported_maximum_menu_depth() {
+    let max_depth = crate::domain::project_limits::max_menu_depth();
+    let mut assets = vec![
+        prepared_asset("rootAudio", "cover.mp3"),
+        prepared_asset("rootImage", "cover.png"),
+    ];
+    let side_prefix = scoped_label_id("root", "side-story", "Histoire sœur");
+    assets.extend([
+        prepared_asset(&format!("{side_prefix}/storyAudio"), "side-story.mp3"),
+        prepared_asset(&format!("{side_prefix}/itemAudio"), "side-title.mp3"),
+        prepared_asset(&format!("{side_prefix}/itemImage"), "side-image.png"),
+    ]);
+    let mut prefix = "root".to_string();
+    for level in 1..=max_depth {
+        let id = format!("folder-{level}");
+        let name = format!("Dossier {level}");
+        prefix = scoped_label_id(&prefix, &id, &name);
+        assets.push(prepared_asset(
+            &format!("{prefix}/menuAudio"),
+            &format!("menu-{level}.mp3"),
+        ));
+        assets.push(prepared_asset(
+            &format!("{prefix}/menuImage"),
+            &format!("menu-{level}.png"),
+        ));
+    }
+    let story_prefix = scoped_label_id(&prefix, "story-final", "Histoire finale");
+    assets.extend([
+        prepared_asset(&format!("{story_prefix}/storyAudio"), "story-final.mp3"),
+        prepared_asset(
+            &format!("{story_prefix}/itemAudio"),
+            "story-final-title.mp3",
+        ),
+        prepared_asset(&format!("{story_prefix}/itemImage"), "story-final.png"),
+    ]);
+
+    let mut entry = CanonicalEntry::Story(CanonicalStory {
+        id: "story-final".to_string(),
+        name: "Histoire finale".to_string(),
+        audio: Some("story-final.mp3".to_string()),
+        item_audio: Some("story-final-title.mp3".to_string()),
+        item_image: Some("story-final.png".to_string()),
+        ..Default::default()
+    });
+    for level in (1..=max_depth).rev() {
+        entry = CanonicalEntry::Menu(CanonicalMenu {
+            id: format!("folder-{level}"),
+            name: format!("Dossier {level}"),
+            audio: Some(format!("menu-{level}.mp3")),
+            image: Some(format!("menu-{level}.png")),
+            children: vec![entry],
+            ..Default::default()
+        });
+    }
+    let staged_asset_names = assets
+        .iter()
+        .map(|asset| asset.staged_asset_name.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    let side_story = CanonicalEntry::Story(CanonicalStory {
+        id: "side-story".to_string(),
+        name: "Histoire sœur".to_string(),
+        audio: Some("side-story.mp3".to_string()),
+        item_audio: Some("side-title.mp3".to_string()),
+        item_image: Some("side-image.png".to_string()),
+        ..Default::default()
+    });
+
+    let document = build_story_document(&report_for(
+        CanonicalProject {
+            name: "Profondeur maximale".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: Some("cover.mp3".to_string()),
+            root_image: Some("cover.png".to_string()),
+            thumbnail_image: None,
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions::default(),
+            entries: vec![entry, side_story],
+            shared_entries: Vec::new(),
+        },
+        assets,
+        Vec::new(),
+    ))
+    .expect("la profondeur authoring maximale doit rester générable");
+
+    let menu_stages = document
+        .stage_nodes
+        .iter()
+        .filter(|stage| stage.name.starts_with("Dossier "))
+        .collect::<Vec<_>>();
+    assert_eq!(menu_stages.len(), max_depth);
+
+    for level in 1..max_depth {
+        let stage = document
+            .stage_nodes
+            .iter()
+            .find(|stage| stage.name == format!("Dossier {level}"))
+            .expect("menu stage");
+        let action_id = &stage
+            .ok_transition
+            .as_ref()
+            .expect("menu transition")
+            .action_node;
+        let action = document
+            .action_nodes
+            .iter()
+            .find(|action| &action.id == action_id)
+            .expect("menu action");
+        let next_id = action.options.first().expect("nested menu target");
+        let next = document
+            .stage_nodes
+            .iter()
+            .find(|candidate| &candidate.uuid == next_id)
+            .expect("nested menu stage");
+        assert_eq!(next.name, format!("Dossier {}", level + 1));
+    }
+
+    let temp_dir = std::env::temp_dir().join(format!(
+        "story-studio-depth-61-roundtrip-{}-{}",
+        std::process::id(),
+        now_millis()
+    ));
+    fs::create_dir_all(&temp_dir).expect("create depth fixture dir");
+    let zip_path = temp_dir.join("depth-61.zip");
+    let file = fs::File::create(&zip_path).expect("create depth fixture zip");
+    let mut writer = zip::ZipWriter::new(file);
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    writer
+        .start_file("story.json", options)
+        .expect("start story.json");
+    writer
+        .write_all(&serde_json::to_vec(&document).expect("serialize depth document"))
+        .expect("write story.json");
+    for asset_name in staged_asset_names {
+        writer
+            .start_file(format!("assets/{asset_name}"), options)
+            .expect("start depth asset");
+        writer.write_all(b"fixture").expect("write depth asset");
+    }
+    writer.finish().expect("finish depth fixture zip");
+
+    let editability = crate::services::pack_reader::classify_pack_editability(
+        zip_path.to_str().expect("utf8 depth fixture path"),
+    )
+    .expect("classify generated depth fixture");
+    assert!(editability.authoring_editable, "{}", editability.reason);
+    assert!(!editability.read_only_inspectable);
+
+    let unpacked = crate::services::pack_reader::unpack_zip_to_entries_unchecked(
+        zip_path.to_str().expect("utf8 depth fixture path"),
+        temp_dir
+            .join("unpacked")
+            .to_str()
+            .expect("utf8 unpack path"),
+    )
+    .expect("reimport generated depth fixture");
+    let root_entries = unpacked["entries"].as_array().expect("imported entries");
+    let mut stack = root_entries
+        .iter()
+        .rev()
+        .map(|entry| (entry, 0usize))
+        .collect::<Vec<_>>();
+    let mut imported_depth = 0usize;
+    while let Some((entry, parent_depth)) = stack.pop() {
+        let is_menu = entry["type"].as_str() == Some("menu");
+        let depth = parent_depth + usize::from(is_menu);
+        imported_depth = imported_depth.max(depth);
+        if let Some(children) = entry["children"].as_array() {
+            for child in children.iter().rev() {
+                stack.push((child, depth));
+            }
+        }
+    }
+    assert_eq!(imported_depth, max_depth);
+    fs::remove_dir_all(temp_dir).expect("cleanup depth fixture");
 }
 
 #[test]

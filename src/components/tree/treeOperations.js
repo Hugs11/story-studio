@@ -1,4 +1,5 @@
 import { findEntryById, findParentMenuId } from '../../store/projectModel/index.js';
+import { validateMenuDepthPlacement } from '../../store/projectModel/menuDepth.js';
 
 // Palette decorative assignee aux racines (utilisee par TreePanel, MultiEditor et FullDiagramTree).
 export const TREE_COLOR_PALETTE = ['#e24b4a', '#ef9f27', '#f0c84b', '#5fbf6b', '#3d9be9', '#7c6af7', '#d95bb4'];
@@ -57,13 +58,25 @@ export function wouldCreateMenuCycle(entry, targetContainerId, projectIndex = nu
 }
 
 export function canMoveEntryToContainer(project, projectIndex, entryId, targetContainerId) {
-  if (!entryId || entryId === 'root') return false;
+  return getMoveEntryToContainerStatus(project, projectIndex, entryId, targetContainerId).allowed;
+}
+
+export function getMoveEntryToContainerStatus(project, projectIndex, entryId, targetContainerId) {
+  if (!entryId || entryId === 'root') return { allowed: false, reason: 'entry_missing' };
   const entry = findEntryById(project, entryId, projectIndex);
-  if (!entry) return false;
+  if (!entry) return { allowed: false, reason: 'entry_missing' };
   const sourceContainerId = findParentMenuId(project, entryId, projectIndex);
-  if (sourceContainerId === targetContainerId) return false;
-  if (wouldCreateMenuCycle(entry, targetContainerId, projectIndex)) return false;
-  return targetContainerId == null || !!findEntryById(project, targetContainerId, projectIndex);
+  if (sourceContainerId === targetContainerId) return { allowed: false, reason: 'same_container' };
+  if (wouldCreateMenuCycle(entry, targetContainerId, projectIndex)) {
+    return { allowed: false, reason: 'menu_cycle' };
+  }
+  if (targetContainerId != null && !findEntryById(project, targetContainerId, projectIndex)) {
+    return { allowed: false, reason: 'target_missing' };
+  }
+  const depth = validateMenuDepthPlacement(project, targetContainerId, [entry], projectIndex);
+  return depth.allowed
+    ? { allowed: true, reason: null, depth }
+    : { allowed: false, reason: depth.code, depth };
 }
 
 // Resoud la zone de drop "pertinente" pour un node donne a partir du dropInfo
@@ -79,6 +92,8 @@ export function resolveDropTargetForNode(id, type, dropInfo) {
   const isMyTarget = dropInfo.targetId === id
     || (type === 'root' && dropInfo.targetId === null && dropInfo.isContainer);
   if (!isMyTarget) return null;
+  if (dropInfo.invalidReason === 'menu_depth_limit') return 'forbidden-depth';
+  if (dropInfo.invalidReason === 'menu_cycle') return 'forbidden-cycle';
   if (dropInfo.position === 'before' && !dropInfo.isContainer) return 'before';
   if (dropInfo.position === 'after' && !dropInfo.isContainer) return 'after';
   if (dropInfo.position === 'inside'

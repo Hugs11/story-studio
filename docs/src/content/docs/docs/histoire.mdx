@@ -1,0 +1,192 @@
+---
+title: Histoire
+description: Comprendre comment une Histoire est présentée, lue, puis reliée à la suite du parcours.
+---
+
+Une **Histoire** ne se résume pas à son fichier audio principal : elle possède
+généralement trois moments : sa **sélection**, sa **lecture**, puis ce qui se passe **à la fin**.
+
+```text
+Histoire « Le Renard »
+
+Écran de sélection
+Image + Audio de sélection : « Le Renard »
+        ↓ OK
+Histoire complète
+        ↓ fin de l’audio
+Rester sur l’écran ou enchaîner vers la suite
+```
+
+Ces étapes permettent de présenter l’Histoire à l’enfant avant de la lancer, puis de choisir
+où le parcours continue une fois l’écoute terminée.
+
+## Les médias d’une Histoire
+
+Une Histoire utilise trois médias principaux :
+
+| Média | Rôle |
+|---|---|
+| **Image** | image affichée lorsque l’Histoire est proposée |
+| **Audio de sélection** | titre ou courte présentation audio entendue lorsque l’Histoire est proposée |
+| **Histoire complète** | récit principal joué après validation |
+
+![Réglages d’une Histoire avec ses médias, ses commandes et ses options de fin](/story-studio/assets/screenshots/story-settings-dark.png)
+
+L’image et l’Audio de sélection servent donc à **choisir** l’Histoire. Ils sont distincts du fichier
+**Histoire complète**, qui contient le récit lui-même.
+
+Pour importer, recadrer, découper, assembler ou générer ces médias, consulte le
+[Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/).
+
+## L’écran de sélection
+
+Avant la lecture de l’histoire, l’enfant arrive normalement sur l’écran de sélection de l’Histoire.
+
+Il voit son image et entend son **Audio de sélection**, par exemple :
+
+> « Le Renard et la lanterne »
+
+Par défaut :
+
+- la **molette** permet de parcourir les autres Histoires du même niveau ;
+- **OK** lance l’Histoire affichée ;
+- **Accueil** revient au Dossier qui contient l’Histoire, ou à la sélection du pack si l’Histoire
+  est placée directement sous le Menu racine.
+
+Les réglages avancés permettent de modifier ces comportements, notamment de lancer automatiquement
+l’Histoire sans attendre **OK**.
+
+:::note[Écran de sélection silencieux]
+Si tu veux conserver un écran de sélection sans jouer d’audio, active explicitement
+**Écran de sélection silencieux**.
+
+Ne laisse pas simplement l’Audio de sélection vide : Story Studio distingue un titre volontairement
+silencieux d’un média manquant.
+:::
+
+## Pendant l’Histoire
+
+Pendant la lecture de **Histoire complète**, deux commandes peuvent être configurées :
+
+- le **Bouton Pause**, pour interrompre puis reprendre le récit ;
+- le **Bouton Accueil**, pour quitter la lecture vers une destination choisie.
+
+Le bouton Accueil utilisé pendant la lecture possède sa propre destination. Il ne faut donc pas le
+confondre avec **Accueil** utilisé sur l’écran de sélection.
+
+[Comprendre les différents comportements du bouton Accueil](/story-studio/docs/navigation/)
+
+## À la fin de l’Histoire
+
+Lorsque le fichier **Histoire complète** se termine, le réglage **Après la lecture** détermine la suite.
+
+Deux comportements principaux sont proposés :
+
+### Rester sur l’écran
+
+**Rester sur l’écran** conserve l’écran de lecture une fois l’audio terminé.
+
+Le parcours ne continue pas automatiquement.
+
+### Enchaîner
+
+**Enchaîner** poursuit automatiquement vers la destination prévue après l’Histoire.
+
+Selon la structure du pack, cette destination peut notamment être :
+
+- le Dossier qui contient l’Histoire ;
+- le titre d’une autre Histoire ;
+- la lecture directe d’une autre Histoire ;
+- le premier choix interne du pack ;
+- une autre destination choisie dans les réglages.
+
+```text
+Dossier « Histoires du soir »
+├── Histoire « La Lune »
+└── Histoire « Le Hibou »
+
+« La Lune » se termine
+        ↓
+Enchaîner
+        ↓
+retour au Dossier « Histoires du soir »
+        ↓
+nouveau choix
+```
+
+## Revenir au titre ou lancer directement une Histoire
+
+Deux destinations proches ont des effets différents :
+
+- choisir une **Histoire** comme destination revient sur son écran de sélection : son image et son
+  Audio de sélection sont présentés avant la lecture ;
+- **Lecture directe – …** lance immédiatement son fichier **Histoire complète**, sans repasser par
+  son écran de sélection.
+
+```text
+Titre « Le Hibou »
+        ↓ OK
+Histoire complète « Le Hibou »
+
+Lecture directe – Le Hibou
+        ↓
+Histoire complète « Le Hibou »
+```
+
+Cette différence est importante lorsqu’une Histoire enchaîne vers une autre.
+
+## Auto-next
+
+L’option **Auto-next** du pack permet d’enchaîner automatiquement les Histoires dans leur ordre.
+
+Lorsqu’elle s’applique, l’Histoire suivante est lancée directement après la précédente, sans repasser
+par son écran de sélection.
+
+Auto-next prend alors la priorité sur les fins et destinations personnalisées concernées. À la
+dernière Histoire d’un Dossier, le parcours revient à ce Dossier. Pour une liste placée directement
+sous le Menu racine, il revient au premier choix interne du pack.
+
+Utilise cette option pour une série d’Histoires qui doivent être écoutées à la suite, plutôt que pour
+un pack dans lequel l’enfant doit choisir après chaque récit.
+
+## Ajouter un message de fin
+
+Une Histoire peut également jouer un audio ou un petit scénario après son récit et avant de poursuivre
+le parcours.
+
+Par exemple :
+
+```text
+Histoire complète « Le Renard »
+        ↓
+« Bravo ! À bientôt pour une nouvelle aventure. »
+        ↓
+Dossier « Animaux »
+```
+
+Si le pack possède un [Message de fin commun](/story-studio/docs/message-de-fin/), les Histoires
+peuvent l’utiliser automatiquement.
+
+Pour une Histoire particulière, les réglages avancés permettent de remplacer cette fin commune par :
+
+- **Ajouter un audio de fin**, pour une seule étape audio ;
+- **Ajouter un scénario de fin**, pour plusieurs étapes successives.
+
+Une fin personnalisée reste distincte du récit principal : elle intervient après **Histoire complète**
+et avant la destination suivante.
+
+## Dans l’Éditeur simplifié
+
+Dans l’**Éditeur simplifié**, le pack contient une seule Histoire.
+
+Story Studio regroupe sa présentation sous **Mon histoire** :
+
+- l’image et le **Titre audio** servent à présenter le pack dans le menu principal de la Lunii ;
+- **OK** lance directement le **Récit complet**.
+
+Il n’y a donc pas un second écran de sélection identique entre la couverture du pack et le récit.
+
+Pour créer plusieurs Histoires, des Dossiers ou une navigation personnalisée, utilise
+l’[Éditeur libre](/story-studio/docs/editeur-libre/).
+
+[Lire la synthèse complète des destinations et des retours](/story-studio/docs/navigation/)

@@ -2,6 +2,10 @@
 
 # Setup guide — AI voice (XTTS)
 
+> **Archived English guide.** This page is retained at its historical URL and describes Story
+> Studio 0.9.7. It is no longer the current user documentation. The maintained documentation is in
+> French: [Piper and XTTS local voices](https://hugs11.github.io/story-studio/docs/voix-locales-piper-xtts/).
+
 > **Scope**: Story Studio 0.9.7 · Windows 10/11. Linux users should follow the
 > [Linux CPU-only guide](xtts-setup-linux.md). XTTS is not validated on macOS
 > for 0.9.7.

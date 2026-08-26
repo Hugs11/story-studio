@@ -1,0 +1,158 @@
+---
+title: "Voix locales : Piper et XTTS"
+description: Générer une voix à partir d’un texte avec Piper, ou connecter une installation XTTS existante.
+---
+
+Story Studio peut transformer un texte en fichier audio directement depuis les champs audio du projet.
+
+Pour la grande majorité des usages, **Piper est le meilleur choix** : il est intégré à Story Studio et ne demande aucune installation particulière. **XTTS** est proposé en complément pour les utilisateurs qui disposent déjà d’un serveur compatible et souhaitent utiliser des voix personnalisées.
+
+## Piper ou XTTS ?
+
+| | Piper | XTTS |
+|---|---|---|
+| Mise en place | aucune configuration | serveur XTTS externe à préparer |
+| Pour quoi faire ? | menus, titres, narrations et voix courantes | voix personnalisées ou clonées |
+| Fonctionnement | directement dans Story Studio | Story Studio communique avec ton serveur |
+| Recommandé pour | la plupart des projets | les utilisateurs avancés |
+
+Le moteur se choisit dans **Préférences → Génération de voix locale**. Tu peux en changer à tout moment.
+
+## Utiliser Piper
+
+Piper est sélectionné par défaut.
+
+Dans **Préférences → Génération de voix locale**, tu peux choisir :
+
+- la **langue** ;
+- la **voix** ;
+- la **vitesse** de lecture.
+
+La voix choisie est téléchargée automatiquement lors de sa première utilisation. Une connexion Internet est donc nécessaire à ce moment-là seulement.
+
+Si tu préfères tout préparer avant de commencer, clique sur **Préparer la voix maintenant**.
+
+:::tip
+Pour un pack destiné à un enfant, prends le temps d’écouter quelques phrases avec plusieurs voix et vitesses. Une voix agréable sur un titre très court ne l’est pas forcément sur une histoire de plusieurs minutes.
+:::
+
+### Générer un audio
+
+Dans n’importe quel champ audio compatible :
+
+![Fenêtre Générer une voix depuis un texte avec Piper](/story-studio/assets/screenshots/voice-generation-dark.png)
+
+1. clique sur l’icône **Générer une voix depuis un texte** ;
+2. saisis le texte à lire ;
+3. vérifie la langue, la voix et la vitesse ;
+4. clique sur **Générer**.
+
+La génération est ajoutée à la **File IA**. Une fois terminée, l’audio est affecté au champ concerné et reste disponible parmi les médias du projet.
+
+Les fichiers générés sont enregistrés dans le dossier géré **voix-générées** du travail courant.
+
+Piper fonctionne entièrement sur ta machine une fois les fichiers de la voix téléchargés.
+
+## Utiliser XTTS
+
+XTTS est une intégration avancée. Elle est surtout utile si tu possèdes déjà une installation XTTS avec tes propres voix ou des voix de référence que tu es autorisé à utiliser.
+
+Story Studio **n’installe pas XTTS à ta place** : Python, PyTorch, le serveur et la gestion des modèles relèvent de ton installation XTTS.
+
+Une installation utilisée avec le démarrage automatique ressemble généralement à ceci :
+
+```text
+XTTS/
+├── venv/
+├── server.py
+├── models/
+├── voices/
+└── output/
+```
+
+:::caution
+Ne copie pas un environnement Python (`venv`) d’un système à un autre. Une installation créée sous Windows doit être recréée sous Linux, et inversement.
+:::
+
+## Connecter ton serveur XTTS
+
+Le plus simple est de faire fonctionner XTTS sur le **même ordinateur** que Story Studio.
+
+Dans **Préférences → Génération de voix locale** :
+
+1. choisis **XTTS (avancé)** ;
+2. indique l’adresse du serveur, généralement `http://127.0.0.1:8020` ;
+3. indique le **Dossier XTTS** ;
+4. choisis la langue par défaut ;
+5. clique sur **Tester et actualiser les voix**.
+
+Si tout fonctionne, Story Studio affiche le modèle utilisé, le mode **CPU** ou **GPU CUDA**, ainsi que les voix détectées.
+
+Tu peux ensuite cocher tes **voix favorites** pour n’afficher qu’elles dans la fenêtre de génération. Si aucune favorite n’est sélectionnée, toutes les voix retournées par XTTS restent disponibles.
+
+La génération se fait ensuite exactement comme avec Piper : clique sur **Générer une voix depuis un texte** dans un champ audio, choisis la voix et lance la génération.
+
+## Laisser Story Studio démarrer XTTS
+
+Si ton installation contient bien `server.py` et son environnement Python, tu peux activer :
+
+**Démarrer XTTS automatiquement si le serveur est arrêté**
+
+Lorsque XTTS ne répond pas, Story Studio tente alors de lancer `server.py`, puis attend que le serveur soit prêt.
+
+Les chemins Python attendus sont :
+
+```text
+Windows : venv\Scripts\python.exe
+Linux   : venv/bin/python
+```
+
+Story Studio peut démarrer XTTS, mais ne propose pas de bouton pour l’arrêter. Si tu souhaites garder le contrôle sur son exécution, lance simplement le serveur toi-même dans un terminal.
+
+## Utiliser XTTS sur une autre machine
+
+Story Studio accepte un serveur XTTS sur :
+
+- `localhost` ou une adresse loopback ;
+- une **adresse IP privée** du réseau local, par exemple `192.168.1.20`.
+
+Les serveurs accessibles par une adresse publique sont refusés.
+
+Une installation XTTS distante demande toutefois un peu plus de préparation : Story Studio récupère le fichier généré depuis le dossier `output` situé dans le **Dossier XTTS** configuré. Ce dossier doit donc rester accessible depuis l’ordinateur où fonctionne Story Studio, par exemple au moyen d’un partage réseau monté correctement.
+
+Si le serveur répond mais que son dossier `output` n’est pas accessible, le test de connexion peut réussir alors que la récupération de l’audio échoue.
+
+:::note[Confidentialité]
+Avec Piper, la synthèse est effectuée sur l’ordinateur.
+
+Avec XTTS, le texte et la voix choisie sont envoyés au serveur que tu as configuré.
+:::
+
+## En cas de problème avec XTTS
+
+**Serveur XTTS indisponible**
+
+Lance le serveur manuellement ou active son démarrage automatique.
+
+**Python XTTS introuvable**
+
+Vérifie que le dossier `venv` correspond bien au système utilisé.
+
+**`server.py` introuvable**
+
+Le **Dossier XTTS** configuré ne pointe probablement pas vers la racine de l’installation.
+
+**Aucune voix détectée**
+
+Clique sur **Tester et actualiser les voix** et consulte le journal affiché sous le bouton.
+
+**Fichier introuvable dans `output`**
+
+Le serveur a répondu, mais Story Studio ne retrouve pas le fichier audio à l’endroit attendu. Vérifie le dossier XTTS et, dans le cas d’un serveur distant, le partage réseau.
+
+**La génération est lente**
+
+En mode CPU, XTTS peut être nettement plus lent. Tant que le serveur continue de répondre et finit par produire l’audio, ce comportement est normal.
+
+[Gérer les autres médias](/story-studio/docs/gestionnaire-de-medias/) ·
+[Configurer ComfyUI](/story-studio/docs/comfyui/)

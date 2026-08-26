@@ -2,6 +2,10 @@ import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
+import {
+  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  validateMenuDepthPlacement,
+} from '../../store/projectModel/menuDepth.js';
 import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../store/mediaToolContext';
 import { END_NODE_ID } from './treePanelConstants';
 import {
@@ -26,6 +30,7 @@ export function buildTreeContextActions({
   nodeId,
   nodeType,
   project,
+  projectIndex,
   projectType,
   selectedIds,
   getEntry,
@@ -70,7 +75,18 @@ export function buildTreeContextActions({
   }
 
   if (projectType === 'pack') {
-    actions.push({ icon: <IconFolderPlus />, label: 'Créer un dossier', fn: () => onAddMenu(targetMenuId) });
+    const addFolderDepth = validateMenuDepthPlacement(
+      project,
+      targetMenuId,
+      [{ type: 'menu', children: [] }],
+      projectIndex,
+    );
+    actions.push({
+      icon: <IconFolderPlus />,
+      label: 'Créer un dossier',
+      fn: () => onAddMenu(targetMenuId),
+      disabledReason: addFolderDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+    });
     actions.push({ icon: <IconStory />, label: 'Importer audio ou archive', fn: () => onAddStory(targetMenuId) });
     if (onImportFolder) {
       actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
@@ -83,8 +99,19 @@ export function buildTreeContextActions({
     }
 
     if (nodeType === 'root' && onDemoteRootToMenu && (project.rootEntries ?? []).length > 0) {
+      const demoteDepth = validateMenuDepthPlacement(
+        project,
+        null,
+        [{ type: 'menu', children: project.rootEntries ?? [] }],
+        projectIndex,
+      );
       actions.push('sep');
-      actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir de la racine', fn: onDemoteRootToMenu });
+      actions.push({
+        icon: <IconArrowUpLeft />,
+        label: 'Sortir de la racine',
+        fn: onDemoteRootToMenu,
+        disabledReason: demoteDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+      });
     }
 
     if (nodeType === 'menu' && onSetMenuAsRoot && project.rootEntries?.[0]?.id === nodeId) {
@@ -119,7 +146,23 @@ export function buildTreeContextActions({
     }
 
     if (clipboardRef.current?.entries?.length) {
-      actions.push({ icon: <IconClipboardPaste />, label: 'Coller ici', fn: () => handlePaste(nodeId) });
+      const pasteDepth = validateMenuDepthPlacement(
+        project,
+        targetMenuId,
+        clipboardRef.current.entries,
+        projectIndex,
+      );
+      const targetPath = targetMenuId == null ? [] : (projectIndex?.pathById?.get(targetMenuId) ?? []);
+      const pasteCreatesCycle = clipboardRef.current.isCut
+        && targetPath.some((entry) => clipboardRef.current.sourceIds?.includes(entry.id));
+      actions.push({
+        icon: <IconClipboardPaste />,
+        label: 'Coller ici',
+        fn: () => handlePaste(nodeId),
+        disabledReason: pasteCreatesCycle
+          ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre.'
+          : pasteDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+      });
     }
 
     if (nodeType === 'story') {

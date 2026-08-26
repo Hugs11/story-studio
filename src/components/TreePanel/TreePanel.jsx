@@ -31,6 +31,13 @@ import './TreePanel.css';
 
 export { END_NODE_ID };
 
+function scrollTreeNodeIntoView(node, behavior = 'auto') {
+  if (!node) return;
+  node.scrollIntoView({ block: 'nearest', behavior });
+  const visibleContent = node.querySelector('.tree-item-body') ?? node;
+  visibleContent.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior });
+}
+
 export function TreePanel({
   project, projectType, selectedId, selectedIds, onSelect, onReorder, onMoveToMenu,
   onAddMenu, onAddStory, onImportFolder, onDeleteMenu, onDeleteItem, onUnpackZip, onSimulateZip,
@@ -224,7 +231,7 @@ export function TreePanel({
         : null;
       if (target) {
         lastRevealRequestRef.current = requestId;
-        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        scrollTreeNodeIntoView(target, 'smooth');
         return;
       }
       attempts += 1;
@@ -236,6 +243,14 @@ export function TreePanel({
       if (frameId != null) cancelAnimationFrame(frameId);
     };
   }, [clearSearch, getParentId, selectionRevealRequest, visibleIds]);
+
+  useEffect(() => {
+    const host = treeScrollRef.current;
+    if (!host || !selectedId) return;
+    const target = [...host.querySelectorAll('[data-tree-node-id]')]
+      .find((node) => node.dataset.treeNodeId === String(selectedId));
+    scrollTreeNodeIntoView(target);
+  }, [selectedId]);
 
   const {
     clipboardRef,
@@ -276,6 +291,7 @@ export function TreePanel({
     handleDragEnd,
     handleDragCancel,
   } = useTreeDnd({
+    project,
     projectIndex,
     selectedIds,
     flatNodes,
@@ -528,6 +544,7 @@ export function TreePanel({
             nodeId: ctxMenu.nodeId,
             nodeType: ctxMenu.nodeType,
             project,
+            projectIndex,
             projectType,
             selectedIds,
             getEntry,

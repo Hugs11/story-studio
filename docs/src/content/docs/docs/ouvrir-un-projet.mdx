@@ -1,0 +1,61 @@
+---
+title: Ouvrir un projet
+description: Reprendre un fichier .mbah, un projet récent ou une session récupérable.
+---
+
+L’entrée **Ouvrir un projet** permet de reprendre un projet Story Studio déjà enregistré au format `.mbah`.
+
+![Accueil de Story Studio avec l’ouverture de projet, les projets récents et les sessions récupérables](/story-studio/assets/screenshots/home-dark.png)
+
+## Ouvrir un fichier `.mbah`
+
+Depuis l’accueil, choisis **Ouvrir un projet** puis sélectionne le fichier `.mbah`.
+
+Tu peux aussi ouvrir directement l’un des **Projets récents** affichés sur l’accueil.
+
+:::note[Un ZIP n’est pas un projet]
+Le fichier `.mbah` contient le projet éditable de Story Studio.
+
+Un ZIP généré est le pack destiné à la Lunii. Si tu ne possèdes plus que ce ZIP, utilise plutôt [**Modifier un pack existant**](/story-studio/docs/modifier-un-pack-existant/).
+:::
+
+## Si des médias sont introuvables
+
+Le `.mbah` enregistre les références vers les audios, images et archives utilisés, mais n’embarque
+pas ces fichiers.
+
+Si certains ont été déplacés, renommés ou se trouvent sur un disque non monté, Story Studio affiche **Médias introuvables**.
+
+Tu peux alors :
+
+- rechercher les fichiers dans un autre dossier ;
+- relier plusieurs médias en indiquant leur nouvel emplacement ;
+- choisir manuellement un fichier lorsqu’une correspondance est ambiguë.
+
+Lorsque tu appliques les correspondances, Story Studio met à jour les chemins et enregistre le projet.
+
+## Projets récents et sessions récupérables
+
+Les **Projets récents** sont des raccourcis vers les derniers fichiers `.mbah` ouverts ou enregistrés.
+
+Une carte **Projet récupérable** est différente : elle correspond à une session temporaire retrouvée après une fermeture inattendue de Story Studio.
+
+Ouvre-la, vérifie son contenu puis utilise **Projet → Enregistrer** pour créer un véritable fichier `.mbah`.
+
+Si tu choisis **Ignorer cette reprise**, Story Studio supprime la session temporaire correspondante.
+
+## Déplacer un projet vers une autre machine
+
+Copier uniquement le `.mbah` ne copie pas les médias.
+
+Pour préparer un projet complet, utilise :
+
+**Préférences → Gestion des projets et médias → Consolider le projet**
+
+Story Studio crée un nouveau fichier `.mbah` consolidé et copie dans le dossier cible tous les médias référencés qu’il retrouve, sans supprimer les originaux. Les éventuels fichiers encore introuvables sont signalés.
+
+:::tip[À retenir]
+Pour archiver ou transférer un projet, préfère toujours une **consolidation** plutôt qu’une copie du fichier `.mbah`.
+:::
+
+[Enregistrer et sauvegarder un projet](/story-studio/docs/enregistrer-et-sauvegarder-un-projet/)
