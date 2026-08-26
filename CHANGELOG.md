@@ -45,13 +45,6 @@ polishes project navigation, imports and recovery before release.
 - Fixed simple-story titles containing spaces and aligned the displayed
   ComfyUI startup timeout with the actual three-minute wait.
 
-### Platform notes
-
-- Supported targets remain Windows x64, Linux x86_64 and macOS Apple Silicon.
-- XTTS remains CPU-only on Linux and was not manually validated on macOS.
-  ComfyUI remains manually validated on Windows only; manual Linux and macOS
-  ComfyUI tests were not run.
-
 ---
 
 ## [0.9.7] - 2026-08-13
