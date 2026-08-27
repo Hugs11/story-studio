@@ -50,6 +50,9 @@ Le Menu racine est unique : il représente le pack et son premier niveau de navi
 Un Dossier est au contraire un élément du parcours. Il permet de regrouper des Histoires, de créer
 un niveau de choix, de poser une question ou d’ajouter une transition.
 
+Son image, son audio et ses options de navigation relèvent de ses propres réglages et sont expliqués
+dans la page [Dossier](/story-studio/docs/dossier/).
+
 ### Histoires directement sous le Menu racine
 
 Avec :
@@ -93,27 +96,8 @@ Menu racine
 le Dossier **Animaux** constitue le premier niveau du parcours.
 
 Comme il est l’unique élément du Menu racine, Story Studio l’atteint automatiquement après
-l’ouverture du pack. Son **Audio de sélection** peut alors présenter ce choix ou poser une question,
-par exemple :
-
-> « Quel animal veux-tu écouter ? »
-
-L’enfant peut ensuite parcourir les Histoires du Dossier avec la molette.
-
-```text
-Menu racine (Image Lunii + Titre audio)
-        ↓ OK
-Dossier « Animaux »
-« Quel animal veux-tu écouter ? »
-        ↓
-Histoire « Le Renard »
-        ↔ molette ↔
-Histoire « Le Hibou »
-```
-
-Si ce Dossier ne contient lui-même qu’un seul élément, Story Studio simplifie davantage le parcours
-afin d’éviter une validation intermédiaire inutile. La **Lecture automatique** est alors imposée et
-la **Molette de sélection** désactivée.
+l’ouverture du pack. La manière dont il présente ensuite son contenu dépend de ses propres médias et
+réglages.
 
 [Découvrir les différents usages et réglages d’un Dossier](/story-studio/docs/dossier/)
 
@@ -140,19 +124,8 @@ Chaque Dossier ajoute donc un niveau au parcours lorsqu’il sert réellement de
 L’**Éditeur simplifié** est destiné aux packs contenant une seule Histoire. Story Studio masque donc
 la structure habituelle du Menu racine et affiche directement **Mon histoire**.
 
-Son image et son **Titre audio** présentent le pack dans le menu principal de la Lunii. Après
-validation avec **OK**, le **Récit complet** est joué directement.
-
-```text
-Image + Titre audio du pack
-        ↓ OK
-Récit complet
-```
-
-Il n’y a donc pas de second écran de sélection entre la présentation du pack et son récit.
-
-Si tu veux créer plusieurs choix, utiliser des Dossiers ou personnaliser la navigation, passe à
-l’[Éditeur libre](/story-studio/docs/editeur-libre/).
+Cette présentation particulière et le passage à l’Éditeur libre sont détaillés dans la page
+[Éditeur simplifié](/story-studio/docs/editeur-simplifie/).
 
 ## Image Lunii et vignette catalogue
 
