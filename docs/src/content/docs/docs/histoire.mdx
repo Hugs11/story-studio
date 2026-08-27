@@ -114,60 +114,21 @@ retour au Dossier « Histoires du soir »
 nouveau choix
 ```
 
-## Revenir au titre ou lancer directement une Histoire
-
-Deux destinations proches ont des effets différents :
-
-- choisir une **Histoire** comme destination revient sur son écran de sélection : son image et son
-  Audio de sélection sont présentés avant la lecture ;
-- **Lecture directe – …** lance immédiatement son fichier **Histoire complète**, sans repasser par
-  son écran de sélection.
-
-```text
-Titre « Le Hibou »
-        ↓ OK
-Histoire complète « Le Hibou »
-
-Lecture directe – Le Hibou
-        ↓
-Histoire complète « Le Hibou »
-```
-
-Cette différence est importante lorsqu’une Histoire enchaîne vers une autre.
+Choisir le titre d’une Histoire et lancer directement son récit sont deux destinations différentes.
+Elles sont comparées dans la page [Navigation](/story-studio/docs/navigation/#choisir-une-destination).
 
 ## Auto-next
 
-L’option **Auto-next** du pack permet d’enchaîner automatiquement les Histoires dans leur ordre.
+L’option globale **Auto-next** peut lancer directement l’Histoire suivante et prendre la priorité sur
+les fins et destinations habituelles.
 
-Lorsqu’elle s’applique, l’Histoire suivante est lancée directement après la précédente, sans repasser
-par son écran de sélection.
+[Comprendre le parcours produit par Auto-next](/story-studio/docs/navigation/#histoire-suivante-et-auto-next-ne-sont-pas-identiques)
 
-Auto-next prend alors la priorité sur les fins et destinations personnalisées concernées. À la
-dernière Histoire d’un Dossier, le parcours revient à ce Dossier. Pour une liste placée directement
-sous le Menu racine, il revient au premier choix interne du pack.
+## Ajouter une fin propre à une Histoire
 
-Utilise cette option pour une série d’Histoires qui doivent être écoutées à la suite, plutôt que pour
-un pack dans lequel l’enfant doit choisir après chaque récit.
+Une Histoire peut utiliser le [Message de fin commun du pack](/story-studio/docs/message-de-fin/).
 
-## Ajouter un message de fin
-
-Une Histoire peut également jouer un audio ou un petit scénario après son récit et avant de poursuivre
-le parcours.
-
-Par exemple :
-
-```text
-Histoire complète « Le Renard »
-        ↓
-« Bravo ! À bientôt pour une nouvelle aventure. »
-        ↓
-Dossier « Animaux »
-```
-
-Si le pack possède un [Message de fin commun](/story-studio/docs/message-de-fin/), les Histoires
-peuvent l’utiliser automatiquement.
-
-Pour une Histoire particulière, les réglages avancés permettent de remplacer cette fin commune par :
+Pour lui donner une fin différente, ses réglages avancés permettent de remplacer ce message par :
 
 - **Ajouter un audio de fin**, pour une seule étape audio ;
 - **Ajouter un scénario de fin**, pour plusieurs étapes successives.
@@ -177,16 +138,8 @@ et avant la destination suivante.
 
 ## Dans l’Éditeur simplifié
 
-Dans l’**Éditeur simplifié**, le pack contient une seule Histoire.
-
-Story Studio regroupe sa présentation sous **Mon histoire** :
-
-- l’image et le **Titre audio** servent à présenter le pack dans le menu principal de la Lunii ;
-- **OK** lance directement le **Récit complet**.
-
-Il n’y a donc pas un second écran de sélection identique entre la couverture du pack et le récit.
-
-Pour créer plusieurs Histoires, des Dossiers ou une navigation personnalisée, utilise
-l’[Éditeur libre](/story-studio/docs/editeur-libre/).
+Dans l’[Éditeur simplifié](/story-studio/docs/editeur-simplifie/), la présentation du pack et son
+unique Histoire sont regroupées sous **Mon histoire**. Il n’y a donc pas de second écran de sélection
+entre la couverture et le récit.
 
 [Lire la synthèse complète des destinations et des retours](/story-studio/docs/navigation/)
