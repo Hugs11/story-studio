@@ -2,12 +2,12 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [0.9.9]
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
   pull_request:
-    branches: [main]
+    branches: [0.9.9]
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
@@ -48,14 +48,14 @@ jobs:
         run: npm run check:site
 
       - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/0.9.9' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/dist
 
   deploy:
     name: Deploy public site
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/0.9.9' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
