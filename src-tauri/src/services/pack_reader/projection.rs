@@ -422,7 +422,7 @@ fn walk_story_doc_to_entries_inner(
         &story_play_stage_ids,
         &existing_story_stage_ids,
     );
-    let night_mode_detection = detect_imported_night_mode(
+    let pre_graph_night_mode_detection = detect_imported_night_mode(
         night_mode_available,
         sq_id,
         &entries,
@@ -430,25 +430,7 @@ fn walk_story_doc_to_entries_inner(
         &actions,
         assets,
     );
-    let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
-        night_mode_detection
-            .as_ref()
-            .map(|detection| {
-                (
-                    Some(detection.audio.clone()),
-                    detection.return_target.clone(),
-                    detection.home_target.clone(),
-                    detection.autoplay,
-                )
-            })
-            .unwrap_or((None, None, None, None));
     let unresolved_transitions = assign_return_targets(&mut entries, &stage_names);
-    if let Some(target) = night_mode_return.as_deref() {
-        remove_night_mode_return_overrides(&mut entries, target, None);
-    }
-    if let Some(detection) = night_mode_detection.as_ref() {
-        apply_night_fallback_overrides(&mut entries, detection);
-    }
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
     let graph_import_safe_unresolved =
@@ -478,8 +460,46 @@ fn walk_story_doc_to_entries_inner(
         entries = graph_projection.root_entries;
         shared_entries = graph_projection.shared_entries;
     }
+    let night_mode_detection = if uses_graph_import_projection {
+        detect_imported_night_mode(
+            night_mode_available,
+            sq_id,
+            &entries,
+            &stages,
+            &actions,
+            assets,
+        )
+        .or(pre_graph_night_mode_detection)
+    } else {
+        pre_graph_night_mode_detection
+    };
+    let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
+        night_mode_detection
+            .as_ref()
+            .map(|detection| {
+                (
+                    Some(detection.audio.clone()),
+                    detection.return_target.clone(),
+                    detection.home_target.clone(),
+                    detection.autoplay,
+                )
+            })
+            .unwrap_or((None, None, None, None));
+    if let Some(detection) = night_mode_detection.as_ref() {
+        if uses_graph_import_projection {
+            remove_projected_night_bridge(&mut entries, &mut shared_entries, &detection.stage_ids);
+        }
+        if let Some(target) = night_mode_return.as_deref() {
+            remove_night_mode_return_overrides(&mut entries, target, None);
+        }
+        apply_night_fallback_overrides(&mut entries, detection);
+    }
     let auto_next_detected =
         !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
+    if uses_graph_import_projection {
+        remove_internal_play_stage_ids(&mut entries);
+        remove_internal_play_stage_ids(&mut shared_entries);
+    }
     let reported_unresolved_transitions = if uses_graph_import_projection {
         Vec::new()
     } else {
@@ -519,6 +539,60 @@ fn walk_story_doc_to_entries_inner(
         "sharedEntries": shared_entries,
         "entries": entries
     }))
+}
+
+fn remove_projected_night_bridge(
+    entries: &mut [serde_json::Value],
+    shared_entries: &mut Vec<serde_json::Value>,
+    night_stage_ids: &HashSet<String>,
+) {
+    shared_entries.retain(|entry| {
+        entry
+            .get("nativeStageId")
+            .or_else(|| entry.get("id"))
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(|id| !night_stage_ids.contains(id))
+    });
+    remove_projected_night_returns(entries, night_stage_ids);
+}
+
+fn remove_projected_night_returns(
+    entries: &mut [serde_json::Value],
+    night_stage_ids: &HashSet<String>,
+) {
+    for entry in entries {
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            remove_projected_night_returns(children, night_stage_ids);
+        }
+
+        let targets_night_stage = entry
+            .get("returnAfterPlay")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|target| target.split_once(':').map(|(_, id)| id))
+            .is_some_and(|id| night_stage_ids.contains(id));
+        if targets_night_stage {
+            if let Some(object) = entry.as_object_mut() {
+                object.remove("returnAfterPlay");
+            }
+        }
+    }
+}
+
+fn remove_internal_play_stage_ids(entries: &mut [serde_json::Value]) {
+    for entry in entries {
+        if let Some(object) = entry.as_object_mut() {
+            object.remove("_playStageId");
+        }
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            remove_internal_play_stage_ids(children);
+        }
+    }
 }
 
 /// Un `audio: null` explicite sur le stage de titre d'un pack importé est une

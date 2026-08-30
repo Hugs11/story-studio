@@ -10,6 +10,7 @@ pub(crate) struct GraphImportOutput {
     pub(crate) root_entries: Vec<ProjectEntry>,
     pub(crate) shared_entries: Vec<ProjectEntry>,
     pub(crate) diagnostics: Vec<String>,
+    play_stage_by_entry: HashMap<String, String>,
 }
 
 pub(super) struct GraphImportProjection {
@@ -30,9 +31,13 @@ pub(super) fn project_story_graph_values(
     assets: &HashMap<String, PathBuf>,
 ) -> Result<GraphImportProjection, String> {
     let output = GraphProjector::new_with_assets(document, Some(assets)).project()?;
+    let mut root_entries = entries_to_json(&output.root_entries);
+    let mut shared_entries = entries_to_json(&output.shared_entries);
+    annotate_play_stage_ids(&mut root_entries, &output.play_stage_by_entry);
+    annotate_play_stage_ids(&mut shared_entries, &output.play_stage_by_entry);
     Ok(GraphImportProjection {
-        root_entries: entries_to_json(&output.root_entries),
-        shared_entries: entries_to_json(&output.shared_entries),
+        root_entries,
+        shared_entries,
         diagnostics: output.diagnostics,
     })
 }
@@ -60,6 +65,7 @@ struct GraphProjector<'a> {
     actions: HashMap<&'a str, &'a ActionNode>,
     assets: Option<&'a HashMap<String, PathBuf>>,
     ok_edges: HashMap<&'a str, Vec<&'a str>>,
+    indexed_router_actions: HashSet<&'a str>,
     title_stage_by_play_stage: HashMap<&'a str, &'a str>,
     reachable: HashSet<&'a str>,
     shared_ids: HashSet<&'a str>,
@@ -97,6 +103,7 @@ impl<'a> GraphProjector<'a> {
             actions,
             assets,
             ok_edges: HashMap::new(),
+            indexed_router_actions: HashSet::new(),
             title_stage_by_play_stage: HashMap::new(),
             reachable: HashSet::new(),
             shared_ids: HashSet::new(),
@@ -118,22 +125,38 @@ impl<'a> GraphProjector<'a> {
         let mut active = Vec::new();
         let mut emitted_tree = HashSet::new();
         for (option_index, target_id) in self.ok_targets(square_one_id).iter().enumerate() {
-            if let Some(entry) = self.build_edge_entry(
-                square_one_id,
-                option_index,
-                target_id,
-                &mut active,
-                &mut emitted_tree,
-            ) {
+            let entry = if root_entries.is_empty() && !self.indexed_router_actions.is_empty() {
+                // La première cible de squareOne est l'ancre de l'arbre authoring.
+                // Une arête de retour vers cette ancre ne doit pas la déplacer dans
+                // le pool partagé : elle sera modélisée comme navigation de fin.
+                self.build_concrete_entry(target_id, &mut active, &mut emitted_tree, true)
+            } else {
+                self.build_edge_entry(
+                    square_one_id,
+                    option_index,
+                    target_id,
+                    &mut active,
+                    &mut emitted_tree,
+                )
+            };
+            if let Some(entry) = entry {
                 root_entries.push(entry);
             }
         }
         self.preserve_unreachable_helper_stages();
+        let play_stage_by_entry = self
+            .title_stage_by_play_stage
+            .iter()
+            .map(|(play_stage_id, entry_stage_id)| {
+                ((*entry_stage_id).to_string(), (*play_stage_id).to_string())
+            })
+            .collect();
 
         Ok(GraphImportOutput {
             root_entries,
             shared_entries: self.shared_entries,
             diagnostics: self.diagnostics,
+            play_stage_by_entry,
         })
     }
 
@@ -146,6 +169,32 @@ impl<'a> GraphProjector<'a> {
     }
 
     fn index_ok_edges(&mut self, document: &'a StoryDocument) {
+        let mut option_indices_by_action: HashMap<&str, HashSet<i32>> = HashMap::new();
+        for stage in &document.stage_nodes {
+            let Some(transition) = stage.ok_transition.as_ref() else {
+                continue;
+            };
+            if self.actions.contains_key(transition.action_node.as_str()) {
+                option_indices_by_action
+                    .entry(transition.action_node.as_str())
+                    .or_default()
+                    .insert(transition.option_index.max(0));
+            }
+        }
+        let indexed_router_actions: HashSet<&str> = option_indices_by_action
+            .into_iter()
+            .filter_map(|(action_id, indices)| {
+                let action = self.actions.get(action_id)?;
+                let targets_are_non_interactive = action.options.iter().all(|stage_id| {
+                    self.stages
+                        .get(stage_id.as_str())
+                        .is_some_and(|stage| !stage.control_settings.wheel)
+                });
+                (indices.len() > 1 && targets_are_non_interactive).then_some(action_id)
+            })
+            .collect();
+        self.indexed_router_actions = indexed_router_actions.clone();
+
         for stage in &document.stage_nodes {
             let Some(transition) = stage.ok_transition.as_ref() else {
                 continue;
@@ -158,7 +207,7 @@ impl<'a> GraphProjector<'a> {
                 continue;
             };
 
-            let targets: Vec<&str> = action
+            let action_targets: Vec<&str> = action
                 .options
                 .iter()
                 .filter_map(|target| {
@@ -174,6 +223,29 @@ impl<'a> GraphProjector<'a> {
                     }
                 })
                 .collect();
+
+            let targets = if indexed_router_actions.contains(transition.action_node.as_str()) {
+                let option_index = if transition.option_index < 0 {
+                    0
+                } else {
+                    transition.option_index as usize
+                };
+                match action_targets.get(option_index).copied() {
+                    Some(target) => vec![target],
+                    None => {
+                        self.diagnostics.push(format!(
+                            "Stage '{}' okTransition option {} hors limites pour l'action '{}' ({} options)",
+                            stage.name,
+                            transition.option_index,
+                            action.name,
+                            action_targets.len()
+                        ));
+                        Vec::new()
+                    }
+                }
+            } else {
+                action_targets
+            };
 
             if !targets.is_empty() {
                 self.ok_edges.insert(stage.uuid.as_str(), targets);
@@ -208,6 +280,8 @@ impl<'a> GraphProjector<'a> {
                 .stages
                 .get(play_stage_id)
                 .is_some_and(|candidate| is_playback_stage(candidate))
+                && (self.indexed_router_actions.is_empty()
+                    || self.ok_targets(play_stage_id).len() <= 1)
             {
                 self.title_stage_by_play_stage
                     .insert(play_stage_id, stage_id);
@@ -387,7 +461,12 @@ impl<'a> GraphProjector<'a> {
             EntryShape::Story { title_stage_id, .. } => {
                 if let Some(target_id) = targets.first().copied() {
                     if let Some(target) = self.typed_target(target_id) {
-                        self.ensure_shared_entry(target_id, active, emitted_tree);
+                        let target_entry_id = self.entry_stage_id(target_id);
+                        if !active.contains(&target_entry_id)
+                            && !emitted_tree.contains(target_entry_id)
+                        {
+                            self.ensure_shared_entry(target_id, active, emitted_tree);
+                        }
                         entry.return_after_play = Some(target);
                     }
                 }
@@ -447,6 +526,8 @@ impl<'a> GraphProjector<'a> {
                     .stages
                     .get(play_stage_id)
                     .is_some_and(|stage| is_playback_stage(stage))
+                    && (self.indexed_router_actions.is_empty()
+                        || self.ok_targets(play_stage_id).len() <= 1)
                 {
                     return Some(EntryShape::Story {
                         play_stage_id,
@@ -664,6 +745,29 @@ fn entries_to_json(entries: &[ProjectEntry]) -> Vec<serde_json::Value> {
     entries.iter().map(entry_to_json).collect()
 }
 
+fn annotate_play_stage_ids(
+    entries: &mut [serde_json::Value],
+    play_stage_by_entry: &HashMap<String, String>,
+) {
+    for entry in entries {
+        if entry.get("type").and_then(serde_json::Value::as_str) == Some("story") {
+            if let Some(play_stage_id) = entry
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|id| play_stage_by_entry.get(id))
+            {
+                entry["_playStageId"] = serde_json::Value::String(play_stage_id.clone());
+            }
+        }
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            annotate_play_stage_ids(children, play_stage_by_entry);
+        }
+    }
+}
+
 fn entry_to_json(entry: &ProjectEntry) -> serde_json::Value {
     let mut object = serde_json::Map::new();
     object.insert(
@@ -815,6 +919,24 @@ mod tests {
         }
     }
 
+    fn stage_with_ok_option(
+        id: &str,
+        name: &str,
+        wheel: bool,
+        autoplay: bool,
+        ok_action: &str,
+        option_index: i32,
+        audio: Option<&str>,
+    ) -> StageNode {
+        let mut value = stage(id, name, wheel, autoplay, Some(ok_action), None, audio);
+        value
+            .ok_transition
+            .as_mut()
+            .expect("ok transition")
+            .option_index = option_index;
+        value
+    }
+
     fn position() -> Position {
         Position {
             x: Number::from(0),
@@ -871,6 +993,151 @@ mod tests {
         assert_eq!(output.root_entries[0].children.len(), 2);
         assert_eq!(output.root_entries[0].children[0].id, "story-a");
         assert_eq!(output.root_entries[0].children[1].id, "story-b");
+    }
+
+    #[test]
+    fn nested_choices_through_reused_routers_stay_hierarchical() {
+        let output = project_story_graph(&document(
+            vec![
+                stage_with_ok_option("root", "Root", true, false, "state-router", 0, None),
+                stage(
+                    "intro",
+                    "First choice",
+                    false,
+                    true,
+                    Some("first-choice"),
+                    None,
+                    Some("intro.mp3"),
+                ),
+                stage_with_ok_option(
+                    "first-a",
+                    "First A",
+                    true,
+                    false,
+                    "state-router",
+                    1,
+                    Some("first-a.mp3"),
+                ),
+                stage_with_ok_option(
+                    "first-b",
+                    "First B",
+                    true,
+                    false,
+                    "state-router",
+                    2,
+                    Some("first-b.mp3"),
+                ),
+                stage(
+                    "second-a",
+                    "Second choice A",
+                    false,
+                    true,
+                    Some("second-choice-a"),
+                    None,
+                    Some("second-a.mp3"),
+                ),
+                stage(
+                    "second-b",
+                    "Second choice B",
+                    false,
+                    true,
+                    Some("second-choice-b"),
+                    None,
+                    Some("second-b.mp3"),
+                ),
+                stage_with_ok_option(
+                    "leaf-a1",
+                    "Leaf A1",
+                    true,
+                    false,
+                    "result-router",
+                    0,
+                    Some("leaf-a1.mp3"),
+                ),
+                stage_with_ok_option(
+                    "leaf-a2",
+                    "Leaf A2",
+                    true,
+                    false,
+                    "result-router",
+                    1,
+                    Some("leaf-a2.mp3"),
+                ),
+                stage_with_ok_option(
+                    "leaf-b1",
+                    "Leaf B1",
+                    true,
+                    false,
+                    "result-router",
+                    2,
+                    Some("leaf-b1.mp3"),
+                ),
+                stage_with_ok_option(
+                    "leaf-b2",
+                    "Leaf B2",
+                    true,
+                    false,
+                    "result-router",
+                    3,
+                    Some("leaf-b2.mp3"),
+                ),
+                stage(
+                    "story-a1",
+                    "Story A1",
+                    false,
+                    true,
+                    None,
+                    None,
+                    Some("a1.mp3"),
+                ),
+                stage(
+                    "story-a2",
+                    "Story A2",
+                    false,
+                    true,
+                    None,
+                    None,
+                    Some("a2.mp3"),
+                ),
+                stage(
+                    "story-b1",
+                    "Story B1",
+                    false,
+                    true,
+                    None,
+                    None,
+                    Some("b1.mp3"),
+                ),
+                stage(
+                    "story-b2",
+                    "Story B2",
+                    false,
+                    true,
+                    None,
+                    None,
+                    Some("b2.mp3"),
+                ),
+            ],
+            vec![
+                action("state-router", &["intro", "second-a", "second-b"]),
+                action("first-choice", &["first-a", "first-b"]),
+                action("second-choice-a", &["leaf-a1", "leaf-a2"]),
+                action("second-choice-b", &["leaf-b1", "leaf-b2"]),
+                action(
+                    "result-router",
+                    &["story-a1", "story-a2", "story-b1", "story-b2"],
+                ),
+            ],
+        ))
+        .unwrap();
+
+        assert!(output.shared_entries.is_empty());
+        let mut ids = Vec::new();
+        collect_ids(&output.root_entries, &mut ids);
+        assert!(ids.iter().all(|id| !id.starts_with("ref-")));
+        for expected in ["leaf-a1", "leaf-a2", "leaf-b1", "leaf-b2"] {
+            assert!(ids.iter().any(|id| id == expected), "missing {expected}");
+        }
     }
 
     #[test]

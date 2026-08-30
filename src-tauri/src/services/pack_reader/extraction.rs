@@ -222,6 +222,8 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let root_entry_count = count_project_entries(&project.root_entries);
     let shared_entry_count = count_project_entries(&project.shared_entries);
     let projected_entry_count = root_entry_count + shared_entry_count;
+    let projected_ref_count = count_project_entries_of_type(&project.root_entries, "ref")
+        + count_project_entries_of_type(&project.shared_entries, "ref");
     let root_ref_count = project
         .root_entries
         .iter()
@@ -239,6 +241,11 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         .get("usesGraphProjection")
         .and_then(|value| value.as_bool())
         .unwrap_or(false);
+    let graph_projection_is_authoring_compatible = graph_projection_is_authoring_compatible(
+        uses_graph_projection,
+        shared_entry_count,
+        projected_ref_count,
+    );
     let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
     let structural_validation = validate_project_structure_for_generation(&project);
     let structural_validation_ok = structural_validation.is_ok();
@@ -265,7 +272,7 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let end_home_or_night_gap_tolerated = end_home_or_night_gap_is_tolerated(&fidelity);
     let authoring_editable = projected_entry_count > 0
         && structural_validation_ok
-        && !uses_graph_projection
+        && graph_projection_is_authoring_compatible
         && root_ref_ratio < ROOT_REF_RATIO_LIMIT
         && shared_entry_count == 0
         && !has_unmodeled_wheel
@@ -289,8 +296,8 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     } else if shared_entry_count > 0 {
         "Lecture seule : projection hors arbre avec éléments partagés non prise en charge en authoring."
             .to_string()
-    } else if uses_graph_projection {
-        "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
+    } else if uses_graph_projection && !graph_projection_is_authoring_compatible {
+        "Lecture seule : graph_import a produit une projection avec des éléments hors hiérarchie."
             .to_string()
     } else if root_ref_only {
         "Lecture seule : la racine importée est uniquement composée de références.".to_string()
@@ -799,6 +806,24 @@ fn count_project_entries(entries: &[ProjectEntry]) -> usize {
         .sum()
 }
 
+fn count_project_entries_of_type(entries: &[ProjectEntry], entry_type: &str) -> usize {
+    entries
+        .iter()
+        .map(|entry| {
+            usize::from(entry.entry_type == entry_type)
+                + count_project_entries_of_type(&entry.children, entry_type)
+        })
+        .sum()
+}
+
+fn graph_projection_is_authoring_compatible(
+    uses_graph_projection: bool,
+    shared_entry_count: usize,
+    projected_ref_count: usize,
+) -> bool {
+    !uses_graph_projection || (shared_entry_count == 0 && projected_ref_count == 0)
+}
+
 fn ratio(part: usize, total: usize) -> f64 {
     if total == 0 {
         0.0
@@ -1001,12 +1026,21 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 mod tests {
     use super::{
         check_pack_editability, classify_pack_editability, extract_all_zip_assets,
-        extract_zip_thumbnail, project_from_imported_entries, unpack_zip_to_entries,
-        unpack_zip_to_entries_unchecked, unpack_zip_to_entries_with_policy,
+        extract_zip_thumbnail, graph_projection_is_authoring_compatible,
+        project_from_imported_entries, unpack_zip_to_entries, unpack_zip_to_entries_unchecked,
+        unpack_zip_to_entries_with_policy,
     };
     use std::fs;
     use std::io::Write;
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn hierarchical_graph_projection_is_authoring_compatible() {
+        assert!(graph_projection_is_authoring_compatible(true, 0, 0));
+        assert!(!graph_projection_is_authoring_compatible(true, 1, 0));
+        assert!(!graph_projection_is_authoring_compatible(true, 0, 1));
+        assert!(graph_projection_is_authoring_compatible(false, 1, 1));
+    }
 
     fn temp_dir(name: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()

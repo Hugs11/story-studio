@@ -323,6 +323,7 @@ fn transition_state(
     transition: Option<&Transition>,
     actions: &HashMap<&str, &ActionNode>,
     stages: &HashMap<&str, &StageNode>,
+    indexed_router_actions: &BTreeSet<&str>,
 ) -> Vec<(TransitionState, Option<String>)> {
     let Some(transition) = transition else {
         return vec![(TransitionState::Missing, None)];
@@ -358,10 +359,15 @@ fn transition_state(
         )];
     };
     let option_count = action.options.len();
+    let is_indexed_router = indexed_router_actions.contains(transition.action_node.as_str());
     let mut states = vec![(
         TransitionState::Selected {
-            option_index: transition.option_index,
-            option_count,
+            option_index: if is_indexed_router {
+                0
+            } else {
+                transition.option_index
+            },
+            option_count: if is_indexed_router { 1 } else { option_count },
         },
         None,
     )];
@@ -377,6 +383,33 @@ fn transition_state(
                 transition.option_index, option_count
             )),
         ));
+    }
+    if is_indexed_router && (transition.option_index as usize) < option_count {
+        let option_index = transition.option_index as usize;
+        let stage_id = &action.options[option_index];
+        let Some(target) = stages.get(stage_id.as_str()) else {
+            states.push((
+                TransitionState::Invalid {
+                    reason: InvalidTransitionKind::MissingTargetStage,
+                    option_index: transition.option_index,
+                    option_count: Some(option_count),
+                },
+                Some(format!(
+                    "{stage_name} {label} option {option_index} cible stage introuvable '{}'",
+                    stage_id
+                )),
+            ));
+            return states;
+        };
+        states.push((
+            TransitionState::OptionTarget {
+                target: control_shape(target),
+                option_index: 0,
+                option_count: 1,
+            },
+            None,
+        ));
+        return states;
     }
     for (option_index, stage_id) in action.options.iter().enumerate() {
         let Some(target) = stages.get(stage_id.as_str()) else {
@@ -421,6 +454,35 @@ fn asset_presence_shapes(document: &StoryDocument) -> BTreeMap<AssetPresenceShap
     shapes
 }
 
+fn indexed_router_actions<'a>(
+    document: &'a StoryDocument,
+    actions: &HashMap<&'a str, &'a ActionNode>,
+    stages: &HashMap<&'a str, &'a StageNode>,
+) -> BTreeSet<&'a str> {
+    let mut option_indices: HashMap<&str, BTreeSet<i32>> = HashMap::new();
+    for stage in &document.stage_nodes {
+        if let Some(transition) = stage.ok_transition.as_ref() {
+            option_indices
+                .entry(transition.action_node.as_str())
+                .or_default()
+                .insert(transition.option_index);
+        }
+    }
+
+    option_indices
+        .into_iter()
+        .filter_map(|(action_id, indices)| {
+            let action = actions.get(action_id)?;
+            let targets_are_non_interactive = action.options.iter().all(|stage_id| {
+                stages
+                    .get(stage_id.as_str())
+                    .is_some_and(|stage| !stage.control_settings.wheel)
+            });
+            (indices.len() > 1 && targets_are_non_interactive).then_some(action_id)
+        })
+        .collect()
+}
+
 fn topology_shapes(document: &StoryDocument) -> TopologySignature {
     let actions: HashMap<&str, &ActionNode> = document
         .action_nodes
@@ -432,6 +494,7 @@ fn topology_shapes(document: &StoryDocument) -> TopologySignature {
         .iter()
         .map(|stage| (stage.uuid.as_str(), stage))
         .collect();
+    let indexed_router_actions = indexed_router_actions(document, &actions, &stages);
 
     let mut shapes = BTreeMap::new();
     let mut invalid_transitions = Vec::new();
@@ -440,9 +503,14 @@ fn topology_shapes(document: &StoryDocument) -> TopologySignature {
             (TransitionKind::Ok, stage.ok_transition.as_ref()),
             (TransitionKind::Home, stage.home_transition.as_ref()),
         ] {
-            for (state, invalid) in
-                transition_state(&stage.name, &kind, transition, &actions, &stages)
-            {
+            for (state, invalid) in transition_state(
+                &stage.name,
+                &kind,
+                transition,
+                &actions,
+                &stages,
+                &indexed_router_actions,
+            ) {
                 if let Some(invalid) = invalid {
                     invalid_transitions.push(invalid);
                 }
@@ -600,6 +668,85 @@ mod tests {
         assert_eq!(report.generated_stage_count, report.oracle_stage_count);
         assert_eq!(report.invalid_transition_count, 0);
         assert_eq!(report.asset_presence_gap_count, 0);
+    }
+
+    #[test]
+    fn indexed_non_interactive_router_is_behaviorally_equivalent_to_direct_transitions() {
+        let generated: StoryDocument = serde_json::from_value(serde_json::json!({
+            "title": "Generated",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "actionNodes": [
+                { "id": "entry", "name": "Entry", "options": ["source-a", "source-b"], "position": { "x": 0, "y": 0 } },
+                { "id": "direct-a", "name": "A", "options": ["target-a"], "position": { "x": 0, "y": 0 } },
+                { "id": "direct-b", "name": "B", "options": ["target-b"], "position": { "x": 0, "y": 0 } }
+            ],
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "entry", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "source-a", "name": "Source A", "type": "stage", "squareOne": false,
+                    "audio": "a.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "direct-a", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "source-b", "name": "Source B", "type": "stage", "squareOne": false,
+                    "audio": "b.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "direct-b", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "target-a", "name": "Target A", "type": "stage", "squareOne": false,
+                    "audio": "ta.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                    "okTransition": null, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "target-b", "name": "Target B", "type": "stage", "squareOne": false,
+                    "audio": "tb.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                    "okTransition": null, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                }
+            ]
+        }))
+        .expect("generated document");
+        let mut oracle = generated.clone();
+        oracle
+            .action_nodes
+            .retain(|action| action.id != "direct-a" && action.id != "direct-b");
+        oracle.action_nodes.push(ActionNode {
+            id: "indexed-router".to_string(),
+            name: "Indexed router".to_string(),
+            options: vec!["target-a".to_string(), "target-b".to_string()],
+            position: generated.action_nodes[0].position.clone(),
+        });
+        for (stage_id, option_index) in [("source-a", 0), ("source-b", 1)] {
+            oracle
+                .stage_nodes
+                .iter_mut()
+                .find(|stage| stage.uuid == stage_id)
+                .and_then(|stage| stage.ok_transition.as_mut())
+                .expect("source transition")
+                .clone_from(&Transition {
+                    action_node: "indexed-router".to_string(),
+                    option_index,
+                });
+        }
+
+        let report = compare_documents_structural(&generated, &oracle);
+        assert!(report.faithful, "écarts inattendus : {:?}", report.gaps);
     }
 
     /// Non fidèle : l'oracle porte une structure que l'arbre ne reproduit plus (édition
