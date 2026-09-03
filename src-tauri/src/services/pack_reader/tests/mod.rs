@@ -8,4 +8,5 @@ use std::path::{Path, PathBuf};
 
 mod baseline;
 mod projection;
+mod triage_corpus;
 mod validation;
