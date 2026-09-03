@@ -734,6 +734,16 @@ fn project_from_imported_entries(
     })
 }
 
+#[cfg(test)]
+pub(super) fn imported_entries_roundtrip_is_faithful(
+    imported: &serde_json::Value,
+    title: &str,
+) -> Result<bool, String> {
+    let project = project_from_imported_entries(imported, title)?;
+    let canonical = canonicalize_project(&project);
+    Ok(canonical_roundtrip_is_faithful(&canonical)?.faithful)
+}
+
 fn allow_missing_selection_audio_for_import_validation(entries: &mut [ProjectEntry]) {
     for entry in entries {
         if entry.entry_type == "story"
