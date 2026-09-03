@@ -42,6 +42,28 @@ pub(super) fn project_story_graph_values(
     })
 }
 
+pub(super) fn promote_autonomous_root_ref_values(
+    root_entries: &mut [serde_json::Value],
+    shared_entries: &mut Vec<serde_json::Value>,
+) -> bool {
+    let Ok(parsed_roots) = serde_json::from_value::<Vec<ProjectEntry>>(serde_json::Value::Array(
+        root_entries.to_vec(),
+    )) else {
+        return false;
+    };
+    let Ok(parsed_shared) = serde_json::from_value::<Vec<ProjectEntry>>(serde_json::Value::Array(
+        shared_entries.clone(),
+    )) else {
+        return false;
+    };
+    let Some(promoted_index) = autonomous_root_ref_index(&parsed_roots, &parsed_shared) else {
+        return false;
+    };
+
+    root_entries[0] = shared_entries.remove(promoted_index);
+    true
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum EntryShape<'a> {
     Menu,
@@ -741,6 +763,65 @@ fn ref_entry(
     }
 }
 
+/// Promotes the only projected root ref when its target is the only autonomous
+/// shared entry. Any additional ref keeps the projection read-only: it may
+/// represent a return edge or another shared graph relationship.
+#[cfg(test)]
+fn promote_autonomous_root_ref(
+    root_entries: &mut [ProjectEntry],
+    shared_entries: &mut Vec<ProjectEntry>,
+) -> bool {
+    let Some(promoted_index) = autonomous_root_ref_index(root_entries, shared_entries) else {
+        return false;
+    };
+    let promoted = shared_entries.remove(promoted_index);
+    root_entries[0] = promoted;
+    true
+}
+
+fn autonomous_root_ref_index(
+    root_entries: &[ProjectEntry],
+    shared_entries: &[ProjectEntry],
+) -> Option<usize> {
+    if root_entries.len() != 1
+        || shared_entries.len() != 1
+        || root_entries[0].entry_type != "ref"
+        || count_refs(root_entries) != 1
+        || count_refs(shared_entries) != 0
+    {
+        return None;
+    }
+
+    let target = root_entries[0].target.as_deref()?;
+    typed_target_matches_entry(target, &shared_entries[0]).then_some(0)
+}
+
+fn count_refs(entries: &[ProjectEntry]) -> usize {
+    entries
+        .iter()
+        .map(|entry| usize::from(entry.entry_type == "ref") + count_refs(&entry.children))
+        .sum()
+}
+
+fn typed_target_matches_entry(target: &str, entry: &ProjectEntry) -> bool {
+    let Some((kind, target_id)) = target.trim().split_once(':') else {
+        return false;
+    };
+    let target_id = target_id.trim();
+    if target_id.is_empty()
+        || (entry.id.trim() != target_id
+            && entry.native_stage_id.as_deref().map(str::trim) != Some(target_id))
+    {
+        return false;
+    }
+
+    match kind.trim() {
+        "menu" => entry.entry_type == "menu",
+        "story" | "story_play" | "story_home_step" => entry.entry_type == "story",
+        _ => false,
+    }
+}
+
 fn entries_to_json(entries: &[ProjectEntry]) -> Vec<serde_json::Value> {
     entries.iter().map(entry_to_json).collect()
 }
@@ -961,6 +1042,133 @@ mod tests {
             }
             collect_targets(&entry.children, targets);
         }
+    }
+
+    fn synthetic_entry(id: &str, entry_type: &str, native_stage_id: Option<&str>) -> ProjectEntry {
+        ProjectEntry {
+            id: id.to_string(),
+            entry_type: entry_type.to_string(),
+            name: id.to_string(),
+            native_stage_id: native_stage_id.map(str::to_string),
+            ..ProjectEntry::default()
+        }
+    }
+
+    fn synthetic_ref(target: &str) -> ProjectEntry {
+        ProjectEntry {
+            id: "root-ref".to_string(),
+            entry_type: "ref".to_string(),
+            name: "Reference".to_string(),
+            target: Some(target.to_string()),
+            ..ProjectEntry::default()
+        }
+    }
+
+    #[test]
+    fn autonomous_root_ref_is_promoted() {
+        let mut roots = vec![synthetic_ref("story:shared")];
+        let mut shared = vec![synthetic_entry("shared", "story", Some("native-shared"))];
+
+        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert_eq!(roots.len(), 1);
+        assert_eq!(roots[0].id, "shared");
+        assert!(shared.is_empty());
+    }
+
+    #[test]
+    fn autonomous_root_ref_accepts_native_stage_id_target() {
+        let mut roots = vec![synthetic_ref("story:native-shared")];
+        let mut shared = vec![synthetic_entry("shared", "story", Some("native-shared"))];
+
+        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert_eq!(roots[0].id, "shared");
+        assert!(shared.is_empty());
+    }
+
+    #[test]
+    fn multiple_shared_entries_are_not_promoted() {
+        let mut roots = vec![synthetic_ref("story:shared")];
+        let mut shared = vec![
+            synthetic_entry("shared", "story", None),
+            synthetic_entry("other", "story", None),
+        ];
+
+        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert_eq!(roots[0].entry_type, "ref");
+        assert_eq!(shared.len(), 2);
+    }
+
+    #[test]
+    fn internal_ref_keeps_root_projection_unchanged() {
+        let mut roots = vec![synthetic_ref("menu:shared")];
+        let mut shared = vec![ProjectEntry {
+            children: vec![synthetic_ref("story:other")],
+            ..synthetic_entry("shared", "menu", None)
+        }];
+
+        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert_eq!(roots[0].entry_type, "ref");
+        assert_eq!(shared[0].children.len(), 1);
+    }
+
+    #[test]
+    fn absent_or_ambiguous_target_keeps_root_projection_unchanged() {
+        for target in ["story:missing", "story:shared:ambiguous"] {
+            let mut roots = vec![synthetic_ref(target)];
+            let mut shared = vec![synthetic_entry("shared", "story", None)];
+
+            assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
+            assert_eq!(roots[0].entry_type, "ref");
+            assert_eq!(shared.len(), 1);
+        }
+    }
+
+    #[test]
+    fn cycle_back_ref_keeps_root_projection_unchanged() {
+        let mut roots = vec![synthetic_ref("menu:shared")];
+        let mut shared = vec![ProjectEntry {
+            children: vec![ProjectEntry {
+                children: vec![ProjectEntry {
+                    ref_kind: Some("return".to_string()),
+                    ..synthetic_ref("menu:shared")
+                }],
+                ..synthetic_entry("story", "story", None)
+            }],
+            ..synthetic_entry("shared", "menu", None)
+        }];
+
+        assert!(!promote_autonomous_root_ref(&mut roots, &mut shared));
+        assert_eq!(roots[0].entry_type, "ref");
+        assert_eq!(shared.len(), 1);
+    }
+
+    #[test]
+    fn promotion_preserves_order_native_ids_and_returns() {
+        let mut roots = vec![synthetic_ref("menu:native-shared")];
+        let mut shared = vec![ProjectEntry {
+            native_stage_id: Some("native-shared".to_string()),
+            return_after_play: Some("story:after".to_string()),
+            children: vec![
+                synthetic_entry("first", "story", Some("native-first")),
+                synthetic_entry("second", "story", Some("native-second")),
+            ],
+            ..synthetic_entry("shared", "menu", None)
+        }];
+
+        assert!(promote_autonomous_root_ref(&mut roots, &mut shared));
+        let promoted = &roots[0];
+        assert_eq!(promoted.id, "shared");
+        assert_eq!(promoted.native_stage_id.as_deref(), Some("native-shared"));
+        assert_eq!(promoted.return_after_play.as_deref(), Some("story:after"));
+        assert_eq!(
+            promoted
+                .children
+                .iter()
+                .map(|entry| entry.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["first", "second"]
+        );
+        assert!(shared.is_empty());
     }
 
     #[test]

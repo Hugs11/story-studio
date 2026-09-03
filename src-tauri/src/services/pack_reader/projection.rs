@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
-use super::graph_import::project_story_graph_values;
+use super::graph_import::{project_story_graph_values, promote_autonomous_root_ref_values};
 use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
@@ -494,6 +494,9 @@ fn walk_story_doc_to_entries_inner(
         }
         apply_night_fallback_overrides(&mut entries, detection);
     }
+    if uses_graph_import_projection {
+        promote_autonomous_root_ref_values(&mut entries, &mut shared_entries);
+    }
     let auto_next_detected =
         !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
     if uses_graph_import_projection {
@@ -554,6 +557,7 @@ fn remove_projected_night_bridge(
             .is_none_or(|id| !night_stage_ids.contains(id))
     });
     remove_projected_night_returns(entries, night_stage_ids);
+    remove_projected_night_returns(shared_entries, night_stage_ids);
 }
 
 fn remove_projected_night_returns(
@@ -1349,5 +1353,59 @@ pub(super) fn walk_entry(
                 "children": children
             }))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use std::collections::HashSet;
+
+    use super::super::graph_import::promote_autonomous_root_ref_values;
+    use super::remove_projected_night_bridge;
+
+    #[test]
+    fn night_bridge_returns_are_cleaned_before_root_ref_promotion() {
+        let mut roots = vec![json!({
+            "id": "root-ref",
+            "type": "ref",
+            "name": "Root reference",
+            "target": "menu:shared-menu",
+            "refKind": "continue",
+            "returnAfterPlay": "story:night-bridge"
+        })];
+        let mut shared = vec![
+            json!({
+                "id": "night-bridge",
+                "type": "story",
+                "name": "Night bridge",
+                "nativeStageId": "night-bridge"
+            }),
+            json!({
+                "id": "shared-menu",
+                "type": "menu",
+                "name": "Shared menu",
+                "nativeStageId": "shared-menu",
+                "children": [{
+                    "id": "story",
+                    "type": "story",
+                    "name": "Story",
+                    "returnAfterPlay": "story:night-bridge"
+                }]
+            }),
+        ];
+        let night_stage_ids = HashSet::from(["night-bridge".to_string()]);
+
+        remove_projected_night_bridge(&mut roots, &mut shared, &night_stage_ids);
+
+        assert_eq!(shared.len(), 1);
+        assert_eq!(shared[0]["id"], "shared-menu");
+        assert!(roots[0].get("returnAfterPlay").is_none());
+        assert!(shared[0]["children"][0].get("returnAfterPlay").is_none());
+
+        assert!(promote_autonomous_root_ref_values(&mut roots, &mut shared));
+        assert_eq!(roots[0]["type"], "menu");
+        assert_eq!(roots[0]["id"], "shared-menu");
+        assert!(shared.is_empty());
     }
 }
