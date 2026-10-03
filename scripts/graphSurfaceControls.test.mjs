@@ -14,6 +14,7 @@ import { readEngineColors, resetColorCache, toRenderableColor } from '../src/com
 import { buildOverview, overviewCamera } from '../src/store/advancedGraphView/graphOverview.js';
 import { nodeRoles } from '../src/store/advancedGraphView/graphRoles.js';
 import { paintOverlay } from '../src/components/AdvancedGraphCanvas/graphSurfaceCapture.js';
+import { commandKeyLabel } from '../src/utils/platformKeys.js';
 
 const { elementByAttribute, mountSurface } = await import('./chromeBench.mjs');
 const { GraphSurfaceControls } = await import('../src/components/AdvancedGraphCanvas/GraphSurfaceControls.jsx');
@@ -464,7 +465,8 @@ test('les boutons de la colonne annoncent la touche effective de leur commande',
   assert.ok(bubbles.includes('Agrandir (+)'));
   assert.ok(bubbles.includes('Réduire (-)'));
   assert.ok(bubbles.includes('Cadrer tout le graphe (0)'));
-  assert.ok(bubbles.includes('Ranger le graphe en suivant le parcours de l’histoire (Ctrl+Shift+R)'));
+  // La touche de commande suit la plateforme : Ctrl, ou ⌘ sous macOS.
+  assert.ok(bubbles.includes(`Ranger le graphe en suivant le parcours de l’histoire (${commandKeyLabel()}+Shift+R)`));
   assert.ok(!elements.some((element) => typeof element.props?.title === 'string' && element.type === 'button'));
   assert.ok(bubbles.includes('Replier la vue d’ensemble (M)'));
 });
