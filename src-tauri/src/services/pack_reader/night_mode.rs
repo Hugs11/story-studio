@@ -159,18 +159,17 @@ pub(super) fn apply_night_fallback_overrides(
     }
 }
 
+/// Le message de fin partagé que les histoires jouent avant leur retour. Il
+/// est cherché que le pack déclare ou non le mode nuit : ce drapeau ne dit que
+/// si l'appareil propose le mode nuit, et beaucoup de packs officiels jouent ce
+/// message sans lui. Le perdre à l'import retirait un Écran avec son.
 pub(super) fn detect_imported_night_mode(
-    night_mode_available: bool,
     root_stage_id: &str,
     entries: &[serde_json::Value],
     stages: &HashMap<&str, &serde_json::Value>,
     actions: &HashMap<&str, &serde_json::Value>,
     assets: &HashMap<String, PathBuf>,
 ) -> Option<NightBridgeDetection> {
-    if !night_mode_available {
-        return None;
-    }
-
     let menu_ids: HashSet<String> = entries
         .iter()
         .flat_map(collect_menu_ids_from_entry)

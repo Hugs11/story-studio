@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Manifeste des binaires de test Windows.
+
+  `tauri_build` pose un manifeste sur l'application, jamais sur les cibles de
+  test. Or `rfd`, tiré par le greffon de dialogues, importe `TaskDialogIndirect`,
+  qui n'existe que dans la version 6 de `comctl32` : celle-ci n'est chargée que
+  si le binaire la déclare. Sans cette déclaration, le chargeur résout
+  `comctl32.dll` vers la 5.82 de `System32`, qui n'exporte pas ce symbole, et le
+  binaire de test meurt au chargement sur `STATUS_ENTRYPOINT_NOT_FOUND` — avant
+  d'exécuter le moindre test.
+
+  `build.rs` ne passe ce fichier qu'aux cibles de test, et seulement pour une
+  cible Windows MSVC.
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*"/>
+    </dependentAssembly>
+  </dependency>
+</assembly>

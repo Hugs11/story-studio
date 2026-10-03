@@ -21,6 +21,10 @@ Si la pastille affiche **À corriger**, ouvre-la pour voir les éléments concer
 
 Cliquer sur un problème sélectionne l’élément correspondant lorsqu’il peut être localisé dans le projet.
 
+Cette pastille est commune aux deux éditeurs. Dans l’Éditeur graphe, elle signale notamment les
+raccords incomplets, les Listes de choix sans option et les destinations incompatibles. Cliquer sur
+un problème permet de retrouver le nœud concerné dans le Graphe et l’Inspecteur.
+
 Les causes fréquentes sont par exemple :
 
 - un audio ou une image obligatoire manquant ;
@@ -34,7 +38,8 @@ Les problèmes affichés dans **À corriger** bloquent la génération tant qu�
 
 ## 2. Relire les options globales
 
-Avant de générer, vérifie surtout les réglages de navigation qui influencent plusieurs Histoires :
+Dans l’Éditeur par menus, vérifie surtout les réglages de navigation qui influencent plusieurs
+Histoires :
 
 - **Auto-next** ;
 - le **Message de fin** ;
@@ -43,13 +48,18 @@ Avant de générer, vérifie surtout les réglages de navigation qui influencent
 
 Un réglage global peut modifier la destination atteinte après plusieurs Histoires. Si le comportement te semble inattendu, consulte la page [Navigation](/story-studio/docs/navigation/).
 
+Dans l’Éditeur graphe, ces parcours sont décrits directement par les boutons, les Listes de choix et
+les raccords de chaque Écran. Parcours les problèmes signalés dans **À corriger**, puis contrôle les
+chemins importants dans le Graphe et le Simulateur.
+
 Relis également **Harmoniser le volume** et **Silence début / fin**. Ces options ne changent pas la navigation, mais elles peuvent traiter les audios lors de la génération.
 
 Voir [Comprendre le traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
 
-## 3. Contrôler le Diagramme
+## 3. Contrôler le Diagramme ou le Graphe
 
-Le **Diagramme** est utile pour vérifier la structure et les transitions calculées par Story Studio.
+Dans l’Éditeur par menus, le **Diagramme** permet de vérifier la structure et les transitions
+calculées par Story Studio.
 
 Pour un pack comme *Les aventures de Léo*, contrôle notamment :
 
@@ -60,6 +70,17 @@ Pour un pack comme *Les aventures de Léo*, contrôle notamment :
 - les éventuels retours vers une autre branche.
 
 Le Diagramme représente la navigation réellement préparée par Story Studio. La position d’un élément dans l’Arbre ne suffit pas toujours à déterminer où mènera la lecture.
+
+Dans l’Éditeur graphe, contrôle directement :
+
+- les raccords qui partent de chaque Écran ;
+- les options présentes dans les Listes de choix ;
+- le choix fixe ou aléatoire utilisé à l’entrée d’une liste ;
+- les retours produits par **OK**, **Accueil** et la fin des audios ;
+- les Écrans réutilisés à plusieurs endroits du parcours.
+
+La position visuelle des nœuds sert à organiser le travail. Ce sont leurs raccords et leurs réglages
+qui déterminent la navigation du pack.
 
 ## 4. Simuler les parcours importants
 
@@ -86,7 +107,7 @@ Pour un gros pack, il n’est pas nécessaire de relire chaque seconde de chaque
 
 Lorsque tu génères un pack, Story Studio te permet de confirmer notamment :
 
-![Fenêtre des métadonnées du pack avant la génération](/story-studio/assets/screenshots/pack-metadata-review-dark.png)
+![Métadonnées du pack avec la Vignette catalogue, l’UUID et le nom du ZIP](/story-studio/assets/screenshots/pack-metadata-dark.png)
 
 - le titre ;
 - l’âge minimum ;
@@ -95,7 +116,18 @@ Lorsque tu génères un pack, Story Studio te permet de confirmer notamment :
 - le producteur ;
 - la description ;
 - l’UUID ;
+- la Vignette catalogue ;
 - le nom du ZIP généré.
+
+### Vignette catalogue
+
+La **Vignette catalogue** présente le pack dans STUdio, LuniiQt et les autres bibliothèques
+compatibles. Elle se choisit dans la fenêtre **Métadonnées du pack**, accessible depuis le titre du
+pack en haut de l’éditeur et affichée avant la génération.
+
+Elle peut conserver une taille et un cadrage différents de l’Image Lunii, car elle n’est pas
+affichée sur la boîte à histoires. Si tu ne choisis pas de vignette particulière, Story Studio
+reprend automatiquement l’image du Menu racine ou de l’Écran d’entrée.
 
 Pour un pack importé, Story Studio peut proposer de créer un nouvel UUID avant la génération.
 
@@ -110,10 +142,14 @@ Clique sur **Générer le pack**.
 Story Studio :
 
 1. demande ou confirme les métadonnées ;
-2. vérifie qu’aucun problème bloquant ne subsiste ;
+2. vérifie qu’aucun problème bloquant ne subsiste dans la structure, l’identité ou les médias ;
 3. demande le dossier de sortie ;
 4. ajoute la génération à la **File de rendu** ;
-5. construit le ZIP.
+5. construit le ZIP ;
+6. relit l’archive produite avant de la considérer comme terminée.
+
+Ces contrôles sont les mêmes pour l’Éditeur par menus et l’Éditeur graphe. Ils permettent notamment
+de vérifier que le ZIP contient bien la navigation et les médias préparés par Story Studio.
 
 Les générations sont exécutées l’une après l’autre dans l’ordre de la file.
 

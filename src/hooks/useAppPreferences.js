@@ -91,6 +91,8 @@ export function useAppPreferences({
   }
 
   async function handleConsolidateProject() {
+    // À l'accueil, le store porte le projet par défaut : rien à consolider.
+    if (!store.project?.projectType) return null;
     const destinationDir = await openDialog({
       directory: true,
       multiple: false,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { visitProjectEntries } from '../store/projectModel';
+import { readMediaBindings, visitProjectEntries } from '../store/projectModel';
 import { FILE_REFRESH_THROTTLE_MS, hasFreshPathSnapshot, readPathSnapshot } from '../store/fileMetadataCache';
 import { dirname, joinPath } from '../utils/fileUtils';
 
@@ -24,6 +24,12 @@ function collectProjectPaths(project, projectIndex = null, savePath = null) {
     }
   };
   addNativeGraphPaths(project?.nativeGraph);
+
+  // Liaisons du mode Avancé : sans elles, `status` resterait indéterminé et un
+  // média manquant ne serait jamais signalé comme tel.
+  for (const binding of readMediaBindings(project)) {
+    if (hasPath(binding?.path)) paths.add(binding.path);
+  }
 
   visitProjectEntries(project, (entry) => {
     if (entry?.type === 'menu') {

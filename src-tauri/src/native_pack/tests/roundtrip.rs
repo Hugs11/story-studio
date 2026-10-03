@@ -1,4 +1,7 @@
 use super::*;
+use crate::native_pack::observed_gates::{
+    observe_archive_review, observe_document_gates, refusal_from_gates, GatePolicy,
+};
 use crate::services::pack_reader::unpack_zip_to_entries_unchecked as unpack_zip_to_entries;
 use std::path::{Path, PathBuf};
 
@@ -51,9 +54,37 @@ fn generated_zip_import(
 ) -> serde_json::Value {
     let report = report_for(project, assets, Vec::new());
     let document = build_story_document(&report).expect("build story document");
-    let zip_path = write_native_pack_zip(&report, &document, &base.join("out")).expect("write zip");
+    let written =
+        write_native_pack_archive(&report, &document, &base.join("out")).expect("write zip");
+    let mut observations = observe_document_gates(
+        &written.story_json,
+        Some(report.pack_uuid.as_str()),
+        GatePolicy::ENFORCED,
+    );
+    let staged_assets = report
+        .assets
+        .iter()
+        .map(|asset| {
+            (
+                asset.staged_asset_name.clone(),
+                asset.staged_asset_path.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
+    observations.push(observe_archive_review(
+        &written.zip_path,
+        &written.story_json,
+        &staged_assets,
+        written.has_thumbnail,
+        GatePolicy::ENFORCED,
+    ));
+    assert_eq!(
+        refusal_from_gates(&observations),
+        None,
+        "les portes d'observation refusent ce pack Libre : {observations:#?}"
+    );
     unpack_zip_to_entries(
-        zip_path.to_str().expect("zip path utf8"),
+        written.zip_path.to_str().expect("zip path utf8"),
         base.join("imported").to_str().expect("import dir utf8"),
     )
     .expect("unpack generated zip")
@@ -662,11 +693,11 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
             audio: Some(format!("{id}.mp3")),
             image: None,
             control_settings: Some(crate::domain::project::EntryControlSettings {
-                autoplay: Some(autoplay),
                 wheel: Some(wheel),
-                pause: Some(false),
                 ok: Some(ok),
                 home: Some(false),
+                pause: Some(false),
+                autoplay: Some(autoplay),
             }),
             ok_target: None,
             ok_choice_targets: Vec::new(),
@@ -770,7 +801,7 @@ fn end_sequence_with_convergence_choice_builds_and_roundtrips() {
             document
                 .stage_nodes
                 .iter()
-                .any(|stage| stage.name == step_name),
+                .any(|stage| stage.label() == step_name),
             "étape de séquence « {step_name} » absente du document généré",
         );
     }
@@ -825,11 +856,11 @@ fn end_sequence_convergence_choice_resolves_forward_references() {
             audio: Some("ensuite.mp3".to_string()),
             image: None,
             control_settings: Some(crate::domain::project::EntryControlSettings {
-                autoplay: Some(false),
                 wheel: Some(true),
-                pause: Some(false),
                 ok: Some(true),
                 home: Some(false),
+                pause: Some(false),
+                autoplay: Some(false),
             }),
             ok_target: if with_choice {
                 None
@@ -1009,20 +1040,24 @@ fn hosted_convergence_choice_tree_roundtrips_via_canonical() {
     let a_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name.contains("Histoire A") && !stage.name.contains("Titre"))
+        .find(|stage| stage.label().contains("Histoire A") && !stage.label().contains("Titre"))
         .expect("stage de lecture de A");
     let a_ok = a_play
         .ok_transition
-        .as_ref()
+        .value()
         .expect("A a une transition de fin");
     let target_uuid = action_by_id
         .get(a_ok.action_node.as_str())
-        .and_then(|action| action.options.get(a_ok.option_index as usize))
+        .and_then(|action| {
+            action
+                .options
+                .get(a_ok.selection.fixed_index().expect("sélection fixe"))
+        })
         .expect("cible de la convergence");
     assert!(
         stage_by_uuid
-            .get(target_uuid.as_str())
-            .is_some_and(|stage| stage.name.contains("Histoire B")),
+            .get(target_uuid.as_deref().unwrap_or_default())
+            .is_some_and(|stage| stage.label().contains("Histoire B")),
         "la fin de A doit converger vers le stage existant de B (sans parachute)",
     );
 

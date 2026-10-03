@@ -1,8 +1,8 @@
 use super::*;
 
 #[test]
-fn save_recording_requires_saved_project() {
-    let err = save_recording(None, None, "recording.webm", b"audio").unwrap_err();
+fn save_recording_requires_a_workspace() {
+    let err = save_recording(None, "recording.webm", b"audio").unwrap_err();
     assert!(err.contains("emplacement de travail"));
 }
 
@@ -36,31 +36,27 @@ fn save_recording_rejects_unsafe_filename() {
 
 #[test]
 fn save_recording_rejects_empty_or_oversized_data() {
-    let err =
-        save_recording(Some("C:/projet/story.mbah"), None, "recording.webm", &[]).unwrap_err();
+    let err = save_recording(Some("C:/projet"), "recording.webm", &[]).unwrap_err();
     assert!(err.contains("vide"));
 
     let data = vec![0_u8; MAX_RECORDING_BYTES + 1];
-    let err =
-        save_recording(Some("C:/projet/story.mbah"), None, "recording.webm", &data).unwrap_err();
+    let err = save_recording(Some("C:/projet"), "recording.webm", &data).unwrap_err();
     assert!(err.contains("trop volumineux"));
 }
 
 #[test]
 fn save_recording_writes_inside_recordings_dir() {
-    let project_dir = temp_project_dir("writes_inside");
-    fs::create_dir_all(&project_dir).expect("create temp project dir");
-    let save_path = project_dir.join("story.lunii");
+    let workspace_dir = temp_project_dir("writes_inside");
+    fs::create_dir_all(&workspace_dir).expect("create temp workspace dir");
 
     let written = save_recording(
-        Some(save_path.to_str().expect("save path utf8")),
-        None,
+        Some(workspace_dir.to_str().expect("workspace path utf8")),
         "recording.webm",
         b"audio",
     )
     .expect("save recording");
     let written_path = PathBuf::from(&written);
-    let expected_recordings_dir = project_dir.join("enregistrements");
+    let expected_recordings_dir = workspace_dir.join("enregistrements");
 
     assert!(
         !written.starts_with(r"\\?\"),
@@ -72,18 +68,16 @@ fn save_recording_writes_inside_recordings_dir() {
     );
     assert_eq!(fs::read(&written_path).expect("read recording"), b"audio");
 
-    fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
+    fs::remove_dir_all(workspace_dir).expect("cleanup temp workspace dir");
 }
 
 #[test]
-fn save_recording_accepts_wav_with_save_path() {
-    let project_dir = temp_project_dir("writes_wav");
-    fs::create_dir_all(&project_dir).expect("create temp project dir");
-    let save_path = project_dir.join("story.mbah");
+fn save_recording_accepts_wav() {
+    let workspace_dir = temp_project_dir("writes_wav");
+    fs::create_dir_all(&workspace_dir).expect("create temp workspace dir");
 
     let written = save_recording(
-        Some(save_path.to_str().expect("save path utf8")),
-        None,
+        Some(workspace_dir.to_str().expect("workspace path utf8")),
         "enregistrement-2026-05-24.wav",
         b"audio",
     )
@@ -96,50 +90,23 @@ fn save_recording_accepts_wav_with_save_path() {
     );
     assert_eq!(
         written_path.parent(),
-        Some(project_dir.join("enregistrements").as_path())
+        Some(workspace_dir.join("enregistrements").as_path())
     );
     assert_eq!(
         fs::read(&written_path).expect("read wav recording"),
         b"audio"
     );
 
-    fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
+    fs::remove_dir_all(workspace_dir).expect("cleanup temp workspace dir");
 }
 
 #[test]
-fn save_recording_prefers_workspace_dir() {
-    let project_dir = temp_project_dir("workspace_recording");
-    let workspace_dir = project_dir.join("workspace");
-    fs::create_dir_all(&workspace_dir).expect("create workspace dir");
-    let save_dir = project_dir.join("saved");
-    fs::create_dir_all(&save_dir).expect("create save dir");
-    let save_path = save_dir.join("story.mbah");
-
-    let written = save_recording(
-        Some(save_path.to_str().expect("save path utf8")),
-        Some(workspace_dir.to_str().expect("workspace path utf8")),
-        "recording.webm",
-        b"audio",
-    )
-    .expect("save workspace recording");
-    let written_path = PathBuf::from(&written);
-
-    assert_eq!(
-        written_path.parent(),
-        Some(workspace_dir.join("enregistrements").as_path())
-    );
-    assert_eq!(fs::read(&written_path).expect("read recording"), b"audio");
-
-    fs::remove_dir_all(project_dir).expect("cleanup temp project dir");
-}
-
-#[test]
-fn save_recording_accepts_session_workspace_without_save_path() {
+fn save_recording_accepts_session_workspace() {
     let root = temp_project_dir("session_recording_root");
     let session =
         crate::support::temp::create_session_workspace(&root).expect("create session workspace");
 
-    let written = save_recording(None, Some(&session), "session-recording.webm", b"audio")
+    let written = save_recording(Some(&session), "session-recording.webm", b"audio")
         .expect("save recording in session workspace");
     let written_path = PathBuf::from(&written);
     let expected_recordings_dir = PathBuf::from(&session).join("enregistrements");
@@ -149,6 +116,52 @@ fn save_recording_accepts_session_workspace_without_save_path() {
         Some(expected_recordings_dir.as_path())
     );
     assert_eq!(fs::read(&written_path).expect("read recording"), b"audio");
+
+    crate::support::temp::cleanup_session_workspace(&root, &session).expect("cleanup session");
+    fs::remove_dir(root).expect("cleanup session root");
+}
+
+/// Deux prises sous le même nom : la seconde ne remplace jamais la première.
+/// Elle reçoit un nom libre, et le chemin rendu est celui réellement écrit.
+fn assert_second_take_keeps_the_first(workspace_dir: Option<&str>, recordings_dir: &Path) {
+    let first = save_recording(workspace_dir, "prise.wav", b"premiere").expect("first take");
+    let second = save_recording(workspace_dir, "prise.wav", b"seconde").expect("second take");
+
+    assert_ne!(first, second, "la seconde prise doit avoir son propre nom");
+    assert_eq!(
+        fs::read(&first).expect("read first take"),
+        b"premiere",
+        "la première prise est intacte"
+    );
+    assert_eq!(fs::read(&second).expect("read second take"), b"seconde");
+    let second_path = PathBuf::from(&second);
+    assert_eq!(second_path.parent(), Some(recordings_dir));
+    assert_eq!(second_path.extension().and_then(OsStr::to_str), Some("wav"));
+}
+
+#[test]
+fn save_recording_never_overwrites_an_existing_take_in_a_workspace() {
+    let workspace_dir = temp_project_dir("no_overwrite_saved");
+    fs::create_dir_all(&workspace_dir).expect("create temp workspace dir");
+
+    assert_second_take_keeps_the_first(
+        Some(workspace_dir.to_str().expect("workspace path utf8")),
+        &workspace_dir.join("enregistrements"),
+    );
+
+    fs::remove_dir_all(workspace_dir).expect("cleanup temp workspace dir");
+}
+
+#[test]
+fn save_recording_never_overwrites_an_existing_take_in_a_session_workspace() {
+    let root = temp_project_dir("no_overwrite_session_root");
+    let session =
+        crate::support::temp::create_session_workspace(&root).expect("create session workspace");
+
+    assert_second_take_keeps_the_first(
+        Some(&session),
+        &PathBuf::from(&session).join("enregistrements"),
+    );
 
     crate::support::temp::cleanup_session_workspace(&root, &session).expect("cleanup session");
     fs::remove_dir(root).expect("cleanup session root");

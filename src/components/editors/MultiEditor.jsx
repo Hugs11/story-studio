@@ -3,8 +3,7 @@ import { Toggle } from '../common/Toggle';
 import { Tooltip } from '../common/Tooltip';
 import { findEntryById } from '../../store/projectModel';
 import { useProjectContext } from '../../store/ProjectContext';
-import { KEYS, read } from '../../store/persistentSettings';
-import { isTtsAvailable, PIPER_DEFAULT_VOICE } from '../../store/xttsSettings';
+import { batchTitleVoice, isTtsAvailable } from '../../store/xttsSettings';
 import { useErrorDialog } from '../common/Dialog';
 import { generateTextImage } from '../TextImageGenerator/generateTextImage';
 import { CircleStop, Moon, Pause, Sparkles, Speech, Trash2 } from '../icons/LucideLocal';
@@ -185,6 +184,8 @@ export const MultiEditor = memo(function MultiEditor({
   function getHomeSelectValue(entry) {
     if (entry.returnOnHome) return entry.returnOnHome;
     const navigation = getGeneratedStoryNavigation(entry, getParentMenu(entry), project, project?.rootEntries ?? []);
+    // Accueil sans destination : la Lunii revient à l'Écran d'entrée.
+    if (navigation.storyHome.isPackStart) return '__none__';
     return generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId);
   }
 
@@ -246,20 +247,6 @@ export const MultiEditor = memo(function MultiEditor({
     ? "Crée d'un coup une image-titre pour chaque histoire ou dossier avec image sélectionné, ou un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les packs ZIP importés sont ignorés."
     : "Crée d'un coup un audio (le nom prononcé) pour les éléments sélectionnés compatibles. Les images-titres ne sont proposées que pour les histoires et les dossiers avec image.";
 
-  function getSelectedVoice() {
-    if ((xttsSettings?.backend || 'piper') === 'piper') {
-      // Piper a toujours une voix par défaut : jamais vide, pas de pré-sélection requise.
-      return xttsSettings?.piperVoice || read(KEYS.PIPER_LAST_VOICE) || PIPER_DEFAULT_VOICE;
-    }
-    const favoriteVoices = Array.isArray(xttsSettings?.favoriteVoices) ? xttsSettings.favoriteVoices : [];
-    return (
-      read(KEYS.XTTS_LAST_VOICE) ||
-      read(KEYS.XTTS_LAST_SPEAKER) ||
-      favoriteVoices[0] ||
-      ''
-    );
-  }
-
   function getNodeTitle(node) {
     return (node.name && node.name.trim()) ? node.name.trim() : 'Sans titre';
   }
@@ -311,7 +298,7 @@ export const MultiEditor = memo(function MultiEditor({
     if (batchBusy) return;
     setBatchError('');
 
-    const voice = getSelectedVoice();
+    const voice = batchTitleVoice(xttsSettings);
     if (!voice) {
       const msg = 'Choisis une voix XTTS une première fois (depuis le bouton TTS d’un audio) avant de lancer la génération groupée.';
       setBatchError(msg);
@@ -489,15 +476,15 @@ export const MultiEditor = memo(function MultiEditor({
                             value={homeSelectValue}
                             onChange={(target) => {
                               if (target === '__mixed__') return;
-                              onBulkUpdateItems(editableIds, () => ({
-                                returnOnHome: target || null,
-                                returnOnHomeNone: false,
-                              }));
+                              onBulkUpdateItems(editableIds, () => (target === '__none__'
+                                ? { returnOnHome: null, returnOnHomeNone: true }
+                                : { returnOnHome: target || null, returnOnHomeNone: false }));
                             }}
                             allMenus={allMenus}
                             allStories={allStories.filter((s) => !ids.includes(s.id))}
                             currentStoryId={null}
                             emptyLabel="Retour direct au menu parent"
+                            includeNone
                             includeStoryPlay={false}
                             size="compact"
                           />
@@ -875,7 +862,6 @@ export const MultiEditor = memo(function MultiEditor({
             type="button"
             onClick={() => onBulkDeleteItems?.(ids)}
             aria-label="Supprimer la sélection"
-            title="Supprimer la sélection"
           >
             <Trash2 className="card-danger-icon" />
           </button>

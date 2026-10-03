@@ -7,14 +7,14 @@ use super::super::{sanitize_stage_label, CanonicalOptions, NativeGenerationWarni
 use crate::domain::project::SilenceMode;
 use crate::services::project_files::validate_existing_file_path;
 use crate::support::audio_norm::{
-    build_edge_silence_filters_with_targets, build_loudness_filters, measure_edge_silence,
-    measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure, EdgeSilenceFilters, LoudnessAction,
-    EDGE_SILENCE_SEC, MAX_LIMITING_DB, NEAR_MUTE_LUFS,
+    build_edge_silence_filters_with_targets, build_loudness_filters, harmonization_notice,
+    measure_edge_silence, measure_loudness_ebur128, plan_loudness_fix, EdgeMeasure,
+    EdgeSilenceFilters, HarmonizationNotice, LoudnessAction, EDGE_SILENCE_SEC,
+    NOTICE_NEAR_MUTE_BOOST,
 };
 use crate::support::ffmpeg::{apply_no_window, now_millis};
 
 struct GenerationEdgePlan {
-    measure_pre_filters: Vec<String>,
     output_filters: Option<EdgeSilenceFilters>,
     measured_edges: Option<(f64, f64)>,
 }
@@ -44,14 +44,7 @@ pub(crate) struct AudioPreparationResult {
 
 struct GenerationLoudnessPlan {
     action: LoudnessAction,
-    pending_warning: Option<PendingAudioWarning>,
-}
-
-struct PendingAudioWarning {
-    code: &'static str,
-    initial_integrated_lufs: f64,
-    gain_db: f64,
-    expected_limiting_db: f64,
+    pending_warning: Option<HarmonizationNotice>,
 }
 
 pub(crate) fn mp3_header_is_native_compatible(bytes: &[u8]) -> bool {
@@ -112,8 +105,11 @@ pub(crate) fn prepare_audio_asset(
         trailing_silence_sec,
         role,
     )?;
-    let mut measure_filters = edge_plan.measure_pre_filters.clone();
-    measure_filters.push("aformat=channel_layouts=mono".to_string());
+    let measure_filters = loudness_measure_filters(
+        edge_plan.measured_edges,
+        leading_silence_sec,
+        trailing_silence_sec,
+    );
 
     let loudness_plan = loudness_action_for_generation(
         ffmpeg,
@@ -221,6 +217,47 @@ fn silence_is_already_conform(
     }
 }
 
+/// Paramètres d'encodage MP3 du pack natif : mono, 44,1 kHz, `libmp3lame` q5,
+/// sans métadonnée ni tag ID3.
+///
+/// Extraits pour que l'export avancé encode **exactement** comme le mode Libre.
+/// Il ne peut pas réutiliser `encode_audio_asset` telle quelle : elle dérive son
+/// nom de sortie d'un rôle et de l'horloge (`processed_audio_output_name`),
+/// alors que l'export avancé exige une destination dérivée de la seule clé de
+/// tâche. Les paramètres de l'encodeur, eux, n'existent qu'ici.
+///
+/// Le muxer est demandé **explicitement** (`-f mp3`) au lieu d'être déduit de
+/// l'extension du fichier de sortie. C'est le même muxer qu'un `.mp3` choisit,
+/// donc la sortie du mode Libre est inchangée ; mais une destination adressée
+/// par une clé de tâche n'a pas d'extension, et faire dépendre le format d'un
+/// nom de fichier est exactement ce qu'il faut éviter.
+pub(crate) fn mp3_encode_args(source: &Path, output: &Path, filters: &str) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-i".to_string(),
+        source.to_string_lossy().to_string(),
+        "-ac".to_string(),
+        "1".to_string(),
+        "-ar".to_string(),
+        "44100".to_string(),
+        "-c:a".to_string(),
+        "libmp3lame".to_string(),
+        "-q:a".to_string(),
+        "5".to_string(),
+        "-map_metadata".to_string(),
+        "-1".to_string(),
+        "-id3v2_version".to_string(),
+        "0".to_string(),
+        "-map".to_string(),
+        "0:a".to_string(),
+        "-af".to_string(),
+        filters.to_string(),
+        "-f".to_string(),
+        "mp3".to_string(),
+        output.to_string_lossy().to_string(),
+    ]
+}
+
 /// Ré-encode l'asset en MP3 (mono, 44.1 kHz, q5) en appliquant la correction de
 /// niveau planifiée et la normalisation de silence.
 #[allow(clippy::too_many_arguments)]
@@ -246,30 +283,9 @@ fn encode_audio_asset(
     );
 
     let mut cmd = Command::new(ffmpeg);
-    cmd.args([
-        "-y",
-        "-i",
-        source.to_string_lossy().as_ref(),
-        "-ac",
-        "1",
-        "-ar",
-        "44100",
-        "-c:a",
-        "libmp3lame",
-        "-q:a",
-        "5",
-        "-map_metadata",
-        "-1",
-        "-id3v2_version",
-        "0",
-        "-map",
-        "0:a",
-        "-af",
-        &filters,
-        output.to_string_lossy().as_ref(),
-    ])
-    .stdout(Stdio::null())
-    .stderr(Stdio::piped());
+    cmd.args(mp3_encode_args(source, &output, &filters))
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
     apply_no_window(&mut cmd);
     let output_result = cmd
         .output()
@@ -336,15 +352,37 @@ fn audio_filter_chain(
     action: &LoudnessAction,
     edge_filters: Option<&EdgeSilenceFilters>,
 ) -> String {
+    audio_filter_chain_for(
+        options.silence_mode,
+        leading_silence_sec,
+        trailing_silence_sec,
+        action,
+        edge_filters,
+    )
+}
+
+/// La chaîne T1 → T5b, paramétrée par le seul mode de silence.
+///
+/// Le projet avancé n'a pas de `CanonicalOptions` : ses options d'harmonisation
+/// et de silences arrivent en paramètres d'appel de l'export. La chaîne, elle,
+/// doit rester la même — c'est elle que le plan de conversion haché décrit,
+/// filtre par filtre.
+pub(crate) fn audio_filter_chain_for(
+    silence_mode: SilenceMode,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
+    action: &LoudnessAction,
+    edge_filters: Option<&EdgeSilenceFilters>,
+) -> String {
     let mut filters = Vec::new();
-    if matches!(options.silence_mode, SilenceMode::Normalize) {
+    if matches!(silence_mode, SilenceMode::Normalize) {
         if let Some(edge_filters) = edge_filters {
             filters.extend(edge_filters.pre_filters.clone());
         }
     }
     filters.push("aformat=channel_layouts=mono".to_string());
     filters.extend(build_loudness_filters(action));
-    match options.silence_mode {
+    match silence_mode {
         SilenceMode::Off => {}
         SilenceMode::Add => {
             let leading_silence_sec = normalized_silence_duration_sec(leading_silence_sec);
@@ -378,6 +416,33 @@ fn audio_filter_chain(
     filters.join(",")
 }
 
+/// Filtres de la mesure de volume qui décide du gain, commune aux deux éditeurs.
+///
+/// Le volume se mesure **sans les silences de bord**, quel que soit le mode de
+/// silences : ce mode ne règle que ce qu'on fait des bords en sortie. Sur un son
+/// court, les bords pèsent dans l'intégré et pourraient, mesurés, faire tomber
+/// dans la bande morte un son qui en sort. Bords illisibles : mesure du son
+/// entier.
+pub(crate) fn loudness_measure_filters(
+    measured_edges: Option<(f64, f64)>,
+    leading_silence_sec: f64,
+    trailing_silence_sec: f64,
+) -> Vec<String> {
+    let mut filters = measured_edges
+        .map(|(leading, trailing)| {
+            build_edge_silence_filters_with_targets(
+                leading,
+                trailing,
+                leading_silence_sec,
+                trailing_silence_sec,
+            )
+            .pre_filters
+        })
+        .unwrap_or_default();
+    filters.push("aformat=channel_layouts=mono".to_string());
+    filters
+}
+
 fn edge_plan_for_generation(
     ffmpeg: &Path,
     source: &Path,
@@ -399,18 +464,6 @@ fn edge_plan_for_generation(
         EdgeMeasure::Unreadable => None,
     };
 
-    let measure_pre_filters = measured_edges
-        .map(|(leading, trailing)| {
-            build_edge_silence_filters_with_targets(
-                leading,
-                trailing,
-                leading_silence_sec,
-                trailing_silence_sec,
-            )
-            .pre_filters
-        })
-        .unwrap_or_default();
-
     let output_filters = if matches!(options.silence_mode, SilenceMode::Normalize) {
         let (leading, trailing) = measured_edges.unwrap_or((0.0, 0.0));
         Some(build_edge_silence_filters_with_targets(
@@ -424,7 +477,6 @@ fn edge_plan_for_generation(
     };
 
     Ok(GenerationEdgePlan {
-        measure_pre_filters,
         output_filters,
         measured_edges,
     })
@@ -461,57 +513,39 @@ fn loudness_action_for_generation(
             loudness_action_reason(&action)
         ));
     }
-    let pending_warning = pending_audio_warning(measure.integrated_lufs, &action);
+    let pending_warning = harmonization_notice(measure.integrated_lufs, &action);
     Ok(GenerationLoudnessPlan {
         action,
         pending_warning,
     })
 }
 
-fn pending_audio_warning(
-    integrated_lufs: f64,
-    action: &LoudnessAction,
-) -> Option<PendingAudioWarning> {
-    let (gain_db, expected_limiting_db) = loudness_action_amounts(action);
-    if integrated_lufs < NEAR_MUTE_LUFS {
-        Some(PendingAudioWarning {
-            code: "AUDIO_NEAR_MUTE_BOOST",
-            initial_integrated_lufs: integrated_lufs,
-            gain_db,
-            expected_limiting_db,
-        })
-    } else if expected_limiting_db > MAX_LIMITING_DB {
-        Some(PendingAudioWarning {
-            code: "AUDIO_STRONG_LIMITING",
-            initial_integrated_lufs: integrated_lufs,
-            gain_db,
-            expected_limiting_db,
-        })
-    } else {
-        None
-    }
-}
-
-fn loudness_action_amounts(action: &LoudnessAction) -> (f64, f64) {
-    match action {
-        LoudnessAction::Gain { gain_db } => (*gain_db, 0.0),
-        LoudnessAction::GainLimit {
-            gain_db,
-            expected_limiting_db,
-        } => (*gain_db, *expected_limiting_db),
-        LoudnessAction::None | LoudnessAction::Uncorrectable { .. } => (0.0, 0.0),
-    }
-}
-
 fn build_generation_audio_warning(
     ffmpeg: &Path,
     output: &Path,
     role: &str,
-    pending: PendingAudioWarning,
+    pending: HarmonizationNotice,
 ) -> NativeGenerationWarning {
-    let label = generation_audio_label(role);
+    harmonization_warning(
+        ffmpeg,
+        output,
+        role.to_string(),
+        generation_audio_label(role),
+        pending,
+    )
+}
+
+/// L'avertissement montré à l'auteur, commun aux deux chaînes : seul le
+/// libellé change — une entrée de l'arbre ici, un Écran dans le graphe.
+pub(crate) fn harmonization_warning(
+    ffmpeg: &Path,
+    output: &Path,
+    role: String,
+    label: String,
+    pending: HarmonizationNotice,
+) -> NativeGenerationWarning {
     let final_integrated_lufs = measure_prepared_output_loudness(ffmpeg, output);
-    let message = if pending.code == "AUDIO_NEAR_MUTE_BOOST" {
+    let message = if pending.code == NOTICE_NEAR_MUTE_BOOST {
         format!(
             "L'audio « {} » était presque muet et a été fortement amplifié ; le bruit de fond peut être plus audible.",
             label
@@ -524,7 +558,7 @@ fn build_generation_audio_warning(
     };
     NativeGenerationWarning {
         code: pending.code.to_string(),
-        role: role.to_string(),
+        role,
         label,
         message,
         initial_integrated_lufs: pending.initial_integrated_lufs,
@@ -619,6 +653,7 @@ pub(crate) fn processed_audio_output_name(role: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::support::audio_norm::MAX_LIMITING_DB;
 
     #[test]
     fn verbatim_silence_conform_in_off_mode() {
@@ -706,16 +741,37 @@ mod tests {
     #[test]
     fn strong_limiting_becomes_a_non_blocking_warning() {
         let action = plan_loudness_fix(-32.0, 0.0);
-        let warning = pending_audio_warning(-32.0, &action).expect("avertissement attendu");
+        let warning = harmonization_notice(-32.0, &action).expect("avertissement attendu");
         assert_eq!(warning.code, "AUDIO_STRONG_LIMITING");
         assert_eq!(warning.gain_db, 18.0);
         assert_eq!(warning.expected_limiting_db, 20.0);
     }
 
+    /// Toudou « Cache-cache dans un arbre » : source déjà chaude (+4,3 après
+    /// passage en mono), aucun gain. Le limiteur protège le plafond ; ce n'est
+    /// pas l'harmonisation qui l'a imposé, rien n'est signalé.
+    #[test]
+    fn hot_source_limited_without_gain_is_not_signalled() {
+        let action = plan_loudness_fix(-15.7, 4.3);
+        assert!(matches!(
+            action,
+            LoudnessAction::GainLimit { gain_db, expected_limiting_db }
+                if gain_db == 0.0 && expected_limiting_db > MAX_LIMITING_DB
+        ));
+        assert!(harmonization_notice(-15.7, &action).is_none());
+    }
+
+    /// Toudou « Toudou dit non » : le gain s'arrête au budget, rien à signaler.
+    #[test]
+    fn narration_capped_at_budget_is_not_signalled() {
+        let action = plan_loudness_fix(-16.5, 2.4);
+        assert!(harmonization_notice(-16.5, &action).is_none());
+    }
+
     #[test]
     fn near_mute_audio_becomes_a_non_blocking_warning() {
         let action = plan_loudness_fix(-50.0, -55.0);
-        let warning = pending_audio_warning(-50.0, &action).expect("avertissement attendu");
+        let warning = harmonization_notice(-50.0, &action).expect("avertissement attendu");
         assert_eq!(warning.code, "AUDIO_NEAR_MUTE_BOOST");
         assert_eq!(warning.gain_db, 36.0);
     }

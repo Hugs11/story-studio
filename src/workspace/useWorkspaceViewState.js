@@ -8,7 +8,7 @@ import {
   WORKSPACE_PANEL_ORDER_CODEC,
 } from './panelLayout';
 
-export const SETTINGS_PANEL_WIDTH_MIN = 400;
+export const SETTINGS_PANEL_WIDTH_MIN = 200;
 export const SETTINGS_PANEL_WIDTH_MAX = 900;
 export const SETTINGS_PANEL_WIDTH_DEFAULT = 800;
 export const TREE_PANEL_WIDTH_DEFAULT = 320;

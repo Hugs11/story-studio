@@ -89,11 +89,14 @@
   padding-right: clamp(0px, 3vw, 44px);
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 
+/* Trois éditeurs et six actions : les deux grilles partagent les mêmes trois
+   colonnes, sans case vide. Elles se replient ensemble quand la zone rétrécit. */
 .mode-editor-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -105,8 +108,22 @@
 
 .mode-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 13px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@container (max-width: 660px) {
+  .mode-editor-grid,
+  .mode-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 420px) {
+  .mode-editor-grid,
+  .mode-action-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---- Tuiles (éditeurs + actions) ---- */
@@ -184,6 +201,16 @@
 .mode-tile--editor .mode-tile-desc {
   font-size: 12.5px;
   line-height: 1.4;
+}
+
+/* Repère de transition sous l'éditeur renommé, calé en bas de la carte. */
+.mode-tile-note {
+  margin-top: auto;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--muted);
+  opacity: 0.8;
 }
 
 /* ---- Liens secondaires ---- */
@@ -351,7 +378,10 @@
 }
 
 .mode-proj-sub {
+  overflow: hidden;
   font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--muted);
 }
 

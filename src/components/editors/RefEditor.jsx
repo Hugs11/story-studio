@@ -59,7 +59,6 @@ export const RefEditor = memo(function RefEditor({ node, allMenus = [], allStori
             type="button"
             onClick={onDelete}
             aria-label="Supprimer ce lien"
-            title="Supprimer ce lien"
           >
             <Trash2 className="card-danger-icon" />
           </button>

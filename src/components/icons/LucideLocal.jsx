@@ -54,6 +54,16 @@ const filePenNode = [
   ['path', { d: 'M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z' }],
 ];
 
+// L'archive — un pack déposé dans l'arbre.
+const fileArchiveNode = [
+  ['path', { d: 'M13.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v11.5' }],
+  ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
+  ['path', { d: 'M8 12v-1' }],
+  ['path', { d: 'M8 18v-2' }],
+  ['path', { d: 'M8 7V6' }],
+  ['circle', { cx: '8', cy: '20', r: '2' }],
+];
+
 const panelLeftNode = [
   ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
   ['path', { d: 'M9 3v18' }],
@@ -75,6 +85,24 @@ const networkNode = [
   ['path', { d: 'M12 12V8' }],
 ];
 
+// L'aiguillage — l'icône d'une Action.
+//
+// Une Action *est* un aiguillage ; lui donner l'icône du réseau la confondait
+// avec le panneau Graphe, juste au-dessus dans la même colonne.
+//
+// `cytoscapeEngine` peint **ce même tracé** dans le losange d'une Action, aux
+// mêmes coordonnées, simplement ramené au carré de 52 unités du canvas. Toute
+// retouche ici doit y être reportée : ce sont deux dessins du même motif.
+const waypointsNode = [
+  ['path', { d: 'm10.586 5.414-5.172 5.172' }],
+  ['path', { d: 'm18.586 13.414-5.172 5.172' }],
+  ['path', { d: 'M6 12h12' }],
+  ['circle', { cx: '12', cy: '20', r: '2' }],
+  ['circle', { cx: '12', cy: '4', r: '2' }],
+  ['circle', { cx: '20', cy: '12', r: '2' }],
+  ['circle', { cx: '4', cy: '12', r: '2' }],
+];
+
 const wrenchNode = [
   ['path', { d: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z' }],
 ];
@@ -84,6 +112,13 @@ const filePlusNode = [
   ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
   ['path', { d: 'M9 15h6' }],
   ['path', { d: 'M12 18v-6' }],
+];
+
+// Le Dossier fermé — le même tracé que `folderPlus`, sans le plus. Il vivait
+// dans le jeu de l'arbre, seul endroit de l'application qui distinguait un
+// Dossier replié d'un Dossier ouvert.
+const folderNode = [
+  ['path', { d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z' }],
 ];
 
 const folderOpenNode = [
@@ -158,6 +193,16 @@ const squareNode = [
   ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }],
 ];
 
+// L'Écran du graphe : le cadre distingue ce pictogramme d'une case à cocher.
+// Le canvas reprend ce tracé dans la texture de ses nœuds.
+const fullscreenNode = [
+  ['path', { d: 'M3 7V5a2 2 0 0 1 2-2h2' }],
+  ['path', { d: 'M17 3h2a2 2 0 0 1 2 2v2' }],
+  ['path', { d: 'M21 17v2a2 2 0 0 1-2 2h-2' }],
+  ['path', { d: 'M7 21H5a2 2 0 0 1-2-2v-2' }],
+  ['rect', { width: '10', height: '8', x: '7', y: '8', rx: '1' }],
+];
+
 const squareStackNode = [
   ['path', { d: 'M4 10c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2' }],
   ['path', { d: 'M10 16c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2' }],
@@ -187,6 +232,28 @@ const cropNode = [
   ['path', { d: 'M18 22V8a2 2 0 0 0-2-2H2' }],
 ];
 
+// Lucide « arrow-right-left » : échanger le fichier de l'emplacement.
+const arrowRightLeftNode = [
+  ['path', { d: 'm16 3 4 4-4 4' }],
+  ['path', { d: 'M20 7H4' }],
+  ['path', { d: 'm8 21-4-4 4-4' }],
+  ['path', { d: 'M4 17h16' }],
+];
+
+// Lucide « case-upper » : l'image-titre, fabriquée à partir d'un texte.
+const caseUpperNode = [
+  ['path', { d: 'M15 11h4.5a1 1 0 0 1 0 5h-4a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h3a1 1 0 0 1 0 5' }],
+  ['path', { d: 'm2 16 4.039-9.69a.5.5 0 0 1 .923 0L11 16' }],
+  ['path', { d: 'M3.304 13h6.392' }],
+];
+
+// Lucide « pencil ». `PenLine` existe déjà mais porte un trait de soulignement
+// qui dit « renommer » ; celle-ci dit « retoucher ».
+const pencilNode = [
+  ['path', { d: 'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z' }],
+  ['path', { d: 'm15 5 4 4' }],
+];
+
 const rotateCcwNode = [
   ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }],
   ['path', { d: 'M3 3v5h5' }],
@@ -203,6 +270,32 @@ const focusNode = [
   ['path', { d: 'M17 3h2a2 2 0 0 1 2 2v2' }],
   ['path', { d: 'M21 17v2a2 2 0 0 1-2 2h-2' }],
   ['path', { d: 'M7 21H5a2 2 0 0 1-2-2v-2' }],
+];
+
+const arrowRightNode = [
+  ['path', { d: 'M5 12h14' }],
+  ['path', { d: 'm12 5 7 7-7 7' }],
+];
+
+const arrowUpRightNode = [
+  ['path', { d: 'M7 7h10v10' }],
+  ['path', { d: 'M17 7 7 17' }],
+];
+
+const cornerUpLeftNode = [
+  ['polyline', { points: '9 14 4 9 9 4' }],
+  ['path', { d: 'M20 20v-7a4 4 0 0 0-4-4H4' }],
+];
+
+// Le losange — la nature Action du graphe, et le renvoi vers un graphe dans les
+// pastilles de navigation de l'arbre.
+const diamondNode = [
+  ['path', { d: 'M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z' }],
+];
+
+const penLineNode = [
+  ['path', { d: 'M12 20h9' }],
+  ['path', { d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z' }],
 ];
 
 const chevronRightNode = [
@@ -379,6 +472,15 @@ const youtubeNode = [
   ['path', { d: 'm10 15 5-3-5-3z' }],
 ];
 
+const gripVerticalNode = [
+  ['circle', { cx: '9', cy: '12', r: '1' }],
+  ['circle', { cx: '9', cy: '5', r: '1' }],
+  ['circle', { cx: '9', cy: '19', r: '1' }],
+  ['circle', { cx: '15', cy: '12', r: '1' }],
+  ['circle', { cx: '15', cy: '5', r: '1' }],
+  ['circle', { cx: '15', cy: '19', r: '1' }],
+];
+
 const ellipsisNode = [
   ['circle', { cx: '5', cy: '12', r: '1' }],
   ['circle', { cx: '12', cy: '12', r: '1' }],
@@ -415,12 +517,59 @@ const listTreeNode = [
   ['path', { d: 'M3 5v12a2 2 0 0 0 2 2h3' }],
 ];
 
+// `rows-2` et `columns-2` de Lucide. Elles disent le **résultat** du repli —
+// deux bandes empilées, ou deux colonnes voisines — et non le geste, ce qui
+// est ce que l'auteur choisit.
+const rows2Node = [
+  ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
+  ['path', { d: 'M3 12h18' }],
+];
+
+const columns2Node = [
+  ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
+  ['path', { d: 'M12 3v18' }],
+];
+
+const plusNode = [
+  ['path', { d: 'M5 12h14' }],
+  ['path', { d: 'M12 5v14' }],
+];
+
+// La Vue d'ensemble du graphe : une carte, qu'on ouvre ou qu'on replie.
+const mapNode = [
+  ['path', { d: 'M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z' }],
+  ['path', { d: 'M15 5.764v15' }],
+  ['path', { d: 'M9 3.236v15' }],
+];
+
+// Le rangement du graphe : un balai, parce qu'il remet de l'ordre sans rien
+// changer à l'histoire.
+const broomSparklesNode = [
+  ['path', { d: 'M11 2v2' }],
+  ['path', { d: 'M12 3h-2' }],
+  ['path', { d: 'M13.5 10.5 22 2' }],
+  ['path', { d: 'M14.734 13.841a2 2 0 00-.314-2.42L12.58 9.58a2 2 0 00-2.421-.314l-7.657 4.461A1 1 0 002.3 15.3l6.403 6.403a1 1 0 001.571-.204z' }],
+  ['path', { d: 'M20 15v4' }],
+  ['path', { d: 'M22 17h-4' }],
+  ['path', { d: 'M4 4v4' }],
+  ['path', { d: 'm5 18 2-2' }],
+  ['path', { d: 'M6 6H2' }],
+  ['path', { d: 'm7.699 10.7 5.602 5.601' }],
+];
+
 export const FilePen = createLocalLucideIcon(filePenNode);
+export const FileArchive = createLocalLucideIcon(fileArchiveNode);
 export const PanelLeft = createLocalLucideIcon(panelLeftNode);
 export const Mic = createLocalLucideIcon(micNode);
 export const Network = createLocalLucideIcon(networkNode);
+// `MapIcon` et non `Map` : un import nommé `Map` masquerait le `Map` natif
+// dans le module qui l'importe.
+export const MapIcon = createLocalLucideIcon(mapNode);
+export const BroomSparkles = createLocalLucideIcon(broomSparklesNode);
+export const Waypoints = createLocalLucideIcon(waypointsNode);
 export const Wrench = createLocalLucideIcon(wrenchNode);
 export const FilePlus = createLocalLucideIcon(filePlusNode);
+export const Folder = createLocalLucideIcon(folderNode);
 export const FolderOpen = createLocalLucideIcon(folderOpenNode);
 export const Save = createLocalLucideIcon(saveNode);
 export const Download = createLocalLucideIcon(downloadNode);
@@ -433,14 +582,23 @@ export const Play = createLocalLucideIcon(playNode);
 export const Pause = createLocalLucideIcon(pauseNode);
 export const CircleStop = createLocalLucideIcon(circleStopNode);
 export const Square = createLocalLucideIcon(squareNode);
+export const Fullscreen = createLocalLucideIcon(fullscreenNode);
 export const SquareStack = createLocalLucideIcon(squareStackNode);
 export const SkipBack = createLocalLucideIcon(skipBackNode);
 export const SkipForward = createLocalLucideIcon(skipForwardNode);
 export const Scissors = createLocalLucideIcon(scissorsNode);
 export const Crop = createLocalLucideIcon(cropNode);
+export const ArrowRightLeft = createLocalLucideIcon(arrowRightLeftNode);
+export const Pencil = createLocalLucideIcon(pencilNode);
+export const CaseUpper = createLocalLucideIcon(caseUpperNode);
 export const RotateCcw = createLocalLucideIcon(rotateCcwNode);
 export const IterationCcw = createLocalLucideIcon(iterationCcwNode);
 export const Focus = createLocalLucideIcon(focusNode);
+export const ArrowRight = createLocalLucideIcon(arrowRightNode);
+export const ArrowUpRight = createLocalLucideIcon(arrowUpRightNode);
+export const CornerUpLeft = createLocalLucideIcon(cornerUpLeftNode);
+export const Diamond = createLocalLucideIcon(diamondNode);
+export const PenLine = createLocalLucideIcon(penLineNode);
 export const ChevronRight = createLocalLucideIcon(chevronRightNode);
 export const ChevronLeft = createLocalLucideIcon(chevronLeftNode);
 export const ChevronDown = createLocalLucideIcon(chevronDownNode);
@@ -473,7 +631,11 @@ export const Search = createLocalLucideIcon(searchNode);
 export const Rss = createLocalLucideIcon(rssNode);
 export const Youtube = createLocalLucideIcon(youtubeNode);
 export const Ellipsis = createLocalLucideIcon(ellipsisNode);
+export const GripVertical = createLocalLucideIcon(gripVerticalNode);
 export const ShieldCheck = createLocalLucideIcon(shieldCheckNode);
 export const Layers = createLocalLucideIcon(layersNode);
 export const UnfoldVertical = createLocalLucideIcon(unfoldVerticalNode);
 export const ListTree = createLocalLucideIcon(listTreeNode);
+export const Rows2 = createLocalLucideIcon(rows2Node);
+export const Columns2 = createLocalLucideIcon(columns2Node);
+export const Plus = createLocalLucideIcon(plusNode);

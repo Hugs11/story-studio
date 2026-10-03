@@ -2,7 +2,9 @@
 // The React hook useAutosave() consumes these directly so the branching is
 // covered by Node-side tests without spinning up the Tauri/React runtime.
 
-import { visitProjectEntries } from './projectModel.js';
+import { visitProjectEntries } from './projectModel/index.js';
+import { isAdvancedProject } from './projectModel/envelope.js';
+import { hasProjectTree } from './projectWorkState.js';
 
 export const AUTOSAVE_ACTIONS = Object.freeze({
   SKIP_BUSY: 'skip-busy',
@@ -109,10 +111,18 @@ function isPristinePlaceholderStory(entry) {
 
 export function isProjectWorthAutosaving(project, mediaLibraryPaths = [], totalMediaCount = 0) {
   if (!project) return false;
+  // Un projet avancé porte son document d'auteur depuis l'acquisition : il n'a
+  // ni arbre, ni médias racine, ni titre obligatoire à inventorier, et l'absence
+  // des trois ne le rend pas vide. Le juger sur l'inventaire Libre reviendrait à
+  // refuser tout snapshot à un graphe ou un contexte édité — c'est la même
+  // lecture que `isProjectDirty`, qui décide de la sauvegarde explicite.
+  if (isAdvancedProject(project)) return true;
   // Check media presence before projectType so imported folders/AI media trigger autosave
   if (mediaLibraryPaths.length > 0) return true;
   if (totalMediaCount > 0) return true;
-  if (project.projectType == null) return false;
+  // L'avancé est déjà sorti plus haut : ce qui reste sans arbre est un accueil
+  // sans projet, et l'inventaire Libre qui suit n'aurait rien à parcourir.
+  if (!hasProjectTree(project)) return false;
   // Un nom saisi est déjà un contenu utilisateur (en mode simple, le champ
   // « Nom de l'histoire » écrit projectName, pas le nom de l'entrée story).
   if (String(project.projectName ?? '').trim() || String(project.packMetadata?.title ?? '').trim()) return true;

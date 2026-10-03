@@ -36,21 +36,22 @@ pub(crate) fn project_dir_from_save_path(save_path: &str) -> Result<PathBuf, Str
         })
 }
 
-pub(crate) fn workspace_or_project_dir(
+/// Racine où un outil écrit un média produit (micro, voix, découpe, assemblage,
+/// édition d'un fichier externe) : le dossier de session tant que le projet
+/// n'est pas enregistré, puis l'emplacement de travail. Le dossier du `.mbah`
+/// n'est jamais un repli, sans quoi un projet rangé hors de l'emplacement de
+/// travail ferait pousser une seconde arborescence gérée à côté de son fichier.
+pub(crate) fn media_output_root(
     workspace_dir: Option<&str>,
-    save_path: Option<&str>,
     missing_message: &str,
 ) -> Result<PathBuf, String> {
-    if let Some(workspace_dir) = workspace_dir
+    match workspace_dir
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
-        return absolute_path(workspace_dir, "Emplacement de travail");
+        Some(workspace_dir) => absolute_path(workspace_dir, "Emplacement de travail"),
+        None => Err(missing_message.to_string()),
     }
-    if let Some(save_path) = save_path.map(str::trim).filter(|value| !value.is_empty()) {
-        return project_dir_from_save_path(save_path);
-    }
-    Err(missing_message.to_string())
 }
 
 pub(crate) fn ensure_managed_project_file(

@@ -345,7 +345,7 @@ fn walk_story_doc_to_entries_inner(
                     );
                     if term_audio.is_some() || term_image.is_some() {
                         // Nœud intermédiaire avec audio/image → le préserver comme entrée menu
-                        // (ex: "qui sera le héros ?" dans Example story)
+                        // (ex: "qui sera le héros ?" dans une histoire de démonstration)
                         vec![serde_json::json!({
                             "id": stage_uuid(terminal).unwrap_or(""),
                             "type": "menu",
@@ -422,14 +422,8 @@ fn walk_story_doc_to_entries_inner(
         &story_play_stage_ids,
         &existing_story_stage_ids,
     );
-    let pre_graph_night_mode_detection = detect_imported_night_mode(
-        night_mode_available,
-        sq_id,
-        &entries,
-        &stages,
-        &actions,
-        assets,
-    );
+    let pre_graph_night_mode_detection =
+        detect_imported_night_mode(sq_id, &entries, &stages, &actions, assets);
     let unresolved_transitions = assign_return_targets(&mut entries, &stage_names);
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
@@ -461,15 +455,8 @@ fn walk_story_doc_to_entries_inner(
         shared_entries = graph_projection.shared_entries;
     }
     let night_mode_detection = if uses_graph_import_projection {
-        detect_imported_night_mode(
-            night_mode_available,
-            sq_id,
-            &entries,
-            &stages,
-            &actions,
-            assets,
-        )
-        .or(pre_graph_night_mode_detection)
+        detect_imported_night_mode(sq_id, &entries, &stages, &actions, assets)
+            .or(pre_graph_night_mode_detection)
     } else {
         pre_graph_night_mode_detection
     };
@@ -520,7 +507,8 @@ fn walk_story_doc_to_entries_inner(
         .unwrap_or("")
         .to_string();
     let night_mode_detected = night_mode_audio.is_some();
-    let effective_night_mode_detected = night_mode_detected && !auto_next_detected;
+    let effective_night_mode_detected =
+        night_mode_detected && night_mode_available && !auto_next_detected;
 
     Ok(serde_json::json!({
         "rootId": format!("import-root:{}", sq_id),
@@ -1037,7 +1025,7 @@ pub(super) fn walk_entry(
                 }
                 1 => {
                     // Cas spécial : terminal autoplay avec 1 seule cible étant un nœud de navigation
-                    // (wheel=true, N≥2 options) — ex: Contemporaine-sélecteur → Example (5 films).
+                    // (wheel=true, N≥2 options) — ex: Sélecteur contemporain → Exemple (5 choix).
                     // Créer un menu au lieu d'une histoire pour conserver la structure complète.
                     if is_stage_autoplay(terminal) {
                         let single_next_id = term_opts[0];
@@ -1288,7 +1276,7 @@ pub(super) fn walk_entry(
                     let term_image =
                         resolve_asset(terminal.get("image").and_then(|v| v.as_str()), assets);
                     // Si le terminal a un audio propre, c'est un vrai nœud de sélection
-                    // (ex: "qui Example va-t-elle rencontrer ?") → sous-menu imbriqué.
+                    // (ex: "qui le héros va-t-il rencontrer ?") → sous-menu imbriqué.
                     if term_audio.is_some() {
                         let sub = serde_json::json!({
                             "id": stage_uuid(terminal).unwrap_or(""),

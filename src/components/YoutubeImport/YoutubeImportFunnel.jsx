@@ -19,6 +19,8 @@ import {
   Youtube,
 } from '../icons/LucideLocal';
 import { KEYS, read as readSetting, write as writeSetting } from '../../store/persistentSettings';
+import { errorMessage, isYoutubeBlocked } from '../../utils/youtubeErrors.js';
+import { releaseTauriListener } from '../../utils/tauriListener';
 import './YoutubeImportFunnel.css';
 
 const STEPS = [
@@ -67,7 +69,7 @@ function hasMultipleLanguages(languages) {
  * Premier usage : avertissement CGU (accepté une fois) puis téléchargement
  * automatique de yt-dlp, reflété par l'écran « Préparation… ».
  */
-export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
+export function YoutubeImportFunnel({ onClose, onImport, mode = 'home', toLibrary = false }) {
   const ytDlpPath = useMemo(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }), []);
   const cguAccepted = useMemo(() => readSetting(KEYS.YOUTUBE_CGU_ACCEPTED) === 'true', []);
 
@@ -98,7 +100,7 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
     listen('youtube-log', (event) => setLogMessage(String(event.payload ?? ''))).then((fn) => {
       unlisten = fn;
     });
-    return () => { unlisten?.(); };
+    return () => { releaseTauriListener(unlisten); };
   }, []);
 
   const videos = list?.videos ?? [];
@@ -273,7 +275,14 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
         setPhase('collect');
         return;
       }
-    } catch {
+    } catch (err) {
+      // Un blocage de YouTube empêcherait aussi les téléchargements : insister
+      // ne ferait que le prolonger.
+      if (isYoutubeBlocked(err)) {
+        setError(errorMessage(err));
+        setPhase('collect');
+        return;
+      }
       // Métadonnées absentes/incomplètes : l'import historique reste utilisable.
     }
     await runImport(chosen);
@@ -298,7 +307,9 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
       : 'Importer');
 
   const subtitle = mode === 'editor'
-    ? 'Importe des vidéos YouTube comme histoires dans ce projet.'
+    ? (toLibrary
+      ? 'Importe l’audio et les vignettes YouTube dans les médias du projet.'
+      : 'Importe des vidéos YouTube comme histoires dans ce projet.')
     : 'Colle une URL YouTube, puis choisis les vidéos à transformer en histoires.';
 
   return (
@@ -404,7 +415,9 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
             </label>
           </form>
           <p className="youtube-funnel-hint">
-            Tu pourras filtrer et sélectionner les vidéos avant qu'elles soient ajoutées dans l'arbre.
+            Tu pourras filtrer et sélectionner les vidéos avant {toLibrary
+              ? "de retrouver leurs médias dans la bibliothèque."
+              : "qu'elles soient ajoutées dans l'arbre."}
           </p>
           {error && <div className="funnel-error" role="alert">{error}</div>}
         </div>
@@ -413,7 +426,9 @@ export function YoutubeImportFunnel({ onClose, onImport, mode = 'home' }) {
           <FunnelSectionHeader
             icon={<Youtube />}
             title={list?.title || 'YouTube'}
-            description="Sélectionne les vidéos à importer dans le pack."
+            description={toLibrary
+              ? 'Sélectionne les vidéos dont tu veux importer l’audio et la vignette.'
+              : 'Sélectionne les vidéos à importer dans le pack.'}
             trailing={(
               <span className="funnel-badge">
                 {videos.length > 0

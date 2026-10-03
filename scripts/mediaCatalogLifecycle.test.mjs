@@ -14,7 +14,9 @@ import {
 import {
   buildEditedImageDestination,
   buildEditedImageFileName,
+  exportWorkspaceDir,
   isDeletableWorkspaceMediaPath,
+  mediaOutputWorkspaceDir,
 } from '../src/store/workspaceDirs.js';
 import { pathKey } from '../src/utils/fileUtils.js';
 import {
@@ -32,6 +34,35 @@ function projectWith(entries) {
     globalOptions: {},
   };
 }
+
+test('workspace output policy distinguishes temporary sessions, saved projects and exports', () => {
+  assert.equal(mediaOutputWorkspaceDir({
+    sessionMode: 'ephemeral',
+    sessionWorkspaceDir: 'C:/cache/session-1',
+    workspaceEnabled: false,
+    configuredWorkspaceDir: 'D:/workspace',
+  }), 'C:/cache/session-1');
+  assert.equal(mediaOutputWorkspaceDir({
+    sessionMode: 'project',
+    workspaceEnabled: true,
+    configuredWorkspaceDir: 'D:/workspace',
+  }), 'D:/workspace');
+  // Option désactivée : un projet enregistré, même rangé ailleurs, envoie les
+  // sorties des outils dans l'emplacement de travail, jamais à côté du `.mbah`.
+  assert.equal(mediaOutputWorkspaceDir({
+    sessionMode: 'project',
+    workspaceEnabled: false,
+    configuredWorkspaceDir: 'D:/workspace',
+  }), 'D:/workspace');
+  assert.equal(exportWorkspaceDir({
+    workspaceEnabled: true,
+    configuredWorkspaceDir: 'D:/workspace',
+  }), 'D:/workspace');
+  assert.equal(exportWorkspaceDir({
+    workspaceEnabled: false,
+    configuredWorkspaceDir: 'D:/workspace',
+  }), '');
+});
 
 test('the media catalog keeps case-distinct Linux files with spaces and accents', () => {
   const upper = '/tmp/Médias de test/A.wav';

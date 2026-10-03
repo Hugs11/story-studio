@@ -33,11 +33,12 @@ import {
 } from '../icons/LucideLocal';
 import { pickAudio, pickImage, pickMultipleZip, getLastExportDir, saveLastExportDir } from '../../hooks/useFileDialog';
 import { copyMediaToWorkspace, projectToRustExport } from '../../store/projectIO';
-import { createZipEntry, DEFAULT_PACK_METADATA, normalizeProjectData } from '../../store/projectModel';
+import { buildAggregateProject, defaultMetadataForPacks } from './aggregateProject.js';
 import { sanitizeImportedName } from '../../store/projectStore';
 import { useProjectContext } from '../../store/ProjectContext';
 import { isTtsAvailable } from '../../store/xttsSettings';
 import { parseConventionName, generateConventionName } from '../../utils/packConvention';
+import { generateUuid } from '../../utils/uuid';
 import { basename, basenameNoExt } from '../../utils/fileUtils';
 import { logger } from '../../utils/logger';
 import { useLocalFile } from '../../hooks/useLocalFile';
@@ -80,52 +81,6 @@ function getPackStoryCount(data) {
   return Math.max(0, stages.filter((stage) => !stage?.squareOne).length);
 }
 
-function defaultMetadataForPacks(packs) {
-  const parsed = packs
-    .map((pack) => parseConventionName(pack.name || pack.fileName))
-    .filter(Boolean);
-  const ages = parsed
-    .map((item) => Number.parseInt(item.minAge, 10))
-    .filter((age) => Number.isFinite(age) && age > 0);
-  return {
-    ...DEFAULT_PACK_METADATA,
-    title: 'Mes histoires du soir',
-    minAge: ages.length ? String(Math.min(...ages)) : '3',
-    version: 1,
-  };
-}
-
-function buildAggregateProject({ packs, rootAudio, rootImage, metadata }) {
-  return normalizeProjectData({
-    version: 1,
-    projectName: metadata.title || 'Pack agrégé',
-    rootName: metadata.title || 'Menu racine',
-    packMetadata: metadata,
-    projectType: 'pack',
-    rootAudio,
-    rootImage,
-    thumbnailImage: rootImage,
-    sameImage: true,
-    // L'audio racine (menu agrégé) est le seul asset natif : il est harmonisé en
-    // loudness et ses silences de bord normalisés. Les assets internes des ZIP
-    // agrégés sont recopiés verbatim depuis l'archive et ne passent pas par la
-    // pipeline audio — pas d'option exposée, ce traitement ne concerne que la racine.
-    globalOptions: {
-      silenceMode: 'normalize',
-      harmonizeLoudness: true,
-      autoNext: false,
-      nightMode: false,
-      aiImageGen: false,
-    },
-    rootEntries: packs.map((pack) => createZipEntry({
-      name: pack.name,
-      zipPath: pack.path,
-      coverImage: pack.coverImage,
-      coverAudio: pack.coverAudio,
-    })),
-  });
-}
-
 export function AggregatePacksFunnel({ onClose }) {
   const { xttsSettings, onUpdateXttsSettings } = useProjectContext();
   const [step, setStep] = useState(0);
@@ -133,7 +88,9 @@ export function AggregatePacksFunnel({ onClose }) {
   const [loadingPacks, setLoadingPacks] = useState(false);
   const [rootAudio, setRootAudio] = useState('');
   const [rootImage, setRootImage] = useState('');
-  const [metadata, setMetadata] = useState(() => defaultMetadataForPacks([]));
+  // L'identité du pack est tirée une fois, à l'ouverture de l'assistant : les
+  // générations successives livrent le même pack, qui remplace le précédent.
+  const [metadata, setMetadata] = useState(() => defaultMetadataForPacks([], generateUuid()));
   const [outputDir, setOutputDir] = useState(() => getLastExportDir() || '');
   const [phase, setPhase] = useState('collect'); // collect | generating | done
   const [progress, setProgress] = useState(0);
@@ -167,7 +124,7 @@ export function AggregatePacksFunnel({ onClose }) {
     if (packs.length === 0) return;
     setMetadata((current) => {
       if (current.title && current.title !== 'Mes histoires du soir') return current;
-      return { ...current, ...defaultMetadataForPacks(packs) };
+      return { ...current, ...defaultMetadataForPacks(packs, current.uuid) };
     });
   }, [packs]);
 
@@ -696,7 +653,6 @@ export function AggregatePacksFunnel({ onClose }) {
       {recordOpen && (
         <Suspense fallback={null}>
           <RecordModal
-            savePath={null}
             workspaceDir={sessionDirRef.current || null}
             projectName={metadata.title || 'agregation'}
             onSaved={(path) => {

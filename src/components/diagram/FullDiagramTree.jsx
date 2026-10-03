@@ -4,7 +4,8 @@ import { findParentMenuId, findEntryById } from '../../store/projectModel';
 import { KEYS, read, write } from '../../store/persistentSettings';
 import { useProjectActions } from '../../store/ProjectActionsContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
-import { isModalSurfaceOpen } from '../../utils/modalSurfaces';
+import { surfaceShortcutsSuspended } from '../../utils/shortcutTarget';
+import { useShortcutLabels } from '../../store/ShortcutLabelsContext';
 import { ContextMenu } from '../TreePanel/ContextMenu';
 import {
   BUTTON_ZOOM_FACTOR,
@@ -15,7 +16,7 @@ import {
 } from './flowDiagramLayout';
 import { buildFocusProject } from './fullDiagramFocus.js';
 import { FullDiagramNode } from './FullDiagramNode.jsx';
-import { StructureActionsBar } from '../structure/StructureActionsBar.jsx';
+import { StructureActionsBar, StructureSearchButton } from '../structure/StructureActionsBar.jsx';
 import { useDiagramViewport } from './diagram/useDiagramViewport';
 import { getDiagramViewportLayoutKey } from './diagram/viewportGeometry.js';
 import { useDiagramNodeDrag } from './diagram/useDiagramNodeDrag';
@@ -46,7 +47,8 @@ import { getStructureLevelLayout } from './diagram/structureLevelLayout';
 import { StructureFocusBar } from './diagram/StructureFocusBar';
 import { StructureLevelSummaryNode } from './diagram/StructureLevelSummaryNode';
 import { StructureDiagramLayer } from './diagram/StructureDiagramLayer';
-import { IconMoon, IconStop } from '../TreePanel/TreeIcons';
+import { NodeIcon } from '../icons/NodeIcon.jsx';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../../store/projectWorkState.js';
 
 const NODE_REVEAL_MINIMUM_ZOOM = 0.5;
 
@@ -69,6 +71,7 @@ export function CompleteDiagramTree({
   onOpenLocalEndSettings,
   controlsHost = null,
   showActionsBar = false,
+  onSearch = null,
   showHint = false,
 }) {
   const {
@@ -79,6 +82,7 @@ export function CompleteDiagramTree({
     onImportYoutube,
     onRecord,
     onGenerateStoryTts,
+    canRecord,
     canGenerateStoryTts,
     onAddMenu,
     onAddStoryToMenu,
@@ -113,6 +117,7 @@ export function CompleteDiagramTree({
   const activeNavigationEdgeIdRef = useRef(null);
   const activeStructureEdgeIdRef = useRef(null);
   const kbHandlersRef = useRef(null);
+  const shortcutLabels = useShortcutLabels();
   const selectNode = onSelectNode ?? defaultOnSelect;
 
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, nodeId, nodeType }
@@ -171,6 +176,7 @@ export function CompleteDiagramTree({
     if (entry?.type === 'menu') return selectedId;
     return findParentMenuId(project, selectedId, projectIndex) ?? null;
   }, [project, projectIndex, selectedId]);
+  const canAddStories = project?.projectType === 'pack';
   const layout = useMemo(() => getStructureLevelLayout(visibleProject, getCompleteMetrics(compactMode), {
     expandedStoryGroupIds,
   }), [visibleProject, compactMode, expandedStoryGroupIds]);
@@ -509,16 +515,17 @@ export function CompleteDiagramTree({
     handleCut,
     handlePaste,
     handleDeleteSelection,
+    onDuplicate,
     selectedId: selectedIds?.size ? selectedId : null,
+    selectionSize: selectedIds?.size ?? 0,
+    selectedType: selectedId ? (projectIndex?.entryById.get(selectedId)?.type ?? null) : null,
   };
 
   useEffect(() => {
     function onKeyDown(e) {
-      // Même garde que useAppShortcuts : couper/coller/supprimer un nœud du
-      // diagramme ne doit pas agir derrière une modale ouverte.
-      if (isModalSurfaceOpen()) return;
-      const tag = e.target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+      // La garde commune des surfaces : rien derrière une modale ouverte, rien
+      // dans un champ de saisie.
+      if (surfaceShortcutsSuspended(e)) return;
       if (e.key === 'Escape' && (activeNavigationEdgeIdRef.current || activeStructureEdgeIdRef.current)) {
         setHoveredNavigationEdgeId(null);
         setPinnedNavigationEdgeId(null);
@@ -529,14 +536,27 @@ export function CompleteDiagramTree({
         e.stopPropagation();
         return;
       }
-      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'diagram');
-      if (!actionId) return;
-      const { handleCopy: copy, handleCut: cut, handlePaste: paste, handleDeleteSelection: del, selectedId: sid } = kbHandlersRef.current;
+      // Les commandes de sélection, partagées avec l'arbre et le graphe.
+      // Renommer n'a pas de forme dans le diagramme : sa touche reste libre.
+      const actionId = findShortcutAction(e, getCurrentShortcuts(), 'selection');
+      if (!actionId || actionId === 'selectionRename') return;
+      const {
+        handleCopy: copy, handleCut: cut, handlePaste: paste, handleDeleteSelection: del,
+        onDuplicate: duplicate, selectedId: sid, selectionSize, selectedType,
+      } = kbHandlersRef.current;
+      // Dupliquer vise un seul nœud, comme son entrée du menu contextuel.
+      if (actionId === 'selectionDuplicate') {
+        if (!duplicate || !sid || selectionSize !== 1
+          || !['menu', 'story', 'zip'].includes(selectedType)) return;
+        e.preventDefault();
+        duplicate(sid);
+        return;
+      }
       e.preventDefault();
-      if (actionId === 'diagramCopy') copy(sid);
-      else if (actionId === 'diagramCut') cut(sid);
-      else if (actionId === 'diagramPaste') paste(sid);
-      else if (actionId === 'diagramDelete') void del(sid);
+      if (actionId === 'selectionCopy') copy(sid);
+      else if (actionId === 'selectionCut') cut(sid);
+      else if (actionId === 'selectionPaste') paste(sid);
+      else if (actionId === 'selectionDelete') void del(sid);
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -554,6 +574,7 @@ export function CompleteDiagramTree({
 
   function buildActions(nodeId, nodeType) {
     return buildDiagramContextActions({
+      shortcutLabels,
       project,
       projectIndex,
       selectedIds,
@@ -615,29 +636,34 @@ export function CompleteDiagramTree({
           onFilterChange={handleSearchFilterChange}
         />
         {showActionsBar ? (
-        <div className="fd-complete-topbar">
           <StructureActionsBar
-            variant="floating"
+            variant="canvas"
             targetMenuId={structureActionTargetMenuId}
-            onAddStory={onAddStoryToMenu}
-            onAddFolder={onAddMenu}
-            onImportFolder={onImportFolder}
-            onImportPodcast={onImportPodcast}
-            onImportYoutube={onImportYoutube}
-            onRecord={onRecord}
-            onGenerateStoryTts={onGenerateStoryTts}
+            onAddStory={canAddStories ? onAddStoryToMenu : null}
+            onAddFolder={canAddStories ? onAddMenu : null}
+            onImportFolder={canAddStories ? onImportFolder : null}
+            onImportPodcast={canAddStories ? onImportPodcast : null}
+            onImportYoutube={canAddStories ? onImportYoutube : null}
+            onRecord={canAddStories ? onRecord : null}
+            onGenerateStoryTts={canAddStories ? onGenerateStoryTts : null}
+            canRecord={canRecord}
             canGenerateStoryTts={canGenerateStoryTts}
             onLaunchSimulator={onSimulateRoot}
-            showLabel
-            availableInlineSize={containerWidth}
+            availableInlineSize={containerWidth ? containerWidth - 24 : null}
+            trailing={onSearch && (
+              <StructureSearchButton
+                label="Rechercher dans le diagramme"
+                onClick={onSearch}
+              />
+            )}
           />
-        </div>
         ) : null}
         <DiagramZoomControls
           zoomValueRef={zoomValueRef}
           zoom={zoomRef.current}
           onZoomIn={() => handleZoom(BUTTON_ZOOM_FACTOR)}
           onZoomOut={() => handleZoom(1 / BUTTON_ZOOM_FACTOR)}
+          onFit={() => fitViewportToLayout(layout, viewportLayoutKey)}
         />
         <StructureFocusBar
           focus={structureFocus}
@@ -814,7 +840,10 @@ export function CompleteDiagramTree({
                 title={`Ouvrir les réglages : ${node.label}`}
               >
                 <span className="fd-local-end-node-icon">
-                  {node.kind === 'sequence' ? <IconStop /> : <IconMoon />}
+                  <NodeIcon
+                    workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+                    nature={node.kind === 'sequence' ? 'end-node' : 'end-night'}
+                  />
                 </span>
                 <span className="fd-local-end-node-text">{node.label}</span>
               </button>

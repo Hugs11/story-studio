@@ -30,7 +30,7 @@ fidelity-dump/
 # Local agent / assistant instructions (not part of the public repo)
 AGENTS.md
 CLAUDE.md
-Documentation/
+[D]ocumentation/
 docs/internal/
 
 # Local environment overrides
@@ -81,6 +81,17 @@ story-editor.png
 center-scrolled.png
 .playwright-mcp/
 
+# Campagne e2e : chemins propres au poste et artefacts d'exécution
+e2e/local.config.json
+e2e/local.c3a-suspects.json
+e2e/artifacts/
+
 # Backups projet générés à l'exécution
 sauvegardes/
 .story-studio-backups/
+
+# Caches Python (oracle Lunii.QT e2e)
+__pycache__/
+
+# Rapports locaux des bancs de graphe
+bench/artifacts/

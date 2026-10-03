@@ -17,7 +17,7 @@ src-tauri/gen/
 src-tauri/tools/linux-x86_64/
 src-tauri/tools/macos-aarch64/
 node_modules/
-Documentation/
+[D]ocumentation/
 linux-0.9.6/
 AGENTS.md
 .git/

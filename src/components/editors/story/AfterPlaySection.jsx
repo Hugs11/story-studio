@@ -30,7 +30,9 @@ import {
 import { EndSequenceEditor } from './EndSequenceEditor';
 import { StoryDisclosure } from './StoryDisclosure';
 import { ChevronDown, ChevronUp, CircleStop, Pause, Trash2 } from '../../icons/LucideLocal';
-import { IconArchive, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../../TreePanel/TreeIcons';
+import { NodeIcon } from '../../icons/NodeIcon.jsx';
+import { hierarchicalNatureOf } from '../../../store/nodeIconVocabulary.js';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../../../store/projectWorkState.js';
 import { useErrorDialog } from '../../common/Dialog';
 import { useProjectActions } from '../../../store/ProjectActionsContext';
 import { useProjectContext } from '../../../store/ProjectContext';
@@ -65,11 +67,14 @@ function RouteArrow() {
 }
 
 function RouteTargetIcon({ type, nightMode = false }) {
-  if (type === 'story') return <IconStory />;
-  if (type === 'zip') return <IconArchive />;
-  if (type === 'root') return <IconHouse />;
-  if (type === 'end-node') return nightMode ? <IconMoon /> : <IconStop />;
-  return <IconFolderOpen />;
+  // Une cible de navigation est toujours nommee a cote de son dessin. Le repli
+  // est le Dossier.
+  return (
+    <NodeIcon
+      workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+      nature={hierarchicalNatureOf(type, { night: nightMode }) ?? 'menu'}
+    />
+  );
 }
 
 function routeTypeFromTarget(target, project) {

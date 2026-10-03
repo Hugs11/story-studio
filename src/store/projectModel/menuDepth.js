@@ -11,8 +11,20 @@ export const MENU_DEPTH_LIMIT_CODE = 'menu_depth_limit';
 
 export const MENU_DEPTH_LIMIT_REACHED_MESSAGE =
   `Limite de ${MAX_MENU_DEPTH} Dossiers imbriqués atteinte.`;
+export const MENU_DEPTH_LIMIT_TITLE = 'Limite d’imbrication';
 
-export function formatProjectMenuDepthError(observedDepth) {
+// L'autre contrainte de structure des Dossiers : aucun ne se range dans son
+// propre sous-arbre. Le glisser la montre au survol, le couper-coller la dit
+// au collage ; les deux emploient la même phrase.
+export const MENU_CYCLE_CODE = 'menu_cycle';
+export const MENU_CYCLE_MESSAGE =
+  'Un Dossier ne peut pas être déplacé dans lui-même ni dans l’un de ses sous-dossiers.';
+export const MENU_CYCLE_PASTE_TITLE = 'Collage impossible';
+export const MENU_CYCLE_PASTE_MESSAGE =
+  'Un Dossier ne peut pas être collé dans lui-même ni dans l’un de ses sous-dossiers. '
+  + 'Il est toujours coupé : choisissez un autre emplacement.';
+
+function formatProjectMenuDepthError(observedDepth) {
   return `Ce projet contient ${observedDepth} Dossiers imbriqués. Story Studio en prend en charge au maximum ${MAX_MENU_DEPTH}.`;
 }
 
@@ -102,7 +114,7 @@ export function getProjectMenuDepthDiagnostic(project) {
   return deepest;
 }
 
-export function getProjectMaxMenuDepth(project) {
+function getProjectMaxMenuDepth(project) {
   return getProjectMenuDepthDiagnostic(project).observedDepth;
 }
 
@@ -124,7 +136,7 @@ export function getMenuSubtreeHeight(entry) {
   return maxHeight;
 }
 
-export function getEntriesMenuHeight(entries) {
+function getEntriesMenuHeight(entries) {
   return (entries ?? []).reduce(
     (height, entry) => Math.max(height, getMenuSubtreeHeight(entry)),
     0,

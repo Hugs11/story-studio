@@ -13,6 +13,79 @@
   container-type: size;
 }
 
+/* Les états d'attente et d'erreur sont des bandeaux autonomes : ils ne
+   reprennent ni les dimensions ni l'ombre du simulateur Lunii. */
+.floating-simulator--notice {
+  box-sizing: border-box;
+  width: min(620px, calc(100vw - 32px));
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+  height: auto;
+  aspect-ratio: auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  container-type: normal;
+}
+
+.floating-simulator-notice {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: min(60vh, 360px);
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 52px 14px 16px;
+  border: 1px solid var(--borderLt);
+  border-radius: var(--radius-md);
+  background: var(--bg1);
+  color: var(--text-secondary);
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+.floating-simulator-notice--error {
+  padding: 16px 52px 16px 16px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.floating-simulator-notice__close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--muted);
+}
+
+.floating-simulator-notice__close:hover:not(:disabled) {
+  background: var(--danger-bg-hover);
+  color: var(--danger-text);
+}
+
+.floating-simulator-notice__title {
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+.floating-simulator-notice--error .floating-simulator-notice__title {
+  color: inherit;
+}
+
+.floating-simulator-notice__message {
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.floating-simulator-notice--error .floating-simulator-notice__message {
+  color: inherit;
+}
+
 .floating-simulator .lunii-sim {
   width: 100%;
   height: 100%;

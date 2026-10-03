@@ -11,7 +11,17 @@ export function createEphemeralSnapshotSeedState({
     inFlight: null,
     seeded,
     savedSnapshot,
+    // File unique des écritures du fichier de reprise : instantané immédiat et
+    // tick périodique écrivent le même fichier, dans l'ordre où ils partent.
+    // Survit aux transitions : une promotion attend aussi l'écriture en vol
+    // d'une session qui se termine.
+    writeChain: Promise.resolve(),
   };
+}
+
+export function enqueueEphemeralSnapshotWrite(state, task) {
+  state.writeChain = state.writeChain.catch(() => {}).then(task);
+  return state.writeChain;
 }
 
 export function resetEphemeralSnapshotSeedState(state, {

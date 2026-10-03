@@ -2,7 +2,7 @@
   "description": "Fixtures partagees JS<->Rust pour ancrer le contrat de validation. Chaque cas decrit un projet et le verdict attendu (les deux moteurs doivent l'accepter ou le refuser).",
   "consumedBy": [
     "scripts/validationParity.test.mjs",
-    "src-tauri/src/domain/tests/parity.rs"
+    "src-tauri/src/domain/validation.rs (parity_fixtures_share_the_js_verdict)"
   ],
   "cases": [
     {
@@ -174,6 +174,511 @@
         ]
       },
       "fileAuditTrue": ["valid/main.mp3"]
+    },
+    {
+      "name": "pack_global_end_target_deleted",
+      "comment": "Message de fin global emprunte par une histoire ; sa destination OK vise une histoire supprimee. Doit etre refuse JS ET Rust (activity_tests::deleted_global_end_return_target_blocks).",
+      "expect": "fail",
+      "jsKeywords": ["Message de fin"],
+      "rustKeywords": ["Message de fin"],
+      "project": {
+        "projectName": "Pack fin globale",
+        "packMetadata": { "title": "Pack fin globale", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": { "nightMode": true },
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "nightModeAudio": "valid/end.mp3",
+        "nightModeReturn": "story:deleted",
+        "rootEntries": [
+          { "id": "story-1", "type": "story", "name": "Histoire 1", "audio": "valid/story1.mp3", "itemAudio": "valid/story1-title.mp3", "itemImage": "valid/story1-title.png" },
+          { "id": "story-2", "type": "story", "name": "Histoire 2", "audio": "valid/story2.mp3", "itemAudio": "valid/story2-title.mp3", "itemImage": "valid/story2-title.png" }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3", "valid/root.png", "valid/thumb.png",
+        "valid/story1.mp3", "valid/story1-title.mp3", "valid/story1-title.png",
+        "valid/story2.mp3", "valid/story2-title.mp3", "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_auto_next_inactive_end_targets",
+      "comment": "Auto-next actif : destination de fin, prompt local et sequence perimes sont inactifs. Doit passer JS ET Rust (activity_tests::auto_next_ignores_inactive_end_targets).",
+      "expect": "ok",
+      "project": {
+        "projectName": "Pack auto-next",
+        "packMetadata": { "title": "Pack auto-next", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": { "autoNext": true },
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1", "type": "story", "name": "Histoire 1",
+            "audio": "valid/story1.mp3", "itemAudio": "valid/story1-title.mp3", "itemImage": "valid/story1-title.png",
+            "returnAfterPlay": "story:deleted",
+            "afterPlaybackPromptAudio": "valid/end.mp3",
+            "afterPlaybackPromptOkTarget": "story:deleted"
+          },
+          {
+            "id": "story-2", "type": "story", "name": "Histoire 2",
+            "audio": "valid/story2.mp3", "itemAudio": "valid/story2-title.mp3", "itemImage": "valid/story2-title.png",
+            "afterPlaybackSequence": [{ "id": "s1", "name": "Fin", "audio": "valid/end.mp3", "okTarget": "story:deleted" }]
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3", "valid/root.png", "valid/thumb.png",
+        "valid/story1.mp3", "valid/story1-title.mp3", "valid/story1-title.png",
+        "valid/story2.mp3", "valid/story2-title.mp3", "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_end_home_step_target_deleted",
+      "comment": "Reaction au bouton Accueil active (deux etapes de fin, Accueil actif) ; sa destination Accueil vise une histoire supprimee. Doit etre refuse JS ET Rust (validation.rs, retour Home de fin).",
+      "expect": "fail",
+      "jsKeywords": [
+        "réaction Accueil"
+      ],
+      "rustKeywords": [
+        "retour Home de fin"
+      ],
+      "project": {
+        "projectName": "Pack réaction Accueil",
+        "packMetadata": {
+          "title": "Pack réaction Accueil",
+          "version": 1,
+          "minAge": "3"
+        },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png",
+            "afterPlaybackSequence": [
+              {
+                "id": "fin-1",
+                "name": "Fin 1",
+                "audio": "valid/end.mp3"
+              },
+              {
+                "id": "fin-2",
+                "name": "Fin 2",
+                "audio": "valid/end.mp3"
+              }
+            ],
+            "afterPlaybackHomeStep": {
+              "id": "fin-accueil",
+              "name": "Fin accueil",
+              "audio": "valid/end.mp3",
+              "homeTarget": "story:deleted"
+            }
+          },
+          {
+            "id": "story-2",
+            "type": "story",
+            "name": "Histoire 2",
+            "audio": "valid/story2.mp3",
+            "itemAudio": "valid/story2-title.mp3",
+            "itemImage": "valid/story2-title.png"
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png",
+        "valid/story2.mp3",
+        "valid/story2-title.mp3",
+        "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_end_step_ok_choice_target_deleted",
+      "comment": "Etape de fin dont un choix OK vise une histoire supprimee. Doit etre refuse JS ET Rust (validation.rs, destination OK fin 1).",
+      "expect": "fail",
+      "jsKeywords": [
+        "OK fin 1"
+      ],
+      "rustKeywords": [
+        "destination OK fin 1"
+      ],
+      "project": {
+        "projectName": "Pack réaction Accueil",
+        "packMetadata": {
+          "title": "Pack réaction Accueil",
+          "version": 1,
+          "minAge": "3"
+        },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png",
+            "afterPlaybackSequence": [
+              {
+                "id": "fin-1",
+                "name": "Fin 1",
+                "audio": "valid/end.mp3",
+                "okChoiceTargets": [
+                  "story:story-2",
+                  "story:deleted"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "story-2",
+            "type": "story",
+            "name": "Histoire 2",
+            "audio": "valid/story2.mp3",
+            "itemAudio": "valid/story2-title.mp3",
+            "itemImage": "valid/story2-title.png"
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png",
+        "valid/story2.mp3",
+        "valid/story2-title.mp3",
+        "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_end_home_step_inactive_home_disabled",
+      "comment": "Accueil desactive sur l'histoire : la reaction au bouton Accueil n'est pas construite, ses destinations ne sont pas verifiees. Accepte JS ET Rust.",
+      "expect": "ok",
+      "project": {
+        "projectName": "Pack réaction Accueil",
+        "packMetadata": {
+          "title": "Pack réaction Accueil",
+          "version": 1,
+          "minAge": "3"
+        },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png",
+            "controlSettings": {
+              "home": false
+            },
+            "afterPlaybackSequence": [
+              {
+                "id": "fin-1",
+                "name": "Fin 1",
+                "audio": "valid/end.mp3"
+              },
+              {
+                "id": "fin-2",
+                "name": "Fin 2",
+                "audio": "valid/end.mp3"
+              }
+            ],
+            "afterPlaybackHomeStep": {
+              "id": "fin-accueil",
+              "name": "Fin accueil",
+              "audio": "valid/end.mp3",
+              "okTarget": "story:deleted",
+              "homeTarget": "story:deleted",
+              "okChoiceTargets": [
+                "story:deleted"
+              ]
+            }
+          },
+          {
+            "id": "story-2",
+            "type": "story",
+            "name": "Histoire 2",
+            "audio": "valid/story2.mp3",
+            "itemAudio": "valid/story2-title.mp3",
+            "itemImage": "valid/story2-title.png"
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png",
+        "valid/story2.mp3",
+        "valid/story2-title.mp3",
+        "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_imported_continuation_renamed",
+      "comment": "Continuation importee renommee : le drapeau importedContinuation suffit, sans audio. Accepte JS ET Rust.",
+      "expect": "ok",
+      "project": {
+        "projectName": "Pack continuation",
+        "packMetadata": { "title": "Pack continuation", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "histoire-1-sequence-choice-fin",
+            "type": "menu",
+            "name": "Encore une ?",
+            "audio": null,
+            "image": null,
+            "autoBlackImage": true,
+            "importedContinuation": { "sourceStoryId": "histoire-1", "sourceStoryName": "Histoire 1", "sourceStepName": "Fin" },
+            "children": [
+              {
+                "id": "histoire-1-sequence-choice-fin-suite",
+                "type": "story",
+                "name": "Suite",
+                "audio": "valid/story1.mp3",
+                "itemAudio": "valid/story1-title.mp3",
+                "itemImage": "valid/story1-title.png"
+              }
+            ]
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png"
+      ]
+    },
+    {
+      "name": "pack_imported_continuation_reassigned_id",
+      "comment": "Continuation importee dont l'identifiant a ete reattribue (deuxieme extraction) : le drapeau suffit. Accepte JS ET Rust.",
+      "expect": "ok",
+      "project": {
+        "projectName": "Pack continuation",
+        "packMetadata": { "title": "Pack continuation", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "b66e077a-2f7c-4d1e-9a51-0c3f5e7d8a90",
+            "type": "menu",
+            "name": "Suite apres Histoire 1",
+            "audio": null,
+            "image": null,
+            "autoBlackImage": true,
+            "importedContinuation": { "sourceStoryId": "histoire-1", "sourceStoryName": "Histoire 1", "sourceStepName": "Fin" },
+            "children": [
+              {
+                "id": "b66e077a-2f7c-4d1e-9a51-0c3f5e7d8a90-suite",
+                "type": "story",
+                "name": "Suite",
+                "audio": "valid/story1.mp3",
+                "itemAudio": "valid/story1-title.mp3",
+                "itemImage": "valid/story1-title.png"
+              }
+            ]
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png"
+      ]
+    },
+    {
+      "name": "pack_menu_shaped_like_continuation_without_flag",
+      "comment": "Dossier ordinaire (drapeau null) qui a le nom et l'identifiant d'une continuation : son audio est exige. Refuse JS ET Rust.",
+      "expect": "fail",
+      "project": {
+        "projectName": "Pack continuation",
+        "packMetadata": { "title": "Pack continuation", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "histoire-1-sequence-choice-fin",
+            "type": "menu",
+            "name": "Suite apres Histoire 1",
+            "audio": null,
+            "image": null,
+            "autoBlackImage": true,
+            "importedContinuation": null,
+            "children": [
+              {
+                "id": "histoire-1-sequence-choice-fin-suite",
+                "type": "story",
+                "name": "Suite",
+                "audio": "valid/story1.mp3",
+                "itemAudio": "valid/story1-title.mp3",
+                "itemImage": "valid/story1-title.png"
+              }
+            ]
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png"
+      ]
+    },
+    {
+      "name": "pack_link_to_unbuilt_home_reaction_home_disabled",
+      "comment": "Lien vers le retour de fin d'une histoire dont Accueil est desactive : la reaction n'est pas construite, la cible est a corriger. Refuse JS ET Rust.",
+      "expect": "fail",
+      "jsKeywords": ["retour de fin introuvable"],
+      "project": {
+        "projectName": "Pack retour de fin",
+        "packMetadata": { "title": "Pack retour de fin", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png",
+            "controlSettings": { "home": false },
+            "afterPlaybackSequence": [
+              { "id": "fin-1", "name": "Fin 1", "audio": "valid/end.mp3" },
+              { "id": "fin-2", "name": "Fin 2", "audio": "valid/end.mp3" }
+            ],
+            "afterPlaybackHomeStep": { "id": "fin-accueil", "name": "Fin accueil", "audio": "valid/end.mp3" }
+          },
+          {
+            "id": "story-2",
+            "type": "story",
+            "name": "Histoire 2",
+            "audio": "valid/story2.mp3",
+            "itemAudio": "valid/story2-title.mp3",
+            "itemImage": "valid/story2-title.png"
+          },
+          { "id": "lien", "type": "ref", "target": "story_home_step:story-1" }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png",
+        "valid/story2.mp3",
+        "valid/story2-title.mp3",
+        "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
+    },
+    {
+      "name": "pack_end_target_to_unbuilt_home_reaction_single_step",
+      "comment": "Destination de fin vers le retour de fin d'une histoire a une seule etape : la reaction n'est pas construite, la cible est a corriger. Refuse JS ET Rust.",
+      "expect": "fail",
+      "jsKeywords": ["retour de fin introuvable"],
+      "project": {
+        "projectName": "Pack retour de fin",
+        "packMetadata": { "title": "Pack retour de fin", "version": 1, "minAge": "3" },
+        "projectType": "pack",
+        "globalOptions": {},
+        "rootAudio": "valid/root.mp3",
+        "rootImage": "valid/root.png",
+        "thumbnailImage": "valid/thumb.png",
+        "rootEntries": [
+          {
+            "id": "story-1",
+            "type": "story",
+            "name": "Histoire 1",
+            "audio": "valid/story1.mp3",
+            "itemAudio": "valid/story1-title.mp3",
+            "itemImage": "valid/story1-title.png",
+            "afterPlaybackSequence": [
+              { "id": "fin-1", "name": "Fin 1", "audio": "valid/end.mp3" }
+            ],
+            "afterPlaybackHomeStep": { "id": "fin-accueil", "name": "Fin accueil", "audio": "valid/end.mp3" }
+          },
+          {
+            "id": "story-2",
+            "type": "story",
+            "name": "Histoire 2",
+            "audio": "valid/story2.mp3",
+            "itemAudio": "valid/story2-title.mp3",
+            "itemImage": "valid/story2-title.png",
+            "afterPlaybackSequence": [
+              { "id": "fin-b", "name": "Fin B", "audio": "valid/end.mp3", "okTarget": "story_home_step:story-1" }
+            ]
+          }
+        ]
+      },
+      "fileAuditTrue": [
+        "valid/root.mp3",
+        "valid/root.png",
+        "valid/thumb.png",
+        "valid/story1.mp3",
+        "valid/story1-title.mp3",
+        "valid/story1-title.png",
+        "valid/story2.mp3",
+        "valid/story2-title.mp3",
+        "valid/story2-title.png",
+        "valid/end.mp3"
+      ]
     }
   ]
 }

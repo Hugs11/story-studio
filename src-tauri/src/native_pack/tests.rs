@@ -7,13 +7,7 @@ use std::io::{Cursor, Write};
 use std::path::Path;
 
 fn simple_story_controls() -> ControlSettings {
-    ControlSettings {
-        wheel: false,
-        ok: false,
-        home: true,
-        pause: true,
-        autoplay: false,
-    }
+    ControlSettings::authored(false, false, true, true, false)
 }
 
 fn sample_options() -> GlobalOptions {
@@ -91,7 +85,7 @@ fn report_for(
 ) -> NativeAssetPreparationReport {
     NativeAssetPreparationReport {
         project,
-        pack_uuid: String::new(),
+        pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
         stage_dir: "stage".to_string(),
         assets_dir: "stage/assets".to_string(),
         assets,
@@ -104,7 +98,30 @@ fn report_for(
         },
         notes: Vec::new(),
         warnings: Vec::new(),
+        for_simulation: false,
     }
+}
+
+fn assert_free_document_passes_gates(
+    report: &NativeAssetPreparationReport,
+    document: &StoryDocument,
+) {
+    use crate::native_pack::observed_gates::{
+        observe_document_gates, refusal_from_gates, GatePolicy,
+    };
+
+    let story_json = super::writer::serialize_story_with_pack_uuid(document, &report.pack_uuid)
+        .expect("le document Libre doit pouvoir être écrit");
+    let observations = observe_document_gates(
+        &story_json,
+        Some(report.pack_uuid.as_str()),
+        GatePolicy::ENFORCED,
+    );
+    assert_eq!(
+        refusal_from_gates(&observations),
+        None,
+        "les portes d'observation refusent cette forme Libre : {observations:#?}"
+    );
 }
 
 fn resolve_night_return_stage<'a>(
@@ -113,16 +130,16 @@ fn resolve_night_return_stage<'a>(
 ) -> &'a StageNode {
     let night_entry_action_id = play_stage
         .ok_transition
-        .as_ref()
+        .value()
         .map(|t| t.action_node.clone())
         .expect("play ok transition");
     let night_stage_id = document
         .action_nodes
         .iter()
         .find(|action| action.id == night_entry_action_id)
-        .and_then(|action| action.options.first())
+        .and_then(|action| action.option_target(0))
         .expect("night stage id")
-        .clone();
+        .to_string();
     let night_stage = document
         .stage_nodes
         .iter()
@@ -130,7 +147,7 @@ fn resolve_night_return_stage<'a>(
         .expect("night stage");
     let return_transition = night_stage
         .ok_transition
-        .as_ref()
+        .value()
         .expect("night return transition");
     let return_action = document
         .action_nodes
@@ -138,10 +155,14 @@ fn resolve_night_return_stage<'a>(
         .find(|action| action.id == return_transition.action_node)
         .expect("night return action");
     let return_stage_id = return_action
-        .options
-        .get(return_transition.option_index as usize)
+        .option_target(
+            return_transition
+                .selection
+                .fixed_index()
+                .expect("sélection fixe"),
+        )
         .expect("night return target")
-        .clone();
+        .to_string();
     document
         .stage_nodes
         .iter()
@@ -150,10 +171,24 @@ fn resolve_night_return_stage<'a>(
 }
 
 mod after_playback_next_story;
+mod aggregated_groups;
+mod auto_next_reopen;
+mod combined_story;
 mod compat;
 mod document_builder;
+mod entry_campaign;
 mod fidelity;
+mod graph_copy;
+mod inactive_fields;
+mod l07_campaign;
+mod menu_endings;
 mod names_and_assets;
 mod night_mode;
+mod observed_gates;
+mod pack_identity;
+mod port_rules;
+mod preparation;
+mod readiness;
+mod release_corpus;
 mod root_and_imports;
 mod roundtrip;

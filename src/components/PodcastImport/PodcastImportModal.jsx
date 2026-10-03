@@ -25,7 +25,7 @@ function episodeMeta(ep) {
     .join(' · ');
 }
 
-export function PodcastImportModal({ onImport, onClose }) {
+export function PodcastImportModal({ onImport, onClose, toLibrary = false }) {
   const [phase, setPhase] = useState('url');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -127,7 +127,7 @@ export function PodcastImportModal({ onImport, onClose }) {
               </form>
               <p className="podcast-hint">
                 Colle l'URL du flux RSS du podcast. Tu pourras choisir les épisodes à télécharger
-                avant qu'ils ne deviennent des histoires.
+                {toLibrary ? ' avant de les retrouver dans Médias.' : " avant qu'ils ne deviennent des histoires."}
               </p>
               {error && <div className="podcast-error" role="alert">{error}</div>}
             </div>

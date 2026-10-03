@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 3,
+  "authoringMode": "free",
+  "version": 2,
+  "projectName": "Histoire de test",
+  "packMetadata": {
+    "title": "Histoire de test",
+    "author": "Auteur de test",
+    "version": 1,
+    "minAge": "3",
+    "producer": "",
+    "bonus": "",
+    "description": "",
+    "uuid": "00000000-0000-4000-8000-000000000001",
+    "originalUuid": "",
+    "namingMode": "convention",
+    "legacyExportName": "",
+    "legacyName": ""
+  },
+  "rootName": "Menu racine",
+  "endNodeName": "Message de fin",
+  "projectType": "simple",
+  "rootAudio": "/ui-media/titre.wav",
+  "rootImage": "/ui-media/couverture.png",
+  "treeColor": null,
+  "thumbnailImage": "/ui-media/couverture.png",
+  "sameImage": true,
+  "autoGenerateRootImage": false,
+  "nightModeAudio": null,
+  "nightModeReturn": null,
+  "nightModeHomeReturn": null,
+  "nativeGraph": null,
+  "globalOptions": {
+    "silenceMode": "normalize",
+    "harmonizeLoudness": true,
+    "autoNext": false,
+    "nightMode": false,
+    "endMessageAutoplay": false,
+    "aiImageGen": false,
+    "endNode": false,
+    "addSilenceDurationSec": {
+      "start": 0.4,
+      "end": 0.4
+    }
+  },
+  "importWarnings": [],
+  "rootEntries": [
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "type": "story",
+      "name": "",
+      "treeColor": null,
+      "nativeStageId": null,
+      "nativeReference": false,
+      "audio": "/ui-media/recit.wav",
+      "itemAudio": null,
+      "itemImage": null,
+      "silentTitleStage": false,
+      "afterPlaybackPromptAudio": null,
+      "afterPlaybackPromptControlSettings": {
+        "autoplay": true,
+        "wheel": false,
+        "pause": false,
+        "ok": true,
+        "home": true
+      },
+      "afterPlaybackPromptOkTarget": null,
+      "afterPlaybackPromptHomeTarget": null,
+      "afterPlaybackPromptHomeNone": false,
+      "afterPlaybackSequence": [],
+      "afterPlaybackHomeStep": null,
+      "autoGenerateImage": false,
+      "individualOptions": {},
+      "controlSettings": {
+        "autoplay": false,
+        "wheel": false,
+        "pause": true,
+        "ok": false,
+        "home": true
+      },
+      "returnAfterPlay": null,
+      "returnOnHome": null,
+      "returnOnHomeNone": false,
+      "titleReturnOnHome": null,
+      "titleReturnOnHomeNone": false,
+      "titleControlSettings": null
+    }
+  ],
+  "name": "3+]Histoire_de_test[by_Auteur_de_test",
+  "packVersion": 1,
+  "packDescription": "",
+  "packUuid": "00000000-0000-4000-8000-000000000001"
+}

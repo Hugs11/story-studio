@@ -35,7 +35,7 @@ export function Histogram({ bins, black = 0, white = 255, gamma = 1 }) {
       }
     }
 
-    // Repères des poignées (statiques en V1, pas encore draggables).
+    // Repères des poignées (statiques, pas encore draggables).
     const marker = (x, color) => {
       ctx.fillStyle = color;
       ctx.fillRect(Math.max(0, Math.min(HIST_W - 1, Math.round(x))), 0, 1, HIST_H);

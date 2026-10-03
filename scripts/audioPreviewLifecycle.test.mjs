@@ -31,6 +31,23 @@ function createHarness(overrides = {}) {
   return { lifecycle, task, applied, discarded, pending, errors };
 }
 
+test('réactiver le propriétaire accepte ses nouvelles requêtes sans réhabiliter les anciennes', async () => {
+  const old = deferred();
+  const harness = createHarness();
+  const oldRun = harness.lifecycle.run(harness.task(old.promise));
+  harness.lifecycle.dispose();
+  harness.lifecycle.activate();
+  const currentRun = harness.lifecycle.run(harness.task(Promise.resolve('current.wav')));
+  assert.equal((await currentRun).status, 'applied');
+  old.resolve('old.wav');
+  assert.equal((await oldRun).status, 'stale');
+  assert.deepEqual(harness.applied, ['current.wav']);
+  assert.deepEqual(harness.discarded, ['old.wav']);
+  harness.lifecycle.dispose();
+  assert.equal((await harness.lifecycle.run(harness.task(Promise.resolve('unmounted.wav')))).status, 'stale');
+  assert.deepEqual(harness.discarded, ['old.wav', 'unmounted.wav']);
+});
+
 test('audio preview lifecycle applies only the latest request when resolutions are reversed', async () => {
   const first = deferred();
   const second = deferred();

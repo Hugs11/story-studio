@@ -51,7 +51,9 @@
         { "path": "**/.story-studio-image-edits" },
         { "path": "**/.story-studio-image-edits/**" },
         { "path": "**/.story-studio-thumbnail" },
-        { "path": "**/.story-studio-thumbnail/**" }
+        { "path": "**/.story-studio-thumbnail/**" },
+        { "path": "**/.story-studio-thumbnail/.story-studio-image-edits" },
+        { "path": "**/.story-studio-thumbnail/.story-studio-image-edits/**" }
       ],
       "deny": [
         { "path": "/boot" },

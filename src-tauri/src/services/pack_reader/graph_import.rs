@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 
 use crate::domain::project::{EntryControlSettings, ProjectEntry};
+#[cfg(test)]
+use crate::native_pack::OptionSelection;
 use crate::native_pack::{sanitize_stage_label, ActionNode, StageNode, StoryDocument};
 
 use super::stage::imported_story_name;
@@ -185,32 +187,37 @@ impl<'a> GraphProjector<'a> {
     fn square_one_id(&mut self) -> Result<&'a str, String> {
         self.stages
             .values()
-            .find(|stage| stage.square_one)
+            .find(|stage| stage.is_square_one())
             .map(|stage| stage.uuid.as_str())
             .ok_or_else(|| "story.json sans squareOne".to_string())
     }
 
     fn index_ok_edges(&mut self, document: &'a StoryDocument) {
-        let mut option_indices_by_action: HashMap<&str, HashSet<i32>> = HashMap::new();
+        let mut option_indices_by_action: HashMap<&str, HashSet<usize>> = HashMap::new();
         for stage in &document.stage_nodes {
-            let Some(transition) = stage.ok_transition.as_ref() else {
+            let Some(transition) = stage.ok_transition.value() else {
                 continue;
             };
-            if self.actions.contains_key(transition.action_node.as_str()) {
-                option_indices_by_action
-                    .entry(transition.action_node.as_str())
-                    .or_default()
-                    .insert(transition.option_index.max(0));
+            // `Random` ne désigne aucun indice : il ne fait pas d'une Action un
+            // routeur indexé partagé, et il n'est surtout pas rabattu sur `0`
+            // (une sélection aléatoire n'est pas l'option `0`).
+            if let Some(index) = transition.selection.fixed_index() {
+                if self.actions.contains_key(transition.action_node.as_str()) {
+                    option_indices_by_action
+                        .entry(transition.action_node.as_str())
+                        .or_default()
+                        .insert(index);
+                }
             }
         }
         let indexed_router_actions: HashSet<&str> = option_indices_by_action
             .into_iter()
             .filter_map(|(action_id, indices)| {
                 let action = self.actions.get(action_id)?;
-                let targets_are_non_interactive = action.options.iter().all(|stage_id| {
+                let targets_are_non_interactive = action.named_options().all(|stage_id| {
                     self.stages
-                        .get(stage_id.as_str())
-                        .is_some_and(|stage| !stage.control_settings.wheel)
+                        .get(stage_id)
+                        .is_some_and(|stage| !stage.control_settings.wheel())
                 });
                 (indices.len() > 1 && targets_are_non_interactive).then_some(action_id)
             })
@@ -218,55 +225,55 @@ impl<'a> GraphProjector<'a> {
         self.indexed_router_actions = indexed_router_actions.clone();
 
         for stage in &document.stage_nodes {
-            let Some(transition) = stage.ok_transition.as_ref() else {
+            let Some(transition) = stage.ok_transition.value() else {
                 continue;
             };
             let Some(action) = self.actions.get(transition.action_node.as_str()) else {
                 self.diagnostics.push(format!(
                     "Stage '{}' okTransition vers action introuvable '{}'",
-                    stage.name, transition.action_node
+                    stage.label(),
+                    transition.action_node
                 ));
                 continue;
             };
 
             let action_targets: Vec<&str> = action
-                .options
-                .iter()
-                .filter_map(|target| {
-                    let target_id = target.as_str();
-                    if self.stages.contains_key(target_id) {
-                        Some(target_id)
-                    } else {
+                .named_options()
+                .filter(|target_id| {
+                    let known = self.stages.contains_key(target_id);
+                    if !known {
                         self.diagnostics.push(format!(
                             "Action '{}' pointe vers stage introuvable '{}'",
-                            action.name, target_id
+                            action.label(),
+                            target_id
                         ));
-                        None
                     }
+                    known
                 })
                 .collect();
 
-            let targets = if indexed_router_actions.contains(transition.action_node.as_str()) {
-                let option_index = if transition.option_index < 0 {
-                    0
-                } else {
-                    transition.option_index as usize
-                };
-                match action_targets.get(option_index).copied() {
+            // Un routeur indexé n'aplatit que les sélections fixes : une
+            // sélection aléatoire conserve tout son éventail de destinations,
+            // qu'aucune analyse statique ne doit trancher par un tirage.
+            let routed_index = indexed_router_actions
+                .contains(transition.action_node.as_str())
+                .then(|| transition.selection.fixed_index())
+                .flatten();
+            let targets = match routed_index {
+                Some(option_index) => match action_targets.get(option_index).copied() {
                     Some(target) => vec![target],
                     None => {
                         self.diagnostics.push(format!(
                             "Stage '{}' okTransition option {} hors limites pour l'action '{}' ({} options)",
-                            stage.name,
-                            transition.option_index,
-                            action.name,
+                            stage.label(),
+                            transition.selection,
+                            action.label(),
                             action_targets.len()
                         ));
                         Vec::new()
                     }
-                }
-            } else {
-                action_targets
+                },
+                None => action_targets,
             };
 
             if !targets.is_empty() {
@@ -289,7 +296,9 @@ impl<'a> GraphProjector<'a> {
 
     fn index_title_stage_by_play_stage(&mut self) {
         for (stage_id, stage) in &self.stages {
-            if stage.square_one || !stage.control_settings.wheel || stage.control_settings.autoplay
+            if stage.is_square_one()
+                || !stage.control_settings.wheel()
+                || stage.control_settings.autoplay()
             {
                 continue;
             }
@@ -440,7 +449,7 @@ impl<'a> GraphProjector<'a> {
         if active.len() > MAX_TREE_DEPTH {
             self.diagnostics.push(format!(
                 "Graphe trop profond pour une modelisation en arbre (profondeur > {MAX_TREE_DEPTH}), stage '{}'",
-                stage.name
+                stage.label()
             ));
             return None;
         }
@@ -500,7 +509,7 @@ impl<'a> GraphProjector<'a> {
                 if targets.len() > 1 && !extra_targets_are_shared_return {
                     self.diagnostics.push(format!(
                         "Stage '{}' a plusieurs sorties OK non modelisees en story",
-                        stage.name
+                        stage.label()
                     ));
                 }
             }
@@ -538,10 +547,10 @@ impl<'a> GraphProjector<'a> {
         }
         let stage = self.stages.get(stage_id)?;
         let targets = self.ok_targets(stage_id);
-        if stage.control_settings.autoplay && targets.len() >= 2 {
+        if stage.control_settings.autoplay() && targets.len() >= 2 {
             return Some(EntryShape::Menu);
         }
-        if stage.control_settings.wheel && !stage.control_settings.autoplay {
+        if stage.control_settings.wheel() && !stage.control_settings.autoplay() {
             if targets.len() == 1 {
                 let play_stage_id = targets[0];
                 if self
@@ -572,14 +581,14 @@ impl<'a> GraphProjector<'a> {
             EntryShape::Menu => Some(ProjectEntry {
                 id: stage.uuid.clone(),
                 entry_type: "menu".to_string(),
-                name: stage.name.clone(),
+                name: stage.label().to_string(),
                 native_stage_id: Some(stage.uuid.clone()),
                 audio: self.resolve_asset(stage.audio.as_deref()),
                 image: self.resolve_asset(stage.image.as_deref()),
-                auto_black_image: stage.image.is_none(),
+                auto_black_image: stage.image.has_no_value(),
                 control_settings: Some(stage_controls(stage)),
                 return_on_home: self.home_project_target(stage.uuid.as_str()),
-                return_on_home_none: stage.home_transition.is_none(),
+                return_on_home_none: stage.home_transition.has_no_value(),
                 ..Default::default()
             }),
             EntryShape::Story {
@@ -591,7 +600,7 @@ impl<'a> GraphProjector<'a> {
                 Some(ProjectEntry {
                     id: title_stage.uuid.clone(),
                     entry_type: "story".to_string(),
-                    name: imported_story_name(&title_stage.name, &play_stage.name).to_string(),
+                    name: imported_story_name(title_stage.label(), play_stage.label()).to_string(),
                     native_stage_id: Some(title_stage.uuid.clone()),
                     audio: self.resolve_asset(play_stage.audio.as_deref()),
                     image: self.resolve_asset(play_stage.image.as_deref()),
@@ -600,9 +609,9 @@ impl<'a> GraphProjector<'a> {
                     control_settings: Some(stage_controls(play_stage)),
                     title_control_settings: Some(stage_controls(title_stage)),
                     return_on_home: self.home_project_target(play_stage.uuid.as_str()),
-                    return_on_home_none: play_stage.home_transition.is_none(),
+                    return_on_home_none: play_stage.home_transition.has_no_value(),
                     title_return_on_home: self.home_project_target(title_stage.uuid.as_str()),
-                    title_return_on_home_none: title_stage.home_transition.is_none(),
+                    title_return_on_home_none: title_stage.home_transition.has_no_value(),
                     ..Default::default()
                 })
             }
@@ -614,13 +623,13 @@ impl<'a> GraphProjector<'a> {
                 Some(ProjectEntry {
                     id: play_stage.uuid.clone(),
                     entry_type: "story".to_string(),
-                    name: play_stage.name.clone(),
+                    name: play_stage.label().to_string(),
                     native_stage_id: Some(play_stage.uuid.clone()),
                     audio: self.resolve_asset(play_stage.audio.as_deref()),
                     image: self.resolve_asset(play_stage.image.as_deref()),
                     control_settings: Some(stage_controls(play_stage)),
                     return_on_home: self.home_project_target(play_stage.uuid.as_str()),
-                    return_on_home_none: play_stage.home_transition.is_none(),
+                    return_on_home_none: play_stage.home_transition.has_no_value(),
                     ..Default::default()
                 })
             }
@@ -653,11 +662,11 @@ impl<'a> GraphProjector<'a> {
             self.shared_entries.push(ProjectEntry {
                 id: stage.uuid.clone(),
                 entry_type: "menu".to_string(),
-                name: stage.name.clone(),
+                name: stage.label().to_string(),
                 native_stage_id: Some(stage.uuid.clone()),
                 audio: self.resolve_asset(stage.audio.as_deref()),
                 image: self.resolve_asset(stage.image.as_deref()),
-                auto_black_image: stage.image.is_none(),
+                auto_black_image: stage.image.has_no_value(),
                 control_settings: Some(stage_controls(stage)),
                 children: vec![ref_entry(stage.uuid.as_str(), 0, &target, false)],
                 ..Default::default()
@@ -666,16 +675,18 @@ impl<'a> GraphProjector<'a> {
         }
     }
 
+    /// La destination unique du Home d'un Stage.
+    ///
+    /// Une sélection `Random` n'en désigne aucune : elle rend `None` plutôt que
+    /// l'option `0`. Le Home projeté est alors « aucun retour
+    /// modélisé », ce que le juge de fidélité relève comme un écart avec
+    /// l'oracle — c'est le garde qui empêche de régénérer un `Fixed(0)` à la
+    /// place d'un `Random`.
     fn home_target(&self, stage_id: &str) -> Option<&'a str> {
         let stage = self.stages.get(stage_id)?;
-        let transition = stage.home_transition.as_ref()?;
+        let transition = stage.home_transition.value()?;
         let action = self.actions.get(transition.action_node.as_str())?;
-        let option_index = if transition.option_index < 0 {
-            0
-        } else {
-            transition.option_index as usize
-        };
-        action.options.get(option_index).map(String::as_str)
+        action.option_target(transition.selection.fixed_index()?)
     }
 
     fn home_project_target(&self, stage_id: &str) -> Option<String> {
@@ -683,7 +694,7 @@ impl<'a> GraphProjector<'a> {
         if self
             .stages
             .get(target_id)
-            .is_some_and(|stage| stage.square_one)
+            .is_some_and(|stage| stage.is_square_one())
         {
             return Some("root".to_string());
         }
@@ -706,7 +717,7 @@ impl<'a> GraphProjector<'a> {
 }
 
 fn is_playback_stage(stage: &StageNode) -> bool {
-    (stage.control_settings.autoplay || !stage.control_settings.wheel)
+    (stage.control_settings.autoplay() || !stage.control_settings.wheel())
         && stage
             .audio
             .as_deref()
@@ -714,7 +725,7 @@ fn is_playback_stage(stage: &StageNode) -> bool {
 }
 
 fn is_unreachable_helper_stage(stage: &StageNode) -> bool {
-    !stage.square_one
+    !stage.is_square_one()
         && stage
             .audio
             .as_deref()
@@ -723,22 +734,22 @@ fn is_unreachable_helper_stage(stage: &StageNode) -> bool {
             .image
             .as_deref()
             .is_none_or(|image| image.trim().is_empty())
-        && !stage.control_settings.wheel
-        && stage.control_settings.ok
-        && stage.control_settings.home
-        && !stage.control_settings.pause
-        && stage.control_settings.autoplay
-        && stage.home_transition.is_none()
-        && stage.ok_transition.is_some()
+        && !stage.control_settings.wheel()
+        && stage.control_settings.ok()
+        && stage.control_settings.home()
+        && !stage.control_settings.pause()
+        && stage.control_settings.autoplay()
+        && stage.home_transition.has_no_value()
+        && stage.ok_transition.is_value()
 }
 
 fn stage_controls(stage: &StageNode) -> EntryControlSettings {
     EntryControlSettings {
-        autoplay: Some(stage.control_settings.autoplay),
-        wheel: Some(stage.control_settings.wheel),
-        pause: Some(stage.control_settings.pause),
-        ok: Some(stage.control_settings.ok),
-        home: Some(stage.control_settings.home),
+        autoplay: Some(stage.control_settings.autoplay()),
+        wheel: Some(stage.control_settings.wheel()),
+        pause: Some(stage.control_settings.pause()),
+        ok: Some(stage.control_settings.ok()),
+        home: Some(stage.control_settings.home()),
     }
 }
 
@@ -942,26 +953,34 @@ mod tests {
     use serde_json::Number;
 
     use super::*;
-    use crate::native_pack::{ControlSettings, Position, Transition};
+    use crate::native_pack::{
+        named_option_targets, ControlSettings, Position, Presence, Transition,
+    };
 
     fn document(stages: Vec<StageNode>, actions: Vec<ActionNode>) -> StoryDocument {
         StoryDocument {
-            title: "Synthetic".to_string(),
-            version: 1,
-            description: String::new(),
-            format: "v1".to_string(),
-            night_mode_available: false,
+            title: Presence::Value("Synthetic".to_string()),
+            version: Presence::Value(1),
+            description: Presence::Value(String::new()),
+            format: Presence::Value("v1".to_string()),
+            night_mode_available: Presence::Value(false),
             action_nodes: actions,
             stage_nodes: stages,
+            uuid: Presence::Absent,
+            factory_disabled: Presence::Absent,
         }
     }
 
     fn action(id: &str, options: &[&str]) -> ActionNode {
         ActionNode {
             id: id.to_string(),
-            name: id.to_string(),
-            options: options.iter().map(|option| (*option).to_string()).collect(),
-            position: position(),
+            name: Presence::Value(id.to_string()),
+            options: named_option_targets(
+                options.iter().map(|option| (*option).to_string()).collect(),
+            ),
+            position: Presence::Value(position()),
+            action_type: Presence::Absent,
+            group_id: Presence::Absent,
         }
     }
 
@@ -976,27 +995,26 @@ mod tests {
     ) -> StageNode {
         StageNode {
             uuid: id.to_string(),
-            name: name.to_string(),
-            stage_type: "stage".to_string(),
-            square_one: id == "root",
-            audio: audio.map(str::to_string),
-            image: None,
-            control_settings: ControlSettings {
+            name: Presence::Value(name.to_string()),
+            stage_type: Presence::Value("stage".to_string()),
+            square_one: Presence::Value(id == "root"),
+            audio: Presence::from_nullable(audio.map(str::to_string)),
+            image: Presence::Null,
+            control_settings: Presence::Value(ControlSettings::authored(
                 wheel,
-                ok: ok_action.is_some(),
-                home: home_action.is_some(),
-                pause: false,
+                ok_action.is_some(),
+                home_action.is_some(),
+                false,
                 autoplay,
-            },
-            home_transition: home_action.map(|action_node| Transition {
-                action_node: action_node.to_string(),
-                option_index: 0,
-            }),
-            ok_transition: ok_action.map(|action_node| Transition {
-                action_node: action_node.to_string(),
-                option_index: 0,
-            }),
-            position: position(),
+            )),
+            home_transition: Presence::from_nullable(
+                home_action.map(|action_node| Transition::fixed(action_node, 0)),
+            ),
+            ok_transition: Presence::from_nullable(
+                ok_action.map(|action_node| Transition::fixed(action_node, 0)),
+            ),
+            position: Presence::Value(position()),
+            group_id: Presence::Absent,
         }
     }
 
@@ -1006,15 +1024,15 @@ mod tests {
         wheel: bool,
         autoplay: bool,
         ok_action: &str,
-        option_index: i32,
+        option_index: usize,
         audio: Option<&str>,
     ) -> StageNode {
         let mut value = stage(id, name, wheel, autoplay, Some(ok_action), None, audio);
         value
             .ok_transition
-            .as_mut()
+            .value_mut()
             .expect("ok transition")
-            .option_index = option_index;
+            .selection = OptionSelection::Fixed(option_index);
         value
     }
 
@@ -1380,7 +1398,9 @@ mod tests {
                         None,
                         None,
                     );
-                    helper.control_settings.home = true;
+                    if let Some(controls) = helper.control_settings.value_mut() {
+                        controls.home = Presence::Value(true);
+                    }
                     helper
                 },
             ],
@@ -1692,5 +1712,124 @@ mod tests {
             let typed = format!("{}:{}", shared.entry_type, shared.id);
             assert!(targets.iter().any(|target| target == &typed));
         }
+    }
+
+    /// Une sélection aléatoire n'est jamais résolue vers l'option
+    /// `0` par le projecteur. Sur un routeur indexé — le seul cas où le
+    /// projecteur aplatit une Action sur une destination unique — elle garde tout
+    /// son éventail.
+    #[test]
+    fn a_random_ok_selection_keeps_every_destination_instead_of_option_zero() {
+        let mut stages = vec![
+            stage(
+                "root",
+                "Root",
+                false,
+                false,
+                Some("root-action"),
+                None,
+                None,
+            ),
+            // Deux indices fixes distincts sur la même Action : c'est ce qui en
+            // fait un « routeur indexé partagé » pour le projecteur.
+            stage_with_ok_option(
+                "fixed-source-0",
+                "Fixed source 0",
+                true,
+                false,
+                "state-router",
+                0,
+                Some("fixed-0.mp3"),
+            ),
+            stage_with_ok_option(
+                "fixed-source",
+                "Fixed source",
+                true,
+                false,
+                "state-router",
+                1,
+                Some("fixed.mp3"),
+            ),
+            stage("state-a", "State A", false, true, None, None, Some("a.mp3")),
+            stage("state-b", "State B", false, true, None, None, Some("b.mp3")),
+        ];
+        // Le Stage aléatoire vise le même routeur indexé que le Stage fixe.
+        let mut random_source = stage(
+            "random-source",
+            "Random source",
+            true,
+            false,
+            Some("state-router"),
+            None,
+            Some("random.mp3"),
+        );
+        random_source
+            .ok_transition
+            .value_mut()
+            .expect("transition OK")
+            .selection = OptionSelection::Random;
+        stages.push(random_source);
+
+        let synthetic = document(
+            stages,
+            vec![
+                action("root-action", &["fixed-source-0", "fixed-source"]),
+                action("state-router", &["state-a", "state-b"]),
+            ],
+        );
+        let projector = GraphProjector::new(&synthetic);
+
+        // Le Stage fixe est bien aplati sur sa seule destination indexée…
+        assert_eq!(projector.ok_targets("fixed-source"), vec!["state-b"]);
+        // …tandis que le Stage aléatoire conserve les deux, sans jamais se
+        // rabattre sur « state-a » (l'option 0).
+        assert_eq!(
+            projector.ok_targets("random-source"),
+            vec!["state-a", "state-b"]
+        );
+    }
+
+    /// Le Home d'une sélection aléatoire ne désigne pas une destination unique :
+    /// le projecteur n'en modélise aucune plutôt que d'affirmer l'option `0`.
+    #[test]
+    fn a_random_home_selection_models_no_single_return_target() {
+        let mut home_stage = stage(
+            "leaf",
+            "Leaf",
+            true,
+            false,
+            None,
+            Some("home-action"),
+            Some("leaf.mp3"),
+        );
+        home_stage
+            .home_transition
+            .value_mut()
+            .expect("transition Home")
+            .selection = OptionSelection::Random;
+
+        let synthetic = document(
+            vec![
+                stage(
+                    "root",
+                    "Root",
+                    false,
+                    false,
+                    Some("root-action"),
+                    None,
+                    None,
+                ),
+                home_stage,
+                stage("home-a", "Home A", false, true, None, None, Some("ha.mp3")),
+                stage("home-b", "Home B", false, true, None, None, Some("hb.mp3")),
+            ],
+            vec![
+                action("root-action", &["leaf"]),
+                action("home-action", &["home-a", "home-b"]),
+            ],
+        );
+        let projector = GraphProjector::new(&synthetic);
+
+        assert_eq!(projector.home_target("leaf"), None);
     }
 }

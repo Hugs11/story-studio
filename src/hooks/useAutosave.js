@@ -1,7 +1,14 @@
 import { useEffect } from 'react';
 import { autoSaveEphemeralProject, autoSaveNewProject, getWorkspaceDir, saveProject } from '../store/projectIO';
 import { createWorkSnapshot } from '../store/projectHelpers';
+import { normalizeWorkProject } from '../store/projectWorkState';
 import { AUTOSAVE_ACTIONS, decideAutosaveAction, isProjectWorthAutosaving } from '../store/autosaveDecision';
+import {
+  acceptEphemeralSnapshotSeed,
+  beginEphemeralSnapshotSeed,
+  enqueueEphemeralSnapshotWrite,
+  finishEphemeralSnapshotSeed,
+} from '../store/ephemeralSnapshotSeed';
 import { logger } from '../utils/logger';
 
 export function useAutosave({
@@ -16,6 +23,7 @@ export function useAutosave({
   ephemeralSnapshotPathRef,
   ephemeralSnapshotSeedStateRef,
   sessionModeRef,
+  workEpochRef,
   isSavingRef,
   mediaTagsRef,
   mediaLibraryPathsRef,
@@ -28,6 +36,11 @@ export function useAutosave({
     if (!enabled) return undefined;
     const interval = setInterval(async () => {
       const project = projectRef.current;
+      // Même garde qu'un enregistrement explicite : un projet remplacé ou
+      // réinitialisé pendant l'écriture ne reçoit ni le chemin d'autosave ni
+      // l'instantané du travail précédent, faute de quoi la prochaine tick
+      // écraserait le fichier d'un autre projet avec celui-ci.
+      const workEpochAtStart = workEpochRef?.current ?? null;
       const mediaLibraryPaths = mediaLibraryPathsRef.current;
       const mediaTags = mediaTagsRef.current;
       const current = createWorkSnapshot(project, mediaLibraryPaths, mediaTags);
@@ -70,16 +83,46 @@ export function useAutosave({
       // store.savePath, so that recording/generation paths are never derived from the autosave file.
       try {
         if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL) {
-          await autoSaveEphemeralProject(project, action.workspaceDir, action.path, {
-            mediaTags,
-            mediaLibraryPaths,
-            totalMediaCount: mediaLibraryCountRef.current,
-          });
-          if (ephemeralSeedState
-            && ephemeralSeedState.sessionToken === ephemeralSessionToken
-            && sessionModeRef?.current === 'ephemeral'
-            && ephemeralSnapshotPathRef?.current === action.path) {
-            ephemeralSeedState.savedSnapshot = current;
+          const writeEphemeral = async () => {
+            // Le travail est relu au moment d'écrire, pas à la tick : un
+            // instantané immédiat passé devant a peut-être déjà écrit plus
+            // récent, et cette écriture ne doit jamais le remplacer par plus
+            // ancien.
+            const latestProject = projectRef.current;
+            const latestPaths = mediaLibraryPathsRef.current;
+            const latestTags = mediaTagsRef.current;
+            const latest = createWorkSnapshot(latestProject, latestPaths, latestTags);
+            const write = ephemeralSeedState
+              ? beginEphemeralSnapshotSeed(ephemeralSeedState, {
+                sessionMode: sessionModeRef?.current,
+                path: ephemeralSnapshotPathRef?.current === action.path ? action.path : null,
+                snapshot: latest,
+              })
+              : { path: action.path };
+            if (!write) return;
+            try {
+              await autoSaveEphemeralProject(latestProject, action.workspaceDir, action.path, {
+                mediaTags: latestTags,
+                mediaLibraryPaths: latestPaths,
+                totalMediaCount: mediaLibraryCountRef.current,
+              });
+              if (ephemeralSeedState && ephemeralSeedState.sessionToken === ephemeralSessionToken) {
+                acceptEphemeralSnapshotSeed(ephemeralSeedState, write, {
+                  sessionMode: sessionModeRef?.current,
+                  path: ephemeralSnapshotPathRef?.current,
+                });
+              }
+            } finally {
+              if (ephemeralSeedState) finishEphemeralSnapshotSeed(ephemeralSeedState, write);
+            }
+          };
+          if (ephemeralSeedState) {
+            await enqueueEphemeralSnapshotWrite(ephemeralSeedState, async () => {
+              if (ephemeralSeedState.sessionToken !== ephemeralSessionToken) return;
+              await writeEphemeral();
+            });
+          } else {
+            await writeEphemeral();
           }
         } else if (action.kind === AUTOSAVE_ACTIONS.AUTOSAVE_EXISTING) {
           await saveProject(project, action.path, null, {
@@ -89,6 +132,7 @@ export function useAutosave({
             mediaLibraryPaths,
             totalMediaCount: mediaLibraryCountRef.current,
           });
+          if ((workEpochRef?.current ?? null) !== workEpochAtStart) return;
           autoSaveSnapshotRef.current = current;
           setAutoSavedPath(action.path);
         } else {
@@ -99,9 +143,10 @@ export function useAutosave({
             totalMediaCount: mediaLibraryCountRef.current,
           });
           if (!result?.path) return;
+          if ((workEpochRef?.current ?? null) !== workEpochAtStart) return;
           autoSavePathRef.current = result.path;
           autoSaveSnapshotRef.current = createWorkSnapshot(
-            result.project,
+            normalizeWorkProject(result.project),
             result.mediaLibraryPaths ?? mediaLibraryPaths,
             mediaTags,
           );

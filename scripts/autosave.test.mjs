@@ -15,6 +15,7 @@ import {
   resetEphemeralSnapshotSeedState,
 } from '../src/store/ephemeralSnapshotSeed.js';
 import {
+  assertProjectCanSaveInPlace,
   buildTransferPromptSignature,
   createWorkSnapshot,
   hasUnsavedWork,
@@ -43,6 +44,15 @@ test('a completed save only resynchronizes the exact input still current in memo
   const inputAtSaveStart = { rootEntries: [] };
   assert.equal(isSaveInputStillCurrent(inputAtSaveStart, inputAtSaveStart), true);
   assert.equal(isSaveInputStillCurrent(inputAtSaveStart, { rootEntries: [] }), false);
+});
+
+test('un chemin existant ne peut pas être écrasé par un état sans projet ouvert', () => {
+  assert.throws(
+    () => assertProjectCanSaveInPlace({ projectType: null, rootEntries: [] }, 'D:/projets/valide.mbah'),
+    /fichier existant a été conservé/,
+  );
+  assert.doesNotThrow(() => assertProjectCanSaveInPlace({ projectType: 'pack' }, 'D:/projets/valide.mbah'));
+  assert.doesNotThrow(() => assertProjectCanSaveInPlace({ projectType: null }, null));
 });
 
 function beginSeed(state, value, path = EPHEMERAL_PATH) {
@@ -414,7 +424,7 @@ test('selectStaleAutosaveBackups treats keep ≤ 0 as “purge everything matchi
   assert.equal(selectStaleAutosaveBackups(entries, 'projet', -1).length, 2);
 });
 
-// --- isProjectWorthAutosaving (plan 24) ---------------------------------
+// --- isProjectWorthAutosaving ------------------------------------------------
 
 function simpleProjectWith(story = {}) {
   return {
@@ -464,6 +474,50 @@ test('isProjectWorthAutosaving: pack avec dossier créé → oui ; pack vide →
   assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [{ id: 'm1', type: 'menu', name: 'Nouveau dossier', children: [] }] }), true);
   assert.equal(isProjectWorthAutosaving({ projectType: 'pack', rootEntries: [] }), false);
   assert.equal(isProjectWorthAutosaving(null), false);
+});
+
+// Projet avancé sans titre, sans média racine et sans arbre : l'inventaire Libre
+// le jugeait vide et lui refusait tout snapshot de reprise.
+const advancedProject = (editorState = { version: 1 }) => ({
+  schemaVersion: 4,
+  authoringMode: 'advanced',
+  projectType: 'advanced',
+  projectName: '',
+  rootEntries: [],
+  authoring: { payload: '{"payloadVersion":1}', editorState, mediaBindings: [] },
+});
+
+test('isProjectWorthAutosaving: projet avancé sans titre, média ni arbre → oui', () => {
+  assert.equal(isProjectWorthAutosaving(advancedProject()), true);
+  assert.equal(isProjectWorthAutosaving(advancedProject(), [], 0), true);
+  // Le filtre du placeholder Libre vierge est intact : le mode décide avant lui.
+  assert.equal(isProjectWorthAutosaving({
+    projectType: 'simple',
+    projectName: '',
+    rootEntries: [{ id: 'story-1', type: 'story', name: '' }],
+  }), false);
+});
+
+test('une disposition d’auteur seule suffit à faire écrire le snapshot de session', () => {
+  const before = createWorkSnapshot(advancedProject(), [], {});
+  const after = createWorkSnapshot(
+    advancedProject({ version: 1, viewport: { x: -240, y: 118.5, zoom: 0.75 } }),
+    [],
+    {},
+  );
+  assert.notEqual(before, after, 'la vue persistante entre dans la signature');
+
+  const action = decideAutosaveAction({
+    currentSnapshot: after,
+    savedSnapshot: null,
+    isDirty: isProjectWorthAutosaving(advancedProject()),
+    workspaceDir: '/tmp/story_studio_session_1_2',
+    sessionMode: 'ephemeral',
+    ephemeralSnapshotPath: EPHEMERAL_PATH,
+    lastEphemeralSnapshot: before,
+  });
+  assert.equal(action.kind, AUTOSAVE_ACTIONS.AUTOSAVE_EPHEMERAL);
+  assert.equal(action.path, EPHEMERAL_PATH);
 });
 
 test('shouldAbortEphemeralPromotion: bloque seulement les erreurs de transfert en session éphémère', () => {

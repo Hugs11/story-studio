@@ -38,12 +38,12 @@ export const EXTERNAL_SUITES = Object.freeze([
     command: 'cargo test check_assets_from_env -- --ignored --nocapture',
   },
   {
-    id: 'plan16',
+    id: 'graph-pack',
     allOf: ['STORY_STUDIO_GRAPH_PACK'],
-    command: 'cargo test plan16_graph_pack_from_env_is_read_only_without_native_graph -- --ignored --nocapture',
+    command: 'cargo test graph_pack_from_env_is_read_only_without_native_graph -- --ignored --nocapture',
   },
   {
-    id: 'external-authoring',
+    id: 'external-authoring-pack',
     allOf: ['STORY_STUDIO_EXTERNAL_AUTHORING_PACK'],
     command: 'cargo test external_authoring_pack_from_env_stays_authoring_editable -- --ignored --nocapture',
   },

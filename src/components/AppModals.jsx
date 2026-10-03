@@ -5,6 +5,9 @@ import { GenerateProgressModal } from './GenerateModal/GenerateProgressModal';
 import { ImportNoticeToast } from './common/ImportNoticeToast';
 import { CreditsModal } from './common/CreditsModal';
 import { SessionMediaTriageModal } from './SessionMediaTriage/SessionMediaTriageModal';
+import { isAdvancedProject } from '../store/projectModel/envelope';
+import { suggestedPackTitle } from '../store/packMetadataModel';
+import { ReleaseNotesModal } from './common/ReleaseNotesModal';
 
 const OptionsTab = lazy(() => import('../tabs/OptionsTab').then((module) => ({ default: module.OptionsTab })));
 const AggregatePacksFunnel = lazy(() => import('./AggregatePacks/AggregatePacksFunnel')
@@ -41,11 +44,10 @@ export function AppModals({
   // état payload (pas un simple booléen de disclosure)
   youtubeFunnelMode,
   setYoutubeFunnelMode,
-  toolbarTtsTargetMenuId,
+  toolbarTtsTarget,
   // contexte
   project,
   savePath,
-  projectType,
   workspaceDir,
   projectName,
   appVersion,
@@ -63,12 +65,19 @@ export function AppModals({
   // génération pack
   packMetadata,
   onSavePackMetadata,
+  // Fiche du pack côté graphe : brouillon lu dans le document, gouvernance des
+  // champs, compteurs de la structure, et son propre chemin d'écriture — un
+  // geste d'auteur annulable, jamais une pose dans l'enveloppe du projet.
+  advancedMetadataForm = null,
+  onSaveAdvancedPackMetadata = null,
   // cycle de vie projet
   onLandEditablePack,
+  onLandAdvancedPack,
+  onBeforeReplacePack,
   onSimulatePackReady,
   // import média
-  onImportMediaEpisodes,
   onPodcastFunnelImport,
+  onPodcastEditorImport,
   onYoutubeFunnelImport,
   onYoutubeEditorImport,
   importing,
@@ -88,8 +97,14 @@ export function AppModals({
   setImportNotice,
   onToolbarRecordSaved,
 }) {
+  // Le mode du projet, lu à sa source unique. Il décide de l'aiguillage de la
+  // fiche du pack, y compris avant que le document de graphe ait été lu une
+  // première fois.
+  const graphProject = isAdvancedProject(project);
+
   return (
     <>
+      {appVersion && <ReleaseNotesModal key={appVersion} appVersion={appVersion} />}
       {modals.isOpen('prefs') && renderDeferred(
         <OptionsTab
           {...optionsTabProps}
@@ -100,7 +115,6 @@ export function AppModals({
 
       {modals.isOpen('record') && renderDeferred(
         <RecordModal
-          savePath={savePath}
           workspaceDir={workspaceDir}
           projectName={projectName}
           onSaved={onToolbarRecordSaved}
@@ -108,6 +122,9 @@ export function AppModals({
         />
       )}
 
+      {/* La cible du texte lu est décidée par l'hôte, qui seul sait quel
+          éditeur est ouvert. Une nouvelle histoire dans le dossier visé côté
+          Libre ; côté graphe, la bibliothèque de médias et rien d'autre. */}
       {modals.isOpen('tts') && canGenerateStoryTts && renderDeferred(
         <GenerateVoiceModal
           savePath={savePath}
@@ -115,7 +132,7 @@ export function AppModals({
           label="Nouvelle histoire"
           initialText=""
           filenameHint="histoire-tts"
-          target={{ kind: 'newStory', menuId: toolbarTtsTargetMenuId }}
+          target={toolbarTtsTarget}
           onUpdateXttsSettings={onUpdateXttsSettings}
           onQueueGenerate={onQueueXttsGenerate}
           onClose={() => modals.close('tts')}
@@ -124,8 +141,9 @@ export function AppModals({
 
       {modals.isOpen('podcastImport') && renderDeferred(
         <PodcastImportModal
-          onImport={(episodes, feed) => onImportMediaEpisodes(episodes, feed)}
+          onImport={onPodcastEditorImport}
           onClose={() => modals.close('podcastImport')}
+          toLibrary={graphProject}
         />,
       )}
 
@@ -134,6 +152,10 @@ export function AppModals({
           onClose={() => modals.close('editPack')}
           onLand={onLandEditablePack}
           onSimulate={onSimulatePackReady}
+          onLandAdvanced={onLandAdvancedPack}
+          onBeforeReplace={onBeforeReplacePack}
+          openedFromGraph={graphProject}
+          onNotice={setImportNotice}
         />
       )}
 
@@ -147,6 +169,7 @@ export function AppModals({
       {youtubeFunnelMode && renderDeferred(
         <YoutubeImportFunnel
           mode={youtubeFunnelMode}
+          toLibrary={youtubeFunnelMode === 'editor' && graphProject}
           onClose={() => setYoutubeFunnelMode(null)}
           onImport={youtubeFunnelMode === 'editor' ? onYoutubeEditorImport : onYoutubeFunnelImport}
         />
@@ -164,25 +187,47 @@ export function AppModals({
         />
       )}
 
+      {/* La fiche du pack, première étape du parcours de fabrication des deux
+          côtés. `canGenerate` qualifie l'arbre ; côté graphe, ce qui
+          bloque est recalculé au départ de la production sur le payload
+          courant, et un verdict mémorisé ici en ferait un second.
+
+          L'aiguillage lit le **mode du projet**, pas la présence du formulaire
+          avancé : celui-ci attend la première lecture du document, et pendant
+          ce court instant confier un projet graphe à la chaîne Libre lui ferait
+          traverser un normaliseur qui le refuse. */}
       {packMetadata.open && renderDeferred(
         <PackNameModal
           open={packMetadata.open}
           packMetadata={{
             ...(project.packMetadata ?? {}),
-            // Titre pré-rempli si vide : nom du menu racine (pack) puis nom du
-            // projet, en cohérence avec le titre affiché dans RootEditor.
-            title: project.packMetadata?.title
-              || (projectType === 'pack' ? project.rootName : '')
-              || project.projectName
-              || '',
+            title: suggestedPackTitle(project),
           }}
+          advanced={advancedMetadataForm}
           project={project}
-          coverImage={project.thumbnailImage || project.rootImage}
+          // `rootImage` est un média d'arbre : il n'existe pas dans un projet
+          // graphe, où la couverture est soit la vignette d'enveloppe, soit —
+          // à défaut — l'image de l'Écran d'entrée que le moteur reprend seul.
+          coverImage={advancedMetadataForm
+            ? advancedMetadataForm.coverImage
+            : (project.thumbnailImage || project.rootImage)}
+          // La vignette catalogue se choisit ici, et nulle part ailleurs : sans
+          // image propre, elle reprend l'image racine.
+          catalogImage={advancedMetadataForm
+            ? advancedMetadataForm.catalogImage
+            : (project.sameImage ? null : (project.thumbnailImage ?? null))}
+          fallbackImage={advancedMetadataForm
+            ? advancedMetadataForm.fallbackImage
+            : (project.rootImage ?? null)}
           exportFolder={modalExportFolder}
-          generateDisabled={!canGenerate}
+          generateDisabled={graphProject ? false : !canGenerate}
           promptRegenerateUuid={importedPackPendingMetaRef.current}
-          onSave={(draft) => onSavePackMetadata(draft, { generate: false })}
-          onSaveAndGenerate={(draft) => onSavePackMetadata(draft, { generate: true })}
+          onSave={graphProject
+            ? onSaveAdvancedPackMetadata
+            : (draft) => onSavePackMetadata(draft, { generate: false })}
+          onSaveAndGenerate={graphProject
+            ? (draft) => onSaveAdvancedPackMetadata(draft, { generate: true })
+            : (draft) => onSavePackMetadata(draft, { generate: true })}
           onClose={packMetadata.close}
         />,
       )}

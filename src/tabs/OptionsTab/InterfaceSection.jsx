@@ -1,4 +1,7 @@
 import { Button } from '../../components/common/Button';
+import { Toggle } from '../../components/common/Toggle';
+import { useSelectionOpensSettings } from '../../hooks/useSelectionOpensSettings';
+import { writeSelectionOpensSettings } from '../../store/selectionOpensSettings';
 import { THEME_OPTIONS } from '../../store/themePreference';
 
 export function InterfaceSection({
@@ -8,6 +11,7 @@ export function InterfaceSection({
   onThemePreferenceChange,
   onOpenShortcuts,
 }) {
+  const selectionOpensSettings = useSelectionOpensSettings();
   return (
     <section id="interface" className={className} ref={sectionRef}>
       <div className="opts-card-title">Interface</div>
@@ -25,6 +29,17 @@ export function InterfaceSection({
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
+      </div>
+      <div className="opts-row">
+        <div className="opts-row-info">
+          <div className="opts-row-label">Ouvrir les réglages quand on sélectionne un nœud</div>
+          <div className="opts-row-sub">Dans les deux éditeurs : un clic dans l'arbre, le diagramme, la liste ou le graphe rouvre les Réglages ou l'Inspecteur s'ils sont fermés.</div>
+        </div>
+        <Toggle
+          on={selectionOpensSettings}
+          onChange={writeSelectionOpensSettings}
+          ariaLabel="Ouvrir les réglages quand on sélectionne un nœud"
+        />
       </div>
       <div className="opts-row">
         <div className="opts-row-info">

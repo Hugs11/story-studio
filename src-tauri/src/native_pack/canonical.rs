@@ -243,6 +243,58 @@ pub(crate) fn resolve_next_story_target(
     }
 }
 
+// Règles d'activité des fins d'histoire : ce que le constructeur lit selon les
+// réglages courants. La collecte des médias (`assets/pipeline.rs`) et la
+// validation avant génération (`domain/validation.rs`) les appliquent aussi, pour
+// ne jamais exiger ni embarquer un champ que le réglage rend inutile.
+// Miroir JS : `projectValidation.js` et `generatedNavigation.js`.
+
+/// La séquence de fin est écrite hors Auto-next ; elle prime sur le prompt.
+pub(crate) fn end_sequence_is_active(auto_next: bool, sequence_len: usize) -> bool {
+    !auto_next && sequence_len > 0
+}
+
+/// Le prompt de fin local n'est écrit qu'hors Auto-next et sans séquence.
+pub(crate) fn end_prompt_is_active(auto_next: bool, sequence_len: usize) -> bool {
+    !auto_next && sequence_len == 0
+}
+
+/// La réaction Accueil s'insère entre la première et la deuxième étape : elle
+/// n'est écrite qu'avec au moins deux étapes et le bouton Accueil actif.
+pub(crate) fn end_home_step_is_active(auto_next: bool, sequence_len: usize, home: bool) -> bool {
+    !auto_next && sequence_len >= 2 && home
+}
+
+/// L'histoire emprunte le message de fin global (pont de nuit de
+/// `build_story_branch`) : ni séquence ni prompt local, et pas l'écran combiné
+/// qui enchaîne directement sur son retour.
+pub(crate) fn story_reaches_global_end_message(story: &CanonicalStory, auto_next: bool) -> bool {
+    !auto_next
+        && story.after_playback_sequence.is_empty()
+        && story.after_playback_prompt_audio.is_none()
+        && !(super::builder::transitions::should_emit_combined_story_stage(story, true)
+            && story.return_after_play.is_some())
+}
+
+/// Au moins une histoire construite emprunte le message de fin global (l'histoire
+/// du mode simple l'emprunte toujours, `build_simple_story`).
+pub(crate) fn global_end_message_is_reached(project: &CanonicalProject) -> bool {
+    fn reached(entries: &[CanonicalEntry], auto_next: bool) -> bool {
+        entries.iter().any(|entry| match entry {
+            CanonicalEntry::Story(story) => story_reaches_global_end_message(story, auto_next),
+            CanonicalEntry::Menu(menu) => reached(&menu.children, auto_next),
+            CanonicalEntry::Zip(_) | CanonicalEntry::Ref(_) => false,
+        })
+    }
+    let auto_next = project.options.auto_next;
+    if auto_next {
+        return false;
+    }
+    project.project_type == "simple"
+        || reached(&project.entries, auto_next)
+        || reached(&project.shared_entries, auto_next)
+}
+
 pub(crate) fn canonicalize_project(project: &Project) -> CanonicalProject {
     let project_type = project
         .project_type

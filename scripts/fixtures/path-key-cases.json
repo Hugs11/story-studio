@@ -1,0 +1,19 @@
+{
+  "comment": "Table partagée par la normalisation de chemin des deux langages. JavaScript la vérifie sur `pathKey` (src/utils/fileUtils.js), Rust sur `path_key` (src-tauri/src/support/paths.rs). Elles doivent rendre le même jeton pour chaque entrée : c'est la clé du cache de vue avancée, et deux normalisations divergentes feraient perdre la vue d'un projet sur une seule plateforme.",
+  "cases": [
+    { "why": "chemin POSIX ordinaire, rendu tel quel", "input": "/home/user/Projets/recit.mbah", "key": "/home/user/Projets/recit.mbah" },
+    { "why": "la casse POSIX est significative et n'est jamais rabattue", "input": "/home/User/Recit.MBAH", "key": "/home/User/Recit.MBAH" },
+    { "why": "les séparateurs répétés sont réduits", "input": "/home//user///recit.mbah", "key": "/home/user/recit.mbah" },
+    { "why": "les espaces de garde sont retirés", "input": "  /home/user/recit.mbah  ", "key": "/home/user/recit.mbah" },
+    { "why": "une valeur vide ne désigne aucun fichier", "input": "", "key": "" },
+    { "why": "une valeur blanche ne désigne aucun fichier", "input": "   ", "key": "" },
+    { "why": "un chemin Windows perd sa casse et ses antislashs", "input": "C:\\Users\\User\\Recit.mbah", "key": "c:/users/user/recit.mbah" },
+    { "why": "un chemin Windows déjà en slashs suit la même règle", "input": "C:/Users/User/Recit.mbah", "key": "c:/users/user/recit.mbah" },
+    { "why": "le préfixe long de Windows est retiré", "input": "\\\\?\\C:\\Users\\User\\Recit.mbah", "key": "c:/users/user/recit.mbah" },
+    { "why": "un partage UNC garde ses deux séparateurs de tête", "input": "\\\\serveur\\partage\\Recit.mbah", "key": "//serveur/partage/recit.mbah" },
+    { "why": "le préfixe long UNC redevient un partage UNC", "input": "\\\\?\\UNC\\serveur\\partage\\Recit.mbah", "key": "//serveur/partage/recit.mbah" },
+    { "why": "une URL n'est pas un chemin de fichier et reste intacte", "input": "https://example.test/Recit.mbah", "key": "https://example.test/Recit.mbah" },
+    { "why": "un blob n'est pas un chemin de fichier et reste intact", "input": "blob:Abc-123", "key": "blob:Abc-123" },
+    { "why": "une donnée en ligne n'est pas un chemin de fichier", "input": "data:AbC", "key": "data:AbC" }
+  ]
+}

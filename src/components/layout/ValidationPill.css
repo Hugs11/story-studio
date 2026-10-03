@@ -32,7 +32,13 @@
 .validation-pill.is-ok {
   border-color: color-mix(in srgb, var(--success) 50%, transparent);
   color: var(--success);
-  cursor: default;
+  cursor: pointer;
+}
+
+.validation-pill.is-ok .validation-pill-count {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  color: var(--success);
 }
 
 .validation-pill.is-verifying {
@@ -121,6 +127,15 @@
   overflow: visible;
 }
 
+.validation-pill-dd.is-advanced {
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(680px, calc(100vh - 112px));
+}
+
+.validation-pill-dd.is-advanced .validation-pill-dd-body {
+  max-height: min(580px, calc(100vh - 190px));
+}
+
 .validation-pill-dd::before {
   content: '';
   position: absolute;
@@ -178,6 +193,30 @@
 .validation-pill-dd-body::-webkit-scrollbar-thumb {
   background: var(--borderLt);
   border-radius: 3px;
+}
+
+.validation-pill-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 7px 6px;
+}
+
+.validation-pill-filters button {
+  padding: 3px 8px;
+  border: 1px solid var(--borderLt);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.validation-pill-filters button[aria-pressed='true'] {
+  border-color: currentcolor;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .validation-pill-group-head {
@@ -246,6 +285,18 @@
   background: var(--warning);
 }
 
+.validation-pill-item[data-severity='error'] .validation-pill-item-dot {
+  background: var(--danger, #d64d4d);
+}
+
+.validation-pill-item-severity {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
 .validation-pill-item-label {
   flex: 1;
   min-width: 0;
@@ -267,6 +318,12 @@
 .validation-pill-item.is-active .validation-pill-item-go,
 .validation-pill-item:hover .validation-pill-item-go {
   opacity: 1;
+}
+
+.validation-pill-empty {
+  margin: 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* Success toast positioned above the generate split button */

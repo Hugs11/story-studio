@@ -4,21 +4,16 @@ import {
   validateMenuDepthPlacement,
 } from './projectModel/menuDepth.js';
 import { basenameNoExt } from '../utils/fileUtils.js';
-import { parseConventionName } from '../utils/packConvention.js';
+import { parseConventionName, splitLeadingAge } from '../utils/packConvention.js';
 import { sanitizeImportedName } from './importedNames.js';
+import { generateUuid } from '../utils/uuid.js';
 
-// Remonte un préfixe d'âge « libre » (« 3+ Example story… », « 6+_Titre ») vers minAge et le
+// Remonte un préfixe d'âge « libre » (« 3+ Example… », « 6+_Titre ») vers minAge et le
 // retire du titre. Contrairement à la convention stricte « N+] » (gérée par
 // parseConventionName), certains packs notent l'âge sans crochet ; sans ce traitement,
 // le « 3+ » restait dans le titre et se dédoublait dans le nom exporté (« 3+]3+_… »).
 function liftLeadingAge(name, fallbackAge = '3') {
-  // « N+ » suivi d'un séparateur (« ] » ou espace) et d'un titre : on remonte l'âge,
-  // sans toucher « 3+5 » ni « 3+Example story » (pas de séparateur = pas un préfixe d'âge).
-  const match = String(name || '').match(/^\s*(\d{1,2})\s*\+(?:\]|\s)\s*(\S.*)$/);
-  if (match && match[2].trim()) {
-    return { minAge: match[1], title: match[2].trim() };
-  }
-  return { minAge: fallbackAge, title: String(name || '').trim() };
+  return splitLeadingAge(name) ?? { minAge: fallbackAge, title: String(name || '').trim() };
 }
 
 export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = '' } = {}) {
@@ -33,9 +28,14 @@ export function getUnpackedPackDetails({ result = {}, zipPath = '', zipName = ''
     : sanitizeImportedName(zipFilename || zipName, 'Pack importé');
   const fallbackAge = (zipFilename || zipName || '').match(/^\s*(\d+)\s*\+/)?.[1] || '3';
   const lifted = liftLeadingAge(packName, fallbackAge);
+  // Un titre de convention réduit à l'âge (« 6+] ») n'a rien de lisible : le
+  // nom de l'archive, s'il en porte un, sert de titre.
+  const archiveTitle = parsedZipFilename?.title
+    || liftLeadingAge(sanitizeImportedName(zipFilename, ''), fallbackAge).title;
   const packMetadata = parsedPackName
     ? {
         ...parsedPackName,
+        title: String(parsedPackName.title || '').trim() ? parsedPackName.title : archiveTitle,
         version: result?.packVersion ?? parsedPackName.version,
         description: result?.packDescription ?? '',
         uuid: result?.uuid ?? result?.packUuid ?? '',
@@ -95,12 +95,18 @@ export function buildProjectAfterZipUnpack({
     entries,
   );
   if (!depthDiagnostic.allowed) throw new ProjectMenuDepthError(depthDiagnostic);
+  // Un pack sans identité lisible n'en impose pas une vide : le projet garde la
+  // sienne, et `originalUuid` reste vide puisque le pack n'en apportait pas.
+  const packMetadata = {
+    ...details.packMetadata,
+    uuid: details.packMetadata.uuid || project?.packMetadata?.uuid || generateUuid(),
+  };
   const nextProject = shouldPromote
     ? {
         ...project,
         projectType: 'pack',
         projectName: project?.projectName ?? '',
-        packMetadata: details.packMetadata,
+        packMetadata,
         rootAudio: result?.rootAudio ?? null,
         rootImage: result?.rootImage ?? null,
         thumbnailImage: result?.thumbnailImage ?? result?.rootImage ?? null,

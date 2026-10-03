@@ -1,5 +1,37 @@
 import { useCallback } from 'react';
 import { pathKey } from '../utils/fileUtils';
+import { advancedMediaUsageForPaths } from '../store/advancedAuthoring/mediaUsage';
+import { isAdvancedProject } from '../store/projectWorkState';
+
+const samePath = (a, b) => pathKey(a) === pathKey(b);
+
+// La réponse d'un projet graphe, pour l'audio comme pour l'image. Trois issues,
+// et la troisième est la raison d'être de cette branche : sans elle, un projet
+// graphe recevait « Non utilisé » — une affirmation — là où l'arbre parcouru
+// était simplement vide. Un auteur supprime un fichier sur cette phrase.
+function advancedJobUsage(project, advancedUsages, paths, words) {
+  const found = advancedMediaUsageForPaths(project, advancedUsages, paths, samePath);
+  if (!found) return { state: 'unused', label: words.unused, detail: words.noBinding };
+  if (!found.bound) return { state: 'unused', label: words.unused, detail: words.noBinding };
+  if (!found.known) {
+    return {
+      state: 'unknown',
+      label: 'Usage non calculé',
+      detail: 'Le fichier est lié au document. Les écrans qui l’emploient ne sont pas encore connus : ouvre l’éditeur du projet pour les établir.',
+    };
+  }
+  if (found.usages.length === 0) {
+    return { state: 'unused', label: words.unused, detail: words.boundUnreferenced };
+  }
+  const detail = found.usages
+    .map((usage) => `Écran : ${usage.label} · Champ : ${usage.field === 'image' ? 'image' : 'audio'}`)
+    .join(' ; ');
+  return {
+    state: 'used',
+    label: found.usages.length === 1 ? words.used : `${words.used} ×${found.usages.length}`,
+    detail,
+  };
+}
 
 const AUDIO_FIELD_LABELS = {
   rootAudio: 'audio d’accueil',
@@ -16,9 +48,17 @@ function audioFieldLabel(field) {
   return AUDIO_FIELD_LABELS[field] || 'champ audio';
 }
 
-export function useAiJobUsage({ project, projectIndex }) {
+export function useAiJobUsage({ project, projectIndex, advancedMediaUsages = null }) {
   const getAudioJobUsage = useCallback((job) => {
     if (!job || job.kind !== 'audio' || job.status !== 'done' || !job.resultPath) return null;
+    if (isAdvancedProject(project)) {
+      return advancedJobUsage(project, advancedMediaUsages, [job.resultPath], {
+        used: 'Utilisé',
+        unused: 'Non utilisé',
+        noBinding: 'Aucune liaison du document ne pointe vers ce fichier.',
+        boundUnreferenced: 'Le fichier est lié au document, mais aucun écran ne l’emploie.',
+      });
+    }
     const resultPath = pathKey(job.resultPath);
     const usages = [];
 
@@ -115,10 +155,18 @@ export function useAiJobUsage({ project, projectIndex }) {
       return { state: 'used', label: 'Utilisé', detail: `Nœud : ${nodeName} · Champ : ${fieldLabel}` };
     }
     return { state: 'unused', label: 'Non utilisé', detail: `Nœud : ${nodeName} · Champ modifié : ${fieldLabel}` };
-  }, [project, projectIndex]);
+  }, [project, projectIndex, advancedMediaUsages]);
 
   const getImageJobUsage = useCallback((job) => {
     if (!job || job.kind === 'audio' || job.status !== 'done' || !job.resultPaths?.length) return null;
+    if (isAdvancedProject(project)) {
+      return advancedJobUsage(project, advancedMediaUsages, job.resultPaths, {
+        used: 'Utilisée',
+        unused: 'Non utilisée',
+        noBinding: 'Aucune liaison du document ne pointe vers ces fichiers.',
+        boundUnreferenced: 'Le fichier est lié au document, mais aucun écran ne l’emploie.',
+      });
+    }
     const resultSet = new Set(job.resultPaths.map(pathKey));
     const usages = [];
 
@@ -148,7 +196,7 @@ export function useAiJobUsage({ project, projectIndex }) {
       };
     }
     return { state: 'unused', label: 'Non utilisée', detail: 'Aucune image de cette génération n’est assignée au projet.' };
-  }, [project, projectIndex]);
+  }, [project, projectIndex, advancedMediaUsages]);
 
   return { getAudioJobUsage, getImageJobUsage };
 }

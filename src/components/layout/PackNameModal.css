@@ -435,6 +435,7 @@
 
 .pack-meta-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -492,4 +493,24 @@
   .pack-meta-actions {
     justify-content: flex-start;
   }
+}
+
+/* La raison pour laquelle une application n'a pas abouti — geste tenu par un
+   export, refus, session occupée. Elle est dite dans la fiche, à côté des
+   actions, parce que la saisie y est conservée et que l'auteur doit savoir
+   pourquoi elle attend. */
+.pack-meta-notice {
+  flex: 1 1 100%;
+  order: -1;
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--warning-text);
+}
+
+/* Le mode de nommage du fichier exporté, offert des deux côtés.
+   Il réutilise la puce des âges : même affordance, même poids visuel. */
+.pack-meta-naming-modes {
+  display: flex;
+  gap: 6px;
 }

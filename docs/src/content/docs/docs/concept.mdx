@@ -6,8 +6,9 @@ tableOfContents: false
 
 Story Studio est un **outil de création et d’édition de packs d’histoires pour les boîtes à histoires Lunii**.
 
-Un pack se construit sous forme d’**arborescence** : un point d’entrée, des **Dossiers** pour créer et
-organiser les choix, et des **Histoires** à écouter.
+Pour commencer simplement, un pack peut se construire sous forme d’**arborescence** : un point
+d’entrée, des **Dossiers** pour créer et organiser les choix, et des **Histoires** à écouter.
+L’**Éditeur par menus** présente le projet de cette manière.
 
 Cette structure définit le parcours de l’enfant : ce qu’il voit, ce qu’il entend et ce qui se passe
 lorsqu’il utilise la **molette**, le bouton **OK** ou le bouton **Accueil**.
@@ -27,6 +28,18 @@ Menu racine « Les aventures de Tartempion »
 Story Studio permet de construire ce parcours visuellement, de le tester avec le simulateur, puis de
 générer le pack à installer sur la boîte à histoires.
 
+Pour une navigation plus libre, l’**Éditeur graphe** montre directement les **Écrans**, les
+**Listes de choix** et les raccords qui les relient. Il permet notamment de créer des histoires à
+choix multiples, des quiz, des tirages aléatoires ou des parcours qui réutilisent le même Écran à
+plusieurs endroits.
+
+```text
+Écran → Liste de choix → Écran → Liste de choix → Écran
+```
+
+Les deux éditeurs produisent le même type de pack. L’Éditeur par menus privilégie une organisation
+familière et structurée ; l’Éditeur graphe donne accès à la navigation la plus complète.
+
 Tu n’as pas besoin de maîtriser toutes ces notions dès le départ. La documentation présente chaque
 élément et chaque étape au fur et à mesure de tes besoins.
 
@@ -35,7 +48,8 @@ Tu n’as pas besoin de maîtriser toutes ces notions dès le départ. La docume
 | Si tu veux… | Consulte |
 |---|---|
 | comprendre comment fonctionnent les déplacements et les retours dans un pack | [Navigation](/story-studio/docs/navigation/) |
-| créer librement plusieurs catégories et Histoires | [Éditeur libre](/story-studio/docs/editeur-libre/) |
+| créer librement plusieurs catégories et Histoires | [Éditeur par menus](/story-studio/docs/editeur-libre/) |
+| créer une navigation avancée, une histoire à choix multiples ou un quiz | [Éditeur graphe](/story-studio/docs/editeur-graphe/) |
 | reprendre un ZIP ou un dossier déjà extrait | [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/) |
 | préparer les images et les sons | [Gestionnaire de médias](/story-studio/docs/gestionnaire-de-medias/) |
 | vérifier ton projet et générer le ZIP final | [Vérifier et générer un pack](/story-studio/docs/verifier-et-generer-un-pack/) |

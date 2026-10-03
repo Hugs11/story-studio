@@ -1,4 +1,5 @@
 import { makeId, normalizeMenuEntry, normalizeRefEntry, normalizeStoryEntry, normalizeZipEntry } from './schema.js';
+import { walkMediaBindingReferences } from './mediaBindings.js';
 import { refTargetEntryId } from '../navigationTargets.js';
 
 function buildProjectIndexEntries(entries, ancestors, level, index) {
@@ -285,13 +286,19 @@ export function getEntryThumbnailPath(entry, { rootImage = null, isRoot = false 
 // consommateurs de muter en place (le cas `mapProjectPaths`) ou de simplement
 // lister les candidats (le cas `collectTransferableProjectFiles`).
 //
-// `scope` est l'un de : 'root', 'native-graph', 'menu', 'story', 'zip',
-// 'story-sequence', 'story-home'. Permet aux filtres de cibler un sous-ensemble
-// sans dupliquer la traversee.
+// `scope` est l'un de : 'root', 'advanced-asset', 'native-graph', 'menu',
+// 'story', 'zip', 'story-sequence', 'story-home'. Permet aux filtres de cibler
+// un sous-ensemble sans dupliquer la traversee.
+//
+// 'advanced-asset' est la seule branche du mode Avancé : elle parcourt les
+// liaisons declarees dans `authoring.mediaBindings`, jamais le payload d'auteur
+// — une chaine opaque, ou une cle `audio` ou `path` d'extension inconnue n'est
+// ni une reference media, ni un candidat au transfert.
 export function* walkProjectMediaReferences(project) {
   if (!project || typeof project !== 'object') return;
 
   yield* walkRootReferences(project);
+  yield* walkMediaBindingReferences(project);
   yield* walkNativeGraphReferences(project.nativeGraph, 'graphe natif (racine)');
   yield* walkEntriesMedia(project.rootEntries ?? []);
 }

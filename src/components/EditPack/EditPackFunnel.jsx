@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import {
   FunnelShell,
   FunnelSectionHeader,
@@ -8,15 +9,27 @@ import {
   FunnelGenerationState,
 } from '../funnels';
 import { Eye, FolderOpen, Package, TriangleAlert, Undo2, Upload } from '../icons/LucideLocal';
+import { useErrorDialog } from '../common/Dialog';
 import { pickFolder, pickZip } from '../../hooks/useFileDialog';
 import { basename } from '../../utils/fileUtils';
-import { KEYS, read as readSetting } from '../../store/persistentSettings';
 import {
   createEditPackOperationLifecycle,
+  editorChooserFor,
+  runEditPackBundleChildOperation,
   runEditPackImportOperation,
 } from './editPackOperationLifecycle';
+import { BundleChildStep } from './BundleChildStep';
+import { inspectionProgressRatio } from './bundleChildren';
+import { graphOnlyNoticeFor } from './graphOnlyNotice';
+import { ImportErrorNotice } from './ImportErrorNotice';
+import { presentImportError } from './importErrorPresentation';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 const ARCHIVE_RE = /\.(zip|7z)$/i;
+
+/// Avancement de l'examen d'une archive enveloppe. L'évènement ne porte que des
+/// comptes : aucun nom de pack d'une bibliothèque privée n'y circule.
+const BUNDLE_PROGRESS_EVENT = 'pack-bundle-inspection-progress';
 
 /**
  * Funnel « Modifier un pack », monté sur le châssis commun des funnels.
@@ -30,13 +43,40 @@ const ARCHIVE_RE = /\.(zip|7z)$/i;
  *   extraction + atterrissage éditeur. Lève en cas d'échec.
  * @param {Function} props.onSimulate async ({ zipPath, packLabel }) — ouvre le
  *   simulateur (lecture seule).
+ * @param {Function} props.onLandAdvanced async ({ zipPath, packLabel }) — ouvre
+ *   le pack dans l'Éditeur graphe. Après classement, un pack compatible avec
+ *   les deux éditeurs laisse le choix ; un pack non fidèle au Libre ouvre le
+ *   Graphe directement.
+ * @param {Function} props.onBeforeReplace async () — garde de sauvegarde du
+ *   projet courant, appelée seulement quand le pack et l'éditeur sont connus.
+ * @param {boolean}  props.openedFromGraph ouvert depuis l'Éditeur graphe : un
+ *   pack compatible avec les deux éditeurs s'ouvre dans le Graphe sans question.
+ * @param {Function} props.onNotice (texte) — notice affichée à l'atterrissage quand
+ *   un pack ne s'ouvre que dans le Graphe et que l'auteur ne l'avait pas choisi.
  */
-export function EditPackFunnel({ onClose, onLand, onSimulate }) {
-  const [phase, setPhase] = useState('collect'); // collect | busy | readOnly | unsupported
+export function EditPackFunnel({
+  onClose,
+  onLand,
+  onSimulate,
+  onLandAdvanced = null,
+  onBeforeReplace = async () => true,
+  openedFromGraph = false,
+  onNotice = null,
+}) {
+  const { showChoiceDialog } = useErrorDialog();
+  // collect | busy | bundle | readOnly | unsupported
+  const [phase, setPhase] = useState('collect');
   const [busy, setBusy] = useState({ title: '', hint: '' });
+  const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null); // { zipPath, packLabel }
-  const allowUnsupportedExtraction = readSetting(KEYS.ALLOW_UNSUPPORTED_PACK_EXTRACTION) === 'true';
+  // L'enveloppe ouverte, tant que l'auteur n'en est pas sorti : revenir depuis
+  // un verdict le ramène à sa liste, pas à la zone de dépôt.
+  const [bundle, setBundle] = useState(null);
+  const [selectedChildId, setSelectedChildId] = useState(null);
+  // L'éditeur d'origine est celui de l'ouverture : l'atterrissage change le
+  // projet courant, pas la question déjà tranchée.
+  const [fromGraph] = useState(openedFromGraph);
   const operationLifecycleRef = useRef(null);
   if (!operationLifecycleRef.current) {
     operationLifecycleRef.current = createEditPackOperationLifecycle();
@@ -45,6 +85,24 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
   useEffect(() => {
     operationLifecycleRef.current.activate();
     return () => operationLifecycleRef.current.deactivate();
+  }, []);
+
+  // L'examen d'une enveloppe classe chacun de ses packs : sur une grosse
+  // archive cela dure, donc l'avancement s'affiche au lieu d'un spinner muet.
+  useEffect(() => {
+    let disposed = false;
+    let stop = null;
+    listen(BUNDLE_PROGRESS_EVENT, (event) => {
+      if (disposed) return;
+      setProgress(inspectionProgressRatio(event?.payload?.done, event?.payload?.total));
+    }).then((unlisten) => {
+      if (disposed) releaseTauriListener(unlisten);
+      else stop = unlisten;
+    }).catch(() => {});
+    return () => {
+      disposed = true;
+      releaseTauriListener(stop);
+    };
   }, []);
 
   function closeFunnel() {
@@ -57,10 +115,43 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
     closeFunnel();
   }
 
+  // La suite d'un atterrissage, identique qu'il vienne d'un pack déposé seul ou
+  // d'un enfant choisi dans une enveloppe.
+  function applyImportResult(result, packLabel, fallbackPhase) {
+    setProgress(null);
+    if (result.status === 'landed') {
+      const notice = graphOnlyNoticeFor(result, { openedFromGraph: fromGraph });
+      if (notice) onNotice?.(notice);
+      closeFunnel();
+    } else if (result.status === 'choice-cancelled') {
+      setPhase(fallbackPhase);
+    } else if (result.status === 'classified') {
+      setPending({
+        zipPath: result.zipPath,
+        packLabel,
+        report: result.report,
+        advancedError: result.advancedError ?? null,
+      });
+      setPhase(result.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
+    } else if (result.status === 'error') {
+      setError(presentImportError(result.error));
+      setPhase(fallbackPhase);
+    }
+  }
+
   async function processPack(path, kind) {
     const operation = operationLifecycleRef.current;
     if (!path || !operation.isActive()) return;
     setError('');
+    setProgress(null);
+    // Ouvrir un autre pack efface la notice du précédent, avant l'atterrissage :
+    // celles que l'atterrissage pose lui-même arrivent après.
+    onNotice?.(null);
+    // Une nouvelle archive quitte définitivement l'enveloppe précédente : sans
+    // cela, un retour depuis un verdict ramènerait à une liste qui n'est plus
+    // celle de l'archive ouverte.
+    setBundle(null);
+    setSelectedChildId(null);
     setBusy({ title: 'Vérification du pack…', hint: 'Un instant.' });
     setPhase('busy');
     const packLabel = basename(path);
@@ -71,23 +162,111 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       isFolder,
       convertFolder: (folderPath) => invoke('convert_folder_pack_to_zip', { folderPath }),
       classify: (zipPath) => invoke('classify_pack_editability', { zipPath }),
-      beforeLand: () => {
-        setBusy({ title: 'Décompression du pack…', hint: 'Ne ferme pas la fenêtre.' });
+      inspect: (archivePath) => invoke('inspect_pack_archive', { path: archivePath }),
+      beforeInspect: () => {
+        setBusy({
+          title: 'Examen de l’archive…',
+          hint: 'Si elle contient plusieurs packs, ils sont examinés un par un.',
+        });
+      },
+      beforeLand: (editor) => {
+        setBusy({
+          title: editor === 'advanced'
+            ? 'Ouverture de l’Éditeur graphe…'
+            : 'Décompression du pack…',
+          hint: 'Ne ferme pas la fenêtre.',
+        });
       },
       land: (zipPath) => onLand({ zipPath, packLabel }),
+      landAdvanced: onLandAdvanced ? (zipPath) => onLandAdvanced({ zipPath, packLabel }) : null,
+      chooseEditor: onLandAdvanced ? editorChooser : null,
+      beforeReplace: onBeforeReplace,
     });
-    if (result.status === 'landed') {
-      closeFunnel();
-    } else if (result.status === 'classified') {
-      setPending({ zipPath: result.zipPath, packLabel, report: result.report });
-      setPhase(result.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
-    } else if (result.status === 'error') {
-      setError(`Ce pack n'a pas pu être ouvert : ${result.error?.message ?? result.error}`);
-      setPhase('collect');
+    if (result.status === 'bundle') {
+      setProgress(null);
+      setBundle({
+        containerPath: result.containerPath,
+        containerLabel: packLabel,
+        containerFingerprint: result.inspection.containerFingerprint,
+        children: result.inspection.children,
+      });
+      setSelectedChildId(null);
+      setPhase('bundle');
+      return;
     }
+    applyImportResult(result, packLabel, 'collect');
+  }
+
+  // L'enfant choisi reprend le parcours d'import d'un pack normal, sans le
+  // modifier : même classification, même éditeur, même simulation.
+  async function processBundleChild() {
+    if (!bundle || !selectedChildId) return;
+    const operation = operationLifecycleRef.current;
+    const child = bundle.children.find((entry) => entry.childId === selectedChildId);
+    const packLabel = child?.displayName ?? bundle.containerLabel;
+    setError('');
+    setProgress(null);
+    onNotice?.(null);
+    setBusy({ title: 'Préparation du pack choisi…', hint: 'Ne ferme pas la fenêtre.' });
+    setPhase('busy');
+    const result = await runEditPackBundleChildOperation({
+      lifecycle: operation,
+      containerPath: bundle.containerPath,
+      containerFingerprint: bundle.containerFingerprint,
+      childId: selectedChildId,
+      extractChild: ({ containerPath, containerFingerprint, childId }) => invoke(
+        'extract_pack_bundle_child',
+        { path: containerPath, containerFingerprint, childId },
+      ),
+      classify: (zipPath) => invoke('classify_pack_editability', { zipPath }),
+      beforeLand: (editor) => {
+        setBusy({
+          title: editor === 'advanced'
+            ? 'Ouverture de l’Éditeur graphe…'
+            : 'Décompression du pack…',
+          hint: 'Ne ferme pas la fenêtre.',
+        });
+      },
+      land: (zipPath) => onLand({ zipPath, packLabel }),
+      landAdvanced: onLandAdvanced ? (zipPath) => onLandAdvanced({ zipPath, packLabel }) : null,
+      chooseEditor: onLandAdvanced ? editorChooser : null,
+      beforeReplace: onBeforeReplace,
+    });
+    applyImportResult(result, packLabel, 'bundle');
+  }
+
+  // Revenir depuis un verdict ramène à la liste de l'enveloppe quand on en
+  // vient, et à la zone de dépôt sinon.
+  function backFromVerdict() {
+    setPending(null);
+    setError('');
+    setPhase(bundle ? 'bundle' : 'collect');
+  }
+
+  function leaveBundle() {
+    setBundle(null);
+    setSelectedChildId(null);
+    setPending(null);
+    setError('');
+    setPhase('collect');
   }
 
   const handleDrop = (paths) => processPack(paths?.[0], 'auto');
+
+  function askEditor() {
+    return showChoiceDialog({
+      title: 'Choisir l’éditeur',
+      message: 'Ce pack peut être modifié avec les deux éditeurs.',
+      variant: 'info',
+      cancelValue: null,
+      actions: [
+        { value: 'free', label: 'Éditeur par menus', kind: 'secondary' },
+        { value: 'advanced', label: 'Éditeur graphe', kind: 'primary', autoFocus: true },
+        { value: null, label: 'Annuler', kind: 'ghost' },
+      ],
+    });
+  }
+  const editorChooser = editorChooserFor({ openedFromGraph: fromGraph, askEditor });
   const handleBrowseFile = async () => {
     const operation = operationLifecycleRef.current;
     const session = operation.captureSession();
@@ -117,28 +296,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
     } catch (e) {
       if (!operation.isCurrent(token)) return;
       operation.finish(token);
-      setError(`Le simulateur n'a pas pu s'ouvrir : ${e?.message ?? e}`);
-      setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
-    }
-  }
-
-  async function handleForceExtract() {
-    if (!pending || !allowUnsupportedExtraction) return;
-    const operation = operationLifecycleRef.current;
-    const token = operation.begin();
-    if (token === null) return;
-    setBusy({ title: 'Extraction forcée du pack…', hint: 'La structure récupérée peut être incomplète.' });
-    setPhase('busy');
-    try {
-      if (!operation.claimCompletion(token)) return;
-      await onLand({ ...pending, allowUnsupported: true });
-      if (!operation.isCurrent(token)) return;
-      operation.finish(token);
-      closeFunnel();
-    } catch (e) {
-      if (!operation.isCurrent(token)) return;
-      operation.finish(token);
-      setError(`L’extraction forcée a échoué : ${e?.message ?? e}`);
+      setError(presentImportError(e, 'simulate'));
       setPhase(pending?.report?.readOnlyInspectable ? 'readOnly' : 'unsupported');
     }
   }
@@ -153,7 +311,21 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
       fitContent
       ariaLabel="Modifier un pack"
     >
-      {phase === 'busy' && <FunnelGenerationState title={busy.title} hint={busy.hint} />}
+      {phase === 'busy' && (
+        <FunnelGenerationState title={busy.title} hint={busy.hint} progress={progress} />
+      )}
+
+      {phase === 'bundle' && bundle && (
+        <BundleChildStep
+          containerLabel={bundle.containerLabel}
+          packs={bundle.children}
+          selectedChildId={selectedChildId}
+          onSelect={setSelectedChildId}
+          onContinue={processBundleChild}
+          onBack={leaveBundle}
+          error={error}
+        />
+      )}
 
       {phase === 'collect' && (
         <div className="funnel-step-content">
@@ -174,7 +346,7 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
               Importer un dossier
             </FunnelToolButton>
           </FunnelDropZone>
-          {error && <div className="funnel-error" role="alert">{error}</div>}
+          <ImportErrorNotice error={error} />
         </div>
       )}
 
@@ -183,32 +355,21 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
           <FunnelSectionHeader
             icon={<TriangleAlert />}
             title="Pack non éditable"
-            description={allowUnsupportedExtraction
-              ? "Ce pack n'est pas éditable de manière fiable. Tu peux le simuler ou tenter une extraction incomplète."
+            description={pending?.advancedError
+              ? "Ce pack n'a pu être ouvert ni dans l'Éditeur par menus ni dans l'Éditeur graphe. La simulation reste disponible en lecture seule."
               : "Ce pack n'est pas éditable avec Story Studio. Tu peux quand même le simuler (lecture seule)."}
           />
-          {pending?.report?.reason && (
-            <div className="funnel-error" role="status">{pending.report.reason}</div>
-          )}
-          {!allowUnsupportedExtraction && (
-            <div className="funnel-warning" role="status">
-              Besoin de récupérer des éléments ? Une option avancée permet de tenter l’extraction :
-              {' '}Préférences → Avancé → Import et audio. La structure obtenue peut être incomplète.
-            </div>
-          )}
+          <ImportErrorNotice error={pending?.advancedError} context="graph" />
+          <ImportErrorNotice error={pending?.report?.reason} context="readOnly" role="status" />
+          <ImportErrorNotice error={error} />
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
-            {allowUnsupportedExtraction && (
-              <FunnelToolButton icon={<TriangleAlert />} accent="neutral" onClick={handleForceExtract}>
-                Extraire quand même
-              </FunnelToolButton>
-            )}
-            <FunnelToolButton icon={<Eye />} accent="violet" variant="solid" onClick={handleSimulate}>
+            <FunnelToolButton icon={<Eye />} accent="neutral" onClick={handleSimulate}>
               Simuler le pack
             </FunnelToolButton>
             <FunnelToolButton
               icon={<Undo2 />}
               accent="neutral"
-              onClick={() => { setPending(null); setError(''); setPhase('collect'); }}
+              onClick={backFromVerdict}
             >
               Choisir un autre pack
             </FunnelToolButton>
@@ -221,29 +382,16 @@ export function EditPackFunnel({ onClose, onLand, onSimulate }) {
           <FunnelSectionHeader
             icon={<TriangleAlert />}
             title="Pack non supporté"
-            description={allowUnsupportedExtraction
-              ? "Ce pack ne peut pas être ouvert normalement. Tu peux tenter une extraction incomplète pour récupérer ses éléments."
-              : "Ce pack ne peut pas être ouvert ni simulé par Story Studio."}
+            description="Ce pack ne peut pas être ouvert ni simulé par Story Studio."
           />
-          {pending?.report?.reason && (
-            <div className="funnel-error" role="status">{pending.report.reason}</div>
-          )}
-          {!allowUnsupportedExtraction && (
-            <div className="funnel-warning" role="status">
-              Besoin de récupérer des éléments ? Une option avancée permet de tenter l’extraction :
-              {' '}Préférences → Avancé → Import et audio. La structure obtenue peut être incomplète.
-            </div>
-          )}
+          <ImportErrorNotice error={pending?.report?.reason} context="unsupported" role="status" />
+          <ImportErrorNotice error={pending?.advancedError} context="graph" />
+          <ImportErrorNotice error={error} />
           <div className="funnel-dropzone-actions" style={{ justifyContent: 'flex-start' }}>
-            {allowUnsupportedExtraction && (
-              <FunnelToolButton icon={<TriangleAlert />} accent="neutral" onClick={handleForceExtract}>
-                Tenter l’extraction
-              </FunnelToolButton>
-            )}
             <FunnelToolButton
               icon={<Undo2 />}
               accent="neutral"
-              onClick={() => { setPending(null); setError(''); setPhase('collect'); }}
+              onClick={backFromVerdict}
             >
               Choisir un autre pack
             </FunnelToolButton>

@@ -2,7 +2,16 @@ import { Children, cloneElement, isValidElement, useLayoutEffect, useRef, useSta
 import { createPortal } from 'react-dom';
 import './Tooltip.css';
 
-export function Tooltip({ text, children, placement = 'below', wrap = false, className = '', style, disabled = false }) {
+// `asChild` : la bulle se branche sur l'enfant (un seul élément DOM) au lieu
+// de l'envelopper dans un bloc — pour un élément positionné en absolu, dans
+// une grille ou visé par un sélecteur `parent > enfant`, que l'enveloppe
+// déplacerait.
+// `whenTruncated` : la bulle ne s'ouvre que si le texte de l'élément est coupé
+// à l'écran — un nom entier n'a pas à être répété.
+export function Tooltip({
+  text, children, placement = 'below', wrap = false, className = '', style, disabled = false,
+  asChild = false, whenTruncated = false,
+}) {
   const [pos, setPos] = useState(null);
   const timerRef = useRef(null);
   const wrapRef = useRef(null);
@@ -10,6 +19,8 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
 
   function handleEnter() {
     if (disabled) return;
+    const anchor = wrapRef.current;
+    if (whenTruncated && anchor && anchor.scrollWidth <= anchor.clientWidth) return;
     timerRef.current = setTimeout(() => {
       if (wrapRef.current) {
         const rect = wrapRef.current.getBoundingClientRect();
@@ -63,19 +74,43 @@ export function Tooltip({ text, children, placement = 'below', wrap = false, cla
     });
   }
 
+  const bubble = !disabled && pos && createPortal(
+    <div
+      ref={bubbleRef}
+      className={`tooltip-bubble${pos.placement === 'above' ? ' is-above' : ''}${wrap ? ' is-wrap' : ''}`}
+      style={{ left: pos.left, top: pos.top, '--tooltip-arrow-left': `${pos.arrowX}px` }}
+    >
+      {text}
+    </div>,
+    document.body,
+  );
+
+  if (asChild) {
+    const child = Children.only(children);
+    const childRef = child.props.ref;
+    return (
+      <>
+        {cloneElement(child, {
+          title: undefined,
+          ref: (node) => {
+            wrapRef.current = node;
+            if (typeof childRef === 'function') childRef(node);
+            else if (childRef) childRef.current = node;
+          },
+          onMouseEnter: (event) => { child.props.onMouseEnter?.(event); handleEnter(); },
+          onMouseLeave: (event) => { child.props.onMouseLeave?.(event); handleLeave(); },
+          onFocus: (event) => { child.props.onFocus?.(event); if (event.currentTarget.matches(':focus-visible')) handleEnter(); },
+          onBlur: (event) => { child.props.onBlur?.(event); handleLeave(); },
+        })}
+        {bubble}
+      </>
+    );
+  }
+
   return (
     <div className={`tooltip-wrap${className ? ` ${className}` : ''}`} style={style} ref={wrapRef} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {renderChildrenWithoutNativeTitle()}
-      {!disabled && pos && createPortal(
-        <div
-          ref={bubbleRef}
-          className={`tooltip-bubble${pos.placement === 'above' ? ' is-above' : ''}${wrap ? ' is-wrap' : ''}`}
-          style={{ left: pos.left, top: pos.top, '--tooltip-arrow-left': `${pos.arrowX}px` }}
-        >
-          {text}
-        </div>,
-        document.body,
-      )}
+      {bubble}
     </div>
   );
 }

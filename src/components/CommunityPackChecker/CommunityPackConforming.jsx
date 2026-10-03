@@ -102,7 +102,7 @@ function buildConformingGroups(report) {
         { key: 'editable', label: 'Éditable Story Studio', value: structure.storyStudioEditable ? 'Oui' : 'Non' },
         { key: 'stories', label: 'Histoires', value: String(structure.storyCount ?? 0) },
         { key: 'stages', label: 'Étapes', value: String(structure.stageCount ?? 0) },
-        { key: 'actions', label: 'Actions', value: String(structure.actionCount ?? 0) },
+        { key: 'actions', label: 'Listes de choix', value: String(structure.actionCount ?? 0) },
         { key: 'refAudio', label: 'Audios référencés', value: String(structure.referencedAudioCount ?? 0) },
         { key: 'refImage', label: 'Images référencées', value: String(structure.referencedImageCount ?? 0) },
       ],

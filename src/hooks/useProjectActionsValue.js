@@ -27,6 +27,11 @@ export function useProjectActionsValue({
     onAddStoryToMenu: mediaImport.handleAddStoryToMenu,
     onImportStories: mediaImport.handleAddStory,
     onImportFolder: mediaImport.handleImportFolder,
+    // L'entrée de fichiers dans la bibliothèque de médias. C'est la seule
+    // forme d'import qui ait un objet sur un document de graphe, et c'est la
+    // même fonction que la médiathèque appelle déjà — une seule place par
+    // action, deux portes vers elle.
+    onImportMediaLibrary: mediaImport.handleImportMediaLibrary,
     onImportPodcast: () => modals.open('podcastImport'),
     onImportYoutube: () => setYoutubeFunnelMode('editor'),
     onRecord: toolbar.handleToolbarRecord,

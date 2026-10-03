@@ -332,7 +332,7 @@ export function useDiagramViewport({
     const node = containerRef.current;
     if (!node) return;
     node.focus({ preventScroll: true });
-    if (event.target.closest?.('.fd-complete-node, .fd-complete-zoom, .fd-complete-topbar, .fd-diagram-search')) return;
+    if (event.target.closest?.('.fd-complete-node, .fd-complete-zoom, .structure-actions-bar--canvas, .fd-diagram-search')) return;
     onStagePanStart?.();
     panStateRef.current = {
       active: true,

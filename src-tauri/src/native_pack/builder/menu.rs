@@ -22,10 +22,7 @@ pub(crate) fn preallocate_menus(
                     menu.id.clone(),
                     MenuPrealloc {
                         action_id: action_id.clone(),
-                        replay_transition: Transition {
-                            action_node: parent_action_id.to_string(),
-                            option_index: index as i32,
-                        },
+                        replay_transition: Transition::fixed(parent_action_id, index),
                     },
                 );
             }

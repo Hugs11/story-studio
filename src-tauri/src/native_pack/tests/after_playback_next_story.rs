@@ -155,7 +155,7 @@ fn stage_by_name<'a>(document: &'a StoryDocument, name: &str) -> &'a StageNode {
     document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == name)
+        .find(|stage| stage.label() == name)
         .unwrap_or_else(|| panic!("stage `{name}` introuvable"))
 }
 
@@ -167,12 +167,12 @@ fn transition_target<'a>(document: &'a StoryDocument, transition: &Transition) -
         .expect("action node cible");
     let stage_id = action
         .options
-        .get(transition.option_index as usize)
+        .get(transition.selection.fixed_index().expect("sélection fixe"))
         .expect("option index");
     document
         .stage_nodes
         .iter()
-        .find(|stage| &stage.uuid == stage_id)
+        .find(|stage| Some(stage.uuid.as_str()) == stage_id.as_deref())
         .expect("stage cible")
 }
 
@@ -180,15 +180,16 @@ fn transition_target<'a>(document: &'a StoryDocument, transition: &Transition) -
 
 #[test]
 fn prompt_ok_next_story_targets_next_sibling_title() {
-    let document = build_story_document(&menu_report(vec![
+    let report = menu_report(vec![
         prompt_story("a", "A", Some("next_story"), None, false),
         plain_story("b", "B"),
-    ]))
-    .expect("document");
+    ]);
+    let document = build_story_document(&report).expect("document");
+    assert_free_document_passes_gates(&report, &document);
 
     let prompt = stage_by_name(&document, "Fin - A");
-    let target = transition_target(&document, prompt.ok_transition.as_ref().expect("prompt ok"));
-    assert_eq!(target.name, "Titre - B");
+    let target = transition_target(&document, prompt.ok_transition.value().expect("prompt ok"));
+    assert_eq!(target.label(), "Titre - B");
 }
 
 #[test]
@@ -200,9 +201,9 @@ fn prompt_ok_next_story_on_last_story_falls_back_to_menu() {
     .expect("document");
 
     let prompt = stage_by_name(&document, "Fin - B");
-    let target = transition_target(&document, prompt.ok_transition.as_ref().expect("prompt ok"));
+    let target = transition_target(&document, prompt.ok_transition.value().expect("prompt ok"));
     // Dernière sœur : repli canonique du retour de lecture = stage du menu parent.
-    assert_eq!(target.name, "Menu");
+    assert_eq!(target.label(), "Menu");
 }
 
 #[test]
@@ -216,9 +217,9 @@ fn prompt_home_next_story_targets_next_sibling_title() {
     let prompt = stage_by_name(&document, "Fin - A");
     let target = transition_target(
         &document,
-        prompt.home_transition.as_ref().expect("prompt home"),
+        prompt.home_transition.value().expect("prompt home"),
     );
-    assert_eq!(target.name, "Titre - B");
+    assert_eq!(target.label(), "Titre - B");
 }
 
 #[test]
@@ -230,12 +231,12 @@ fn prompt_home_next_story_on_last_story_falls_back_to_prompt_ok() {
     .expect("document");
 
     let prompt = stage_by_name(&document, "Fin - B");
-    let ok = prompt.ok_transition.as_ref().expect("prompt ok");
-    let home = prompt.home_transition.as_ref().expect("prompt home");
+    let ok = prompt.ok_transition.value().expect("prompt ok");
+    let home = prompt.home_transition.value().expect("prompt home");
     // Dernière sœur : `next_story` non résolu → repli sur la transition OK du prompt (la racine),
     // jamais le Home de l'histoire. Home et OK pointent donc vers la même transition.
     assert_eq!(home.action_node, ok.action_node);
-    assert_eq!(home.option_index, ok.option_index);
+    assert_eq!(home.selection, ok.selection);
 }
 
 #[test]
@@ -247,7 +248,7 @@ fn prompt_home_none_emits_no_transition() {
     .expect("document");
 
     let prompt = stage_by_name(&document, "Fin - A");
-    assert!(prompt.home_transition.is_none());
+    assert!(prompt.home_transition.has_no_value());
 }
 
 #[test]
@@ -259,13 +260,13 @@ fn prompt_home_empty_follows_ok_including_next_story() {
     .expect("document");
 
     let prompt = stage_by_name(&document, "Fin - A");
-    let ok = prompt.ok_transition.as_ref().expect("prompt ok");
-    let home = prompt.home_transition.as_ref().expect("prompt home");
+    let ok = prompt.ok_transition.value().expect("prompt ok");
+    let home = prompt.home_transition.value().expect("prompt home");
     // Home vide suit exactement OK...
     assert_eq!(home.action_node, ok.action_node);
-    assert_eq!(home.option_index, ok.option_index);
+    assert_eq!(home.selection, ok.selection);
     // ...et OK a bien résolu next_story vers la sœur suivante.
-    assert_eq!(transition_target(&document, ok).name, "Titre - B");
+    assert_eq!(transition_target(&document, ok).label(), "Titre - B");
 }
 
 // ── Séquence ────────────────────────────────────────────────────────────────
@@ -284,8 +285,8 @@ fn sequence_final_ok_next_story_targets_next_sibling_title() {
     .expect("document");
 
     let step = stage_by_name(&document, "SeqA");
-    let target = transition_target(&document, step.ok_transition.as_ref().expect("seq ok"));
-    assert_eq!(target.name, "Titre - B");
+    let target = transition_target(&document, step.ok_transition.value().expect("seq ok"));
+    assert_eq!(target.label(), "Titre - B");
 }
 
 #[test]
@@ -302,8 +303,8 @@ fn sequence_final_ok_next_story_on_last_story_falls_back_to_menu() {
     .expect("document");
 
     let step = stage_by_name(&document, "SeqB");
-    let target = transition_target(&document, step.ok_transition.as_ref().expect("seq ok"));
-    assert_eq!(target.name, "Menu");
+    let target = transition_target(&document, step.ok_transition.value().expect("seq ok"));
+    assert_eq!(target.label(), "Menu");
 }
 
 #[test]
@@ -320,8 +321,8 @@ fn sequence_step_home_next_story_targets_next_sibling_title() {
     .expect("document");
 
     let step = stage_by_name(&document, "SeqA");
-    let target = transition_target(&document, step.home_transition.as_ref().expect("seq home"));
-    assert_eq!(target.name, "Titre - B");
+    let target = transition_target(&document, step.home_transition.value().expect("seq home"));
+    assert_eq!(target.label(), "Titre - B");
 }
 
 #[test]
@@ -355,7 +356,57 @@ fn sequence_home_step_home_next_story_targets_next_sibling_title() {
     let step = stage_by_name(&document, "Reaction A");
     let target = transition_target(
         &document,
-        step.home_transition.as_ref().expect("home step home"),
+        step.home_transition.value().expect("home step home"),
     );
-    assert_eq!(target.name, "Titre - B");
+    assert_eq!(target.label(), "Titre - B");
+}
+
+/// Réaction Accueil de fin active (au moins deux étapes) : pendant la lecture,
+/// Accueil mène à cette réaction, quelle que soit la destination Accueil
+/// réglée sur l'histoire. Le miroir `generatedNavigation.js` doit le dire.
+#[test]
+fn active_home_step_replaces_the_story_home_destination() {
+    let home_step = || CanonicalAfterPlaybackStep {
+        id: "home-step".to_string(),
+        name: "Reaction A".to_string(),
+        audio: Some("hs.mp3".to_string()),
+        image: None,
+        control_settings: None,
+        ok_target: None,
+        ok_choice_targets: Vec::new(),
+        home_target: Some("root".to_string()),
+        home_follows_ok: false,
+        home_none: false,
+    };
+    type Configure = fn(&mut CanonicalStory);
+    let variants: [(&str, Configure); 3] = [
+        ("par défaut", |_| {}),
+        ("destination choisie", |story| {
+            story.return_on_home = Some("story:b".to_string());
+        }),
+        ("sans destination", |story| story.return_on_home_none = true),
+    ];
+    for (label, configure) in variants {
+        let mut story_a = sequence_story(
+            "a",
+            "A",
+            vec![
+                seq_step("SeqA1", None, None),
+                seq_step("SeqA2", Some("root"), None),
+            ],
+            Some(home_step()),
+        );
+        configure(&mut story_a);
+        let document = build_story_document(&menu_report(vec![story_a, plain_story("b", "B")]))
+            .expect("document");
+
+        let play = stage_by_name(&document, "Histoire - A");
+        let target = transition_target(
+            &document,
+            play.home_transition
+                .value()
+                .unwrap_or_else(|| panic!("{label} : Accueil de lecture écrit")),
+        );
+        assert_eq!(target.label(), "Reaction A", "{label}");
+    }
 }

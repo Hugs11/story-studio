@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { collectSessionOnlyMedia, applySessionMediaTriage } from '../store/sessionMediaTriage';
 import { copyMediaToWorkspace } from '../store/projectIO';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
@@ -21,6 +21,8 @@ import { logger } from '../utils/logger';
  */
 export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLibraryPaths, showChoiceDialog }) {
   const [triageRequest, setTriageRequest] = useState(null); // null | { items, resolve }
+  const liveStoreRef = useRef(store);
+  liveStoreRef.current = store;
 
   const triageSessionMedia = useCallback(async ({
     project,
@@ -28,7 +30,9 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
     targetWorkspaceDir,
     projectName = '',
     transferCopies = [],
+    isSessionCurrent = () => true,
   }) => {
+    if (!isSessionCurrent()) return { changed: false };
     const replacements = new Map();
     for (const copy of transferCopies) {
       if (copy?.from && copy?.to) replacements.set(pathKey(copy.from), copy.to);
@@ -37,7 +41,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
     const items = collectSessionOnlyMedia({
       project,
       mediaLibraryPaths: mediaLibraryPathsRef.current,
-      mediaTags: store.mediaTags,
+      mediaTags: liveStoreRef.current.mediaTags,
       sessionDir,
       excludeKeys: replacements,
     });
@@ -46,6 +50,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
     if (items.length > 0) {
       const choice = await new Promise((resolve) => setTriageRequest({ items, resolve }));
       setTriageRequest(null);
+      if (!isSessionCurrent()) return { changed: false };
 
       const keptKeys = new Set(choice.keptPaths.map((path) => pathKey(path)));
       for (const item of items) {
@@ -56,6 +61,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
       while (pending.length > 0) {
         const failed = [];
         for (const path of pending) {
+          if (!isSessionCurrent()) return { changed: false };
           if (replacements.has(pathKey(path))) continue;
           try {
             const artifactCopies = [];
@@ -74,6 +80,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
             failed.push({ path, error: String(error) });
           }
         }
+        if (!isSessionCurrent()) return { changed: false };
         if (failed.length === 0) break;
         logger.error(`session:triage-copy-errors count=${failed.length}`);
         const details = failed.slice(0, 5).map((item) => `• ${item.path}\n  ${item.error}`).join('\n');
@@ -97,20 +104,21 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
       }
     }
 
-    if (replacements.size === 0 && droppedPaths.length === 0) return { changed: false };
+    if (!isSessionCurrent()
+      || (replacements.size === 0 && droppedPaths.length === 0)) return { changed: false };
 
     const next = applySessionMediaTriage({
       mediaLibraryPaths: mediaLibraryPathsRef.current,
-      mediaTags: store.mediaTags,
+      mediaTags: liveStoreRef.current.mediaTags,
       replacements,
       droppedPaths,
     });
     const changed = droppedPaths.length > 0
       || JSON.stringify(next.mediaLibraryPaths) !== JSON.stringify(mediaLibraryPathsRef.current)
-      || JSON.stringify(next.mediaTags) !== JSON.stringify(store.mediaTags);
+      || JSON.stringify(next.mediaTags) !== JSON.stringify(liveStoreRef.current.mediaTags);
     if (!changed) return { changed: false };
 
-    store.setMediaTags(next.mediaTags);
+    liveStoreRef.current.setMediaTags(next.mediaTags);
     setMediaLibraryPaths(next.mediaLibraryPaths);
     mediaLibraryPathsRef.current = next.mediaLibraryPaths;
     logger.info(`session:triage rekeyed=${replacements.size} dropped=${droppedPaths.length}`);
@@ -119,6 +127,7 @@ export function useSessionMediaTriage({ store, mediaLibraryPathsRef, setMediaLib
       changed: true,
       mediaLibraryPaths: next.mediaLibraryPaths,
       mediaTags: next.mediaTags,
+      replacements,
     };
   }, [mediaLibraryPathsRef, setMediaLibraryPaths, showChoiceDialog, store]);
 

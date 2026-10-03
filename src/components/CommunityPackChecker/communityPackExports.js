@@ -579,7 +579,7 @@ function buildConformingGroups(report) {
         { key: 'editable', label: 'Éditable Story Studio', value: structure.storyStudioEditable ? 'Oui' : 'Non' },
         { key: 'stories', label: 'Histoires', value: String(structure.storyCount ?? 0) },
         { key: 'stages', label: 'Étapes', value: String(structure.stageCount ?? 0) },
-        { key: 'actions', label: 'Actions', value: String(structure.actionCount ?? 0) },
+        { key: 'actions', label: 'Listes de choix', value: String(structure.actionCount ?? 0) },
         { key: 'refAudio', label: 'Audios référencés', value: String(structure.referencedAudioCount ?? 0) },
         { key: 'refImage', label: 'Images référencées', value: String(structure.referencedImageCount ?? 0) },
       ],
@@ -1332,7 +1332,7 @@ export function formatReadableReport(report) {
     lines.push(`- Éditable Story Studio : ${structure.storyStudioEditable ? 'oui' : 'non'}`);
     lines.push(`- Histoires : ${structure.storyCount ?? 0}`);
     lines.push(`- Étapes : ${structure.stageCount ?? 0}`);
-    lines.push(`- Actions : ${structure.actionCount ?? 0}`);
+    lines.push(`- Listes de choix : ${structure.actionCount ?? 0}`);
     lines.push(`- Audios référencés : ${structure.referencedAudioCount ?? 0}`);
     lines.push(`- Images référencées : ${structure.referencedImageCount ?? 0}`);
     lines.push('');

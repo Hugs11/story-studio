@@ -3,6 +3,8 @@ import { Button } from '../common/Button';
 
 export function MediaSelectionBar({
   selectedCount,
+  graphMediaTarget,
+  onAssignToGraph,
   selectedAudioItems,
   onCopyAudio,
   onCutAudio,
@@ -16,7 +18,8 @@ export function MediaSelectionBar({
   visibleSelectedItems,
   onClear,
 }) {
-  if (selectedCount <= 1) return null;
+  const multiple = selectedCount > 1;
+  if (!multiple && !(selectedCount === 1 && graphMediaTarget)) return null;
 
   function applyBulkTag(e) {
     e.preventDefault();
@@ -31,7 +34,12 @@ export function MediaSelectionBar({
   return (
     <div className="media-selection-bar">
       <span className="media-selection-count">{selectedCount} sélectionné{selectedCount > 1 ? 's' : ''}</span>
-      {selectedAudioItems.length > 0 ? (
+      {graphMediaTarget && (
+        <Button variant="primary" className="media-selection-btn" onClick={onAssignToGraph}>
+          Utiliser sur « {graphMediaTarget.label} »
+        </Button>
+      )}
+      {multiple && selectedAudioItems.length > 0 ? (
         <>
           <Button className="media-selection-btn" onClick={onCopyAudio}>
             Copier {selectedAudioItems.length} son{selectedAudioItems.length > 1 ? 's' : ''}
@@ -46,7 +54,7 @@ export function MediaSelectionBar({
           )}
         </>
       ) : null}
-      {onAddMediaTag ? (
+      {multiple && onAddMediaTag ? (
         <div className="media-selection-tag-wrap">
           <form className="media-selection-tag-form" onSubmit={applyBulkTag}>
             <input
@@ -84,7 +92,7 @@ export function MediaSelectionBar({
           )}
         </div>
       ) : null}
-      <Button className="media-selection-btn" onClick={onClear}>Effacer</Button>
+      {multiple && <Button className="media-selection-btn" onClick={onClear}>Effacer</Button>}
     </div>
   );
 }

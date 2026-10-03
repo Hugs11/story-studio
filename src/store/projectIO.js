@@ -2,6 +2,8 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, copyFile, mkdir, rename, remove, exists, readDir } from '@tauri-apps/plugin-fs';
 import { getProjectFilePrefix, sanitizeProjectPrefix } from '../utils/projectPrefix';
+import { isFallbackProjectName, suggestProjectName } from './projectSaveName.js';
+import { createAdvancedViewBridge } from './advancedGraphView/advancedViewBridge.js';
 import {
   basename,
   basenameNoExt,
@@ -9,16 +11,24 @@ import {
   isPathInside,
   joinPath,
   pathKey,
-  toProjectRelativePath,
 } from '../utils/fileUtils';
 import { TEMP_IMAGES_DIR, LEGACY_TEMP_IMAGES_DIR } from '../utils/tempDirs';
 import {
-  migrateProjectData,
-  normalizeProjectData,
+  decodeProjectFile,
+  encodeProjectFile,
+  projectFileBody,
+  projectPreviewThumbnail,
   projectToRustExport,
-  projectToSerializable,
+  readMediaBindings,
+  readProjectFilePreview,
+  resolveMediaBindingStatuses,
   walkProjectMediaReferences,
 } from './projectModel';
+import {
+  fromProjectRelativeMediaPath,
+  relativizeProjectMediaPaths,
+  toProjectRelativeMediaPath,
+} from './projectMediaPaths';
 import { isProjectWorthAutosaving, selectStaleAutosaveBackups } from './autosaveDecision';
 import { KEYS, read as readSetting, write as writeSetting } from './persistentSettings';
 import {
@@ -32,6 +42,7 @@ import {
 } from './workspaceDirs';
 import { chooseCompatibleProjectPath, workspaceFallbackForProjectRelativePath } from './projectPathCompatibility';
 import { reconcileMediaLibraryPaths } from './mediaLibrary';
+import { collectSessionBoundReferences } from './sessionMediaTriage';
 import {
   imageEditMetadataPath,
   readImageEditMetadata,
@@ -49,6 +60,25 @@ const FILENAME_FORBIDDEN_CHARS = /[<>:"/\\|?*\[\]+]/g;
 
 function sanitizeProjectFilename(name, fallback = 'mon-projet') {
   return String(name || fallback).trim().replace(FILENAME_FORBIDDEN_CHARS, '_');
+}
+
+async function projectSaveFilename(project, currentSavePath = null) {
+  let documentTitle = null;
+  if (project?.authoringMode === 'advanced') {
+    try {
+      // Lire ce payload précis évite de nommer le fichier depuis une vue UI
+      // encore associée au document précédent ou au titre avant renommage.
+      const view = await createAdvancedViewBridge().readGraphView(project.authoring.payload);
+      if (view?.metadata?.title?.presence === 'value') documentTitle = view.metadata.title.value;
+    } catch {
+      // Une lecture indisponible ne doit pas empêcher de conserver le travail.
+      // Le nom local (ou celui du fichier existant) reste utilisable en repli.
+    }
+  }
+  return sanitizeProjectFilename(suggestProjectName(project, {
+    documentTitle,
+    currentFileName: currentSavePath ? basenameNoExt(currentSavePath) : '',
+  }));
 }
 
 function getStoredDir(keys) {
@@ -105,14 +135,6 @@ function projectNameFromPath(path) {
   return basenameNoExt(path).trim();
 }
 
-function isFallbackProjectName(value) {
-  const normalized = String(value || '')
-    .trim()
-    .normalize('NFKC')
-    .toLowerCase();
-  return !normalized || ['nouveau-projet', 'nouveau projet', 'mon-projet', 'mon projet', 'projet'].includes(normalized);
-}
-
 function withLocalProjectNameForPath(project, path, { force = false } = {}) {
   const stem = projectNameFromPath(path);
   if (!stem) return project;
@@ -140,7 +162,7 @@ export function rememberRecentProject(project, path) {
     projectName: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
     name: project?.projectName?.trim() || basenameNoExt(path) || 'Projet sans nom',
     projectType: project?.projectType || 'pack',
-    thumbnailImage: project?.thumbnailImage || project?.rootImage || null,
+    thumbnailImage: projectPreviewThumbnail(project),
     updatedAt: Date.now(),
   };
   const next = [
@@ -201,25 +223,10 @@ function relativizeTagKeys(tags, mbahDir) {
   const result = {};
   for (const [path, tagList] of Object.entries(tags)) {
     if (Array.isArray(tagList) && tagList.length > 0) {
-      result[toProjectRelative(path, mbahDir)] = tagList;
+      result[toProjectRelativeMediaPath(path, mbahDir)] = tagList;
     }
   }
   return result;
-}
-
-// Converts an absolute path to a relative path (./...) if it's inside mbahDir, otherwise returns it unchanged.
-function toProjectRelative(absolutePath, mbahDir) {
-  if (!hasPath(absolutePath)) return absolutePath;
-  return toProjectRelativePath(absolutePath, mbahDir);
-}
-
-// Resolves a relative path (./...) against mbahDir into an absolute path.
-// Absolute paths (old projects) are returned unchanged.
-function fromProjectRelative(maybRelativePath, mbahDir) {
-  if (!hasPath(maybRelativePath)) return maybRelativePath;
-  if (!maybRelativePath.startsWith('./') && !maybRelativePath.startsWith('../')) return maybRelativePath;
-  const fwdDir = mbahDir.replace(/\\/g, '/').replace(/\/$/, '');
-  return fwdDir + '/' + maybRelativePath.replace(/^\.\//, '');
 }
 
 async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir, cache) {
@@ -229,7 +236,7 @@ async function resolveLoadedProjectPath(maybeRelativePath, mbahDir, workspaceDir
   const cacheKey = `${mbahDir}\n${workspaceDir}\n${maybeRelativePath}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-  const projectPath = fromProjectRelative(maybeRelativePath, mbahDir);
+  const projectPath = fromProjectRelativeMediaPath(maybeRelativePath, mbahDir);
   const workspacePath = workspaceFallbackForProjectRelativePath(maybeRelativePath, workspaceDir);
   if (!workspacePath || normalizePath(projectPath) === normalizePath(workspacePath)) {
     cache.set(cacheKey, projectPath);
@@ -267,15 +274,6 @@ async function absolutizeTagKeysWithCompatibility(tags, mbahDir, workspaceDir, c
   return result;
 }
 
-// Applique transformFn a chaque path media du projet, retourne un clone modifie.
-function mapProjectPaths(project, transformFn) {
-  const cloned = structuredClone(project);
-  for (const ref of walkProjectMediaReferences(cloned)) {
-    ref.obj[ref.key] = transformFn(ref.path);
-  }
-  return cloned;
-}
-
 function isManagedProjectPath(path, savePath) {
   if (!hasPath(path) || !hasPath(savePath)) return false;
   const workspaceDir = readSetting(KEYS.WORKSPACE_DIR);
@@ -301,7 +299,7 @@ function shouldTransferProjectPath(path, savePath, statusByPath = null) {
 // Construit la liste mutable des references a transferer, sur un clone du projet.
 // L'appelant peut muter `ref.obj[ref.key]` pour rediriger les chemins.
 function collectTransferTargets(project, savePath, statusByPath = null) {
-  const updated = structuredClone(projectToSerializable(normalizeProjectData(project)));
+  const updated = projectFileBody(project);
   const refs = [];
   for (const ref of walkProjectMediaReferences(updated)) {
     if (!shouldTransferProjectPath(ref.path, savePath, statusByPath)) continue;
@@ -314,10 +312,12 @@ function collectTransferTargets(project, savePath, statusByPath = null) {
 // que l'utilisateur peut accepter ou refuser de copier dans le projet.
 export function collectTransferableProjectFiles(project, savePath, statusByPath = null) {
   if (!hasPath(savePath)) return [];
-  const normalized = normalizeProjectData(project);
+  // Le mode Avancé passe par la même vue : une liaison média déclarée est une
+  // candidate au même titre qu'une référence d'arbre, et `assetRef` n'est jamais
+  // proposé au transfert — seul son `path` l'est.
   const seen = new Set();
   const candidates = [];
-  for (const ref of walkProjectMediaReferences(normalized)) {
+  for (const ref of walkProjectMediaReferences(projectFileBody(project))) {
     if (!shouldTransferProjectPath(ref.path, savePath, statusByPath)) continue;
     const key = normalizePath(ref.path);
     if (seen.has(key)) continue;
@@ -366,7 +366,13 @@ export async function transferProjectFilesToProject(project, savePath, copyToPro
   }
 
   return {
-    project: updated,
+    // Une copie réussie est un fait de disque : la liaison qui la désigne passe
+    // à `resolved`. Une copie échouée garde son dernier chemin connu et son
+    // état ; le transfert ne retire ni ne réordonne jamais une liaison, et ne
+    // requalifie rien quand il n'a rien copié.
+    project: copies.length === 0
+      ? updated
+      : resolveMediaBindingStatuses(updated, Object.fromEntries(copies.map(({ to }) => [to, true]))),
     copiedCount: copiedPaths.size,
     copies,
     errors,
@@ -402,11 +408,15 @@ async function backupProjectFile(path, limit = 0, backupDirOverride = null) {
   }
 }
 
+// Le fichier précédent n'est remplacé que par un `rename` sur un temporaire
+// complet : ni l'écriture ni le remplacement ne peuvent le laisser à moitié
+// réécrit. Le backup est pris avant, donc il conserve l'état valide même quand
+// l'écriture échoue ensuite ; le temporaire, lui, est retiré dans les deux cas.
 async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupDirOverride = null } = {}) {
   await backupProjectFile(path, backupLimit, backupDirOverride);
   const tmpPath = `${path}.tmp-${Date.now()}`;
-  await writeTextFile(tmpPath, contents);
   try {
+    await writeTextFile(tmpPath, contents);
     await rename(tmpPath, path);
   } catch (error) {
     await remove(tmpPath).catch(() => {});
@@ -416,18 +426,23 @@ async function writeProjectFileAtomic(path, contents, { backupLimit = 0, backupD
 
 /**
  * Copie les images temporaires vers {workspaceDir}/images-generees/.
- * Fallback : images-generees/ à côté du .mbah si workspace non défini.
+ * Sans workspace fourni, l'emplacement de travail configuré (ou celui par
+ * défaut) : jamais un dossier à côté du .mbah.
  * Retourne un projet serialisable avec les chemins mis à jour.
+ * Chaque copie créée est consignée dans `createdCopies` (`{ from, to }`) au fil
+ * de l'eau : un échec en cours de route laisse la liste exacte à retirer.
  */
-async function persistTempImages(project, projectPath, workspaceDir = null) {
-  const updated = structuredClone(projectToSerializable(normalizeProjectData(project)));
+async function persistTempImages(project, projectPath, workspaceDir = null, createdCopies = null) {
+  const updated = projectFileBody(project);
 
   // Une seule traversee : on collecte uniquement les images temporaires editables.
   // `walkProjectMediaReferences` couvre rootImage/thumbnailImage + menu.image + story.itemImage,
-  // mais on filtre `scope: 'native-graph'` pour ne pas toucher aux assets graphe natif preserves.
+  // mais on filtre `scope: 'native-graph'` pour ne pas toucher aux assets graphe natif preserves,
+  // et `scope: 'advanced-asset'` pour la meme raison : une liaison d'auteur n'est
+  // jamais une image temporaire a deplacer vers `images-generees/`.
   const tempRefs = [];
   for (const ref of walkProjectMediaReferences(updated)) {
-    if (ref.scope === 'native-graph') continue;
+    if (ref.scope === 'native-graph' || ref.scope === 'advanced-asset') continue;
     if (ref.key !== 'rootImage' && ref.key !== 'thumbnailImage' && ref.key !== 'image' && ref.key !== 'itemImage') continue;
     if (!isTempImage(ref.path)) continue;
     tempRefs.push(ref);
@@ -435,19 +450,40 @@ async function persistTempImages(project, projectPath, workspaceDir = null) {
 
   if (tempRefs.length === 0) return updated;
 
-  const resolvedWs = workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
-  const baseDir = resolvedWs || getProjectDir(projectPath);
+  const baseDir = workspaceDir || await getWorkspaceDir();
   const prefix = getProjectFilePrefix(project, projectPath) || sanitizeProjectPrefix(basenameNoExt(projectPath));
   for (const ref of tempRefs) {
-    ref.obj[ref.key] = await copyMediaToWorkspace(
+    const copied = await copyMediaToWorkspace(
       ref.path,
       baseDir,
       IMAGES_GENEREES,
       prefix,
+      { artifactCopies: createdCopies },
     );
+    createdCopies?.push({ from: ref.path, to: copied });
+    ref.obj[ref.key] = copied;
   }
 
   return updated;
+}
+
+/**
+ * Retire les copies de médias qu'une opération a créées puis abandonnées :
+ * aucun fichier écrit ne les désigne, elles ne seraient que des fichiers en
+ * trop. Seule une vraie copie est retirée — une entrée dont la destination est
+ * sa source désigne un fichier déjà présent, qui n'appartient pas à
+ * l'opération. `keepPaths` protège les copies que l'état en mémoire a déjà
+ * reprises. Un retrait impossible est ignoré : le reliquat reste inoffensif.
+ */
+export async function discardMediaCopies(copies = [], { keepPaths = [] } = {}) {
+  const skipped = new Set(keepPaths.filter(hasPath).map(pathKey));
+  for (const copy of copies) {
+    if (!hasPath(copy?.to) || pathKey(copy.to) === pathKey(copy.from ?? '')) continue;
+    const key = pathKey(copy.to);
+    if (skipped.has(key)) continue;
+    skipped.add(key);
+    await cleanupIncompleteImageArtifact(copy.to);
+  }
 }
 
 export async function saveProject(project, existingPath = null, onProgress = null, options = {}) {
@@ -458,7 +494,7 @@ export async function saveProject(project, existingPath = null, onProgress = nul
     const lastDir = getStoredDir(PROJECT_SAVE_KEYS) ?? getStoredDir(PROJECT_OPEN_KEYS);
     const workspaceAutosaveDir = ws ? joinPath(ws, SAUVEGARDES) : null;
     const defaultDir = workspaceAutosaveDir ?? lastDir;
-    const suggestedName = sanitizeProjectFilename(project.projectName);
+    const suggestedName = await projectSaveFilename(project);
     const chosenPath = await save({
       filters: [{ name: 'Projet LuniiPack', extensions: ['mbah'] }],
       defaultPath: defaultDir ? joinPath(defaultDir, `${suggestedName}.mbah`) : `${suggestedName}.mbah`,
@@ -480,31 +516,41 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   const projectForPath = options.autosave
     ? project
     : withLocalProjectNameForPath(project, path);
-  // During autosave never move temp images — they'd land next to the autosave file, not the real project.
-  // persistTempImages only runs on explicit saves so assets end up beside the user's chosen .mbah.
-  const projectWithImages = options.autosave
-    ? projectToSerializable(normalizeProjectData(projectForPath))
-    : await persistTempImages(projectForPath, path, resolvedWs);
-  const catalogPathsForSave = options.autosave
-    ? (options.mediaLibraryPaths ?? [])
-    : (options.mediaLibraryPaths ?? []).filter((mediaPath) => !isTempImage(mediaPath));
-  const reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
-  const projectToSave = {
-    ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, mbahDir)),
-    // Tags are still keyed by media path. Keys are relativized in .mbah files
-    // to survive project-folder moves; content-hash tags would be a future
-    // migration if we need to track renamed files inside the workspace.
-    mediaTags: relativizeTagKeys(options.mediaTags ?? {}, mbahDir),
-    mediaLibraryPaths: reconciledMediaLibraryPaths
-      .map((p) => toProjectRelative(p, mbahDir)),
-  };
-  const workspaceBackupDir = resolvedWs
-    ? joinPath(resolvedWs, SAUVEGARDES, VERSIONS_SECURITE)
-    : null;
-  await writeProjectFileAtomic(path, JSON.stringify(projectToSave, null, 2), {
-    backupLimit: options.backupLimit ?? 0,
-    backupDirOverride: options.backupDirOverride ?? workspaceBackupDir,
-  });
+  // Les images copiées ne valent que par le fichier qui les désigne : si
+  // l'écriture échoue, elles sont retirées.
+  const createdCopies = [];
+  let projectWithImages;
+  let reconciledMediaLibraryPaths;
+  try {
+    // Une sauvegarde automatique ne déplace jamais les images temporaires :
+    // seule une sauvegarde explicite les copie dans l'emplacement de travail.
+    projectWithImages = options.autosave
+      ? projectFileBody(projectForPath)
+      : await persistTempImages(projectForPath, path, resolvedWs, createdCopies);
+    const catalogPathsForSave = options.autosave
+      ? (options.mediaLibraryPaths ?? [])
+      : (options.mediaLibraryPaths ?? []).filter((mediaPath) => !isTempImage(mediaPath));
+    reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
+    const projectToSave = {
+      ...relativizeProjectMediaPaths(projectWithImages, mbahDir),
+      // Tags are still keyed by media path. Keys are relativized in .mbah files
+      // to survive project-folder moves; content-hash tags would be a future
+      // migration if we need to track renamed files inside the workspace.
+      mediaTags: relativizeTagKeys(options.mediaTags ?? {}, mbahDir),
+      mediaLibraryPaths: reconciledMediaLibraryPaths
+        .map((p) => toProjectRelativeMediaPath(p, mbahDir)),
+    };
+    const workspaceBackupDir = resolvedWs
+      ? joinPath(resolvedWs, SAUVEGARDES, VERSIONS_SECURITE)
+      : null;
+    await writeProjectFileAtomic(path, encodeProjectFile(projectToSave, { fileName: basename(path) }), {
+      backupLimit: options.backupLimit ?? 0,
+      backupDirOverride: options.backupDirOverride ?? workspaceBackupDir,
+    });
+  } catch (error) {
+    await discardMediaCopies(createdCopies);
+    throw error;
+  }
   if (!options.autosave) {
     saveProjectDir(PROJECT_SAVE_KEYS[0], path);
   }
@@ -513,8 +559,34 @@ export async function saveProject(project, existingPath = null, onProgress = nul
   return { path, project: projectWithImages, mediaLibraryPaths: reconciledMediaLibraryPaths };
 }
 
+/**
+ * Écrit un projet dans un fichier **neuf**, sans jamais en écraser un : un
+ * fichier déjà présent fait échouer l'écriture. Un échec en cours de route
+ * retire le fichier que cette écriture a créé, et lui seul. Aucun média n'est
+ * copié : les chemins sont seulement relativisés au dossier du fichier.
+ */
+export async function writeNewProjectFile(project, path) {
+  if (await exists(path)) {
+    throw new Error(`Un fichier porte déjà ce nom : ${basename(path)}.`);
+  }
+  const contents = encodeProjectFile(
+    relativizeProjectMediaPaths(projectFileBody(project), getProjectDir(path)),
+    { fileName: basename(path) },
+  );
+  try {
+    await writeTextFile(path, contents, { createNew: true });
+  } catch (error) {
+    // Un fichier apparu entre la vérification et l'écriture n'est pas le nôtre :
+    // on n'y touche pas. Toute autre panne laisse un fichier partiel, le nôtre.
+    const alreadyThere = /exist/i.test(String(error?.message ?? error));
+    if (!alreadyThere) await remove(path).catch(() => {});
+    throw error;
+  }
+  return path;
+}
+
 export async function saveProjectAs(project, currentSavePath, onProgress = null, mediaTags = {}, options = {}, mediaLibraryPaths = []) {
-  const safeCurrentName = sanitizeProjectFilename(project.projectName);
+  const safeCurrentName = await projectSaveFilename(project, currentSavePath);
   const ws = options.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   const workspaceAutosaveDir = ws ? joinPath(ws, SAUVEGARDES) : null;
   const defaultDir = currentSavePath
@@ -532,25 +604,52 @@ export async function saveProjectAs(project, currentSavePath, onProgress = null,
 
   onProgress?.('Enregistrement du projet...');
 
-  const resolvedWs = options?.useProjectDirAsWorkspace
-    ? newProjectDir
-    : (options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null);
+  const resolvedWs = options?.workspaceDir || readSetting(KEYS.WORKSPACE_DIR) || null;
   onProgress?.('Décollage vers la lune...');
   const projectForPath = withLocalProjectNameForPath(project, newPath, { force: true });
-  const projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs);
   const catalogPathsForSave = mediaLibraryPaths.filter((mediaPath) => !isTempImage(mediaPath));
-  const reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
-  const projectToSave = {
-    ...mapProjectPaths(projectWithImages, (p) => toProjectRelative(p, newProjectDir)),
-    mediaTags: relativizeTagKeys(mediaTags, newProjectDir),
-    mediaLibraryPaths: reconciledMediaLibraryPaths
-      .map((p) => toProjectRelative(p, newProjectDir)),
-  };
-  await writeProjectFileAtomic(newPath, JSON.stringify(projectToSave, null, 2));
+  // `deferWrite` : le chemin est choisi et le projet préparé, mais rien n'est
+  // écrit. L'appelant écrit lui-même une fois ses médias à l'abri — un fichier
+  // posé avant eux désignerait des médias qui peuvent disparaître, et un
+  // fichier existant qu'on écrase ne doit pas être perdu si l'opération
+  // échoue ensuite. Les images temporaires restent en place : l'écriture de
+  // l'appelant les copie, et une opération abandonnée avant n'en laisse aucune
+  // copie orpheline.
+  if (options.deferWrite) {
+    const projectBody = projectFileBody(projectForPath);
+    return {
+      path: newPath,
+      project: projectBody,
+      mediaLibraryPaths: reconcileMediaLibraryPaths(projectBody, catalogPathsForSave),
+      written: false,
+    };
+  }
+  const createdCopies = [];
+  let projectWithImages;
+  let reconciledMediaLibraryPaths;
+  try {
+    projectWithImages = await persistTempImages(projectForPath, newPath, resolvedWs, createdCopies);
+    reconciledMediaLibraryPaths = reconcileMediaLibraryPaths(projectWithImages, catalogPathsForSave);
+    const projectToSave = {
+      ...relativizeProjectMediaPaths(projectWithImages, newProjectDir),
+      mediaTags: relativizeTagKeys(mediaTags, newProjectDir),
+      mediaLibraryPaths: reconciledMediaLibraryPaths
+        .map((p) => toProjectRelativeMediaPath(p, newProjectDir)),
+    };
+    await writeProjectFileAtomic(newPath, encodeProjectFile(projectToSave, { fileName: basename(newPath) }));
+  } catch (error) {
+    await discardMediaCopies(createdCopies);
+    throw error;
+  }
   saveProjectDir(PROJECT_SAVE_KEYS[0], newPath);
 
   onProgress?.('Projet enregistré');
-  return { path: newPath, project: projectWithImages, mediaLibraryPaths: reconciledMediaLibraryPaths };
+  return {
+    path: newPath,
+    project: projectWithImages,
+    mediaLibraryPaths: reconciledMediaLibraryPaths,
+    written: true,
+  };
 }
 
 export async function loadProject() {
@@ -567,24 +666,52 @@ export async function loadProject() {
 export async function loadProjectFromPath(path, { preserveEmptyProjectName = false } = {}) {
   const text = await readTextFile(path);
   const mbahDir = getProjectDir(path);
-  const rawData = JSON.parse(text);
   const workspaceDir = await getWorkspaceDir();
   const compatibilityCache = new Map();
-  const mediaTags = await absolutizeTagKeysWithCompatibility(rawData.mediaTags, mbahDir, workspaceDir, compatibilityCache);
-  const mediaLibraryPaths = Array.isArray(rawData.mediaLibraryPaths)
-    ? await Promise.all(rawData.mediaLibraryPaths.map((p) => resolveLoadedProjectPath(p, mbahDir, workspaceDir, compatibilityCache)))
-    : [];
-  const withAbsolutePaths = await resolveLoadedProjectPaths(rawData, mbahDir, workspaceDir, compatibilityCache);
-  const migrated = migrateProjectData(withAbsolutePaths, {
+  // Le codec identifie l'enveloppe et valide le payload avant que le moindre
+  // chemin ne soit résolu : un fichier refusé n'entre pas en mémoire, et rien
+  // n'est réécrit sur le disque. La résolution disque, elle, reste ici.
+  const { project, summary } = await decodeProjectFile(text, {
+    fileName: basename(path) || path,
     savePath: path,
     preserveEmptyProjectName,
+    resolveMediaPaths: (raw) => resolveLoadedProjectPaths(raw, mbahDir, workspaceDir, compatibilityCache),
   });
-  const data = normalizeProjectData(migrated);
+  // `mediaTags` et `mediaLibraryPaths` appartiennent au fichier, pas au projet
+  // en mémoire : le catalogue et ses tags sont rendus à part, résolus avec le
+  // repli workspace. Les laisser dans le projet dupliquerait un état que le
+  // normaliseur Libre supprime déjà, aux deux modes cette fois.
+  const { mediaTags: fileMediaTags, mediaLibraryPaths: fileMediaLibraryPaths, ...data } = project;
+  const mediaTags = await absolutizeTagKeysWithCompatibility(fileMediaTags, mbahDir, workspaceDir, compatibilityCache);
+  const mediaLibraryPaths = Array.isArray(fileMediaLibraryPaths)
+    ? await Promise.all(fileMediaLibraryPaths.map((p) => resolveLoadedProjectPath(p, mbahDir, workspaceDir, compatibilityCache)))
+    : [];
   return {
     data,
     path,
+    summary,
     mediaTags,
     mediaLibraryPaths: reconcileMediaLibraryPaths(data, mediaLibraryPaths),
+  };
+}
+
+// Aperçu d'un fichier projet pour une liste, sans l'ouvrir. Le codec ne lit que
+// l'enveloppe : ni migration, ni normalisation, ni validation Rust du payload,
+// et aucune écriture — énumérer des reprises de session ne peut donc pas générer
+// une identité ni modifier un snapshot. Seul le chemin de la vignette est résolu,
+// parce qu'il doit être affichable ; le reste du fichier n'est pas touché.
+export async function previewProjectFromPath(path) {
+  const text = await readTextFile(path);
+  const preview = readProjectFilePreview(text, { fileName: basename(path) || path });
+  if (!hasPath(preview.thumbnailImage)) return preview;
+  return {
+    ...preview,
+    thumbnailImage: await resolveLoadedProjectPath(
+      preview.thumbnailImage,
+      getProjectDir(path),
+      await getWorkspaceDir(),
+      new Map(),
+    ),
   };
 }
 
@@ -605,6 +732,17 @@ export async function ensureExportsDir(workspaceDir) {
   }
 }
 
+// Relève l'existence des seuls fichiers déclarés par les liaisons médias.
+// Un projet Libre n'en a pas : il ressort inchangé, sans le moindre accès disque.
+async function auditMediaBindingStatuses(project) {
+  const statusByPath = {};
+  for (const binding of readMediaBindings(project)) {
+    if (!hasPath(binding?.path) || Object.hasOwn(statusByPath, binding.path)) continue;
+    statusByPath[binding.path] = await exists(binding.path).catch(() => false);
+  }
+  return resolveMediaBindingStatuses(project, statusByPath);
+}
+
 function mediaKindForPath(path) {
   const ext = String(path || '').toLowerCase().replace(/^.*\./, '');
   if (['mp3', 'ogg', 'wav', 'm4a', 'webm', 'flac'].includes(ext)) return 'audio';
@@ -615,8 +753,10 @@ function mediaKindForPath(path) {
 
 export async function consolidateProject(project, savePath, destinationDir, onProgress = null) {
   if (!destinationDir) return null;
-  const normalized = normalizeProjectData(project);
-  const serializable = structuredClone(projectToSerializable(normalized));
+  // Même vue qu'au transfert : le mode Avancé copie ce que ses liaisons
+  // déclarent, jamais ce que le payload d'auteur contient. Un `assetRef` reste
+  // une chaîne du dialecte et n'est ni copié, ni réécrit, ni dédoublonné.
+  const serializable = projectFileBody(project);
   const refs = [...walkProjectMediaReferences(serializable)];
 
   await mkdir(destinationDir, { recursive: true });
@@ -650,9 +790,28 @@ export async function consolidateProject(project, savePath, destinationDir, onPr
   const fallbackName = savePath ? basenameNoExt(savePath) : 'projet';
   const projectName = sanitizeProjectFilename(serializable.projectName || fallbackName, 'projet') || 'projet';
   const projectPath = joinPath(destinationDir, `${projectName.replace(/\.mbah$/i, '')}-consolidee.mbah`);
-  const projectToSave = mapProjectPaths(serializable, (p) => toProjectRelative(p, destinationDir));
-  await writeProjectFileAtomic(projectPath, JSON.stringify(projectToSave, null, 2));
-  return { path: projectPath, project: serializable, copiedCount, errors };
+  // Le `status` d'une liaison est un dernier état connu, jamais un droit de
+  // suppression : il est redérivé du disque après les copies, et une liaison
+  // sans fichier reste liée, déclarée `missing` avec son dernier chemin connu.
+  const consolidated = await auditMediaBindingStatuses(serializable);
+  const projectToSave = relativizeProjectMediaPaths(consolidated, destinationDir);
+  await writeProjectFileAtomic(projectPath, encodeProjectFile(projectToSave, { fileName: basename(projectPath) }));
+  return { path: projectPath, project: consolidated, copiedCount, errors };
+}
+
+// Dépendances du projet qui vivent encore dans le dossier de session **et**
+// existent sur le disque. Ce sont exactement les fichiers qu'un nettoyage de
+// session détruirait : tant qu'il en reste un, le projet enregistré n'est pas
+// autonome et la promotion ne doit pas supprimer la session. Une référence dont
+// le fichier a déjà disparu n'en est pas une — un média manquant n'a jamais
+// empêché un enregistrement, et le nettoyage ne lui retire rien.
+export async function collectLiveSessionDependencies(project, sessionDir) {
+  const bound = collectSessionBoundReferences({ project, sessionDir });
+  const live = [];
+  for (const dependency of bound) {
+    if (await exists(dependency.path).catch(() => false)) live.push(dependency);
+  }
+  return live;
 }
 
 export function isAlreadyManagedFile(path, workspaceDir, savePath) {

@@ -2,6 +2,7 @@ import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
   decodeNavigationStoryId,
+  encodeStoryHomeStepNavigationTarget,
   isCurrentMenuNavigationTarget,
   isNextStoryNavigationTarget,
   isRootNavigationTarget,
@@ -40,6 +41,50 @@ function hasCombinedNightStoryShape(entry) {
     && entry?.controlSettings?.autoplay === true
     && entry?.returnAfterPlay
   );
+}
+
+// Règles d'activité des fins d'histoire, miroir de `native_pack/canonical.rs`
+// (`end_*_is_active`, `story_reaches_global_end_message`,
+// `global_end_message_is_reached`) : un champ que le réglage courant rend
+// inutile n'est ni écrit par le moteur ni vérifié avant génération.
+function endSequenceLength(entry) {
+  return entry?.afterPlaybackSequence?.length ?? 0;
+}
+
+export function isEndSequenceActive(entry, project) {
+  return !project?.globalOptions?.autoNext && endSequenceLength(entry) > 0;
+}
+
+export function isEndPromptActive(entry, project) {
+  return !project?.globalOptions?.autoNext && endSequenceLength(entry) === 0;
+}
+
+// La réaction Accueil s'insère entre la première et la deuxième étape.
+export function isEndHomeStepActive(entry, project) {
+  return !project?.globalOptions?.autoNext
+    && endSequenceLength(entry) >= 2
+    && entry?.controlSettings?.home !== false;
+}
+
+function storyReachesEndNode(entry, project) {
+  return !!(
+    entry?.type === 'story'
+    && !project?.globalOptions?.autoNext
+    && endSequenceLength(entry) === 0
+    && !entry?.afterPlaybackPromptAudio
+    && !hasCombinedNightStoryShape(entry)
+  );
+}
+
+// Au moins une histoire emprunte le message de fin global ; l'histoire du mode
+// simple l'emprunte toujours.
+export function projectReachesEndNode(project) {
+  if (project?.globalOptions?.autoNext) return false;
+  if (project?.projectType === 'simple') return true;
+  const reaches = (entries) => (entries ?? []).some((entry) => (
+    entry?.type === 'menu' ? reaches(entry.children) : storyReachesEndNode(entry, project)
+  ));
+  return reaches(project?.rootEntries);
 }
 
 export function getDefaultPackEntryDestination(project) {
@@ -242,13 +287,7 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
   // Prévisualisation de la configuration : le nœud participe au parcours dès
   // sa création, même si son média requis n'est pas encore renseigné. Cette
   // information reste distincte de `usesEndNode`, miroir du runtime Rust.
-  const presentsEndNode = !!(
-    hasVisibleEndNode(project)
-    && entry?.type === 'story'
-    && !hasPrompt
-    && !hasSequence
-    && !hasCombinedNightStoryShape(entry)
-  );
+  const presentsEndNode = hasVisibleEndNode(project) && storyReachesEndNode(entry, project);
   const importedNightPrompt = isImportedNightPrompt(entry, parentMenu, project, rootEntries);
   const resolvesEndNodeRoute = presentsEndNode || importedNightPrompt;
   // Cible explicitement configurée sur le nœud de fin (null si l'utilisateur
@@ -299,23 +338,24 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
       globalAutoplay: project?.globalOptions?.endMessageAutoplay ?? true,
     }),
   };
-  const sequence = entry?.afterPlaybackSequence ?? [];
-  const sequenceReturnTarget = hasSequence
-    ? resolveGeneratedTargetForStory(
-      sequence.at(-1)?.okTarget,
-      entry,
-      parentMenu,
-      rootEntries,
-      directReturnTarget,
-    )
-    : null;
-  const endEffectiveTargetId = autoNextFallback
-    ?? (endNodeEffectiveTargetId ?? sequenceReturnTarget ?? promptOkTarget ?? directReturnTarget);
   const homeTarget = entry?.returnOnHome
     ? resolveGeneratedTargetForStory(entry.returnOnHome, entry, parentMenu, rootEntries, directReturnTarget)
     : null;
-  const implicitHomeTarget = !!entry?.returnOnHomeNone && entry?.controlSettings?.home !== false
-    ? endEffectiveTargetId
+  // Accueil actif sans destination : le moteur n'écrit aucune transition
+  // (`return_on_home_none`, `builder/menu_branch.rs` et `builder/root.rs`) et la
+  // Lunii revient d'elle-même à l'Écran d'entrée (« Retour Lunii » du graphe).
+  // Seule une réaction Accueil de fin active remplace cette absence
+  // (`story_branch.rs`, `sequence_transitions.home`).
+  const implicitHome = !!entry?.returnOnHomeNone && entry?.controlSettings?.home !== false;
+  const homeStepReplacesHome = !!entry?.afterPlaybackHomeStep && isEndHomeStepActive(entry, project);
+  const homeReturnsToPackStart = implicitHome && !homeStepReplacesHome;
+  // Réaction Accueil de fin active : le moteur remplace la transition Accueil
+  // de lecture par celle qui mène à la réaction, que la destination Accueil
+  // soit réglée, par défaut ou absente (`story_branch.rs`,
+  // `effective_play_home_transition`).
+  const homeLeadsToEndHomeStep = homeStepReplacesHome && entry?.controlSettings?.home !== false;
+  const endHomeStepTarget = homeLeadsToEndHomeStep
+    ? encodeStoryHomeStepNavigationTarget(entry.id)
     : null;
 
   return {
@@ -326,11 +366,15 @@ export function getGeneratedStoryNavigation(entry, parentMenu, project, rootEntr
     },
     storyHome: {
       targetId: homeTarget,
-      effectiveTargetId: homeTarget ?? implicitHomeTarget,
+      effectiveTargetId: endHomeStepTarget ?? homeTarget,
       isConfigured: !!entry?.returnOnHome,
       isNone: !!entry?.returnOnHomeNone && entry?.controlSettings?.home === false,
       isInactive: entry?.controlSettings?.home === false,
-      isImplicit: !!entry?.returnOnHomeNone && entry?.controlSettings?.home !== false,
+      isImplicit: implicitHome,
+      // Aucune transition écrite : retour par défaut de la Lunii à l'Écran d'entrée.
+      isPackStart: homeReturnsToPackStart,
+      // Accueil pendant la lecture mène à la réaction Accueil de fin.
+      isEndHomeStep: homeLeadsToEndHomeStep,
     },
     endNodeReturn: {
       // `targetId` (rétro-compatible) = cible explicitement configurée sur le nœud de fin.

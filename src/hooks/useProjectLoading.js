@@ -26,6 +26,10 @@ export function useProjectLoading({
   showErrorDialog,
   onProjectLoaded = null,
   onBeforeProjectReplaced = null,
+  // Donne une chance de prendre en charge un projet relu avant qu'il remplace
+  // le travail courant (copie graphe d'un projet par menus ouvert depuis le
+  // graphe). Rend `true` quand il l'a pris en charge.
+  routeLoadedProject = null,
 }) {
   const applyLoadedProject = useCallback(async (result) => {
     const entries = result?.data?.rootEntries?.length ?? 0;
@@ -86,6 +90,7 @@ export function useProjectLoading({
     if (!canContinue) return;
     try {
       const result = await loadProject();
+      if (result && await routeLoadedProject?.(result)) return;
       if (result) {
         await onBeforeProjectReplaced?.();
         await applyLoadedProject(result);
@@ -102,6 +107,7 @@ export function useProjectLoading({
     confirmSaveBeforeLeaveCurrent,
     handleSaveProject,
     onBeforeProjectReplaced,
+    routeLoadedProject,
     showErrorDialog,
   ]);
 

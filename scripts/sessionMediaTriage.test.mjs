@@ -1,11 +1,15 @@
-// Tests du tri des médias de session à la promotion (plan 22, D51).
-// Couvre la détection des orphelins (bibliothèque seulement, dans le dossier
-// de session) et l'application du tri (remplacements + abandons) sur la
-// bibliothèque et les tags.
+// Tests du tri des médias de session à la promotion. Couvre la détection des
+// orphelins (bibliothèque seulement, dans le dossier de session) et
+// l'application du tri (remplacements + abandons) sur la bibliothèque et les
+// tags.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSessionOnlyMedia, applySessionMediaTriage } from '../src/store/sessionMediaTriage.js';
+import {
+  applySessionMediaTriage,
+  collectSessionBoundReferences,
+  collectSessionOnlyMedia,
+} from '../src/store/sessionMediaTriage.js';
 import { pathKey } from '../src/utils/fileUtils.js';
 
 const SESSION_DIR = 'C:\\Temp\\story_studio_session_1234_5678_0';
@@ -169,7 +173,7 @@ test('applySessionMediaTriage: un média seulement tagué et conservé rejoint l
   assert.deepEqual(result.mediaTags, { [copied]: ['favori'] });
 });
 
-test('collectSessionOnlyMedia: une clé de tag orpheline dans la session est détectée (P2a revue)', () => {
+test('collectSessionOnlyMedia: une clé de tag orpheline dans la session est détectée', () => {
   const taggedOnly = `${SESSION_DIR}\\fichiers-importes\\tagge.mp3`;
   const orphans = collectSessionOnlyMedia({
     project: projectWith({}),
@@ -181,7 +185,7 @@ test('collectSessionOnlyMedia: une clé de tag orpheline dans la session est dé
   assert.equal(orphans[0].path, taggedOnly);
 });
 
-test('collectSessionOnlyMedia: les chemins déjà copiés par le transfert sont exclus (P2b revue)', () => {
+test('collectSessionOnlyMedia: les chemins déjà copiés par le transfert sont exclus', () => {
   const transferred = `${SESSION_DIR}\\voix-generees\\deja-copie.mp3`;
   const realOrphan = `${SESSION_DIR}\\voix-generees\\orphelin.mp3`;
   const excludeKeys = new Map([[pathKey(transferred), 'C:/Workspace/fichiers-importes/deja-copie.mp3']]);
@@ -193,4 +197,66 @@ test('collectSessionOnlyMedia: les chemins déjà copiés par le transfert sont 
   });
   assert.equal(orphans.length, 1);
   assert.equal(orphans[0].path, realOrphan);
+});
+
+// ── Dépendances restées dans la session ──────────────────────────────────────
+// Ce qu'un nettoyage de promotion détruirait. La traversée est celle de tous les
+// consommateurs : une liaison média du mode Avancé y figure comme une référence
+// d'arbre, et un chemin extérieur n'y figure pas.
+
+const advancedProject = (bindings) => ({
+  schemaVersion: 4,
+  authoringMode: 'advanced',
+  projectType: 'advanced',
+  projectName: 'avance',
+  rootEntries: [],
+  authoring: { payload: '{"payloadVersion":1}', editorState: { version: 1 }, mediaBindings: bindings },
+});
+
+test('collectSessionBoundReferences: une liaison avancée dans la session est une dépendance', () => {
+  const inside = `${SESSION_DIR}\\fichiers-importes\\a1b2c3.mp3`;
+  const bound = collectSessionBoundReferences({
+    project: advancedProject([
+      { assetRef: 'a1b2c3.mp3', path: inside, status: 'resolved' },
+      { assetRef: 'd4e5f6.png', path: 'C:\\Users\\TestUser\\Images\\couverture.png', status: 'resolved' },
+    ]),
+    sessionDir: SESSION_DIR,
+  });
+  assert.deepEqual(bound, [{ path: inside, label: 'Média avancé: a1b2c3.mp3' }]);
+});
+
+test('collectSessionBoundReferences: références Libre dédupliquées, dossier frère exclu', () => {
+  const inside = `${SESSION_DIR}\\enregistrements\\intro.mp3`;
+  const bound = collectSessionBoundReferences({
+    project: projectWith({ rootAudio: inside, storyAudio: inside, storyImage: `${SESSION_DIR}-copy\\a.png` }),
+    sessionDir: SESSION_DIR,
+  });
+  assert.deepEqual(bound.map((entry) => entry.path), [inside]);
+});
+
+test('collectSessionBoundReferences: sans dossier de session ni projet, aucune dépendance', () => {
+  assert.deepEqual(collectSessionBoundReferences({ project: projectWith({}), sessionDir: '' }), []);
+  assert.deepEqual(collectSessionBoundReferences({ project: null, sessionDir: SESSION_DIR }), []);
+});
+
+// Le tri « Médias non utilisés » d'un projet graphe : un média lié par le
+// document n'est jamais proposé à l'abandon, qu'il soit encore dans la session
+// ou déjà copié par le transfert. Seul un média du catalogue qu'aucune liaison
+// ne désigne l'est.
+test('collectSessionOnlyMedia: un média lié par le graphe n’est jamais orphelin', () => {
+  const bound = `${SESSION_DIR}\\zips-extraits\\pack.zip\\a1b2c3.mp3`;
+  const transferred = `${SESSION_DIR}\\zips-extraits\\pack.zip\\d4e5f6.png`;
+  const unused = `${SESSION_DIR}\\fichiers-importes\\a1b2c3--1790000000000-1.mp3`;
+  const copy = 'C:\\Projets\\fichiers-importes\\projet__d4e5f6.png';
+  const orphans = collectSessionOnlyMedia({
+    project: advancedProject([
+      { assetRef: 'a1b2c3.mp3', path: bound, status: 'resolved' },
+      // Après le transfert, la liaison désigne la copie du projet.
+      { assetRef: 'd4e5f6.png', path: copy, status: 'resolved' },
+    ]),
+    mediaLibraryPaths: [bound, transferred, unused],
+    sessionDir: SESSION_DIR,
+    excludeKeys: new Map([[pathKey(transferred), copy]]),
+  });
+  assert.deepEqual(orphans.map((item) => item.path), [unused]);
 });

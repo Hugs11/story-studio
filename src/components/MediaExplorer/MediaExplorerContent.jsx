@@ -24,6 +24,7 @@ export function MediaExplorerContent({
   onActivate,
   onNavigate,
   mediaTags,
+  tagsOf,
   allTags,
   onAddMediaTag,
   onRemoveMediaTag,
@@ -37,6 +38,8 @@ export function MediaExplorerContent({
   selectedItems,
   onSelectItem,
   onContextMenuSelect,
+  onSelectNode,
+  onRevealGraphNode,
   dropOnNode,
   onImportMedia,
   onImportStories,
@@ -60,6 +63,8 @@ export function MediaExplorerContent({
     selectedAudioItems,
     onSelect: onSelectItem,
     onContextMenuSelect,
+    onSelectNode,
+    onRevealGraphNode,
     dropOnNode,
   };
 
@@ -115,7 +120,7 @@ export function MediaExplorerContent({
               item={item}
               index={idx}
               isPopoverOpen={activePopover?.idx === idx}
-              itemTags={mediaTags?.[item.path] ?? []}
+              itemTags={tagsOf(item.path)}
               isSelected={selectedIds.has(item.id)}
               visibleCols={visibleCols}
               {...commonTileProps}
@@ -134,7 +139,7 @@ export function MediaExplorerContent({
           item={item}
           index={idx}
           isPopoverOpen={activePopover?.idx === idx}
-          itemTags={mediaTags?.[item.path] ?? []}
+          itemTags={tagsOf(item.path)}
           isSelected={selectedIds.has(item.id)}
           {...commonTileProps}
         />

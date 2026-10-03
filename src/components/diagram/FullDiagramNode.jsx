@@ -4,22 +4,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocalFile } from '../../hooks/useLocalFile';
 import { getEntryThumbnailPath } from '../../store/projectModel';
-import { MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
+import { MENU_CYCLE_MESSAGE, MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
 import { Tooltip } from '../common/Tooltip';
 import { ChevronDown, Eye } from '../icons/LucideLocal';
-import { IconArchive, IconArrowRight, IconFolderOpen, IconHouse, IconMoon, IconStop, IconStory } from '../TreePanel/TreeIcons';
+import { NodeIcon } from '../icons/NodeIcon.jsx';
+import { hierarchicalNatureOf } from '../../store/nodeIconVocabulary.js';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../../store/projectWorkState.js';
 import { END_NODE_ID } from './flowDiagramLayout';
 import { toggleDiagramSelection } from './diagram/diagramSelection';
 import { useZipCover } from '../editors/useZipCover.js';
 
 function DiagramNodeTypeIcon({ entry }) {
-  if (entry.type === 'root') return <IconHouse />;
-  if (entry.type === 'menu') return <IconFolderOpen />;
-  if (entry.type === 'story') return <IconStory />;
-  if (entry.type === 'zip') return <IconArchive />;
-  if (entry.type === 'ref') return <IconArrowRight />;
-  if (entry.type === 'end-node') return entry.icon === 'moon' ? <IconMoon /> : <IconStop />;
-  return null;
+  // Le diagramme ne replie pas ses Dossiers : il les dessine ouverts, comme
+  // l'arbre le fait d'une ligne depliee. Le dessin vient de la table.
+  return (
+    <NodeIcon
+      workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+      nature={hierarchicalNatureOf(entry.type, { night: entry.icon === 'moon' })}
+    />
+  );
 }
 
 function useNearDiagramViewport(rootRef, enabled) {
@@ -103,7 +106,7 @@ export function FullDiagramNode({
     ? isForbiddenDepth
       ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
       : isForbiddenCycle
-        ? 'Cycle de Dossiers interdit'
+        ? MENU_CYCLE_MESSAGE
         : (isRoot ? 'Deplacer a la racine' : 'Deplacer ici')
     : null;
 

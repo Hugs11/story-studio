@@ -43,6 +43,18 @@
   min-width: 0;
 }
 
+.ctx-shortcut {
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ctx-item.danger .ctx-shortcut { color: inherit; opacity: .7; }
+
 .ctx-disabled-hint {
   flex-basis: 100%;
   padding-left: 24px;

@@ -4,12 +4,19 @@
     "index.html",
     "src/components/funnels/index.js",
     "scripts/*.test.mjs",
+    "scripts/*Transport.mjs",
+    "scripts/reactHookDriver.mjs",
+    "scripts/advanced-export-fixtures.mjs",
+    "scripts/advanced-graph-fixtures.mjs",
+    "scripts/bench-report.mjs",
+    "scripts/bench-sample-memory.mjs",
     "scripts/analyze-bundle.mjs",
     "scripts/audit-dead-exports.mjs",
     "scripts/audit-dead-imports.mjs",
     "scripts/audit-imports.mjs",
     "scripts/audit-orphan-files.mjs",
-    "scripts/audit-rust-dead.mjs"
+    "scripts/audit-rust-dead.mjs",
+    "bench/graphEngines/*.{js,jsx}"
   ],
-  "project": ["src/**/*.{js,jsx}", "scripts/**/*.mjs"]
+  "project": ["src/**/*.{js,jsx}", "scripts/**/*.mjs", "bench/**/*.{js,jsx}"]
 }

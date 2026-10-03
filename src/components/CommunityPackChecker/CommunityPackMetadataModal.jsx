@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../common/Button';
 import { CircleCheck, FilePen, Package, TriangleAlert, X } from '../icons/LucideLocal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { generateConventionName, parseConventionName } from '../../utils/packConvention';
 import { generateUuid } from '../../utils/uuid';
+import { packIdentityRefusal } from '../../store/packIdentityCheck';
 import { useErrorDialog } from '../common/Dialog';
 import './CommunityPackMetadataModal.css';
 
@@ -43,7 +45,8 @@ function defaultDraft(report) {
     producer: parsed.producer || '',
     bonus: parsed.bonus || '',
     description: report?.packDescription || parsed.description || '',
-    uuid: report?.packUuid || '',
+    // Un pack sans identité lisible en reçoit une neuve, sans avertissement.
+    uuid: report?.packUuid || generateUuid(),
     minAge: parsed.minAge || '3',
     version: currentVersion + 1,
     namingMode: 'convention',
@@ -81,6 +84,7 @@ export function CommunityPackMetadataModal({
 }) {
   const [draft, setDraft] = useState(() => defaultDraft(report));
   const [uuidPromptOpen, setUuidPromptOpen] = useState(false);
+  const [identityRefusal, setIdentityRefusal] = useState(null);
   const uuidPromptRequestRef = useRef(null);
   const currentReportRef = useRef(report);
   currentReportRef.current = report;
@@ -151,8 +155,13 @@ export function CommunityPackMetadataModal({
     updateField('uuid', generateUuid());
   }
 
-  function submit() {
+  async function submit() {
     if (!canSubmit) return;
+    // Même contrôle que la fiche du pack : une graphie que les passerelles ne
+    // liraient pas est refusée ici, avec sa raison.
+    const refusal = await packIdentityRefusal(normalized.uuid, invoke);
+    setIdentityRefusal(refusal);
+    if (refusal) return;
     onSubmit?.(normalized);
   }
 
@@ -251,7 +260,7 @@ export function CommunityPackMetadataModal({
             <div className="checker-meta-grid">
               <label>
                 <span>Producteur</span>
-                <input value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder="Example Producer, RTL..." />
+                <input value={draft.producer || ''} onChange={(event) => updateField('producer', event.target.value)} placeholder="Ex. producteur..." />
               </label>
               <label>
                 <span>Bonus</span>
@@ -270,6 +279,7 @@ export function CommunityPackMetadataModal({
                 <input value={draft.uuid || ''} onChange={(event) => updateField('uuid', event.target.value)} placeholder="UUID du pack" />
                 <button type="button" onClick={regenerateUuid}>Générer</button>
               </div>
+              {identityRefusal ? <p className="funnel-error" role="alert">{identityRefusal}</p> : null}
             </label>
           </section>
         </div>

@@ -145,6 +145,7 @@ test('computeBadgesData : option default affiche retour et Home par défaut', ()
   );
 });
 
+// Aucune transition écrite : la Lunii revient à l'Écran d'entrée (pas de cible).
 test('computeBadgesData : Home actif sans transition explicite devient natif implicite', () => {
   const entry = {
     id: 'story-a',
@@ -159,7 +160,7 @@ test('computeBadgesData : Home actif sans transition explicite devient natif imp
 
   assert.deepEqual(
     computeBadgesData(entry, null, new Map(), project, project.rootEntries),
-    [{ kind: 'home-implicit', status: null, targetId: 'story:story-a', isDefault: false }],
+    [{ kind: 'home-implicit', status: null, targetId: null, isDefault: false }],
   );
 });
 

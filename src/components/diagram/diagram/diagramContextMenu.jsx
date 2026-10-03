@@ -50,6 +50,8 @@ export function buildDiagramContextActions({
   handlePasteMedia,
   handleDeleteSelection,
   closeContextMenu,
+  // Les libellés effectifs des raccourcis, affichés à droite des entrées.
+  shortcutLabels = {},
 }) {
   if (nodeId === END_NODE_ID) {
     return [{ icon: <Trash2 />, label: 'Supprimer le message de fin', fn: () => onRemoveEndNode?.(), danger: true }];
@@ -99,9 +101,9 @@ export function buildDiagramContextActions({
 
   if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
     actions.push('sep');
-    actions.push({ icon: '⧉', label: 'Dupliquer', fn: () => onDuplicate?.(nodeId) });
-    actions.push({ icon: <Copy />, label: 'Copier', fn: () => handleCopy(nodeId) });
-    actions.push({ icon: <Scissors />, label: 'Couper', fn: () => handleCut(nodeId) });
+    actions.push({ icon: '⧉', label: 'Dupliquer', fn: () => onDuplicate?.(nodeId), shortcut: shortcutLabels.selectionDuplicate ?? null });
+    actions.push({ icon: <Copy />, label: 'Copier', fn: () => handleCopy(nodeId), shortcut: shortcutLabels.selectionCopy ?? null });
+    actions.push({ icon: <Scissors />, label: 'Couper', fn: () => handleCut(nodeId), shortcut: shortcutLabels.selectionCut ?? null });
   }
 
   if (clipboardRef.current?.entries?.length) {
@@ -118,6 +120,7 @@ export function buildDiagramContextActions({
     actions.push({
       icon: <ClipboardPaste />,
       label: 'Coller ici',
+      shortcut: shortcutLabels.selectionPaste ?? null,
       fn: () => handlePaste(nodeId),
       disabledReason: pasteCreatesCycle
         ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre.'
@@ -199,6 +202,7 @@ export function buildDiagramContextActions({
     actions.push({
       icon: <Trash2 />,
       label: selectedForDelete.length > 1 ? `Supprimer ${selectedForDelete.length} éléments` : 'Supprimer',
+      shortcut: shortcutLabels.selectionDelete ?? null,
       fn: deleteFn,
       danger: true,
     });

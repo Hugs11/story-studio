@@ -1,5 +1,9 @@
 use crate::domain::project::{Project, ProjectEntry};
 use crate::domain::project_limits::validate_project_menu_depth;
+use crate::native_pack::{
+    canonicalize_project, end_home_step_is_active, end_prompt_is_active, end_sequence_is_active,
+    global_end_message_is_reached,
+};
 use crate::services::project_files::{validate_existing_file_path, validate_existing_pack_path};
 use std::collections::{HashMap, HashSet};
 
@@ -255,6 +259,16 @@ fn is_imported_continuation_menu(entry: &ProjectEntry) -> bool {
         && entry.name.trim_start().starts_with("Suite apres")
 }
 
+/// Continuation importée admise sans audio : le drapeau `importedContinuation`,
+/// lu comme le JS, que le dossier soit renommé ou réidentifié. La forme
+/// (identifiant et nom) ne sert que de repli aux projets antérieurs au drapeau.
+fn is_silent_imported_continuation(entry: &ProjectEntry) -> bool {
+    entry.entry_type == "menu"
+        && entry
+            .imported_continuation
+            .unwrap_or_else(|| is_imported_continuation_menu(entry))
+}
+
 fn normalize_imported_continuation_clones(entries: &mut [ProjectEntry]) {
     for entry in entries {
         if entry.entry_type == "menu" {
@@ -381,6 +395,7 @@ fn has_playable_descendants(entry: &ProjectEntry) -> bool {
 
 fn collect_entry_graph_stats(
     entries: &[ProjectEntry],
+    auto_next: bool,
     menu_ids: &mut HashSet<String>,
     story_ids: &mut HashSet<String>,
     story_home_step_ids: &mut HashSet<String>,
@@ -401,6 +416,7 @@ fn collect_entry_graph_stats(
             }
             collect_entry_graph_stats(
                 &entry.children,
+                auto_next,
                 menu_ids,
                 story_ids,
                 story_home_step_ids,
@@ -409,7 +425,16 @@ fn collect_entry_graph_stats(
             );
         } else if entry.entry_type == "story" && !entry_id.is_empty() {
             story_ids.insert(entry_id.to_string());
-            if entry.after_playback_home_step.is_some() {
+            // Seule une réaction Accueil que le constructeur construit peut être
+            // visée par « Retour de fin » : sinon la cible ne se résout pas.
+            let home = entry
+                .control_settings
+                .as_ref()
+                .and_then(|c| c.home)
+                .unwrap_or(true);
+            if entry.after_playback_home_step.is_some()
+                && end_home_step_is_active(auto_next, entry.after_playback_sequence.len(), home)
+            {
                 story_home_step_ids.insert(entry_id.to_string());
             }
         }
@@ -580,6 +605,7 @@ fn validate_navigation_targets(
     entries: &[ProjectEntry],
     graph: &NavigationValidationContext<'_>,
     context: &str,
+    auto_next: bool,
     errors: &mut Vec<String>,
 ) {
     for entry in entries {
@@ -601,13 +627,17 @@ fn validate_navigation_targets(
             );
         }
 
-        validate_navigation_target(
-            entry.return_after_play.as_deref(),
-            &entry_name,
-            "la destination de navigation après lecture",
-            graph,
-            errors,
-        );
+        // Auto-next enchaîne l'histoire suivante : le constructeur ne lit ni
+        // `returnAfterPlay` ni les fins locales.
+        if !auto_next {
+            validate_navigation_target(
+                entry.return_after_play.as_deref(),
+                &entry_name,
+                "la destination de navigation après lecture",
+                graph,
+                errors,
+            );
+        }
         if !entry.return_on_home_none {
             validate_navigation_target(
                 entry.return_on_home.as_deref(),
@@ -626,23 +656,35 @@ fn validate_navigation_targets(
                 errors,
             );
         }
-        validate_navigation_target(
-            entry.after_playback_prompt_ok_target.as_deref(),
-            &entry_name,
-            "la destination OK du prompt final",
-            graph,
-            errors,
-        );
-        if !entry.after_playback_prompt_home_none {
+        let sequence_len = entry.after_playback_sequence.len();
+        let has_prompt_audio = entry
+            .after_playback_prompt_audio
+            .as_deref()
+            .is_some_and(|path| !path.trim().is_empty());
+        if has_prompt_audio && end_prompt_is_active(auto_next, sequence_len) {
             validate_navigation_target(
-                entry.after_playback_prompt_home_target.as_deref(),
+                entry.after_playback_prompt_ok_target.as_deref(),
                 &entry_name,
-                "la destination Accueil du prompt final",
+                "la destination OK du prompt final",
                 graph,
                 errors,
             );
+            if !entry.after_playback_prompt_home_none {
+                validate_navigation_target(
+                    entry.after_playback_prompt_home_target.as_deref(),
+                    &entry_name,
+                    "la destination Accueil du prompt final",
+                    graph,
+                    errors,
+                );
+            }
         }
-        for (index, step) in entry.after_playback_sequence.iter().enumerate() {
+        let active_sequence = if end_sequence_is_active(auto_next, sequence_len) {
+            entry.after_playback_sequence.as_slice()
+        } else {
+            &[]
+        };
+        for (index, step) in active_sequence.iter().enumerate() {
             let step_label = format!("la destination OK fin {}", index + 1);
             validate_navigation_target(
                 step.ok_target.as_deref(),
@@ -671,7 +713,17 @@ fn validate_navigation_targets(
                 );
             }
         }
-        if let Some(step) = entry.after_playback_home_step.as_ref() {
+        if let Some(step) = entry.after_playback_home_step.as_ref().filter(|_| {
+            end_home_step_is_active(
+                auto_next,
+                sequence_len,
+                entry
+                    .control_settings
+                    .as_ref()
+                    .and_then(|c| c.home)
+                    .unwrap_or(true),
+            )
+        }) {
             validate_navigation_target(
                 step.ok_target.as_deref(),
                 &entry_name,
@@ -700,7 +752,24 @@ fn validate_navigation_targets(
         }
 
         if entry.entry_type == "menu" {
-            validate_navigation_targets(&entry.children, graph, &entry_context, errors);
+            validate_navigation_targets(&entry.children, graph, &entry_context, auto_next, errors);
+        }
+    }
+}
+
+/// Vérifie sur disque un média facultatif : absent, rien à vérifier.
+fn validate_optional_file(
+    path: Option<&str>,
+    label: &str,
+    file_validation: FileValidation,
+    errors: &mut Vec<String>,
+) {
+    let Some(path) = path.map(str::trim).filter(|value| !value.is_empty()) else {
+        return;
+    };
+    if file_validation.checks_disk() {
+        if let Err(err) = validate_existing_file_path(path, label) {
+            errors.push(err);
         }
     }
 }
@@ -709,6 +778,7 @@ fn validate_project_entry_for_generation(
     entry: &ProjectEntry,
     context: &str,
     file_validation: FileValidation,
+    auto_next: bool,
     errors: &mut Vec<String>,
 ) {
     let trimmed_id = entry.id.trim();
@@ -727,7 +797,7 @@ fn validate_project_entry_for_generation(
                 errors.push(format!("{} : collection vide.", context));
             }
 
-            if (is_imported_continuation_menu(entry)
+            if (is_silent_imported_continuation(entry)
                 || is_preserved_native_helper_shared_entry(entry))
                 && entry.audio.as_deref().unwrap_or("").trim().is_empty()
             {
@@ -747,7 +817,10 @@ fn validate_project_entry_for_generation(
             }
 
             let menu_image_label = format!("{} : image menu", context);
-            if let Some(menu_image) = entry
+            if entry.auto_black_image {
+                // autoBlackImage : le générateur produit un écran noir et n'écrit pas
+                // l'image éventuellement conservée ; elle n'est ni requise ni vérifiée.
+            } else if let Some(menu_image) = entry
                 .image
                 .as_deref()
                 .map(str::trim)
@@ -758,8 +831,6 @@ fn validate_project_entry_for_generation(
                         errors.push(err);
                     }
                 }
-            } else if entry.auto_black_image {
-                // autoBlackImage : le générateur produit un écran noir, aucune image requise.
             } else {
                 errors.push(format!("{} manquante.", menu_image_label));
             }
@@ -770,6 +841,7 @@ fn validate_project_entry_for_generation(
                     child,
                     &format!("{} / {}", context, child_name),
                     file_validation,
+                    auto_next,
                     errors,
                 );
             }
@@ -807,18 +879,56 @@ fn validate_project_entry_for_generation(
                 ));
             } else {
                 validate_story_entry_for_generation(entry, context, file_validation, errors);
-                if let Some(prompt_audio) = entry
-                    .after_playback_prompt_audio
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    if file_validation.checks_disk() {
-                        let label = format!("{} : audio fin histoire", context);
-                        if let Err(err) = validate_existing_file_path(prompt_audio, &label) {
-                            errors.push(err);
-                        }
+                // Médias de fin : seuls ceux que le constructeur écrit sont vérifiés.
+                // Une étape ou une réaction sans média reste valide (écran muet).
+                let sequence_len = entry.after_playback_sequence.len();
+                if end_prompt_is_active(auto_next, sequence_len) {
+                    validate_optional_file(
+                        entry.after_playback_prompt_audio.as_deref(),
+                        &format!("{} : audio fin histoire", context),
+                        file_validation,
+                        errors,
+                    );
+                }
+                if end_sequence_is_active(auto_next, sequence_len) {
+                    for (index, step) in entry.after_playback_sequence.iter().enumerate() {
+                        validate_optional_file(
+                            step.audio.as_deref(),
+                            &format!("{} : audio de fin {}", context, index + 1),
+                            file_validation,
+                            errors,
+                        );
+                        validate_optional_file(
+                            step.image.as_deref(),
+                            &format!("{} : image de fin {}", context, index + 1),
+                            file_validation,
+                            errors,
+                        );
                     }
+                }
+                if let Some(step) = entry.after_playback_home_step.as_ref().filter(|_| {
+                    end_home_step_is_active(
+                        auto_next,
+                        sequence_len,
+                        entry
+                            .control_settings
+                            .as_ref()
+                            .and_then(|c| c.home)
+                            .unwrap_or(true),
+                    )
+                }) {
+                    validate_optional_file(
+                        step.audio.as_deref(),
+                        &format!("{} : audio de la réaction Accueil", context),
+                        file_validation,
+                        errors,
+                    );
+                    validate_optional_file(
+                        step.image.as_deref(),
+                        &format!("{} : image de la réaction Accueil", context),
+                        file_validation,
+                        errors,
+                    );
                 }
             }
         }
@@ -894,12 +1004,26 @@ fn validate_project_for_generation_with_mode(
         }
     }
 
-    if project.global_options.night_mode {
-        if let Some(night_audio) = required_file_path(
-            project.night_mode_audio.as_deref(),
-            "Audio mode nuit",
-            &mut errors,
-        ) {
+    // Message de fin global : vérifié seulement si une histoire l'emprunte ;
+    // remplacé partout par des fins locales, ou sous Auto-next, il est inactif.
+    let auto_next = project.global_options.auto_next;
+    let has_night_audio = project
+        .night_mode_audio
+        .as_deref()
+        .is_some_and(|path| !path.trim().is_empty());
+    let global_end_active = (project.global_options.night_mode || has_night_audio)
+        && global_end_message_is_reached(&canonicalize_project(project));
+    if global_end_active {
+        let night_audio = if project.global_options.night_mode {
+            required_file_path(
+                project.night_mode_audio.as_deref(),
+                "Audio mode nuit",
+                &mut errors,
+            )
+        } else {
+            project.night_mode_audio.as_deref().map(str::trim)
+        };
+        if let Some(night_audio) = night_audio {
             if file_validation.checks_disk() {
                 if let Err(err) = validate_existing_file_path(night_audio, "Audio mode nuit") {
                     errors.push(err);
@@ -913,13 +1037,19 @@ fn validate_project_for_generation_with_mode(
             .iter()
             .find(|entry| entry.entry_type != "menu" && entry.entry_type != "zip")
         {
+            // L'histoire simple ne porte que son récit : son titre et son image
+            // sont l'audio et l'image racine, vérifiés plus haut
+            // (`build_simple_story` ne lit rien d'autre sur l'histoire).
             Some(story) => {
-                validate_story_entry_for_generation(
-                    story,
-                    "Histoire principale",
-                    file_validation,
-                    &mut errors,
-                );
+                let label = "Histoire principale : audio";
+                if let Some(audio) = required_file_path(story.audio.as_deref(), label, &mut errors)
+                {
+                    if file_validation.checks_disk() {
+                        if let Err(err) = validate_existing_file_path(audio, label) {
+                            errors.push(err);
+                        }
+                    }
+                }
             }
             None => errors.push("Histoire principale manquante.".to_string()),
         }
@@ -936,6 +1066,7 @@ fn validate_project_for_generation_with_mode(
         let mut menu_playable_counts = HashMap::new();
         collect_entry_graph_stats(
             &root_entries,
+            auto_next,
             &mut menu_ids,
             &mut story_ids,
             &mut story_home_step_ids,
@@ -944,6 +1075,7 @@ fn validate_project_for_generation_with_mode(
         );
         collect_entry_graph_stats(
             &shared_entries,
+            auto_next,
             &mut menu_ids,
             &mut story_ids,
             &mut story_home_step_ids,
@@ -969,13 +1101,39 @@ fn validate_project_for_generation_with_mode(
             story_ids: &story_ids,
             story_home_step_ids: &story_home_step_ids,
         };
-        validate_navigation_targets(&root_entries, &navigation_graph, "Racine", &mut errors);
+        validate_navigation_targets(
+            &root_entries,
+            &navigation_graph,
+            "Racine",
+            auto_next,
+            &mut errors,
+        );
         validate_navigation_targets(
             &shared_entries,
             &navigation_graph,
             "Éléments partagés",
+            auto_next,
             &mut errors,
         );
+        // Une destination du message de fin global qui ne mène plus nulle part
+        // (histoire ou dossier supprimé) reste à corriger : le constructeur la
+        // remplacerait sans le dire par le retour propre à chaque histoire.
+        if global_end_active {
+            validate_navigation_target(
+                project.night_mode_return.as_deref(),
+                "Message de fin",
+                "la destination après le message",
+                &navigation_graph,
+                &mut errors,
+            );
+            validate_navigation_target(
+                project.night_mode_home_return.as_deref(),
+                "Message de fin",
+                "la destination du bouton Accueil",
+                &navigation_graph,
+                &mut errors,
+            );
+        }
         let reachable_shared_ids = reachable_shared_entry_ids(&root_entries, &shared_entries);
         validate_shared_entries_reachable(
             &shared_entries,
@@ -986,11 +1144,23 @@ fn validate_project_for_generation_with_mode(
 
         for entry in &root_entries {
             let entry_name = display_label(&entry.name, "Element racine");
-            validate_project_entry_for_generation(entry, &entry_name, file_validation, &mut errors);
+            validate_project_entry_for_generation(
+                entry,
+                &entry_name,
+                file_validation,
+                auto_next,
+                &mut errors,
+            );
         }
         for entry in &shared_entries {
             let entry_name = display_label(&entry.name, "Element partage");
-            validate_project_entry_for_generation(entry, &entry_name, file_validation, &mut errors);
+            validate_project_entry_for_generation(
+                entry,
+                &entry_name,
+                file_validation,
+                auto_next,
+                &mut errors,
+            );
         }
     }
 
@@ -1338,11 +1508,11 @@ mod tests {
             native_stage_id: Some("helper".to_string()),
             auto_black_image: true,
             control_settings: Some(EntryControlSettings {
-                autoplay: Some(true),
                 wheel: Some(false),
-                pause: Some(false),
                 ok: Some(true),
                 home: Some(true),
+                pause: Some(false),
+                autoplay: Some(true),
             }),
             children: vec![ref_entry("helper-ref", "story:story-a")],
             ..ProjectEntry::default()
@@ -1430,6 +1600,26 @@ mod tests {
     }
 
     #[test]
+    fn a_simple_story_needs_only_its_audio_besides_the_root_media() {
+        // L'éditeur simplifié range le titre audio et l'image à la racine :
+        // l'histoire elle-même n'a ni audio titre ni image propres.
+        let mut project = base_project("simple");
+        project.root_audio = Some("valid/titre.mp3".to_string());
+        project.root_image = Some("valid/image.png".to_string());
+        project.root_entries = vec![ProjectEntry {
+            id: "story-main".to_string(),
+            entry_type: "story".to_string(),
+            name: "Histoire principale".to_string(),
+            audio: Some("valid/main.mp3".to_string()),
+            ..ProjectEntry::default()
+        }];
+        assert_eq!(
+            validate_project_for_generation_with_mode(&project, FileValidation::StructureOnly),
+            Ok(())
+        );
+    }
+
+    #[test]
     fn parity_simple_missing_root_audio_fails() {
         // Equivalent JSON : simple_missing_root_audio. JS = fail (warning audio intro),
         // Rust = Err contenant "Audio racine".
@@ -1450,6 +1640,132 @@ mod tests {
             "Rust doit signaler l'audio racine manquant ; recu : {}",
             errors,
         );
+    }
+
+    // Le verdict de chaque cas de scripts/fixtures/validation-projects.json,
+    // lu tel quel : le fichier que vérifie validationParity.test.mjs. Seuls les
+    // réglages que la normalisation JS complète toujours sont posés ici.
+    #[test]
+    fn parity_fixtures_share_the_js_verdict() {
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../scripts/fixtures/validation-projects.json"
+        ))
+        .expect("fichier de parité");
+        for case in fixtures["cases"].as_array().expect("cas de parité") {
+            let name = case["name"].as_str().expect("nom du cas");
+            let mut project = case["project"].clone();
+            let options = &mut project["globalOptions"];
+            for key in ["autoNext", "nightMode"] {
+                if options.get(key).is_none() {
+                    options[key] = serde_json::Value::Bool(false);
+                }
+            }
+            let project: Project = serde_json::from_value(project)
+                .unwrap_or_else(|err| panic!("{name} : projet illisible : {err}"));
+            let verdict = validate_project_structure_for_generation(&project);
+            match case["expect"].as_str() {
+                Some("ok") => assert!(verdict.is_ok(), "{name} : Rust refuse : {verdict:?}"),
+                Some("fail") => assert!(verdict.is_err(), "{name} : Rust accepte"),
+                other => panic!("{name} : verdict attendu inconnu {other:?}"),
+            }
+        }
+    }
+
+    // Dossier « Suite apres … » tel que le JS l'envoie : sans audio, écran
+    // transparent. `flag` : `None` = champ absent (projet antérieur au drapeau),
+    // `Some((clé, valeur))` = champ écrit sous cette clé.
+    fn continuation_menu(
+        id: &str,
+        name: &str,
+        flag: Option<(&str, serde_json::Value)>,
+    ) -> ProjectEntry {
+        let mut entry = serde_json::json!({
+            "id": id,
+            "type": "menu",
+            "name": name,
+            "audio": null,
+            "image": null,
+            "autoBlackImage": true,
+            "children": [{
+                "id": format!("{id}-suite"),
+                "type": "story",
+                "name": "Suite",
+                "audio": "valid/story1.mp3",
+                "itemAudio": "valid/story1-title.mp3",
+                "itemImage": "valid/story1-title.png"
+            }]
+        });
+        if let Some((key, value)) = flag {
+            entry[key] = value;
+        }
+        serde_json::from_value(entry).expect("dossier de continuation")
+    }
+
+    fn continuation_verdict(menu: ProjectEntry) -> Result<(), String> {
+        validate_project_structure_for_generation(&pack_project(vec![menu]))
+    }
+
+    fn imported_flag() -> Option<(&'static str, serde_json::Value)> {
+        Some((
+            "importedContinuation",
+            serde_json::json!({ "sourceStoryId": "histoire", "sourceStoryName": "Histoire 1" }),
+        ))
+    }
+
+    #[test]
+    fn a_renamed_imported_continuation_stays_silent() {
+        let menu = continuation_menu(
+            "histoire-sequence-choice-fin",
+            "Encore une ?",
+            imported_flag(),
+        );
+        continuation_verdict(menu).expect("le drapeau suffit, quel que soit le nom");
+    }
+
+    #[test]
+    fn an_imported_continuation_with_a_reassigned_id_stays_silent() {
+        let menu = continuation_menu(
+            "b66e077a-2f7c-4d1e-9a51-0c3f5e7d8a90",
+            "Suite apres Histoire 1",
+            imported_flag(),
+        );
+        continuation_verdict(menu).expect("le drapeau suffit, quel que soit l'identifiant");
+    }
+
+    #[test]
+    fn a_menu_without_the_flag_needs_its_audio_whatever_its_name() {
+        // La normalisation JS écrit toujours le champ : `null` pour un dossier ordinaire.
+        let menu = continuation_menu(
+            "histoire-sequence-choice-fin",
+            "Suite apres Histoire 1",
+            Some(("importedContinuation", serde_json::Value::Null)),
+        );
+        let errors = continuation_verdict(menu).expect_err("audio menu exigé comme en JS");
+        assert!(errors.contains("audio menu manquant"), "{errors}");
+    }
+
+    #[test]
+    fn the_raw_import_flag_is_read_like_the_normalized_one() {
+        let menu = continuation_menu(
+            "a1b2",
+            "Encore une ?",
+            Some((
+                "_importedContinuation",
+                serde_json::json!({ "sourceStoryName": "Histoire 1" }),
+            )),
+        );
+        continuation_verdict(menu).expect("`_importedContinuation` vaut le drapeau");
+    }
+
+    #[test]
+    fn a_legacy_continuation_without_the_field_is_still_recognized() {
+        // Projet antérieur au drapeau : l'identifiant et le nom restent le repli.
+        let menu = continuation_menu(
+            "histoire-sequence-choice-fin",
+            "Suite apres Histoire 1",
+            None,
+        );
+        continuation_verdict(menu).expect("repli des anciens projets");
     }
 
     #[test]
@@ -1515,3 +1831,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "validation_activity_tests.rs"]
+mod activity_tests;

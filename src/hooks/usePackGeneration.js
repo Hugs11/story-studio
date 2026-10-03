@@ -1,15 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { getLastExportDir, saveLastExportDir } from './useFileDialog';
 import { ensureExportsDir, projectToRustExport } from '../store/projectIO';
 import { getGenerateErrors } from '../store/projectValidation';
-import {
-  hasExplicitExportPackName,
-  shouldPromptRegenerateImportedUuid,
-} from '../store/projectHelpers';
+import { hasExplicitExportPackName } from '../store/projectHelpers';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
-import { generateUuid } from '../utils/uuid';
 import { logger } from '../utils/logger';
+import { askImportedUuidRevision } from './importedUuidRevision';
 
 // Grappe « générer le pack » extraite d'AppContent : étape métadonnées
 // (PackNameModal), gardes de validation (audit en cours puis erreurs bloquantes),
@@ -30,9 +27,17 @@ export function usePackGeneration({
   showChoiceDialog,
 }) {
   const [packMetadataOpen, setPackMetadataOpen] = useState(false);
+  // Les deux gestes de la fiche sont stables : le bouton de
+  // production du graphe ouvre cette fiche, et une identité qui change à chaque
+  // rendu ferait reconstruire la commande de production — donc le raccourci et
+  // le bouton — à chaque battement de l'export.
+  const openPackMetadata = useCallback(() => setPackMetadataOpen(true), []);
+  const closePackMetadata = useCallback(() => setPackMetadataOpen(false), []);
 
   async function resolveDefaultExportDir() {
-    let defaultPath = getLastExportDir();
+    // Avant le premier enregistrement, ne jamais proposer le dossier de la
+    // session de cache ni un ancien choix sans rapport avec le projet courant.
+    let defaultPath = store.savePath ? getLastExportDir() : undefined;
     if (!defaultPath) {
       const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
       if (ws) {
@@ -90,25 +95,16 @@ export function usePackGeneration({
     });
   }
 
-  async function handleSavePackMetadata(draft, { generate = false } = {}) {
-    let effectiveDraft = draft;
-    // Nouvelle révision d'un pack importé : proposer (sans obligation) un nouvel UUID
-    // AVANT de générer — donc avant le sélecteur de dossier de sortie (dialogue natif
-    // OS qui passe devant). Dialogue in-app awaitable, résolu ici puis on continue.
-    if (generate && importedPackPendingMetaRef.current && shouldPromptRegenerateImportedUuid(draft)) {
-      const choice = await showChoiceDialog({
-        title: "Nouvelle révision d'un pack importé",
-        message: "Ce pack a un UUID d'origine. Générer un nouvel UUID pour cette version ?\n\n"
-          + "Garde l'UUID d'origine seulement pour remplacer exactement la même révision.",
-        variant: 'info',
-        cancelValue: 'keep',
-        actions: [
-          { value: 'keep', label: "Garder l'UUID d'origine", kind: 'ghost' },
-          { value: 'renew', label: 'Générer un nouvel UUID', kind: 'primary', autoFocus: true },
-        ],
-      });
-      if (choice === 'renew') effectiveDraft = { ...draft, uuid: generateUuid() };
-    }
+  async function handleSavePackMetadata(requestedDraft, { generate = false } = {}) {
+    // La vignette catalogue n'est pas une métadonnée : elle est retirée du
+    // brouillon et écrite à côté, dans les médias de la racine.
+    const { catalogImage, ...draft } = requestedDraft ?? {};
+    const catalogChanged = Object.hasOwn(requestedDraft ?? {}, 'catalogImage');
+    // Nouvelle révision d'un pack importé : la question est posée avant le
+    // sélecteur de dossier de sortie.
+    const effectiveDraft = generate && importedPackPendingMetaRef.current
+      ? await askImportedUuidRevision(draft, showChoiceDialog)
+      : draft;
     const nextPackMetadata = { ...(store.project.packMetadata ?? {}), ...effectiveDraft };
     const isSimple = store.project.projectType === 'simple';
     const nextTitle = String(effectiveDraft?.title ?? '').trim();
@@ -116,6 +112,11 @@ export function usePackGeneration({
       ...store.project,
       packMetadata: nextPackMetadata,
       ...(isSimple && nextTitle ? { projectName: nextTitle } : {}),
+      // Sans image propre, la vignette reprend l'image racine (`sameImage`).
+      ...(catalogChanged ? {
+        sameImage: !catalogImage,
+        thumbnailImage: catalogImage || store.project.rootImage || null,
+      } : {}),
     };
     if (!generate) {
       store.setProject(projectForAction);
@@ -130,13 +131,15 @@ export function usePackGeneration({
     if (generate) await handleGenerate(projectForAction, { skipMetadata: true });
   }
 
+  const packMetadata = useMemo(() => ({
+    open: packMetadataOpen,
+    openPackMetadata,
+    close: closePackMetadata,
+  }), [packMetadataOpen, openPackMetadata, closePackMetadata]);
+
   return {
     handleGenerate,
     handleSavePackMetadata,
-    packMetadata: {
-      open: packMetadataOpen,
-      openPackMetadata: () => setPackMetadataOpen(true),
-      close: () => setPackMetadataOpen(false),
-    },
+    packMetadata,
   };
 }

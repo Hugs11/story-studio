@@ -1,0 +1,148 @@
+/* Les dialogues de l'Éditeur avancé.
+ *
+ * Ils vivent dans le portail commun (`app-modal-overlay`), ce qui suspend les
+ * raccourcis globaux tant qu'ils sont ouverts. Le panneau défile au lieu de
+ * déborder : un inventaire de références entrantes peut être long, et le tronquer
+ * cacherait exactement ce que l'auteur doit décider. */
+
+.advanced-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(640px, 92vw);
+  max-height: 86vh;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--surface-2, #1c2025);
+  color: var(--text-1, #e8eaed);
+  border: 1px solid var(--border-1, #2a2f35);
+}
+
+.advanced-dialog__header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.advanced-dialog__description {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-dialog__body {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.advanced-dialog__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.advanced-dialog__spacer {
+  flex: 1;
+}
+
+.advanced-decision-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advanced-decision-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.advanced-decision-list__what {
+  flex: 1;
+  min-width: 160px;
+  overflow-wrap: anywhere;
+}
+
+.advanced-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+
+/* Le choix du point de départ d'une écoute depuis une Action.
+ *
+ * Les occurrences sont listées dans leur ordre, et deux occurrences vers le
+ * même Écran restent deux lignes : le rang fait l'identité d'une occurrence
+ * dans le dialecte, et les fondre en une seule effacerait une information que
+ * l'auteur doit voir. */
+.advanced-listen-choices {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.advanced-listen-choice {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border: 1px solid var(--borderLt);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.advanced-listen-choice label {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  cursor: pointer;
+}
+
+.advanced-listen-choice__rank {
+  flex: none;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.advanced-listen-choice__target { color: var(--text-primary); font-weight: 600; }
+.advanced-listen-choice__target em { color: var(--muted); font-weight: 400; }
+
+/* Une destination inexploitable n'est pas masquée : elle est dite, et
+ * distinguée de celle qui manque. */
+.advanced-listen-choice__reason { color: var(--warning); }
+.advanced-listen-choice.is-null,
+.advanced-listen-choice.is-dangling {
+  border-style: dashed;
+  border-color: var(--warning-border);
+}
+
+/* La création d'un Écran au bout d'un trait : les interrupteurs du panneau,
+   et la case qui en fait le réglage des nouveaux Écrans. */
+.advanced-link-dialog__controls {
+  margin-top: 10px;
+}
+
+.advanced-link-dialog__remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}

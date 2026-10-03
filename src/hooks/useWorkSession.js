@@ -2,16 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   autoSaveEphemeralProject,
+  collectLiveSessionDependencies,
   ensureWorkspaceDir,
   getWorkspaceDir,
   loadProjectFromPath,
+  previewProjectFromPath,
 } from '../store/projectIO';
 import { isProjectWorthAutosaving } from '../store/autosaveDecision';
 import { createWorkSnapshot } from '../store/projectHelpers';
+import { collectSessionBoundReferences } from '../store/sessionMediaTriage';
 import {
   acceptEphemeralSnapshotSeed,
   beginEphemeralSnapshotSeed,
   createEphemeralSnapshotSeedState,
+  enqueueEphemeralSnapshotWrite,
   finishEphemeralSnapshotSeed,
   resetEphemeralSnapshotSeedState,
 } from '../store/ephemeralSnapshotSeed';
@@ -36,6 +40,7 @@ export function useWorkSession({
   sdStore,
   xttsStore,
   showErrorDialog,
+  showChoiceDialog,
   useWorkspaceForNewProjects,
   configuredWorkspaceDir,
   setConfiguredWorkspaceDir,
@@ -62,9 +67,45 @@ export function useWorkSession({
   const sessionWorkspaceDirRef = useRef('');
   const ephemeralSnapshotPathRef = useRef(null);
   const ephemeralSnapshotSeedStateRef = useRef(createEphemeralSnapshotSeedState());
-  const snapshotWriteChainRef = useRef(Promise.resolve());
+  // Jeton d'identité de la session de travail courante. Il change à **chaque**
+  // transition, si bien qu'une opération longue partie d'une session peut
+  // constater à son retour qu'elle n'y est plus : c'est la condition pour
+  // qu'un enregistrement lancé dans la session A ne promeuve, ne trie ni ne
+  // supprime jamais le dossier de la session B devenue courante entre-temps.
+  const sessionTicketRef = useRef({});
+
+  // Toute transition de session passe par ici : le jeton et l'état du filet
+  // anti-crash sont périmés ensemble, jamais l'un sans l'autre.
+  function beginSessionTransition(seed = undefined) {
+    sessionTicketRef.current = {};
+    if (seed) resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current, seed);
+    else resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+  }
+
+  // Ce que vaut la session à l'instant où une opération longue démarre. Les
+  // appelants gardent ce ticket et le représentent à l'arrivée.
+  function captureWorkSession() {
+    return {
+      ticket: sessionTicketRef.current,
+      mode: sessionModeRef.current,
+      dir: sessionWorkspaceDirRef.current,
+    };
+  }
+
+  // Vrai seulement si la session courante est **exactement** celle capturée :
+  // même jeton, même mode, même dossier.
+  function isWorkSessionCurrent(session) {
+    return !!session
+      && session.ticket === sessionTicketRef.current
+      && session.mode === sessionModeRef.current
+      && session.dir === sessionWorkspaceDirRef.current;
+  }
 
   // Reprises après crash : snapshots orphelins proposés comme projets sur l'accueil.
+  // Les énumérer n'est qu'une lecture : l'aperçu s'arrête à l'enveloppe, donc
+  // aucun snapshot n'est migré, normalisé, validé par Rust ni réécrit tant que
+  // l'utilisateur n'a pas choisi de reprendre — c'est `handleRecoverSession` qui
+  // ouvre réellement le fichier, par le même chemin qu'une ouverture explicite.
   useEffect(() => {
     let cancelled = false;
     async function loadRecoveries() {
@@ -76,20 +117,19 @@ export function useWorkSession({
         }
         const enriched = await Promise.all(recoveries.map(async (recovery) => {
           try {
-            const result = await loadProjectFromPath(recovery.snapshotPath, {
-              preserveEmptyProjectName: true,
-            });
+            const preview = await previewProjectFromPath(recovery.snapshotPath);
             return {
               ...recovery,
-              projectName: result.data?.projectName || 'Projet récupérable',
-              projectType: result.data?.projectType || 'pack',
-              thumbnailImage: result.data?.thumbnailImage || result.data?.rootImage || null,
+              projectName: preview.projectName || 'Projet récupérable',
+              projectType: preview.projectType || 'pack',
+              thumbnailImage: preview.thumbnailImage,
             };
           } catch {
             return {
               ...recovery,
               projectName: 'Projet récupérable',
-              projectType: 'pack',
+              // Snapshot illisible : son éditeur est inconnu, l'accueil n'en affiche aucun.
+              projectType: null,
               thumbnailImage: null,
             };
           }
@@ -125,46 +165,51 @@ export function useWorkSession({
     const capturedProject = store.project;
     const capturedPaths = mediaLibraryPaths;
     const capturedTags = mediaTags;
-    snapshotWriteChainRef.current = snapshotWriteChainRef.current
-      .catch(() => {})
-      .then(async () => {
-        const state = ephemeralSnapshotSeedStateRef.current;
-        if (state.sessionToken !== sessionToken
-          || sessionModeRef.current !== 'ephemeral'
-          || ephemeralSnapshotPathRef.current !== snapshotPath) return;
-        const write = beginEphemeralSnapshotSeed(state, {
-          sessionMode: 'ephemeral',
-          path: snapshotPath,
-          snapshot: currentWorkSnapshot,
-        });
-        if (!write) return;
-        try {
-          await autoSaveEphemeralProject(capturedProject, sessionWorkspaceDir, write.path, {
-            mediaTags: capturedTags,
-            mediaLibraryPaths: capturedPaths,
-            totalMediaCount: mediaLibraryCountRef.current,
-          });
-          acceptEphemeralSnapshotSeed(state, write, {
-            sessionMode: sessionModeRef.current,
-            path: ephemeralSnapshotPathRef.current,
-          });
-        } catch (error) {
-          logger.error('session:seed-snapshot-error', error);
-        } finally {
-          finishEphemeralSnapshotSeed(state, write);
-        }
+    enqueueEphemeralSnapshotWrite(ephemeralSnapshotSeedStateRef.current, async () => {
+      const state = ephemeralSnapshotSeedStateRef.current;
+      if (state.sessionToken !== sessionToken
+        || sessionModeRef.current !== 'ephemeral'
+        || ephemeralSnapshotPathRef.current !== snapshotPath) return;
+      const write = beginEphemeralSnapshotSeed(state, {
+        sessionMode: 'ephemeral',
+        path: snapshotPath,
+        snapshot: currentWorkSnapshot,
       });
+      if (!write) return;
+      try {
+        await autoSaveEphemeralProject(capturedProject, sessionWorkspaceDir, write.path, {
+          mediaTags: capturedTags,
+          mediaLibraryPaths: capturedPaths,
+          totalMediaCount: mediaLibraryCountRef.current,
+        });
+        acceptEphemeralSnapshotSeed(state, write, {
+          sessionMode: sessionModeRef.current,
+          path: ephemeralSnapshotPathRef.current,
+        });
+      } catch (error) {
+        logger.error('session:seed-snapshot-error', error);
+      } finally {
+        finishEphemeralSnapshotSeed(state, write);
+      }
+    });
   }, [currentWorkSnapshot, mediaLibraryPaths, mediaTags, sessionMode, sessionWorkspaceDir, store.project]);
 
   // Prépare une session de travail (éphémère par défaut, ou workspace réel si
   // l'option correspondante est active), fixe le type de projet et renvoie le dossier cible
   // d'écriture. Partagé par « Retour à l’accueil » et les funnels d'entrée éditeur.
-  async function prepareNewWorkSession(type) {
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+  //
+  // `applyProjectType: false` laisse le projet courant intact : l'Éditeur avancé
+  // n'a pas de type hiérarchique à poser, et en poser un ferait clignoter
+  // l'espace de travail Libre le temps que le pack soit acquis. Le projet est
+  // alors installé en une fois par `loadProject`, qui fait avancer l'époque.
+  async function prepareNewWorkSession(type, { applyProjectType = true } = {}) {
+    beginSessionTransition();
     let workspaceDir;
     if (useWorkspaceForNewProjects) {
       const realWorkspace = configuredWorkspaceDir || await ensureWorkspaceDir();
       if (!configuredWorkspaceDir) setConfiguredWorkspaceDir(realWorkspace);
+      sessionModeRef.current = 'project';
+      sessionWorkspaceDirRef.current = '';
       setSessionMode('project');
       setSessionWorkspaceDir('');
       setWorkspaceDirState(realWorkspace);
@@ -172,6 +217,11 @@ export function useWorkSession({
       workspaceDir = realWorkspace;
     } else {
       const sessionDir = await invoke('create_session_workspace');
+      // Les miroirs ref d'abord : une opération partie de la session
+      // précédente doit voir la nouvelle session dès cette ligne, sans
+      // attendre le rendu qui synchronise les états.
+      sessionModeRef.current = 'ephemeral';
+      sessionWorkspaceDirRef.current = sessionDir;
       setSessionMode('ephemeral');
       setSessionWorkspaceDir(sessionDir);
       setWorkspaceDirState(sessionDir);
@@ -183,7 +233,7 @@ export function useWorkSession({
     setAutoSavedPath(null);
     importedPackPendingMetaRef.current = false;
     store.setSavePath(null);
-    store.setProjectType(type);
+    if (applyProjectType) store.setProjectType(type);
     logger.info(`session:start mode=${useWorkspaceForNewProjects ? 'project' : 'ephemeral'} type=${type}`);
     return workspaceDir;
   }
@@ -200,7 +250,9 @@ export function useWorkSession({
   // Retour à l'accueil : ferme la session sans toucher au
   // store ni au dossier (le nettoyage éventuel est un appel séparé).
   function resetWorkSession() {
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+    beginSessionTransition();
+    sessionModeRef.current = null;
+    sessionWorkspaceDirRef.current = '';
     setSessionMode(null);
     setSessionWorkspaceDir('');
     setWorkspaceDirState(configuredWorkspaceDir);
@@ -209,11 +261,13 @@ export function useWorkSession({
   // Échec d'un atterrissage de funnel : nettoie la session tout juste créée
   // (jamais le workspace réel), vide le projet et revient à l'accueil.
   function abandonWorkSession(sessionDir) {
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+    beginSessionTransition();
     if (!useWorkspaceForNewProjects && sessionDir) {
       invoke('cleanup_session_workspace', { path: sessionDir }).catch(() => {});
     }
     store.resetProject();
+    sessionModeRef.current = null;
+    sessionWorkspaceDirRef.current = '';
     setSessionMode(null);
     setSessionWorkspaceDir('');
     setWorkspaceDirState(configuredWorkspaceDir);
@@ -224,8 +278,11 @@ export function useWorkSession({
   // (`importFn(workspaceDir)`), et en cas d'échec logge puis abandonne la session
   // avant de relancer l'erreur — le funnel affiche alors son écran d'erreur et
   // l'accueil est revenu dans un état propre.
-  async function runFunnelLanding(type, importFn, { errorLog = 'funnel:land-error' } = {}) {
-    const workspaceDir = await prepareNewWorkSession(type);
+  async function runFunnelLanding(type, importFn, {
+    errorLog = 'funnel:land-error',
+    applyProjectType = true,
+  } = {}) {
+    const workspaceDir = await prepareNewWorkSession(type, { applyProjectType });
     try {
       return await importFn(workspaceDir);
     } catch (error) {
@@ -236,14 +293,52 @@ export function useWorkSession({
   }
 
   // Promotion « Enregistrer comme projet » : seule transition qui supprime la
-  // session éphémère en cours (sauf cleanupSession=false quand des transferts de
-  // médias ont échoué : la session reste récupérable). Bascule en mode projet.
-  function promoteSessionToProject({ workspaceDir = null, cleanupSession = true } = {}) {
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
-    if (cleanupSession !== false && sessionModeRef.current === 'ephemeral' && sessionWorkspaceDirRef.current) {
-      invoke('cleanup_session_workspace', { path: sessionWorkspaceDirRef.current }).catch((error) => {
-        logger.warn('session:cleanup-error', error);
-      });
+  // session éphémère en cours. La session et le travail enregistré doivent être
+  // encore courants, les transferts réussis et les dépendances sorties du dossier.
+  // Tant que ces conditions ne sont pas réunies, conserver aussi le mode
+  // éphémère et son filet de récupération.
+  async function promoteSessionToProject({
+    session = null,
+    isPublicationCurrent = null,
+    project = null,
+    workspaceDir = null,
+    cleanupSession = true,
+  } = {}) {
+    // Une promotion appartient à la session d'où elle est partie. Si une autre
+    // session est devenue courante entre-temps, ce résultat ne la concerne pas :
+    // ni son mode, ni son dossier, ni ses médias ne lui appartiennent. Sans ce
+    // refus, un Save As lent lisait le dossier de la session courante tout en
+    // cherchant ses dépendances dans le projet d'une autre, et supprimait des
+    // fichiers encore référencés.
+    const canPromote = () => isWorkSessionCurrent(session)
+      && isPublicationCurrent?.() === true;
+    if (!canPromote()) {
+      logger.warn(`session:promotion-refused dir='${session?.dir}' current='${sessionWorkspaceDirRef.current}'`);
+      return;
+    }
+    const sessionDir = sessionWorkspaceDirRef.current;
+    const wasEphemeral = sessionModeRef.current === 'ephemeral' && !!sessionDir;
+    if (wasEphemeral) {
+      if (cleanupSession === false) return;
+      // Une écriture déjà engagée doit finir avant la suppression de son dossier.
+      // Une mutation pendant cette attente périme également la promotion.
+      await ephemeralSnapshotSeedStateRef.current.writeChain.catch(() => {});
+      const pending = await collectLiveSessionDependencies(project, sessionDir);
+      if (pending.length > 0 || !canPromote()) {
+        logger.warn(`session:cleanup-skipped dependencies=${pending.length} dir='${sessionDir}'`);
+        return;
+      }
+    }
+    beginSessionTransition();
+    // Aucun await entre le dernier contrôle et la bascule : passé cette ligne,
+    // les snapshots encore en file sont invalidés par le jeton de transition.
+    // Une étape d'historique qui désigne encore un fichier de session (un média
+    // retiré avant la sauvegarde, donc ni copié ni trié) ne sera plus lisible
+    // après le nettoyage : elle n'est plus restaurable.
+    if (wasEphemeral) {
+      store.relocateHistory((step) => (
+        collectSessionBoundReferences({ project: step, sessionDir }).length > 0 ? null : step
+      ));
     }
     sessionModeRef.current = 'project';
     sessionWorkspaceDirRef.current = '';
@@ -252,13 +347,32 @@ export function useWorkSession({
     if (workspaceDir) {
       setConfiguredWorkspaceDir(workspaceDir);
       setWorkspaceDirState(workspaceDir);
+      workspaceDirRef.current = workspaceDir;
+    } else {
+      // Le dossier du projet n'est pas un nouveau workspace configuré. Quand
+      // l'option workspace est désactivée, sortir de la session restaure donc
+      // la préférence existante sans la remplacer par le dossier du `.mbah`.
+      setWorkspaceDirState(configuredWorkspaceDir);
+      workspaceDirRef.current = configuredWorkspaceDir;
     }
+    if (!wasEphemeral) return;
+    // Le contrôle des dépendances a rendu la main : un instantané parti pendant
+    // cette attente a vu la session encore éphémère et écrit dans son dossier.
+    // La bascule ci-dessus annule ceux qui n'ont pas démarré ; celui qui est en
+    // vol doit finir avant la suppression, sinon il crée son fichier temporaire
+    // dans un dossier qui n'existe plus.
+    await ephemeralSnapshotSeedStateRef.current.writeChain.catch(() => {});
+    await invoke('cleanup_session_workspace', { path: sessionDir }).catch((error) => {
+      logger.warn('session:cleanup-error', error);
+    });
   }
 
   // Passage en mode projet après chargement d'un `.mbah` existant (pas de
   // promotion : la session précédente a été nettoyée avant remplacement).
   async function enterProjectMode() {
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+    beginSessionTransition();
+    sessionModeRef.current = 'project';
+    sessionWorkspaceDirRef.current = '';
     const realWorkspace = configuredWorkspaceDir || await getWorkspaceDir();
     setSessionMode('project');
     setSessionWorkspaceDir('');
@@ -267,7 +381,7 @@ export function useWorkSession({
 
   async function handleRecoverSession(recovery) {
     if (!recovery?.snapshotPath || !recovery?.sessionDir) return;
-    resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current);
+    beginSessionTransition();
     try {
       const result = await loadProjectFromPath(recovery.snapshotPath, {
         preserveEmptyProjectName: true,
@@ -287,7 +401,7 @@ export function useWorkSession({
       setWorkspaceDirState(recovery.sessionDir);
       workspaceDirRef.current = recovery.sessionDir;
       // Snapshot déjà sur disque : la signature unifiée évite une réécriture immédiate.
-      resetEphemeralSnapshotSeedState(ephemeralSnapshotSeedStateRef.current, {
+      beginSessionTransition({
         seeded: true,
         savedSnapshot: createWorkSnapshot(
           result.data,
@@ -310,6 +424,19 @@ export function useWorkSession({
 
   async function handleIgnoreSessionRecovery(recovery) {
     if (!recovery?.sessionDir) return;
+    // Ignorer supprime définitivement l'instantané et les médias de session :
+    // l'auteur le confirme d'abord.
+    const choice = await showChoiceDialog({
+      title: 'Ignorer cette reprise',
+      message: 'Supprimer définitivement ce travail non enregistré ?',
+      variant: 'warning',
+      cancelValue: 'cancel',
+      actions: [
+        { value: 'cancel', label: 'Annuler', autoFocus: true },
+        { value: 'delete', label: 'Supprimer', kind: 'danger-outline' },
+      ],
+    });
+    if (choice !== 'delete') return;
     try {
       await invoke('cleanup_session_workspace', { path: recovery.sessionDir });
     } catch (error) {
@@ -325,6 +452,8 @@ export function useWorkSession({
     sessionModeRef,
     ephemeralSnapshotPathRef,
     ephemeralSnapshotSeedStateRef,
+    captureWorkSession,
+    isWorkSessionCurrent,
     prepareNewWorkSession,
     cleanupEphemeralSession,
     resetWorkSession,

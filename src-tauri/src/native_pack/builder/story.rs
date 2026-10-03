@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use super::super::{resolve_next_story_target, CanonicalEntry, Transition};
+use super::super::{
+    end_home_step_is_active, resolve_next_story_target, CanonicalEntry, Transition,
+};
 use super::{menu::MenuPrealloc, transitions::transition};
 
 /// Contexte de navigation minimal pour résoudre `next_story` dans les cibles de fin
@@ -35,6 +37,7 @@ pub(crate) struct StoryPrealloc {
 
 pub(crate) fn preallocate_story_play_stages(
     entries: &[CanonicalEntry],
+    auto_next: bool,
     result: &mut HashMap<String, StoryPrealloc>,
 ) {
     for entry in entries {
@@ -46,17 +49,25 @@ pub(crate) fn preallocate_story_play_stages(
                         play_stage_id: Uuid::new_v4().to_string(),
                         play_action_id: Uuid::new_v4().to_string(),
                         home_step_stage_id: (story.after_playback_home_step.is_some()
-                            && story.after_playback_sequence.len() > 1)
-                            .then(|| Uuid::new_v4().to_string()),
+                            && end_home_step_is_active(
+                                auto_next,
+                                story.after_playback_sequence.len(),
+                                story.home,
+                            ))
+                        .then(|| Uuid::new_v4().to_string()),
                         home_step_action_id: (story.after_playback_home_step.is_some()
-                            && story.after_playback_sequence.len() > 1)
-                            .then(|| Uuid::new_v4().to_string()),
+                            && end_home_step_is_active(
+                                auto_next,
+                                story.after_playback_sequence.len(),
+                                story.home,
+                            ))
+                        .then(|| Uuid::new_v4().to_string()),
                         approach_transition: None,
                     },
                 );
             }
             CanonicalEntry::Menu(menu) => {
-                preallocate_story_play_stages(&menu.children, result);
+                preallocate_story_play_stages(&menu.children, auto_next, result);
             }
             _ => {}
         }
@@ -73,7 +84,7 @@ pub(crate) fn preallocate_story_approach_transitions(
         match entry {
             CanonicalEntry::Story(story) if !story.id.is_empty() => {
                 if let Some(prealloc) = story_preallocs.get_mut(&story.id) {
-                    prealloc.approach_transition = Some(transition(parent_action_id, index as i32));
+                    prealloc.approach_transition = Some(transition(parent_action_id, index));
                 }
             }
             CanonicalEntry::Menu(menu) => {

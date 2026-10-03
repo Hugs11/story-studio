@@ -2,7 +2,7 @@ import { readFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 
 // MIME : source unique dans utils/mimeTypes. Re-exporte ici pour les
-// consommateurs historiques (ProjectSimulator, ZipSimulator) qui l'importaient
+// consommateurs historiques (ProjectSimulator, FlatSimulator) qui l'importaient
 // depuis ce module, et utilise en interne (getLocalUrl / get_pack_asset).
 import { MIME } from '../../utils/mimeTypes';
 import { FILE_CHANGED_EVENT } from '../../store/fileMetadataCache';

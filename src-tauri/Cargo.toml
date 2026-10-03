@@ -1,6 +1,6 @@
 [package]
 name = "story-studio"
-version = "0.9.8"
+version = "0.9.9"
 description = "Cross-platform desktop editor for creating Lunii-compatible story packs"
 authors = ["hugs11"]
 license = "MIT"
@@ -24,7 +24,10 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", features = ["unbounded_depth"] }
+# `float_roundtrip` : sans elle, `parse_decimal` convertit le significand en `f64` puis
+# divise par une puissance de dix ; ce double arrondi décale de 1 ULP les mantisses
+# longues du dialecte STUdio v1.
+serde_json = { version = "1", features = ["float_roundtrip", "unbounded_depth"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-log = "2"
@@ -42,3 +45,8 @@ unicode-normalization = "0.1"
 [target.'cfg(target_os = "linux")'.dependencies]
 glib = "0.18"
 gtk = "0.18"
+webkit2gtk = "2.0.2"
+
+[dev-dependencies]
+# WebView factice seulement : les tests exercent le handler IPC et le codec réels.
+tauri = { version = "2", features = ["test"] }

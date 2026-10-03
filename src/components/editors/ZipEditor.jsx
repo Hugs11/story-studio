@@ -14,8 +14,14 @@ function ZipCover({ zipPath, coverImage }) {
   return (
     <div className="image-field" style={{ marginBottom: 12, flex: 'none' }}>
       <div className="media-label">Vignette catalogue</div>
-      <div className="image-drop filled" style={{ cursor: 'default' }}>
-        <img src={url} alt="" className="image-preview" />
+      {/* Aperçu en lecture seule : le cadre du champ image, sans barre
+          d'outils — d'où `--bare`, qui ne réserve pas sa gouttière. */}
+      <div className="image-slot image-slot--bare">
+        <div className="image-slot__frame">
+          <div className="image-drop filled" style={{ cursor: 'default' }}>
+            <img src={url} alt="" className="image-preview" />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { classifyOsDroppedFiles } from '../store/projectHelpers';
 import { logger } from '../utils/logger';
+import { releaseTauriListener } from '../utils/tauriListener';
 import { isTauriRuntime } from '../utils/tauriRuntime';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 
@@ -87,6 +88,10 @@ export function useOsFileDrop({
     let unlisten;
     let cancelled = false;
     const win = getCurrentWindow();
+    // Un écouteur resté branché traiterait chaque dépôt une fois de plus.
+    const releaseListener = (fn) => releaseTauriListener(fn, {
+      onError: (error) => logger.warn('os-drop:unlisten-error', error),
+    });
     win.scaleFactor()
       .then((factor) => {
         if (!cancelled && Number.isFinite(factor) && factor > 0) {
@@ -96,13 +101,13 @@ export function useOsFileDrop({
       .catch(() => {});
     win.onDragDropEvent((event) => osFileDropHandlerRef.current(event.payload))
       .then((fn) => {
-        if (cancelled) fn();
+        if (cancelled) releaseListener(fn);
         else unlisten = fn;
       })
       .catch((error) => logger.error('os-drop:listen-error', error));
     return () => {
       cancelled = true;
-      unlisten?.();
+      releaseListener(unlisten);
       setDropZone(null);
     };
   }, []);

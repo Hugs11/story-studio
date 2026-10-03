@@ -187,6 +187,58 @@
   --scrollbar-thumb: #C4CBD5;
   --scrollbar-thumb-hover: #AEB7C4;
 
+  /* Canvas du graphe avancé. La carte d'un Écran sans image doit rester une
+     carte : peinte en --bg2 elle ne tenait que 1,04:1 sur --bg0 en clair et
+     1,20:1 en sombre, c'est-à-dire un trou au dézoom sur les 32 à 38 % du
+     corpus qui n'ont pas d'image.
+
+     Le rapport s'inverse d'un thème à l'autre — en clair la carte est plus
+     SOMBRE que le fond, en sombre plus claire — et les deux blocs doivent
+     donc porter ces tokens : un token défini d'un seul côté laisse l'autre
+     thème sur le repli hexadécimal de `COLOR_TOKENS`, c'est-à-dire sur la
+     couleur de l'autre thème.
+
+     Les deux cibles diffèrent, et c'est un arbitrage de l'auteur du produit,
+     pas un oubli. Le sombre tient les 3:1 du plan. Le clair est relâché à
+     2:1 : sur un fond presque blanc, 3:1 imposait une carte ardoise franche
+     qui transformait la surface en damier et écrasait les vignettes photo.
+     Le seuil WCAG 1.4.11 n'est donc pas atteint en clair — à rouvrir si la
+     lisibilité au dézoom ne suit pas.
+
+     Chaque nature de nœud porte sa famille de teinte : violet (285°) pour un
+     Écran, teal (190°) pour une Action. La teinte seule ne suffit pas — en
+     clair, le violet et le teal de la maquette avaient la même luminance, et
+     ne se séparaient plus pour un œil qui confond les deux. Les deux familles
+     sont donc aussi écartées **en clarté** : l'Action tient au moins 1,5:1
+     contre le contour d'un Écran, qui devient son aplat sous 12 %.
+
+     Le violet garde la luminance des cartes grises qu'il remplace : 2,04:1
+     pour la carte et 3,1:1 pour le contour en clair. L'Action tient 5,3:1,
+     et son pictogramme 6,2:1 sur elle ; elle s'écarte de 1,71:1 du contour
+     d'un Écran et de 2,6:1 de sa carte. */
+  --graph-card-bg: #A4A4D4;
+  --graph-card-border: #827FC9;
+  --graph-action-bg: #0E6D68;
+  --graph-action-border: #005552;
+  --graph-action-glyph: #FFFFFF;
+  /* La mini-carte flotte sur la grille : son contour doit rester plus franc
+     que les lignes majeures du canvas clair. */
+  --graph-overview-border: color-mix(in srgb, var(--muted) 55%, var(--bg1));
+
+  /* Le trait d'un retour **au repos**. Il empruntait `--info`, qui est fait
+     pour un message, pas pour des centaines de traits : 9,5:1 sur le fond en
+     sombre, contre 3,9:1 pour un trait de structure. Le retour pesait donc
+     deux fois et demie la structure alors que les deux familles sont de même
+     rang, et le faisceau des retours écrasait la scène au dézoom.
+
+     L'atténuer par l'opacité ne marchait pas : en sombre le bleu est plus
+     clair que le fond, en clair plus sombre, et la même valeur d'alpha donne
+     4,8:1 d'un côté pour 1,6:1 de l'autre. C'est donc la teinte qui porte le
+     retrait, et elle tient les deux thèmes — 4,7:1 en sombre, 3,7:1 en clair,
+     soit le voisinage immédiat de la structure. `--info` reste le bleu franc,
+     réservé au survol : c'est lui qui désigne le lien qu'on inspecte. */
+  --graph-link-return: #4A7FB5;
+
   --tree-depth-guide: color-mix(in srgb, var(--borderLt) 40%, transparent);
   --tree-path-guide: color-mix(in srgb, var(--text-secondary) 52%, var(--tree-depth-guide));
   --tree-scope-bg: color-mix(in srgb, var(--bg2) 72%, transparent);
@@ -283,6 +335,22 @@
   --scrollbar-track: var(--bg0);
   --scrollbar-thumb: var(--bg3);
   --scrollbar-thumb-hover: color-mix(in srgb, var(--bg3) 82%, white);
+
+  /* Voir le bloc clair pour la règle. Ici la carte tient 3,15:1 et son
+     contour 4,69:1. L'Action tient 9:1, son pictogramme 8,2:1 sur elle, et
+     elle s'écarte de 1,93:1 du contour d'un Écran. Son contour s'écarte du
+     fond dans le même sens que son aplat, comme celui d'une carte. */
+  --graph-card-bg: #5D5C88;
+  --graph-card-border: #7874B7;
+  --graph-action-bg: #52C0B9;
+  --graph-action-border: #83D4CE;
+  --graph-action-glyph: #031A19;
+  /* Le contraste sombre était déjà juste : conserver son contour historique. */
+  --graph-overview-border: var(--borderLt);
+
+  /* Voir le bloc clair. La teinte est la même dans les deux thèmes : c'est le
+     seul bleu qui tienne la bande visée des deux côtés d'un fond qui s'inverse. */
+  --graph-link-return: #4A7FB5;
 
   --tree-depth-guide: color-mix(in srgb, var(--borderLt) 34%, transparent);
   --tree-path-guide: color-mix(in srgb, var(--text) 42%, var(--tree-depth-guide));

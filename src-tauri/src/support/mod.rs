@@ -2,8 +2,11 @@ pub(crate) mod archive_limits;
 pub(crate) mod audio_norm;
 pub(crate) mod executable;
 pub mod ffmpeg;
+pub(crate) mod fs_pack_diagnostics;
 pub mod fs_pack_reader;
 pub mod imported_pack;
+#[cfg(target_os = "linux")]
+pub(crate) mod linux_microphone_permission;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux_webview_gestures;
 pub mod lunii_zip_validator;

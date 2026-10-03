@@ -1,0 +1,1524 @@
+/* L'espace de travail avancé : panneaux, surface, diagnostics.
+ *
+ * Il réutilise les règles de `AdvancedGraphCanvas.css` pour la recherche, le
+ * canvas et le panneau de droite ; ce fichier ne porte que ce que l'édition
+ * ajoute. Aucune règle n'est partagée avec le diagramme Libre.
+ *
+ * Deux contraintes d'accessibilité tiennent les choix visuels :
+ * - **aucune information n'est portée par la seule couleur** : chaque état
+ *   porte aussi un mot ou une forme ;
+ * - les panneaux restent utilisables étroits : la liste et l'inspecteur
+ *   conservent leurs propres défilements, le graphe absorbe l'espace restant. */
+
+.advanced-workspace {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg0);
+  color: var(--text);
+}
+
+.advanced-workspace--error {
+  display: block;
+  padding: 24px;
+}
+
+.advanced-panel-slot {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.advanced-panel-slot--advanced-graph {
+  flex: 1 1 640px;
+  min-width: 360px;
+}
+
+.advanced-panel-slot--advanced-node-list {
+  flex: 0 1 var(--advanced-node-list-panel-width, 240px);
+  min-width: 220px;
+  max-width: 380px;
+  container: structure-panel / inline-size;
+}
+
+.advanced-panel-slot--advanced-inspector {
+  flex: 0 1 var(--advanced-inspector-panel-width, 800px);
+  min-width: 200px;
+  max-width: 900px;
+  container: settings-panel / inline-size;
+}
+
+.advanced-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg1);
+}
+
+.advanced-panel-header {
+  height: 38px;
+  flex: 0 0 38px;
+  padding: 4px 8px 4px 13px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg1);
+}
+
+.advanced-panel-header__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* Les commandes du panneau, **au centre** de son en-tête. Le titre à gauche et
+   le contrepoids à droite ont la même souplesse : la rangée est donc centrée
+   sur l'en-tête, pas sur la place qui reste après le titre.
+   Le bouton lui-même vient de la barre du haut (`chrome-toolbar-btn`) : rien
+   n'est redéfini ici, pour que les commandes déplacées gardent exactement
+   l'apparence qu'elles avaient. */
+.advanced-panel-header.has-actions .advanced-panel-header__title,
+.advanced-panel-header__balance {
+  flex: 1 1 0;
+}
+
+.advanced-panel-header__balance {
+  min-width: 0;
+}
+
+.advanced-panel-header__actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+
+.advanced-panel-header__close {
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.advanced-panel-header__close:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+.advanced-panel-header__close:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+.advanced-panel-header__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.advanced-panel--graph > .advanced-canvas__stage,
+.advanced-panel--nodes > .advanced-search {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.advanced-panel--nodes > .advanced-search {
+  border-right: 0;
+}
+
+/* ── Éditeur ───────────────────────────────────────────────────────────── */
+
+.advanced-inspector--editor {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 0;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.advanced-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+}
+
+.advanced-editor > .card {
+  padding: 16px;
+}
+
+.advanced-editor__media-card .media-split {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.advanced-editor__media-card .media-split-right {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.advanced-media-field__more {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.advanced-media-field__more:hover {
+  color: var(--text);
+}
+
+.advanced-editor__technical {
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.advanced-editor__technical > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.advanced-editor__technical > .advanced-editor__section {
+  margin-top: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+}
+
+.advanced-editor__identity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.advanced-editor__name-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.advanced-editor__name-control {
+  min-width: 0;
+}
+
+.advanced-editor__name-control .advanced-field__name-input {
+  width: 100%;
+}
+
+.advanced-editor__identifier {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.advanced-editor__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.advanced-editor__kind {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* Le badge porte la couleur du nœud sur la scène : violet pour un Écran,
+   vert d'eau pour une Liste de choix. Les jetons du graphe changent avec le
+   thème, le texte suit : `--graph-action-glyph` est fait pour l'aplat d'une
+   Action, et le texte courant tient sur le violet des deux thèmes. */
+.advanced-editor__kind--stage {
+  border-color: var(--graph-card-border);
+  background: var(--graph-card-bg);
+  color: var(--text-primary);
+}
+
+.advanced-editor__kind--action {
+  border-color: var(--graph-action-border);
+  background: var(--graph-action-bg);
+  color: var(--graph-action-glyph);
+}
+
+.advanced-editor__title {
+  flex-basis: 100%;
+  order: -1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+}
+
+.advanced-editor__badge {
+  padding: 2px 7px;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.advanced-editor__fallback,
+.advanced-field__absent {
+  color: var(--text-2, #9aa2ab);
+  font-style: italic;
+}
+
+.advanced-editor__identity {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) 1fr;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.advanced-editor__identity dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.advanced-editor__identity dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.advanced-field__name-input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg2);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.advanced-field__name-input:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid color-mix(in srgb, var(--focus-ring) 30%, transparent);
+  outline-offset: 1px;
+}
+
+.advanced-editor__section h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.advanced-editor__section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.advanced-editor__section-heading--list { margin-bottom: 10px; }
+
+.advanced-editor__connection-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 18px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background-position: center;
+  background-size: cover;
+}
+
+.advanced-editor__connection-icon.has-thumbnail {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+/* Une liste de choix : le losange vert d'eau du graphe, son pictogramme dedans.
+   Mêmes jetons que la scène, qui suivent le thème. */
+.advanced-editor__connection-icon--action {
+  width: 18px;
+  height: 18px;
+  margin: 0 2px;
+  border: 1px solid var(--graph-action-border);
+  border-radius: 3px;
+  background: var(--graph-action-bg);
+  color: var(--graph-action-glyph);
+  transform: rotate(45deg);
+}
+
+.advanced-editor__connection-icon--action svg {
+  width: 12px;
+  height: 12px;
+  transform: rotate(-45deg);
+}
+
+.advanced-editor__connection-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.advanced-editor__return-label {
+  color: var(--info);
+  font-size: 9px;
+}
+
+.advanced-editor > .advanced-editor__section,
+.advanced-editor > .advanced-field {
+  margin: 0;
+}
+
+.advanced-editor > .advanced-editor__section + .advanced-editor__section,
+.advanced-editor > .advanced-field + .advanced-editor__section {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* La corbeille de l'éditeur libre, pendant qu'une édition est suspendue. */
+.advanced-editor .card-danger-trash:disabled {
+  cursor: default;
+  opacity: .5;
+}
+
+/* ── Champs ────────────────────────────────────────────────────────────── */
+
+.advanced-field {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg2) 54%, transparent);
+}
+
+.advanced-field[data-highlight='true'],
+.advanced-controls[data-highlight='true'] {
+  border-color: var(--warning-1, #e8b339);
+  /* Le repérage ne repose pas sur la seule couleur : le cadre change aussi
+   * d'épaisseur, ce qui reste lisible en contraste réduit. */
+  border-width: 2px;
+}
+
+.advanced-field legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.advanced-field__label {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-field__note {
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-field__warning {
+  color: var(--warning-1, #e8b339);
+}
+
+.advanced-field__warning::before {
+  content: '⚠ ';
+}
+
+.advanced-field__flag {
+  color: var(--warning-1, #e8b339);
+}
+
+.advanced-field__actions,
+.advanced-controls__completion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.advanced-field__form {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-1, #2a2f35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advanced-field__form-title {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.advanced-selection-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.advanced-selection-mode legend {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.advanced-selection-mode__option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: var(--radius-sm);
+  background: var(--bg1);
+  cursor: pointer;
+}
+
+.advanced-selection-mode__option.is-selected {
+  border-color: var(--graph-action-border);
+  background: color-mix(in srgb, var(--graph-action-bg) 16%, var(--bg1));
+}
+
+.advanced-selection-mode__option svg,
+.advanced-options__random svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.advanced-selection-mode__fixed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 2px 28px;
+}
+
+
+.advanced-controls__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.advanced-controls__toggles {
+  margin-top: 2px;
+}
+
+.advanced-controls__row.is-undefined {
+  padding: 8px 10px;
+  border: 1px dashed var(--warning-border);
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg);
+}
+
+.advanced-controls__name {
+  flex: 1;
+}
+
+/* Dans un intitulé en capitales, le terme technique garde sa casse. */
+.advanced-exit__label .advanced-editor__term {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.advanced-control-group + .advanced-control-group { margin-top: 2px; }
+
+.advanced-controls__completion {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-1, #2a2f35);
+}
+
+.advanced-inspector--editor .advanced-inspector__empty {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  padding: 24px 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+  font-style: normal;
+}
+
+/* ── Options ───────────────────────────────────────────────────────────── */
+
+.advanced-options {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advanced-options__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 3px;
+  background: var(--bg1);
+  font-size: 12px;
+}
+
+.advanced-options__row.is-dragging {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 6px 16px color-mix(in srgb, #000 30%, transparent);
+}
+
+/* La poignée et le menu « ⋯ » : discrets, pour que le nom respire. */
+.advanced-options__handle,
+.advanced-options__toggle,
+.advanced-options__more {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+}
+
+.advanced-options__handle { cursor: grab; touch-action: none; }
+.advanced-options__handle:active { cursor: grabbing; }
+.advanced-options__toggle,
+.advanced-options__more { cursor: pointer; }
+
+/* Les listes du panneau d'Action partagent la même ligne bordée. Une ligne
+   qui a une tête (poignée, chevron) et un rang (ou un nombre) les porte à
+   gauche de la cible ; une provenance, qui n'en a pas, commence à la cible. */
+.advanced-options__lead {
+  width: 20px;
+  flex: 0 0 20px;
+}
+
+.advanced-options__target .advanced-link {
+  /* Le nom tient sur une ligne : c'est le texte qui le suit qui passe à la
+     ligne, et un nom trop long pour la place se coupe par une ellipse. */
+  flex: 0 1 auto;
+  min-width: 3em;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.advanced-options__row > .advanced-options__target:first-child { margin-left: 4px; }
+
+.advanced-options__random {
+  color: var(--graph-random, var(--text-primary));
+}
+
+.advanced-options__random {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.advanced-exit__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.advanced-exit__actions svg { width: 14px; height: 14px; }
+
+/* Le nombre d'éléments d'un encadré, en pastille à côté de son titre : un
+   renseignement, pas une partie du titre. Teinté du vert d'eau des listes de
+   choix, mêlé au fond pour rester discret dans les deux thèmes. */
+.advanced-count {
+  display: inline-block;
+  flex: 0 0 auto;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 1px solid color-mix(in srgb, var(--graph-action-border) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--graph-action-bg) 16%, transparent);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* « ouvre cette liste sur » : le verbe de la ligne d'arrivée, secondaire. */
+.advanced-options__verb { color: var(--text-2, #9aa2ab); }
+
+/* La place d'un choix dans sa liste, « 19/40 » : plus large qu'un rang. */
+.advanced-options__position { min-width: 40px; }
+
+/* La ligne secondaire sous une ligne bordée — « 1/1 dans <liste> », « s'ouvre
+   par OK depuis … » —, alignée sur la cible, après la tête et la touche. */
+.advanced-options__place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin: -2px 0 0 30px;
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+}
+
+/* Le nom technique d'une sortie, après son titre : « Suite du parcours
+   okTransition ». Discret, pour qui lit le format ou la documentation STUdio. */
+.advanced-editor__term {
+  margin-left: 6px;
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* « Se déclenche » / « Destination » : les deux temps d'une sortie. */
+.advanced-exit__label {
+  margin: 10px 0 6px;
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.advanced-exit .card-title-row + .advanced-exit__label { margin-top: 4px; }
+
+/* « via la liste … (un seul choix) » sous une sortie qui mène directement à
+   un Écran : la ligne n'a ni tête ni touche, elle s'aligne sur la cible. */
+.advanced-options__place--flush { margin-left: 8px; }
+
+/* Le retour par défaut d'Accueil : un comportement, pas une donnée
+   enregistrée — la ligne est en pointillés. */
+.advanced-options__row--fallback {
+  border-style: dashed;
+  background: transparent;
+}
+
+/* « commence sur [choix ▾] » sous la liste d'une sortie : le réglage se fait
+   sur place. */
+.advanced-exit__landing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0 0 0 28px;
+  font-size: 12px;
+}
+
+/* Ce qui se passe sur un choix de la liste, après son nom : les Écrans qui
+   commencent dessus, une molette éteinte. Passe à la ligne s'il le faut. */
+.advanced-choice__target { flex-wrap: wrap; row-gap: 2px; }
+
+.advanced-choice__note {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.advanced-choice__note.is-warning { color: var(--warning-1, #e8b339); }
+
+.advanced-exit__landing-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Un « ? » après un intitulé : un espace, et la casse du « ? » inchangée. */
+.advanced-selection-mode legend .help-hint,
+.advanced-exit__label .help-hint,
+.advanced-arrival__label .help-hint {
+  margin-left: 5px;
+  vertical-align: middle;
+  letter-spacing: 0;
+}
+
+.advanced-exit__landing select {
+  flex: 1 1 12em;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@container settings-panel (max-width: 320px) {
+  .advanced-exit__landing { margin-left: 12px; }
+
+  /* Un choix de la liste : la poignée, le rang et le menu tiennent 88 px
+     d'une ligne qui en fait 128. La vignette et le nom passent donc sur une
+     seconde ligne, pleine largeur, et la mention « départ de … » ou
+     « molette désactivée » dessous. */
+  .advanced-options__row:has(> .advanced-choice__target) { flex-wrap: wrap; }
+  .advanced-options__row > .advanced-choice__target { order: 1; flex-basis: 100%; }
+  .advanced-options__row:has(> .advanced-choice__target) > .advanced-options__more { margin-left: auto; }
+  .advanced-choice__target .advanced-link { flex: 1 1 0; }
+  .advanced-choice__target .advanced-choice__note { flex-basis: 100%; }
+}
+
+/* Une liste où figure l'Écran : sa place, puis comment on y arrive. */
+.advanced-arrivals {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advanced-arrival {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: var(--radius-sm);
+  background: var(--bg1);
+  font-size: 12px;
+}
+
+.advanced-arrival__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.advanced-arrival__place { color: var(--text-2, #9aa2ab); white-space: nowrap; }
+.advanced-arrival__remove { margin-left: auto; flex: 0 0 auto; }
+
+.advanced-arrival__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  align-items: baseline;
+}
+
+.advanced-arrival__label {
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.advanced-arrival__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advanced-arrival__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.advanced-arrival__how { color: var(--text-2, #9aa2ab); }
+
+.advanced-arrival__warning { margin: 0; }
+
+.advanced-wheel__side {
+  display: inline-flex;
+  color: var(--text-2, #9aa2ab);
+}
+.advanced-wheel__side svg { width: 14px; height: 14px; }
+
+/* Les noms d'Écrans et de listes d'une ligne d'arrivée ou de molette tiennent
+   sur une ligne, coupés par une ellipse plutôt que lettre à lettre. */
+.advanced-arrival__item .advanced-link,
+.advanced-arrival__head .advanced-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* À 200 px de panneau : chaque nouvelle ligne du panneau d'un Écran passe à
+   la ligne là où le sens le permet, jamais au milieu d'un mot, et aucun texte
+   ne glisse sous un interrupteur. */
+@container settings-panel (max-width: 320px) {
+  /* « activé » / « désactivé » sous le nom du bouton, pas sous l'interrupteur. */
+  .advanced-controls__state {
+    display: block;
+    margin-left: 0;
+  }
+
+  .advanced-options__row--fallback > .advanced-options__target {
+    flex-wrap: wrap;
+    overflow-wrap: normal;
+  }
+
+  .advanced-exit .advanced-field__actions .btn-xs {
+    height: auto;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .advanced-arrival { padding: 6px; }
+
+  /* La vignette et le nom restent ensemble ; la précision passe dessous.
+     Le nom de la liste, en tête, passe plutôt à la ligne en entier. */
+  .advanced-arrival__item .advanced-link { flex: 1 1 0; }
+  .advanced-arrival__item .advanced-link ~ .advanced-arrival__how { flex-basis: 100%; }
+
+  .advanced-arrival__head { flex-wrap: wrap; }
+  .advanced-arrival__remove { margin-left: 0; }
+
+}
+
+/* L'état d'un bouton, après son nom : « Bouton Accueil  activé ». */
+.advanced-controls__state {
+  margin-left: 8px;
+  color: var(--text-2, #9aa2ab);
+  font-size: 12px;
+}
+
+/* L'intertitre d'une touche dans « Cette liste s'ouvre » et sous une liste
+   dépliée : la touche, puis de combien d'Écrans. */
+.advanced-options__subhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 6px;
+  color: var(--text-2, #9aa2ab);
+  font-size: 12px;
+  list-style: none;
+}
+
+.advanced-options__group { display: flex; flex-direction: column; gap: 6px; }
+
+.advanced-options--nested {
+  margin: 0 0 0 28px;
+}
+
+.advanced-options__handle:hover:not(:disabled),
+.advanced-options__toggle:hover:not(:disabled),
+.advanced-options__more:hover:not(:disabled) {
+  background: var(--bg2);
+  color: var(--text-primary);
+}
+
+.advanced-options__handle:disabled,
+.advanced-options__more:disabled { opacity: .4; cursor: default; }
+
+.advanced-options__handle svg,
+.advanced-options__toggle svg,
+.advanced-options__more svg,
+.advanced-field__actions svg { width: 14px; height: 14px; }
+
+.advanced-options__rank {
+  min-width: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-options__target {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+
+.advanced-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.advanced-link:disabled {
+  cursor: default;
+  color: var(--text-2, #9aa2ab);
+  text-decoration: none;
+}
+
+/* ── Retours de geste ──────────────────────────────────────────────────── */
+
+.advanced-feedback {
+  margin: 12px 12px 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-1, #2a2f35);
+  font-size: 12px;
+}
+
+.advanced-feedback--refusal {
+  border-color: var(--danger-1, #b3261e);
+}
+
+/* Le refus se lit sans couleur : son en-tête le nomme. */
+.advanced-feedback__head {
+  margin: 0 0 4px;
+}
+
+.advanced-feedback__message,
+.advanced-feedback__path {
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+
+.advanced-feedback__references {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.advanced-feedback__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* ── Diagnostics ───────────────────────────────────────────────────────── */
+
+.advanced-diagnostics {
+  border-top: 1px solid var(--border-1, #2a2f35);
+  max-height: 40%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.advanced-diagnostics--popover {
+  border-top: 0;
+  max-height: none;
+}
+
+.advanced-diagnostics--popover .advanced-diagnostics__list {
+  padding: 0;
+  overflow: visible;
+}
+
+.advanced-issues-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.advanced-issues-popover > .advanced-export__section,
+.advanced-issues-popover > .advanced-export__outcome,
+.advanced-issues-popover > .advanced-export__running {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-1, #2a2f35);
+}
+
+.advanced-diagnostics__list {
+  margin: 0;
+  padding: 0 12px 12px;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advanced-diagnostics__item {
+  padding: 8px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-left-width: 4px;
+  border-radius: 3px;
+}
+
+.advanced-diagnostics__item[data-severity='ACTION_REQUIRED'],
+.advanced-diagnostics__item[data-severity='error'] {
+  border-left-color: var(--danger-1, #b3261e);
+}
+
+.advanced-diagnostics__item[data-severity='WARNING'],
+.advanced-diagnostics__item[data-severity='warning'] {
+  border-left-color: var(--warning-1, #e8b339);
+}
+
+.advanced-diagnostics__head {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  font-size: 11px;
+}
+
+.advanced-diagnostics__message {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.advanced-diagnostics__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.advanced-diagnostics__empty {
+  color: var(--text-2, #9aa2ab);
+  font-size: 12px;
+}
+
+/* ── Panneaux étroits ──────────────────────────────────────────────────── */
+
+/* ── Export ────────────────────────────────────────────────────────────── */
+
+/* Ces classes peignent la qualification et les refus dans la pastille du haut.
+ * Ce popover reste hors du triptyque de panneaux. */
+.advanced-export {
+  border-top: 1px solid var(--border-1, #2a2f35);
+  max-height: 46%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.advanced-export__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+}
+
+.advanced-export__running {
+  font-size: 12px;
+  color: var(--warning-1, #e8b339);
+}
+
+.advanced-export__body {
+  padding: 0 12px 12px;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.advanced-export__section h3,
+.advanced-export__outcome h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.advanced-export__group-title {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  color: var(--text-2, #9aa2ab);
+}
+
+/* Le verdict ne repose pas sur la couleur : le mot « bloqué » le dit, et le
+ * marqueur en tête le répète. */
+.advanced-export__verdict {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.advanced-export__verdict[data-blocked='true']::before {
+  content: '⛔ ';
+}
+
+.advanced-export__verdict[data-blocked='false']::before {
+  content: '✓ ';
+}
+
+.advanced-export__verdict-label {
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-export__stale {
+  margin: 2px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--warning-1, #e8b339);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.advanced-export__stale::before {
+  content: '⚠ ';
+}
+
+.advanced-export__rows {
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.advanced-export__rows--dense {
+  gap: 3px;
+  font-size: 11px;
+}
+
+.advanced-export__row {
+  padding: 6px 8px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-left-width: 4px;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+
+.advanced-export__row[data-level='ERROR'],
+.advanced-export__row[data-level='ACTION_REQUIRED'] {
+  border-left-color: var(--danger-1, #b3261e);
+}
+
+.advanced-export__row-head {
+  margin: 0 0 2px;
+}
+
+.advanced-export__row-source {
+  text-transform: uppercase;
+  color: var(--text-2, #9aa2ab);
+  font-size: 11px;
+}
+
+.advanced-export__row-message {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.advanced-export__row-path {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--text-2, #9aa2ab);
+  overflow-wrap: anywhere;
+}
+
+.advanced-export__stages {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 11px;
+}
+
+.advanced-export__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.advanced-export__details,
+.advanced-export__limits {
+  font-size: 12px;
+}
+
+.advanced-export__details > summary,
+.advanced-export__limits > summary {
+  cursor: pointer;
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-export__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advanced-export__log {
+  margin: 0;
+  padding: 6px 8px;
+  max-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.advanced-export__outcome {
+  padding: 8px 10px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 4px;
+}
+
+.advanced-export__outcome--refused {
+  border-color: var(--danger-1, #b3261e);
+}
+
+/* ── Relecture d'une archive ───────────────────────────────────────────── */
+
+/* Le bandeau est au-dessus du lecteur flottant, et il dit toujours de QUELLE
+ * révision l'archive vient. Après une édition, il cesse de la présenter comme
+ * le document courant — la couleur ne suffit pas, le texte change aussi. */
+.advanced-review-banner {
+  position: absolute;
+  z-index: 25;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(760px, calc(100% - 48px));
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 4px;
+  background: var(--surface-2, #1c2027);
+  font-size: 12px;
+}
+
+.advanced-review-banner[data-current='false'] {
+  border-color: var(--warning-1, #e8b339);
+}
+
+.advanced-review-banner[data-current='false']::before {
+  content: '⚠';
+}
+
+.advanced-review-banner__title {
+  font-weight: 600;
+}
+
+.advanced-review-banner__path {
+  overflow-wrap: anywhere;
+  color: var(--text-2, #9aa2ab);
+}
+
+.advanced-review-banner__state {
+  color: var(--text-2, #9aa2ab);
+}
+
+@media (width <= 1100px) {
+  .advanced-export {
+    max-height: 60%;
+  }
+}
+
+/* À 200 px de panneau, la ligne complète (touche, liste, compteur, action)
+   ne tient plus sans tasser les libellés. Elle garde le sens de lecture en
+   haut, puis place le compteur et l'action sur des lignes dédiées. */
+@container settings-panel (max-width: 320px) {
+  .advanced-editor {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .advanced-editor > .card {
+    padding: 10px;
+  }
+
+  .advanced-editor__section-heading--list {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .advanced-editor__section-heading--list > .advanced-link {
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  .advanced-controls__toggles .sequence-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  .advanced-controls__toggles .sequence-control > span {
+    min-width: 0;
+    overflow-wrap: normal;
+  }
+
+  .advanced-controls__row.is-undefined,
+  .advanced-controls__completion .advanced-controls__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .advanced-controls__row.is-undefined > select,
+  .advanced-controls__completion .advanced-controls__row > select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Une ligne d'un groupe (destination, Écran d'origine, groupe Accueil) :
+     le nom prend la ligne, le bouton « Modifier » passe dessous, à droite.
+     Aucune ligne ne suppose de colonnes fixes : toutes n'ont pas de chevron. */
+  .advanced-options__group > .advanced-options__row {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .advanced-options__group > .advanced-options__row > .advanced-options__target {
+    flex: 1 1 calc(100% - 28px);
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .advanced-options__group > .advanced-exit__row > .advanced-options__target {
+    flex-basis: calc(100% - 72px);
+  }
+
+  /* La vignette et le nom sur la même ligne ; le compteur passe dessous. */
+  .advanced-options__group > .advanced-options__row > .advanced-options__target .advanced-link {
+    flex: 1 1 0;
+  }
+
+  .advanced-options__group > .advanced-options__row .advanced-count {
+    margin-left: 0;
+    padding-inline: 5px;
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .advanced-options--nested { margin-left: 12px; }
+
+}
+
+/* Sélection de plusieurs nœuds : les cartes de la sélection multiple du Libre. */
+.advanced-selection-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.advanced-selection-editor__banner {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.advanced-selection-editor__error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
+}
+.advanced-create-stage-split {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+}
+
+.advanced-create-stage-split__toggle {
+  border-left: 1px solid var(--border-1, #2a2f35);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.advanced-panel--graph .advanced-panel-header__actions {
+  gap: 8px;
+}
+
+.advanced-panel--graph .advanced-create-command {
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+}
+
+.advanced-panel--graph .advanced-create-command,
+.advanced-create-stage-split .chrome-toolbar-btn {
+  height: 24px;
+  min-height: 24px;
+}
+
+.advanced-panel--graph .advanced-create-command {
+  height: 26px;
+  min-height: 26px;
+}
+
+.advanced-create-stage-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 190px;
+  padding-top: 6px;
+}
+
+.advanced-create-stage-menu__item {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+.advanced-create-stage-menu__item:hover,
+.advanced-create-stage-menu__item:focus-visible {
+  background: var(--bg3);
+  color: var(--accent);
+}

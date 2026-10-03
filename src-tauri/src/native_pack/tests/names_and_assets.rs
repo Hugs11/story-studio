@@ -172,7 +172,11 @@ fn cancelled_zip_transfer_removes_the_partial_file() {
     let error = transfer_completed_zip(&local_zip, &output_dir, "Pack", &|| true)
         .expect_err("transfer should be cancelled");
 
-    assert_eq!(error, "Génération annulée.");
+    // L'annulation est typée à la source (reprise B-01) : le transfert ne la
+    // confond plus avec une panne d'écriture.
+    assert_eq!(error, TransferError::Cancelled);
+    // Et le mode Libre en tire toujours exactement le même message qu'avant.
+    assert_eq!(error.into_message(), "Génération annulée.");
     assert!(fs::read_dir(&output_dir)
         .expect("read output dir")
         .next()
@@ -223,16 +227,20 @@ fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
         Vec::new(),
     );
     let document = StoryDocument {
-        title: "Thumbnail Test".to_string(),
-        version: 1,
-        description: String::new(),
-        format: "v1".to_string(),
-        night_mode_available: false,
+        title: Presence::Value("Thumbnail Test".to_string()),
+        version: Presence::Value(1),
+        description: Presence::Value(String::new()),
+        format: Presence::Value("v1".to_string()),
+        night_mode_available: Presence::Value(false),
         action_nodes: Vec::new(),
         stage_nodes: Vec::new(),
+        uuid: Presence::Absent,
+        factory_disabled: Presence::Absent,
     };
 
-    let zip_path = write_native_pack_zip(&report, &document, &base.join("out")).expect("write zip");
+    let zip_path = write_native_pack_archive(&report, &document, &base.join("out"))
+        .expect("write zip")
+        .zip_path;
     let file = fs::File::open(&zip_path).expect("open generated zip");
     let mut archive = zip::ZipArchive::new(file).expect("read generated zip");
     assert!(archive.by_name("thumbnail.jpg").is_err());
@@ -242,6 +250,114 @@ fn writes_catalog_thumbnail_as_png_even_when_source_is_jpeg() {
         .read_to_end(&mut png_bytes)
         .expect("read thumbnail.png");
     assert!(png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
+
+    let _ = fs::remove_dir_all(base);
+}
+
+/// Test de non-régression du writer Libre après l'extraction de `pack_zip`.
+///
+/// L'assemblage du ZIP est désormais partagé avec l'export avancé. Ce test fige
+/// ce que le pack Libre contient et dans quel ordre : `story.json` d'abord, les
+/// médias sous `assets/` **plats et dédupliqués par nom**, la couverture en
+/// sidecar — et rien d'autre. Une modification du module commun qui changerait
+/// la forme de l'archive Libre échoue ici.
+#[test]
+fn the_libre_archive_keeps_its_exact_shape_after_the_shared_extraction() {
+    let base = std::env::temp_dir().join(format!("story_studio_libre_shape_{}", now_millis()));
+    fs::create_dir_all(&base).expect("create test dir");
+
+    let cover_source = base.join("cover.png");
+    let cover = DynamicImage::ImageRgb8(RgbImage::from_pixel(4, 4, Rgb([9, 9, 9])));
+    let mut png_bytes = Vec::new();
+    cover
+        .write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)
+        .expect("encode cover");
+    fs::write(&cover_source, png_bytes).expect("write cover source");
+
+    // Deux rôles distincts partagent un même nom staged : l'archive n'en écrit
+    // qu'un, exactement comme avant l'extraction.
+    let staged = base.join("stage").join("aaaa1111.mp3");
+    fs::create_dir_all(staged.parent().expect("stage dir")).expect("create stage dir");
+    fs::write(&staged, b"audio-bytes").expect("write staged asset");
+    let shared = |role: &str| PreparedAsset {
+        role: role.to_string(),
+        source_path: staged.to_string_lossy().to_string(),
+        source_kind: "test".to_string(),
+        staged_asset_name: "aaaa1111.mp3".to_string(),
+        staged_asset_path: staged.to_string_lossy().to_string(),
+        transformed: false,
+        deduplicated: false,
+    };
+
+    let report = report_for(
+        CanonicalProject {
+            name: "Forme Libre".to_string(),
+            project_type: "pack".to_string(),
+            pack_version: 1,
+            pack_description: String::new(),
+            root_audio: None,
+            root_image: None,
+            thumbnail_image: Some(cover_source.to_string_lossy().to_string()),
+            night_mode_audio: None,
+            night_mode_return: None,
+            night_mode_home_return: None,
+            native_graph: None,
+            options: CanonicalOptions {
+                silence_mode: crate::domain::project::SilenceMode::Off,
+                harmonize_loudness: true,
+                auto_next: false,
+                night_mode: false,
+                end_message_autoplay: true,
+            },
+            entries: Vec::new(),
+            shared_entries: Vec::new(),
+        },
+        vec![shared("root/storyAudio"), shared("root/itemAudio")],
+        Vec::new(),
+    );
+    let document = StoryDocument {
+        title: Presence::Value("Forme Libre".to_string()),
+        version: Presence::Value(1),
+        description: Presence::Value(String::new()),
+        format: Presence::Value("v1".to_string()),
+        night_mode_available: Presence::Value(false),
+        action_nodes: Vec::new(),
+        stage_nodes: Vec::new(),
+        uuid: Presence::Absent,
+        factory_disabled: Presence::Absent,
+    };
+
+    let zip_path = write_native_pack_archive(&report, &document, &base.join("out"))
+        .expect("write zip")
+        .zip_path;
+    assert_eq!(
+        zip_path.file_name().and_then(|name| name.to_str()),
+        Some("Forme_Libre.zip"),
+        "le nom d'archive reste celui du projet assaini"
+    );
+
+    let file = fs::File::open(&zip_path).expect("open generated zip");
+    let mut archive = zip::ZipArchive::new(file).expect("read generated zip");
+    let names: Vec<String> = (0..archive.len())
+        .map(|index| archive.by_index(index).expect("entry").name().to_string())
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            "story.json".to_string(),
+            "assets/aaaa1111.mp3".to_string(),
+            "thumbnail.png".to_string(),
+        ],
+        "ordre et contenu exacts de l'archive Libre"
+    );
+
+    let mut asset_bytes = Vec::new();
+    archive
+        .by_name("assets/aaaa1111.mp3")
+        .expect("asset")
+        .read_to_end(&mut asset_bytes)
+        .expect("read asset");
+    assert_eq!(asset_bytes, b"audio-bytes");
 
     let _ = fs::remove_dir_all(base);
 }
@@ -353,6 +469,7 @@ fn generation_result_serializes_the_frontend_warning_contract() {
             gain_db: 18.0,
             expected_limiting_db: 20.0,
         }],
+        gate_observations: Vec::new(),
     })
     .expect("serialize generation result");
 
@@ -360,4 +477,7 @@ fn generation_result_serializes_the_frontend_warning_contract() {
     assert_eq!(value["warnings"][0]["code"], "AUDIO_STRONG_LIMITING");
     assert_eq!(value["warnings"][0]["finalIntegratedLufs"], -14.2);
     assert_eq!(value["warnings"][0]["expectedLimitingDb"], 20.0);
+    // Le résultat porte les observations, vides comprises : une clé
+    // absente ferait lire « aucun contrôle branché » là où il n'y a rien à dire.
+    assert_eq!(value["gateObservations"], serde_json::json!([]));
 }

@@ -92,14 +92,14 @@ test('warns with "Menu racine — Audio d’accueil à ajouter" when rootAudio i
   assert.equal(missingAudio.status, 'warning');
 });
 
-test('pack project missing thumbnailImage hints at the « même image » checkbox', () => {
+test('pack project without its own thumbnail reuses the root image, without warning', () => {
   const project = buildProject({ thumbnailImage: '' });
 
   const issues = getProjectValidationIssues(project);
-  const thumb = find(issues, (i) => /Image bibliothèque à ajouter/.test(i.text));
-  assert.ok(thumb, 'warning image bibliothèque attendu');
-  assert.match(thumb.text, /cocher « même image » ou en choisir une/);
-  assert.equal(thumb.status, 'warning');
+  assert.equal(find(issues, (i) => /bibliothèque|vignette/i.test(i.text)), null,
+    `aucun warning vignette attendu, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
+  assert.equal(project.sameImage, true);
+  assert.equal(project.thumbnailImage, project.rootImage);
 });
 
 test('pack project with sameImage validates only the root image', () => {
@@ -428,4 +428,89 @@ test('a ref to a stale shared story is treated as a missing target', () => {
   const issues = getProjectValidationIssues(project);
   const missing = find(issues, (i) => i.id === 'ref-1' && /destination histoire introuvable/.test(i.text));
   assert.ok(missing, `erreur cible absente attendue, reçu: ${JSON.stringify(issues.map((i) => i.text))}`);
+});
+
+// Fins refusées par le générateur (`src-tauri/src/native_pack/tests/menu_endings.rs`) :
+// l'auteur l'apprend ici, dans « À corriger », et non au moment de fabriquer.
+function storyEntry(id, fields = {}) {
+  return {
+    id,
+    type: 'story',
+    name: `Histoire ${id}`,
+    audio: `D:/projet/${id}.mp3`,
+    itemAudio: `D:/projet/${id}-title.mp3`,
+    itemImage: `D:/projet/${id}-title.png`,
+    ...fields,
+  };
+}
+
+// Le bouton Accueil coupé dans « Pendant l'histoire ».
+const WITHOUT_HOME = { controlSettings: { home: false }, returnOnHome: null, returnOnHomeNone: true };
+
+function exitIssues(project) {
+  return getProjectValidationIssues(project).filter((issue) => /Fin sans sortie/.test(issue.text));
+}
+
+test('une histoire à la racine sans Accueil ni mode de fin demande d’activer Accueil', () => {
+  const issues = exitIssues(buildProject({
+    rootEntries: [storyEntry('a', WITHOUT_HOME), storyEntry('b')],
+  }));
+  assert.equal(issues.length, 1, JSON.stringify(issues));
+  assert.equal(issues[0].id, 'a');
+  assert.equal(issues[0].status, 'error');
+  assert.match(issues[0].text, /^Histoire a — Fin sans sortie/);
+  assert.match(issues[0].text, /activez le bouton Accueil de cette histoire/);
+});
+
+test('Accueil actif, « Rester sur l’écran » ou « Enchaîner » laissent une sortie', () => {
+  for (const controlSettings of [
+    { home: true },
+    { home: false, ok: true, autoplay: false },
+    { home: false, ok: false, autoplay: true },
+  ]) {
+    const issues = exitIssues(buildProject({
+      rootEntries: [storyEntry('a', { ...WITHOUT_HOME, controlSettings }), storyEntry('b')],
+    }));
+    assert.deepEqual(issues, [], JSON.stringify(controlSettings));
+  }
+});
+
+test('dans un dossier, seule une destination des histoires du dossier retire la sortie automatique', () => {
+  const folder = (fields = {}) => ({
+    id: 'm',
+    type: 'menu',
+    name: 'Dossier',
+    audio: 'D:/projet/m.mp3',
+    image: 'D:/projet/m.png',
+    children: [storyEntry('a', WITHOUT_HOME), storyEntry('b')],
+    ...fields,
+  });
+  assert.deepEqual(exitIssues(buildProject({ rootEntries: [folder()] })), []);
+  const issues = exitIssues(buildProject({
+    rootEntries: [folder({ returnAfterPlay: 'root' }), storyEntry('c')],
+  }));
+  assert.equal(issues.length, 1, JSON.stringify(issues));
+  assert.equal(issues[0].id, 'a');
+  assert.match(issues[0].text, /^Dossier \/ Histoire a — Fin sans sortie/);
+});
+
+test('les étapes de fin et l’écran de sélection tout désactivés ne sont pas signalés', () => {
+  const off = { autoplay: false, ok: false, home: false, pause: false, wheel: false };
+  const issues = exitIssues(buildProject({
+    rootEntries: [
+      storyEntry('a', { afterPlaybackPromptAudio: 'D:/projet/p.mp3', afterPlaybackPromptControlSettings: off }),
+      storyEntry('b', { titleControlSettings: off }),
+    ],
+  }));
+  assert.deepEqual(issues, []);
+});
+
+test('une étape de fin active laisse une sortie même sans Accueil', () => {
+  const issues = exitIssues(buildProject({
+    rootEntries: [
+      storyEntry('a', { ...WITHOUT_HOME, afterPlaybackPromptAudio: 'D:/projet/p.mp3' }),
+      storyEntry('b', { ...WITHOUT_HOME, afterPlaybackSequence: [{ id: 's1', name: 'Fin', audio: 'D:/projet/s.mp3' }] }),
+    ],
+  }));
+  assert.deepEqual(issues, []);
 });

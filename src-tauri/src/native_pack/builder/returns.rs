@@ -9,39 +9,38 @@ impl<'a> StoryBuilder<'a> {
         target_menu_id: Option<&str>,
         fallback_transition: Transition,
     ) -> Transition {
-        if let Some(target) = decode_navigation_target(target_menu_id) {
-            return match target {
-                NavigationTarget::Root => self
-                    .root_action_id
-                    .as_ref()
-                    .map(|action_id| transition(action_id, 0))
-                    .unwrap_or(fallback_transition),
-                NavigationTarget::CurrentMenu | NavigationTarget::NextStory => fallback_transition,
-                NavigationTarget::Menu(target_id) => self
-                    .menu_prealloc
-                    .get(target_id)
-                    .map(|prealloc| prealloc.replay_transition.clone())
-                    .unwrap_or(fallback_transition),
-                NavigationTarget::Story(story_id) => self
-                    .story_prealloc
-                    .get(story_id)
-                    .and_then(|prealloc| prealloc.approach_transition.clone())
-                    .unwrap_or(fallback_transition),
-                NavigationTarget::StoryPlay(story_id) => self
-                    .story_prealloc
-                    .get(story_id)
-                    .map(|prealloc| transition(&prealloc.play_action_id, 0))
-                    .unwrap_or(fallback_transition),
-                NavigationTarget::StoryHomeStep(story_id) => self
-                    .story_prealloc
-                    .get(story_id)
-                    .and_then(|prealloc| prealloc.home_step_action_id.as_deref())
-                    .map(|action_id| transition(action_id, 0))
-                    .unwrap_or(fallback_transition),
-            };
-        }
+        self.resolved_story_return_transition(target_menu_id)
+            .unwrap_or(fallback_transition)
+    }
 
-        fallback_transition
+    /// La transition d'une cible typée **réellement résolue**, sans repli.
+    /// `None` signifie « cette cible ne désigne encore aucun nœud construit » :
+    /// l'appelant décide alors s'il replie ou s'il exige une cible réelle.
+    fn resolved_story_return_transition(&self, target_menu_id: Option<&str>) -> Option<Transition> {
+        match decode_navigation_target(target_menu_id)? {
+            NavigationTarget::Root => self
+                .root_action_id
+                .as_ref()
+                .map(|action_id| transition(action_id, 0)),
+            NavigationTarget::CurrentMenu | NavigationTarget::NextStory => None,
+            NavigationTarget::Menu(target_id) => self
+                .menu_prealloc
+                .get(target_id)
+                .map(|prealloc| prealloc.replay_transition.clone()),
+            NavigationTarget::Story(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .and_then(|prealloc| prealloc.approach_transition.clone()),
+            NavigationTarget::StoryPlay(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .map(|prealloc| transition(&prealloc.play_action_id, 0)),
+            NavigationTarget::StoryHomeStep(story_id) => self
+                .story_prealloc
+                .get(story_id)
+                .and_then(|prealloc| prealloc.home_step_action_id.as_deref())
+                .map(|action_id| transition(action_id, 0)),
+        }
     }
 
     pub(in crate::native_pack::builder) fn resolve_story_home_transition(
@@ -108,32 +107,39 @@ impl<'a> StoryBuilder<'a> {
     /// convergence de fin (`okChoiceTargets`) — c'est le « sucre au-dessus de `ref` » de
     /// fin de séquence. D'abord le stage préalloué (résout les cibles « en avant »), sinon la
     /// résolution via transition (cibles déjà construites). Le `fallback` paramètre la
-    /// sémantique : transition de repli (convergence indulgente) ou sentinelle non résolue
-    /// (`option_index < 0`) pour exiger une cible réelle (refs).
+    /// sémantique : `Some(transition)` pour une convergence indulgente, `None` pour
+    /// exiger une cible réelle (refs).
+    ///
+    /// `None` remplace l'ancienne sentinelle `option_index: -1` : depuis que la
+    /// sélection est typée, `-1` désigne `Random` et ne peut plus servir de
+    /// marqueur interne « cible non résolue ».
     pub(in crate::native_pack::builder) fn resolve_target_stage(
         &self,
         target: &str,
-        fallback: Transition,
+        fallback: Option<Transition>,
     ) -> Option<String> {
         if let Some(stage_id) = self.preallocated_target_stage(target) {
             return Some(stage_id);
         }
-        let transition = self.resolve_story_return_transition(Some(target), fallback);
+        let transition = self
+            .resolved_story_return_transition(Some(target))
+            .or(fallback)?;
         self.transition_target_stage_id(&transition)
     }
 
+    /// Le stage désigné par une transition **déjà construite**. Une sélection
+    /// `Random` ne désigne pas un stage unique : elle rend `None` plutôt qu'une
+    /// destination arbitraire.
     pub(in crate::native_pack::builder) fn transition_target_stage_id(
         &self,
         transition: &Transition,
     ) -> Option<String> {
-        if transition.option_index < 0 {
-            return None;
-        }
+        let option_index = transition.selection.fixed_index()?;
         self.action_nodes
             .iter()
             .find(|action| action.id == transition.action_node)
-            .and_then(|action| action.options.get(transition.option_index as usize))
-            .cloned()
+            .and_then(|action| action.option_target(option_index))
+            .map(str::to_string)
     }
 
     pub(in crate::native_pack::builder) fn resolve_title_home_transition(

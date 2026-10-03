@@ -2,14 +2,16 @@
 //! ffmpeg embarqué. Sortie bornée au cache privé de l'application (le frontend
 //! la copie ensuite dans le projet/session, comme pour le podcast).
 
+use std::ffi::OsString;
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
+use super::error::{classify_failure, YoutubeError, YoutubeErrorCode};
+use super::info_cache;
 use super::metadata::validate_youtube_url;
 use super::process::run_command_with_timeout;
-use super::provision::ensure_ytdlp;
-use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path};
+use super::tool::{pace_analysis, Ytdlp, SLEEP_REQUESTS};
+use crate::support::ffmpeg::get_ffmpeg_path;
 use crate::support::paths::path_for_frontend;
 
 /// Garde-fou de taille par vidéo (cohérent avec le plafond média podcast).
@@ -24,9 +26,9 @@ pub fn download_audio(
     file_name: &str,
     audio_language: Option<&str>,
     emit: &dyn Fn(&str),
-) -> Result<String, String> {
+) -> Result<String, YoutubeError> {
     validate_youtube_url(video_url)?;
-    let exe = ensure_ytdlp(home, custom, emit)?;
+    let ytdlp = Ytdlp::prepare(home, custom, emit)?;
 
     let ffmpeg = get_ffmpeg_path()?;
     let ffmpeg_dir = ffmpeg
@@ -41,13 +43,27 @@ pub fn download_audio(
     let out_template = output_dir.join(format!("{}.%(ext)s", stem));
     let format_selector = audio_format_selector(audio_language);
 
+    // Une analyse récente évite de réinterroger l'API de lecture ; sinon, cette
+    // vidéo est analysée ici et l'appel est espacé des précédents.
+    let info_dir = info_cache::info_dir(output_dir);
+    let video_id = info_cache::video_id_from_url(video_url);
+    let cached_info = video_id
+        .as_deref()
+        .and_then(|id| info_cache::fresh(&info_dir, id));
+    let source: Vec<OsString> = match &cached_info {
+        Some(path) => vec!["--load-info-json".into(), path.into()],
+        None => {
+            pace_analysis();
+            vec!["--".into(), video_url.into()]
+        }
+    };
+
     emit("Téléchargement de l'audio…");
-    let mut cmd = Command::new(&exe);
-    apply_no_window(&mut cmd);
+    let mut cmd = ytdlp.command();
     cmd.args([
         "--no-playlist".as_ref(),
-        "--no-warnings".as_ref(),
-        "--ignore-config".as_ref(),
+        "--sleep-requests".as_ref(),
+        SLEEP_REQUESTS.as_ref(),
         "--max-filesize".as_ref(),
         MAX_FILESIZE.as_ref(),
         "-f".as_ref(),
@@ -59,26 +75,38 @@ pub fn download_audio(
         ffmpeg_dir.as_os_str(),
         "-o".as_ref(),
         out_template.as_os_str(),
-        video_url.as_ref(),
     ]);
+    cmd.args(&source);
 
-    let output = match run_command_with_timeout(cmd, DOWNLOAD_TIMEOUT, "Téléchargement YouTube") {
+    let result = run_command_with_timeout(cmd, DOWNLOAD_TIMEOUT, "Téléchargement YouTube");
+    // Une analyse sert à un seul téléchargement : réussi, il est inutile de la
+    // garder ; échoué, elle est suspecte.
+    if let Some(id) = video_id.as_deref().filter(|_| cached_info.is_some()) {
+        info_cache::remove(&info_dir, id);
+    }
+    let output = match result {
         Ok(output) => output,
         Err(err) => {
             cleanup_stem_files(output_dir, &stem);
-            return Err(err);
+            return Err(err.into());
         }
     };
     if !output.status.success() {
         cleanup_stem_files(output_dir, &stem);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!(
-            "Téléchargement impossible : {}",
-            stderr.trim().lines().last().unwrap_or("erreur inconnue")
+        return Err(classify_failure(
+            &String::from_utf8_lossy(&output.stderr),
+            "Téléchargement impossible",
         ));
     }
     if !dest.is_file() || std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0) == 0 {
-        return Err("yt-dlp n'a produit aucun fichier audio.".to_string());
+        cleanup_stem_files(output_dir, &stem);
+        // yt-dlp sort sans erreur lorsqu'il saute un fichier trop volumineux.
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let failure = classify_failure(&stdout, "Téléchargement impossible");
+        if failure.code == YoutubeErrorCode::TooLarge {
+            return Err(failure);
+        }
+        return Err("yt-dlp n'a produit aucun fichier audio.".to_string().into());
     }
     Ok(path_for_frontend(&dest))
 }

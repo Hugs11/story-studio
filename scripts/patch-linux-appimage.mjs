@@ -21,6 +21,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { verifiedDownload } from './verified-download.mjs';
 
 const MAX_TOOL_BYTES = 24 * 1024 * 1024;
+export async function installDirIcon(appDir) {
+  const source = fileURLToPath(new URL('../src-tauri/icons/128x128@2x.png', import.meta.url));
+  if (!(await lstat(source)).isFile()) throw new Error('Story Studio icon is not a regular file.');
+  const png = await readFile(source);
+  if (!png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    throw new Error('Story Studio icon is not a PNG.');
+  }
+  const destination = join(appDir, '.DirIcon');
+  // Replace any old file or symlink with a self-contained regular PNG.
+  await rm(destination, { force: true });
+  await copyFile(source, destination);
+  return png;
+}
 const DOWNLOAD_CACHE = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -215,6 +228,7 @@ export async function patchLinuxAppImage(input) {
     run(inputCopy, ['--appimage-extract'], { cwd: workDir, quiet: true });
 
     const appDir = join(workDir, 'squashfs-root');
+    const dirIcon = await installDirIcon(appDir);
     const bundledWayland = await findFiles(appDir, WAYLAND_LIBRARIES);
     const bundledNames = new Set(bundledWayland.map((path) => basename(path)));
     if (!bundledNames.has('libwayland-client.so.0')) {
@@ -253,6 +267,14 @@ export async function patchLinuxAppImage(input) {
       throw new Error('Patched AppImage is not an ELF executable.');
     }
     await chmod(patched, 0o755);
+    const verificationDir = join(workDir, 'verify-icon');
+    await mkdir(verificationDir);
+    run(patched, ['--appimage-extract', '.DirIcon'], { cwd: verificationDir, quiet: true });
+    const extractedIcon = join(verificationDir, 'squashfs-root', '.DirIcon');
+    if (!(await lstat(extractedIcon)).isFile()
+      || !(await readFile(extractedIcon)).equals(dirIcon)) {
+      throw new Error('Repacked AppImage does not contain the expected .DirIcon PNG.');
+    }
     await rename(patched, appImage);
     const digest = createHash('sha256').update(patchedBytes).digest('hex');
     process.stdout.write(

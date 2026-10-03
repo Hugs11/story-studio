@@ -4,6 +4,7 @@ import { useLocalFile } from '../../hooks/useLocalFile';
 import { createAudioPlayer, disposeAudioPlayerRef } from '../../utils/audioPlayer';
 import { Button } from '../common/Button';
 import { FilePen, Scissors } from '../icons/LucideLocal';
+import { resolveUsageTarget } from './usageTarget';
 import './MediaPopover.css';
 
 function fmt(secs) {
@@ -146,7 +147,7 @@ function TagEditor({ path, itemTags, allProjectTags, onAddMediaTag, onRemoveMedi
 }
 
 export function MediaPopover({
-  item, anchorRect, getMeta, onSelectNode, onClose,
+  item, anchorRect, getMeta, onSelectNode, onRevealGraphNode, onClose,
   itemTags = [], allProjectTags = [], onAddMediaTag, onRemoveMediaTag, onSplit, onEditImage,
 }) {
   const popRef = useRef(null);
@@ -183,14 +184,18 @@ export function MediaPopover({
     };
   }, [onClose]);
 
-  const firstUsage = item.usages.find((u) => u.entryId) ?? null;
+  const usageTarget = resolveUsageTarget(item, { onSelectNode, onRevealGraphNode });
+  const canGoTo = Boolean(usageTarget);
 
   function handleGoTo() {
-    if (firstUsage?.entryId && onSelectNode) onSelectNode(firstUsage.entryId);
+    usageTarget?.go();
     onClose();
   }
 
-  const hasTagActions = onAddMediaTag && onRemoveMediaTag;
+  // Une étiquette est posée **sur un chemin**. Une référence du document sans
+  // fichier lié n'en a pas : offrir le geste le rendrait silencieusement sans
+  // effet, ce qui est pire que de ne pas l'offrir.
+  const hasTagActions = Boolean(onAddMediaTag && onRemoveMediaTag && item.path);
 
   const style = pos
     ? { position: 'fixed', left: pos.left, top: pos.top, opacity: 1 }
@@ -231,11 +236,11 @@ export function MediaPopover({
       {item.kind === 'audio' && (
         <>
           <PopoverAudioPlayer path={item.path} name={item.name} />
-          {firstUsage?.entryId && onSelectNode ? (
+          {canGoTo ? (
             <Button
               className="mp-action-btn mp-action-btn--goto"
               onClick={handleGoTo}
-              title={`Ouvrir les réglages de « ${firstUsage.label} »`}
+              title={`Ouvrir les réglages de « ${usageTarget.label} »`}
             >
               Voir l’utilisation dans le projet
             </Button>

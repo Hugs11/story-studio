@@ -1,11 +1,11 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useEffect, useMemo, useState } from 'react';
 import './ModeSelector.css';
-import { BookOpenText, FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, X, Youtube } from '../icons/LucideLocal';
+import { BookOpenText, FilePen, FolderOpen, Layers, Package, Rss, ShieldCheck, SlidersHorizontal, SwatchBook, Waypoints, X, Youtube } from '../icons/LucideLocal';
 import { useErrorDialog } from '../common/Dialog';
 import { Tooltip } from '../common/Tooltip';
 import { useLocalFile } from '../../hooks/useLocalFile';
-import { loadProjectFromPath } from '../../store/projectIO';
+import { previewProjectFromPath } from '../../store/projectIO';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 
 const DOCUMENTATION_URL = 'https://hugs11.github.io/story-studio/docs/';
@@ -22,12 +22,30 @@ function formatRecentDate(updatedAt) {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
+// Le nom exact de l'éditeur qui rouvrira le projet, comme sur ses cartes.
+// Un type inconnu ne se devine pas : aucun libellé plutôt qu'un faux.
 function projectTypeLabel(type) {
-  return type === 'simple' ? 'Histoire' : 'Pack';
+  if (type === 'advanced') return 'Éditeur graphe';
+  if (type === 'simple') return 'Éditeur simplifié';
+  if (type === 'pack') return 'Éditeur par menus';
+  return null;
 }
 
-function ProjectThumb({ project, index, loadedThumbnail = null }) {
-  const thumbnailPath = project.thumbnailImage || loadedThumbnail || null;
+function recoverySubtitle(recovery) {
+  return [
+    projectTypeLabel(recovery.projectType),
+    'Non enregistré',
+    formatRecentDate(recovery.modifiedAtMs),
+  ].filter(Boolean).join(' · ');
+}
+
+function ProjectThumb({ project, index, loadedThumbnail = undefined }) {
+  // La source de vérité est le `.mbah` enregistré. L'entrée des récents
+  // sert seulement pendant sa relecture : son chemin peut dater d'avant une
+  // promotion de session ou une copie d'image temporaire.
+  const thumbnailPath = loadedThumbnail === undefined
+    ? (project.thumbnailImage || null)
+    : loadedThumbnail;
   const thumbnailUrl = useLocalFile(thumbnailPath);
 
   if (thumbnailUrl) {
@@ -43,6 +61,7 @@ function ProjectThumb({ project, index, loadedThumbnail = null }) {
 
 export function ModeSelector({
   onSelect,
+  onSelectGraph,
   onEditPack,
   onPodcastFunnel,
   onYoutubeFunnel,
@@ -80,9 +99,19 @@ export function ModeSelector({
     {
       key: 'pack',
       Icon: SwatchBook,
-      name: 'Éditeur libre',
-      desc: 'Menus multiples, agrégation de ZIP et navigation personnalisée',
+      name: 'Éditeur par menus',
+      desc: 'Menus et dossiers imbriqués, agrégation de ZIP',
+      note: 'Anciennement Éditeur libre',
       onClick: () => onSelect('pack'),
+    },
+    {
+      key: 'advanced',
+      // L'Action est la notion propre à cet éditeur ; `Network` désigne déjà
+      // les vues de diagramme et la structure d'un pack.
+      Icon: Waypoints,
+      name: 'Éditeur graphe',
+      desc: 'Navigation libre : Écrans, listes de choix et raccords avancés',
+      onClick: onSelectGraph,
     },
     {
       key: 'simple',
@@ -140,22 +169,22 @@ export function ModeSelector({
 
   useEffect(() => {
     let cancelled = false;
-    const projectsToLoad = visibleRecentProjects.filter((project) => (
-      project?.path
-      && !project.thumbnailImage
-    ));
+    const projectsToLoad = visibleRecentProjects.filter((project) => project?.path);
     if (!projectsToLoad.length) return undefined;
 
     Promise.all(projectsToLoad.map((project) => (
-      loadProjectFromPath(project.path)
-        .then((result) => [project.path, result?.data?.thumbnailImage || result?.data?.rootImage || null])
+      previewProjectFromPath(project.path)
+        .then((preview) => [project.path, preview?.thumbnailImage || null])
         .catch(() => [project.path, null])
     ))).then((entries) => {
       if (cancelled) return;
       setLoadedThumbnails((prev) => {
         const next = { ...prev };
         for (const [path, thumbnail] of entries) {
-          if (next[path] === undefined) next[path] = thumbnail;
+          // Le même `.mbah` peut revenir dans les récents après une nouvelle
+          // sauvegarde avec une autre vignette : sa relecture remplace alors le
+          // cache précédent au lieu de conserver une absence ou un ancien chemin.
+          next[path] = thumbnail;
         }
         return next;
       });
@@ -192,6 +221,7 @@ export function ModeSelector({
                   <span className="mode-tile-icon"><tile.Icon className="mode-tile-icon-svg" strokeWidth={1.9} /></span>
                   <span className="mode-tile-name">{tile.name}</span>
                   <span className="mode-tile-desc">{tile.desc}</span>
+                  {tile.note && <span className="mode-tile-note">{tile.note}</span>}
                 </button>
               ))}
             </div>
@@ -251,7 +281,7 @@ export function ModeSelector({
                       />
                       <span className="mode-proj-copy">
                         <span className="mode-proj-name">{recovery.projectName || 'Projet récupérable'}</span>
-                        <span className="mode-proj-sub">Projet non enregistré · {formatRecentDate(recovery.modifiedAtMs)}</span>
+                        <span className="mode-proj-sub">{recoverySubtitle(recovery)}</span>
                       </span>
                     </button>
                     <Tooltip
@@ -281,7 +311,7 @@ export function ModeSelector({
                       <ProjectThumb
                         project={project}
                         index={visibleRecoveries.length + index}
-                        loadedThumbnail={loadedThumbnails[project.path] ?? null}
+                        loadedThumbnail={loadedThumbnails[project.path]}
                       />
                       <span className="mode-proj-copy">
                         <span className="mode-proj-name">{project.projectName || project.name}</span>

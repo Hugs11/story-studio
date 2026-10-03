@@ -1,5 +1,5 @@
 use super::{XttsGenerateRequest, XttsSettings};
-use crate::services::project_files::workspace_or_project_dir;
+use crate::services::project_files::media_output_root;
 use crate::support::ffmpeg::now_millis;
 use std::path::{Path, PathBuf};
 
@@ -67,10 +67,9 @@ fn reject_unsafe_hint(raw_hint: &str) -> Result<(), String> {
 }
 
 pub(super) fn generated_dir(request: &XttsGenerateRequest) -> Result<PathBuf, String> {
-    workspace_or_project_dir(
+    media_output_root(
         request.workspace_dir.as_deref(),
-        request.save_path.as_deref(),
-        "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix.",
+        "Aucun emplacement de travail : impossible de generer une voix.",
     )
     .map(|dir| dir.join("voix-generees"))
 }

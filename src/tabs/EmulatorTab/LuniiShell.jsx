@@ -12,6 +12,7 @@ export function LuniiShell({
   onRight,
   paused,
   onPause,
+  pauseDisabled,
   okDisabled,
   homeDisabled,
   playbackControls,
@@ -117,17 +118,32 @@ export function LuniiShell({
           </div>
         </div>
         <div className="lunii-buttons">
-          <Tooltip text="Accueil">
-            <button className="lunii-btn-round" onClick={onHome} disabled={homeDisabled}>⌂</button>
-          </Tooltip>
-          <Tooltip text={paused ? 'Reprendre' : 'Pause'}>
-            <button className="lunii-btn-round" onClick={onPause}>
-              {paused ? '▶' : '⏸'}
-            </button>
-          </Tooltip>
-          <Tooltip text="OK">
-            <button className="lunii-btn-round lunii-btn-ok" onClick={onOk} disabled={okDisabled}>OK</button>
-          </Tooltip>
+          <button
+            type="button"
+            className="lunii-btn-round"
+            aria-label="Accueil"
+            onClick={onHome}
+            disabled={homeDisabled}
+          >
+            ⌂
+          </button>
+          <button
+            type="button"
+            className="lunii-btn-round"
+            aria-label={paused ? 'Reprendre' : 'Pause'}
+            onClick={onPause}
+            disabled={pauseDisabled}
+          >
+            {paused ? '▶' : '⏸'}
+          </button>
+          <button
+            type="button"
+            className="lunii-btn-round lunii-btn-ok"
+            onClick={onOk}
+            disabled={okDisabled}
+          >
+            OK
+          </button>
         </div>
       </div>
     </div>

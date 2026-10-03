@@ -3,6 +3,10 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { logger } from '../../utils/logger';
 import { basename } from '../../utils/fileUtils';
 import { Button } from '../common/Button';
+import { ProductionReport } from '../production/ProductionReport.jsx';
+import { AdvancedJobReport } from '../production/AdvancedJobReport.jsx';
+import { renderJobReport } from '../../store/production/productionReport.js';
+import { WORK_NATURE } from '../../store/production/renderQueueWork.js';
 import './RenderQueuePanel.css';
 
 const STATUS_LABEL = {
@@ -17,24 +21,6 @@ const PANEL_MIN_HEIGHT = 120;
 const PANEL_BOTTOM_OFFSET = 33;
 const PANEL_TOP_MARGIN = 72;
 
-function warningDetails(warning) {
-  const measurements = [
-    Number.isFinite(warning?.initialIntegratedLufs)
-      ? `départ ${warning.initialIntegratedLufs.toFixed(1)} LUFS`
-      : null,
-    Number.isFinite(warning?.finalIntegratedLufs)
-      ? `sortie ${warning.finalIntegratedLufs.toFixed(1)} LUFS`
-      : null,
-    Number.isFinite(warning?.gainDb)
-      ? `gain ${warning.gainDb >= 0 ? '+' : ''}${warning.gainDb.toFixed(1)} dB`
-      : null,
-    Number.isFinite(warning?.expectedLimitingDb) && warning.expectedLimitingDb > 0
-      ? `limitation ${warning.expectedLimitingDb.toFixed(1)} dB`
-      : null,
-  ].filter(Boolean);
-  return measurements.length > 0 ? measurements.join(' · ') : '';
-}
-
 function clampPanelHeight(value) {
   const maxHeight = typeof window === 'undefined'
     ? PANEL_DEFAULT_HEIGHT
@@ -47,16 +33,11 @@ function formatTime(ts) {
   return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
-  const logsEndRef = useRef(null);
+function JobCard({ job, expanded, onToggle, onRemove, onCancel, advanced = null }) {
   const [copyStatus, setCopyStatus] = useState('idle');
   const [openFolderError, setOpenFolderError] = useState(false);
   const copyResetRef = useRef(null);
   const openFolderResetRef = useRef(null);
-
-  useEffect(() => {
-    if (expanded) logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [job.logs, expanded]);
 
   useEffect(() => () => {
     if (copyResetRef.current) clearTimeout(copyResetRef.current);
@@ -64,10 +45,12 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
   }, []);
 
   const folderName = basename(job.outputFolder);
-  const warnings = Array.isArray(job.warnings) ? job.warnings : [];
+  const production = renderJobReport(job);
+  const isAdvanced = job.nature === WORK_NATURE.ADVANCED;
+  const warnings = production?.result?.warnings ?? [];
   const allText = [
     ...job.logs,
-    ...warnings.map((warning) => `${warning.message}${warningDetails(warning) ? ` (${warningDetails(warning)})` : ''}`),
+    ...warnings.map((warning) => typeof warning === 'string' ? warning : String(warning?.message ?? warning)),
     ...(job.errorMessage ? [job.errorMessage] : []),
   ].join('\n');
   const hasWarnings = job.status === 'done' && warnings.length > 0;
@@ -136,33 +119,26 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
 
       {expanded && (
         <div className="rq-job-detail">
-          <div className="rq-job-logs">
-            {job.logs.length === 0 && job.status === 'pending' && (
-              <div className="rq-log-empty">En attente de démarrage…</div>
-            )}
-            {job.logs.map((line, i) => (
-              <div key={i} className="rq-log-line">{line}</div>
-            ))}
-            {job.status === 'error' && job.errorMessage && (
-              <div className="rq-log-line rq-log-error">{job.errorMessage}</div>
-            )}
-            <div ref={logsEndRef} />
-          </div>
-          {hasWarnings && (
-            <div className="rq-job-warnings" role="status">
-              <div className="rq-job-warnings-title">
-                Pack généré avec {warnings.length} avertissement{warnings.length > 1 ? 's' : ''} audio
-              </div>
-              {warnings.map((warning, index) => (
-                <div className="rq-job-warning" key={`${warning.code || 'audio'}-${warning.role || index}`}>
-                  <span>{warning.message}</span>
-                  {warningDetails(warning) ? <small>{warningDetails(warning)}</small> : null}
-                </div>
-              ))}
-              <div className="rq-job-warning-advice">
-                Le ZIP est utilisable ; vérifie de préférence ces passages sur la Lunii.
-              </div>
-            </div>
+          {/* Le rapport de production commun aux deux éditeurs : état,
+              progression, chemin produit, problème. Deux choses restent à la
+              carte, et c'est délibéré — l'annulation, qui doit rester
+              atteignable sur une carte **repliée**, et le badge d'état, que
+              l'en-tête porte déjà. Les redoubler ici n'aurait rien ajouté. */}
+          <ProductionReport
+            report={production}
+            showHeading={false}
+            details={isAdvanced ? (
+              <AdvancedJobReport
+                job={job}
+                stagePaths={advanced?.stagePaths ?? null}
+                onFocusPath={advanced?.onFocusPath ?? null}
+                onOpenDiagnostics={advanced?.onOpenDiagnostics ?? null}
+                onReview={advanced?.onReview ?? null}
+              />
+            ) : null}
+          />
+          {job.logs.length === 0 && job.status === 'pending' && (
+            <div className="rq-log-empty">En attente de démarrage…</div>
           )}
           <div className="rq-job-actions">
             {job.logs.length > 0 && (
@@ -187,7 +163,19 @@ function JobCard({ job, expanded, onToggle, onRemove, onCancel }) {
   );
 }
 
-export function RenderQueuePanel({ jobs, onRemove, onCancel, onClearDone, onClose, embedded = false }) {
+export function RenderQueuePanel({
+  jobs,
+  onRemove,
+  onCancel,
+  onClearDone,
+  onClose,
+  embedded = false,
+  // Les raccords vers l'éditeur graphe, ou `null` quand aucun projet graphe
+  // n'est ouvert. La ligne reste alors consultable ; seuls les gestes qui
+  // demandent un canvas — recentrer un Écran, ouvrir les résolutions, réécouter
+  // l'archive — disparaissent.
+  advanced = null,
+}) {
   const [expandedId, setExpandedId] = useState(null);
   const [panelHeight, setPanelHeight] = useState(PANEL_DEFAULT_HEIGHT);
   const resizingRef = useRef(false);
@@ -282,6 +270,7 @@ export function RenderQueuePanel({ jobs, onRemove, onCancel, onClearDone, onClos
               onToggle={() => setExpandedId(id => id === job.id ? null : job.id)}
               onRemove={onRemove}
               onCancel={onCancel}
+              advanced={advanced}
             />
           ))
         )}

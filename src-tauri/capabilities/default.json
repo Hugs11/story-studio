@@ -35,7 +35,9 @@
         { "path": "$APPCACHE/**/.story-studio-image-edits" },
         { "path": "$APPCACHE/**/.story-studio-image-edits/**" },
         { "path": "$APPCACHE/**/.story-studio-thumbnail" },
-        { "path": "$APPCACHE/**/.story-studio-thumbnail/**" }
+        { "path": "$APPCACHE/**/.story-studio-thumbnail/**" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail/.story-studio-image-edits" },
+        { "path": "$APPCACHE/**/.story-studio-thumbnail/.story-studio-image-edits/**" }
       ]
     }
   ]

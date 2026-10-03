@@ -1,11 +1,10 @@
-import { Package, Play, SwatchBook } from '../icons/LucideLocal';
-import { IconArchive } from '../TreePanel/TreeIcons';
+import { FileArchive, Package, Play, SwatchBook } from '../icons/LucideLocal';
 
 export function KindIcon({ kind }) {
   if (kind === 'archive') {
     return (
       <span className="media-kind-icon media-kind-icon--archive">
-        <IconArchive />
+        <FileArchive />
       </span>
     );
   }

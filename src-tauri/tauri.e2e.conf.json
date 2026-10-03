@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.hugs11.story-studio.e2e",
+  "app": {
+    "windows": [
+      {
+        "title": "Story Studio (e2e)",
+        "width": 1100,
+        "height": 680,
+        "minWidth": 700,
+        "minHeight": 500,
+        "resizable": true,
+        "maximizable": true,
+        "maximized": true,
+        "decorations": false,
+        "zoomHotkeysEnabled": false,
+        "additionalBrowserArgs": "--remote-debugging-port=9222 --use-fake-ui-for-media-stream --use-fake-device-for-media-stream --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+      }
+    ]
+  }
+}

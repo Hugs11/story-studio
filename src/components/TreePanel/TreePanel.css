@@ -14,110 +14,6 @@
   padding: 4px 0 48px 0;
 }
 
-/* ── Search bar ─────────────────────────────────────────────────────────── */
-.tree-search-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 6px 10px 5px;
-  flex-shrink: 0;
-}
-
-.tree-search-bar {
-  --tree-search-accent: var(--accent-2);
-  --tree-search-accent-dim: var(--accent-2-dim);
-  --tree-search-focus-soft: color-mix(in srgb, var(--accent-2) 24%, transparent);
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 28px;
-  margin: 0;
-  padding: 0 7px 0 11px;
-  border: 0.5px solid var(--control-border);
-  border-radius: 14px;
-  background: transparent;
-  color: var(--control-text-muted);
-  flex-shrink: 0;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
-}
-
-.tree-search-controls .node-color-filter-row {
-  padding: 2px 8px 1px 11px;
-}
-
-.tree-search-bar:hover {
-  border-color: var(--control-border-hover);
-}
-
-.tree-search-bar:focus-within {
-  border-color: var(--tree-search-accent);
-  background: var(--tree-search-accent-dim);
-  color: var(--text);
-  box-shadow: 0 0 0 3px var(--tree-search-focus-soft);
-}
-
-.tree-search-icon {
-  display: inline-flex;
-  align-items: center;
-  color: var(--control-text-muted);
-  flex-shrink: 0;
-}
-
-.tree-search-bar:focus-within .tree-search-icon {
-  color: var(--tree-search-accent);
-}
-
-.tree-search-input:not([type='checkbox']):not([type='radio']):not([type='range']) {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 11.5px;
-  padding: 0;
-  outline: none;
-}
-
-.tree-search-input:not([type='checkbox']):not([type='radio']):not([type='range']):focus {
-  border: none;
-  outline: none;
-  box-shadow: none;
-}
-
-.tree-search-input::placeholder {
-  color: var(--muted);
-}
-
-.tree-search-clear {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--tree-search-accent);
-  border: none;
-  color: var(--accent-2-contrast);
-  cursor: pointer;
-  font-size: 11px;
-  line-height: 1;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tree-search-clear:hover {
-  background: var(--accent-2-hover);
-}
-
-.tree-search-clear:focus-visible {
-  outline: 1px solid var(--accent-2-text);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 3px var(--tree-search-focus-soft);
-}
-
 /* ── End-node separator ─────────────────────────────────────────────────── */
 .tree-end-node-sep {
   flex-shrink: 0;
@@ -283,6 +179,14 @@
   width: 14px;
   height: 14px;
   color: var(--muted);
+}
+
+/* Le jeu partagé dessine sur une grille de 24 et laisse chaque surface fixer sa
+   taille — le diagramme peint à 18 px, le rail compact à 16. L'arbre peint à
+   14 px, ce qui garde la densité des lignes et leur alignement. */
+.ti-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .tree-item.is-colored {

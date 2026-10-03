@@ -66,7 +66,6 @@ export function CommunityPackCheckerFunnel({ onClose }) {
     (correctionCounts.automatic > 0 || titleNeedsCorrection(checker.report) || selectedOptionalSilences.size > 0)
     && !busy
   ), [checker.report, correctionCounts.automatic, selectedOptionalSilences, busy]);
-  const needsMetadata = titleNeedsCorrection(checker.report);
   const canOpenReport = !!checker.report;
   const canOpenCorrection = canOpenReport && (canCreateFixedPack || correctionCounts.optional > 0);
   const error = localError || checker.error;
@@ -142,8 +141,9 @@ export function CommunityPackCheckerFunnel({ onClose }) {
       setStep(2);
       return;
     }
-    if (needsMetadata) setMetadataOpen(true);
-    else void fixPack(null);
+    // La fenêtre des métadonnées s'ouvre toujours avant de créer le ZIP
+    // corrigé : l'identité du pack s'y garde ou s'y renouvelle, comme au Libre.
+    setMetadataOpen(true);
   }
 
   function handleStepClick(index) {

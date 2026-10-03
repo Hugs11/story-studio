@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use super::super::workspace_or_project_dir;
+use super::super::media_output_root;
 use super::{
     run_ffmpeg_audio_edit, unique_audio_assembly_path, validate_audio_assembly_filename,
     validate_audio_assembly_input, AudioEditParams, FfmpegAudioEditRequest,
@@ -43,11 +43,10 @@ pub struct AudioSplitResult {
     pub failed: Vec<AudioSplitFailure>,
 }
 
-fn split_target_dir(save_path: &str, workspace_dir: Option<&str>) -> Result<PathBuf, String> {
-    let target_dir = workspace_or_project_dir(
+fn split_target_dir(workspace_dir: Option<&str>) -> Result<PathBuf, String> {
+    let target_dir = media_output_root(
         workspace_dir,
-        Some(save_path),
-        "Enregistrez le projet avant de découper un audio.",
+        "Aucun emplacement de travail : impossible de découper un audio.",
     )?
     .join("fichiers-importes");
     fs::create_dir_all(&target_dir)
@@ -105,7 +104,6 @@ fn split_one_segment(
 }
 
 pub fn split_audio_segments(
-    save_path: &str,
     input_path: &str,
     segments: &[AudioSplitSegment],
     workspace_dir: Option<&str>,
@@ -115,7 +113,7 @@ pub fn split_audio_segments(
     }
     let input = validate_audio_assembly_input(input_path)?;
     let input_path = input.to_string_lossy().to_string();
-    let target_dir = split_target_dir(save_path, workspace_dir)?;
+    let target_dir = split_target_dir(workspace_dir)?;
     let ffmpeg = get_ffmpeg_path()?;
 
     let mut created = Vec::new();

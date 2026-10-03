@@ -36,7 +36,7 @@ export function ProjectsMediaSection({
         <div className="opts-row-info">
           <div className="opts-row-label">Utiliser un workspace pour les nouveaux projets</div>
           <div className="opts-row-sub">
-            Désactivé par défaut : les nouveaux projets commencent dans une session temporaire, sans emplacement imposé.
+            Désactivé par défaut : les nouveaux projets commencent dans une session temporaire ; au premier enregistrement, leurs médias rejoignent l’emplacement de travail.
           </div>
         </div>
         <Toggle on={!!useWorkspaceForNewProjects} onChange={onUseWorkspaceForNewProjectsChange} />
@@ -71,7 +71,7 @@ export function ProjectsMediaSection({
             Copie le `.mbah` et tous les médias référencés dans un dossier cible, sans supprimer les originaux.
           </div>
         </div>
-        <Button onClick={handleConsolidate} disabled={consolidating || !project}>
+        <Button onClick={handleConsolidate} disabled={consolidating || !project?.projectType}>
           {consolidating ? 'Consolidation...' : 'Consolider'}
         </Button>
       </div>

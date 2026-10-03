@@ -89,11 +89,11 @@ fn builds_story_title_without_item_audio() {
             title_return_on_home: None,
             title_return_on_home_none: false,
             title_control_settings: Some(crate::domain::project::EntryControlSettings {
-                autoplay: Some(false),
                 wheel: Some(true),
-                pause: Some(false),
                 ok: Some(true),
                 home: Some(true),
+                pause: Some(false),
+                autoplay: Some(false),
             }),
         })],
 
@@ -120,21 +120,70 @@ fn builds_story_title_without_item_audio() {
     let title_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Story Without Item Audio")
+        .find(|stage| stage.label() == "Titre - Story Without Item Audio")
         .expect("title stage");
 
-    assert_eq!(title_stage.audio, None);
+    assert!(title_stage.audio.has_no_value());
     assert_eq!(title_stage.image.as_deref(), Some("item.png"));
-    assert!(title_stage.control_settings.wheel);
-    assert!(title_stage.control_settings.ok);
-    assert!(title_stage.control_settings.home);
-    assert!(!title_stage.control_settings.pause);
-    assert!(!title_stage.control_settings.autoplay);
+    assert!(title_stage.control_settings.wheel());
+    assert!(title_stage.control_settings.ok());
+    assert!(title_stage.control_settings.home());
+    assert!(!title_stage.control_settings.pause());
+    assert!(!title_stage.control_settings.autoplay());
     assert_eq!(
         serde_json::to_value(title_stage).expect("serialize title stage")["audio"],
         serde_json::Value::Null,
     );
-    assert!(title_stage.ok_transition.is_some());
+    assert!(title_stage.ok_transition.is_value());
+}
+
+/// La sentinelle interne « cible non résolue » du constructeur a
+/// disparu au profit d'une absence de repli. Une référence dont la cible n'existe
+/// pas doit toujours produire une **erreur nommée**, jamais une transition
+/// aléatoire ni une arête vers l'option `0`.
+#[test]
+fn an_unresolved_ref_fails_loudly_instead_of_becoming_random() {
+    let project = CanonicalProject {
+        name: "Ref fantôme".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+            end_message_autoplay: true,
+        },
+        entries: vec![CanonicalEntry::Ref(CanonicalRef {
+            id: "ref-fantome".to_string(),
+            target: "story:inexistante".to_string(),
+            ref_kind: Some("continue".to_string()),
+        })],
+        shared_entries: Vec::new(),
+    };
+
+    let error = build_story_document(&report_for(
+        project,
+        vec![
+            prepared_asset("rootAudio", "root.mp3"),
+            prepared_asset("rootImage", "root.png"),
+        ],
+        Vec::new(),
+    ))
+    .expect_err("une référence non résolue doit échouer");
+
+    assert!(
+        error.contains("Référence non résolue") && error.contains("story:inexistante"),
+        "diagnostic inattendu : {error}"
+    );
 }
 
 #[test]
@@ -189,23 +238,23 @@ fn root_ref_can_target_shared_story() {
     let cover = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.square_one)
+        .find(|stage| stage.is_square_one())
         .expect("cover stage");
     let root_action = document
         .action_nodes
         .iter()
         .find(|action| {
-            Some(action.id.as_str()) == cover.ok_transition.as_ref().map(|t| t.action_node.as_str())
+            Some(action.id.as_str()) == cover.ok_transition.value().map(|t| t.action_node.as_str())
         })
         .expect("root action");
     let target_stage_id = root_action.options.first().expect("root ref option");
     let target_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| &stage.uuid == target_stage_id)
+        .find(|stage| Some(stage.uuid.as_str()) == target_stage_id.as_deref())
         .expect("shared title stage");
 
-    assert_eq!(target_stage.name, "Titre - Shared Story");
+    assert_eq!(target_stage.label(), "Titre - Shared Story");
 }
 
 #[test]
@@ -229,15 +278,31 @@ fn imported_direct_story_stage_stays_combined() {
             night_mode: false,
             end_message_autoplay: true,
         },
-        entries: vec![CanonicalEntry::Story(CanonicalStory {
-            id: "direct".to_string(),
-            name: "Direct".to_string(),
-            native_stage_id: Some("native-direct".to_string()),
-            audio: Some("direct.mp3".to_string()),
-            autoplay: true,
-            return_on_home_none: true,
-            ..Default::default()
-        })],
+        // Comme dans les vrais packs, une histoire directe enchaîne sur
+        // l'élément suivant de la liste : jamais sur elle-même (`port_rules`).
+        entries: vec![
+            CanonicalEntry::Story(CanonicalStory {
+                id: "direct".to_string(),
+                name: "Direct".to_string(),
+                native_stage_id: Some("native-direct".to_string()),
+                audio: Some("direct.mp3".to_string()),
+                autoplay: true,
+                return_on_home_none: true,
+                return_after_play: Some("next_story".to_string()),
+                ..Default::default()
+            }),
+            CanonicalEntry::Story(CanonicalStory {
+                id: "suite".to_string(),
+                name: "Suite".to_string(),
+                native_stage_id: Some("native-suite".to_string()),
+                audio: Some("suite.mp3".to_string()),
+                autoplay: true,
+                return_on_home_none: true,
+                // La dernière revient à la première, comme la liste des vrais packs.
+                return_after_play: Some("story:direct".to_string()),
+                ..Default::default()
+            }),
+        ],
         shared_entries: Vec::new(),
     };
     let document = build_story_document(&report_for(
@@ -246,23 +311,81 @@ fn imported_direct_story_stage_stays_combined() {
             prepared_asset("rootAudio", "root.mp3"),
             prepared_asset("rootImage", "root.png"),
             prepared_asset("root/Direct#direct/storyAudio", "direct.mp3"),
+            prepared_asset("root/Suite#suite/storyAudio", "suite.mp3"),
         ],
         Vec::new(),
     ))
     .expect("direct native story document");
+    assert!(crate::native_pack::port_rules::port_violations(&document).is_empty());
 
     assert!(document
         .stage_nodes
         .iter()
-        .any(|stage| stage.name == "Direct"));
+        .any(|stage| stage.label() == "Direct"));
     assert!(!document
         .stage_nodes
         .iter()
-        .any(|stage| stage.name == "Titre - Direct"));
+        .any(|stage| stage.label() == "Titre - Direct"));
     assert!(!document
         .stage_nodes
         .iter()
-        .any(|stage| stage.name == "Histoire - Direct"));
+        .any(|stage| stage.label() == "Histoire - Direct"));
+}
+
+/// L'éditeur par menus, cas de l'histoire unique : l'Écran d'entrée ouvre une
+/// liste d'une seule histoire. Créée dans l'éditeur (sans `native_stage_id`),
+/// elle a un Écran titre distinct de la lecture : aucune combinaison de ses
+/// réglages ne produit de boucle sur soi-même (`port_rules`).
+#[test]
+fn a_single_authored_story_at_the_root_never_loops_on_itself() {
+    for autoplay in [false, true] {
+        for auto_next in [false, true] {
+            for return_on_home_none in [false, true] {
+                let project = CanonicalProject {
+                    name: "Histoire unique".to_string(),
+                    project_type: "pack".to_string(),
+                    pack_version: 1,
+                    pack_description: String::new(),
+                    root_audio: Some("root.mp3".to_string()),
+                    root_image: Some("root.png".to_string()),
+                    thumbnail_image: None,
+                    night_mode_audio: None,
+                    night_mode_return: None,
+                    night_mode_home_return: None,
+                    native_graph: None,
+                    options: CanonicalOptions {
+                        silence_mode: crate::domain::project::SilenceMode::Off,
+                        harmonize_loudness: true,
+                        auto_next,
+                        night_mode: false,
+                        end_message_autoplay: true,
+                    },
+                    entries: vec![CanonicalEntry::Story(CanonicalStory {
+                        id: "unique".to_string(),
+                        name: "Unique".to_string(),
+                        audio: Some("unique.mp3".to_string()),
+                        autoplay,
+                        return_on_home_none,
+                        ..Default::default()
+                    })],
+                    shared_entries: Vec::new(),
+                };
+                let document = build_story_document(&report_for(
+                    project,
+                    vec![
+                        prepared_asset("rootAudio", "root.mp3"),
+                        prepared_asset("rootImage", "root.png"),
+                        prepared_asset("root/Unique#unique/storyAudio", "unique.mp3"),
+                    ],
+                    Vec::new(),
+                ))
+                .unwrap_or_else(|error| {
+                    panic!("autoplay={autoplay} auto_next={auto_next} home_none={return_on_home_none} : {error}")
+                });
+                assert!(crate::native_pack::port_rules::port_violations(&document).is_empty());
+            }
+        }
+    }
 }
 
 #[test]
@@ -334,12 +457,12 @@ fn imported_title_home_story_play_targets_playback_stage() {
     let source_title = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Source")
+        .find(|stage| stage.label() == "Titre - Source")
         .expect("source title");
     let target_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Target")
+        .find(|stage| stage.label() == "Histoire - Target")
         .expect("target playback");
     let home_action = document
         .action_nodes
@@ -348,7 +471,7 @@ fn imported_title_home_story_play_targets_playback_stage() {
             Some(action.id.as_str())
                 == source_title
                     .home_transition
-                    .as_ref()
+                    .value()
                     .map(|transition| transition.action_node.as_str())
         })
         .expect("source title home action");
@@ -356,8 +479,16 @@ fn imported_title_home_story_play_targets_playback_stage() {
     assert_eq!(
         home_action
             .options
-            .get(source_title.home_transition.as_ref().unwrap().option_index as usize)
-            .map(String::as_str),
+            .get(
+                source_title
+                    .home_transition
+                    .value()
+                    .unwrap()
+                    .selection
+                    .fixed_index()
+                    .expect("sélection fixe")
+            )
+            .and_then(|option| option.as_deref()),
         Some(target_play.uuid.as_str())
     );
 }
@@ -418,12 +549,12 @@ fn imported_menu_home_story_play_targets_playback_stage() {
     let menu_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Menu")
+        .find(|stage| stage.label() == "Menu")
         .expect("menu stage");
     let target_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Target")
+        .find(|stage| stage.label() == "Histoire - Target")
         .expect("target playback");
     let home_action = document
         .action_nodes
@@ -432,7 +563,7 @@ fn imported_menu_home_story_play_targets_playback_stage() {
             Some(action.id.as_str())
                 == menu_stage
                     .home_transition
-                    .as_ref()
+                    .value()
                     .map(|transition| transition.action_node.as_str())
         })
         .expect("menu home action");
@@ -440,8 +571,16 @@ fn imported_menu_home_story_play_targets_playback_stage() {
     assert_eq!(
         home_action
             .options
-            .get(menu_stage.home_transition.as_ref().unwrap().option_index as usize)
-            .map(String::as_str),
+            .get(
+                menu_stage
+                    .home_transition
+                    .value()
+                    .unwrap()
+                    .selection
+                    .fixed_index()
+                    .expect("sélection fixe")
+            )
+            .and_then(|option| option.as_deref()),
         Some(target_play.uuid.as_str())
     );
 }
@@ -516,12 +655,12 @@ fn imported_story_home_story_play_targets_playback_stage() {
     let source_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Source")
+        .find(|stage| stage.label() == "Histoire - Source")
         .expect("source playback");
     let target_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Target")
+        .find(|stage| stage.label() == "Histoire - Target")
         .expect("target playback");
     let home_action = document
         .action_nodes
@@ -530,7 +669,7 @@ fn imported_story_home_story_play_targets_playback_stage() {
             Some(action.id.as_str())
                 == source_play
                     .home_transition
-                    .as_ref()
+                    .value()
                     .map(|transition| transition.action_node.as_str())
         })
         .expect("source playback home action");
@@ -538,8 +677,16 @@ fn imported_story_home_story_play_targets_playback_stage() {
     assert_eq!(
         home_action
             .options
-            .get(source_play.home_transition.as_ref().unwrap().option_index as usize)
-            .map(String::as_str),
+            .get(
+                source_play
+                    .home_transition
+                    .value()
+                    .unwrap()
+                    .selection
+                    .fixed_index()
+                    .expect("sélection fixe")
+            )
+            .and_then(|option| option.as_deref()),
         Some(target_play.uuid.as_str())
     );
 }
@@ -602,14 +749,14 @@ fn root_story_return_to_shared_story_uses_single_option_action() {
     let source_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Source")
+        .find(|stage| stage.label() == "Histoire - Source")
         .expect("source playback");
     let target_title = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Target")
+        .find(|stage| stage.label() == "Titre - Target")
         .expect("target title");
-    let ok_transition = source_play.ok_transition.as_ref().expect("source ok");
+    let ok_transition = source_play.ok_transition.value().expect("source ok");
     let ok_action = document
         .action_nodes
         .iter()
@@ -618,8 +765,13 @@ fn root_story_return_to_shared_story_uses_single_option_action() {
 
     assert_eq!(ok_action.options.len(), 1);
     assert_eq!(
-        ok_action.options.get(ok_transition.option_index as usize),
-        Some(&target_title.uuid)
+        ok_action.option_target(
+            ok_transition
+                .selection
+                .fixed_index()
+                .expect("sélection fixe")
+        ),
+        Some(target_title.uuid.as_str())
     );
 }
 
@@ -653,11 +805,11 @@ fn generates_imported_prompt_controls_and_home_null() {
             item_image: Some("item.png".to_string()),
             after_playback_prompt_audio: Some("prompt.mp3".to_string()),
             after_playback_prompt_control_settings: Some(EntryControlSettings {
-                autoplay: Some(false),
                 wheel: Some(false),
-                pause: Some(false),
                 ok: Some(true),
                 home: Some(true),
+                pause: Some(false),
+                autoplay: Some(false),
             }),
             after_playback_prompt_ok_target: Some("root".to_string()),
             after_playback_prompt_home_target: None,
@@ -699,15 +851,15 @@ fn generates_imported_prompt_controls_and_home_null() {
     let prompt_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Fin - Prompt Story")
+        .find(|stage| stage.label() == "Fin - Prompt Story")
         .expect("prompt stage");
 
     assert_eq!(prompt_stage.audio.as_deref(), Some("prompt.mp3"));
-    assert!(!prompt_stage.control_settings.autoplay);
-    assert!(prompt_stage.control_settings.ok);
-    assert!(prompt_stage.control_settings.home);
-    assert!(prompt_stage.ok_transition.is_some());
-    assert!(prompt_stage.home_transition.is_none());
+    assert!(!prompt_stage.control_settings.autoplay());
+    assert!(prompt_stage.control_settings.ok());
+    assert!(prompt_stage.control_settings.home());
+    assert!(prompt_stage.ok_transition.is_value());
+    assert!(prompt_stage.home_transition.has_no_value());
 }
 
 #[test]
@@ -752,11 +904,11 @@ fn exports_after_playback_sequence_before_story_return() {
                             audio: Some("bell.mp3".to_string()),
                             image: None,
                             control_settings: Some(EntryControlSettings {
-                                autoplay: Some(true),
                                 wheel: Some(false),
-                                pause: Some(false),
                                 ok: Some(false),
                                 home: Some(false),
+                                pause: Some(false),
+                                autoplay: Some(true),
                             }),
                             ok_target: None,
                             ok_choice_targets: Vec::new(),
@@ -770,11 +922,11 @@ fn exports_after_playback_sequence_before_story_return() {
                             audio: Some("ok.mp3".to_string()),
                             image: None,
                             control_settings: Some(EntryControlSettings {
-                                autoplay: Some(false),
                                 wheel: Some(false),
-                                pause: Some(false),
                                 ok: Some(true),
                                 home: Some(true),
+                                pause: Some(false),
+                                autoplay: Some(false),
                             }),
                             ok_target: Some("story_play:second".to_string()),
                             ok_choice_targets: Vec::new(),
@@ -838,54 +990,56 @@ fn exports_after_playback_sequence_before_story_return() {
         let action = action_by_id
             .get(transition.action_node.as_str())
             .expect("action");
-        let stage_id = action.options[transition.option_index as usize].as_str();
+        let stage_id = action
+            .option_target(transition.selection.fixed_index().expect("sélection fixe"))
+            .expect("cible d'option nommée");
         document
             .stage_nodes
             .iter()
             .find(|stage| stage.uuid == stage_id)
-            .map(|stage| stage.name.as_str())
+            .map(|stage| stage.label())
             .expect("stage")
     };
 
     let play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Premier")
+        .find(|stage| stage.label() == "Histoire - Premier")
         .expect("play stage");
     assert_eq!(
-        target_stage_name(play_stage.ok_transition.as_ref().expect("play ok")),
+        target_stage_name(play_stage.ok_transition.value().expect("play ok")),
         "Cloche"
     );
 
     let bell_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Cloche")
+        .find(|stage| stage.label() == "Cloche")
         .expect("bell stage");
     assert_eq!(bell_stage.audio.as_deref(), Some("bell.mp3"));
-    assert!(bell_stage.control_settings.autoplay);
+    assert!(bell_stage.control_settings.autoplay());
     assert_eq!(
-        target_stage_name(bell_stage.ok_transition.as_ref().expect("bell ok")),
+        target_stage_name(bell_stage.ok_transition.value().expect("bell ok")),
         "Ok ?"
     );
 
     let ok_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Ok ?")
+        .find(|stage| stage.label() == "Ok ?")
         .expect("ok stage");
     assert_eq!(ok_stage.audio.as_deref(), Some("ok.mp3"));
-    assert!(!ok_stage.control_settings.autoplay);
-    assert!(ok_stage.control_settings.ok);
+    assert!(!ok_stage.control_settings.autoplay());
+    assert!(ok_stage.control_settings.ok());
     assert_eq!(
-        target_stage_name(ok_stage.ok_transition.as_ref().expect("prompt ok")),
+        target_stage_name(ok_stage.ok_transition.value().expect("prompt ok")),
         "Histoire - Second"
     );
     assert!(
         document
             .stage_nodes
             .iter()
-            .filter(|stage| stage.name == "nightStage")
+            .filter(|stage| stage.label() == "nightStage")
             .count()
             <= 1
     );
@@ -976,6 +1130,7 @@ fn auto_next_overrides_end_steps_and_story_returns() {
     );
 
     let document = build_story_document(&report).expect("auto-next story document");
+    assert_free_document_passes_gates(&report, &document);
     let action_by_id: HashMap<&str, &ActionNode> = document
         .action_nodes
         .iter()
@@ -985,56 +1140,58 @@ fn auto_next_overrides_end_steps_and_story_returns() {
         let action = action_by_id
             .get(transition.action_node.as_str())
             .expect("action");
-        let stage_id = action.options[transition.option_index as usize].as_str();
+        let stage_id = action
+            .option_target(transition.selection.fixed_index().expect("sélection fixe"))
+            .expect("cible d'option nommée");
         document
             .stage_nodes
             .iter()
             .find(|stage| stage.uuid == stage_id)
-            .map(|stage| stage.name.as_str())
+            .map(|stage| stage.label())
             .expect("stage")
     };
 
     let first_play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Premier")
+        .find(|stage| stage.label() == "Histoire - Premier")
         .expect("first play stage");
     let second_play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Second")
+        .find(|stage| stage.label() == "Histoire - Second")
         .expect("second play stage");
 
-    assert!(!document.night_mode_available);
-    assert!(first_play_stage.control_settings.autoplay);
-    assert!(second_play_stage.control_settings.autoplay);
+    assert!(!document.night_mode_available.is_true());
+    assert!(first_play_stage.control_settings.autoplay());
+    assert!(second_play_stage.control_settings.autoplay());
     assert!(document
         .stage_nodes
         .iter()
-        .all(|stage| stage.name != "nightStage"));
+        .all(|stage| stage.label() != "nightStage"));
     assert!(document
         .stage_nodes
         .iter()
-        .all(|stage| stage.name != "Cloche"));
+        .all(|stage| stage.label() != "Cloche"));
     assert!(document
         .stage_nodes
         .iter()
-        .all(|stage| !stage.name.starts_with("Fin -")));
+        .all(|stage| !stage.label().starts_with("Fin -")));
     assert_eq!(
-        target_stage_name(first_play_stage.ok_transition.as_ref().expect("first ok")),
+        target_stage_name(first_play_stage.ok_transition.value().expect("first ok")),
         "Histoire - Second"
     );
     assert_eq!(
         target_stage_name(
             first_play_stage
                 .home_transition
-                .as_ref()
+                .value()
                 .expect("first home")
         ),
         "Menu"
     );
     assert_eq!(
-        target_stage_name(second_play_stage.ok_transition.as_ref().expect("second ok")),
+        target_stage_name(second_play_stage.ok_transition.value().expect("second ok")),
         "Menu"
     );
 }
@@ -1066,7 +1223,7 @@ fn canonicalizes_pack_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
-        pack_uuid: String::new(),
+        pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
     };
@@ -1131,7 +1288,7 @@ fn canonicalizes_recursive_root_entries_structure() {
         global_options: sample_options(),
         pack_version: 1,
         pack_description: String::new(),
-        pack_uuid: String::new(),
+        pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
     };
@@ -1194,7 +1351,10 @@ fn collects_asset_requests_for_pack() {
     };
 
     let requests = collect_asset_requests(&project, 1.0, 1.0);
-    assert_eq!(requests.len(), 10);
+    assert_eq!(requests.len(), 9);
+    assert!(requests
+        .iter()
+        .all(|request| request.role != "thumbnailImage"));
     assert!(requests
         .iter()
         .any(|request| matches!(request.source_kind, AssetSourceKind::Zip)));
@@ -1291,14 +1451,14 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         },
         pack_version: 1,
         pack_description: String::new(),
-        pack_uuid: String::new(),
+        pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
 
         shared_entries: Vec::new(),
     };
 
     let report = NativeAssetPreparationReport {
         project: canonicalize_project(&project),
-        pack_uuid: String::new(),
+        pack_uuid: "11111111-2222-4333-8444-555566667777".to_string(),
         stage_dir: stage_dir.to_string_lossy().to_string(),
         assets_dir: assets_dir.to_string_lossy().to_string(),
         assets: vec![
@@ -1357,14 +1517,16 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
         },
         notes: Vec::new(),
         warnings: Vec::new(),
+        for_simulation: false,
     };
 
-    let zip_path = write_native_pack_zip(
+    let zip_path = write_native_pack_archive(
         &report,
         &build_story_document(&report).expect("story doc"),
         &output_dir,
     )
-    .expect("write zip");
+    .expect("write zip")
+    .zip_path;
 
     let zip_file = fs::File::open(&zip_path).expect("open zip");
     let mut archive = zip::ZipArchive::new(zip_file).expect("read zip");
@@ -1383,7 +1545,7 @@ fn writes_each_deduplicated_asset_only_once_in_final_zip() {
 
 #[test]
 fn builds_simple_story_pack() {
-    let report = report_for(
+    let mut report = report_for(
         CanonicalProject {
             name: "Single Story".to_string(),
             project_type: "simple".to_string(),
@@ -1429,30 +1591,56 @@ fn builds_simple_story_pack() {
     let cover = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Cover node")
+        .find(|stage| stage.label() == "Cover node")
         .expect("cover stage");
     let story_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "histoire")
+        .find(|stage| stage.label() == "histoire")
         .expect("simple story stage");
     let root_action = &document.action_nodes[0];
 
-    assert_eq!(root_action.name, "Action node");
-    assert_eq!(root_action.options, vec![story_stage.uuid.clone()]);
+    assert_eq!(root_action.label(), "Action node");
+    assert_eq!(root_action.options, vec![Some(story_stage.uuid.clone())]);
     assert_eq!(
-        cover.ok_transition.as_ref().map(|t| t.action_node.as_str()),
+        cover.ok_transition.value().map(|t| t.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(story_stage.audio.as_deref(), Some("story.mp3"));
-    assert!(story_stage.image.is_none());
-    assert!(story_stage.ok_transition.is_none());
-    assert!(story_stage.home_transition.is_none());
-    assert!(!story_stage.control_settings.autoplay);
-    assert!(story_stage.control_settings.pause);
-    assert!(!story_stage.control_settings.ok);
-    assert!(story_stage.control_settings.home);
-    assert!(!story_stage.control_settings.wheel);
+    assert!(story_stage.image.has_no_value());
+    assert!(story_stage.ok_transition.has_no_value());
+    assert!(story_stage.home_transition.has_no_value());
+    assert!(!story_stage.control_settings.autoplay());
+    assert!(story_stage.control_settings.pause());
+    assert!(!story_stage.control_settings.ok());
+    assert!(story_stage.control_settings.home());
+    assert!(!story_stage.control_settings.wheel());
+
+    // Les réglages réalisables au simplifié passent par la même garde native.
+    let CanonicalEntry::Story(story) = &mut report.project.entries[0] else {
+        panic!("story");
+    };
+    story.autoplay = true;
+    let error = build_story_document(&report).expect_err("automatic playback needs a destination");
+    assert!(error.contains("sans destination utilisable"));
+    let CanonicalEntry::Story(story) = &mut report.project.entries[0] else {
+        panic!("story");
+    };
+    story.autoplay = false;
+    story.home = false;
+    story.wheel = true;
+    let error = build_story_document(&report).expect_err("a singleton wheel is not an exit");
+    assert!(error.contains("sans sortie utilisable"));
+
+    report.project.project_type = "pack".to_string();
+    report
+        .assets
+        .push(prepared_asset("root/Single Story/itemAudio", "item.mp3"));
+    report
+        .assets
+        .push(prepared_asset("root/Single Story/itemImage", "item.png"));
+    let error = build_story_document(&report).expect_err("root menu story uses the same exit rule");
+    assert!(error.contains("sans sortie utilisable"));
 }
 
 #[test]
@@ -1515,51 +1703,51 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
     let cover = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Cover node")
+        .find(|stage| stage.label() == "Cover node")
         .expect("cover stage");
     let menu_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Choose a story")
+        .find(|stage| stage.label() == "Choose a story")
         .expect("menu stage");
     let title_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Story Alpha" && stage.image.is_some())
+        .find(|stage| stage.label() == "Titre - Story Alpha" && stage.image.is_value())
         .expect("title stage");
     let play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Story Alpha" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Story Alpha" && stage.image.has_no_value())
         .expect("play stage");
     let root_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![menu_stage.uuid.clone()])
+        .find(|action| action.options == vec![Some(menu_stage.uuid.clone())])
         .expect("root action");
     let menu_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![title_stage.uuid.clone()])
+        .find(|action| action.options == vec![Some(title_stage.uuid.clone())])
         .expect("menu action");
 
-    assert_eq!(root_action.name, "Action node");
-    assert_eq!(menu_action.name, "Action node");
+    assert_eq!(root_action.label(), "Action node");
+    assert_eq!(menu_action.label(), "Action node");
     assert_eq!(
-        cover.ok_transition.as_ref().map(|t| t.action_node.as_str()),
+        cover.ok_transition.value().map(|t| t.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(
         menu_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|t| t.action_node.as_str()),
         Some(menu_action.id.as_str())
     );
     assert_eq!(
         title_stage
             .home_transition
-            .as_ref()
+            .value()
             .map(|t| t.action_node.as_str()),
         Some(root_action.id.as_str())
     );
@@ -1568,29 +1756,29 @@ fn builds_menu_story_with_title_returning_to_root_and_play_to_menu() {
     assert_eq!(
         play_stage
             .home_transition
-            .as_ref()
+            .value()
             .map(|t| t.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(
         play_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|t| t.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(
-        play_stage.home_transition.as_ref().map(|t| t.option_index),
-        Some(0)
+        play_stage.home_transition.value().map(|t| t.selection),
+        Some(OptionSelection::Fixed(0))
     );
     assert_eq!(
-        play_stage.ok_transition.as_ref().map(|t| t.option_index),
-        Some(0)
+        play_stage.ok_transition.value().map(|t| t.selection),
+        Some(OptionSelection::Fixed(0))
     );
-    assert!(menu_stage.control_settings.autoplay);
-    assert!(!menu_stage.control_settings.wheel);
-    assert!(title_stage.control_settings.wheel);
-    assert!(play_stage.control_settings.autoplay);
+    assert!(menu_stage.control_settings.autoplay());
+    assert!(!menu_stage.control_settings.wheel());
+    assert!(title_stage.control_settings.wheel());
+    assert!(play_stage.control_settings.autoplay());
 }
 
 #[test]
@@ -1660,11 +1848,11 @@ fn single_root_menu_with_multiple_children_preserves_choice_controls() {
     let menu_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Introduction")
+        .find(|stage| stage.label() == "Introduction")
         .expect("root menu stage");
 
-    assert!(menu_stage.control_settings.wheel);
-    assert!(!menu_stage.control_settings.autoplay);
+    assert!(menu_stage.control_settings.wheel());
+    assert!(!menu_stage.control_settings.autoplay());
 }
 
 #[test]
@@ -1747,71 +1935,71 @@ fn builds_recursive_menu_story_tree() {
     let top_menu = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Choose a character")
+        .find(|stage| stage.label() == "Choose a character")
         .expect("top menu stage");
     let submenu = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Nested Menu")
+        .find(|stage| stage.label() == "Nested Menu")
         .expect("submenu stage");
     let title_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Nested Story" && stage.image.is_some())
+        .find(|stage| stage.label() == "Titre - Nested Story" && stage.image.is_value())
         .expect("title stage");
     let play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Nested Story" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Nested Story" && stage.image.has_no_value())
         .expect("play stage");
     let top_menu_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![submenu.uuid.clone()])
+        .find(|action| action.options == vec![Some(submenu.uuid.clone())])
         .expect("top menu action");
     let _submenu_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![title_stage.uuid.clone()])
+        .find(|action| action.options == vec![Some(title_stage.uuid.clone())])
         .expect("submenu action");
 
-    assert!(top_menu.home_transition.is_none());
-    assert!(submenu.home_transition.is_none());
-    assert!(!submenu.control_settings.autoplay);
-    assert!(submenu.control_settings.wheel);
-    assert_eq!(document.stage_nodes[0].name, "Cover node");
-    assert_eq!(document.stage_nodes[1].name, "Choose a character");
-    assert_eq!(document.stage_nodes[2].name, "Nested Menu");
+    assert!(top_menu.home_transition.has_no_value());
+    assert!(submenu.home_transition.has_no_value());
+    assert!(!submenu.control_settings.autoplay());
+    assert!(submenu.control_settings.wheel());
+    assert_eq!(document.stage_nodes[0].label(), "Cover node");
+    assert_eq!(document.stage_nodes[1].label(), "Choose a character");
+    assert_eq!(document.stage_nodes[2].label(), "Nested Menu");
     assert_eq!(
         title_stage
             .home_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(top_menu_action.id.as_str())
     );
     assert_eq!(
         title_stage
             .home_transition
-            .as_ref()
-            .map(|transition| transition.option_index),
-        Some(0)
+            .value()
+            .map(|transition| transition.selection),
+        Some(OptionSelection::Fixed(0))
     );
     // After playback: return to Nested Menu submenu stage (matching resolveReturnTarget → parentMenu.id).
     assert_eq!(
         play_stage
             .home_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(top_menu_action.id.as_str())
     );
     assert_eq!(
         play_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(top_menu_action.id.as_str())
     );
-    assert!(play_stage.control_settings.autoplay);
+    assert!(play_stage.control_settings.autoplay());
 }
 
 #[test]
@@ -1882,7 +2070,7 @@ fn builds_the_supported_maximum_menu_depth() {
         ..Default::default()
     });
 
-    let document = build_story_document(&report_for(
+    let report = report_for(
         CanonicalProject {
             name: "Profondeur maximale".to_string(),
             project_type: "pack".to_string(),
@@ -1901,13 +2089,15 @@ fn builds_the_supported_maximum_menu_depth() {
         },
         assets,
         Vec::new(),
-    ))
-    .expect("la profondeur authoring maximale doit rester générable");
+    );
+    let document = build_story_document(&report)
+        .expect("la profondeur authoring maximale doit rester générable");
+    assert_free_document_passes_gates(&report, &document);
 
     let menu_stages = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.name.starts_with("Dossier "))
+        .filter(|stage| stage.label().starts_with("Dossier "))
         .collect::<Vec<_>>();
     assert_eq!(menu_stages.len(), max_depth);
 
@@ -1915,11 +2105,11 @@ fn builds_the_supported_maximum_menu_depth() {
         let stage = document
             .stage_nodes
             .iter()
-            .find(|stage| stage.name == format!("Dossier {level}"))
+            .find(|stage| stage.label() == format!("Dossier {level}"))
             .expect("menu stage");
         let action_id = &stage
             .ok_transition
-            .as_ref()
+            .value()
             .expect("menu transition")
             .action_node;
         let action = document
@@ -1931,9 +2121,9 @@ fn builds_the_supported_maximum_menu_depth() {
         let next = document
             .stage_nodes
             .iter()
-            .find(|candidate| &candidate.uuid == next_id)
+            .find(|candidate| Some(candidate.uuid.as_str()) == next_id.as_deref())
             .expect("nested menu stage");
-        assert_eq!(next.name, format!("Dossier {}", level + 1));
+        assert_eq!(next.label(), format!("Dossier {}", level + 1));
     }
 
     let temp_dir = std::env::temp_dir().join(format!(
@@ -2080,33 +2270,33 @@ fn preserves_explicit_menu_home_transition() {
     let top_menu = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Choose a character")
+        .find(|stage| stage.label() == "Choose a character")
         .expect("top menu stage");
     let submenu = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Nested Menu")
+        .find(|stage| stage.label() == "Nested Menu")
         .expect("submenu stage");
     let root_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![top_menu.uuid.clone()])
+        .find(|action| action.options == vec![Some(top_menu.uuid.clone())])
         .expect("root action");
 
-    assert!(top_menu.home_transition.is_none());
+    assert!(top_menu.home_transition.has_no_value());
     assert_eq!(
         submenu
             .home_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(
         submenu
             .home_transition
-            .as_ref()
-            .map(|transition| transition.option_index),
-        Some(0)
+            .value()
+            .map(|transition| transition.selection),
+        Some(OptionSelection::Fixed(0))
     );
 }
 
@@ -2216,30 +2406,93 @@ fn preserves_imported_story_title_home_transition() {
     let top_menu = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Choose a character")
+        .find(|stage| stage.label() == "Choose a character")
         .expect("top menu stage");
     let nested_title = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Nested Story")
+        .find(|stage| stage.label() == "Titre - Nested Story")
         .expect("nested title stage");
     let silent_title = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Titre - Silent title home")
+        .find(|stage| stage.label() == "Titre - Silent title home")
         .expect("silent title stage");
     let root_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![top_menu.uuid.clone()])
+        .find(|action| action.options == vec![Some(top_menu.uuid.clone())])
         .expect("root action");
 
     assert_eq!(
         nested_title
             .home_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(root_action.id.as_str())
     );
-    assert!(silent_title.home_transition.is_none());
+    assert!(silent_title.home_transition.has_no_value());
+}
+
+/// Accueil actif sans destination (`returnOnHomeNone`) dans un dossier : le
+/// moteur n'écrit aucune transition Accueil sur l'Écran de lecture, et la Lunii
+/// revient d'elle-même à l'Écran d'entrée. Le miroir JS
+/// (`storyHome.isPackStart`, `scripts/storyHomeWithoutDestination.test.mjs`)
+/// annonce ce retour, pas le dossier parent.
+#[test]
+fn active_home_without_destination_writes_no_home_transition() {
+    let story = CanonicalStory {
+        id: "a".to_string(),
+        name: "A".to_string(),
+        audio: Some("a.mp3".to_string()),
+        item_audio: Some("a-title.mp3".to_string()),
+        item_image: Some("a-title.png".to_string()),
+        home: true,
+        return_on_home_none: true,
+        ..Default::default()
+    };
+    let project = CanonicalProject {
+        name: "Pack".to_string(),
+        project_type: "pack".to_string(),
+        pack_version: 1,
+        pack_description: String::new(),
+        root_audio: Some("root.mp3".to_string()),
+        root_image: Some("root.png".to_string()),
+        thumbnail_image: None,
+        night_mode_audio: None,
+        night_mode_return: None,
+        night_mode_home_return: None,
+        native_graph: None,
+        options: CanonicalOptions {
+            silence_mode: crate::domain::project::SilenceMode::Off,
+            harmonize_loudness: true,
+            auto_next: false,
+            night_mode: false,
+            end_message_autoplay: true,
+        },
+        entries: vec![CanonicalEntry::Menu(CanonicalMenu {
+            id: "m".to_string(),
+            name: "M".to_string(),
+            audio: Some("m.mp3".to_string()),
+            image: Some("m.png".to_string()),
+            children: vec![CanonicalEntry::Story(story)],
+            ..Default::default()
+        })],
+        shared_entries: Vec::new(),
+    };
+    let assets: Vec<PreparedAsset> = collect_asset_requests(&project, 0.0, 0.0)
+        .into_iter()
+        .enumerate()
+        .map(|(index, request)| prepared_asset(&request.role, &format!("asset-{index}")))
+        .collect();
+    let document =
+        build_story_document(&report_for(project, assets, Vec::new())).expect("document Libre");
+    let play = document
+        .stage_nodes
+        .iter()
+        .find(|stage| stage.label() == "Histoire - A")
+        .expect("Écran de lecture");
+
+    assert!(play.control_settings.home());
+    assert!(play.home_transition.has_no_value());
 }

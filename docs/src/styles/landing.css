@@ -235,6 +235,57 @@
         margin-top: 6px;
       }
 
+      .community-card {
+        max-width: 820px;
+        margin: 16px auto 0;
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        border: 1px solid rgba(107, 123, 255, 0.45);
+        border-radius: 12px;
+        background: rgba(107, 123, 255, 0.08);
+        text-align: left;
+      }
+
+      .community-card h2 {
+        margin: 0 0 5px;
+        font-size: 17px;
+      }
+
+      .community-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .community-card > a {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border: 1px solid var(--violet);
+        border-radius: 9px;
+        color: var(--text);
+        font-size: 13.5px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .discord-mark {
+        width: 19px;
+        height: 19px;
+        fill: currentColor;
+      }
+
+      .community-card > a:hover {
+        background: rgba(107, 123, 255, 0.15);
+        color: var(--text);
+        text-decoration: none;
+      }
+
       .demo-card {
         max-width: 820px;
         margin: 16px auto 0;
@@ -343,6 +394,40 @@
         border-radius: 14px;
         border: 1px solid var(--border);
         box-shadow: var(--shadow-lg);
+      }
+
+      .capture-placeholder {
+        width: 100%;
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 32px;
+        border: 1px dashed rgba(147, 160, 255, 0.7);
+        border-radius: 14px;
+        background:
+          linear-gradient(135deg, rgba(107, 123, 255, 0.11), rgba(245, 174, 35, 0.06)),
+          var(--bg-elev);
+        color: var(--text);
+        text-align: center;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .capture-placeholder strong {
+        font-size: clamp(18px, 2.2vw, 24px);
+      }
+
+      .capture-placeholder span {
+        max-width: 620px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .media-pair .capture-placeholder {
+        min-height: 100%;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
       }
 
       .journey-intro {
@@ -536,6 +621,11 @@
           padding: 36px 0;
         }
         .release-card {
+          padding: 18px;
+        }
+        .community-card {
+          align-items: flex-start;
+          flex-direction: column;
           padding: 18px;
         }
         .demo-card {

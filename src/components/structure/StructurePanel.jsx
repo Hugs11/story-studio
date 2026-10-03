@@ -1,12 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { TreePanel } from '../TreePanel/TreePanel';
 import { TreeDisplayPopover } from '../TreePanel/TreeDisplayPopover';
-import { Tooltip } from '../common/Tooltip';
-import { Search } from '../icons/LucideLocal';
 import { KEYS } from '../../store/persistentSettings';
 import { useProjectActions } from '../../store/ProjectActionsContext';
 import { usePersistentState } from '../../hooks/usePersistentState';
-import { StructureActionsBar } from './StructureActionsBar';
+import { StructureActionsBar, StructureSearchButton } from './StructureActionsBar';
 
 const BOOL_CODEC = {
   decode: (value) => value === 'true',
@@ -34,6 +32,7 @@ function useStructureNodeColor() {
 }
 
 export function StructurePanel({
+  canvasActionsAvailable = false,
   project,
   projectType,
   selectedId,
@@ -88,31 +87,24 @@ export function StructurePanel({
           <StructureActionsBar
             variant="panel"
             targetMenuId={structureActionTargetMenuId}
-            onAddStory={onAddStoryToMenu}
-            onAddFolder={onAddMenu}
-            onImportFolder={onImportFolder}
-            onImportPodcast={onImportPodcast}
-            onImportYoutube={onImportYoutube}
-            onRecord={onRecord}
-            onGenerateStoryTts={onGenerateStoryTts}
+            onAddStory={canvasActionsAvailable ? null : onAddStoryToMenu}
+            onAddFolder={canvasActionsAvailable ? null : onAddMenu}
+            onImportFolder={canvasActionsAvailable ? null : onImportFolder}
+            onImportPodcast={canvasActionsAvailable ? null : onImportPodcast}
+            onImportYoutube={canvasActionsAvailable ? null : onImportYoutube}
+            onRecord={canvasActionsAvailable ? null : onRecord}
+            onGenerateStoryTts={canvasActionsAvailable ? null : onGenerateStoryTts}
             canRecord={canRecord}
             canGenerateStoryTts={canGenerateStoryTts}
-            onLaunchSimulator={onSimulateRoot}
+            onLaunchSimulator={canvasActionsAvailable ? null : onSimulateRoot}
             trailing={(
               <>
-                <Tooltip text="Rechercher dans la structure (Ctrl+F)" placement="below">
-                  <button
-                    type="button"
-                    className="tree-display-trigger tree-search-trigger"
-                    aria-label="Rechercher dans la structure"
-                    onClick={() => {
-                      setTreeDisplayOpen(false);
-                      onFocusTreeSearch?.();
-                    }}
-                  >
-                    <Search className="tree-display-trigger-icon" strokeWidth={2.15} absoluteStrokeWidth />
-                  </button>
-                </Tooltip>
+                <StructureSearchButton
+                  onClick={() => {
+                    setTreeDisplayOpen(false);
+                    onFocusTreeSearch?.();
+                  }}
+                />
                 <TreeDisplayPopover
                   open={treeDisplayOpen}
                   onOpenChange={setTreeDisplayOpen}

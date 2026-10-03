@@ -1,0 +1,1255 @@
+/* Surface avancée : recherche, canvas, inspecteur.
+ *
+ * Aucune règle de ce fichier n'est partagée avec `FlowDiagram.css` : le
+ * diagramme Libre garde intégralement ses gestes, sa caméra et son style, et
+ * aucune régression Libre n'est permise. */
+
+.advanced-canvas {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr minmax(260px, 340px);
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-1, #15181c);
+  color: var(--text-1, #e8eaed);
+}
+
+.advanced-canvas--error {
+  display: block;
+  padding: 24px;
+}
+
+.advanced-canvas__stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg0);
+}
+
+/* L'étiquette d'un lien survolé, posée au point d'entrée du pointeur. Elle ne
+   capte jamais le pointeur : le lien reste survolé sous elle. */
+.advanced-canvas__edge-label {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  max-width: min(420px, 70%);
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg1);
+  box-shadow: 0 4px 14px color-mix(in srgb, #000 30%, transparent);
+  color: var(--text-primary);
+  font-size: 11px;
+  pointer-events: none;
+  transform: translate(12px, 12px);
+  white-space: nowrap;
+}
+
+.advanced-canvas__edge-label-end {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.advanced-canvas__edge-label-arrow { color: var(--muted); }
+
+.advanced-canvas__edge-label-via {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Le terme technique de la sortie, après son nom : « okTransition ». */
+.advanced-canvas__edge-label-term {
+  margin-left: 5px;
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Le canvas occupe toute la scène. Le moteur y pose son propre élément ; rien
+ * n'est exposé au DOM par le rendu, ce qui est exactement pourquoi la liste de
+ * recherche et l'inspecteur sont le chemin principal. */
+.advanced-canvas__host {
+  position: absolute;
+  inset: 0;
+}
+
+/* Le fond reste derrière les canvas transparents de Cytoscape. Ses variables
+ * reprennent la même transformation que les nœuds : écran = graphe * zoom + pan.
+ * La texture temporaire de Cytoscape reste transparente pour laisser ce fond
+ * visible durant un geste de caméra. */
+.advanced-canvas__host[data-grid-engine="cytoscape"] {
+  --graph-grid-step: 32px;
+  --graph-grid-major-step: 160px;
+  --graph-grid-x: 0px;
+  --graph-grid-y: 0px;
+  --graph-grid-major-x: 0px;
+  --graph-grid-major-y: 0px;
+  --graph-grid-minor-alpha: 4%;
+  --graph-grid-major-alpha: 8%;
+  --graph-grid-minor-color: color-mix(in srgb, var(--text-secondary, #a6a2c0) var(--graph-grid-minor-alpha), transparent);
+  --graph-grid-major-color: color-mix(in srgb, var(--text-secondary, #a6a2c0) var(--graph-grid-major-alpha), transparent);
+  background-color: var(--bg0, #15181c);
+  background-image:
+    linear-gradient(to right, var(--graph-grid-minor-color) 0, var(--graph-grid-minor-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--graph-grid-minor-color) 0, var(--graph-grid-minor-color) 1px, transparent 1px),
+    linear-gradient(to right, var(--graph-grid-major-color) 0, var(--graph-grid-major-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--graph-grid-major-color) 0, var(--graph-grid-major-color) 1px, transparent 1px);
+  background-size:
+    var(--graph-grid-step) var(--graph-grid-step),
+    var(--graph-grid-step) var(--graph-grid-step),
+    var(--graph-grid-major-step) var(--graph-grid-major-step),
+    var(--graph-grid-major-step) var(--graph-grid-major-step);
+  background-position:
+    var(--graph-grid-x) var(--graph-grid-y),
+    var(--graph-grid-x) var(--graph-grid-y),
+    var(--graph-grid-major-x) var(--graph-grid-major-y),
+    var(--graph-grid-major-x) var(--graph-grid-major-y);
+}
+
+.advanced-group-overlays {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.advanced-group-overlay {
+  --group-tone: #6b8f5e;
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  border: 1px dashed color-mix(in srgb, var(--group-tone) 34%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--group-tone) 7%, transparent);
+}
+
+.advanced-group-overlay > span {
+  position: absolute;
+  top: 9px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  color: color-mix(in srgb, var(--group-tone) 62%, var(--text-secondary));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.advanced-group-overlay.is-tone-1 { --group-tone: #8f7d68; }
+.advanced-group-overlay.is-tone-2 { --group-tone: #87904e; }
+.advanced-group-overlay.is-tone-3 { --group-tone: #a86a86; }
+.advanced-group-overlay.is-tone-4 { --group-tone: #5f87a8; }
+.advanced-group-overlay.is-tone-5 { --group-tone: #7a8494; }
+
+/* Cartes du handoff. Le moteur garde les fonds, miniatures et zones de clic ;
+ * cette couche pose le contenu typographique sans le flou ni la troncature du
+ * texte canvas. Elle ne capte jamais le pointeur. */
+.advanced-node-overlays {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.advanced-node-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  will-change: transform;
+}
+
+/* Le compte de sorties est posé **au-dessus** du losange. À droite, il tombait
+   sous le rail des prises, dont la longueur suit le nombre d'options : aucun
+   décalage fixe ne l'en aurait écarté, puisque c'est précisément le nombre
+   qu'il annonce qui fait grandir ce rail. Au-dessus, la place est libre à
+   toutes les tailles — le rail est vertical et centré, le nom est dessous.
+   La pastille reprend le langage du compteur « Choix » de l'inspecteur : le
+   chiffre reste une information attachée à l'Action, pas un titre flottant. */
+.advanced-node-overlay__action-count {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  min-width: 1.64em;
+  height: 1.64em;
+  padding: 0 .45em;
+  border: 1px solid color-mix(in srgb, var(--graph-action-border) 45%, transparent);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--graph-action-bg) 16%, transparent);
+  color: var(--text-primary);
+  /* Sa taille suit le zoom, pas le losange : voir `nodeOverlayMetrics.js`. */
+  font-size: var(--action-count-font, 11px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Pas d'icône de remplacement sur un Écran sans image : elle mesurait 2,6 px
+   à 11 % de zoom — donc vue à aucune échelle utile — et désignait une absence
+   là où il n'y en a pas, le format rendant l'image facultative. C'est la carte
+   elle-même, repeinte en `--graph-card-bg`, qui porte désormais le nœud. */
+
+/* Le nom se pose sous la prise du bas, pas à distance fixe de la carte : la
+   prise grandit avec le zoom, et à 350 % elle couvrait le nom. `--port-overhang`
+   est ce qu'elle déborde de la carte, en pixels écran, publié par la couche. */
+.advanced-node-overlay__label {
+  position: absolute;
+  top: calc(100% + var(--port-overhang, 0px) + 4px);
+  left: 50%;
+  width: var(--node-label-width, 112px);
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.advanced-node-overlay.is-dimmed {
+  opacity: .12;
+}
+
+.advanced-node-overlay.is-entry .advanced-node-overlay__label {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.advanced-node-overlay__badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  max-width: calc(100% - 10px);
+  overflow: hidden;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.advanced-node-overlay__badge.is-entry {
+  border: 1px solid var(--accent-border);
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  color: var(--accent-text);
+}
+
+.advanced-node-overlay__badge.is-warning {
+  border: 1px solid var(--warning-border);
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  color: var(--warning);
+}
+
+.advanced-node-overlay__selection {
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--accent);
+  border-radius: 11px;
+  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+}
+
+/* Le contour de sélection d'une Action suit son losange. Un carré tourné d'un
+   quart de tour a ses sommets au milieu des côtés de sa boîte : c'est
+   exactement la silhouette du nœud. Les 70,71 % sont le rapport d'un carré
+   inscrit de la sorte — 1/√2 — et les 12 px poussent chaque arête de 6 px vers
+   l'extérieur, le même retrait que sur une carte. */
+.advanced-node-overlay--action .advanced-node-overlay__selection {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: calc(70.71% + 12px);
+  height: calc(70.71% + 12px);
+  border-radius: 5px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.advanced-node-overlay__ports {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+.advanced-node-overlay__ports button {
+  position: absolute;
+  width: var(--link-handle-size, 22px);
+  height: var(--link-handle-size, 22px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: transparent;
+  cursor: crosshair;
+  touch-action: none;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+
+.advanced-node-overlay__ports button svg { display: none; }
+
+/* La pastille visible, repeinte par-dessus celle du moteur : même couleur,
+ * même place, mais jamais sous une taille lisible (`portDotPx`). Le liseré de
+ * fond la détache des liens qui passent dessous. */
+.advanced-node-overlay__ports button::before {
+  content: '';
+  width: var(--port-dot-size, 9px);
+  height: var(--port-dot-size, 9px);
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--port-dot-color, var(--text-secondary));
+  box-shadow: 0 0 0 1.5px var(--bg0);
+}
+
+.advanced-node-overlay__ports button.is-stage-home { --port-dot-color: var(--info); }
+
+.advanced-node-overlay__ports button.is-add::before {
+  background: var(--bg0);
+  border: 1.5px solid var(--port-dot-color, var(--text-secondary));
+}
+
+.advanced-node-overlay__ports button.is-inactive::before { opacity: 0.5; }
+
+/* Poignée révélée sous 30 % : taille fixe, posée hors de la carte. */
+.advanced-node-overlay__ports button.is-revealed {
+  width: var(--revealed-handle-size, 16px);
+  height: var(--revealed-handle-size, 16px);
+}
+
+.advanced-node-overlay__ports button.is-revealed::before {
+  width: var(--revealed-dot-size, 10px);
+  height: var(--revealed-dot-size, 10px);
+}
+
+/* La position d'une poignée vient du moteur, en pixels écran relatifs au centre
+ * de la carte : c'est la même géométrie que la pastille peinte et que
+ * l'extrémité du lien qui s'y raccorde. Les règles qui la calculaient ici
+ * s'appuyaient sur `--port-inset`, jamais déclarée : `calc()` était invalide,
+ * la déclaration tombait, et les poignées se posaient au coin supérieur gauche
+ * de la carte au lieu d'être sur les prises. */
+
+.advanced-node-overlay__ports button.is-inactive {
+  cursor: help;
+}
+
+.advanced-node-overlay__ports button:hover,
+.advanced-node-overlay__ports button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.advanced-node-overlay__ports svg { width: 13px; height: 13px; }
+
+.advanced-link-draft {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.advanced-link-draft line {
+  stroke: var(--accent-2);
+  stroke-width: 2.6;
+  stroke-dasharray: 6 4;
+}
+
+/* Le cadre de la cible visée. Il est peint pendant le tirage, et non après :
+   sans lui, on relâchait sans savoir ce qu'on allait toucher. Le refus se
+   montre du même geste — un Écran se raccorde à une Action, et réciproquement. */
+.advanced-link-draft rect {
+  fill: none;
+  stroke: var(--accent-2-text);
+  stroke-width: 2;
+}
+
+.advanced-link-draft rect[data-reach='valid'] {
+  fill: color-mix(in srgb, var(--accent-2) 14%, transparent);
+}
+
+.advanced-link-draft rect[data-reach='invalid'] {
+  stroke: var(--warning);
+  stroke-dasharray: 4 3;
+}
+
+/* Repères de la vue éloignée (planche 3b). Ils sont en **pixels écran**, donc
+ * de taille constante à tous les zooms : c'est toute la différence avec une
+ * largeur Cytoscape, qui est une unité du graphe et fond avec lui. */
+.advanced-landmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  will-change: transform;
+}
+
+.advanced-landmark i {
+  display: block;
+  border-radius: 999px;
+}
+
+.advanced-landmark--entry i {
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.advanced-landmark--warning i {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 22%, transparent);
+}
+
+.advanced-landmark--selected i {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--focus-ring);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.advanced-landmark--hub i {
+  width: 11px;
+  height: 11px;
+  background: var(--text-secondary);
+}
+
+/* Le nom d'un repère porte le fond du canevas. Sous 3 %, les nœuds restent
+   peints en aplats serrés : posé à nu sur cette trame, le nom ne se lisait
+   plus. */
+/* La place du nom est tranchée par `farLandmarks`, qui la partage avec la
+   capture de recette : dessous, dessus, à droite ou à gauche de la marque, à
+   l'écart qu'il a calculé. La feuille de style ne fait que l'appliquer. */
+.advanced-landmark__tag,
+.advanced-landmark__name {
+  position: absolute;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  font-size: 13px;
+  line-height: 16px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.advanced-landmark__tag.is-below,
+.advanced-landmark__name.is-below {
+  top: calc(50% + var(--landmark-name-offset));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.advanced-landmark__name.is-above {
+  bottom: calc(50% + var(--landmark-name-offset));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.advanced-landmark__name.is-right {
+  top: 50%;
+  left: calc(50% + var(--landmark-name-offset));
+  transform: translateY(-50%);
+}
+
+.advanced-landmark__name.is-left {
+  top: 50%;
+  right: calc(50% + var(--landmark-name-offset));
+  transform: translateY(-50%);
+}
+
+/* La marque reçoit le pointeur : son infobulle nomme le nœud même quand son
+   nom n'a pas trouvé de place, et un clic le sélectionne. Au-dessus du canvas,
+   elle n'est plus masquée par les liens qui la traversent. */
+.advanced-landmark i,
+.advanced-landmark__tag,
+.advanced-landmark__name {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.advanced-landmark--entry .advanced-landmark__tag {
+  color: var(--accent-text);
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+/* Une marque regroupée représente plusieurs nœuds à corriger voisins : elle
+   porte leur nombre, au centre de l'anneau, et pas leur nom. Sans ce
+   regroupement, un pack lourdement diagnostiqué peignait un anneau et un nom
+   par nœud — 508 paires de noms qui se recouvrent dès 795 nœuds. */
+/* Les étiquettes des carrefours rangées dans la marge du graphe, et le trait
+   qui les relie à leur point. La place est tranchée par `calloutLayout`. */
+.advanced-landmark-callouts {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.advanced-landmark-callouts line {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+  stroke-opacity: .55;
+}
+
+.advanced-landmark-callout {
+  position: absolute;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.advanced-landmark-callout:hover { color: var(--text); }
+
+.advanced-landmark--warning.is-grouped i {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+  background: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.advanced-landmark__count {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.advanced-landmark--warning .advanced-landmark__name { color: var(--warning); }
+.advanced-landmark--selected .advanced-landmark__name { color: var(--accent-text); }
+.advanced-landmark--hub .advanced-landmark__name { color: var(--text-secondary); font-weight: 600; }
+
+.advanced-graph-zoom {
+  display: grid;
+}
+
+.advanced-graph-zoom button,
+.advanced-graph-zoom output {
+  min-height: 32px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.advanced-graph-zoom button { cursor: pointer; font-size: 18px; }
+.advanced-graph-zoom button:hover { background: var(--bg3); color: var(--text); }
+.advanced-graph-zoom button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -3px; }
+.advanced-graph-zoom__fit { border-bottom: 0 !important; font-size: 15px !important; }
+.advanced-graph-zoom > button:first-child { border-radius: 7px 7px 0 0; }
+.advanced-graph-camera > :last-child > button:last-child,
+.advanced-graph-camera > :last-child > .tooltip-wrap:last-child > button,
+.advanced-graph-camera > :last-child > .advanced-layout-control:last-child > .advanced-layout-control__trigger {
+  border-radius: 0 0 7px 7px;
+}
+
+/* Les commandes de caméra : le zoom, puis le pas-à-pas, en **un seul bloc**.
+   Tout ce qui s'y trouve déplace le regard sans toucher au document, et rien
+   d'autre sur la surface ne fait cela. Le cadre, le fond et l'arrondi sont
+   portés ici plutôt que par chaque groupe : les deux restent des groupes
+   distincts pour les lecteurs d'écran, mais se voient comme une seule pièce.
+   La colonne garde sa largeur d'origine : les deux flèches s'empilent plutôt
+   que de la faire grossir, et chacune garde ainsi toute la largeur comme
+   cible de clic. */
+.advanced-graph-camera {
+  position: absolute;
+  z-index: 14;
+  top: 40px;
+  left: 12px;
+  width: 38px;
+  display: flex;
+  flex-direction: column;
+  /* Pas de rognage : les replis du rangement se déplient hors de la colonne.
+     Ce sont les commandes du haut et du bas qui épousent l'arrondi. */
+  overflow: visible;
+  border: 1px solid var(--borderLt);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
+}
+
+.advanced-graph-camera--joined {
+  top: 49px;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.advanced-graph-camera--joined .advanced-graph-zoom > button:first-child {
+  border-radius: 0;
+}
+
+/* Les deux pas suivent la colonne : chacun sur sa ligne, pleine largeur.
+   Les chevrons gardent leur sens — précédent et suivant, pas haut et bas —
+   et leurs infobulles le disent. */
+.advanced-graph-steps {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+/* Le Tooltip enveloppe chaque bouton : sans cela son conteneur s'intercale
+   dans la colonne et le bouton cesse d'en occuper toute la largeur. */
+.advanced-graph-steps .tooltip-wrap { display: block; }
+
+.advanced-graph-steps button {
+  width: 100%;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.advanced-graph-steps .tooltip-wrap + .tooltip-wrap button {
+  border-top: 1px solid var(--border);
+}
+
+.advanced-graph-steps button:hover { background: var(--bg3); color: var(--text); }
+.advanced-graph-steps button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -3px; }
+
+/* Une commande impossible reste **lisible et expliquée** : son infobulle dit
+   pourquoi, au lieu de la faire disparaître sans raison. */
+.advanced-graph-steps button[aria-disabled='true'] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.advanced-graph-steps button[aria-disabled='true']:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* Ranger et la vue d'ensemble, en bas de la colonne, séparés des commandes
+   de caméra par un trait plus marqué : ce sont des réglages de la surface,
+   et Ranger modifie le document. */
+.advanced-graph-tools {
+  display: grid;
+  border-top: 2px solid var(--border);
+}
+
+.advanced-graph-tools > * + * { border-top: 1px solid var(--border); }
+
+.advanced-layout-control__trigger,
+.advanced-graph-tools__overview {
+  width: 100%;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.advanced-layout-control__trigger svg,
+.advanced-graph-tools__overview svg { width: 16px; height: 16px; }
+
+.advanced-layout-control__trigger:hover:not(:disabled),
+.advanced-graph-tools__overview:hover { background: var(--bg3); color: var(--text); }
+
+.advanced-layout-control__trigger:disabled { opacity: .45; cursor: default; }
+
+.advanced-layout-control__trigger:focus-visible,
+.advanced-graph-tools__overview:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+/* Enfoncé tant que la vue d'ensemble est ouverte : le même léger contraste
+   que la vue choisie du gestionnaire de médias, dans son violet. L'orange est
+   réservé à ce qui désigne un nœud — la racine, la sélection. */
+.advanced-graph-tools__overview.is-on {
+  background: color-mix(in srgb, var(--accent-2) 14%, var(--control-bg));
+  color: var(--accent-2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 36%, transparent);
+}
+.advanced-graph-tools__overview.is-on:hover { color: var(--accent-2); }
+
+.advanced-layout-control { position: relative; }
+
+/* Les replis se déplient à droite de la colonne, au survol du groupe entier,
+   bouton compris. Le retrait gauche est une passerelle transparente : le
+   pointeur traverse l'écart sans quitter le groupe, donc sans les perdre.
+   `focus-within` fait la même chose au clavier — masqués, ils ne seraient pas
+   atteignables par tabulation. */
+.advanced-layout-control__folds {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  display: none;
+  gap: 3px;
+  padding-left: 8px;
+  transform: translateY(-50%);
+}
+
+.advanced-layout-control:hover .advanced-layout-control__folds,
+.advanced-layout-control:focus-within .advanced-layout-control__folds {
+  display: flex;
+}
+
+.advanced-layout-control__fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.advanced-layout-control__fold:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent-text);
+}
+
+.advanced-layout-control__fold:disabled { opacity: .5; cursor: default; }
+.advanced-layout-control__fold svg { width: 13px; height: 13px; }
+
+/* Le refus d'un rangement : le document est resté intact, et le dire vaut
+   mieux qu'un bouton sans effet. */
+.advanced-layout-control__warning {
+  position: absolute;
+  top: 100%;
+  left: calc(100% + 8px);
+  width: 220px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--control-bg);
+  color: var(--warning-text);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.advanced-graph-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100% - 270px);
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg1) 92%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.advanced-graph-legend__filter { position: relative; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+.advanced-graph-legend__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.advanced-graph-legend__checkbox {
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: 0 0 12px;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 25%, var(--border));
+  border-radius: 3px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-secondary) 72%, var(--bg1));
+  transition: border-color var(--dur-fast), background var(--dur-fast), color var(--dur-fast);
+}
+.advanced-graph-legend__checkbox svg { width: 10px; height: 10px; stroke-width: 2.5; }
+.advanced-graph-legend__filter:hover .advanced-graph-legend__checkbox {
+  border-color: color-mix(in srgb, var(--text-secondary) 58%, var(--border));
+}
+.advanced-graph-legend__input:checked + .advanced-graph-legend__checkbox {
+  border-color: color-mix(in srgb, var(--text-secondary) 32%, var(--border));
+  background: color-mix(in srgb, var(--text-secondary) 9%, transparent);
+}
+.advanced-graph-legend__input:focus-visible + .advanced-graph-legend__checkbox {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+.advanced-graph-legend__filter.is-disabled { opacity: 0.55; }
+.advanced-graph-legend i { width: 16px; height: 0; border-top: 2px solid var(--muted); }
+/* La légende montre le trait **au repos**, puisque c'est ce que la surface
+   peint. Elle est restée sur `--info` quand le retour a pris sa teinte de
+   retrait, et annonçait donc une couleur qui n'existait plus que sous le
+   pointeur. */
+.advanced-graph-legend .is-return { border-top-style: dashed; border-color: var(--graph-link-return); }
+.advanced-graph-legend .is-device-return { border-top-style: dotted; border-color: var(--graph-link-return); opacity: .6; }
+.advanced-graph-legend .is-random { border-top-style: dotted; border-color: var(--muted); }
+
+.advanced-graph-presentation button {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.advanced-graph-presentation {
+  position: absolute;
+  z-index: 12;
+  top: 14px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 280px);
+  padding: 7px 10px;
+  transform: translateX(-50%);
+  border: 1px solid var(--accent-2-border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
+  color: var(--accent-2-text);
+  font-size: 11px;
+}
+
+.advanced-graph-presentation label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.advanced-graph-overview {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 214px;
+  overflow: hidden;
+  border: 1px solid var(--graph-overview-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
+}
+
+.advanced-graph-overview__title {
+  height: 26px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.advanced-graph-overview__close {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.advanced-graph-overview__close svg { width: 12px; height: 12px; }
+.advanced-graph-overview__close:hover { background: var(--bg3); color: var(--text); }
+.advanced-graph-overview__close:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+.advanced-graph-overview > svg {
+  display: block;
+  width: 100%;
+  height: 104px;
+  background: var(--bg0);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.advanced-graph-overview > svg:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.advanced-graph-overview > svg rect { fill: var(--muted); opacity: .72; }
+.advanced-graph-overview > svg rect.is-entry { fill: var(--accent); opacity: 1; }
+.advanced-graph-overview > svg rect.is-warning { fill: var(--warning); opacity: 1; }
+.advanced-graph-overview > svg rect.is-hub { fill: var(--text-secondary); opacity: 1; }
+.advanced-graph-overview > svg .advanced-graph-overview__camera {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 1;
+}
+
+@media (max-width: 980px) {
+  .advanced-graph-overview { display: none; }
+  .advanced-graph-legend { max-width: calc(100% - 28px); }
+}
+
+/* Dépôt d'un média venu de la médiathèque. Le canvas ne peut pas éclairer
+ * l'Écran visé — il n'expose aucun nœud au DOM —, donc la scène entière marque
+ * qu'elle accepte, et le nom de l'Écran est porté par le fantôme de glisser. */
+.advanced-canvas__stage.is-drop-over::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+}
+
+.advanced-canvas__status {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 62%);
+  font-size: 12px;
+}
+
+.advanced-canvas__status--warning {
+  background: rgb(179 38 30 / 82%);
+}
+
+/* ── Recherche ─────────────────────────────────────────────────────────── */
+
+.advanced-search {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border-1, #2a2f35);
+}
+
+.advanced-search__scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.advanced-search__scope {
+  padding: 3px 8px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.advanced-search__scope[aria-pressed="true"] {
+  background: var(--accent-1, #22303c);
+  border-color: var(--accent-2, #3a4753);
+}
+
+.advanced-search__count {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.advanced-search__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.advanced-search__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.advanced-search__item:hover {
+  background: rgb(255 255 255 / 6%);
+}
+
+/* Le focus de la liste est **visible** : c'est le chemin clavier principal. */
+.advanced-search__item[data-focused="true"] {
+  background: var(--accent-1, #22303c);
+  outline: 2px solid var(--accent-3, #ffb300);
+  outline-offset: -2px;
+}
+
+/* Écran et Action se distinguent par leur dessin, pas par la seule couleur.
+   Ce dessin vient de la table commune aux deux éditeurs — un carré
+   arrondi et un losange, les formes mêmes que le canvas dessine à côté. La
+   pastille de texte qui portait un « É » ou un « A » a disparu ; cette règle ne
+   fait plus que donner sa taille au dessin, dans la boîte de 18 px que la
+   pastille occupait, pour que la hauteur des lignes ne bouge pas. */
+.advanced-search__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.advanced-search__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.advanced-search__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.advanced-search__fallback,
+.advanced-inspector__fallback {
+  opacity: 0.6;
+}
+
+.advanced-search__flag {
+  margin-left: auto;
+  color: #f28b82;
+}
+
+/* ── Inspecteur ────────────────────────────────────────────────────────── */
+
+.advanced-inspector {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-left: 1px solid var(--border-1, #2a2f35);
+  font-size: 13px;
+}
+
+.advanced-inspector__header {
+  margin-bottom: 10px;
+}
+
+.advanced-inspector__kind {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.advanced-inspector__title {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.advanced-inspector__row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+  padding: 2px 0;
+  align-items: baseline;
+}
+
+.advanced-inspector__label {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.advanced-inspector__cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Une absence, un `null` et une valeur ne se ressemblent pas : la distinction
+ * doit rester lisible à l'œil, pas seulement dans le DTO. */
+.advanced-inspector__absent {
+  font-style: italic;
+  opacity: 0.55;
+}
+
+.advanced-inspector__absent[data-presence="null"] {
+  text-decoration: underline dotted;
+}
+
+.advanced-inspector__warning {
+  color: #f28b82;
+  font-style: normal;
+}
+
+.advanced-inspector__controls {
+  margin: 10px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border-1, #2a2f35);
+  border-radius: 4px;
+}
+
+.advanced-inspector__controls legend {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.advanced-inspector__options ol {
+  margin: 4px 0;
+  padding-left: 22px;
+}
+
+.advanced-inspector__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #8ab4f8;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.advanced-inspector__link:disabled {
+  color: inherit;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.advanced-inspector__diagnostics ul {
+  margin: 4px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.advanced-inspector__diagnostics li {
+  margin-bottom: 8px;
+  padding-left: 8px;
+  border-left: 3px solid #f28b82;
+}
+
+.advanced-inspector__diagnostics li[data-family="import"] { border-left-color: #8ab4f8; }
+.advanced-inspector__diagnostics li[data-family="authoring"] { border-left-color: #fdd663; }
+
+.advanced-inspector__family {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.advanced-inspector__diagnostics p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.advanced-inspector h3 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.advanced-inspector__empty {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* Les feuilles locales de la liste sont chargées avant cette feuille par le
+ * graphe d'import Vite. Ces règles de convergence restent donc ici, après les
+ * anciens socles structurels, afin que le rendu final soit bien celui de la
+ * maquette et non l'ancien prototype. */
+.advanced-search__scopes { gap: 5px; }
+.advanced-search__scope {
+  min-height: 25px;
+  padding: 4px 9px;
+  border-color: var(--border);
+  color: var(--text-secondary);
+  font: 500 11px/1 var(--font-sans);
+}
+.advanced-search__scope[aria-pressed='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+  color: var(--accent-text);
+}
+.advanced-search__scope[data-warning='true'] {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.advanced-search__count {
+  padding: 0 14px 10px;
+  color: var(--muted);
+  font: 10px/1.4 var(--font-mono);
+  opacity: 1;
+}
+.advanced-search__item {
+  min-height: 46px;
+  gap: 9px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+}
+.advanced-search__item:hover { background: var(--bg2); }
+.advanced-search__item[data-focused='true'] {
+  background: var(--accent-dim);
+  outline: 0;
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--accent-border);
+}
+.advanced-search__icon {
+  width: 30px;
+  height: 22px;
+  border: 1px solid var(--borderLt);
+  border-radius: 4px;
+  background-color: var(--bg2);
+}
+.advanced-search__icon svg { width: 14px; height: 14px; }
+.advanced-search__fallback { opacity: 1; }

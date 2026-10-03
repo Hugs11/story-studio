@@ -151,7 +151,6 @@ export const StoryEditor = memo(function StoryEditor({
                 {
                   key: 'generate-text',
                   label: 'Générer une image-titre',
-                  icon: '✦',
                   onClick: handleRegenerate,
                   title: "Créer une image-titre à partir du nom de l'histoire",
                 },
@@ -166,29 +165,31 @@ export const StoryEditor = memo(function StoryEditor({
               Son
               <span className="media-col-subtitle">Audio de sélection puis lecture de l'histoire</span>
             </div>
-            <AudioField
-              label="Audio de sélection"
-              description={explicitSilentSelection
-                ? 'Optionnel — ce titre de sélection peut rester silencieux'
-                : "Énoncé quand l'enfant parcourt les histoires"}
-              file={node.itemAudio}
-              required={selectionAudioRequired}
-              emptyBadge={explicitSilentSelection ? 'Écran silencieux' : null}
-              ttsTextSuggestion={node.name || ''}
-              ttsFilenameHint={`selection-${node.name || 'histoire'}`}
-              xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
-              onPick={(f) => onUpdate(createStorySelectionAudioUpdate(f))}
-              onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
-            />
-            <AudioField
-              label="Histoire complète"
-              description="Écoutée quand l'enfant valide son choix"
-              file={node.audio}
-              ttsFilenameHint={`histoire-complete-${node.name || 'histoire'}`}
-              xttsTarget={{ kind: 'story', entryId: node.id, field: 'audio' }}
-              onPick={handleStoryAudioPick}
-              onClear={() => onUpdate({ audio: null })}
-            />
+            <div className="media-col-stack">
+              <AudioField
+                label="Audio de sélection"
+                description={explicitSilentSelection
+                  ? 'Optionnel — ce titre de sélection peut rester silencieux'
+                  : "Énoncé quand l'enfant parcourt les histoires"}
+                file={node.itemAudio}
+                required={selectionAudioRequired}
+                emptyBadge={explicitSilentSelection ? 'Écran silencieux' : null}
+                ttsTextSuggestion={node.name || ''}
+                ttsFilenameHint={`selection-${node.name || 'histoire'}`}
+                xttsTarget={{ kind: 'story', entryId: node.id, field: 'itemAudio' }}
+                onPick={(f) => onUpdate(createStorySelectionAudioUpdate(f))}
+                onClear={() => onUpdate(createStorySelectionAudioUpdate(null))}
+              />
+              <AudioField
+                label="Histoire complète"
+                description="Écoutée quand l'enfant valide son choix"
+                file={node.audio}
+                ttsFilenameHint={`histoire-complete-${node.name || 'histoire'}`}
+                xttsTarget={{ kind: 'story', entryId: node.id, field: 'audio' }}
+                onPick={handleStoryAudioPick}
+                onClear={() => onUpdate({ audio: null })}
+              />
+            </div>
           </div>
         </div>
 
@@ -224,7 +225,6 @@ export const StoryEditor = memo(function StoryEditor({
             type="button"
             onClick={onDelete}
             aria-label="Supprimer cette histoire"
-            title="Supprimer cette histoire"
           >
             <Trash2 className="card-danger-icon" />
           </button>

@@ -1,25 +1,34 @@
-use std::collections::HashSet;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use uuid::Uuid;
 
+use super::observed_gates::{
+    gates_header, observe_archive_review, observe_document_gates, refusal_from_gates,
+    GateObservation, GatePolicy,
+};
+use super::pack_zip::{local_zip_path, write_pack_zip, ArchiveAsset, ArchiveContents};
 use super::{
-    build_story_document, prepare_native_pack_assets_report_with_cancel, CanonicalProject,
-    NativeAssetPreparationReport, NativeGenerationWarning, StoryDocument,
+    build_story_document, pack_identity_refusal, prepare_native_pack_assets_report_with_cancel,
+    CanonicalProject, NativeAssetPreparationReport, NativeGenerationWarning, Presence,
+    StoryDocument,
 };
 use crate::domain::project::Project;
 use crate::services::project_files::validate_existing_file_path;
 use crate::support::paths::path_for_frontend;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativePackGenerationResult {
     pub(crate) zip_path: String,
     pub(crate) warnings: Vec<NativeGenerationWarning>,
+    /// Ce que les trois contrôles de l'éditeur avancé ont constaté, **sans
+    /// refuser**. Une observation ne conditionne rien : le pack est
+    /// publié qu'elle signale un motif de refus ou non.
+    pub(crate) gate_observations: Vec<GateObservation>,
 }
 
 pub(crate) fn generate_native_pack_v1_with_cancel(
@@ -30,6 +39,9 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
 ) -> Result<NativePackGenerationResult, String> {
     let output_dir = PathBuf::from(output_folder);
     preflight_output_directory(&output_dir)?;
+    // Avant toute conversion : une identité absente ou illisible ne donnera
+    // jamais un pack livrable, inutile d'en faire payer la préparation.
+    libre_pack_identity(&project.pack_uuid)?;
     let asset_report = prepare_native_pack_assets_report_with_cancel(project, emit, should_cancel)?;
 
     let result = (|| {
@@ -38,15 +50,24 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
         check_cancelled(should_cancel)?;
         let local_output_dir = PathBuf::from(&asset_report.stage_dir).join("pack-export");
         emit("📦 Assemblage du ZIP dans le cache local...");
-        let local_zip_path = write_native_pack_zip(&asset_report, &story, &local_output_dir)?;
+        let written = write_native_pack_archive(&asset_report, &story, &local_output_dir)?;
         check_cancelled(should_cancel)?;
+
+        // Les trois contrôles d'archive, **bloquants**. Ils sont placés entre
+        // l'archive locale complète et sa publication : c'est le seul endroit
+        // où les trois ont leur objet sous la main, et il est antérieur au
+        // point de publication unique. Un refus coûte donc du temps de
+        // conversion, jamais un pack abîmé livré.
+        let observations = run_free_chain_gates(&asset_report, &written, emit)?;
+
         emit("📤 Transfert du ZIP vers le dossier choisi...");
         let zip_path = transfer_completed_zip(
-            &local_zip_path,
+            &written.zip_path,
             &output_dir,
             &asset_report.project.name,
             should_cancel,
-        )?;
+        )
+        .map_err(TransferError::into_message)?;
         emit(&format!(
             "✅ ZIP natif v1 genere : {}",
             zip_path.to_string_lossy()
@@ -54,6 +75,7 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
         Ok(NativePackGenerationResult {
             zip_path: path_for_frontend(&zip_path),
             warnings: asset_report.warnings.clone(),
+            gate_observations: observations,
         })
     })();
 
@@ -61,84 +83,173 @@ pub(crate) fn generate_native_pack_v1_with_cancel(
     result
 }
 
+/// Exécute les trois contrôles d'archive sur ce que la chaîne Libre vient
+/// d'écrire, les journalise, et refuse ce que la politique lui dit de refuser.
+///
+/// La politique n'est pas décidée ici : `GatePolicy::ENFORCED` la porte, en un
+/// seul endroit, et cette fonction ne fait que l'appliquer. Un refus arrive
+/// **avant** `transfer_completed_zip`, donc aucune archive n'est publiée.
+fn run_free_chain_gates(
+    asset_report: &NativeAssetPreparationReport,
+    written: &WrittenNativePack,
+    emit: &dyn Fn(&str),
+) -> Result<Vec<GateObservation>, String> {
+    let policy = GatePolicy::ENFORCED;
+    emit(gates_header(policy));
+    let mut observations = observe_document_gates(
+        &written.story_json,
+        Some(asset_report.pack_uuid.as_str()),
+        policy,
+    );
+
+    let staged_assets = asset_report
+        .assets
+        .iter()
+        .map(|asset| {
+            (
+                asset.staged_asset_name.clone(),
+                asset.staged_asset_path.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
+    observations.push(observe_archive_review(
+        &written.zip_path,
+        &written.story_json,
+        &staged_assets,
+        written.has_thumbnail,
+        policy,
+    ));
+
+    for observation in &observations {
+        emit(&observation.log_line());
+    }
+    match refusal_from_gates(&observations) {
+        Some(refusal) => {
+            emit(&refusal);
+            Err(refusal)
+        }
+        None => Ok(observations),
+    }
+}
+
 fn check_cancelled(should_cancel: &(dyn Fn() -> bool + Sync)) -> Result<(), String> {
     if should_cancel() {
-        Err("Génération annulée.".to_string())
+        Err(CANCELLED_MESSAGE.to_string())
     } else {
         Ok(())
     }
 }
 
-pub(crate) fn write_native_pack_zip(
+/// Le message d'annulation du mode Libre, dont son appelant dépend.
+pub(super) const CANCELLED_MESSAGE: &str = "Génération annulée.";
+
+/// L'issue d'un transfert, **typée à la source**.
+///
+/// Le transfert est le seul endroit de la publication où deux issues très
+/// différentes se ressemblent : une annulation demandée par l'auteur et une
+/// panne d'écriture réelle interrompent toutes deux la copie, et toutes deux
+/// laissent le dossier de destination sans archive. Les distinguer par leur
+/// texte reviendrait à reconstruire un type depuis un message, ce qu'il faut
+/// éviter. Elles sont donc distinctes **avant** de remonter, et chaque appelant
+/// les traduit dans son propre vocabulaire.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum TransferError {
+    /// L'auteur a demandé l'arrêt. Ce n'est pas une panne.
+    Cancelled,
+    /// Une écriture, une lecture ou un renommage a réellement échoué.
+    Write { path: String, message: String },
+}
+
+impl TransferError {
+    fn write(path: &Path, message: impl std::fmt::Display) -> Self {
+        Self::Write {
+            path: path.to_string_lossy().to_string(),
+            message: message.to_string(),
+        }
+    }
+
+    /// Le vocabulaire du mode Libre, qui ne connaît que des chaînes.
+    ///
+    /// L'annulation y garde **exactement** le message que son appelant attend :
+    /// `generate_native_pack_v1_with_cancel` le propage tel quel, et le typage
+    /// ajouté ici ne change pas un octet de ce que le mode Libre rapporte.
+    pub(super) fn into_message(self) -> String {
+        match self {
+            Self::Cancelled => CANCELLED_MESSAGE.to_string(),
+            Self::Write { message, .. } => message,
+        }
+    }
+}
+
+fn transfer_cancelled(should_cancel: &(dyn Fn() -> bool + Sync)) -> Result<(), TransferError> {
+    if should_cancel() {
+        Err(TransferError::Cancelled)
+    } else {
+        Ok(())
+    }
+}
+
+/// Ce que l'assemblage du ZIP local a réellement écrit.
+///
+/// Le chemin suffisait tant que personne ne relisait l'archive. La relecture en
+/// observation a besoin de deux choses de plus, et elle ne peut pas les
+/// recalculer sans cesser de contrôler ce qui a été écrit : le `story.json`
+/// **exact** qui est entré dans le ZIP, et la présence ou non d'une couverture.
+/// Les re-dériver reviendrait à comparer l'archive à une seconde opinion.
+#[derive(Debug, Clone)]
+pub(crate) struct WrittenNativePack {
+    pub(crate) zip_path: PathBuf,
+    pub(crate) story_json: String,
+    pub(crate) has_thumbnail: bool,
+}
+
+/// Assemble le ZIP local du mode Libre, et rend ce qu'il a écrit.
+///
+/// L'écriture elle-même appartient à `pack_zip`, partagée avec l'export avancé :
+/// même ordre d'entrées, même `assets/` plat, même sidecar de couverture. Ce
+/// writer garde ce qui lui est propre — la sérialisation `story.json` du pack
+/// Libre et la source de couverture d'un projet canonique.
+pub(crate) fn write_native_pack_archive(
     asset_report: &NativeAssetPreparationReport,
     story: &StoryDocument,
     output_dir: &Path,
-) -> Result<PathBuf, String> {
+) -> Result<WrittenNativePack, String> {
     let story_json = serialize_story_with_pack_uuid(story, &asset_report.pack_uuid)?;
+    let zip_path = local_zip_path(output_dir, &asset_report.project.name)
+        .map_err(|error| error.to_string())?;
 
-    fs::create_dir_all(output_dir).map_err(|e| {
-        format!(
-            "Impossible de préparer le dossier ZIP local '{}': {e}",
-            output_dir.display()
-        )
-    })?;
-    let zip_path = export_zip_path(output_dir, &asset_report.project.name);
+    let assets = asset_report
+        .assets
+        .iter()
+        .map(|asset| ArchiveAsset {
+            archive_name: asset.staged_asset_name.as_str(),
+            source_path: Path::new(&asset.staged_asset_path),
+        })
+        .collect();
 
-    let out_file = fs::File::create(&zip_path).map_err(|e| {
-        format!(
-            "Impossible de créer le ZIP local '{}': {e}",
-            zip_path.display()
-        )
-    })?;
-    let mut out_zip = zip::ZipWriter::new(out_file);
-    let opts = zip::write::SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
-
-    out_zip
-        .start_file("story.json", opts)
-        .map_err(|e| format!("Impossible d'ajouter story.json au ZIP local: {e}"))?;
-    out_zip
-        .write_all(story_json.as_bytes())
-        .map_err(|e| format!("Impossible d'écrire story.json dans le ZIP local: {e}"))?;
-
-    let mut written_assets = HashSet::new();
-    for asset in &asset_report.assets {
-        if !written_assets.insert(asset.staged_asset_name.clone()) {
-            continue;
+    let thumbnail_png = match thumbnail_source_path(&asset_report.project) {
+        Some(source) => {
+            let thumbnail = validate_existing_file_path(&source, "Thumbnail source")?;
+            Some(encode_thumbnail_png(&thumbnail)?)
         }
-        let asset_bytes = fs::read(&asset.staged_asset_path).map_err(|e| {
-            format!(
-                "Lecture asset stage impossible {} : {}",
-                asset.staged_asset_name, e
-            )
-        })?;
-        let zip_asset_name = format!("assets/{}", asset.staged_asset_name);
-        out_zip
-            .start_file(&zip_asset_name, opts)
-            .map_err(|e| format!("Impossible d'ajouter '{zip_asset_name}' au ZIP local: {e}"))?;
-        out_zip.write_all(&asset_bytes).map_err(|e| {
-            format!("Impossible d'écrire '{zip_asset_name}' dans le ZIP local: {e}")
-        })?;
-    }
+        None => None,
+    };
+    let has_thumbnail = thumbnail_png.is_some();
 
-    if let Some(thumbnail_source) = thumbnail_source_path(&asset_report.project) {
-        let thumbnail = validate_existing_file_path(&thumbnail_source, "Thumbnail source")?;
-        let bytes = encode_thumbnail_png(&thumbnail)?;
-        out_zip
-            .start_file("thumbnail.png", opts)
-            .map_err(|e| format!("Impossible d'ajouter thumbnail.png au ZIP local: {e}"))?;
-        out_zip
-            .write_all(&bytes)
-            .map_err(|e| format!("Impossible d'écrire thumbnail.png dans le ZIP local: {e}"))?;
-    }
-
-    out_zip.finish().map_err(|e| {
-        format!(
-            "Impossible de finaliser le ZIP local '{}': {e}",
-            zip_path.display()
-        )
-    })?;
-    Ok(zip_path)
+    write_pack_zip(
+        &ArchiveContents {
+            story_json: &story_json,
+            assets,
+            thumbnail_png,
+        },
+        &zip_path,
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(WrittenNativePack {
+        zip_path,
+        story_json,
+        has_thumbnail,
+    })
 }
 
 pub(super) fn preflight_output_directory(output_dir: &Path) -> Result<(), String> {
@@ -189,16 +300,25 @@ pub(super) fn preflight_output_directory(output_dir: &Path) -> Result<(), String
     })
 }
 
+/// Publie le ZIP local dans le dossier choisi par l'auteur.
+///
+/// C'est le **point de publication unique** des deux writers : le renommage
+/// `.partial → .zip` est le seul instant où une archive devient visible. Son
+/// issue est typée (`TransferError`) pour que l'annulation ne se confonde pas
+/// avec une panne d'écriture au moment de remonter.
 pub(super) fn transfer_completed_zip(
     local_zip_path: &Path,
     output_dir: &Path,
     project_name: &str,
     should_cancel: &(dyn Fn() -> bool + Sync),
-) -> Result<PathBuf, String> {
+) -> Result<PathBuf, TransferError> {
     fs::create_dir_all(output_dir).map_err(|e| {
-        format!(
-            "Impossible d'accéder au dossier de destination '{}': {e}",
-            output_dir.display()
+        TransferError::write(
+            output_dir,
+            format!(
+                "Impossible d'accéder au dossier de destination '{}': {e}",
+                output_dir.display()
+            ),
         )
     })?;
 
@@ -214,17 +334,23 @@ pub(super) fn transfer_completed_zip(
 
     let transfer_result = (|| {
         let mut source = fs::File::open(local_zip_path).map_err(|e| {
-            format!(
-                "Impossible de relire le ZIP local '{}': {e}",
-                local_zip_path.display()
+            TransferError::write(
+                local_zip_path,
+                format!(
+                    "Impossible de relire le ZIP local '{}': {e}",
+                    local_zip_path.display()
+                ),
             )
         })?;
         let expected_size = source
             .metadata()
             .map_err(|e| {
-                format!(
-                    "Impossible de contrôler la taille du ZIP local '{}': {e}",
-                    local_zip_path.display()
+                TransferError::write(
+                    local_zip_path,
+                    format!(
+                        "Impossible de contrôler la taille du ZIP local '{}': {e}",
+                        local_zip_path.display()
+                    ),
                 )
             })?
             .len();
@@ -233,53 +359,74 @@ pub(super) fn transfer_completed_zip(
             .create_new(true)
             .open(&partial_path)
             .map_err(|e| {
-                format!(
-                    "Impossible de créer le transfert temporaire '{}': {e}",
-                    partial_path.display()
+                TransferError::write(
+                    &partial_path,
+                    format!(
+                        "Impossible de créer le transfert temporaire '{}': {e}",
+                        partial_path.display()
+                    ),
                 )
             })?;
 
         let mut buffer = vec![0_u8; 1024 * 1024];
         let mut transferred_size = 0_u64;
         loop {
-            check_cancelled(should_cancel)?;
+            // L'annulation est relue à chaque bloc : elle peut donc tomber
+            // à l'entrée du transfert comme au milieu de la copie, et elle
+            // remonte typée dans les deux cas.
+            transfer_cancelled(should_cancel)?;
             let read = source.read(&mut buffer).map_err(|e| {
-                format!(
-                    "Impossible de lire le ZIP local pendant le transfert '{}': {e}",
-                    local_zip_path.display()
+                TransferError::write(
+                    local_zip_path,
+                    format!(
+                        "Impossible de lire le ZIP local pendant le transfert '{}': {e}",
+                        local_zip_path.display()
+                    ),
                 )
             })?;
             if read == 0 {
                 break;
             }
             partial.write_all(&buffer[..read]).map_err(|e| {
-                format!(
-                    "Impossible d'écrire le ZIP dans le dossier de destination '{}': {e}",
-                    output_dir.display()
+                TransferError::write(
+                    output_dir,
+                    format!(
+                        "Impossible d'écrire le ZIP dans le dossier de destination '{}': {e}",
+                        output_dir.display()
+                    ),
                 )
             })?;
             transferred_size += read as u64;
         }
         partial.flush().map_err(|e| {
-            format!(
-                "Impossible de terminer l'écriture du ZIP dans '{}': {e}",
-                output_dir.display()
+            TransferError::write(
+                output_dir,
+                format!(
+                    "Impossible de terminer l'écriture du ZIP dans '{}': {e}",
+                    output_dir.display()
+                ),
             )
         })?;
         drop(partial);
 
         let published_size = fs::metadata(&partial_path)
             .map_err(|e| {
-                format!(
-                    "Impossible de vérifier le transfert temporaire '{}': {e}",
-                    partial_path.display()
+                TransferError::write(
+                    &partial_path,
+                    format!(
+                        "Impossible de vérifier le transfert temporaire '{}': {e}",
+                        partial_path.display()
+                    ),
                 )
             })?
             .len();
         if transferred_size != expected_size || published_size != expected_size {
-            return Err(format!(
-                "Le transfert du ZIP vers '{}' est incomplet (attendu: {expected_size} octets, transféré: {transferred_size}, présent: {published_size}).",
-                output_dir.display()
+            return Err(TransferError::write(
+                output_dir,
+                format!(
+                    "Le transfert du ZIP vers '{}' est incomplet (attendu: {expected_size} octets, transféré: {transferred_size}, présent: {published_size}).",
+                    output_dir.display()
+                ),
             ));
         }
 
@@ -287,10 +434,13 @@ pub(super) fn transfer_completed_zip(
             final_path = export_zip_path(output_dir, project_name);
         }
         fs::rename(&partial_path, &final_path).map_err(|e| {
-            format!(
-                "Le ZIP a été transféré, mais son renommage final de '{}' vers '{}' a échoué: {e}",
-                partial_path.display(),
-                final_path.display()
+            TransferError::write(
+                &final_path,
+                format!(
+                    "Le ZIP a été transféré, mais son renommage final de '{}' vers '{}' a échoué: {e}",
+                    partial_path.display(),
+                    final_path.display()
+                ),
             )
         })?;
         Ok(final_path.clone())
@@ -301,12 +451,17 @@ pub(super) fn transfer_completed_zip(
             Ok(()) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(cleanup_error) => {
-                let transfer_error = transfer_result
-                    .err()
-                    .unwrap_or_else(|| "Transfert du ZIP impossible.".to_string());
-                return Err(format!(
-                    "{transfer_error} Le fichier incomplet '{}' n'a pas pu être supprimé: {cleanup_error}",
-                    partial_path.display()
+                // Le fichier incomplet est resté : c'est une panne d'écriture,
+                // quelle qu'ait été la cause de l'interruption. Elle **remplace**
+                // l'issue d'origine plutôt que de la déguiser, parce qu'un
+                // résidu dans le dossier de l'auteur est le fait le plus grave à
+                // rapporter — une annulation propre, elle, ne laisse rien.
+                return Err(TransferError::write(
+                    &partial_path,
+                    format!(
+                        "Le fichier incomplet '{}' n'a pas pu être supprimé après l'arrêt du transfert: {cleanup_error}",
+                        partial_path.display()
+                    ),
                 ));
             }
         }
@@ -315,22 +470,103 @@ pub(super) fn transfer_completed_zip(
     transfer_result
 }
 
-fn serialize_story_with_pack_uuid(
+/// L'identité du projet, telle que le pack Libre la portera.
+///
+/// Elle devient l'UUID de l'Écran d'entrée, que les passerelles réduisent à ses
+/// huit derniers caractères hexadécimaux pour nommer le pack sur l'appareil.
+/// Une graphie qu'elles lisent différemment, ou pas du tout, est refusée ici
+/// plutôt que livrée : elle ne serait pas le pack que l'auteur a choisi.
+pub(super) fn libre_pack_identity(pack_uuid: &str) -> Result<&str, String> {
+    let identity = pack_uuid.trim();
+    if identity.is_empty() {
+        return Err(
+            "Identité de pack absente : elle doit être choisie et persistée avant l'export."
+                .to_string(),
+        );
+    }
+    match pack_identity_refusal(identity) {
+        Some(refusal) => Err(format!(
+            "{refusal} Le corriger, ou en générer un nouveau, dans la fenêtre des métadonnées du pack."
+        )),
+        None => Ok(identity),
+    }
+}
+
+/// Écrit le `story.json` du pack Libre. `uuid` appartient au modèle : le writer
+/// le pose sur une copie du document au lieu de l'injecter dans la `Value`
+/// produite, ce qui le rendrait invisible à toute relecture.
+pub(super) fn serialize_story_with_pack_uuid(
     story: &StoryDocument,
     pack_uuid: &str,
 ) -> Result<String, String> {
-    let mut story_value = serde_json::to_value(story)
-        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
-    let uuid = if pack_uuid.trim().is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        pack_uuid.trim().to_string()
-    };
-    if let Some(object) = story_value.as_object_mut() {
-        object.insert("uuid".to_string(), serde_json::Value::String(uuid));
+    let mut story = story.clone();
+    let pack_uuid = pack_uuid.trim();
+    if !pack_uuid.is_empty() {
+        story.uuid = Presence::Value(libre_pack_identity(pack_uuid)?.to_string());
+    } else if story
+        .uuid
+        .as_deref()
+        .is_none_or(|uuid| uuid.trim().is_empty())
+    {
+        return Err(
+            "Identité de pack absente : elle doit être choisie et persistée avant l'export."
+                .to_string(),
+        );
     }
+    restore_required_media_keys(&mut story);
+    refuse_incomplete_control_settings(&story)?;
+    let story_value = serde_json::to_value(&story)
+        .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))?;
     serde_json::to_string_pretty(&story_value)
         .map_err(|e| format!("Impossible de serialiser story.json natif : {}", e))
+}
+
+/// Rétablit `audio` et `image` sur la **copie de sortie** du pack Libre.
+///
+/// Un Stage importé peut omettre ces clés ; `Presence::Absent` les fait alors
+/// disparaître du pack, alors qu'elles y étaient toujours émises à `null`.
+/// STUdio figé déréférence `imageNode.getAsString()` / `audioNode.getAsString()`
+/// dès que la clé manque — `Optional.ofNullable(node).filter(JsonElement::isJsonNull).isEmpty()`
+/// est vrai pour une clé absente comme pour une valeur non nulle
+/// (`ArchiveStoryPackReader.java:200-210`) — et lève une `NullPointerException`,
+/// que la même clé à `null` évite. Le document d'auteur, lui, conserve
+/// l'omission : absent et `null` ne doivent pas être confondus, et la sortie
+/// standard avancée a ses propres règles de préparation.
+fn restore_required_media_keys(story: &mut StoryDocument) {
+    for stage in &mut story.stage_nodes {
+        if stage.audio.is_absent() {
+            stage.audio = Presence::Null;
+        }
+        if stage.image.is_absent() {
+            stage.image = Presence::Null;
+        }
+    }
+}
+
+/// Refuse d'écrire un pack dont un Stage ne porte pas les cinq contrôles
+/// explicites.
+///
+/// L'entrée conserve un `controlSettings` incomplet dans le document, mais
+/// l'objet doit être complet en sortie et on ne complète pas les valeurs
+/// manquantes à la place de l'auteur — les deux passerelles figées lisent d'ailleurs les
+/// cinq membres sans garde (`ArchiveStoryPackReader.java:188-191`). Le writer
+/// s'arrête donc avec un message localisé plutôt que d'inventer un contrôle ou
+/// de produire un pack que STUdio ne peut pas lire.
+fn refuse_incomplete_control_settings(story: &StoryDocument) -> Result<(), String> {
+    let incomplete = story
+        .stage_nodes
+        .iter()
+        .filter(|stage| !stage.control_settings.is_complete())
+        .map(|stage| format!("'{}' ({})", stage.label(), stage.uuid))
+        .collect::<Vec<_>>();
+    if incomplete.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "Contrôles incomplets : {} n'ont pas leurs cinq valeurs (wheel, ok, home, pause, autoplay). \
+         Renseignez-les explicitement avant de générer le pack : elles ne peuvent pas être déduites.",
+        incomplete.join(", ")
+    ))
 }
 
 fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {
@@ -340,7 +576,12 @@ fn thumbnail_source_path(project: &CanonicalProject) -> Option<String> {
         .or_else(|| project.root_image.clone())
 }
 
-fn encode_thumbnail_png(thumbnail: &Path) -> Result<Vec<u8>, String> {
+/// Ré-encode une image déjà validée en PNG de couverture.
+///
+/// L'export avancé la réutilise sur son **asset image préparé** de l'écran
+/// d'entrée : la couverture dérive du média que la préparation a déjà
+/// contrôlé, jamais d'une seconde lecture du fichier d'origine.
+pub(super) fn encode_thumbnail_png(thumbnail: &Path) -> Result<Vec<u8>, String> {
     let bytes = fs::read(thumbnail).map_err(|e| format!("Lecture thumbnail impossible : {}", e))?;
     let image = image::load_from_memory(&bytes)
         .map_err(|e| format!("Image thumbnail illisible : {}", e))?;

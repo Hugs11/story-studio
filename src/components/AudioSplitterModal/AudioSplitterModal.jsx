@@ -48,7 +48,6 @@ function readableError(value) {
 
 export function AudioSplitterModal({
   item,
-  savePath,
   onClose,
   onCreated,
   contextRequest = null,
@@ -400,8 +399,8 @@ export function AudioSplitterModal({
 
   async function handleSubmit() {
     setError('');
-    if (!savePath && !workspaceDir) {
-      setError('Enregistrez le projet avant de découper un audio.');
+    if (!workspaceDir) {
+      setError('Aucun emplacement de travail : impossible de découper un audio.');
       return;
     }
     if (segments.length === 0) {
@@ -412,7 +411,6 @@ export function AudioSplitterModal({
     setSubmitting(true);
     try {
       const result = await invoke('split_audio_segments', {
-        savePath: savePath || '',
         inputPath: item.path,
         segments: segments.map((segment) => ({
           outputFileName: stripAudioExtension(segment.outputFileName) || 'extrait',

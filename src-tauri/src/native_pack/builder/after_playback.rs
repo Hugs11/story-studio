@@ -23,9 +23,16 @@ impl<'a> StoryBuilder<'a> {
             .iter()
             .map(|_| self.next_id())
             .collect();
-        let home_sequence_transition = if let (Some(home_step), Some(first_next_action_id)) =
-            (story.after_playback_home_step.as_ref(), action_ids.get(1))
-        {
+        let home_sequence_transition = if let (Some(home_step), Some(first_next_action_id)) = (
+            story.after_playback_home_step.as_ref().filter(|_| {
+                end_home_step_is_active(
+                    self.report.project.options.auto_next,
+                    story.after_playback_sequence.len(),
+                    story.home,
+                )
+            }),
+            action_ids.get(1),
+        ) {
             let (home_stage_id, home_action_id) = self
                 .story_prealloc
                 .get(&story.id)
@@ -50,35 +57,51 @@ impl<'a> StoryBuilder<'a> {
             self.action_nodes.push(ActionNode {
                 id: home_action_id.clone(),
                 name: action_node_name(),
-                options: vec![home_stage_id.clone()],
-                position: zero_position(),
+                action_type: Presence::Absent,
+                group_id: Presence::Absent,
+                options: named_option_targets(vec![home_stage_id.clone()]),
+                position: no_authored_position(),
             });
-            self.stage_nodes.push(StageNode {
-                uuid: home_stage_id,
-                name: home_step.name.clone(),
-                stage_type: "stage".to_string(),
-                square_one: false,
-                audio: home_step
-                    .audio
-                    .as_ref()
-                    .map(|_| {
-                        self.asset_name(&format!("{}/afterPlaybackHomeStep/audio", role_prefix))
-                    })
-                    .transpose()?,
-                image: home_step
-                    .image
-                    .as_ref()
-                    .map(|_| {
-                        self.asset_name(&format!("{}/afterPlaybackHomeStep/image", role_prefix))
-                    })
-                    .transpose()?,
-                control_settings: prompt_controls_from_settings(
-                    home_step.control_settings.as_ref(),
-                ),
-                home_transition,
-                ok_transition: Some(next_transition),
-                position: zero_position(),
-            });
+            self.push_entry_stage(
+                &story.id,
+                StageNode {
+                    uuid: home_stage_id,
+                    name: Presence::Value(home_step.name.clone()),
+                    stage_type: default_stage_type(),
+                    square_one: Presence::Value(false),
+                    group_id: Presence::Absent,
+                    audio: Presence::from_nullable(
+                        home_step
+                            .audio
+                            .as_ref()
+                            .map(|_| {
+                                self.asset_name(&format!(
+                                    "{}/afterPlaybackHomeStep/audio",
+                                    role_prefix
+                                ))
+                            })
+                            .transpose()?,
+                    ),
+                    image: Presence::from_nullable(
+                        home_step
+                            .image
+                            .as_ref()
+                            .map(|_| {
+                                self.asset_name(&format!(
+                                    "{}/afterPlaybackHomeStep/image",
+                                    role_prefix
+                                ))
+                            })
+                            .transpose()?,
+                    ),
+                    control_settings: Presence::Value(prompt_controls_from_settings(
+                        home_step.control_settings.as_ref(),
+                    )),
+                    home_transition: Presence::from_nullable(home_transition),
+                    ok_transition: Presence::Value(next_transition),
+                    position: no_authored_position(),
+                },
+            );
             Some(transition(&home_action_id, 0))
         } else {
             None
@@ -94,10 +117,7 @@ impl<'a> StoryBuilder<'a> {
                     play_return_transition.clone(),
                 )
             } else {
-                Transition {
-                    action_node: action_ids[index + 1].clone(),
-                    option_index: 0,
-                }
+                Transition::fixed(action_ids[index + 1].clone(), 0)
             };
             if is_last && step.ok_choice_targets.len() > 1 {
                 let mut options = Vec::new();
@@ -105,7 +125,7 @@ impl<'a> StoryBuilder<'a> {
                     // Résolveur unifié (sucre au-dessus de `ref`) : préalloué pour les
                     // convergences « en avant », repli sur le retour de lecture (indulgent).
                     if let Some(stage_id) =
-                        self.resolve_target_stage(target, play_return_transition.clone())
+                        self.resolve_target_stage(target, Some(play_return_transition.clone()))
                     {
                         options.push(stage_id);
                     }
@@ -115,8 +135,10 @@ impl<'a> StoryBuilder<'a> {
                     self.action_nodes.push(ActionNode {
                         id: choice_action_id.clone(),
                         name: action_node_name(),
-                        options,
-                        position: zero_position(),
+                        action_type: Presence::Absent,
+                        group_id: Presence::Absent,
+                        options: named_option_targets(options),
+                        position: no_authored_position(),
                     });
                     next_transition = transition(&choice_action_id, 0);
                 }
@@ -141,40 +163,50 @@ impl<'a> StoryBuilder<'a> {
             self.action_nodes.push(ActionNode {
                 id: action_id,
                 name: action_node_name(),
-                options: vec![stage_id.clone()],
-                position: zero_position(),
+                action_type: Presence::Absent,
+                group_id: Presence::Absent,
+                options: named_option_targets(vec![stage_id.clone()]),
+                position: no_authored_position(),
             });
 
-            self.stage_nodes.push(StageNode {
-                uuid: stage_id,
-                name: stage_name,
-                stage_type: "stage".to_string(),
-                square_one: false,
-                audio: step
-                    .audio
-                    .as_ref()
-                    .map(|_| {
-                        self.asset_name(&format!(
-                            "{}/afterPlaybackSequence/{}/audio",
-                            role_prefix, index
-                        ))
-                    })
-                    .transpose()?,
-                image: step
-                    .image
-                    .as_ref()
-                    .map(|_| {
-                        self.asset_name(&format!(
-                            "{}/afterPlaybackSequence/{}/image",
-                            role_prefix, index
-                        ))
-                    })
-                    .transpose()?,
-                control_settings: prompt_controls_from_settings(step.control_settings.as_ref()),
-                home_transition,
-                ok_transition: Some(next_transition),
-                position: zero_position(),
-            });
+            self.push_entry_stage(
+                &story.id,
+                StageNode {
+                    uuid: stage_id,
+                    name: Presence::Value(stage_name),
+                    stage_type: default_stage_type(),
+                    square_one: Presence::Value(false),
+                    group_id: Presence::Absent,
+                    audio: Presence::from_nullable(
+                        step.audio
+                            .as_ref()
+                            .map(|_| {
+                                self.asset_name(&format!(
+                                    "{}/afterPlaybackSequence/{}/audio",
+                                    role_prefix, index
+                                ))
+                            })
+                            .transpose()?,
+                    ),
+                    image: Presence::from_nullable(
+                        step.image
+                            .as_ref()
+                            .map(|_| {
+                                self.asset_name(&format!(
+                                    "{}/afterPlaybackSequence/{}/image",
+                                    role_prefix, index
+                                ))
+                            })
+                            .transpose()?,
+                    ),
+                    control_settings: Presence::Value(prompt_controls_from_settings(
+                        step.control_settings.as_ref(),
+                    )),
+                    home_transition: Presence::from_nullable(home_transition),
+                    ok_transition: Presence::Value(next_transition),
+                    position: no_authored_position(),
+                },
+            );
         }
 
         let first_action_id = action_ids

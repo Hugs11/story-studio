@@ -7,18 +7,26 @@
 //
 // Regles partagees JS <-> Rust (toute divergence est un bug a corriger):
 //   - Audio racine obligatoire (rootAudio).
-//   - Image racine obligatoire, vignette obligatoire sur pack sauf si `sameImage`.
+//   - Image racine obligatoire ; sans vignette propre, le catalogue la reprend.
 //   - Story : audio obligatoire, accessibilite disque verifiee.
 //   - Story : itemImage obligatoire, itemAudio obligatoire sauf titre explicite silencieux.
 //   - Zip : zipPath obligatoire et fichier accessible.
 //   - Pack non-vide : au moins une histoire jouable.
-//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences).
+//   - Cibles de navigation cassees (returnAfterPlay, returnOnHome, refs, sequences,
+//     destinations du message de fin global).
+//   - Regles d'activite (native_pack/canonical.rs) : un champ que le reglage courant
+//     rend inutile (fin locale sous Auto-next, image d'un Ecran transparent, message
+//     de fin global qu'aucune histoire n'emprunte) n'est ni exige ni verifie.
 //
 // Regles UX uniquement (cote JS, signalees a l'utilisateur en temps reel) :
 //   - "duplicateId" : doublons d'ID dans rootEntries. Rust ne controle pas
 //     (la generation cree des ids assainis distincts).
 //   - "rootReservedId" : ID 'root' reserve. Rust applique implicitement.
 //   - emptyMenu / emptyPack : warnings JS, Rust refuse via "aucune histoire".
+//   - "storyWithoutExit" : histoire dont l'écran de lecture n'a ni OK, ni lecture
+//     automatique, ni Accueil. Rust refuse a la generation (native_pack/port_rules.rs) ;
+//     seule cette forme est realisable depuis la fiche d'une histoire
+//     (native_pack/tests/menu_endings.rs), les autres fins sont normalisees.
 //
 // Si une regle est ajoutee : l'implementer des deux cotes, etendre
 // validation-projects.json + le module tests::parity_* de Rust.
@@ -35,6 +43,8 @@ import { buildProjectIndex, getPlayableDescendantCount, visitProjectEntries } fr
 import { decodeNavigationMenuId, decodeNavigationStoryId, isCurrentMenuNavigationTarget, isNextStoryNavigationTarget, isRootNavigationTarget, isStoryHomeStepNavigationTarget, isStoryNavigationTarget, normalizeNavigationTarget } from './navigationTargets.js';
 import { VALIDATION_MESSAGES, brokenField, emptyTarget, missingField, missingTarget } from './validationMessages.js';
 import { isStorySelectionAudioRequired } from './storyTitleStage.js';
+import { isEndHomeStepActive, isEndPromptActive, isEndSequenceActive, projectReachesEndNode } from './generatedNavigation.js';
+import { getGeneratedStoryPlayControls } from './generatedPlayback.js';
 
 function hasPath(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -68,7 +78,9 @@ function collectProjectGraphStats(projectIndex) {
   };
 }
 
-function validateNavigationTarget(issues, id, label, target, projectIndex, menuIds) {
+// `navigation` : les dossiers existants et le projet, dont les réglages
+// décident quelles réactions Accueil le constructeur construit.
+function validateNavigationTarget(issues, id, label, target, projectIndex, navigation) {
   const normalized = normalizeNavigationTarget(target);
   if (!normalized) return;
   if (isRootNavigationTarget(normalized) || isCurrentMenuNavigationTarget(normalized) || isNextStoryNavigationTarget(normalized)) {
@@ -79,20 +91,24 @@ function validateNavigationTarget(issues, id, label, target, projectIndex, menuI
     const entry = storyId ? projectIndex.entryById.get(storyId) : null;
     if (!entry || entry.type !== 'story') {
       pushError(issues, id, missingTarget(label, 'histoire'));
-    } else if (isStoryHomeStepNavigationTarget(normalized) && !entry.afterPlaybackHomeStep) {
+    } else if (
+      isStoryHomeStepNavigationTarget(normalized)
+      && !(entry.afterPlaybackHomeStep && isEndHomeStepActive(entry, navigation.project))
+    ) {
+      // « Retour de fin » ne vise qu'une réaction que le constructeur construit.
       pushError(issues, id, VALIDATION_MESSAGES.storyReturnLost(label));
     }
     return;
   }
   const menuId = decodeNavigationMenuId(normalized);
-  if (!menuId || !menuIds.has(menuId)) {
+  if (!menuId || !navigation.menuIds.has(menuId)) {
     pushError(issues, id, missingTarget(label, 'dossier'));
   } else if (getPlayableDescendantCount(projectIndex, menuId) === 0) {
     pushError(issues, id, emptyTarget(label, 'dossier'));
   }
 }
 
-function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
+function validateStorySelectionItem(issues, item, fallbackName, fileAudit, project) {
   const name = labelOrFallback(item?.name, fallbackName);
   const itemId = item?.id ?? null;
   const selectionAudioRequired = isStorySelectionAudioRequired(item);
@@ -102,15 +118,22 @@ function validateStorySelectionItem(issues, item, fallbackName, fileAudit) {
   else if (isBrokenPath(item?.itemImage, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image'));
   if (!hasPath(item?.itemAudio) && selectionAudioRequired) pushWarning(issues, itemId, missingField(name, 'audio titre'));
   else if (isBrokenPath(item?.itemAudio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio titre'));
-  if (hasPath(item?.afterPlaybackPromptAudio) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
+  // Médias de fin : seuls ceux que le moteur écrit sont vérifiés (miroir des
+  // règles d'activité Rust). Une étape ou une réaction sans média reste valide :
+  // le moteur et les lecteurs acceptent un écran muet.
+  if (isEndPromptActive(item, project) && isBrokenPath(item?.afterPlaybackPromptAudio, fileAudit)) {
     pushWarning(issues, itemId, brokenField(name, "audio de fin d'histoire"));
   }
-  for (const [index, step] of (item?.afterPlaybackSequence ?? []).entries()) {
-    if (!hasPath(step?.audio)) {
-      pushWarning(issues, itemId, missingField(name, `audio de fin ${index + 1}`));
-    } else if (isBrokenPath(step.audio, fileAudit)) {
-      pushWarning(issues, itemId, brokenField(name, `audio de fin ${index + 1}`));
+  if (isEndSequenceActive(item, project)) {
+    for (const [index, step] of item.afterPlaybackSequence.entries()) {
+      if (isBrokenPath(step?.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, `audio de fin ${index + 1}`));
+      if (isBrokenPath(step?.image, fileAudit)) pushWarning(issues, itemId, brokenField(name, `image de fin ${index + 1}`));
     }
+  }
+  const homeStep = item?.afterPlaybackHomeStep;
+  if (homeStep && isEndHomeStepActive(item, project)) {
+    if (isBrokenPath(homeStep.audio, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'audio de la réaction Accueil'));
+    if (isBrokenPath(homeStep.image, fileAudit)) pushWarning(issues, itemId, brokenField(name, 'image de la réaction Accueil'));
   }
 }
 
@@ -126,10 +149,14 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   const rootName = labelOrFallback(project?.projectName || project?.packMetadata?.title, 'Pack sans nom');
   const autoNext = !!project?.globalOptions?.autoNext;
   const nightMode = !!project?.globalOptions?.nightMode;
-  const hasEndNode = !autoNext && (nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode);
+  // Le message de fin global n'est vérifié que si une histoire l'emprunte : remplacé
+  // partout par des fins locales, le moteur ne l'écrit pas.
+  const hasEndNode = !autoNext
+    && (nightMode || !!project?.nightModeAudio || !!project?.globalOptions?.endNode)
+    && projectReachesEndNode(project);
   const projectIndex = providedProjectIndex ?? buildProjectIndex(project);
   const { entryIdCounts, menuMap, firstSimpleStory, rootPlayableCount } = collectProjectGraphStats(projectIndex);
-  const menuIds = new Set(menuMap.keys());
+  const navigation = { menuIds: new Set(menuMap.keys()), project };
 
   if (!projectType) {
     pushWarning(issues, 'root', VALIDATION_MESSAGES.noProjectType);
@@ -157,19 +184,10 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
   else if (isBrokenPath(project?.rootAudio, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'audio intro'));
   if (!hasPath(project?.rootImage)) pushWarning(issues, 'root', missingField('Menu racine', 'image de couverture', { feminine: true }));
   else if (isBrokenPath(project?.rootImage, fileAudit)) pushWarning(issues, 'root', brokenField('Menu racine', 'image de couverture'));
-  const rootImageAsThumbnail = !!project?.sameImage;
-  if (projectType === 'pack') {
-    if (!rootImageAsThumbnail && !hasPath(project?.thumbnailImage)) {
-      pushWarning(
-        issues,
-        'root',
-        `${missingField('Menu racine', 'image bibliothèque', { feminine: true })} (cocher « même image » ou en choisir une)`,
-      );
-    } else if (!rootImageAsThumbnail && isBrokenPath(project?.thumbnailImage, fileAudit)) {
-      pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
-    }
-  } else if (!rootImageAsThumbnail && hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
-    pushWarning(issues, 'root', brokenField('Menu racine', 'image bibliothèque'));
+  // Sans vignette propre, le catalogue reprend l'image racine : il ne manque
+  // donc jamais de vignette. Une vignette propre se vérifie comme un média.
+  if (!project?.sameImage && hasPath(project?.thumbnailImage) && isBrokenPath(project?.thumbnailImage, fileAudit)) {
+    pushWarning(issues, 'root', brokenField('Fiche du pack', 'vignette catalogue'));
   }
   if (hasEndNode && !hasPath(project?.nightModeAudio)) {
     pushWarning(issues, 'end-node', missingField('Message de fin', 'audio'));
@@ -184,6 +202,14 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       pushWarning(issues, 'root', brokenField(rootName, 'histoire'));
     }
     return issues;
+  }
+
+  // Une destination du message de fin qui ne mène plus nulle part (histoire ou
+  // dossier supprimé) reste visible et à corriger : le moteur la remplacerait
+  // sans le dire par le retour propre à chaque histoire.
+  if (hasEndNode) {
+    validateNavigationTarget(issues, 'end-node', 'Message de fin — destination après le message', project?.nightModeReturn, projectIndex, navigation);
+    validateNavigationTarget(issues, 'end-node', 'Message de fin — bouton Accueil', project?.nightModeHomeReturn, projectIndex, navigation);
   }
 
   visitProjectEntries(project, (entry, ancestors) => {
@@ -208,7 +234,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           `${entryLabel} — référence`,
           entry?.target,
           projectIndex,
-          menuIds,
+          navigation,
         );
       }
       return;
@@ -224,7 +250,9 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
       const isSilentImportedContinuation = !!entry?.importedContinuation;
       if (!hasPath(entry?.audio) && !isSilentImportedContinuation) pushWarning(issues, menuId, missingField(pathLabel, 'audio'));
       else if (isBrokenPath(entry?.audio, fileAudit)) pushWarning(issues, menuId, brokenField(pathLabel, 'audio'));
-      if (!hasPath(entry?.image) && !entry?.autoBlackImage) {
+      if (entry?.autoBlackImage) {
+        // Écran transparent : le moteur n'écrit pas l'image éventuellement conservée.
+      } else if (!hasPath(entry?.image)) {
         pushWarning(issues, menuId, missingField(pathLabel, 'image', { feminine: true }));
       } else if (isBrokenPath(entry?.image, fileAudit)) {
         pushWarning(issues, menuId, brokenField(pathLabel, 'image'));
@@ -239,7 +267,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
           `${entryLabel} — destination des histoires`,
           entry?.returnAfterPlay,
           projectIndex,
-          menuIds,
+          navigation,
         );
       }
       validateNavigationTarget(
@@ -248,7 +276,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         `${entryLabel} — Accueil du dossier`,
         entry?.returnOnHome,
         projectIndex,
-        menuIds,
+        navigation,
       );
       return;
     }
@@ -260,7 +288,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         `${entryLabel} — destination de fin`,
         entry?.returnAfterPlay,
         projectIndex,
-        menuIds,
+        navigation,
       );
     }
 
@@ -271,7 +299,7 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         `${entryLabel} — bouton Accueil`,
         entry?.returnOnHome,
         projectIndex,
-        menuIds,
+        navigation,
       );
     }
 
@@ -282,21 +310,32 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
         `${entryLabel} — Accueil du titre`,
         entry?.titleReturnOnHome,
         projectIndex,
-        menuIds,
+        navigation,
       );
     }
 
     if (entry?.type === 'zip') validateZipItem(issues, entry, pathLabel, fileAudit);
     else {
-      validateStorySelectionItem(issues, entry, pathLabel, fileAudit);
-      if (!autoNext && hasPath(entry?.afterPlaybackPromptAudio)) {
+      validateStorySelectionItem(issues, entry, pathLabel, fileAudit, project);
+      // Les réglages que le générateur écrira réellement (lecture automatique
+      // forcée comprise) : sans OK, lecture automatique ni Accueil, l'enfant
+      // reste bloqué à la fin de l'histoire. Une étape de fin active donne une
+      // destination OK à l'écran de lecture, et le générateur y rallume OK.
+      const parentMenu = ancestors.at(-1)?.type === 'menu' ? ancestors.at(-1) : null;
+      const playControls = getGeneratedStoryPlayControls(entry, parentMenu, project);
+      const hasEndStep = isEndSequenceActive(entry, project)
+        || (isEndPromptActive(entry, project) && hasPath(entry?.afterPlaybackPromptAudio));
+      if (!hasEndStep && !playControls.ok && !playControls.autoplay && !playControls.home) {
+        pushError(issues, entry?.id ?? null, VALIDATION_MESSAGES.storyWithoutExit(pathLabel));
+      }
+      if (isEndPromptActive(entry, project) && hasPath(entry?.afterPlaybackPromptAudio)) {
         validateNavigationTarget(
           issues,
           entry?.id ?? null,
           `${entryLabel} — OK du prompt final`,
           entry?.afterPlaybackPromptOkTarget,
           projectIndex,
-          menuIds,
+          navigation,
         );
         if (!entry?.afterPlaybackPromptHomeNone) {
           validateNavigationTarget(
@@ -305,11 +344,11 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
             `${entryLabel} — Accueil du prompt final`,
             entry?.afterPlaybackPromptHomeTarget,
             projectIndex,
-            menuIds,
+            navigation,
           );
         }
       }
-      if (!autoNext && (entry?.afterPlaybackSequence ?? []).length > 0) {
+      if (isEndSequenceActive(entry, project)) {
         for (const [index, step] of entry.afterPlaybackSequence.entries()) {
           validateNavigationTarget(
             issues,
@@ -317,8 +356,18 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
             `${entryLabel} — OK fin ${index + 1}`,
             step?.okTarget,
             projectIndex,
-            menuIds,
+            navigation,
           );
+          for (const target of step?.okChoiceTargets ?? []) {
+            validateNavigationTarget(
+              issues,
+              entry?.id ?? null,
+              `${entryLabel} — OK fin ${index + 1}`,
+              target,
+              projectIndex,
+              navigation,
+            );
+          }
           if (!step?.homeFollowsOk && !step?.homeNone) {
             validateNavigationTarget(
               issues,
@@ -326,9 +375,34 @@ export function getProjectValidationIssues(project, fileAudit = {}, providedProj
               `${entryLabel} — Accueil fin ${index + 1}`,
               step?.homeTarget,
               projectIndex,
-              menuIds,
+              navigation,
             );
           }
+        }
+      }
+      // Réaction au bouton Accueil : mêmes règles d'activité que ses médias
+      // (miroir de `validation.rs`, « retour Home de fin »).
+      const homeStep = entry?.afterPlaybackHomeStep;
+      if (homeStep && isEndHomeStepActive(entry, project)) {
+        for (const target of [homeStep.okTarget, ...(homeStep.okChoiceTargets ?? [])]) {
+          validateNavigationTarget(
+            issues,
+            entry?.id ?? null,
+            `${entryLabel} — OK de la réaction Accueil`,
+            target,
+            projectIndex,
+            navigation,
+          );
+        }
+        if (!homeStep.homeFollowsOk && !homeStep.homeNone) {
+          validateNavigationTarget(
+            issues,
+            entry?.id ?? null,
+            `${entryLabel} — Accueil de la réaction Accueil`,
+            homeStep.homeTarget,
+            projectIndex,
+            navigation,
+          );
         }
       }
     }

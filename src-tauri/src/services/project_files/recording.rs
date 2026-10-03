@@ -1,12 +1,15 @@
 use std::ffi::OsStr;
 use std::fs;
+use std::io::{ErrorKind, Write};
 use std::path::Path;
 
-use super::workspace_or_project_dir;
+use super::audio::unique_audio_assembly_path;
+use super::media_output_root;
 use crate::support::paths::path_for_frontend;
 
 pub(super) const MAX_RECORDING_BYTES: usize = 100 * 1024 * 1024;
 const MAX_RECORDING_FILENAME_CHARS: usize = 180;
+const RECORDING_NAME_ATTEMPTS: usize = 8;
 
 pub(super) fn validate_recording_filename(filename: &str) -> Result<&str, String> {
     let path = Path::new(filename);
@@ -39,7 +42,6 @@ pub(super) fn validate_recording_filename(filename: &str) -> Result<&str, String
 }
 
 pub(crate) fn save_recording(
-    save_path: Option<&str>,
     workspace_dir: Option<&str>,
     filename: &str,
     data: &[u8],
@@ -55,17 +57,50 @@ pub(crate) fn save_recording(
     }
 
     let file_name = validate_recording_filename(filename)?;
-    let project_dir = workspace_or_project_dir(
+    let project_dir = media_output_root(
         workspace_dir,
-        save_path,
-        "Definissez un emplacement de travail ou sauvegardez le projet avant d'enregistrer un audio.",
+        "Aucun emplacement de travail : impossible d'enregistrer un audio.",
     )?;
     let recordings_dir = project_dir.join("enregistrements");
     fs::create_dir_all(&recordings_dir)
         .map_err(|e| format!("Impossible de creer le dossier d'enregistrements : {}", e))?;
-    let file_path = recordings_dir.join(file_name);
-
-    fs::write(&file_path, data)
-        .map_err(|e| format!("Impossible de sauvegarder l'enregistrement : {}", e))?;
-    Ok(path_for_frontend(&file_path))
+    // Une prise existante n'est jamais remplacée : le nom libre vient de la
+    // même réservation que les outils d'assemblage, et la création exclusive
+    // (`create_new`) garantit qu'aucun fichier apparu entre-temps n'est écrasé.
+    let mut last_error = None;
+    for _ in 0..RECORDING_NAME_ATTEMPTS {
+        let file_path = unique_audio_assembly_path(&recordings_dir, file_name)?;
+        let mut file = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&file_path)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+                last_error = Some(error);
+                continue;
+            }
+            Err(error) => {
+                return Err(format!(
+                    "Impossible de sauvegarder l'enregistrement : {}",
+                    error
+                ))
+            }
+        };
+        if let Err(error) = file.write_all(data).and_then(|()| file.sync_all()) {
+            drop(file);
+            let _ = fs::remove_file(&file_path);
+            return Err(format!(
+                "Impossible de sauvegarder l'enregistrement : {}",
+                error
+            ));
+        }
+        return Ok(path_for_frontend(&file_path));
+    }
+    Err(format!(
+        "Impossible de trouver un nom libre pour l'enregistrement : {}",
+        last_error
+            .map(|error| error.to_string())
+            .unwrap_or_default()
+    ))
 }

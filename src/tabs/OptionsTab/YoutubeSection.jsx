@@ -4,6 +4,8 @@ import { listen } from '@tauri-apps/api/event';
 import { Button } from '../../components/common/Button';
 import { KEYS, read as readSetting, write } from '../../store/persistentSettings';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { errorMessage } from '../../utils/youtubeErrors.js';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 export function YoutubeSection({ className, sectionRef }) {
   const [ytDlpPath, setYtDlpPath] = useState(() => readSetting(KEYS.YTDLP_CUSTOM_PATH, { defaultValue: '' }));
@@ -18,10 +20,10 @@ export function YoutubeSection({ className, sectionRef }) {
       if (cancelled) return;
       setYtDlpUpdate((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     }).catch(() => {});
-    return () => { cancelled = true; if (unlisten) unlisten(); };
+    return () => { cancelled = true; releaseTauriListener(unlisten); };
   }, []);
 
   function handleYtDlpPathChange(value) {
@@ -35,7 +37,7 @@ export function YoutubeSection({ className, sectionRef }) {
       await invoke('update_ytdlp');
       setYtDlpUpdate({ state: 'ok', message: 'yt-dlp est à jour.' });
     } catch (e) {
-      setYtDlpUpdate({ state: 'error', message: `${e}` });
+      setYtDlpUpdate({ state: 'error', message: errorMessage(e) });
     }
   }
 
@@ -44,14 +46,16 @@ export function YoutubeSection({ className, sectionRef }) {
       <div className="opts-card-title">YouTube (yt-dlp)</div>
       <div className="opts-help">
         Le funnel « Pack depuis YouTube » télécharge automatiquement yt-dlp au premier usage et le
-        garde à jour. YouTube bloquant les versions périmées, ces réglages ne servent qu'en cas de souci.
+        garde à jour, ainsi que le moteur JavaScript Deno (environ 40 Mo) dont yt-dlp a besoin pour
+        lire YouTube de façon fiable. YouTube bloquant les versions périmées, ces réglages ne servent
+        qu'en cas de souci.
       </div>
       <div className="opts-row">
         <div className="opts-row-info">
           <div className="opts-row-label">Mettre à jour yt-dlp maintenant</div>
           <div className="opts-row-sub">
-            Force le téléchargement de la dernière version. Utile si un import échoue avec un message
-            de version obsolète.
+            Force le téléchargement de la dernière version de yt-dlp et installe le moteur JavaScript
+            s'il manque. Utile si un import échoue avec un message de version obsolète.
           </div>
         </div>
         <Button onClick={handleUpdateYtDlp} disabled={ytDlpUpdate.state === 'loading'} style={{ flexShrink: 0 }}>

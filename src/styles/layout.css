@@ -76,6 +76,18 @@ body {
   justify-content: center;
 }
 
+/* L'espace avancé occupe toute la surface : il porte sa propre barre, ses
+ * panneaux et ses diagnostics, et ne partage aucun panneau avec l'espace
+ * hiérarchique. */
+.workspace--advanced {
+  flex-direction: column;
+}
+
+.workspace-advanced-loading {
+  margin: auto;
+  color: var(--text-secondary);
+}
+
 .workspace--diagram-full {
   background: var(--bg0);
 }
@@ -246,7 +258,7 @@ body.workspace-is-reordering * {
 /* Réglages : largeur persistée, sans rôle « central » implicite. */
 .workspace-panel-slot--settings {
   flex: 0 0 var(--workspace-settings-panel-width, 800px);
-  min-width: 400px;
+  min-width: 200px;
   max-width: 900px;
   container: settings-panel / inline-size;
 }
@@ -271,7 +283,7 @@ body.workspace-is-reordering * {
 
 .workspace--with-diagram .workspace-panel-slot--settings {
   flex: 0 1 var(--workspace-settings-panel-width, 800px);
-  min-width: 400px;
+  min-width: 200px;
 }
 
 .workspace--without-diagram .workspace-panel-slot--structure {
@@ -280,7 +292,7 @@ body.workspace-is-reordering * {
 }
 
 .workspace--without-diagram .workspace-panel-slot--settings {
-  min-width: 360px;
+  min-width: 200px;
 }
 
 /* Sans Diagramme, le dernier panneau visible absorbe l'espace restant. */
@@ -295,7 +307,7 @@ body.workspace-is-reordering * {
   }
 
   .workspace--with-diagram .workspace-panel-slot--settings {
-    min-width: 320px;
+    min-width: 200px;
   }
 
   .workspace--with-diagram .workspace-panel-slot--diagram {
@@ -308,7 +320,7 @@ body.workspace-is-reordering * {
   }
 
   .workspace--without-diagram .workspace-panel-slot--settings {
-    min-width: 320px;
+    min-width: 200px;
   }
 }
 
@@ -318,7 +330,7 @@ body.workspace-is-reordering * {
   }
 
   .workspace--with-diagram .workspace-panel-slot--settings {
-    min-width: 240px;
+    min-width: 200px;
   }
 
   .workspace--with-diagram .workspace-panel-slot--diagram {
@@ -331,7 +343,7 @@ body.workspace-is-reordering * {
   }
 
   .workspace--without-diagram .workspace-panel-slot--settings {
-    min-width: 240px;
+    min-width: 200px;
   }
 }
 
@@ -391,6 +403,13 @@ body.workspace-is-reordering * {
   background: var(--accent-dim);
   border: 1px solid var(--accent-border);
   flex: 0 0 24px;
+}
+
+/* La pastille fait 24 px de côté, bordure comprise ; le dessin du jeu partagé
+   en occupe 14, la taille qu'il avait auparavant dans cet en-tête. */
+.settings-panel-header-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .settings-panel-header-main {

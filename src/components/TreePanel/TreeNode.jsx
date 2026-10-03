@@ -3,30 +3,34 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Tooltip } from '../common/Tooltip';
-import { MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
+import { MENU_CYCLE_MESSAGE, MENU_DEPTH_LIMIT_REACHED_MESSAGE } from '../../store/projectModel/menuDepth.js';
+import { NodeIcon } from '../icons/NodeIcon.jsx';
+import { hierarchicalNatureOf } from '../../store/nodeIconVocabulary.js';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../../store/projectWorkState.js';
 import {
-  IconFolderClosed, IconFolderOpen, IconStory, IconArchive, IconHouse, IconMoon,
-  IconReturn, IconStop, IconDiamond, IconArrowRight,
-  ICON_BY_KEY,
-} from './TreeIcons';
-import { ListTree, UnfoldVertical } from '../icons/LucideLocal';
+  ArrowRight, CornerUpLeft, Diamond, House, ListTree, Moon, Square, UnfoldVertical,
+} from '../icons/LucideLocal';
 import { getTreeGuideStyleVars, getTreeIndent, resolveHoverGuide } from './treeGuides';
 import './TreePanel.css';
 import './TreeGuides.css';
 
+// Les pastilles de navigation disent **vers quoi** une entrée renvoie. Elles ne
+// nomment donc pas une nature et restent ce qu'elles sont. Là où leur cible en
+// est une — l'accueil, le message de fin, sa variante nuit —, elles portent le
+// dessin de cette nature : c'est le vocabulaire qui le veut, pas un hasard.
 const BADGE_ICON_BY_KIND = {
-  return: <IconReturn />,
+  return: <CornerUpLeft />,
   'prompt-return': <UnfoldVertical />,
   'sequence-return': <ListTree />,
-  home: <IconHouse />,
-  'home-implicit': <IconHouse />,
-  'home-none': <IconHouse />,
-  'end-node': <IconStop />,
-  'end-night': <IconMoon />,
-  'end-node-home': <IconHouse />,
-  'end-night-home': <IconHouse />,
-  graph: <IconDiamond />,
-  continuation: <IconArrowRight />,
+  home: <House />,
+  'home-implicit': <House />,
+  'home-none': <House />,
+  'end-node': <Square />,
+  'end-night': <Moon />,
+  'end-node-home': <House />,
+  'end-night-home': <House />,
+  graph: <Diamond />,
+  continuation: <ArrowRight />,
 };
 
 const MAX_NAVIGATION_BADGE_SLOTS = 2;
@@ -72,7 +76,7 @@ function TreeInlineNameInput({ value, onChange, onCommit, onCancel }) {
 function TreeNodeInner({
   id,
   type,
-  icon,
+  night = false,
   label,
   level,
   selected,
@@ -150,23 +154,17 @@ function TreeNodeInner({
     ? hiddenNavigationBadges.map((badge) => badge.title).join(' · ')
     : '';
 
-  let resolvedIcon;
-  if (icon) {
-    const IconComp = ICON_BY_KEY[icon];
-    resolvedIcon = IconComp ? <IconComp /> : icon;
-  } else if (type === 'menu') {
-    resolvedIcon = expanded ? <IconFolderOpen /> : <IconFolderClosed />;
-  } else if (type === 'root') {
-    resolvedIcon = <IconHouse />;
-  } else if (type === 'story') {
-    resolvedIcon = <IconStory />;
-  } else if (type === 'ref') {
-    resolvedIcon = <IconArrowRight />;
-  } else if (type === 'zip') {
-    resolvedIcon = <IconArchive />;
-  } else {
-    resolvedIcon = <IconMoon />;
-  }
+  // Le dessin vient de la table, pas d'une suite de conditions tenue ici. Le
+  // repli est la lune : une entrée dont le type n'est pas une
+  // nature connue est traitée comme un message de fin en mode nuit.
+  const nature = hierarchicalNatureOf(type, { night }) ?? 'end-night';
+  const resolvedIcon = (
+    <NodeIcon
+      workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+      nature={nature}
+      collapsed={type === 'menu' && !expanded}
+    />
+  );
 
   const handlePointerHover = onHoverScope && !dragging
     ? (e) => {
@@ -208,7 +206,7 @@ function TreeNodeInner({
       title={showForbiddenDepth
         ? MENU_DEPTH_LIMIT_REACHED_MESSAGE
         : showForbiddenCycle
-          ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre'
+          ? MENU_CYCLE_MESSAGE
           : undefined}
       data-tree-node-id={id}
       {...(type === 'story' || type === 'menu' || type === 'root'
@@ -291,7 +289,7 @@ function TreeNodeInner({
 export const TreeNode = memo(TreeNodeInner, (prev, next) => (
   prev.id === next.id
   && prev.type === next.type
-  && prev.icon === next.icon
+  && prev.night === next.night
   && prev.label === next.label
   && prev.level === next.level
   && prev.selected === next.selected

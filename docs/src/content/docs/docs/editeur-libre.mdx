@@ -1,24 +1,29 @@
 ---
-title: Éditeur libre
+title: Éditeur par menus
 description: Créer un pack avec plusieurs Histoires, des Dossiers et une navigation personnalisée.
 ---
 
-L’**Éditeur libre** permet de construire soi-même la structure d’un pack.
+L’**Éditeur par menus** permet de construire soi-même la structure d’un pack.
+
+:::note[Anciennement Éditeur libre]
+Jusqu’à la version 0.9.8, cet éditeur s’appelait **Éditeur libre**. Seul son nom change : tes
+projets, tes réglages et tes raccourcis restent les mêmes.
+:::
 
 Tu peux placer quelques Histoires directement dans le **Menu racine**, les organiser dans des
 **Dossiers**, ajouter plusieurs niveaux de choix et définir ce qui se passe après chaque lecture.
 Ce mode convient aussi bien à une petite collection qu’à un parcours plus élaboré.
 
-:::note[Un espace de création complet]
-L’Éditeur libre est l’espace de création le plus complet de Story Studio. Les autres modes de
-création proposent des parcours simplifiés pour certains besoins : une Histoire unique, un podcast,
-des vidéos YouTube ou l’agrégation de packs. Mais toutes ces opérations sont disponibles dans
-l’Éditeur libre avec plus de liberté.
+:::note[Le socle des parcours guidés]
+Les autres modes de création proposent des parcours simplifiés pour certains besoins : une Histoire
+unique, un podcast, des vidéos YouTube ou l’agrégation de packs. Toutes ces opérations sont aussi
+disponibles dans l’Éditeur par menus, avec plus de réglages. Pour une navigation qui ne suit pas
+une arborescence de menus, Story Studio propose également l’**Éditeur graphe**.
 :::
 
-![Vue générale de l’Éditeur libre avec l’Arbre, les Réglages, le Diagramme et les Médias](/story-studio/assets/screenshots/free-editor-overview-dark.png)
+![Vue générale de l’Éditeur par menus avec l’Arbre, les Réglages, le Diagramme et les Médias](/story-studio/assets/screenshots/free-editor-overview-dark.png)
 
-## Quand choisir l’Éditeur libre ?
+## Quand choisir l’Éditeur par menus ?
 
 Choisis ce mode si tu veux notamment :
 
@@ -33,19 +38,19 @@ Choisis ce mode si tu veux notamment :
 
 ## Commencer par le Menu racine
 
-Un nouveau projet ouvert dans l’Éditeur libre contient un **Menu racine** vide. Il représente le
+Un nouveau projet ouvert dans l’Éditeur par menus contient un **Menu racine** vide. Il représente le
 pack et contient le premier niveau de son parcours.
 
 Commence par préparer sa présentation :
 
 - le **Nom** identifie le Menu racine dans Story Studio ;
 - l’**Image Lunii** présente le pack sur la boîte à histoires ;
-- la **Vignette catalogue** est utilisée par les logiciels et bibliothèques compatibles ;
 - le **Titre audio** est entendu lorsque l’enfant parcourt ses packs sur la Lunii.
 
-Tu peux utiliser la même image pour la Lunii et la vignette catalogue, ou choisir deux visuels
-différents. Ajoute ensuite des Histoires directement au Menu racine ou crée des Dossiers pour
-organiser les choix.
+La Vignette catalogue destinée aux logiciels et bibliothèques compatibles se choisit dans
+[les métadonnées du pack](/story-studio/docs/verifier-et-generer-un-pack/#vignette-catalogue).
+Ajoute ensuite des Histoires directement au Menu racine ou crée des Dossiers pour organiser les
+choix.
 
 ## Construire l’arborescence
 
@@ -164,6 +169,24 @@ Même pour un gros pack, fais d’abord fonctionner un trajet complet : Menu rac
 Histoire → fin → retour. Il est plus facile de repérer une erreur de navigation avant de remplir
 toute la structure.
 :::
+
+## Continuer dans l’Éditeur graphe
+
+Quand ton pack a besoin d’une navigation qui ne suit plus une arborescence de menus, choisis
+**Projet → Continuer dans l’éditeur graphe…**. Story Studio crée une copie de ton projet, nommée
+par exemple `Toudou - graphe.mbah`, à côté de l’original, puis l’ouvre dans l’Éditeur graphe.
+Ouvrir un projet par menus depuis l’Éditeur graphe propose la même copie.
+
+- Ton projet par menus reste tel quel.
+- La copie utilise les mêmes fichiers médias : rien n’est dupliqué.
+- Elle produit le même pack sur la boîte à histoires, avec la même identité : Story Studio compare
+  les deux avant de créer la copie et refuse s’ils diffèrent.
+- Un projet jamais enregistré doit d’abord l’être : la copie se crée à côté de lui.
+- Un projet qui contient un pack inclus ne peut pas encore être copié.
+
+La copie ne revient pas dans l’Éditeur par menus. Pour y revenir, génère le pack depuis l’Éditeur
+graphe, puis ouvre-le avec **Modifier un pack** : s’il tient dans l’arborescence, l’Éditeur par
+menus le reprend.
 
 [Découvrir l’espace d’édition](/story-studio/docs/espace-d-edition/) ·
 [Comparer des structures](/story-studio/docs/exemples-de-structures/)

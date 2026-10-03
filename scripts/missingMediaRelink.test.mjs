@@ -6,6 +6,8 @@ import {
   relinkMediaLibraryPaths,
   relinkMediaTags,
   relinkProjectMedia,
+  refreshRelinkRows,
+  shouldProposeMissingMediaRelink,
 } from '../src/store/missingMediaRelink.js';
 import {
   chooseCompatibleProjectPath,
@@ -148,4 +150,48 @@ test('chooseCompatibleProjectPath prefers workspace media when the project-relat
     ),
     'C:/workspace/sauvegardes/fichiers-importes/story.mp3',
   );
+});
+
+// Le retour d'une boîte native (choix du dossier, choix d'un fichier) redonne
+// le focus à la fenêtre, et ce focus relance l'audit des chemins. Une
+// proposition déjà ouverte ne doit pas se fermer pendant cette relecture : sa
+// fermeture démontait la boîte et effaçait les fichiers que l'auteur venait de
+// relier.
+test('une proposition ouverte reste ouverte pendant un nouvel audit', () => {
+  const inputs = {
+    projectOpen: true,
+    savePath: 'C:/projets/pack.mbah',
+    missingMedia: [{ path: 'C:/projets/fichiers-importes/a.mp3' }],
+    missingMediaSignature: 'a',
+    dismissedMissingMediaSignature: '',
+  };
+  // Premier audit : la liste n'est pas encore stable, rien ne s'ouvre.
+  assert.equal(shouldProposeMissingMediaRelink({ ...inputs, pathAuditPending: true }), false);
+  // Proposition ouverte, audit relancé par le retour de focus : elle reste.
+  assert.equal(shouldProposeMissingMediaRelink({ ...inputs, pathAuditPending: true, proposalOpen: true }), true);
+  // Rejet ou liste vidée : elle se ferme, audit en cours ou non.
+  assert.equal(shouldProposeMissingMediaRelink({
+    ...inputs, pathAuditPending: true, proposalOpen: true, dismissedMissingMediaSignature: 'a',
+  }), false);
+  assert.equal(shouldProposeMissingMediaRelink({
+    ...inputs, pathAuditPending: true, proposalOpen: true, missingMedia: [],
+  }), false);
+});
+
+test('une liste rafraîchie garde les fichiers déjà reliés', () => {
+  const rows = [
+    { path: 'C:/p/fichiers-importes/a.mp3', fileName: 'a.mp3', status: 'found', replacementPath: 'D:/bureau/a.mp3', matches: ['D:/bureau/a.mp3'] },
+    { path: 'C:/p/fichiers-importes/b.png', fileName: 'b.png', status: 'found', replacementPath: 'D:/bureau/b.png', matches: ['D:/bureau/b.png'] },
+  ];
+  // `b.png` est revenu à sa place, `c.mp3` vient de disparaître.
+  const refreshed = refreshRelinkRows(rows, [
+    { path: 'C:\\p\\fichiers-importes\\a.mp3', fileName: 'a.mp3', labels: ['Accueil'], count: 1 },
+    { path: 'C:/p/fichiers-importes/c.mp3', fileName: 'c.mp3', labels: [], count: 1 },
+  ]);
+  assert.deepEqual(refreshed.map((row) => [row.fileName, row.status, row.replacementPath]), [
+    ['a.mp3', 'found', 'D:/bureau/a.mp3'],
+    ['c.mp3', 'missing', ''],
+  ]);
+  // Les métadonnées viennent de la liste à jour.
+  assert.deepEqual(refreshed[0].labels, ['Accueil']);
 });

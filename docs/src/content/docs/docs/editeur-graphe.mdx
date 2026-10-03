@@ -1,0 +1,228 @@
+---
+title: Éditeur graphe
+description: Construire et modifier directement la navigation d’un pack sous forme de graphe.
+---
+
+L’**Éditeur graphe** permet de travailler directement sur la navigation réelle du pack.
+
+Contrairement à l’Éditeur par menus, il ne cherche pas à présenter le projet sous forme
+d’arborescence. Chaque étape du parcours apparaît comme un nœud, et chaque raccord indique où
+l’enfant peut aller ensuite.
+
+Ce mode s’adresse surtout aux projets dont la navigation ne tient plus dans une structure classique
+de Dossiers et d’Histoires : histoires à choix multiples, quiz, tirages aléatoires, retours
+particuliers, écrans réutilisés à plusieurs endroits, parcours croisés ou packs importés avec une
+organisation plus complexe.
+
+Il offre davantage de liberté, mais demande aussi de suivre plus attentivement les raccords et les
+règles de navigation.
+
+Tu peux aussi poursuivre un projet commencé dans l’Éditeur par menus : Story Studio en crée une
+copie pour l’ouvrir dans l’Éditeur graphe, en conservant le projet d’origine. Les limites et le
+fonctionnement de cette copie sont détaillés dans
+[la page de l’Éditeur par menus](/story-studio/docs/editeur-libre/#continuer-dans-léditeur-graphe).
+
+## Les deux éléments du graphe
+
+Un graphe alterne entre deux types de nœuds :
+
+- un **Écran**, qui représente ce que la Lunii affiche et fait entendre à un moment donné ;
+- une **Liste de choix**, qui détermine le ou les Écrans accessibles ensuite.
+
+La règle de base est simple :
+
+```text
+Écran
+  ↓
+Liste de choix
+  ↓
+Écran
+  ↓
+Liste de choix
+  ↓
+Écran
+```
+
+Un Écran ne conduit donc pas directement à un autre Écran. Entre les deux se trouve toujours une
+Liste de choix.
+
+De la même manière, une Liste de choix contient des Écrans : elle ne conduit pas directement à une
+autre Liste de choix.
+
+:::tip[Tu viens de STUdio ?]
+Ce que STUdio appelle un **Action node** est nommé **Liste de choix** dans Story Studio.
+
+Ce changement de vocabulaire est volontaire. Les actions des boutons **OK** et **Accueil** sont
+configurées sur les Écrans, et non sur les Action nodes. Un Action node contient avant tout une
+liste d’Écrans accessibles : il représente donc une Liste de choix.
+
+Les deux termes désignent le même élément dans le pack :
+
+| STUdio | Story Studio |
+| --- | --- |
+| Stage node | Écran |
+| Action node | Liste de choix |
+
+:::
+
+## Se repérer dans l’éditeur
+
+L’espace de travail est organisé en trois panneaux :
+
+- la **Liste des nœuds et Écrans** permet de rechercher un élément, de le sélectionner et de
+  retrouver rapidement sa place dans le projet ;
+- le **Graphe** montre les Écrans, les Listes de choix et leurs raccords. C’est ici que tu déplaces
+  les nœuds et construis visuellement le parcours ;
+- l’**Inspecteur** affiche les réglages de la sélection : médias et boutons d’un Écran, options
+  d’une Liste de choix, destinations et autres propriétés.
+
+Le Graphe reste toujours visible. La Liste et l’Inspecteur peuvent être fermés lorsque tu veux
+donner davantage de place au parcours. Les trois panneaux peuvent aussi être réordonnés, et leurs
+séparateurs permettent d’ajuster leur largeur.
+
+![Vue générale de l’Éditeur graphe avec la Liste des nœuds, le Graphe et l’Inspecteur](/story-studio/assets/screenshots/graph-editor-overview-dark.png)
+
+### Travailler sur le graphe
+
+Tu peux sélectionner un ou plusieurs nœuds pour les déplacer ou leur appliquer une action commune.
+Le menu contextuel permet notamment de créer, renommer, colorer ou retirer des éléments et de
+commencer certains raccords.
+
+Les commandes habituelles permettent de copier, couper, coller, dupliquer ou annuler une
+modification. **Ranger le graphe** réorganise automatiquement les nœuds lorsque le parcours devient
+difficile à lire, sans changer sa navigation.
+
+La Liste, le Graphe et l’Inspecteur partagent la même sélection : choisir un élément dans l’une de
+ces zones le révèle dans les autres.
+
+## Une Liste de choix n’implique pas toujours plusieurs possibilités
+
+Malgré son nom, une Liste de choix peut ne contenir qu’un seul Écran.
+
+Dans ce cas, elle ne sert pas à proposer plusieurs possibilités à l’enfant. Elle représente
+simplement le passage entre deux étapes du parcours.
+
+C’est notamment ce qui se produit au moment de lancer une Histoire :
+
+```text
+Écran de sélection de l’Histoire
+        ↓ OK
+Liste de choix à une seule option
+        ↓
+Écran de lecture
+```
+
+Les listes à une seule option sont donc courantes. Elles font partie de la structure normale d’un
+pack et ne constituent pas une erreur.
+
+Avec plusieurs options, la Liste de choix devient un véritable choix parcouru avec la molette :
+
+```text
+Écran « Choisis un animal »
+        ↓
+Liste de choix
+├── Écran « Le Renard »
+├── Écran « Le Hibou »
+└── Écran « Le Lion »
+```
+
+Cette structure permet notamment de créer :
+
+- une Histoire dont l’enfant choisit la suite ;
+- un quiz dans lequel chaque réponse conduit vers un Écran différent ;
+- un parcours qui réutilise les mêmes Écrans depuis plusieurs endroits ;
+- une sélection dont le point de départ change aléatoirement.
+
+Pour que l’enfant puisse passer d’un choix à l’autre, active la **molette** sur les Écrans proposés
+dans la liste. Sur un Écran où elle est désactivée, tourner la molette ne change pas de choix.
+
+## Choix fixe ou aléatoire
+
+Lorsqu’un Écran ouvre une Liste de choix, Story Studio peut indiquer sur quel choix la liste
+commence :
+
+- un **choix fixe** ouvre toujours la liste sur le même Écran ;
+- **Au hasard, à chaque fois** choisit un nouvel Écran de départ à chaque entrée dans la liste.
+
+```text
+Écran « Une surprise t’attend »
+        ↓ fin de l’audio
+Liste de choix — Au hasard, à chaque fois
+├── Écran « La forêt »
+├── Écran « La montagne »
+└── Écran « La mer »
+```
+
+L’option aléatoire ne modifie pas l’ordre de la Liste de choix. Elle détermine seulement l’Écran
+présenté en premier lorsqu’on y entre. Si la molette est disponible, l’enfant peut ensuite parcourir
+les autres choix normalement.
+
+Ce réglage peut servir à varier le début d’un parcours, à tirer une question de quiz ou à lancer une
+séquence différente à chaque écoute.
+
+:::note[Une liste à une seule option]
+Sur une Liste de choix qui ne contient qu’un seul Écran, un choix aléatoire et un choix fixe
+aboutissent visuellement au même endroit. Utilise simplement le choix fixe : l’aléatoire devient
+utile lorsque plusieurs possibilités existent.
+:::
+
+## Comprendre un raccord
+
+Pour lire une partie du graphe, pars toujours d’un Écran et pose-toi trois questions :
+
+1. quelle action ouvre la Liste de choix : **OK**, **Accueil** ou la fin d’un audio ?
+2. quels Écrans figurent dans cette Liste de choix ?
+3. sur quel choix l’enfant arrive-t-il lorsqu’il ouvre la liste ?
+
+Un raccord ne signifie donc pas seulement « aller à cet endroit ». Il participe à un parcours qui
+alterne entre un Écran et une Liste de choix.
+
+Dans l’Inspecteur, **Suite du parcours** désigne une seule destination, déclenchée soit par **OK**,
+soit à la **fin du son** si la lecture automatique est activée. Ces deux déclencheurs ne définissent
+pas deux destinations différentes.
+
+## L’Écran d’entrée
+
+L’**Écran d’entrée** est le point de départ du pack. Il représente sa couverture dans le menu
+principal de la Lunii.
+
+Il occupe une place particulière : aucun choix du pack ne peut conduire vers lui. Pour revenir à la
+sélection du pack, utilise le comportement normal du bouton **Accueil**, sans créer de raccord vers
+l’Écran d’entrée.
+
+Laisse également **Accueil** désactivé sur cet Écran. Un retour actif vers son propre Écran, comme
+une suite du parcours qui renvoie à l’Écran courant, est une boucle que la génération refuse.
+
+## Commencer simplement
+
+Pour prendre en main l’Éditeur graphe, commence par un parcours court :
+
+```text
+Écran d’entrée
+        ↓ OK
+Liste de choix
+        ↓
+Écran de sélection de l’Histoire
+        ↓ OK
+Liste de choix à une seule option
+        ↓
+Écran de lecture
+```
+
+Ajoute ensuite les retours, les choix supplémentaires et les parcours particuliers. La pastille de
+validation signale les raccords incomplets ou incompatibles avec le fonctionnement de la Lunii.
+
+Pour construire ce parcours :
+
+1. Fais un clic droit dans le Graphe pour créer les Écrans et les Listes de choix nécessaires.
+2. Sélectionne chaque Écran et ajoute son image et son audio dans l’Inspecteur.
+3. Tire un raccord depuis une prise de l’Écran vers une Liste de choix, puis depuis la liste vers
+   l’Écran qu’elle doit proposer. Dans l’Inspecteur, vérifie la **Suite du parcours**, ses
+   déclencheurs et le choix de départ.
+4. Règle les retours **Accueil** et, pour une liste de plusieurs options, active la molette sur
+   les Écrans proposés. Rejoue ensuite le trajet dans le Simulateur.
+
+Utilise régulièrement le **Simulateur** pour vérifier le résultat avec la molette, **OK** et
+**Accueil**. Le graphe décrit la structure du pack ; le Simulateur montre ce que l’enfant vivra
+réellement.
+

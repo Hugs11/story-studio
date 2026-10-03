@@ -1,0 +1,6 @@
+# Les archives et leur manifeste sont **produits**, jamais versionnés :
+# `node scripts/advanced-export-fixtures.mjs` les régénère à l'octet près, et
+# committer 200 Ko de médias synthétiques ferait grossir le dépôt pour une
+# valeur que le générateur porte déjà.
+*.zip
+manifest.json

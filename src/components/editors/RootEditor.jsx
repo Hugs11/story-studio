@@ -2,7 +2,6 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { NativeGraphEditor } from './NativeGraphEditor';
-import { Toggle } from '../common/Toggle';
 import { TextImagePromptModal } from '../TextImageGenerator/TextImagePromptModal';
 import { Info } from '../icons/LucideLocal';
 import { KEYS, read, write } from '../../store/persistentSettings';
@@ -53,11 +52,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
     setSimpleNameDraft(simpleStoryName);
   }
 
-  function setSameImage(v) {
-    onUpdateMedia('sameImage', v);
-    if (v && node.rootImage) onUpdateMedia('thumbnailImage', node.rootImage);
-  }
-
   const [textImgModal, setTextImgModal] = useState(null);
 
   function handleGenerateTextImage() {
@@ -66,16 +60,6 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
       onConfirm: (path) => {
         onUpdateMedia('rootImage', path);
         if (sameImage) onUpdateMedia('thumbnailImage', path);
-        onUpdateMedia('autoGenerateRootImage', false);
-      },
-    });
-  }
-
-  function handleGenerateThumbnailTextImage() {
-    setTextImgModal({
-      defaultText: rootTitle,
-      onConfirm: (path) => {
-        onUpdateMedia('thumbnailImage', path);
         onUpdateMedia('autoGenerateRootImage', false);
       },
     });
@@ -129,7 +113,7 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
             <strong>Mode histoire simple</strong>
             <span>
               Tu crées un pack contenant une seule histoire. Pour des menus, plusieurs histoires ou
-              une navigation personnalisée, utilise plutôt l'« Éditeur libre ».
+              une navigation personnalisée, utilise plutôt l'« Éditeur par menus ».
             </span>
           </div>
           <button
@@ -192,136 +176,49 @@ export const RootEditor = memo(function RootEditor({ node, projectType, onUpdate
         <div className="card-sep" />
 
         <div className="root-media-section">
-          {sameImage ? (
-            <div className="media-split root-cover-media-split">
-              <div className="media-split-left">
-                <div className="media-col-header">
-                  Image
-                  <span className="media-col-subtitle">
-                    {isSimple
-                      ? "Visuel utilisé pour présenter l'histoire"
-                      : 'Visuel utilisé pour présenter le pack'}
-                  </span>
-                </div>
-                <ImageField
-                  fieldId="root:coverImage"
-                  file={node.rootImage}
-                  badge="Lunii + Catalogue"
-                  formatHint="Choisis une image : elle sera adaptée en 320 × 240 px à l’export"
-                  extraActions={[
-                    {
-                      key: 'generate-text',
-                      label: 'Générer une image-titre',
-                      icon: '✦',
-                      onClick: handleGenerateTextImage,
-                      title: "Créer une image-titre à partir du nom de l'histoire",
-                    },
-                  ]}
-                  onPick={(f) => {
-                    onUpdateMedia('rootImage', f);
-                    onUpdateMedia('thumbnailImage', f);
-                    onUpdateMedia('autoGenerateRootImage', false);
-                  }}
-                  onClear={() => {
-                    onUpdateMedia('rootImage', null);
-                    onUpdateMedia('thumbnailImage', null);
-                    onUpdateMedia('autoGenerateRootImage', false);
-                  }}
-                />
+          <div className="media-split root-cover-media-split">
+            <div className="media-split-left">
+              <div className="media-col-header">
+                Image
+                <span className="media-col-subtitle">
+                  {isSimple
+                    ? "Visuel utilisé pour présenter l'histoire"
+                    : 'Visuel utilisé pour présenter le pack'}
+                </span>
               </div>
-              <div className="media-split-divider" />
-              <div className="media-split-right">
-                {renderRootAudio()}
-              </div>
+              {/* La vignette catalogue se choisit dans la fiche du pack. Tant
+                  qu'elle n'en a pas de propre, elle suit cette image. */}
+              <ImageField
+                fieldId="root:coverImage"
+                file={node.rootImage}
+                badge="Lunii · 320×240"
+                formatHint="Choisis une image : elle sera adaptée en 320 × 240 px à l’export"
+                extraActions={[
+                  {
+                    key: 'generate-text',
+                    label: 'Générer une image-titre',
+                    onClick: handleGenerateTextImage,
+                    title: "Créer une image-titre à partir du nom de l'histoire",
+                  },
+                ]}
+                onPick={(f) => {
+                  onUpdateMedia('rootImage', f);
+                  if (sameImage) onUpdateMedia('thumbnailImage', f);
+                  onUpdateMedia('autoGenerateRootImage', false);
+                }}
+                onClear={() => {
+                  onUpdateMedia('rootImage', null);
+                  if (sameImage) onUpdateMedia('thumbnailImage', null);
+                  onUpdateMedia('autoGenerateRootImage', false);
+                }}
+              />
             </div>
-          ) : (
-            <>
-              <div className="root-image-section">
-                <div className="media-col-header">
-                  Image
-                  <span className="media-col-subtitle">
-                    {isSimple
-                      ? "Visuels utilisés pour présenter l'histoire sur la Lunii et dans les catalogues"
-                      : 'Visuels utilisés pour présenter le pack sur la Lunii et dans les catalogues'}
-                  </span>
-                </div>
-                <div className="root-image-split-layout">
-                  <div className="root-image-col root-image-col--lunii">
-                    <div className="media-col-header">
-                      Image Lunii
-                      <span className="media-col-subtitle">Affichée sur la Lunii, adaptée en 320×240 à l'export</span>
-                    </div>
-                    <ImageField
-                      align="start"
-                      fieldId="root:rootImage"
-                      file={node.rootImage}
-                      badge="Lunii · 320×240"
-                      formatHint="Choisis une image : elle sera adaptée en 320 × 240 px à l’export"
-                      extraActions={[
-                        {
-                          key: 'generate-text',
-                          label: 'Générer une image-titre',
-                          icon: '✦',
-                          onClick: handleGenerateTextImage,
-                          title: "Créer une image-titre à partir du nom de l'histoire",
-                        },
-                      ]}
-                      onPick={(f) => { onUpdateMedia('rootImage', f); onUpdateMedia('autoGenerateRootImage', false); }}
-                      onClear={() => { onUpdateMedia('rootImage', null); onUpdateMedia('autoGenerateRootImage', false); }}
-                    />
-                  </div>
-                  <div className="root-image-col root-image-col--catalog">
-                    <div className="media-col-header">
-                      Vignette catalogue
-                      <span className="media-col-subtitle">Utilisée par STUdio, LuniiQt et les bibliothèques</span>
-                    </div>
-                    <ImageField
-                      align="start"
-                      fieldId="root:thumbnailImage"
-                      file={node.thumbnailImage}
-                      badge="Catalogue · taille libre"
-                      formatHint="Taille libre — utilisée par STUdio, LuniiQt et les catalogues"
-                      extraActions={[
-                        {
-                          key: 'generate-text',
-                          label: 'Générer une image-titre',
-                          icon: '✦',
-                          onClick: handleGenerateThumbnailTextImage,
-                          title: "Créer une image-titre pour le catalogue à partir du nom de l'histoire",
-                        },
-                      ]}
-                      onPick={(f) => onUpdateMedia('thumbnailImage', f)}
-                      onClear={() => onUpdateMedia('thumbnailImage', null)}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="card-sep" />
-              <div className="root-audio-below">
-                {renderRootAudio()}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="card root-image-settings-card">
-        <div className="card-title-row">
-          <div className="card-title">Réglage du menu racine</div>
-        </div>
-
-        <label className="sequence-control root-image-sync-control">
-          <Toggle
-            on={sameImage}
-            onChange={setSameImage}
-            ariaLabel="Utiliser la même image pour la Lunii et la vignette catalogue"
-          />
-          <div className="root-image-sync-copy">
-            <span className="during-play-control-title">
-              Utiliser la même image pour la Lunii et la vignette catalogue
-            </span>
+            <div className="media-split-divider" />
+            <div className="media-split-right">
+              {renderRootAudio()}
+            </div>
           </div>
-        </label>
+        </div>
       </div>
 
       {isSimple && (

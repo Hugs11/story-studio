@@ -25,8 +25,6 @@ pub struct PiperGenerateRequest {
     pub voice: Option<String>,
     #[serde(default)]
     pub speed: f32,
-    #[serde(rename = "savePath")]
-    pub save_path: Option<String>,
     #[serde(rename = "workspaceDir", default)]
     pub workspace_dir: Option<String>,
     #[serde(rename = "filenameHint")]
@@ -113,15 +111,13 @@ mod tests {
     }
 
     #[test]
-    fn generated_dir_prefers_active_workspace_and_falls_back_to_saved_project() {
+    fn generated_dir_uses_the_workspace_and_never_the_project_folder() {
         let root = std::env::temp_dir().join("story_studio_piper_output_test");
         let workspace = root.join("cache").join("session-active");
-        let save_path = root.join("projets").join("sauvegarde.mbah");
         let mut request = PiperGenerateRequest {
             text: "Bonjour".to_string(),
             voice: None,
             speed: 1.0,
-            save_path: Some(save_path.to_string_lossy().to_string()),
             workspace_dir: Some(workspace.to_string_lossy().to_string()),
             filename_hint: None,
         };
@@ -131,13 +127,7 @@ mod tests {
         );
 
         request.workspace_dir = None;
-        assert_eq!(
-            generated_dir(&request).unwrap(),
-            save_path
-                .parent()
-                .expect("project parent")
-                .join("voix-generees")
-        );
+        assert!(generated_dir(&request).is_err());
 
         request.workspace_dir = Some("relative-workspace".to_string());
         assert!(generated_dir(&request).is_err());
@@ -209,7 +199,6 @@ mod tests {
                     ),
                     voice: Some(voice.id.to_string()),
                     speed,
-                    save_path: None,
                     workspace_dir: Some(workspace.to_string_lossy().to_string()),
                     filename_hint: Some(format!("{}-{speed}", voice.id)),
                 },

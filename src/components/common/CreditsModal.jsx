@@ -47,7 +47,7 @@ export function CreditsModal({ appVersion, onClose }) {
             Né d'une envie simple : créer des histoires pour Armand.
           </div>
           <div className="credits-line">
-            Créé par hugs11, assisté de Claude-code et Codex
+            Créé par hugs11, assisté par l'IA
           </div>
           <section className="credits-help" aria-labelledby="credits-help-title">
             <span id="credits-help-title" className="credits-help-title">Aide</span>
@@ -63,7 +63,8 @@ export function CreditsModal({ appVersion, onClose }) {
           </section>
           <div className="credits-line credits-thanks">
             Remerciements<br />
-            <strong>Jersou</strong>, <strong>Dantsu</strong>, <strong>o.Daneel</strong> et{' '}
+            <strong>marian-m12l</strong> (créateur de STUdio), <strong>Jersou</strong>,{' '}
+            <strong>Dantsu</strong>, <strong>o.Daneel</strong> (créateur de Lunii.QT) et{' '}
             <strong>LuckyTheCookie</strong>
           </div>
         </div>

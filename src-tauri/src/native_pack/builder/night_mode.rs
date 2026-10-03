@@ -1,7 +1,10 @@
+use super::super::{named_option_targets, Presence};
 use super::super::{
     resolve_next_story_target, ActionNode, CanonicalEntry, StageNode, StoryBuilder, Transition,
 };
-use super::transitions::{action_node_name, night_story_controls, transition, zero_position};
+use super::transitions::{
+    action_node_name, default_stage_type, night_story_controls, no_authored_position, transition,
+};
 
 impl<'a> StoryBuilder<'a> {
     pub(in crate::native_pack) fn build_night_bridge(&mut self) -> Result<Transition, String> {
@@ -54,10 +57,14 @@ impl<'a> StoryBuilder<'a> {
         let cache_key = format!(
             "{}#{}#{}",
             return_transition.action_node,
-            return_transition.option_index,
+            return_transition.selection.to_dialect_index(),
             home_transition
                 .as_ref()
-                .map(|transition| format!("{}#{}", transition.action_node, transition.option_index))
+                .map(|transition| format!(
+                    "{}#{}",
+                    transition.action_node,
+                    transition.selection.to_dialect_index()
+                ))
                 .unwrap_or_default()
         );
         if let Some(existing) = self.night_bridge_cache.get(&cache_key).cloned() {
@@ -70,23 +77,26 @@ impl<'a> StoryBuilder<'a> {
         self.action_nodes.push(ActionNode {
             id: night_entry_action_id.clone(),
             name: action_node_name(),
-            options: vec![night_stage_id.clone()],
-            position: zero_position(),
+            action_type: Presence::Absent,
+            group_id: Presence::Absent,
+            options: named_option_targets(vec![night_stage_id.clone()]),
+            position: no_authored_position(),
         });
 
         self.stage_nodes.push(StageNode {
             uuid: night_stage_id,
-            name: "nightStage".to_string(),
-            stage_type: "stage".to_string(),
-            square_one: false,
-            audio: Some(self.asset_name("nightModeAudio")?),
-            image: None,
-            control_settings: night_story_controls(
+            name: Presence::Value("nightStage".to_string()),
+            stage_type: default_stage_type(),
+            square_one: Presence::Value(false),
+            group_id: Presence::Absent,
+            audio: Presence::Value(self.asset_name("nightModeAudio")?),
+            image: Presence::Null,
+            control_settings: Presence::Value(night_story_controls(
                 self.report.project.options.end_message_autoplay,
-            ),
-            home_transition,
-            ok_transition: Some(return_transition),
-            position: zero_position(),
+            )),
+            home_transition: Presence::from_nullable(home_transition),
+            ok_transition: Presence::Value(return_transition),
+            position: no_authored_position(),
         });
 
         let bridge = transition(&night_entry_action_id, 0);

@@ -9,7 +9,7 @@ import '../styles/landing.css';
     <title>Story Studio pour Lunii — Créer, éditer et tester des packs</title>
     <meta
       name="description"
-      content="Story Studio est un éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs d'histoires compatibles Lunii."
+      content="Story Studio est un éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs d'histoires compatibles Lunii."
     />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="EW_r5pSDajA6Py5Z_duzkWnG2z-j_8UgUwk07VyOa4c" />
@@ -20,7 +20,7 @@ import '../styles/landing.css';
     <meta property="og:title" content="Story Studio pour Lunii — Créer et tester des packs" />
     <meta
       property="og:description"
-      content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs compatibles Lunii."
+      content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs compatibles Lunii."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Story Studio" />
@@ -34,7 +34,7 @@ import '../styles/landing.css';
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Story Studio pour Lunii — Créer et tester des packs" />
-    <meta name="twitter:description" content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs compatibles Lunii." />
+    <meta name="twitter:description" content="Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs compatibles Lunii." />
     <meta name="twitter:image" content="https://hugs11.github.io/story-studio/social-card.png" />
     <meta name="twitter:image:alt" content="Story Studio — éditeur de packs d'histoires pour la Lunii" />
 
@@ -44,13 +44,13 @@ import '../styles/landing.css';
         "@type": "SoftwareApplication",
         "name": "Story Studio",
         "alternateName": "Story Studio pour Lunii",
-        "description": "Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et exporter des packs d'histoires compatibles Lunii.",
+        "description": "Éditeur desktop open source pour Windows, Linux et macOS permettant de créer, importer, corriger et générer des packs d'histoires compatibles Lunii.",
         "url": "https://hugs11.github.io/story-studio/",
         "downloadUrl": "https://github.com/Hugs11/story-studio/releases/latest",
         "codeRepository": "https://github.com/Hugs11/story-studio",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Windows 10+, Linux x86_64, macOS 11+",
-        "softwareVersion": "0.9.8",
+        "softwareVersion": "0.9.9",
         "license": "https://github.com/Hugs11/story-studio/blob/main/LICENSE",
         "author": {
           "@type": "Person",
@@ -65,7 +65,7 @@ import '../styles/landing.css';
       }
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="logostory.svg" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
   </head>
   <body>
@@ -84,15 +84,19 @@ import '../styles/landing.css';
         <div class="container">
           <h1>Créer des histoires pour la Lunii avec Story Studio</h1>
           <p class="tagline">
-            Story Studio est un éditeur desktop open source pour Windows,
-            Linux et macOS. Il permet de créer des histoires pour la Lunii,
-            importer, corriger, organiser, tester et exporter des packs
-            compatibles Lunii dans une interface visuelle.
+            Story Studio est un logiciel pour créer et modifier des packs
+            pour les boîtes à histoires Lunii. Il intègre des outils pour
+            éditer le son et les images, et évite de devoir jongler avec
+            Audacity ou d'autres logiciels pour créer son pack d'histoires.
+            Gratuit et open source, il est disponible sur Windows, Linux
+            et macOS. Tout reste local : images, audio, navigation,
+            simulation et génération du ZIP.
           </p>
           <p class="tagline">
-            Si vous cherchez un outil pour créer des histoires pour la Lunii,
-            Story Studio est fait pour vous. Le projet reste local, gratuit et
-            pensé pour créer facilement et visuellement vos histoires audio.
+            L'Éditeur par menus organise vos Dossiers et vos Histoires sous
+            forme hiérarchique ; l'Éditeur graphe permet de créer des structures
+            plus complexes, comme des quiz ou des histoires à choix multiples.
+            L'Éditeur simplifié propose un parcours guidé.
           </p>
 
           <div class="cta-group">
@@ -113,6 +117,7 @@ import '../styles/landing.css';
             </div>
             <div class="hero-links">
               <a href="docs/">Documentation</a>
+              <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">Discord</a>
               <a href="https://github.com/Hugs11/story-studio/releases/latest">Notes de version</a>
               <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog complet</a>
               <a href="https://github.com/Hugs11/story-studio">Code source</a>
@@ -120,18 +125,43 @@ import '../styles/landing.css';
           </div>
 
           <div class="release-card" aria-labelledby="latest-release-title">
-            <h2 id="latest-release-title">Nouveautés de la version 0.9.8</h2>
+            <h2 id="latest-release-title">Nouveautés de la version 0.9.9</h2>
             <ul>
-              <li>Documentation utilisateur complète, structurée et recherchable directement en ligne.</li>
-              <li>Navigation plus fidèle dans les Dossiers, le simulateur et les fins personnalisées.</li>
-              <li>Choix de la langue audio YouTube et reprise des sessions temporaires plus fiables.</li>
+              <li>Nouvel Éditeur graphe pour créer et modifier directement les navigations avancées.</li>
+              <li>À l'import, tu peux choisir l'éditeur quand les deux conviennent ; lorsque la structure du pack ne rentre pas dans un arbre hiérarchique, il s'ouvre directement dans le graphe.</li>
+              <li>Un projet de l'Éditeur par menus peut être copié dans l'Éditeur graphe ; l'original reste intact.</li>
+              <li>Import des archives contenant plusieurs packs, avec choix du pack à ouvrir.</li>
+              <li>Contrôles renforcés avant génération du ZIP et relecture du ZIP généré.</li>
+              <li>Correction de l'UUID afin de conserver réellement l'identité choisie à la génération du ZIP.</li>
+              <li>Import YouTube plus fiable grâce à Deno, notamment pour les vidéos destinées aux enfants et les pistes doublées.</li>
+              <li>Simulateur, audio, sauvegardes et reprise de session plus fiables.</li>
             </ul>
           </div>
+
+          <p><a href="docs/editeur-graphe/">Découvrir le guide de l'Éditeur graphe</a></p>
+
+          <aside class="community-card" aria-labelledby="community-title">
+            <div>
+              <h2 id="community-title">Une idée, un retour ou besoin d'aide ?</h2>
+              <p>
+                Rejoignez le Discord de Story Studio pour proposer une fonctionnalité,
+                échanger autour d'un bug ou accéder aux versions bêta.
+              </p>
+            </div>
+            <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">
+              <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7.2 6.4A15.8 15.8 0 0 1 12 5.7c1.7 0 3.3.2 4.8.7 1.7 2.4 2.7 5.2 2.9 8.2-1.2 1.7-2.8 2.8-4.6 3.5l-1.1-1.5c.7-.3 1.3-.6 1.9-1.1-1.2.6-2.5.9-3.9.9s-2.7-.3-3.9-.9c.6.5 1.2.8 1.9 1.1l-1.1 1.5a10.6 10.6 0 0 1-4.6-3.5c.2-3 1.2-5.8 2.9-8.2Z" />
+                <circle cx="9.2" cy="11.8" r="1.15" />
+                <circle cx="14.8" cy="11.8" r="1.15" />
+              </svg>
+              Rejoindre le serveur Discord ↗
+            </a>
+          </aside>
 
           <div class="demo-card" aria-labelledby="demo-packs-title">
             <h2 id="demo-packs-title">Deux packs pour découvrir Story Studio</h2>
             <p>
-              Ouvrez-les dans le simulateur, explorez leur structure puis adaptez-les
+              Ouvrez-les dans le Simulateur, explorez leur structure puis adaptez-les
               librement dans l'éditeur.
             </p>
             <div class="demo-links">
@@ -162,11 +192,7 @@ import '../styles/landing.css';
           </div>
         </div>
         <div class="hero-shot">
-          <img
-            src="assets/screenshots/workspace-dark.png"
-            alt="Espace de travail unifié de Story Studio"
-            width="1080"
-          />
+          <img src="assets/screenshots/graph-editor-overview-dark.png" alt="Vue générale de l'Éditeur graphe avec la liste des nœuds et l'Inspecteur" width="2554" height="1439" />
         </div>
       </section>
 
@@ -176,7 +202,7 @@ import '../styles/landing.css';
           <p class="journey-intro">
             Story Studio rassemble tout le parcours dans une application locale :
             partir de ses propres fichiers ou d'un pack existant, préparer les
-            médias, construire la navigation, tester le résultat et exporter un
+            médias, construire la navigation, tester le résultat et générer un
             pack prêt pour la boîte à histoires.
           </p>
 
@@ -193,11 +219,7 @@ import '../styles/landing.css';
                 </p>
               </div>
               <figure class="journey-media">
-                <img
-                  src="assets/screenshots/home-dark.png"
-                  alt="Accueil guidé de Story Studio avec les différents parcours de création et d'import"
-                  loading="lazy"
-                />
+                <img src="assets/screenshots/home-dark.png" alt="Accueil de Story Studio avec les trois éditeurs et les parcours guidés" loading="lazy" />
               </figure>
             </article>
 
@@ -288,31 +310,40 @@ import '../styles/landing.css';
             <article class="journey-step">
               <div class="journey-copy">
                 <span class="journey-number">4</span>
-                <h3>Organiser, visualiser et tester le projet</h3>
+                <h3>Construire et tester la navigation</h3>
                 <p>
-                  Construisez les menus et les histoires dans l'arbre, puis
-                  réglez chaque nœud dans le panneau Réglages. Le diagramme donne
-                  une vue d'ensemble de la structure, des retours et des
-                  enchaînements du pack.
+                  L'Éditeur par menus organise simplement les Dossiers et les
+                  Histoires sous forme d'arborescence. Le panneau Réglages et le
+                  Diagramme permettent ensuite de relire les retours et les
+                  enchaînements produits.
                 </p>
               </div>
               <figure class="journey-media">
                 <img
-                  src="assets/screenshots/diagram-full-dark.png"
-                  alt="Diagramme complet d'un pack complexe"
+                  src="assets/screenshots/workspace-dark.png"
+                  alt="Éditeur par menus avec l'Arbre, les Réglages et le Diagramme"
                   loading="lazy"
                 />
               </figure>
               <div class="journey-copy">
                 <p>
-                  Le simulateur flottant permet de parcourir l'histoire comme
-                  sur la boîte, tout en gardant le diagramme sous les yeux.
+                  <a href="docs/editeur-graphe/">L'Éditeur graphe</a> donne directement accès aux Écrans, aux
+                  Listes de choix et à leurs raccords. Il permet de construire
+                  des histoires à choix multiples, des quiz, des tirages
+                  aléatoires et des parcours croisés.
+                </p>
+              </div>
+              <div class="journey-copy">
+                <p>
+                  Les deux éditeurs partagent la Bibliothèque médias, les outils audio, la file de
+                  rendu et le même Simulateur flottant. Vous pouvez parcourir
+                  l'histoire comme sur la boîte avant de générer le ZIP.
                 </p>
               </div>
               <figure class="journey-media">
                 <img
                   src="assets/screenshots/diagram-simulator-dark.png"
-                  alt="Diagramme du pack avec le simulateur flottant"
+                  alt="Diagramme du pack avec le Simulateur flottant"
                   loading="lazy"
                 />
               </figure>
@@ -321,22 +352,18 @@ import '../styles/landing.css';
             <article class="journey-step">
               <div class="journey-copy">
                 <span class="journey-number">5</span>
-                <h3>Vérifier les réglages puis générer le pack</h3>
+                <h3>Vérifier les réglages puis générer le ZIP</h3>
                 <p>
-                  Contrôlez les métadonnées, la couverture et les options de
-                  traitement audio avant l'export. Story Studio signale les
-                  points à corriger et ne propose la génération que lorsque le
-                  projet est prêt.
+                  Contrôlez les métadonnées, la Vignette catalogue et les
+                  options audio ou de navigation avant la génération du ZIP. Story Studio
+                  vérifie la structure, l'identité et les médias, puis relit le
+                  ZIP produit avant de terminer la génération du ZIP.
                 </p>
               </div>
               <div class="media-pair media-pair--settings">
                 <figure>
-                  <img
-                    src="assets/screenshots/pack-metadata-dark.png"
-                    alt="Métadonnées et couverture du pack"
-                    loading="lazy"
-                  />
-                  <figcaption>Renseigner les métadonnées du pack</figcaption>
+                  <img src="assets/screenshots/pack-metadata-dark.png" alt="Métadonnées du pack avec la Vignette catalogue, l'UUID et le nom du ZIP" loading="lazy" />
+                  <figcaption>Vérifier les métadonnées du pack</figcaption>
                 </figure>
                 <figure>
                   <img
@@ -344,7 +371,7 @@ import '../styles/landing.css';
                     alt="Options de traitement audio et de lecture du pack"
                     loading="lazy"
                   />
-                  <figcaption>Vérifier les options de génération</figcaption>
+                  <figcaption>Vérifier les options de génération du ZIP</figcaption>
                 </figure>
               </div>
               <div class="journey-copy">
@@ -379,7 +406,7 @@ import '../styles/landing.css';
           </p>
           <p>
             Story Studio est né de ce besoin : rassembler l'import, les images,
-            l'audio, la navigation, la simulation et l'export dans un même
+            l'audio, la navigation, la simulation et la génération du ZIP dans un même
             espace clair, local et compréhensible.
           </p>
         </div>
@@ -387,7 +414,7 @@ import '../styles/landing.css';
 
       <section id="install">
         <div class="container">
-          <h2>Comment installer</h2>
+          <h2>Installer Story Studio</h2>
           <div class="steps">
             <div class="step">
               <h3>Choisissez votre plateforme</h3>
@@ -407,7 +434,7 @@ import '../styles/landing.css';
             <div class="step">
               <h3>Lancez Story Studio</h3>
               <p>
-                Le build macOS n'est pas notarié : au premier lancement,
+                Le build macOS n'est pas notarisé : au premier lancement,
                 faites un Contrôle-clic sur l'app puis choisissez
                 <em>Ouvrir</em>, sans désactiver Gatekeeper globalement.
               </p>
@@ -423,8 +450,12 @@ import '../styles/landing.css';
           Story Studio est un outil communautaire gratuit et open source.
           <strong>Il n'est pas affilié, soutenu ou sponsorisé par Lunii.</strong>
         </div>
+        <div class="disclaimer">
+          <strong>Story Studio est conçu et développé avec l'aide d'outils d'intelligence artificielle. Les choix de conception, la direction du projet et la validation finale reviennent à un humain.</strong>
+        </div>
         <div class="links">
           <a href="docs/">Documentation</a>
+          <a href="https://discord.gg/jztpQz5Ad" target="_blank" rel="noopener noreferrer">Discord</a>
           <a href="https://github.com/Hugs11/story-studio">Code source (GitHub)</a>
           <a href="https://github.com/Hugs11/story-studio/issues">Signaler un bug</a>
           <a href="https://github.com/Hugs11/story-studio/blob/main/CHANGELOG.md">Changelog</a>

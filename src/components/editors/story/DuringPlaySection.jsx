@@ -29,6 +29,9 @@ const TITLE_CONTROLS = [
   { key: 'wheel',    label: 'Molette',              tip: "L'enfant peut tourner la molette pour parcourir les autres histoires.",   def: true },
 ];
 
+// Valeur du sélecteur pour « Accueil sans destination » (`returnOnHomeNone`).
+const HOME_PACK_START_VALUE = '__none__';
+
 let duringPlaySelectionAdvancedOpen = false;
 
 export function DuringPlaySection({ node, project = null, allMenus = [], allStories = [], parentMenu = null, onUpdate }) {
@@ -43,7 +46,13 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
   const effectiveHomeSelectValue = navigation.storyHome.effectiveTargetId
     ? generatedTargetIdToSelectValue(navigation.storyHome.effectiveTargetId)
     : null;
-  const homeSelectValue = node.returnOnHome ?? effectiveHomeSelectValue ?? parentMenuTarget ?? '';
+  // Accueil sans destination : la Lunii revient à l'Écran d'entrée ; le
+  // sélecteur le dit au lieu de proposer le dossier parent.
+  const homeSelectValue = node.returnOnHome
+    ?? (navigation.storyHome.isPackStart ? HOME_PACK_START_VALUE : null)
+    ?? effectiveHomeSelectValue
+    ?? parentMenuTarget
+    ?? '';
   const includeHomeDefaultOption = !parentMenuTarget || homeSelectValue === '';
 
   return (
@@ -94,17 +103,26 @@ export function DuringPlaySection({ node, project = null, allMenus = [], allStor
               <>
                 <span className="during-play-destination-label">Destination</span>
                 <div className="during-play-home-select">
-                  <NavigationTargetSelect
-                    value={homeSelectValue}
-                    onChange={(target) => onUpdate({ returnOnHome: target || null, returnOnHomeNone: false })}
-                    allMenus={allMenus}
-                    allStories={allStories}
-                    currentStoryId={node.id}
-                    emptyLabel="Retour au menu d'accueil"
-                    includeDefault={includeHomeDefaultOption}
-                    includeStoryPlay={false}
-                    size="compact"
-                  />
+                  {navigation.storyHome.isEndHomeStep ? (
+                    // La réaction Accueil de fin remplace toute destination
+                    // choisie ici : le sélecteur n'aurait aucun effet.
+                    <span className="card-copy">Réaction au bouton Accueil (réglée dans « Après la lecture »)</span>
+                  ) : (
+                    <NavigationTargetSelect
+                      value={homeSelectValue}
+                      onChange={(target) => onUpdate(target === HOME_PACK_START_VALUE
+                        ? { returnOnHome: null, returnOnHomeNone: true }
+                        : { returnOnHome: target || null, returnOnHomeNone: false })}
+                      allMenus={allMenus}
+                      allStories={allStories}
+                      currentStoryId={node.id}
+                      emptyLabel="Retour au menu d'accueil"
+                      includeDefault={includeHomeDefaultOption}
+                      includeNone
+                      includeStoryPlay={false}
+                      size="compact"
+                    />
+                  )}
                 </div>
               </>
             ) : null}

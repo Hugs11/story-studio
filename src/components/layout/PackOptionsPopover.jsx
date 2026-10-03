@@ -5,8 +5,16 @@ import { Wrench } from '../icons/LucideLocal';
 import {
   formatPackAudioEdgeSilence,
   getPackAudioEdgeSilenceSettings,
+  readPackAudioProcessing,
 } from '../../config/audioProcessing';
 import './PackOptionsPopover.css';
+
+// Le tiroir des options **du pack** : traitement audio et lecture, suivi de la
+// passerelle vers les préférences de l'application. Le tiroir est partagé par
+// les deux éditeurs ; les préférences gardent aussi leur raccourci clavier.
+//
+// Les options audio gardent les mêmes libellés et valeurs pré-cochées dans
+// tous les éditeurs. Auto-next appartient uniquement à l'éditeur par menus.
 
 function silenceModePresentation(leadingSeconds, trailingSeconds) {
   const leadingLabel = formatPackAudioEdgeSilence(leadingSeconds);
@@ -39,11 +47,12 @@ export function PackOptionsPopover({
 }) {
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
-  const isSimpleProject = projectType === 'simple';
   const { leading, trailing } = getPackAudioEdgeSilenceSettings();
   const { durationSummary: silenceDurationSummary, options: silenceOptions } = silenceModePresentation(leading, trailing);
-  // 'normalize' est le défaut appliqué par le schéma quand le mode n'est pas défini.
-  const activeSilenceMode = globalOptions.silenceMode ?? 'normalize';
+  // Les valeurs affichées viennent de la source unique : un projet Libre les
+  // porte explicitement, un projet graphe ne porte rien tant que l'auteur n'a
+  // touché à rien, et les deux doivent montrer le même pré-cochage.
+  const { silenceMode: activeSilenceMode, harmonizeLoudness } = readPackAudioProcessing(globalOptions);
   const activeSilenceHelp = (silenceOptions.find(([mode]) => mode === activeSilenceMode) ?? silenceOptions[0])[3];
 
   useEffect(() => () => {
@@ -73,6 +82,11 @@ export function PackOptionsPopover({
     onUpdateOption?.(key, value);
   }
 
+  function handleOpenPreferences() {
+    onOpenChange?.(false);
+    onOpenPreferences?.();
+  }
+
   function openPopover() {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     onOpenChange?.(true);
@@ -81,11 +95,6 @@ export function PackOptionsPopover({
   function scheduleClose() {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => onOpenChange?.(false), 140);
-  }
-
-  function handleOpenPreferences() {
-    onOpenChange?.(false);
-    onOpenPreferences?.();
   }
 
   return (
@@ -113,7 +122,7 @@ export function PackOptionsPopover({
                   </span>
                   <span className="pack-options-control-end">
                     <Toggle
-                      on={globalOptions.harmonizeLoudness !== false}
+                      on={harmonizeLoudness}
                       onChange={(value) => updateOption('harmonizeLoudness', value)}
                       ariaLabel="Harmoniser le volume des audios vers -14 LUFS à la génération."
                     />
@@ -143,29 +152,34 @@ export function PackOptionsPopover({
                 <span className="pack-options-control-hint pack-options-silence-hint">{activeSilenceHelp}</span>
               </div>
 
-              <div className="pack-options-well-sep" />
+              {projectType === 'pack' ? (
+                <>
+                  <div className="pack-options-well-sep" />
 
-              <div className="pack-options-well-title">Lecture <span>· global</span></div>
-              <Tooltip
-                text="Enchaîne automatiquement les histoires et ignore les messages, scénarios et retours de fin tant que l'option est active."
-                wrap
-                className="pack-options-row-tip"
-              >
-                <div className={`pack-options-control-row ${isSimpleProject ? 'is-disabled' : ''}`}>
-                  <span className="pack-options-control-copy">
-                    <span className="pack-options-control-title">Auto-next</span>
-                    <span className="pack-options-control-hint">Enchaîne la lecture des nœuds</span>
-                  </span>
-                  <span className="pack-options-control-end">
-                    <Toggle
-                      on={!!globalOptions.autoNext}
-                      onChange={(value) => updateOption('autoNext', value)}
-                      disabled={isSimpleProject}
-                      ariaLabel="Auto-next. Enchaîne automatiquement les histoires et ignore les fins configurées."
-                    />
-                  </span>
-                </div>
-              </Tooltip>
+                  <div className="pack-options-well-title">Lecture <span>· global</span></div>
+                  <Tooltip
+                    text={"Enchaîne automatiquement les histoires et ignore les messages, scénarios et retours de fin tant que l'option est active."}
+                    wrap
+                    className="pack-options-row-tip"
+                  >
+                    <div className="pack-options-control-row">
+                      <span className="pack-options-control-copy">
+                        <span className="pack-options-control-title">Auto-next</span>
+                        <span className="pack-options-control-hint">
+                          Enchaîne la lecture des nœuds
+                        </span>
+                      </span>
+                      <span className="pack-options-control-end">
+                        <Toggle
+                          on={!!globalOptions.autoNext}
+                          onChange={(value) => updateOption('autoNext', value)}
+                          ariaLabel="Auto-next. Enchaîne automatiquement les histoires et ignore les fins configurées."
+                        />
+                      </span>
+                    </div>
+                  </Tooltip>
+                </>
+              ) : null}
             </div>
 
             {onOpenPreferences ? (

@@ -89,6 +89,16 @@ fn candidate_prompt_stage<'a>(
     }
 
     let prompt_stage = stages.get(direct_ok_target)?;
+    // Une position dans une liste (Action à plusieurs options, Écran à molette)
+    // est un retour au menu, pas un message de fin : le constructeur écrit
+    // toujours ce message derrière une Action à une seule option. Cas typique :
+    // la dernière histoire enchaînée revient au début de la liste racine.
+    let lands_in_a_list = transition_action_options(play_stage.get("okTransition"), actions).len()
+        > 1
+        && stage_control_bool(prompt_stage, "wheel", false);
+    if lands_in_a_list {
+        return None;
+    }
     let prompt_home = transition_target_stage_id(prompt_stage.get("homeTransition"), actions);
     let prompt_ok = transition_target_stage_id(prompt_stage.get("okTransition"), actions);
     let prompt_has_audio = prompt_stage.get("audio").and_then(|v| v.as_str()).is_some();

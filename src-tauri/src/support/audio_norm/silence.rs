@@ -45,23 +45,35 @@ impl EdgeSilenceSelection {
     };
 }
 
-pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMeasure, String> {
+/// Arguments de la mesure d'enveloppe RMS.
+///
+/// Extraits pour que l'export avancé mesure **exactement** comme le mode Libre
+/// tout en portant sa propre invocation : il doit classer l'issue d'un outil
+/// par phase et par opération, ce qu'un `Result<_, String>` ne sait pas rendre.
+/// La mesure, elle, ne doit pas exister en deux exemplaires.
+pub(crate) fn edge_envelope_args(input: &Path) -> Vec<String> {
     let envelope_filter = format!(
         "aformat=channel_layouts=mono,asetnsamples=n={}:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level",
         EDGE_RMS_WINDOW_SAMPLES
     );
+    vec![
+        "-hide_banner".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        input.to_string_lossy().to_string(),
+        "-map".to_string(),
+        "0:a:0".to_string(),
+        "-af".to_string(),
+        envelope_filter,
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
+pub(crate) fn measure_edge_silence(ffmpeg: &Path, input: &Path) -> Result<EdgeMeasure, String> {
     let mut cmd = Command::new(ffmpeg);
-    cmd.arg("-hide_banner")
-        .arg("-nostats")
-        .arg("-i")
-        .arg(input)
-        .arg("-map")
-        .arg("0:a:0")
-        .arg("-af")
-        .arg(envelope_filter)
-        .arg("-f")
-        .arg("null")
-        .arg("-")
+    cmd.args(edge_envelope_args(input))
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     apply_no_window(&mut cmd);

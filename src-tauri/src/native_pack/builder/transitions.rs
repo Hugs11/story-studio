@@ -1,57 +1,31 @@
-use serde_json::Number;
-
-use super::super::{CanonicalStory, ControlSettings, Position, Transition};
+use super::super::{CanonicalStory, ControlSettings, Position, Presence, Transition};
 use crate::domain::project::EntryControlSettings;
 
 pub(crate) fn playback_controls() -> ControlSettings {
-    ControlSettings {
-        wheel: false,
-        ok: false,
-        home: true,
-        pause: true,
-        autoplay: true,
-    }
+    ControlSettings::authored(false, false, true, true, true)
 }
 
 pub(crate) fn night_story_controls(autoplay: bool) -> ControlSettings {
-    ControlSettings {
-        wheel: false,
-        ok: true,
-        home: true,
-        pause: false,
-        autoplay,
-    }
+    ControlSettings::authored(false, true, true, false, autoplay)
 }
 
 pub(crate) fn post_playback_prompt_controls() -> ControlSettings {
-    ControlSettings {
-        wheel: false,
-        ok: true,
-        home: true,
-        pause: false,
-        autoplay: true,
-    }
+    ControlSettings::authored(false, true, true, false, true)
 }
 
 pub(crate) fn title_controls_from_settings(
     settings: Option<&EntryControlSettings>,
 ) -> ControlSettings {
-    let fallback = ControlSettings {
-        wheel: true,
-        ok: true,
-        home: true,
-        pause: false,
-        autoplay: false,
-    };
-    ControlSettings {
-        wheel: settings.and_then(|c| c.wheel).unwrap_or(fallback.wheel),
-        ok: settings.and_then(|c| c.ok).unwrap_or(fallback.ok),
-        home: settings.and_then(|c| c.home).unwrap_or(fallback.home),
-        pause: settings.and_then(|c| c.pause).unwrap_or(fallback.pause),
-        autoplay: settings
+    let fallback = ControlSettings::authored(true, true, true, false, false);
+    ControlSettings::authored(
+        settings.and_then(|c| c.wheel).unwrap_or(fallback.wheel()),
+        settings.and_then(|c| c.ok).unwrap_or(fallback.ok()),
+        settings.and_then(|c| c.home).unwrap_or(fallback.home()),
+        settings.and_then(|c| c.pause).unwrap_or(fallback.pause()),
+        settings
             .and_then(|c| c.autoplay)
-            .unwrap_or(fallback.autoplay),
-    }
+            .unwrap_or(fallback.autoplay()),
+    )
 }
 
 pub(crate) fn should_emit_combined_story_stage(
@@ -79,22 +53,21 @@ pub(crate) fn prompt_controls_from_settings(
     settings: Option<&EntryControlSettings>,
 ) -> ControlSettings {
     let fallback = post_playback_prompt_controls();
-    ControlSettings {
-        wheel: settings.and_then(|c| c.wheel).unwrap_or(fallback.wheel),
-        ok: settings.and_then(|c| c.ok).unwrap_or(fallback.ok),
-        home: settings.and_then(|c| c.home).unwrap_or(fallback.home),
-        pause: settings.and_then(|c| c.pause).unwrap_or(fallback.pause),
-        autoplay: settings
+    ControlSettings::authored(
+        settings.and_then(|c| c.wheel).unwrap_or(fallback.wheel()),
+        settings.and_then(|c| c.ok).unwrap_or(fallback.ok()),
+        settings.and_then(|c| c.home).unwrap_or(fallback.home()),
+        settings.and_then(|c| c.pause).unwrap_or(fallback.pause()),
+        settings
             .and_then(|c| c.autoplay)
-            .unwrap_or(fallback.autoplay),
-    }
+            .unwrap_or(fallback.autoplay()),
+    )
 }
 
-pub(crate) fn transition(action_id: &str, option_index: i32) -> Transition {
-    Transition {
-        action_node: action_id.to_string(),
-        option_index,
-    }
+/// Une transition vers une option d'indice connu : les constructeurs Libre
+/// choisissent toujours une destination précise, jamais `Random`.
+pub(crate) fn transition(action_id: &str, option_index: usize) -> Transition {
+    Transition::fixed(action_id, option_index)
 }
 
 pub(crate) fn stage_transition_uses_action(
@@ -106,13 +79,23 @@ pub(crate) fn stage_transition_uses_action(
         .unwrap_or(false)
 }
 
-pub(crate) fn action_node_name() -> String {
-    "Action node".to_string()
+/// Le nom que les constructeurs Libre donnent explicitement à leurs Actions.
+/// C'est un choix d'auteur du builder, pas le repli de lecture retiré du
+/// modèle : il est émis.
+pub(crate) fn action_node_name() -> Presence<String> {
+    Presence::Value(super::super::ACTION_NODE_FALLBACK_NAME.to_string())
 }
 
-pub(crate) fn zero_position() -> Position {
-    Position {
-        x: Number::from(0),
-        y: Number::from(0),
-    }
+/// Le `type` que les constructeurs Libre donnent explicitement à leurs Stages.
+pub(crate) fn default_stage_type() -> Presence<String> {
+    Presence::Value(super::super::STAGE_TYPE_FALLBACK.to_string())
+}
+
+/// Un nœud créé par un constructeur Libre ne porte aucune position d'auteur.
+/// Une disposition synthétique se range dans l'état d'éditeur, pas dans le
+/// document ; la préparation n'émet `position` que si elle vient de la source
+/// ou d'une intention explicite. Un `{0,0}` posé par ces constructeurs ne serait
+/// ni l'un ni l'autre.
+pub(crate) fn no_authored_position() -> Presence<Position> {
+    Presence::Absent
 }

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NAV_TARGET_NEXT_STORY,
   decodeNavigationMenuId,
+  decodeNavigationStoryId,
   encodeMenuNavigationTarget,
   encodeStoryHomeStepNavigationTarget,
   encodeStoryNavigationTarget,
@@ -48,6 +49,7 @@ function buildNavigationTargetOptions({
   includeDefault = true,
   includeNextStory = true,
   includeStoryPlay = true,
+  flagMissingValue = false,
 }) {
   const options = [];
   if (value === '__mixed__') {
@@ -96,7 +98,25 @@ function buildNavigationTargetOptions({
       kind: 'story_home_step',
     });
   }
+  // Une destination dont l'histoire ou le dossier a été supprimé reste affichée
+  // comme telle, jamais confondue avec le choix par défaut de la ligne vide.
+  if (flagMissingValue && isMissingNavigationValue(value, allMenus, allStories)) {
+    options.unshift({ value, label: 'Destination supprimée — à choisir', kind: 'none', disabled: true });
+  }
   return options;
+}
+
+function isMissingNavigationValue(value, allMenus, allStories) {
+  const normalized = normalizeNavigationTarget(value);
+  if (!normalized || value === '__mixed__' || value === '__none__') return false;
+  if (isRootNavigationTarget(normalized) || isCurrentMenuNavigationTarget(normalized)) return false;
+  if (isNextStoryNavigationTarget(normalized)) return false;
+  if (isStoryNavigationTarget(normalized)) {
+    const storyId = decodeNavigationStoryId(normalized);
+    return !allStories.some((story) => story.id === storyId);
+  }
+  const menuId = decodeNavigationMenuId(normalized);
+  return !allMenus.some((menu) => menu.id === menuId);
 }
 
 export const CONTROL_DEFS = [
@@ -195,6 +215,7 @@ export function NavigationTargetSelect({
   style,
   includeNextStory = true,
   includeStoryPlay = true,
+  flagMissingValue = false,
   size = 'default',
 }) {
   const [open, setOpen] = useState(false);
@@ -218,6 +239,7 @@ export function NavigationTargetSelect({
       includeDefault,
       includeNextStory,
       includeStoryPlay,
+      flagMissingValue,
     }),
     [
       rawSelectedValue,
@@ -231,6 +253,7 @@ export function NavigationTargetSelect({
       includeDefault,
       includeNextStory,
       includeStoryPlay,
+      flagMissingValue,
     ],
   );
   // Un « vrai » choix correspond à une ligne concrète de la liste (menu, histoire,

@@ -487,6 +487,24 @@
   word-break: break-word;
 }
 
+.funnel-error-details {
+  margin-top: 8px;
+}
+
+.funnel-error-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.funnel-error-details pre {
+  margin: 8px 0 0;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: inherit;
+  font-size: 11.5px;
+}
+
 .funnel-warning {
   margin-top: 14px;
   padding: 10px 12px;
@@ -715,4 +733,98 @@
   .funnel-step-content { padding: 20px 16px; }
   .funnel-head { padding: 14px 16px; }
   .funnel-foot { padding: 12px 16px; }
+}
+
+/* 10. Écran de choix d'une archive enveloppe --------------------------------- */
+/* Une enveloppe contient plusieurs packs indépendants : l'auteur en choisit un,
+   et la suite est le parcours d'import ordinaire. La liste reste volontairement
+   sobre — ni vignette ni métadonnée enrichie, qui imposeraient d'extraire les
+   médias de chaque pack pour être affichées. */
+.bundle-child-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.bundle-child {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    "name size verdict"
+    "reason reason reason";
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--bg1);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bundle-child:hover:not(:disabled) {
+  border-color: var(--control-border-hover);
+  background: var(--bg2);
+}
+
+.bundle-child.is-selected {
+  border-color: var(--accent-2);
+  background: var(--bg2);
+}
+
+.bundle-child:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bundle-child-name {
+  grid-area: name;
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.bundle-child-size {
+  grid-area: size;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bundle-child-verdict {
+  grid-area: verdict;
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--bg2);
+  color: var(--text-secondary);
+  border: 1px solid var(--control-border);
+}
+
+.bundle-child-verdict.is-editable {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.bundle-child-verdict.is-error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+.bundle-child-reason {
+  grid-area: reason;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
 }

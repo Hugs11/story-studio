@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { MediaTransferProvider } from '../store/MediaTransferContext';
 import { ProjectContext } from '../store/ProjectContext';
 import { ProjectActionsContext } from '../store/ProjectActionsContext';
+import { ShortcutLabelsContext } from '../store/ShortcutLabelsContext';
 import { TitleBar } from './layout/TitleBar';
 import { Toolbar } from './layout/Toolbar';
 import { AppModals } from './AppModals';
@@ -24,7 +25,10 @@ export function AppShell({
   mediaTransfer,
   projectContextValue,
   projectActions,
-  projectType,
+  // Le panneau du bas et la bottombar suivent « un projet est-il ouvert ? »,
+  // comme la barre : médiathèque, files et étiquettes ne demandent pas d'arbre.
+  // Le shell ne lit pas la capacité d'arbre.
+  projectOpen,
   titleBar,
   toolbar,
   workspace,
@@ -35,16 +39,18 @@ export function AppShell({
   return (
     <MediaTransferProvider
       dropOnNode={mediaTransfer.dropOnNode}
+      prepareMediaForProject={mediaTransfer.prepareMediaForProject}
       notifyCutPaste={mediaTransfer.notifyCutPaste}
       activeDropZone={mediaTransfer.activeDropZone}
       setActiveDropZone={mediaTransfer.setActiveDropZone}
     >
     <ProjectContext.Provider value={projectContextValue}>
     <ProjectActionsContext.Provider value={projectActions}>
+    <ShortcutLabelsContext.Provider value={toolbar.shortcutLabels}>
     <div className="app">
       <TitleBar
         projectName={titleBar.projectName}
-        packMetadata={titleBar.packMetadata}
+        packRecap={titleBar.packRecap}
         packCoverImage={titleBar.packCoverImage}
         isDirty={titleBar.isDirty}
         hasSavePath={titleBar.hasSavePath}
@@ -54,30 +60,37 @@ export function AppShell({
         onOpenCredits={titleBar.onOpenCredits}
       />
 
-      {projectType !== null && (
+      {projectOpen && (
         <Toolbar
-          showProjectActions={toolbar.showProjectActions}
+          inventory={toolbar.inventory}
           shortcutLabels={toolbar.shortcutLabels}
-          saveState={toolbar.saveState}
-          generateDisabled={toolbar.generateDisabled}
+          suspensionNotice={toolbar.suspensionNotice}
           onNewProject={toolbar.onNewProject}
           onOpenProject={toolbar.onOpenProject}
+          onOpenPack={toolbar.onOpenPack}
           onSaveProject={toolbar.onSaveProject}
           onSaveProjectAs={toolbar.onSaveProjectAs}
+          onContinueInGraph={toolbar.onContinueInGraph}
+          onUndo={toolbar.onUndo}
+          onRedo={toolbar.onRedo}
+          onOpenPreferences={toolbar.onOpenPreferences}
           panels={toolbar.panels}
           panelOrder={toolbar.panelOrder}
           onMovePanel={toolbar.onMovePanel}
           onToggleTree={toolbar.onToggleTree}
           onToggleSettings={toolbar.onToggleSettings}
           onToggleDiagram={toolbar.onToggleDiagram}
+          onToggleNodeList={toolbar.onToggleNodeList}
+          onToggleInspector={toolbar.onToggleInspector}
           packOptionsOpen={toolbar.packOptionsOpen}
           onPackOptionsOpenChange={toolbar.onPackOptionsOpenChange}
           projectType={toolbar.projectType}
           globalOptions={toolbar.globalOptions}
           onUpdateGlobalOption={toolbar.onUpdateGlobalOption}
-          onOpenPreferences={toolbar.onOpenPreferences}
           onGenerate={toolbar.onGenerate}
+          issueKind={toolbar.issueKind}
           validationIssues={toolbar.validationIssues}
+          advancedIssues={toolbar.advancedIssues}
           pathAuditPending={toolbar.pathAuditPending}
           validationOpen={toolbar.validationOpen}
           onValidationOpenChange={toolbar.onValidationOpenChange}
@@ -90,9 +103,11 @@ export function AppShell({
           {renderDeferred(
             <WorkspaceView
               project={workspace.project}
+              projectEpoch={workspace.projectEpoch}
               node={workspace.node}
               selectedId={workspace.selectedId}
               onSetProjectType={workspace.onSetProjectType}
+              onStartAdvancedProject={workspace.onStartAdvancedProject}
               onEditPack={workspace.onEditPack}
               onPodcastFunnel={workspace.onPodcastFunnel}
               onYoutubeFunnel={workspace.onYoutubeFunnel}
@@ -114,10 +129,13 @@ export function AppShell({
               onFocusTreeSearch={workspace.onFocusTreeSearch}
               diagramSearchFocusTrigger={workspace.diagramSearchFocusTrigger}
               workspaceViewState={workspace.workspaceViewState}
+              advanced={workspace.advanced}
             />,
           )}
-          {projectType !== null && bottomPanel.open && renderDeferred(
+          {projectOpen && bottomPanel.open && renderDeferred(
             <BottomWorkspacePanel
+              key={bottomPanel.editorScope}
+              heightKey={bottomPanel.heightKey}
               activeTab={bottomPanel.activeTab}
               onActiveTabChange={bottomPanel.onActiveTabChange}
               onClose={bottomPanel.onClose}
@@ -136,7 +154,9 @@ export function AppShell({
               getAudioUsage={bottomPanel.getAudioUsage}
               getImageUsage={bottomPanel.getImageUsage}
               onSelectNode={bottomPanel.onSelectNode}
+              onRevealGraphNode={bottomPanel.onRevealGraphNode}
               renderQueue={bottomPanel.renderQueue}
+              renderQueueAdvanced={bottomPanel.renderQueueAdvanced}
               mediaTags={bottomPanel.mediaTags}
               onAddMediaTag={bottomPanel.onAddMediaTag}
               onRemoveMediaTag={bottomPanel.onRemoveMediaTag}
@@ -146,11 +166,14 @@ export function AppShell({
               savePath={bottomPanel.savePath}
               projectName={bottomPanel.projectName}
               onMediaCreated={bottomPanel.onMediaCreated}
+              advancedMediaUsages={bottomPanel.advancedMediaUsages}
               mediaToolRequest={bottomPanel.mediaToolRequest}
               onAcknowledgeMediaToolRequest={bottomPanel.onAcknowledgeMediaToolRequest}
               onInvalidateMediaToolRequest={bottomPanel.onInvalidateMediaToolRequest}
               onValidateMediaToolRequest={bottomPanel.onValidateMediaToolRequest}
               onApplyMediaToolProjectAction={bottomPanel.onApplyMediaToolProjectAction}
+              pendingMediaReveal={bottomPanel.pendingMediaReveal}
+              onMediaRevealConsumed={bottomPanel.onMediaRevealConsumed}
             />
           )}
         </div>
@@ -161,7 +184,7 @@ export function AppShell({
       {/* Bottom bar */}
       <div className="bottombar">
         <span className="status-text">{bottomBar.statusText}</span>
-        {bottomBar.projectType !== null && !bottomBar.open && (
+        {bottomBar.projectOpen && !bottomBar.open && (
           <button
             className="rq-bottombar-btn"
             onClick={bottomBar.onOpenMedia}
@@ -170,7 +193,7 @@ export function AppShell({
             <span>({bottomBar.mediaLibraryCount})</span>
           </button>
         )}
-        {bottomBar.projectType !== null && !bottomBar.open && (
+        {bottomBar.projectOpen && !bottomBar.open && (
           <button
             className={`rq-bottombar-btn${bottomBar.renderQueueActiveCount > 0 ? ' has-active' : ''}`}
             onClick={bottomBar.onOpenRenderQueue}
@@ -181,7 +204,7 @@ export function AppShell({
             {bottomBar.renderQueueActiveCount === 0 && bottomBar.renderQueueHasResults && <span className="bottom-status-pill is-done">✓</span>}
           </button>
         )}
-        {bottomBar.projectType !== null && !bottomBar.open && (
+        {bottomBar.projectOpen && !bottomBar.open && (
           <button
             className={`rq-bottombar-btn${bottomBar.aiQueueActiveCount > 0 ? ' has-active' : ''}`}
             onClick={bottomBar.onOpenAiQueue}
@@ -195,6 +218,7 @@ export function AppShell({
         {bottomBar.appVersion && <span className="bottombar-version">v{bottomBar.appVersion}</span>}
       </div>
     </div>
+    </ShortcutLabelsContext.Provider>
     </ProjectActionsContext.Provider>
     </ProjectContext.Provider>
     </MediaTransferProvider>

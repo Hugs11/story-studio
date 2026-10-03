@@ -70,7 +70,13 @@ export function useAiGeneration({
       label: job.targetLabel || 'Audio IA',
       targetLabel: job.targetLabel || 'Audio IA',
       voiceLabel: job.voiceLabel || 'XTTS',
-      target: job.target || null,
+      // Toute cible est liée au travail qui l'a demandée : une voix revenue
+      // après l'ouverture d'un autre projet ne s'y applique pas (garde de
+      // `applyGeneratedAudioToTarget`). Une cible qui porte déjà son époque la
+      // garde.
+      target: job.target
+        ? { projectEpoch: store.workEpochRef.current, ...job.target }
+        : null,
       request: job.request,
       settings: { ...xttsSettings },
       projectName: getProjectFilePrefix(store.project, store.savePath),

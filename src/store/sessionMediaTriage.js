@@ -43,6 +43,28 @@ export function collectSessionOnlyMedia({ project, mediaLibraryPaths, mediaTags 
 }
 
 /**
+ * Références médias du projet qui pointent **encore** dans le dossier de
+ * session. Ce sont les dépendances qu'un nettoyage emporterait : tant qu'il en
+ * reste une, le projet enregistré n'est pas autonome et la session ne peut pas
+ * être supprimée. La traversée est celle de tous les consommateurs, donc une
+ * liaison média du mode Avancé y figure au même titre qu'une référence d'arbre.
+ * L'existence sur disque est vérifiée par l'appelant : ce module reste pur.
+ */
+export function collectSessionBoundReferences({ project, sessionDir }) {
+  if (!pathKey(sessionDir)) return [];
+  const seen = new Set();
+  const bound = [];
+  for (const ref of walkProjectMediaReferences(project)) {
+    const key = pathKey(ref.path);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!isPathInside(ref.path, sessionDir)) continue;
+    bound.push({ path: ref.path, label: ref.label });
+  }
+  return bound;
+}
+
+/**
  * Applique le résultat du tri à la bibliothèque et aux tags :
  * - `replacements` : Map clé normalisée (pathKey) → nouveau chemin copié ;
  * - `droppedPaths` : chemins abandonnés (retirés de la bibliothèque, tags perdus).

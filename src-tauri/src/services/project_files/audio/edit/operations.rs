@@ -71,9 +71,8 @@ pub fn trim_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = workspace_or_project_dir(
+        let importes_dir = media_output_root(
             workspace_dir,
-            save_path,
             "Définissez un emplacement de travail pour découper un fichier externe.",
         )?
         .join("fichiers-importes");
@@ -178,9 +177,8 @@ pub fn cut_audio(
             original_path: None,
         })
     } else {
-        let importes_dir = workspace_or_project_dir(
+        let importes_dir = media_output_root(
             workspace_dir,
-            save_path,
             "Définissez un emplacement de travail pour couper un fichier externe.",
         )?
         .join("fichiers-importes");
@@ -363,9 +361,8 @@ pub(crate) fn commit_audio_preview_in(
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = workspace_or_project_dir(
+        let importes_dir = media_output_root(
             workspace_dir,
-            save_path,
             "Définissez un emplacement de travail pour éditer un fichier externe.",
         )?
         .join("fichiers-importes");
@@ -473,9 +470,8 @@ pub fn apply_audio_edit(request: AudioEditRequest<'_>) -> Result<TrimAudioResult
         let tmp_path = parent.join(format!("{}_edit_tmp_{}.{}", stem, now_millis(), ext));
         (tmp_path, input.clone(), false)
     } else {
-        let importes_dir = workspace_or_project_dir(
+        let importes_dir = media_output_root(
             request.workspace_dir,
-            request.save_path,
             "Définissez un emplacement de travail pour éditer un fichier externe.",
         )?
         .join("fichiers-importes");

@@ -1,7 +1,9 @@
 // Apercu visuel d'une entree pendant un drag (dnd-kit DragOverlay content).
 // Extrait de TreePanel.jsx.
 
-import { IconArchive, IconFolderOpen, IconStory } from './TreeIcons';
+import { NodeIcon } from '../icons/NodeIcon.jsx';
+import { hierarchicalNatureOf } from '../../store/nodeIconVocabulary.js';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../../store/projectWorkState.js';
 
 export function TreeDragOverlay({ entry }) {
   if (!entry) return null;
@@ -10,7 +12,12 @@ export function TreeDragOverlay({ entry }) {
       <span className="tree-chevron-spacer" />
       <div className="tree-item-body">
         <span className="ti-icon">
-          {entry.type === 'menu' ? <IconFolderOpen /> : entry.type === 'zip' ? <IconArchive /> : <IconStory />}
+          {/* L'apercu porte le dessin de la nature transportee. Un type inconnu
+              reste une histoire. */}
+          <NodeIcon
+            workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+            nature={hierarchicalNatureOf(entry.type) ?? 'story'}
+          />
         </span>
         <span className="ti-label">{entry.name}</span>
       </div>

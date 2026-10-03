@@ -14,7 +14,7 @@ import {
   X,
 } from '../icons/LucideLocal';
 import { basename, dirname, joinPath, pathKey } from '../../utils/fileUtils';
-import { candidatePathsForRelinkRoot, mediaKindFromPath } from '../../store/missingMediaRelink';
+import { candidatePathsForRelinkRoot, mediaKindFromPath, refreshRelinkRows } from '../../store/missingMediaRelink';
 import './MissingMediaRelinkModal.css';
 
 const MAX_SCAN_FILES = 12000;
@@ -146,11 +146,10 @@ export function MissingMediaRelinkModal({ missingMedia, workspaceDir = '', onApp
   const [scanningKey, setScanningKey] = useState('');
   const [applying, setApplying] = useState(false);
 
+  // Un nouvel audit (retour de focus, fichier remis en place) renouvelle la
+  // liste : les fichiers déjà reliés gardent leur choix.
   useEffect(() => {
-    setRows(buildInitialRows(missingMedia));
-    setQuery('');
-    setFilter('all');
-    setCollapsed(new Set());
+    setRows((current) => refreshRelinkRows(current, missingMedia));
   }, [missingMedia]);
 
   const total = rows.length;

@@ -11,9 +11,13 @@
 use serde::Serialize;
 
 mod download;
+mod error;
+mod info_cache;
+mod js_runtime;
 mod metadata;
 mod process;
 mod provision;
+mod tool;
 
 /// Une vidéo listée. Les noms de champs miroir `PodcastEpisode` (camelCase) pour
 /// que le funnel et le gestionnaire d'import soient mutualisés côté JS : `audioUrl`
@@ -58,8 +62,19 @@ pub struct YoutubeList {
 }
 
 pub use download::download_audio;
+pub use error::YoutubeError;
 pub use metadata::{fetch_audio_languages, fetch_list};
 pub(crate) use provision::update_ytdlp as update_ytdlp_binary;
+
+/// Action manuelle « Mettre à jour » : force la dernière version de yt-dlp et
+/// prépare le moteur JavaScript s'il manque encore.
+pub fn update_tools(home: &std::path::Path, emit: &dyn Fn(&str)) -> Result<(), YoutubeError> {
+    update_ytdlp_binary(home, emit)?;
+    if js_runtime::ensure_js_runtime(home, emit).is_none() {
+        emit("yt-dlp est à jour, mais le moteur JavaScript n'a pas pu être préparé.");
+    }
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
@@ -67,7 +82,7 @@ mod tests {
         format_duration, is_channel_source, normalize_listing_url, page_window,
         parse_audio_language_lines, parse_list_json, reorder_numbered_series, validate_youtube_url,
     };
-    use super::{download_audio, fetch_list, update_ytdlp_binary};
+    use super::{download_audio, fetch_audio_languages, fetch_list, update_ytdlp_binary};
     use std::path::Path;
     use uuid::Uuid;
 
@@ -336,8 +351,10 @@ not-json
 
         let video_url = std::env::var("STORY_STUDIO_YOUTUBE_VIDEO_URL")
             .unwrap_or_else(|_| "https://www.youtube.com/watch?v=PIMtEh8qo4o".to_string());
+        let downloads = root.join("downloads");
         let video = fetch_list(
             &home,
+            &downloads,
             Some(custom.to_string_lossy().as_ref()),
             &video_url,
             1,
@@ -345,20 +362,48 @@ not-json
         )
         .expect("read public video metadata");
         assert_eq!(video.videos.len(), 1);
+        assert!(
+            home.join("deno").join("2.9.7").join("deno").is_file(),
+            "the pinned JavaScript runtime is provisioned on first use"
+        );
+        let info_dir = downloads.join("info");
+        let video_info = info_dir.join(format!("{}.info.json", video.videos[0].id));
+        assert!(
+            video_info.is_file(),
+            "a single video analysis is kept for its download"
+        );
 
         let playlist_url =
             std::env::var("STORY_STUDIO_YOUTUBE_PLAYLIST_URL").unwrap_or_else(|_| {
                 "https://www.youtube.com/playlist?list=PLxrLFHZQc8nqMzvzB0Ml0nGWgjnB9HO7f"
                     .to_string()
             });
-        let playlist =
-            fetch_list(&home, None, &playlist_url, 1, &emit).expect("read public playlist fixture");
+        let playlist = fetch_list(&home, &downloads, None, &playlist_url, 1, &emit)
+            .expect("read public playlist fixture");
         assert!(playlist.videos.len() > 1);
         assert_eq!(playlist.page, 1);
 
+        let picked: Vec<String> = playlist
+            .videos
+            .iter()
+            .take(2)
+            .map(|video| video.audio_url.clone())
+            .collect();
+        let languages = fetch_audio_languages(&home, &downloads, None, &picked, &emit)
+            .expect("analyze selected playlist videos");
+        assert_eq!(languages.len(), picked.len());
+        for analyzed in &languages {
+            assert!(
+                info_dir
+                    .join(format!("{}.info.json", analyzed.id))
+                    .is_file(),
+                "each analyzed video is kept for its download"
+            );
+        }
+
         let output = download_audio(
             &home,
-            &root.join("downloads"),
+            &downloads,
             None,
             &video_url,
             "validation été avec espaces",
@@ -368,6 +413,10 @@ not-json
         .expect("download public video audio");
         let output = Path::new(&output);
         assert!(output.is_file());
+        assert!(
+            !video_info.exists(),
+            "the cached analysis is consumed by the download"
+        );
         assert!(std::fs::metadata(output).unwrap().len() > 0);
         std::fs::remove_file(output).expect("remove downloaded audio fixture");
         std::fs::remove_dir_all(root).expect("clean live YouTube fixture");

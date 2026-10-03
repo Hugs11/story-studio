@@ -9,6 +9,7 @@ import {
   piperLanguageForVoice,
 } from '../../store/xttsSettings';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   const [piperVoices, setPiperVoices] = useState([]);
@@ -53,10 +54,10 @@ export function usePiperVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
       if (cancelled) return;
       setPiperProvision((prev) => (prev.state === 'loading' ? { ...prev, message: String(event.payload) } : prev));
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     }).catch(() => {});
-    return () => { cancelled = true; if (unlisten) unlisten(); };
+    return () => { cancelled = true; releaseTauriListener(unlisten); };
   }, []);
 
   function updatePiperLanguage(language) {

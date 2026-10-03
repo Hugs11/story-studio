@@ -1,10 +1,45 @@
 # Third-Party Notices
 
 Story Studio source code is licensed under the **MIT License** (see `LICENSE`).
-This repository and its installers also ship **third-party command-line binaries**
-that are **not** covered by the MIT license — each binary remains under the
-license set by its upstream project. The notices below describe each bundled
-binary, its provenance, and the obligations that come with redistributing it.
+Story Studio also uses third-party libraries, assets and command-line tools.
+Each component retains its upstream license and copyright notices; Story
+Studio's MIT license does not replace them. The notices below distinguish
+components shipped in the application from tools downloaded at runtime.
+
+## Cytoscape.js
+
+- **Used by:** the Graph Editor canvas, through
+  `src/components/AdvancedGraphCanvas/engines/`.
+- **Version:** `3.34.3`, resolved in `package-lock.json`.
+- **Upstream project:** <https://js.cytoscape.org/>
+- **License:** MIT —
+  <https://github.com/cytoscape/cytoscape.js/blob/v3.34.3/LICENSE>.
+- **Copyright notice:** Copyright (c) 2016-2026, The Cytoscape Consortium.
+- **Bundled license text:** `public/licenses/Cytoscape-MIT.txt`, copied by Vite
+  into `dist/licenses/Cytoscape-MIT.txt` and shipped with the desktop frontend.
+
+Cytoscape.js is included in the production JavaScript bundle. Redistributing
+it requires retaining its copyright and complete MIT permission notice.
+A project link or an entry in the changelog alone does not replace that text.
+The installed Cytoscape package declares no runtime npm dependencies.
+
+## Rolldown generated runtime helpers
+
+- **Used in:** the generated production JavaScript chunk `rolldown-runtime-*.js`.
+- **Build tool version:** `1.0.0-rc.17`, resolved in `package-lock.json`.
+- **License:** MIT —
+  <https://github.com/rolldown/rolldown/blob/v1.0.0-rc.17/LICENSE>.
+- **Copyright notice:** Copyright (c) 2024-present VoidZero Inc. & Contributors.
+- **Bundled license texts:** `public/licenses/Rolldown-MIT.txt` and
+  `public/licenses/Rolldown-THIRD-PARTY-LICENSE.txt`; Vite copies both into
+  `dist/licenses/`.
+- **Upstream derivative-code notices:**
+  <https://github.com/rolldown/rolldown/blob/v1.0.0-rc.17/THIRD-PARTY-LICENSE>
+  identifies Rollup contributors (2017) and Evan Wallace (2020), both under MIT.
+
+The compiler itself is a development tool, but its generated runtime helpers
+are shipped. The upstream MIT and derivative-code notices are retained with
+the application.
 
 ## Lucide Icons
 
@@ -220,14 +255,14 @@ not bundle this AppImage-specific plugin set.
 
 ## External runtime tools
 
-The tools below run as separate processes. yt-dlp is downloaded on first use
+The tools below run as separate processes. yt-dlp and Deno are downloaded on first use
 into writable app-data; Piper 1.6 is built from source and bundled per platform
 while its voice models remain downloaded separately. Their upstream licenses
 and notices apply as detailed below.
 
 ### yt-dlp
 
-- **Used by:** the "Pack depuis YouTube" funnel (plan 09), to list videos and
+- **Used by:** the "Pack depuis YouTube" funnel, to list videos and
   extract their audio. Provisioned by `src-tauri/src/services/youtube/`.
 - **Downloaded from:**
   the latest immutable release tag resolved through the official GitHub API,
@@ -253,13 +288,37 @@ does not redistribute yt-dlp; it is fetched at runtime. If a future
 release bundles it, treat that standalone binary as GPL v3 or later and
 include the matching upstream third-party notices.
 
+### Deno (YouTube JavaScript runtime)
+
+- **Used by:** yt-dlp to solve YouTube JavaScript challenges, through
+  `src-tauri/src/services/youtube/js_runtime.rs` and `tool.rs`.
+- **Version:** `2.9.7`; the version and archive SHA-256 values are pinned together
+  in `js_runtime.rs` for Windows x64, Linux x86_64 and macOS Apple Silicon.
+- **Downloaded from:** the official versioned release
+  <https://github.com/denoland/deno/releases/tag/v2.9.7>, directly into
+  `<app-data>/yt-dlp/deno/2.9.7/` on first use. No Deno executable is included
+  in the Story Studio installers or mirrored by Story Studio.
+- **Deno source license:** MIT —
+  <https://github.com/denoland/deno/blob/v2.9.7/LICENSE.md>.
+- **Copyright notice:** Copyright 2018-2026 the Deno authors.
+- **Local license text:** `public/licenses/Deno-MIT.txt`, shipped in
+  `dist/licenses/Deno-MIT.txt` for reference.
+
+Deno's MIT license requires retaining its copyright and permission notice
+when redistributing Deno. Its executable also incorporates third-party code,
+including V8; Deno's MIT text is not an exhaustive license inventory for that
+binary. Story Studio currently downloads the original executable from upstream
+rather than redistributing it. If a future release bundles or mirrors Deno,
+include the notices for the exact binary's third-party components as well as
+Deno's MIT license before distribution.
+
 ### Piper (text-to-speech) — 0.9.6 migration
 
 Story Studio 0.9.6 builds and bundles a native Piper runtime for Windows x64,
 Linux x86_64 and macOS Apple Silicon. The runtime is invoked as a separate
 process. It needs no Python installation, Homebrew runtime or Rosetta.
 
-- **Used by:** the default zero-config TTS backend (plan 08).
+- **Used by:** the default zero-config TTS backend.
 - **Piper source:** `OHF-Voice/piper1-gpl` tag `v1.6.0`, commit
   `f04d52c5528ac7cf2d73757f57990ff490f75005` —
   <https://codeload.github.com/OHF-Voice/piper1-gpl/tar.gz/refs/tags/v1.6.0>
@@ -355,6 +414,6 @@ machine-readable provenance manifests. Do not replace the tracked Windows
 `ffmpeg.exe` without checking that it remains below GitHub's hard **100 MiB
 per-file** limit.
 
-yt-dlp remains downloaded at runtime and is not bundled. Piper 1.6 is bundled
+yt-dlp and Deno remain downloaded at runtime and are not bundled. Piper 1.6 is bundled
 without its voice models; corresponding-source availability for the exact
 runtime build must accompany the 0.9.6 release.

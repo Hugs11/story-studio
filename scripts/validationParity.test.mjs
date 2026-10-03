@@ -1,7 +1,8 @@
 // Test de parite JS<->Rust pour la validation projet.
 // Charge les fixtures partagees scripts/fixtures/validation-projects.json
 // et verifie que le moteur JS produit le meme verdict (ok/fail) que celui
-// documente. Le pendant Rust est dans src-tauri/src/domain/tests/parity.rs.
+// documente. Le pendant Rust (validation.rs, parity_fixtures_share_the_js_verdict)
+// lit le meme fichier.
 //
 // Quand on ajoute une regle de validation : ajouter ici un cas (avec verdict
 // et mots-cles attendus), implementer la regle des DEUX cotes, et faire
