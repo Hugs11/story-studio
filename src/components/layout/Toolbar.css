@@ -187,6 +187,10 @@
   background: var(--bg3);
 }
 
+.chrome-panel-toggle.is-fixed {
+  box-shadow: inset 0 0 0 1px var(--borderLt);
+}
+
 .chrome-panel-toggle .chrome-icon {
   width: 17px;
   height: 17px;
@@ -322,4 +326,30 @@
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+/* ── Barre unique ─────────────────────────────────────────────────────────── */
+
+/* Rétablir est le miroir d'Annuler : une seule icône, retournée, plutôt qu'un
+   second glyphe local à embarquer. */
+.chrome-toolbar-btn--mirrored .chrome-toolbar-btn-icon {
+  transform: scaleX(-1);
+}
+
+/* Groupe de commandes structurelles rendues en boutons pleins (créations de
+   nœuds de l'éditeur graphe). */
+.chrome-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* La raison d'une suspension, dite **à côté** des commandes tenues et jamais à
+   leur place : l'auteur doit comprendre pourquoi une commande ne répond pas. */
+.chrome-toolbar-notice {
+  margin-left: 10px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--warning-text);
+  white-space: nowrap;
 }

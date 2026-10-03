@@ -1,0 +1,23 @@
+.help-hint {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.help-hint:hover,
+.help-hint:focus-visible {
+  border-color: var(--text-2, #9aa2ab);
+  color: var(--text);
+}

@@ -3,19 +3,20 @@ import { MediaExplorer } from '../MediaExplorer/MediaExplorer';
 import { RenderQueuePanel } from '../RenderQueuePanel/RenderQueuePanel';
 import { SDQueuePanel } from '../SDQueuePanel/SDQueuePanel';
 import { collectMediaLibrary } from '../../store/mediaLibrary';
-import { KEYS, read, write } from '../../store/persistentSettings';
+import { read, write } from '../../store/persistentSettings';
 import './BottomWorkspacePanel.css';
 
 const DEFAULT_HEIGHT = 270;
 const MIN_HEIGHT = 180;
 const MAX_HEIGHT = 600;
 
-function loadHeight() {
-  const raw = Number(read(KEYS.BOTTOM_PANEL_HEIGHT));
+function loadHeight(storageKey) {
+  const raw = Number(read(storageKey));
   return Number.isFinite(raw) && raw >= MIN_HEIGHT && raw <= MAX_HEIGHT ? raw : DEFAULT_HEIGHT;
 }
 
 export function BottomWorkspacePanel({
+  heightKey,
   activeTab,
   onActiveTabChange,
   onClose,
@@ -24,6 +25,7 @@ export function BottomWorkspacePanel({
   sdJobs,
   xttsJobs,
   mediaLibraryPaths,
+  advancedMediaUsages = null,
   onImportStories,
   onImportMedia,
   onImportMediaFolder,
@@ -34,7 +36,13 @@ export function BottomWorkspacePanel({
   getAudioUsage,
   getImageUsage,
   onSelectNode,
+  onRevealGraphNode,
   renderQueue,
+  // Les raccords vers l'éditeur graphe dont la file a besoin pour peindre
+  // le compte rendu détaillé d'un travail graphe. `null` sans projet graphe
+  // ouvert — la ligne reste consultable, les gestes qui demandent un canvas
+  // disparaissent.
+  renderQueueAdvanced = null,
   mediaTags,
   onAddMediaTag,
   onRemoveMediaTag,
@@ -49,8 +57,10 @@ export function BottomWorkspacePanel({
   onInvalidateMediaToolRequest,
   onValidateMediaToolRequest,
   onApplyMediaToolProjectAction,
+  pendingMediaReveal = null,
+  onMediaRevealConsumed,
 }) {
-  const [height, setHeight] = useState(loadHeight);
+  const [height, setHeight] = useState(() => loadHeight(heightKey));
   const dragRef = useRef(null);
 
   const activeCount = renderQueue.jobs.filter((job) => job.status === 'pending' || job.status === 'running').length;
@@ -60,8 +70,11 @@ export function BottomWorkspacePanel({
   )).length;
   const aiDoneCount = aiJobs.filter((job) => job.status === 'done' || job.status === 'error').length;
   const mediaCount = useMemo(
-    () => collectMediaLibrary({ project, statusByPath: pathAudit, sdJobs, xttsJobs, extraPaths: mediaLibraryPaths }).length,
-    [project, pathAudit, sdJobs, xttsJobs, mediaLibraryPaths],
+    () => collectMediaLibrary({
+      project, statusByPath: pathAudit, sdJobs, xttsJobs,
+      extraPaths: mediaLibraryPaths, advancedUsages: advancedMediaUsages,
+    }).length,
+    [project, pathAudit, sdJobs, xttsJobs, mediaLibraryPaths, advancedMediaUsages],
   );
   const tabClassName = (tab) => [
     'bottom-workspace-tab',
@@ -85,7 +98,7 @@ export function BottomWorkspacePanel({
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       if (dragRef.current != null) {
-        write(KEYS.BOTTOM_PANEL_HEIGHT, String(dragRef.current));
+        write(heightKey, String(dragRef.current));
         dragRef.current = null;
       }
     }
@@ -133,10 +146,12 @@ export function BottomWorkspacePanel({
             sdJobs={sdJobs}
             xttsJobs={xttsJobs}
             extraPaths={mediaLibraryPaths}
+            advancedMediaUsages={advancedMediaUsages}
             onImportStories={onImportStories}
             onImportMedia={onImportMedia}
             onImportMediaFolder={onImportMediaFolder}
             onSelectNode={onSelectNode}
+            onRevealGraphNode={onRevealGraphNode}
             mediaTags={mediaTags}
             onAddMediaTag={onAddMediaTag}
             onRemoveMediaTag={onRemoveMediaTag}
@@ -151,6 +166,8 @@ export function BottomWorkspacePanel({
             onInvalidateMediaToolRequest={onInvalidateMediaToolRequest}
             onValidateMediaToolRequest={onValidateMediaToolRequest}
             onApplyMediaToolProjectAction={onApplyMediaToolProjectAction}
+            pendingMediaReveal={pendingMediaReveal}
+            onMediaRevealConsumed={onMediaRevealConsumed}
           />
         ) : activeTab === 'queue' ? (
           <RenderQueuePanel
@@ -160,6 +177,7 @@ export function BottomWorkspacePanel({
             onCancel={renderQueue.cancelJob}
             onClearDone={renderQueue.clearDone}
             onClose={onClose}
+            advanced={renderQueueAdvanced}
           />
         ) : (
           <SDQueuePanel

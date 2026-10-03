@@ -364,7 +364,7 @@ fn parse_sha256_sum(text: &str, asset: &str) -> Option<String> {
     None
 }
 
-fn download_bytes(
+pub(super) fn download_bytes(
     url: &str,
     max_bytes: u64,
     timeout: Duration,
@@ -414,7 +414,7 @@ fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<(), String> {
     replace_file(&tmp, dest)
 }
 
-fn replace_file(staging: &Path, dest: &Path) -> Result<(), String> {
+pub(super) fn replace_file(staging: &Path, dest: &Path) -> Result<(), String> {
     let backup = dest.with_extension(format!("backup-{}", Uuid::new_v4()));
     if dest.exists() {
         std::fs::rename(dest, &backup)
@@ -433,14 +433,14 @@ fn replace_file(staging: &Path, dest: &Path) -> Result<(), String> {
 }
 
 #[cfg(unix)]
-fn set_executable_permissions(path: &Path) -> Result<(), String> {
+pub(super) fn set_executable_permissions(path: &Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
         .map_err(|error| format!("Permissions Unix yt-dlp impossibles : {error}"))
 }
 
 #[cfg(not(unix))]
-fn set_executable_permissions(_path: &Path) -> Result<(), String> {
+pub(super) fn set_executable_permissions(_path: &Path) -> Result<(), String> {
     Ok(())
 }
 

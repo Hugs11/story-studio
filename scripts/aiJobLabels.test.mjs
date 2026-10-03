@@ -10,11 +10,11 @@ function index(entries) {
 }
 
 test('labels story selection image jobs from field id', () => {
-  const projectIndex = index([{ id: 'story-1', name: 'Example story and the dinosaurs' }]);
+  const projectIndex = index([{ id: 'story-1', name: 'Example story' }]);
 
   assert.equal(
     getImageJobTargetLabel({ fieldId: 'story-1:itemImage' }, projectIndex),
-    'Example story and the dinosaurs - image de selection',
+    'Example story - image de selection',
   );
 });
 

@@ -120,6 +120,7 @@ export function EndNodeEditor({
                 currentStoryId={null}
                 emptyLabel={packStartReturnLabel}
                 includeStoryPlay={false}
+                flagMissingValue
               />
             </div>
           </div>
@@ -160,6 +161,7 @@ export function EndNodeEditor({
                 allStories={allStories}
                 currentStoryId={null}
                 emptyLabel="Selon chaque histoire"
+                flagMissingValue
               />
             </div>
           </div>
@@ -187,7 +189,6 @@ export function EndNodeEditor({
             type="button"
             onClick={() => onRemove?.()}
             aria-label="Supprimer le message de fin"
-            title="Supprimer le message de fin"
           >
             <Trash2 className="card-danger-icon" />
           </button>

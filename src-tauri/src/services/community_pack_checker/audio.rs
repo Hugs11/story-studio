@@ -1029,7 +1029,7 @@ mod tests {
         // Fichier court (invite) touchant le pic sur quelques échantillons : le
         // plancher absolu évite le faux positif malgré un ratio non négligeable.
         assert!(!audio_is_clipped(5, 3 * 44_100));
-        // Fichiers V6 réellement écrêtés (mesurés : 8 000–24 000 échantillons,
+        // Fichiers réellement écrêtés (mesurés : 8 000–24 000 échantillons,
         // 0,09–0,19 %) → signalés.
         assert!(audio_is_clipped(8_214, five_min));
         assert!(audio_is_clipped(24_374, 294 * 44_100));

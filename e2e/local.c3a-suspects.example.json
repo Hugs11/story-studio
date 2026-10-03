@@ -1,0 +1,18 @@
+{
+  "generationError": [
+    { "label": "generation-error-1", "relPath": "01 - Editable/FR/<âge>/<nom du pack>.zip" },
+    { "label": "generation-error-2", "relPath": "01 - Editable/FR/<âge>/<nom du pack>.zip" }
+  ],
+  "b07": [
+    { "label": "b07-home-ok-meme-noeud", "relPath": "02 - Lecture seule/.../<nom du pack>.zip" }
+  ],
+  "b08": [
+    { "label": "b08-nightmode-1", "relPath": "02 - Lecture seule/.../<nom du pack>.7z" },
+    { "label": "b08-nightmode-2", "relPath": "02 - Lecture seule/.../<nom du pack>.7z" }
+  ],
+  "b09": [
+    { "label": "b09-explosion-1", "relPath": "02 - Lecture seule/.../<nom du pack>.7z" },
+    { "label": "b09-explosion-2", "relPath": "02 - Lecture seule/.../<nom du pack>.zip" },
+    { "label": "b09-effondrement-1", "relPath": "02 - Lecture seule/.../<nom du pack>.7z" }
+  ]
+}

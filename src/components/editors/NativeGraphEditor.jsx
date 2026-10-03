@@ -3,6 +3,7 @@ import { AudioField } from './AudioField';
 import { ImageField } from './ImageField';
 import { Toggle } from '../common/Toggle';
 import { basename } from '../../utils/fileUtils';
+import { optionSelectionCandidates, parseOptionSelection } from '../../store/optionSelection.js';
 
 function cloneGraph(graph) {
   return structuredClone(graph);
@@ -29,14 +30,23 @@ function stageLabel(stage, index) {
   return `${stageKind(stage)} ${index + 1}${suffix ? ` · ${suffix}` : ''}`;
 }
 
+// Les destinations qu'une transition peut atteindre.
+//
+// La vue les represente toutes et n'en choisit aucune : une selection aleatoire
+// (`optionIndex = -1`) designe toutes les options de l'Action, et
+// n'est jamais rabattue vers l'option 0. Sur une Action a plusieurs options, la
+// roue permet de parcourir toutes les destinations, quelle que soit la selection
+// initiale : elles restent donc toutes affichees.
 function transitionTargets(transition, actionById) {
   const actionId = transition?.actionNode;
   if (!actionId) return [];
   const options = actionById.get(actionId)?.options ?? [];
   if (!Array.isArray(options) || options.length === 0) return [];
   if (options.length > 1) return options.filter(Boolean);
-  const optionIndex = Number.isInteger(transition?.optionIndex) ? transition.optionIndex : 0;
-  return [options[Math.max(0, optionIndex)] ?? options[0]].filter(Boolean);
+  const selection = parseOptionSelection(transition?.optionIndex);
+  return optionSelectionCandidates(selection, options.length)
+    .map((index) => options[index])
+    .filter(Boolean);
 }
 
 function updateStageInGraph(graph, selectedStageId, updater) {

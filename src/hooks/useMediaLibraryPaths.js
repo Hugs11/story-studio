@@ -8,7 +8,13 @@ import {
   reconcileMediaLibraryPaths,
 } from '../store/mediaLibrary';
 
-export function useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRef, mediaCatalogChangedRef = null }) {
+export function useMediaLibraryPaths({
+  store,
+  sdStore,
+  xttsStore,
+  workspaceDirRef,
+  mediaCatalogChangedRef = null,
+}) {
   const [mediaLibraryPaths, setMediaLibraryPaths] = useState([]);
   const mediaLibraryPathsRef = useRef([]);
   mediaLibraryPathsRef.current = mediaLibraryPaths;
@@ -57,6 +63,9 @@ export function useMediaLibraryPaths({ store, sdStore, xttsStore, workspaceDirRe
       deleteFromDisk,
       deleteDisk: () => invoke('delete_workspace_media_file', {
         path: item.path,
+        // Seuls les médias rangés dans l'emplacement de travail (ou la session)
+        // sont supprimables du disque ; ceux d'un ancien projet rangés à côté
+        // de son `.mbah` restent en place.
         workspaceDir: workspaceDirRef.current || '',
         preservePaths,
       }),

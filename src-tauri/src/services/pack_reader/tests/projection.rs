@@ -728,14 +728,14 @@ fn repeated_prompt_stages_are_not_imported_as_global_night_mode() {
             },
             {
                 "uuid": "story-1",
-                "name": "Example story",
+                "name": "Example story A",
                 "audio": "story-1-title.mp3",
                 "okTransition": { "actionNode": "story-1-title-action", "optionIndex": 0 },
                 "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
             },
             {
                 "uuid": "story-1-play",
-                "name": "Example story reading",
+                "name": "Example story A lecture",
                 "audio": "story-1.mp3",
                 "homeTransition": { "actionNode": "story-1-home-action", "optionIndex": 0 },
                 "okTransition": { "actionNode": "story-1-play-action", "optionIndex": 0 },
@@ -751,14 +751,14 @@ fn repeated_prompt_stages_are_not_imported_as_global_night_mode() {
             },
             {
                 "uuid": "story-2",
-                "name": "Example story",
+                "name": "Example story B",
                 "audio": "story-2-title.mp3",
                 "okTransition": { "actionNode": "story-2-title-action", "optionIndex": 0 },
                 "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
             },
             {
                 "uuid": "story-2-play",
-                "name": "Example story reading",
+                "name": "Example story B lecture",
                 "audio": "story-2.mp3",
                 "homeTransition": { "actionNode": "story-2-home-action", "optionIndex": 0 },
                 "okTransition": { "actionNode": "story-2-play-action", "optionIndex": 0 },
@@ -835,14 +835,14 @@ fn duplicated_night_stages_are_imported_as_next_story_night_mode() {
             },
             {
                 "uuid": "story-1",
-                "name": "Example story",
+                "name": "Example story A",
                 "audio": "story-1-title.mp3",
                 "okTransition": { "actionNode": "story-1-title-action", "optionIndex": 0 },
                 "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
             },
             {
                 "uuid": "story-1-play",
-                "name": "Example story reading",
+                "name": "Example story A lecture",
                 "audio": "story-1.mp3",
                 "homeTransition": { "actionNode": "story-1-home-action", "optionIndex": 0 },
                 "okTransition": { "actionNode": "story-1-play-action", "optionIndex": 0 },
@@ -858,14 +858,14 @@ fn duplicated_night_stages_are_imported_as_next_story_night_mode() {
             },
             {
                 "uuid": "story-2",
-                "name": "Example story",
+                "name": "Example story B",
                 "audio": "story-2-title.mp3",
                 "okTransition": { "actionNode": "story-2-title-action", "optionIndex": 0 },
                 "controlSettings": { "autoplay": false, "wheel": true, "ok": true, "home": true }
             },
             {
                 "uuid": "story-2-play",
-                "name": "Example story reading",
+                "name": "Example story B lecture",
                 "audio": "story-2.mp3",
                 "homeTransition": { "actionNode": "story-2-home-action", "optionIndex": 0 },
                 "okTransition": { "actionNode": "story-2-play-action", "optionIndex": 0 },

@@ -1,0 +1,12 @@
+# Fixtures du banc d'essai du graphe : **entièrement regénérables**, jamais versionnées.
+#
+#   node scripts/advanced-graph-fixtures.mjs                              → *.payload.json
+#   cargo test --lib graph_view::tests::bench -- --ignored --nocapture    → *.view.json
+#
+# Elles pèsent une cinquantaine de mégaoctets et sont déterministes : les
+# versionner ajouterait un poids permanent au dépôt pour un contenu que deux
+# commandes reconstruisent à l'octet près. La règle du dépôt sur les golden
+# files s'applique ici telle quelle.
+*.payload.json
+*.view.json
+manifest.json

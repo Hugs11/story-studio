@@ -49,15 +49,11 @@ Voir [ComfyUI](/story-studio/docs/comfyui/).
 
 ### Avancé
 
-**Import et audio**
+**Silences audio**
 
-Contient quelques réglages qu’il vaut mieux laisser par défaut sauf besoin précis :
-
-- **Autoriser l’extraction des packs non supportés** permet de tenter une extraction partielle pour récupérer des médias ou des histoires, sans garantir la fidélité ni la régénération du pack ;
-- **Silence au début** et **Silence à la fin** définissent la durée de référence des silences
-  de début et de fin utilisée lors du traitement audio.
-
-Voir [Modifier un pack existant](/story-studio/docs/modifier-un-pack-existant/).
+**Silence au début** et **Silence à la fin** définissent la durée de référence des silences
+de début et de fin utilisée lors du traitement audio. Il vaut mieux les laisser par défaut sauf
+besoin précis.
 
 Pour comprendre l’harmonisation du volume et le réglage des silences, voir [Traitement audio du pack](/story-studio/docs/traitement-audio-du-pack/).
 
@@ -97,7 +93,11 @@ Un travail qui n’a pas encore été enregistré dispose également d’un méc
 
 ## Les raccourcis à retenir
 
-Les principaux raccourcis globaux sont :
+Sur Mac, `Cmd` remplace `Ctrl` dans tous les raccourcis de Story Studio, et la fenêtre de personnalisation l’affiche `⌘`.
+
+### Dans les deux éditeurs
+
+Ces raccourcis fonctionnent dans l’**Éditeur par menus** comme dans l’**Éditeur graphe**.
 
 | Action | Raccourci par défaut |
 |---|---|
@@ -105,19 +105,53 @@ Les principaux raccourcis globaux sont :
 | Ouvrir un projet | `Ctrl+O` |
 | Enregistrer | `Ctrl+S` |
 | Enregistrer sous | `Ctrl+Maj+S` |
-| Importer des histoires | `Ctrl+I` |
-| Ajouter un Dossier | `Ctrl+Maj+N` |
 | Options du pack | `Ctrl+,` |
 | Rechercher dans la structure | `Ctrl+F` |
-| Afficher / masquer l’Arbre | `Ctrl+1` |
-| Afficher / masquer les Réglages | `Ctrl+2` |
-| Afficher / masquer le Diagramme | `Ctrl+3` |
 | Ouvrir les Préférences | `Ctrl+Maj+O` |
 | Ouvrir les éléments à corriger | `Ctrl+Maj+E` |
 | Générer le pack | `Ctrl+G` |
 | Annuler / Rétablir | `Ctrl+Z` / `Ctrl+Maj+Z` |
 
-Lorsqu’un élément est sélectionné dans l’**Arbre** ou le **Diagramme**, les raccourcis habituels `Ctrl+C`, `Ctrl+X`, `Ctrl+V` et `Suppr` permettent également de copier, couper, coller ou supprimer la sélection.
+### La sélection
+
+Les mêmes raccourcis agissent sur la sélection de l’**Arbre**, du **Diagramme** et du **graphe**. Modifié une fois, un raccourci change dans les trois.
+
+| Action | Raccourci par défaut |
+|---|---|
+| Copier / Couper / Coller | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` |
+| Dupliquer | `Ctrl+D` |
+| Supprimer | `Suppr` (ou `⌫`) |
+| Renommer | `F2` |
+
+Dans l’Arbre et le Diagramme, Dupliquer agit sur un seul élément sélectionné, comme son entrée du menu contextuel. Renommer n’existe que dans l’Arbre et le graphe. Dans le graphe, Supprimer ouvre la même confirmation que « Retirer… » au clic droit, pour un nœud ou pour toute une sélection.
+
+### Éditeur par menus
+
+| Action | Raccourci par défaut |
+|---|---|
+| Importer des histoires | `Ctrl+I` |
+| Ajouter un Dossier | `Ctrl+Maj+N` |
+| Afficher / masquer l’Arbre | `Ctrl+1` |
+| Afficher / masquer les Réglages | `Ctrl+2` |
+| Afficher / masquer le Diagramme | `Ctrl+3` |
+
+### Éditeur graphe
+
+| Action | Raccourci par défaut |
+|---|---|
+| Agrandir / Réduire | `+` / `-` |
+| Cadrer tout le graphe | `0` |
+| Nœud visité précédent / suivant | `Alt+←` / `Alt+→` |
+| Créer un Écran sous le pointeur | `E` |
+| Créer une liste de choix sous le pointeur | `A` |
+| Afficher / masquer la vue d’ensemble | `M` |
+| Ranger le graphe | `Ctrl+Maj+R` |
+
+Un Écran, une liste de choix ou un collage créé au clavier apparaît sous le pointeur, comme au clic droit, ou au centre de la vue quand le pointeur n’est pas sur le graphe.
+
+Les infobulles des boutons et les menus contextuels affichent toujours le raccourci en vigueur, y compris après une personnalisation.
+
+Aucun raccourci ne réagit pendant la saisie dans un champ, ni quand une fenêtre est ouverte par-dessus l’éditeur.
 
 Dans le panneau **Médias**, `Ctrl+Maj+F` place le focus sur la recherche.
 
@@ -148,8 +182,9 @@ Ouvre **Préférences → Interface → Raccourcis clavier → Modifier**.
 La fenêtre regroupe les raccourcis par contexte :
 
 - Général ;
-- Arbre du projet ;
-- Diagramme ;
+- Sélection ;
+- Éditeur par menus ;
+- Éditeur graphe ;
 - Panneau Médias ;
 - Éditeur audio ;
 - Éditeur d’image ;
@@ -157,7 +192,7 @@ La fenêtre regroupe les raccourcis par contexte :
 
 Tu peux rechercher une action, cliquer sur son raccourci puis appuyer sur la nouvelle combinaison.
 
-Story Studio refuse une combinaison déjà utilisée par une autre action dans le même contexte. Tu peux aussi **réinitialiser une section** ou **tout réinitialiser** pour revenir aux valeurs par défaut.
+Story Studio refuse une combinaison déjà utilisée par une autre action active au même moment. Par exemple, une touche de l’éditeur graphe ne peut pas reprendre celle d’un raccourci Général ou de la Sélection, puisque les trois fonctionnent ensemble. Elle peut en revanche reprendre celle de l’éditeur audio, qui ne fonctionne que dans sa propre fenêtre. Tu peux aussi **réinitialiser une section** ou **tout réinitialiser** pour revenir aux valeurs par défaut.
 
 Les raccourcis de **Navigation standard** sont affichés pour information mais ne peuvent pas être modifiés. Ils correspondent aux conventions habituelles de navigation au clavier et d’accessibilité.
 

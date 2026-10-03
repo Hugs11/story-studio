@@ -15,9 +15,13 @@ import {
   insertEntryAfter,
   moveEntryNextTo,
   moveEntriesToContainer,
-  getProjectMenuDepthDiagnostic,
+  MENU_CYCLE_CODE,
+  MENU_CYCLE_PASTE_MESSAGE,
+  MENU_CYCLE_PASTE_TITLE,
   MENU_DEPTH_LIMIT_CODE,
   MENU_DEPTH_LIMIT_REACHED_MESSAGE,
+  MENU_DEPTH_LIMIT_TITLE,
+  makeId,
   normalizeProjectData,
   removeEntryCascadingRefs,
   removeEntriesCascadingRefs,
@@ -31,10 +35,22 @@ import {
   validateMenuDepthMove,
   validateMenuDepthPlacement,
 } from './projectModel';
+import {
+  followSystemChange,
+  isPristineWork,
+  normalizeWorkProject,
+  pushWorkHistory,
+  redoWorkHistory,
+  relocateWorkHistory,
+  undoWorkHistory,
+  workBaseline,
+  workProjectDepthDiagnostic,
+} from './projectWorkState';
 import { normalizeNavigationTarget } from './navigationTargets';
 import { logger } from '../utils/logger';
 import { basenameNoExt, pathKey } from '../utils/fileUtils';
 import { sanitizeImportedEntries, sanitizeImportedName } from './importedNames';
+import { withMediaTag, withoutMediaTag } from './mediaTags';
 import {
   attachStoryEndToGlobalProject,
   removeGlobalEndMessageProject,
@@ -43,13 +59,6 @@ import {
 } from './endMessageMutations';
 
 export { sanitizeImportedEntries, sanitizeImportedName };
-
-export function isTextEditingTarget(target) {
-  if (!(target instanceof Element)) return false;
-  return !!target.closest('input, textarea, [contenteditable=""], [contenteditable="true"], [role="textbox"]');
-}
-
-const MAX_HISTORY_SIZE = 50;
 
 const ENTRY_NAVIGATION_FIELDS = [
   'returnAfterPlay',
@@ -85,6 +94,8 @@ const DEFAULT_PROJECT = normalizeProjectData({
   },
   rootEntries: [],
 });
+
+export { DEFAULT_PROJECT };
 
 function nameFromPath(path) {
   if (!path) return '';
@@ -133,6 +144,13 @@ export function useProjectStore() {
   const [savePath, setSavePath] = useState(null); // chemin du .mbah sauvegardé
   const historyRef = useRef([]);
   const redoRef = useRef([]);
+  // Compteur de remplacements du travail courant : il change quand le projet est
+  // réinitialisé ou remplacé, jamais quand il est simplement muté. C'est ce qui
+  // distingue « le résultat est périmé » de « il ne concerne plus ce travail ».
+  const workEpochRef = useRef(0);
+  // État de départ d'un travail neuf (voir `workBaseline`) ; `null` hors de
+  // ce cas, et à chaque remplacement du travail.
+  const pristineRef = useRef(null);
   const [mutationError, setMutationError] = useState(null);
   projectMutationRef.current = project;
   // canUndo / canRedo sont des derives purs des refs : on les recalcule au
@@ -148,15 +166,15 @@ export function useProjectStore() {
   // Toute modification passe par ici pour alimenter l'historique
   const setProject = useCallback((updater) => {
     const current = projectMutationRef.current;
-    const next = normalizeProjectData(
+    const next = normalizeWorkProject(
       typeof updater === 'function' ? updater(current) : updater,
     );
+    // Ces refs sont mutées hors de l'updater React : StrictMode peut rejouer un
+    // updater pour en vérifier la pureté, ce qui dupliquerait sinon une étape.
+    historyRef.current = pushWorkHistory(historyRef.current, current);
+    redoRef.current = [];
     projectMutationRef.current = next;
-    setProjectRaw(prev => {
-      historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY_SIZE - 1)), prev];
-      redoRef.current = [];
-      return next;
-    });
+    setProjectRaw(next);
   }, []);
 
   const clearMutationError = useCallback(() => setMutationError(null), []);
@@ -165,6 +183,7 @@ export function useProjectStore() {
     const rejection = {
       ...diagnostic,
       code: MENU_DEPTH_LIMIT_CODE,
+      title: MENU_DEPTH_LIMIT_TITLE,
       message: MENU_DEPTH_LIMIT_REACHED_MESSAGE,
     };
     setMutationError(rejection);
@@ -175,9 +194,11 @@ export function useProjectStore() {
     if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
     const current = projectMutationRef.current;
     const next = buildNextProject(current);
-    const finalDiagnostic = getProjectMenuDepthDiagnostic(next);
+    const finalDiagnostic = workProjectDepthDiagnostic(next);
     if (!finalDiagnostic.allowed) return rejectMenuDepthMutation(finalDiagnostic);
-    projectMutationRef.current = next;
+    // `setProject` doit encore voir `current` pour l'empiler dans l'historique.
+    // Installer `next` dans la ref ici créait une étape fantôme contenant deux
+    // fois l'état final : le premier Annuler après ajout/collage ne faisait rien.
     setProject(next);
     return { ...finalDiagnostic, project: next };
   }, [rejectMenuDepthMutation, setProject]);
@@ -185,37 +206,56 @@ export function useProjectStore() {
   const setProjectWithDepthGuard = useCallback((updater) => {
     const current = projectMutationRef.current;
     const next = typeof updater === 'function' ? updater(current) : updater;
-    const diagnostic = getProjectMenuDepthDiagnostic(next);
+    const diagnostic = workProjectDepthDiagnostic(next);
     return commitDepthMutation(diagnostic, () => next);
   }, [commitDepthMutation]);
 
   const undo = useCallback(() => {
-    if (historyRef.current.length === 0) return;
-    setProjectRaw(current => {
-      const prev = historyRef.current[historyRef.current.length - 1];
-      historyRef.current = historyRef.current.slice(0, -1);
-      redoRef.current = [...redoRef.current, current];
-      projectMutationRef.current = prev;
-      return prev;
+    const step = undoWorkHistory({
+      history: historyRef.current,
+      redo: redoRef.current,
+      current: projectMutationRef.current,
     });
+    if (!step) return;
+    historyRef.current = step.history;
+    redoRef.current = step.redo;
+    projectMutationRef.current = step.project;
+    setProjectRaw(step.project);
   }, []);
 
   const redo = useCallback(() => {
-    if (redoRef.current.length === 0) return;
-    setProjectRaw(current => {
-      const next = redoRef.current[redoRef.current.length - 1];
-      redoRef.current = redoRef.current.slice(0, -1);
-      historyRef.current = [...historyRef.current, current];
-      projectMutationRef.current = next;
-      return next;
+    const step = redoWorkHistory({
+      history: historyRef.current,
+      redo: redoRef.current,
+      current: projectMutationRef.current,
     });
+    if (!step) return;
+    historyRef.current = step.history;
+    redoRef.current = step.redo;
+    projectMutationRef.current = step.project;
+    setProjectRaw(step.project);
+  }, []);
+
+  // Une sauvegarde qui déplace des médias (promotion d'une session) repointe le
+  // projet courant hors historique : les piles doivent suivre, sinon annuler
+  // restaurerait des chemins supprimés avec la session. Voir `relocateWorkHistory`.
+  const relocateHistory = useCallback((relocate) => {
+    const next = relocateWorkHistory({
+      history: historyRef.current,
+      redo: redoRef.current,
+      relocate,
+    });
+    historyRef.current = next.history;
+    redoRef.current = next.redo;
   }, []);
 
   // ── Projet ──────────────────────────────────────────────────────────────────
 
   const resetProject = useCallback(() => {
+    workEpochRef.current += 1;
     historyRef.current = [];
     redoRef.current = [];
+    pristineRef.current = null;
     setProjectRaw(DEFAULT_PROJECT);
     projectMutationRef.current = DEFAULT_PROJECT;
     setSelectedId('root');
@@ -223,12 +263,17 @@ export function useProjectStore() {
     setMediaTagsRaw({});
   }, []);
 
+  // Installation d'un projet acquis ou relu. L'historique est vidé : une identité
+  // générée à l'initialisation ne peut donc pas disparaître au premier undo, et
+  // rien d'antérieur à ce projet ne reste atteignable.
   const loadProject = useCallback((data) => {
-    const diagnostic = getProjectMenuDepthDiagnostic(data);
+    const diagnostic = workProjectDepthDiagnostic(data);
     if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
+    workEpochRef.current += 1;
     historyRef.current = [];
     redoRef.current = [];
-    const normalized = normalizeProjectData(data);
+    pristineRef.current = null;
+    const normalized = normalizeWorkProject(data);
     projectMutationRef.current = normalized;
     setProjectRaw(normalized);
     setSelectedId('root');
@@ -239,26 +284,17 @@ export function useProjectStore() {
     setMediaTagsRaw(tags && typeof tags === 'object' ? tags : {});
   }, []);
 
+  // Le même fichier peut arriver ici sous plusieurs formes de chemin, et une
+  // carte héritée peut déjà en porter deux. La politique d'alias — quelle clé
+  // est réemployée, ce qui est fusionné, ce qui est retiré — vit dans
+  // `mediaTags.js`, avec la lecture : c'est la seule façon que le panneau, la
+  // vignette et le retrait disent la même chose.
   const addMediaTag = useCallback((path, tag) => {
-    if (!path || !tag?.trim()) return;
-    const t = tag.trim();
-    setMediaTagsRaw(prev => {
-      const current = prev[path] ?? [];
-      if (current.includes(t)) return prev;
-      return { ...prev, [path]: [...current, t] };
-    });
+    setMediaTagsRaw(prev => withMediaTag(prev, path, tag));
   }, []);
 
   const removeMediaTag = useCallback((path, tag) => {
-    setMediaTagsRaw(prev => {
-      const current = prev[path] ?? [];
-      const next = current.filter(t => t !== tag);
-      if (next.length === 0) {
-        const { [path]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [path]: next };
-    });
+    setMediaTagsRaw(prev => withoutMediaTag(prev, path, tag));
   }, []);
 
   const deleteMediaTag = useCallback((tag) => {
@@ -290,9 +326,10 @@ export function useProjectStore() {
   }, []);
 
   const syncProjectWithoutHistory = useCallback((data) => {
-    const diagnostic = getProjectMenuDepthDiagnostic(data);
+    const diagnostic = workProjectDepthDiagnostic(data);
     if (!diagnostic.allowed) return rejectMenuDepthMutation(diagnostic);
-    const next = normalizeProjectData(data);
+    const next = normalizeWorkProject(data);
+    pristineRef.current = followSystemChange(pristineRef.current, projectMutationRef.current, next);
     projectMutationRef.current = next;
     setProjectRaw((current) => {
       return JSON.stringify(next) === JSON.stringify(current) ? current : next;
@@ -300,18 +337,46 @@ export function useProjectStore() {
     return diagnostic;
   }, [rejectMenuDepthMutation]);
 
+  // Posé par les seules entrées qui n'ont rien à perdre : nouveau projet et
+  // pack ouvert pour modification (le pack d'origine reste sur le disque).
+  const markPristine = useCallback(() => {
+    pristineRef.current = workBaseline(projectMutationRef.current);
+  }, []);
+
+  const isPristine = useCallback(
+    () => isPristineWork(pristineRef.current, projectMutationRef.current),
+    [],
+  );
+
+  // Le projet tel qu'il est maintenant, sans attendre le rendu : une relecture
+  // faite juste après une publication (garde de départ) doit voir le projet
+  // que cette publication vient d'installer.
+  const readProject = useCallback(() => projectMutationRef.current, []);
+
   const setProjectType = useCallback((type) => {
-    setProject(p => {
-      if (type === 'simple') {
-        const firstStory = p.rootEntries.find((entry) => entry.type === 'story')
-          ?? p.rootEntries.find((entry) => entry.type === 'menu')?.children?.find((entry) => entry.type === 'story')
-          ?? createStoryEntry({ name: '' });
-        return updateProjectRootEntries({ ...p, projectType: type }, [firstStory]);
-      }
-      return updateProjectRootEntries({ ...p, projectType: type }, p.rootEntries ?? []);
-    });
+    const current = projectMutationRef.current;
+    const project = current.packMetadata?.uuid
+      ? current
+      : {
+          ...current,
+          packMetadata: {
+            ...(current.packMetadata ?? DEFAULT_PACK_METADATA),
+            uuid: makeId(),
+          },
+        };
+    const next = type === 'simple'
+      ? updateProjectRootEntries(
+          { ...project, projectType: type },
+          [project.rootEntries.find((entry) => entry.type === 'story')
+            ?? project.rootEntries.find((entry) => entry.type === 'menu')?.children?.find((entry) => entry.type === 'story')
+            ?? createStoryEntry({ name: '' })],
+        )
+      : updateProjectRootEntries({ ...project, projectType: type }, project.rootEntries ?? []);
+    // Le choix du type fait partie de l'acquisition du nouveau travail. Il ne
+    // constitue pas une édition auteur et ne doit donc jamais être annulable.
+    syncProjectWithoutHistory(next);
     logger.info(`project:set-type type=${type}`);
-  }, [setProject]);
+  }, [syncProjectWithoutHistory]);
 
   const updateStoryAudio = useCallback((audio) => {
     setProject(p => {
@@ -460,6 +525,24 @@ export function useProjectStore() {
   // ── Items ─────────────────────────────────────────────────────────────────
 
   const addStory = useCallback((menuId, audioPath, options = {}) => {
+    const current = projectMutationRef.current;
+    if (current.projectType === 'simple' && !menuId) {
+      // Un projet simple n'a qu'une histoire, la seule lue par l'éditeur, la
+      // validation et le moteur : un son déposé à la racine devient son
+      // « Audio du récit », jamais une seconde histoire cachée.
+      const simpleStory = current.rootEntries?.[0];
+      if (!simpleStory || !audioPath) return null;
+      if (simpleStory.audio) {
+        setMutationError({
+          title: 'Audio du récit',
+          message: "L'histoire a déjà un audio du récit. Pour le remplacer, "
+            + "utilise le champ « Audio du récit ».",
+        });
+        return null;
+      }
+      setProject(p => updateEntry(p, simpleStory.id, { audio: audioPath }));
+      return null;
+    }
     const autoName = nameFromPath(audioPath);
     const explicitName = typeof options.name === 'string' ? options.name.trim() : '';
     const hasImportedAudio = !!audioPath;
@@ -485,6 +568,16 @@ export function useProjectStore() {
   }, [setProject]);
 
   const addZip = useCallback((menuId, zipPath, preferredName = null, coverImage = null, coverAudio = null) => {
+    if (projectMutationRef.current.projectType === 'simple') {
+      // Un projet simple n'a qu'une histoire : un pack ajouté serait une
+      // seconde entrée racine, ni affichée ni générée.
+      setMutationError({
+        title: 'Projet simple',
+        message: "Un projet simple ne contient qu'une histoire : on ne peut pas y ajouter "
+          + "un pack (.zip). Pour réunir plusieurs packs, crée un projet dans l'éditeur par menus.",
+      });
+      return null;
+    }
     const rawName = preferredName || basenameNoExt(zipPath);
     const name = sanitizeImportedName(rawName, 'ZIP importe');
     const newZip = createZipEntry({ name, zipPath: zipPath || null, coverImage, coverAudio });
@@ -551,8 +644,17 @@ export function useProjectStore() {
   const cutPasteEntriesToMenu = useCallback((sourceIds, targetMenuId) => {
     const current = projectMutationRef.current;
     const targetPath = targetMenuId == null ? [] : (findEntryPath(current, targetMenuId) ?? []);
+    // Le collage n'a pas de survol pour prévenir : le refus est dit, comme
+    // celui de profondeur, et l'appelant garde la coupe pour un autre essai.
     if (targetPath.some((entry) => sourceIds.includes(entry.id))) {
-      return { allowed: false, code: 'menu_cycle' };
+      const rejection = {
+        allowed: false,
+        code: MENU_CYCLE_CODE,
+        title: MENU_CYCLE_PASTE_TITLE,
+        message: MENU_CYCLE_PASTE_MESSAGE,
+      };
+      setMutationError(rejection);
+      return rejection;
     }
     const diagnostic = validateMenuDepthMove(current, sourceIds, targetMenuId);
     return commitDepthMutation(
@@ -598,7 +700,7 @@ export function useProjectStore() {
     const current = projectMutationRef.current;
     const targetPath = toMenuId == null ? [] : (findEntryPath(current, toMenuId) ?? []);
     if (targetPath.some((entry) => itemIds.includes(entry.id))) {
-      return { allowed: false, code: 'menu_cycle' };
+      return { allowed: false, code: MENU_CYCLE_CODE };
     }
     const diagnostic = validateMenuDepthMove(current, itemIds, toMenuId);
     if (itemIds.length === 1 && anchorId && insertPosition !== 'inside') {
@@ -638,10 +740,12 @@ export function useProjectStore() {
 
   return {
     project, setProject, setProjectWithDepthGuard, loadProject, resetProject, syncProjectWithoutHistory,
+    markPristine, isPristine, readProject,
+    workEpochRef,
     mutationError, clearMutationError,
     savePath, setSavePath,
     selectedId, setSelectedId,
-    canUndo, undo, canRedo, redo,
+    canUndo, undo, canRedo, redo, relocateHistory,
     setProjectType, updateStoryAudio,
     updateProjectName, updatePackMetadata, updateRootMedia, updateGlobalOption, updateGlobalEndMessage, updateGlobalEndPlayback, addGlobalEndMessage, attachStoryEndToGlobal, removeGlobalEndMessage,
     addMenu, updateMenu, deleteMenu, promoteMenuToRoot, demoteRootToMenu,

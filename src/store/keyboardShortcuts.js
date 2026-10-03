@@ -1,15 +1,39 @@
 import { KEYS, read, write, remove } from './persistentSettings.js';
+import { commandKeyIsMeta, commandKeyLabel } from '../utils/platformKeys.js';
 
-// Liste des scopes connus + libellés pour l'UI.
-// L'ordre détermine la priorité de dispatch et l'ordre d'affichage dans la modale.
+// Les portées, rangées par **commande** et non par surface.
+//
+// Une commande qui existe dans les deux éditeurs — enregistrer, annuler,
+// copier la sélection — n'a qu'une définition : reconfigurée une fois, elle
+// change partout. Les copies par surface (`treeCopy`, `diagramCopy`) se
+// laissaient reconfigurer chacune de leur côté, et le même geste finissait par
+// porter deux touches selon l'endroit où l'on cliquait.
+//
+// `contexts` dit **où** une portée est active. Deux raccourcis ne se
+// contredisent que s'ils peuvent être actifs en même temps : Ctrl+X coupe de
+// l'audio dans l'éditeur audio et des nœuds dans le graphe sans conflit, mais
+// `M` ne peut pas servir à la fois une commande générale et la vue d'ensemble.
+//
+// L'ordre détermine la priorité de dispatch et l'ordre d'affichage dans la
+// modale.
+const SHORTCUT_CONTEXTS = Object.freeze({
+  LIBRE: 'libre',
+  GRAPH: 'graph',
+  AUDIO_EDITOR: 'audioEditor',
+  IMAGE_EDITOR: 'imageEditor',
+});
+
+const BOTH_EDITORS = Object.freeze([SHORTCUT_CONTEXTS.LIBRE, SHORTCUT_CONTEXTS.GRAPH]);
+
 export const SHORTCUT_SCOPES = [
-  { id: 'general',     label: 'Général',                  description: 'Actifs partout dans l\'application.' },
-  { id: 'tree',        label: 'Arbre du projet',          description: 'Actifs quand un élément de l\'arbre est sélectionné.' },
-  { id: 'diagram',     label: 'Diagramme',                description: 'Actifs quand un nœud du diagramme est sélectionné.' },
-  { id: 'mediaPanel',  label: 'Panneau Médias',           description: 'Actifs quand le panneau Médias est ouvert.' },
-  { id: 'audioEditor', label: 'Éditeur audio',            description: 'Actifs uniquement dans la fenêtre d\'édition audio.' },
-  { id: 'imageEditor', label: 'Éditeur d\'image',         description: 'Actifs uniquement dans la fenêtre d\'édition d\'image.' },
-  { id: 'a11y',        label: 'Navigation standard',      description: 'Raccourcis ARIA universels. Non modifiables pour préserver l\'accessibilité.' },
+  { id: 'general',     label: 'Général',                  contexts: BOTH_EDITORS, description: 'Actifs dans les deux éditeurs, par menus et graphe.' },
+  { id: 'selection',   label: 'Sélection',                contexts: BOTH_EDITORS, description: 'Agissent sur la sélection, dans l\'arbre, le diagramme ou le graphe.' },
+  { id: 'libre',       label: 'Éditeur par menus',        contexts: [SHORTCUT_CONTEXTS.LIBRE], description: 'Actifs seulement dans l\'éditeur par menus.' },
+  { id: 'graph',       label: 'Éditeur graphe',           contexts: [SHORTCUT_CONTEXTS.GRAPH], description: 'Actifs seulement dans l\'éditeur graphe.' },
+  { id: 'mediaPanel',  label: 'Panneau Médias',           contexts: BOTH_EDITORS, description: 'Actifs quand le panneau Médias est ouvert.' },
+  { id: 'audioEditor', label: 'Éditeur audio',            contexts: [SHORTCUT_CONTEXTS.AUDIO_EDITOR], description: 'Actifs uniquement dans la fenêtre d\'édition audio.' },
+  { id: 'imageEditor', label: 'Éditeur d\'image',         contexts: [SHORTCUT_CONTEXTS.IMAGE_EDITOR], description: 'Actifs uniquement dans la fenêtre d\'édition d\'image.' },
+  { id: 'a11y',        label: 'Navigation standard',      contexts: [], description: 'Raccourcis ARIA universels. Non modifiables pour préserver l\'accessibilité.' },
 ];
 
 // Définition d'un raccourci.
@@ -18,16 +42,16 @@ export const SHORTCUT_SCOPES = [
 // - scope : un des SHORTCUT_SCOPES
 // - readOnly : si true, listé dans la modale mais non capturable (a11y, etc.)
 // - defaultShortcut : combinaison par défaut
-// - aliases : combinaisons équivalentes acceptées en plus du raccourci principal
+// - aliases : combinaisons équivalentes acceptées en plus du raccourci principal,
+//   tant que le raccourci principal est celui par défaut
 // - description : sous-titre court (optionnel)
 export const SHORTCUT_DEFINITIONS = [
   // ── Général ────────────────────────────────────────────────────────────────
   { id: 'newProject',       scope: 'general', label: 'Retour à l’accueil',                  defaultShortcut: { ctrl: true, key: 'n', code: 'KeyN' } },
   { id: 'openProject',      scope: 'general', label: 'Ouvrir un projet',                   defaultShortcut: { ctrl: true, key: 'o', code: 'KeyO' } },
+  { id: 'openPack',         scope: 'general', label: 'Ouvrir un pack',                     defaultShortcut: { ctrl: true, shift: true, key: 'p', code: 'KeyP' } },
   { id: 'saveProject',      scope: 'general', label: 'Enregistrer le projet',              defaultShortcut: { ctrl: true, key: 's', code: 'KeyS' } },
   { id: 'saveAs',           scope: 'general', label: 'Enregistrer sous',                    defaultShortcut: { ctrl: true, shift: true, key: 's', code: 'KeyS' } },
-  { id: 'importStories',    scope: 'general', label: 'Importer des histoires',              defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
-  { id: 'addFolder',        scope: 'general', label: 'Ajouter un dossier',                  defaultShortcut: { ctrl: true, shift: true, key: 'n', code: 'KeyN' } },
   {
     id: 'storySettings', scope: 'general', label: 'Options du pack',
     defaultShortcut: { ctrl: true, key: ',', code: 'Comma' },
@@ -37,9 +61,6 @@ export const SHORTCUT_DEFINITIONS = [
       { ctrl: true, key: ';', code: 'Semicolon' },
     ],
   },
-  { id: 'toggleTree',       scope: 'general', label: 'Afficher/masquer l\'arbre',           defaultShortcut: { ctrl: true, key: '1', code: 'Digit1' }, aliases: [{ ctrl: true, key: '1', code: 'Numpad1' }] },
-  { id: 'toggleSettings',   scope: 'general', label: 'Afficher/masquer les réglages',       defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
-  { id: 'toggleDiagram',    scope: 'general', label: 'Afficher/masquer le diagramme',       defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
   { id: 'tabOptions',       scope: 'general', label: 'Préférences',                         defaultShortcut: { ctrl: true, shift: true, key: 'o', code: 'KeyO' } },
   { id: 'generate',         scope: 'general', label: 'Générer le pack',                    defaultShortcut: { ctrl: true, key: 'g', code: 'KeyG' } },
   { id: 'treeSearch',       scope: 'general', label: 'Rechercher dans la structure',        defaultShortcut: { ctrl: true, key: 'f', code: 'KeyF' } },
@@ -47,17 +68,49 @@ export const SHORTCUT_DEFINITIONS = [
   { id: 'undo',             scope: 'general', label: 'Annuler',                             defaultShortcut: { ctrl: true, key: 'z', code: 'KeyZ' } },
   { id: 'redo',             scope: 'general', label: 'Rétablir',                            defaultShortcut: { ctrl: true, shift: true, key: 'z', code: 'KeyZ' } },
 
-  // ── Arbre du projet ───────────────────────────────────────────────────────
-  { id: 'treeCopy',   scope: 'tree', label: 'Copier la sélection',            defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
-  { id: 'treeCut',    scope: 'tree', label: 'Couper la sélection',            defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
-  { id: 'treePaste',  scope: 'tree', label: 'Coller',                         defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
-  { id: 'treeDelete', scope: 'tree', label: 'Supprimer la sélection',         defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+  // ── Sélection (arbre, diagramme, graphe) ─────────────────────────────────
+  { id: 'selectionCopy',      scope: 'selection', label: 'Copier la sélection',     defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
+  { id: 'selectionCut',       scope: 'selection', label: 'Couper la sélection',     defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
+  { id: 'selectionPaste',     scope: 'selection', label: 'Coller',                  defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
+  { id: 'selectionDuplicate', scope: 'selection', label: 'Dupliquer la sélection',  defaultShortcut: { ctrl: true, key: 'd', code: 'KeyD' } },
+  { id: 'selectionDelete',    scope: 'selection', label: 'Supprimer la sélection',  defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+  { id: 'selectionRename',    scope: 'selection', label: 'Renommer',                defaultShortcut: { key: 'F2', code: 'F2' } },
 
-  // ── Diagramme ─────────────────────────────────────────────────────────────
-  { id: 'diagramCopy',   scope: 'diagram', label: 'Copier la sélection',       defaultShortcut: { ctrl: true, key: 'c', code: 'KeyC' } },
-  { id: 'diagramCut',    scope: 'diagram', label: 'Couper la sélection',       defaultShortcut: { ctrl: true, key: 'x', code: 'KeyX' } },
-  { id: 'diagramPaste',  scope: 'diagram', label: 'Coller',                    defaultShortcut: { ctrl: true, key: 'v', code: 'KeyV' } },
-  { id: 'diagramDelete', scope: 'diagram', label: 'Supprimer la sélection',    defaultShortcut: { key: 'Delete', code: 'Delete' }, aliases: [{ key: 'Backspace', code: 'Backspace' }] },
+  // ── Éditeur par menus ─────────────────────────────────────────────────────
+  { id: 'importStories',    scope: 'libre', label: 'Importer des histoires',              defaultShortcut: { ctrl: true, key: 'i', code: 'KeyI' } },
+  { id: 'addFolder',        scope: 'libre', label: 'Ajouter un dossier',                  defaultShortcut: { ctrl: true, shift: true, key: 'n', code: 'KeyN' } },
+  { id: 'toggleTree',       scope: 'libre', label: 'Afficher/masquer l\'arbre',           defaultShortcut: { ctrl: true, key: '1', code: 'Digit1' }, aliases: [{ ctrl: true, key: '1', code: 'Numpad1' }] },
+  { id: 'toggleSettings',   scope: 'libre', label: 'Afficher/masquer les réglages',       defaultShortcut: { ctrl: true, key: '2', code: 'Digit2' }, aliases: [{ ctrl: true, key: '2', code: 'Numpad2' }] },
+  { id: 'toggleDiagram',    scope: 'libre', label: 'Afficher/masquer le diagramme',       defaultShortcut: { ctrl: true, key: '3', code: 'Digit3' }, aliases: [{ ctrl: true, key: '3', code: 'Numpad3' }] },
+
+  // ── Éditeur graphe ────────────────────────────────────────────────────────
+  // `+` demande Maj sur un clavier AZERTY, pas sur un QWERTY où la touche porte
+  // `=` : les variantes couvrent les deux, et le pavé numérique.
+  {
+    id: 'graphZoomIn', scope: 'graph', label: 'Agrandir',
+    defaultShortcut: { key: '+', code: 'NumpadAdd' },
+    aliases: [{ shift: true, key: '+', code: 'Equal' }, { key: '=', code: 'Equal' }],
+  },
+  {
+    id: 'graphZoomOut', scope: 'graph', label: 'Réduire',
+    defaultShortcut: { key: '-', code: 'NumpadSubtract' },
+    aliases: [{ key: '-', code: 'Minus' }],
+  },
+  { id: 'graphFit',            scope: 'graph', label: 'Cadrer tout le graphe',     defaultShortcut: { key: '0', code: 'Digit0' }, aliases: [{ key: '0', code: 'Numpad0' }] },
+  { id: 'graphVisitBack',      scope: 'graph', label: 'Nœud visité précédent',     defaultShortcut: { alt: true, key: 'ArrowLeft', code: 'ArrowLeft' } },
+  { id: 'graphVisitForward',   scope: 'graph', label: 'Nœud visité suivant',       defaultShortcut: { alt: true, key: 'ArrowRight', code: 'ArrowRight' } },
+  { id: 'graphCreateStage',    scope: 'graph', label: 'Créer un Écran sous le pointeur',   defaultShortcut: { key: 'e', code: 'KeyE' } },
+  { id: 'graphCreateAction',   scope: 'graph', label: 'Créer une liste de choix sous le pointeur', defaultShortcut: { key: 'a', code: 'KeyA' } },
+  { id: 'graphToggleOverview', scope: 'graph', label: 'Afficher/masquer la vue d’ensemble', defaultShortcut: { key: 'm', code: 'KeyM' } },
+  { id: 'graphArrange',        scope: 'graph', label: 'Ranger le graphe',          defaultShortcut: { ctrl: true, shift: true, key: 'r', code: 'KeyR' } },
+  // Geste de la surface, tenu par le moteur du graphe : listé pour être connu,
+  // jamais capturé ni comparé aux autres commandes.
+  {
+    id: 'graphBoxSelect', scope: 'graph', label: 'Sélectionner une zone du graphe',
+    defaultShortcut: { shift: true, key: 'Drag', code: 'Drag' },
+    readOnly: true,
+    readOnlyReason: 'Glisser sur le fond. Glisser ensuite un nœud sélectionné déplace toute la sélection.',
+  },
 
   // ── Panneau Médias ────────────────────────────────────────────────────────
   { id: 'mediaSearch', scope: 'mediaPanel', label: 'Rechercher dans les médias', defaultShortcut: { ctrl: true, shift: true, key: 'f', code: 'KeyF' } },
@@ -127,7 +180,15 @@ function normalizeStoredShortcut(shortcut) {
   return normalized.code || normalized.key ? normalized : null;
 }
 
+// Le libellé d'une touche. Une lettre et un symbole s'affichent **tels qu'ils
+// sont tapés** — sur un AZERTY, la touche de code `KeyQ` porte `A` —, un
+// chiffre et une touche nommée par leur position.
 function keyLabelFromCode(code, key) {
+  if (/^[a-z]$/.test(key ?? '')) return key.toUpperCase();
+  if (code?.startsWith('Digit')) return code.slice(5);
+  if (code?.startsWith('Numpad')) return code.slice(6).replace(/^([a-z])/, (m) => m.toUpperCase())
+    .replace(/^Add$/, '+').replace(/^Subtract$/, '-');
+  if (typeof key === 'string' && key.length === 1 && key !== ' ') return key;
   if (code?.startsWith('Key')) return code.slice(3).toUpperCase();
   if (code?.startsWith('Digit')) return code.slice(5);
   if (code?.startsWith('Numpad')) return code.slice(6).replace(/^([a-z])/, (m) => m.toUpperCase());
@@ -158,6 +219,7 @@ function keyLabelFromCode(code, key) {
   if (code === 'Delete') return 'Suppr';
   if (code === 'Backspace') return '⌫';
   if (code === 'Click') return 'Clic';
+  if (code === 'Drag') return 'Glisser';
   if (code && code.startsWith('F') && /^F\d+$/.test(code)) return code;
   if (key) return key.length === 1 ? key.toUpperCase() : key;
   return code || '';
@@ -167,12 +229,17 @@ export function formatShortcut(shortcut) {
   if (!shortcut) return '';
   const normalized = normalizeShortcut(shortcut);
   const parts = [];
-  if (normalized.ctrl) parts.push('Ctrl');
+  if (normalized.ctrl) parts.push(commandKeyLabel());
   if (normalized.shift) parts.push('Shift');
   if (normalized.alt) parts.push('Alt');
   if (normalized.meta) parts.push('Meta');
   parts.push(keyLabelFromCode(normalized.code, normalized.key));
   return parts.filter(Boolean).join('+');
+}
+
+// Un texte suivi de son raccourci, pour une infobulle : « Agrandir (+) ».
+export function withShortcut(text, shortcutLabel) {
+  return shortcutLabel ? `${text} (${shortcutLabel})` : text;
 }
 
 export function getShortcutLabelMap(shortcuts) {
@@ -187,8 +254,10 @@ export function getShortcutLabelMap(shortcuts) {
 export function loadKeyboardShortcuts() {
   const parsed = read(KEYS.KEYBOARD_SHORTCUTS, { parse: JSON.parse });
   if (!parsed) return DEFAULT_SHORTCUTS;
-  const { shortcuts: migrated, changed } = migratePanelToggleShortcuts(parsed);
-  if (changed) saveKeyboardShortcuts(migrated);
+  const panels = migratePanelToggleShortcuts(parsed);
+  const selection = migrateSelectionShortcuts(panels.shortcuts);
+  const migrated = selection.shortcuts;
+  if (panels.changed || selection.changed) saveKeyboardShortcuts(migrated);
   return Object.fromEntries(
     EDITABLE_DEFINITIONS.map((definition) => [
       definition.id,
@@ -275,7 +344,7 @@ function migratePanelToggleShortcuts(shortcuts) {
     // Ne pas introduire une collision silencieuse : la personnalisation legacy
     // n'est copiée que si aucune autre action générale effective ne l'utilise.
     next[targetId] = isLegacyCustomization
-      && !hasGeneralShortcutConflict(next, targetId, legacy)
+      && !hasActiveShortcutConflict(next, targetId, legacy)
       ? legacy
       : fallback;
     changed = true;
@@ -284,11 +353,68 @@ function migratePanelToggleShortcuts(shortcuts) {
   return { shortcuts: next, changed };
 }
 
-function hasGeneralShortcutConflict(shortcuts, actionId, shortcut) {
-  return EDITABLE_DEFINITIONS.some((definition) => {
-    if (definition.scope !== 'general' || definition.id === actionId) return false;
-    const effective = normalizeStoredShortcut(shortcuts?.[definition.id])
-      ?? normalizeShortcut(definition.defaultShortcut);
+// Vague 3 : copier, couper, coller et supprimer n'ont plus qu'une définition,
+// partagée par l'arbre, le diagramme et le graphe. Une personnalisation de
+// l'ancienne commande d'arbre ou de diagramme devient celle de la commande
+// commune ; si les deux avaient été personnalisées différemment, celle de
+// l'arbre gagne, parce que c'est la surface historique du Libre. Une valeur
+// déjà posée sur la commande commune reste la source de vérité.
+const SELECTION_MIGRATIONS = Object.freeze([
+  { targetId: 'selectionCopy', legacyIds: ['treeCopy', 'diagramCopy'] },
+  { targetId: 'selectionCut', legacyIds: ['treeCut', 'diagramCut'] },
+  { targetId: 'selectionPaste', legacyIds: ['treePaste', 'diagramPaste'] },
+  { targetId: 'selectionDelete', legacyIds: ['treeDelete', 'diagramDelete'] },
+]);
+
+function migrateSelectionShortcuts(shortcuts) {
+  const next = { ...shortcuts };
+  let changed = false;
+  for (const { targetId, legacyIds } of SELECTION_MIGRATIONS) {
+    const definition = SHORTCUT_DEFINITIONS.find((item) => item.id === targetId);
+    const customized = legacyIds
+      .map((legacyId) => normalizeStoredShortcut(next[legacyId]))
+      .find((legacy) => legacy && !shortcutEquals(legacy, definition.defaultShortcut));
+    if (!normalizeStoredShortcut(next[targetId]) && customized
+      && !hasActiveShortcutConflict(next, targetId, customized)) {
+      next[targetId] = customized;
+      changed = true;
+    }
+    for (const legacyId of legacyIds) {
+      if (legacyId in next) {
+        delete next[legacyId];
+        changed = true;
+      }
+    }
+  }
+  return { shortcuts: next, changed };
+}
+
+// Les contextes où une portée est active.
+function scopeContexts(scopeId) {
+  return SHORTCUT_SCOPES.find((scope) => scope.id === scopeId)?.contexts ?? [];
+}
+
+// Deux portées peuvent-elles être actives au même moment ? C'est la seule
+// question qui fasse d'une même touche un conflit.
+export function scopesOverlap(leftScope, rightScope) {
+  if (leftScope === rightScope) return true;
+  const right = scopeContexts(rightScope);
+  return scopeContexts(leftScope).some((context) => right.includes(context));
+}
+
+function effectiveShortcut(shortcuts, definition) {
+  return normalizeStoredShortcut(shortcuts?.[definition.id])
+    ?? normalizeShortcut(definition.defaultShortcut);
+}
+
+// Une commande active en même temps que `actionId` répond-elle déjà à cette
+// touche, par son raccourci ou par l'une de ses variantes ?
+function hasActiveShortcutConflict(shortcuts, actionId, shortcut, definitions = EDITABLE_DEFINITIONS) {
+  const target = SHORTCUT_DEFINITIONS.find((definition) => definition.id === actionId);
+  if (!target) return false;
+  return definitions.some((definition) => {
+    if (definition.id === actionId || !scopesOverlap(definition.scope, target.scope)) return false;
+    const effective = effectiveShortcut(shortcuts, definition);
     if (shortcutEquals(effective, shortcut)) return true;
     return shortcutEquals(effective, definition.defaultShortcut)
       && (definition.aliases ?? []).some((alias) => shortcutEquals(alias, shortcut));
@@ -320,11 +446,14 @@ export function resetKeyboardShortcutsForScope(shortcuts, scope) {
 export function shortcutFromEvent(event) {
   if (['Control', 'Shift', 'Alt', 'Meta', 'Dead', 'Unidentified'].includes(event.key)) return null;
   if (!event.code && !event.key) return null;
+  // Sous macOS, Cmd **est** la touche de commande : capturée, elle devient la
+  // même commande que Ctrl ailleurs, et le raccourci se partage entre machines.
+  const commandIsMeta = commandKeyIsMeta();
   return normalizeShortcut({
-    ctrl: event.ctrlKey,
+    ctrl: event.ctrlKey || (commandIsMeta && event.metaKey),
     shift: event.shiftKey,
     alt: event.altKey,
-    meta: event.metaKey,
+    meta: commandIsMeta ? false : event.metaKey,
     code: event.code,
     key: event.key,
   });
@@ -340,26 +469,53 @@ function shortcutEquals(left, right) {
     && (a.code ? a.code === b.code : a.key === b.key);
 }
 
-// Conflits limités au même scope : Ctrl+X peut exister en 'tree' ET en 'audioEditor'.
+// Conflits entre commandes **actives en même temps** : Ctrl+X peut couper des
+// nœuds dans le graphe et de l'audio dans l'éditeur audio, mais pas servir
+// deux commandes du graphe, ni une commande générale et une commande du graphe.
 export function findShortcutConflict(shortcuts, actionId, shortcut) {
-  const target = SHORTCUT_DEFINITIONS.find((d) => d.id === actionId);
-  if (!target) return null;
   return EDITABLE_DEFINITIONS.find((definition) => (
-    definition.id !== actionId
-    && definition.scope === target.scope
-    && shortcutEquals(shortcuts?.[definition.id] ?? definition.defaultShortcut, shortcut)
+    hasActiveShortcutConflict(shortcuts, actionId, shortcut, [definition])
   )) || null;
 }
 
+const LATIN_LETTER = /^[a-z]$/;
+
+// Une frappe répond-elle à ce raccourci ?
+//
+// La touche se compare selon sa nature, et c'est ce qui rend les raccourcis
+// justes sur un AZERTY comme sur un QWERTY :
+//
+// - une **lettre** se compare au caractère tapé. Comparée à sa position, la
+//   touche `Q` d'un AZERTY — code `KeyA` — déclenchait le raccourci de `A`, et
+//   `Ctrl+W` celui de `Ctrl+Z`. La position ne sert que lorsque le caractère
+//   n'est pas une lettre latine : un clavier cyrillique garde ainsi `Ctrl+Z`
+//   sur la touche où il l'attend ;
+// - un **chiffre** et une **touche nommée** (flèches, Suppr, F2…) se comparent
+//   à leur position : sur un AZERTY, la touche `1` tape `&` ;
+// - un **symbole** se compare au caractère tapé, quelle que soit la touche qui
+//   le porte. Ses variantes disent avec quelle touche de Maj il s'obtient.
 function shortcutMatchesEvent(event, shortcut) {
   const normalized = normalizeShortcut(shortcut);
-  if (!!event.ctrlKey !== normalized.ctrl) return false;
+  // La commande est Ctrl, ou Cmd sous macOS (voir `platformKeys`).
+  const commandIsMeta = commandKeyIsMeta();
+  const command = !!event.ctrlKey || (commandIsMeta && !!event.metaKey);
+  if (command !== normalized.ctrl) return false;
   if (!!event.shiftKey !== normalized.shift) return false;
   if (!!event.altKey !== normalized.alt) return false;
-  if (!!event.metaKey !== normalized.meta) return false;
+  if (!commandIsMeta && !!event.metaKey !== normalized.meta) return false;
   const eventKey = normalizeKey(event.key);
-  return (normalized.code && event.code === normalized.code)
-    || (!!normalized.key && eventKey === normalized.key);
+  if (LATIN_LETTER.test(normalized.key)) {
+    return LATIN_LETTER.test(eventKey)
+      ? eventKey === normalized.key
+      : !!normalized.code && event.code === normalized.code;
+  }
+  const positional = /^(Digit|Numpad)/.test(normalized.code) || normalized.key.length > 1
+    || (!normalized.key && !!normalized.code);
+  if (positional) {
+    return (!!normalized.code && event.code === normalized.code)
+      || (normalized.key.length > 1 && eventKey === normalized.key);
+  }
+  return !!normalized.key && eventKey === normalized.key;
 }
 
 // Snapshot global des raccourcis courants — App.jsx le pousse à chaque update.
@@ -375,12 +531,13 @@ export function getCurrentShortcuts() {
 }
 
 // Recherche une action correspondant à l'évènement.
-// Si `scope` est fourni, ne considère que les raccourcis de ce scope.
-// Sinon, parcourt tous les scopes (utile pour le dispatcher global).
+// `scope` restreint la recherche à une portée, ou à plusieurs s'il est un
+// tableau ; sans lui, toutes les portées sont parcourues.
 export function findShortcutAction(event, shortcuts, scope = null) {
+  const scopes = scope === null ? null : [].concat(scope);
   for (const definition of SHORTCUT_DEFINITIONS) {
     if (definition.readOnly) continue;
-    if (scope && definition.scope !== scope) continue;
+    if (scopes && !scopes.includes(definition.scope)) continue;
     const shortcut = shortcuts?.[definition.id] ?? definition.defaultShortcut;
     if (shortcutMatchesEvent(event, shortcut)) return definition.id;
     if (shortcutEquals(shortcut, definition.defaultShortcut)) {

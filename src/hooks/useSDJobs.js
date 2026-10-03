@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import { addProjectPrefix } from '../utils/fileUtils';
 import { logger } from '../utils/logger';
 import { isTauriRuntime } from '../utils/tauriRuntime';
+import { releaseTauriListener } from '../utils/tauriListener';
 
 const MAX_CONCURRENT_SD_JOBS = 1;
 
@@ -28,13 +29,13 @@ export function useSDJobs(sdStore, workspaceDir = null, onMediaCreated = null) {
         });
       }
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     }).catch((error) => logger.error('comfyui:listen-error', error));
 
     return () => {
       cancelled = true;
-      if (unlisten) unlisten();
+      releaseTauriListener(unlisten);
     };
   }, []);
 

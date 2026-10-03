@@ -7,10 +7,10 @@ import { normalizeProjectData } from '../src/store/projectModel.js';
 test('unpack derives a clean title from a non-prefixed filename (no story title)', () => {
   const { packMetadata } = getUnpackedPackDetails({
     result: {},
-    zipPath: "C:/tmp/session/fichiers-importes/3+ Example story partent à l'aventure.zip",
+    zipPath: "C:/tmp/session/fichiers-importes/3+ Example story part à l'aventure.zip",
   });
   // Pas de préfixe « nouveau projet » injecté, et l'âge libre « 3+ » remonte vers minAge.
-  assert.equal(packMetadata.title, "Example story partent à l'aventure");
+  assert.equal(packMetadata.title, "Example story part à l'aventure");
   assert.equal(packMetadata.minAge, '3');
 });
 
@@ -25,7 +25,7 @@ test('unpack does not lift a leading number that is not an age token', () => {
 test('unpack keeps the pack uuid read from the story doc', () => {
   const { packMetadata } = getUnpackedPackDetails({
     result: { title: "3+]Example_story[by_Studio_V2", uuid: '11111111-2222-4333-8444-555555555555' },
-    zipPath: 'C:/x/3+]Example story.zip',
+    zipPath: 'C:/x/3+]Example.zip',
   });
   assert.equal(packMetadata.title, 'Example story');
   assert.equal(packMetadata.minAge, '3');
@@ -34,14 +34,14 @@ test('unpack keeps the pack uuid read from the story doc', () => {
 
 test('zip unpack promotion keeps the local mbah project name after first save', () => {
   const project = normalizeProjectData({
-    projectName: 'La petite histoire de la musique classique',
+    projectName: 'Example local project',
     projectType: 'pack',
     packMetadata: {},
     rootEntries: [{
       id: 'zip-1',
       type: 'zip',
       name: 'Example classic story by Example Author',
-      zipPath: 'C:/workspace/fichiers-importes/nouveau projet 5__Example classic story_by Example Author v1 1781861932480 1.zip',
+      zipPath: 'C:/workspace/fichiers-importes/example-classic-story.zip',
     }],
   });
 
@@ -62,7 +62,7 @@ test('zip unpack promotion keeps the local mbah project name after first save', 
     savedDuringUnpack: true,
   });
 
-  assert.equal(nextProject.projectName, 'La petite histoire de la musique classique');
+  assert.equal(nextProject.projectName, 'Example local project');
   assert.equal(nextProject.packMetadata.title, 'Example classic story by Example Author');
   assert.equal(nextProject.packMetadata.uuid, 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
   assert.equal(nextProject.rootEntries.length, 1);
@@ -117,4 +117,51 @@ test('zip unpack promotion ignores graph shared entries', () => {
 
   assert.equal(nextProject.rootEntries[0].target, 'story:hub');
   assert.equal(Object.hasOwn(nextProject, 'sharedEntries'), false);
+});
+
+function blankProjectWithZip(uuid) {
+  return normalizeProjectData({
+    projectType: 'pack',
+    packMetadata: { uuid },
+    rootEntries: [{ id: 'zip-1', type: 'zip', name: 'Pack', zipPath: '/packs/pack.zip' }],
+  });
+}
+
+function promote(project, result) {
+  return buildProjectAfterZipUnpack({
+    project,
+    menuId: null,
+    itemId: 'zip-1',
+    entries: [{ id: 'story-1', type: 'story', name: 'Ouverture', audio: '/x/audio.mp3' }],
+    zipPath: '/packs/pack.zip',
+    zipName: 'Pack',
+    result,
+  });
+}
+
+test('zip unpack promotion keeps the project identity when the pack brings none', () => {
+  const projectUuid = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+  const { project: nextProject, promoted } = promote(blankProjectWithZip(projectUuid), { title: 'Pack' });
+
+  assert.equal(promoted, true);
+  assert.equal(nextProject.packMetadata.uuid, projectUuid);
+  assert.equal(nextProject.packMetadata.originalUuid, '');
+});
+
+test('zip unpack promotion never leaves the project without identity', () => {
+  const { project: nextProject } = promote(blankProjectWithZip(''), { title: 'Pack' });
+
+  assert.match(nextProject.packMetadata.uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(nextProject.packMetadata.originalUuid, '');
+});
+
+test('zip unpack promotion takes the identity the pack brings', () => {
+  const packUuid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+  const { project: nextProject } = promote(
+    blankProjectWithZip('bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'),
+    { title: 'Pack', uuid: packUuid },
+  );
+
+  assert.equal(nextProject.packMetadata.uuid, packUuid);
+  assert.equal(nextProject.packMetadata.originalUuid, packUuid);
 });

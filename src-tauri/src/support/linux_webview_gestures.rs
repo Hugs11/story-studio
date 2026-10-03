@@ -44,7 +44,7 @@ fn dispatch_pinch(window: &WebviewWindow, phase: &str, scale: f64, center: Optio
          {{detail:{{phase:'{phase}',scale:{scale},clientX:{x},clientY:{y}}}}}));"
     );
     if let Err(error) = window.eval(script) {
-        log::warn!(target: "diagram", "Linux pinch event could not reach the diagram: {error}");
+        log::warn!(target: "viewport", "Linux pinch event could not reach the viewport: {error}");
     }
 }
 
@@ -53,8 +53,8 @@ fn dispatch_pinch(window: &WebviewWindow, phase: &str, scale: f64, center: Optio
 /// on the WebView widget as `wk-view-zoom-gesture`. We keep that recognizer so
 /// GTK/libinput remains the source of gesture data, block only WebKit's page
 /// magnification callbacks, then forward the normalized gesture to the shared
-/// diagram viewport.
-pub(crate) fn install_diagram_pinch_bridge(
+/// diagram and advanced graph viewports.
+pub(crate) fn install_pinch_bridge(
     window: WebviewWindow,
     platform_webview: tauri::webview::PlatformWebview,
 ) -> Result<(), String> {
@@ -97,8 +97,10 @@ pub(crate) fn install_diagram_pinch_bridge(
         );
     });
 
-    gesture.connect_end(move |gesture, _| {
-        dispatch_pinch(&window, "end", 1.0, gesture.bounding_box_center());
+    gesture.connect_end(move |_, _| {
+        // GTK has already released the gesture's touch points at `end`.
+        // Querying its bounding box here can read invalid native memory.
+        dispatch_pinch(&window, "end", 1.0, None);
     });
 
     // Retain our Rust closures for exactly as long as WebKit retains its
@@ -107,7 +109,7 @@ pub(crate) fn install_diagram_pinch_bridge(
         let retained_gesture: *mut gtk::ffi::GtkGestureZoom = gesture.into_glib_ptr();
         glib::gobject_ffi::g_object_set_data_full(
             webview.as_ptr() as *mut glib::gobject_ffi::GObject,
-            c"story-studio-diagram-pinch-bridge".as_ptr(),
+            c"story-studio-pinch-bridge".as_ptr(),
             retained_gesture.cast::<c_void>(),
             Some(unref_gobject),
         );

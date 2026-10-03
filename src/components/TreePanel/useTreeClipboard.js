@@ -65,7 +65,10 @@ export function useTreeClipboard({
     const { entries, isCut, sourceIds } = clipboardRef.current;
     const targetId = getPasteTargetId(nodeId ?? selectedId);
     if (isCut) {
-      onCutPasteEntries(sourceIds, targetId);
+      // Un collage refusé — boucle ou profondeur, dits par le store — garde la
+      // coupe : l'auteur colle ailleurs sans recouper.
+      const result = onCutPasteEntries(sourceIds, targetId);
+      if (result?.allowed === false) return;
       clipboardRef.current = null;
       setCutIds(new Set());
     } else {

@@ -14,6 +14,10 @@ const modeSelectorSource = await readFile(
   new URL('../src/components/ModeSelector/ModeSelector.jsx', import.meta.url),
   'utf8',
 );
+const appShellSource = await readFile(
+  new URL('../src/components/AppShell.jsx', import.meta.url),
+  'utf8',
+);
 const defaultCapability = JSON.parse(await readFile(
   new URL('../src-tauri/capabilities/default.json', import.meta.url),
   'utf8',
@@ -45,4 +49,17 @@ test('l’accueil propose un accès direct à la documentation', () => {
   assert.match(modeSelectorSource, /await openUrl\(DOCUMENTATION_URL\);/);
   assert.match(modeSelectorSource, /href=\{DOCUMENTATION_URL\}/);
   assert.match(modeSelectorSource, />Documentation<\/span>/);
+});
+
+test('l’accueil présente les menus puis le graphe puis le simplifié', () => {
+  const simple = modeSelectorSource.indexOf("name: 'Éditeur simplifié'");
+  const menus = modeSelectorSource.indexOf("name: 'Éditeur par menus'");
+  const graph = modeSelectorSource.indexOf("name: 'Éditeur graphe'");
+  assert.ok(menus >= 0 && graph > menus && simple > graph);
+  assert.doesNotMatch(modeSelectorSource, /name: 'Éditeur libre'/);
+  assert.match(modeSelectorSource, /onClick:\s*onSelectGraph/);
+  assert.match(
+    appShellSource,
+    /onStartAdvancedProject=\{workspace\.onStartAdvancedProject\}/,
+  );
 });

@@ -18,6 +18,7 @@ use std::sync::mpsc;
 
 use rayon::prelude::*;
 
+use crate::native_pack::{pack_identity_from_story, pack_identity_refusal};
 use crate::services::pack_reader;
 use crate::support::ffmpeg::{get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
@@ -189,7 +190,7 @@ pub(crate) fn create_fixed_pack_with_source_log(
         );
         if let Some(patch) = metadata_patch.as_ref() {
             emit("Application des métadonnées au story.json...");
-            apply_metadata_patch(&mut doc.story, patch);
+            apply_metadata_patch(&mut doc.story, patch)?;
         }
         let fixed_zip_path =
             unique_fixed_zip_path(source_path, output_dir, metadata_patch.as_ref());
@@ -453,13 +454,9 @@ fn analyze_pack_inner(
         .unwrap_or("")
         .trim()
         .to_string();
-    report.pack_uuid = doc
-        .story
-        .get("uuid")
-        .and_then(|value| value.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    // L'identité que l'appareil connaît : celle de l'Écran d'entrée, que la
+    // plupart des packs STUdio portent sans `uuid` de tête.
+    report.pack_uuid = pack_identity_from_story(&doc.story).unwrap_or_default();
     report.pack_version = doc
         .story
         .get("version")
@@ -1161,9 +1158,20 @@ fn metadata_patch_has_changes(patch: &PackMetadataPatchModel) -> bool {
         || patch.naming_mode.is_some()
 }
 
-fn apply_metadata_patch(story: &mut serde_json::Value, patch: &PackMetadataPatchModel) {
+fn apply_metadata_patch(
+    story: &mut serde_json::Value,
+    patch: &PackMetadataPatchModel,
+) -> Result<(), String> {
+    if let Some(uuid) = patch
+        .uuid
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        apply_pack_identity(story, uuid)?;
+    }
     let Some(object) = story.as_object_mut() else {
-        return;
+        return Ok(());
     };
     if let Some(title) = patch
         .title
@@ -1188,63 +1196,110 @@ fn apply_metadata_patch(story: &mut serde_json::Value, patch: &PackMetadataPatch
             serde_json::Value::Number(serde_json::Number::from(version.max(1))),
         );
     }
-    if let Some(uuid) = patch
-        .uuid
-        .as_ref()
-        .map(|value| value.trim())
-        .filter(|value| !value.is_empty())
-    {
+
+    // L'âge, l'auteur, le producteur, le bonus et le mode de nommage ne composent
+    // que le nom du fichier corrigé (`convention_zip_stem`). Ils n'entrent pas
+    // dans le pack : aucun lecteur ne les relirait, et l'Éditeur graphe y verrait
+    // une extension inconnue à trancher.
+    Ok(())
+}
+
+/// Donne au pack corrigé l'identité choisie dans la fenêtre des métadonnées.
+///
+/// STUdio et Lunii.QT lisent l'identité sur l'Écran d'entrée ; écrire le seul
+/// `uuid` de tête laissait « Générer un nouvel UUID » sans effet sur l'appareil.
+/// L'Écran d'entrée est donc renommé, avec toutes les options d'Action qui le
+/// visent, et la tête est alignée. Garder l'identité ne touche à rien.
+///
+/// Un autre Écran qui porterait déjà la chaîne choisie serait fusionné par
+/// STUdio : il reçoit d'abord un UUID neuf, et ses références le suivent.
+fn apply_pack_identity(story: &mut serde_json::Value, identity: &str) -> Result<(), String> {
+    if let Some(refusal) = pack_identity_refusal(identity) {
+        return Err(refusal);
+    }
+    if pack_identity_from_story(story).as_deref() == Some(identity) {
+        return Ok(());
+    }
+    let stages = story
+        .get("stageNodes")
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| {
+            "story.json sans stageNodes : l'identité ne peut pas être posée.".to_string()
+        })?;
+    let entries: Vec<usize> = stages
+        .iter()
+        .enumerate()
+        .filter(|(_, stage)| stage.get("squareOne").and_then(|value| value.as_bool()) == Some(true))
+        .map(|(index, _)| index)
+        .collect();
+    let [entry_index] = entries[..] else {
+        return Err(
+            "Le pack n'a pas un seul Écran d'entrée : son identité ne peut pas être posée."
+                .to_string(),
+        );
+    };
+    let entry_id = stages[entry_index]
+        .get("uuid")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let colliding: Vec<usize> = stages
+        .iter()
+        .enumerate()
+        .filter(|(index, stage)| {
+            *index != entry_index
+                && stage.get("uuid").and_then(|value| value.as_str()) == Some(identity)
+        })
+        .map(|(index, _)| index)
+        .collect();
+
+    for index in colliding {
+        rename_stage(story, index, identity, &uuid::Uuid::new_v4().to_string());
+    }
+    rename_stage(story, entry_index, &entry_id, identity);
+    if let Some(object) = story.as_object_mut() {
         object.insert(
             "uuid".to_string(),
-            serde_json::Value::String(uuid.to_string()),
+            serde_json::Value::String(identity.to_string()),
         );
     }
+    Ok(())
+}
 
-    let has_community_metadata = patch.min_age.is_some()
-        || patch.author.is_some()
-        || patch.producer.is_some()
-        || patch.bonus.is_some()
-        || patch.naming_mode.is_some();
-    if has_community_metadata {
-        let mut metadata = object
-            .get("storyStudioMetadata")
-            .and_then(|value| value.as_object())
-            .cloned()
-            .unwrap_or_default();
-        if let Some(value) = patch.min_age.as_ref() {
-            metadata.insert(
-                "minAge".to_string(),
-                serde_json::Value::String(value.trim().to_string()),
-            );
-        }
-        if let Some(value) = patch.author.as_ref() {
-            metadata.insert(
-                "author".to_string(),
-                serde_json::Value::String(value.trim().to_string()),
-            );
-        }
-        if let Some(value) = patch.producer.as_ref() {
-            metadata.insert(
-                "producer".to_string(),
-                serde_json::Value::String(value.trim().to_string()),
-            );
-        }
-        if let Some(value) = patch.bonus.as_ref() {
-            metadata.insert(
-                "bonus".to_string(),
-                serde_json::Value::String(value.trim().to_string()),
-            );
-        }
-        if let Some(value) = patch.naming_mode.as_ref() {
-            metadata.insert(
-                "namingMode".to_string(),
-                serde_json::Value::String(value.trim().to_string()),
-            );
-        }
-        object.insert(
-            "storyStudioMetadata".to_string(),
-            serde_json::Value::Object(metadata),
+/// Renomme un Écran et les options d'Action qui le visent. Une option est une
+/// chaîne d'identifiant d'Écran ; seules les options égales à l'ancien nom
+/// bougent.
+fn rename_stage(story: &mut serde_json::Value, index: usize, from: &str, to: &str) {
+    if let Some(stage) = story
+        .get_mut("stageNodes")
+        .and_then(|value| value.as_array_mut())
+        .and_then(|stages| stages.get_mut(index))
+        .and_then(|stage| stage.as_object_mut())
+    {
+        stage.insert(
+            "uuid".to_string(),
+            serde_json::Value::String(to.to_string()),
         );
+    }
+    if from.is_empty() {
+        return;
+    }
+    let actions = story
+        .get_mut("actionNodes")
+        .and_then(|value| value.as_array_mut())
+        .into_iter()
+        .flatten();
+    for action in actions {
+        let options = action
+            .get_mut("options")
+            .and_then(|value| value.as_array_mut())
+            .into_iter()
+            .flatten();
+        for option in options {
+            if option.as_str() == Some(from) {
+                *option = serde_json::Value::String(to.to_string());
+            }
+        }
     }
 }
 

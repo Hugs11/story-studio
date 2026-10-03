@@ -1,0 +1,46 @@
+.release-notes-box {
+  width: 660px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.release-notes-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, var(--bg1)), var(--bg1));
+}
+.release-notes-eyebrow { color: var(--accent); font-size: 11px; letter-spacing: .1em; font-weight: 700; }
+.release-notes-header h2 { margin: 10px 0 6px; font-size: 25px; }
+.release-notes-header p { margin: 0; color: var(--text-secondary); }
+.release-notes-body { padding: 22px 28px; overflow-y: auto; min-height: 0; line-height: 1.55; }
+.release-notes-body h3 { margin: 0 0 12px; font-size: 14px; }
+.release-notes-highlights { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; }
+.release-notes-highlights li { display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: baseline; gap: 10px; font-size: 12px; line-height: 1.45; }
+.release-notes-highlights strong { font-size: 12px; }
+.release-notes-highlights span { color: var(--text-secondary); }
+.release-notes-highlights .release-notes-badge {
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-align: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.release-notes-highlights .release-notes-badge--fix { color: var(--text-secondary); background: var(--bg2); }
+.release-notes-highlights .release-notes-badge--chore { color: var(--muted); background: var(--bg2); }
+.release-notes-letter { margin-top: 22px; padding: 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); }
+.release-notes-letter p { font-size: 13px; margin: 0 0 12px; }
+.release-notes-signature { display: block; text-align: right; color: var(--accent); font-size: 13px; }
+.release-notes-links { display: flex; flex-wrap: wrap; gap: 12px 22px; margin-top: 18px; font-size: 13px; }
+.release-notes-links a { color: var(--accent); text-underline-offset: 3px; }
+.release-notes-footer { padding: 14px 28px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.release-notes-footer span { font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 480px) {
+  .release-notes-header, .release-notes-body, .release-notes-footer { padding: 16px; }
+  .release-notes-header h2 { font-size: 21px; }
+  .release-notes-footer { flex-wrap: wrap; }
+}

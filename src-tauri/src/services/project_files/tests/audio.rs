@@ -47,7 +47,7 @@ fn audio_assembly_unique_path_never_overwrites() {
 
 #[test]
 fn concat_audio_files_requires_two_inputs_before_ffmpeg() {
-    let err = concat_audio_files("C:/projet/test.mbah", &[], "sortie.mp3", 0.0, None).unwrap_err();
+    let err = concat_audio_files(&[], "sortie.mp3", 0.0, None).unwrap_err();
     assert!(err.contains("au moins deux"));
 }
 
@@ -62,17 +62,15 @@ fn concat_audio_files_smoke_with_ffmpeg_when_available() {
     let input_b = project_dir.join("partie_2.wav");
     run_ffmpeg_make_silence(&ffmpeg, 0.05, &input_a).expect("create first wav");
     run_ffmpeg_make_silence(&ffmpeg, 0.05, &input_b).expect("create second wav");
-    let save_path = project_dir.join("story.mbah");
 
     let output = concat_audio_files(
-        save_path.to_str().unwrap(),
         &[
             input_a.to_string_lossy().to_string(),
             input_b.to_string_lossy().to_string(),
         ],
         "histoire_complete.mp3",
         0.05,
-        None,
+        Some(project_dir.to_str().unwrap()),
     )
     .expect("concat audio files");
     let output_path = PathBuf::from(output);
@@ -103,7 +101,6 @@ fn split_audio_segments_keeps_successes_when_one_segment_fails() {
     run_ffmpeg_make_silence(&ffmpeg, 0.2, &input).expect("create source wav");
 
     let result = split_audio_segments(
-        "",
         input.to_str().unwrap(),
         &[
             AudioSplitSegment {

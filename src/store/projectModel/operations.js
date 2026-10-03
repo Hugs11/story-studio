@@ -1,4 +1,4 @@
-import { isSameMediaPath, makeId, normalizeBaseProject, normalizeEntry } from './schema.js';
+import { isSameMediaPath, makeId, normalizeBaseProject, normalizeEntry, remapEntryIds } from './schema.js';
 import { extractEntry, findEntryById, findIncomingRefs } from './index.js';
 import { getProjectMenuDepthDiagnostic } from './menuDepth.js';
 
@@ -146,12 +146,6 @@ export function appendEntry(project, containerId, entry) {
   return updateProjectRootEntries(project, appendEntryToTree(project.rootEntries ?? [], containerId, entry));
 }
 
-export function shallowCloneEntry(entry) {
-  const clone = { ...entry, id: makeId() };
-  if (Array.isArray(clone.children)) clone.children = [];
-  return clone;
-}
-
 function insertEntryAfterInTree(entries, anchorId, newEntry) {
   const result = [];
   for (const entry of entries) {
@@ -263,8 +257,34 @@ export function removeEntriesCascadingRefs(project, entryIds) {
   return removeEntries(project, new Set([...ids, ...danglingRefIds]));
 }
 
+// Un pack extrait garde les identifiants de sa source : extrait deux fois dans
+// le même parent, il en ferait des doublons, et une modification par
+// identifiant toucherait les deux copies. Les identifiants déjà pris par le
+// parent sont donc réattribués, et les cibles internes du pack les suivent. Le
+// parent n'est pas touché ; l'entrée remplacée libère le sien.
+function withoutIdCollisions(project, replacedId, entries) {
+  const taken = new Set();
+  const collectTaken = (list) => {
+    for (const entry of list ?? []) {
+      if (entry.id !== replacedId) taken.add(entry.id);
+      collectTaken(entry.children);
+    }
+  };
+  collectTaken(project.rootEntries);
+  const idMap = new Map();
+  const collectCollisions = (list) => {
+    for (const entry of list ?? []) {
+      if (taken.has(entry.id) && !idMap.has(entry.id)) idMap.set(entry.id, makeId());
+      collectCollisions(entry.children);
+    }
+  };
+  collectCollisions(entries);
+  if (idMap.size === 0) return entries;
+  return entries.map((entry) => remapEntryIds(entry, idMap));
+}
+
 export function replaceEntryWithEntries(project, containerId, entryId, replacementEntries) {
-  const normalized = replacementEntries.map(normalizeEntry);
+  const normalized = withoutIdCollisions(project, entryId, replacementEntries.map(normalizeEntry));
   if (containerId == null) {
     const nextEntries = [];
     for (const entry of project.rootEntries ?? []) {

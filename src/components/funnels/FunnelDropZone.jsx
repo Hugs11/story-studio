@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Upload } from '../icons/LucideLocal';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 /**
  * Zone de dépôt réutilisable du châssis — gabarit de la maquette :
@@ -52,10 +53,10 @@ export function FunnelDropZone({ icon, title, hint, onFiles, disabled = false, c
         onFilesRef.current?.(paths);
       }
     })
-      .then((fn) => { if (cancelled) fn(); else unlisten = fn; })
+      .then((fn) => { if (cancelled) releaseTauriListener(fn); else unlisten = fn; })
       .catch(() => {});
 
-    return () => { cancelled = true; unlisten?.(); };
+    return () => { cancelled = true; releaseTauriListener(unlisten); };
   }, [disabled]);
 
   return (

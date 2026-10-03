@@ -90,22 +90,39 @@ pub fn run() {
                     }
                     let pinch_window = window.clone();
                     if let Err(error) = window.with_webview(move |platform_webview| {
-                        if let Err(error) =
-                            support::linux_webview_gestures::install_diagram_pinch_bridge(
-                                pinch_window,
-                                platform_webview,
-                            )
-                        {
+                        if let Err(error) = support::linux_webview_gestures::install_pinch_bridge(
+                            pinch_window,
+                            platform_webview,
+                        ) {
                             log::warn!(
-                                target: "diagram",
-                                "Linux diagram pinch bridge could not be installed: {error}"
+                                target: "viewport",
+                                "Linux pinch bridge could not be installed: {error}"
                             );
                         }
                     }) {
                         log::warn!(
-                            target: "diagram",
-                            "Linux WebView is unavailable for diagram pinch handling: {error}"
+                            target: "viewport",
+                            "Linux WebView is unavailable for pinch handling: {error}"
                         );
+                    }
+                    match window.url() {
+                        Ok(trusted_url) => {
+                            if let Err(error) = window.with_webview(move |platform_webview| {
+                                support::linux_microphone_permission::install(
+                                    platform_webview,
+                                    trusted_url,
+                                );
+                            }) {
+                                log::warn!(
+                                    target: "recording",
+                                    "Linux microphone permission handler could not be installed: {error}"
+                                );
+                            }
+                        }
+                        Err(error) => log::warn!(
+                            target: "recording",
+                            "Linux application URL is unavailable for microphone permission: {error}"
+                        ),
                     }
                 }
             }
@@ -148,6 +165,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::generation::generate_pack,
             commands::generation::cancel_generate_pack,
+            commands::generation::project_pack_for_simulation,
+            commands::generation::copy_project_to_graph,
+            commands::generation::verify_project_graph_copy,
             commands::files::save_recording,
             commands::files::delete_file,
             commands::files::delete_workspace_media_file,
@@ -163,6 +183,16 @@ pub fn run() {
             commands::files::discard_audio_preview,
             commands::files::restore_audio_original,
             commands::files::validate_lunii_zip_cmd,
+            commands::pack::acquire_advanced_pack_document,
+            commands::project_codec::validate_advanced_payload,
+            commands::project_codec::read_advanced_graph_view,
+            commands::advanced_view::read_advanced_view_state,
+            commands::advanced_view::write_advanced_view_state,
+            commands::advanced_view::rename_advanced_view_state,
+            commands::project_codec::create_advanced_document,
+            commands::project_codec::assess_advanced_payload_readiness,
+            commands::project_codec::apply_advanced_gesture,
+            commands::advanced_export::export_advanced_pack,
             commands::files::scan_unused_project_files,
             commands::files::delete_unused_project_files,
             commands::files::scan_import_folder,
@@ -171,8 +201,11 @@ pub fn run() {
             commands::pack::get_pack_asset,
             commands::pack::unpack_zip_to_entries,
             commands::pack::convert_folder_pack_to_zip,
+            commands::pack::inspect_pack_archive,
+            commands::pack::extract_pack_bundle_child,
             commands::pack::check_pack_editability,
             commands::pack::classify_pack_editability,
+            commands::pack::check_pack_identity,
             commands::pack::analyze_community_pack,
             commands::pack::create_fixed_community_pack,
             commands::xtts::xtts_get_status,

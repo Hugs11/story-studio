@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { addProjectPrefix } from '../utils/fileUtils';
 
-export function useXttsJobs(xttsStore, onAudioGenerated, workspaceDir = null, onMediaCreated = null) {
+export function useXttsJobs(
+  xttsStore, onAudioGenerated, workspaceDir = null, onMediaCreated = null, onLibraryAudioReady = null,
+) {
   useEffect(() => {
     const isRunning = xttsStore.jobs.some(j => j.status === 'running');
     if (isRunning) return;
@@ -24,6 +26,7 @@ export function useXttsJobs(xttsStore, onAudioGenerated, workspaceDir = null, on
         xttsStore.updateJob(next.id, { status: 'done', resultPath: finalPath, progress: 1, progressLabel: '100%' });
         onAudioGenerated(next.target, finalPath, next);
         onMediaCreated?.(finalPath);
+        if (next.target?.kind === 'mediaLibrary') onLibraryAudioReady?.(finalPath, next);
       })
       .catch((e) => {
         xttsStore.updateJob(next.id, { status: 'error', errorMessage: String(e) });

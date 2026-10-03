@@ -1,2 +1,1 @@
-export { ProjectSimulator } from './EmulatorTab/ProjectSimulator';
-export { ZipSimulator } from './EmulatorTab/ZipSimulator';
+export { FlatSimulator } from './EmulatorTab/FlatSimulator';

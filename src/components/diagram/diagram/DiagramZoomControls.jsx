@@ -1,9 +1,10 @@
-export function DiagramZoomControls({ zoomValueRef, zoom, onZoomIn, onZoomOut }) {
+export function DiagramZoomControls({ zoomValueRef, zoom, onZoomIn, onZoomOut, onFit }) {
   return (
-    <div className="fd-complete-zoom">
-      <button type="button" className="fd-complete-zoom-btn" onClick={onZoomIn}>+</button>
-      <div ref={zoomValueRef} className="fd-complete-zoom-value">{Math.round(zoom * 100)}%</div>
-      <button type="button" className="fd-complete-zoom-btn" onClick={onZoomOut}>−</button>
+    <div className="fd-complete-zoom" role="group" aria-label="Zoom du diagramme">
+      <button type="button" className="fd-complete-zoom-btn" onClick={onZoomIn} aria-label="Agrandir">+</button>
+      <output ref={zoomValueRef} className="fd-complete-zoom-value" aria-label="Niveau de zoom">{Math.round(zoom * 100)}%</output>
+      <button type="button" className="fd-complete-zoom-btn" onClick={onZoomOut} aria-label="Réduire">−</button>
+      <button type="button" className="fd-complete-zoom-btn fd-complete-zoom-fit" onClick={onFit} aria-label="Cadrer tout le diagramme">⌗</button>
     </div>
   );
 }

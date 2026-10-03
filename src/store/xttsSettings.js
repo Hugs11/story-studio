@@ -85,3 +85,20 @@ export function isTtsAvailable(settings) {
   if (!settings) return false;
   return settings.backend === 'piper' || settings.enabled === true;
 }
+
+// La voix d'une génération groupée d'audios titres, sans fenêtre à ouvrir :
+// Piper a toujours une voix par défaut ; XTTS reprend la dernière voix choisie,
+// ou la première favorite. Vide si l'auteur n'en a encore choisi aucune.
+// Partagée par la sélection multiple des deux éditeurs.
+export function batchTitleVoice(settings) {
+  if ((settings?.backend || 'piper') === 'piper') {
+    return settings?.piperVoice || readSetting(KEYS.PIPER_LAST_VOICE) || PIPER_DEFAULT_VOICE;
+  }
+  const favoriteVoices = Array.isArray(settings?.favoriteVoices) ? settings.favoriteVoices : [];
+  return (
+    readSetting(KEYS.XTTS_LAST_VOICE)
+    || readSetting(KEYS.XTTS_LAST_SPEAKER)
+    || favoriteVoices[0]
+    || ''
+  );
+}

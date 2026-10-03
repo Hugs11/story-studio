@@ -1,5 +1,23 @@
+/* **Taille de l'aperçu : une proportion bornée, pas un plafond.**
+
+   Un simple `min(100%, plafond)` ne suit la colonne qu'en dessous du plafond :
+   au-dessus, l'aperçu est constant, et redimensionner le panneau ne change
+   rien — c'est ce que faisait l'ancien `min(100%, 320px)`.
+   La largeur est donc une **proportion** de la colonne, encadrée par un
+   plancher et un plafond.
+
+   Trois jetons, redéclarables par contexte :
+   - `--image-field-basis` : la part de la colonne. `100%` veut dire « la
+     colonne porte déjà la proportion, remplis-la » — c'est le cas quand la
+     grille parente a elle-même une piste proportionnelle.
+   - `--image-field-min` / `--image-field-max` : les bornes. Le plancher tient
+     l'aperçu lisible dans un panneau étroit, le plafond l'empêche de
+     redevenir une grande image là où la place ne manque pas. */
 .image-field {
-  --image-field-width: min(100%, 320px);
+  /* Le seul réglage restant : le plafond de l'aperçu. Sa largeur réelle vaut
+     la place offerte moins la barre d'outils, bornée par ce plafond — le
+     calcul vit sur `.image-drop`, en un seul endroit. */
+  --image-field-max: 380px;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -12,29 +30,155 @@
 }
 
 .image-field.is-align-start > .media-label,
-.image-field.is-align-start > .image-drop,
-.image-field.is-align-start > .image-drop-wrap,
-.image-field.is-align-start > .image-action-row,
 .image-field.is-align-start > .image-sd-results {
   margin-inline: 0;
 }
 
 .image-field.is-compact {
-  flex: 0 1 320px;
-  width: min(100%, 320px);
-  max-width: 320px;
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .image-field > .media-label,
-.image-field > .image-drop,
-.image-field > .image-drop-wrap,
-.image-field > .image-action-row,
 .image-field > .image-sd-results {
-  width: var(--image-field-width);
+  width: 100%;
 }
 
 .image-drop-wrap {
   display: block;
+  min-width: 0;
+}
+
+/* ── Cadre soudé : l'aperçu et sa barre d'outils ─────────────────────────
+
+   **La barre prend la hauteur de l'image sans que personne la calcule.**
+   Les deux sont voisines dans une rangée flex, dont l'étirement par défaut
+   fait le travail ; recopier une hauteur les aurait désynchronisées au
+   premier changement de largeur.
+
+   Le `gap` d'un pixel sur un fond de bordure dessine le filet qui les sépare :
+   une vraie bordure sur l'un des deux aurait doublé le trait du contour.
+
+   **La largeur de l'aperçu est la seule valeur calculée**, et elle l'est en
+   CSS : la place disponible, moins ce que la barre occupe, bornée comme
+   partout ailleurs. `--image-tool-gutter` vaut la barre entière — colonnes,
+   rembourrage, filet et contours. */
+/* **C'est le slot qui porte la requête**, pas le champ : `ZipEditor` réutilise
+   `.image-field` et `.image-drop` sans monter ce composant, et un
+   `contain: inline-size` posé là-haut aurait effondré sa vignette, dont la
+   boîte se dimensionne sur son contenu. Ici la largeur vient du parent, donc
+   la mesure est bien définie. */
+.image-slot {
+  container: image-slot / inline-size;
+  --image-tool-gutter: 35px;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Un aperçu sans barre d'outils ne réserve rien pour elle. */
+.image-slot--bare {
+  --image-tool-gutter: 0px;
+}
+
+.image-field.is-align-center > .image-slot {
+  justify-content: center;
+}
+
+.image-slot__frame {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-slot__toolbar {
+  display: grid;
+  grid-template-columns: repeat(var(--image-tool-cols, 1), 26px);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg1);
+  box-sizing: border-box;
+  flex: none;
+}
+
+/* **`Tooltip` interpose un `.tooltip-wrap`**, qui devient l'élément de grille
+   à la place du bouton. Sans cette reprise, le bouton se dimensionnait sur son
+   icône et flottait en haut de sa cellule au lieu de l'occuper. */
+.image-slot__toolbar > .tooltip-wrap {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.image-tool {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--control-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.image-tool > svg {
+  width: var(--image-tool-icon, 15px);
+  height: var(--image-tool-icon, 15px);
+  display: block;
+}
+
+.image-tool:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  color: var(--text);
+}
+
+.image-tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.image-tool--ai {
+  color: var(--accent-2-text);
+}
+
+.image-tool--ai:hover:not(:disabled) {
+  background: var(--accent-2-dim);
+  color: var(--accent-2-text);
+}
+
+.image-tool--danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.image-tool:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* La génération dure : l'icône respire plutôt que de rester simplement
+   éteinte, sans quoi rien ne distingue « en cours » de « indisponible ». */
+.image-tool.is-busy {
+  opacity: 1;
+  color: var(--accent-2-text);
+  animation: image-tool-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes image-tool-pulse {
+  50% { opacity: 0.35; }
 }
 
 .image-field > .media-label {
@@ -49,11 +193,34 @@
   text-align: left;
 }
 
-/* Conteneur fixé à 320x240 max, ratio 4:3 */
+/* **Invariant de cadrage — ne pas toucher sans lire ceci.**
+
+   Tout fichier qui entre dans un champ passe par `ImageEditorModal` en
+   `forceExport`, qui le rend dans un canvas 320x240 (`CANVAS_W`/`CANVAS_H`) :
+   le fichier stocké est **toujours exactement 4:3**. La boîte est donc
+   verrouillée sur ce même ratio et l'aperçu est peint en `object-fit: fill`,
+   ce qui est une correspondance exacte — ni rognage, ni bande, ni
+   déformation, à n'importe quelle largeur.
+
+   Conséquence : **réduire la boîte est sûr, la proportion se tient seule.**
+   Ce qui la casserait : changer `aspect-ratio`, ou passer l'aperçu en `cover`
+   (qui rognerait) ou `contain` (qui ajouterait une seconde bande par-dessus
+   celle que l'éditeur a déjà cuite dans le fichier).
+
+   `container` : le placeholder et les icônes se règlent sur la largeur réelle
+   de la boîte, que le panneau redimensionne en JS — une media query de
+   fenêtre ne la verrait pas. Le conteneur est **nommé** pour ne pas capturer
+   les `@container` anonymes des cartes alentour. */
 .image-drop {
   position: relative;
-  width: 100%;
+  flex: none;
+  width: clamp(
+    var(--image-field-min, 110px),
+    100cqi - var(--image-tool-gutter),
+    var(--image-field-max)
+  );
   aspect-ratio: 4 / 3;
+  container: image-frame / inline-size;
   border-radius: var(--border-radius-md);
   overflow: hidden;
   cursor: pointer;
@@ -62,32 +229,25 @@
     linear-gradient(90deg, color-mix(in srgb, var(--border) 28%, transparent) 1px, transparent 1px),
     color-mix(in srgb, var(--bg2) 88%, var(--bg1));
   background-size: 18px 18px, 18px 18px, auto;
-  border: 1px solid color-mix(in srgb, var(--borderLt) 86%, transparent);
 }
 
-.overlay-btn-danger {
-  border-color: rgba(248, 113, 113, 0.5);
-  color: #fca5a5;
-}
-
-.overlay-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.35);
-  border-color: rgba(248, 113, 113, 0.8);
-  color: #ffd9d9;
-}
-
-.image-drop.empty {
-  border-style: solid;
+/* L'emplacement vide s'annonce par un liseré pointillé **en retrait**, repris
+   de la maquette : il dit « à remplir » sans ajouter un second trait contre
+   celui du cadre. */
+.image-drop.empty::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed var(--borderLt);
+  border-radius: 5px;
+  pointer-events: none;
 }
 
 .image-drop.missing {
-  border-color: var(--danger-border);
   background: var(--danger-bg);
 }
 
 .image-drop.filled {
-  border: 0;
-  box-shadow: inset 0 0 0 1px var(--border);
   background: #111;
 }
 
@@ -128,8 +288,9 @@
 
 /* Placeholder quand pas d'image */
 .image-placeholder {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 5px;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -137,16 +298,19 @@
   gap: 8px;
 }
 
+/* L'icône se passe de son ancien médaillon : le liseré pointillé dit déjà
+   « emplacement vide », et deux cadres imbriqués se disputaient la lecture. */
 .image-placeholder-icon {
-  font-size: 24px;
-  width: 46px;
-  height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg1) 80%, transparent);
-  border: 1px solid color-mix(in srgb, var(--borderLt) 86%, transparent);
+  color: var(--muted);
+}
+
+.image-placeholder-icon > svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .image-placeholder-text {
@@ -162,104 +326,195 @@
   font-weight: 600;
 }
 
-/* Overlay au hover */
-.image-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  color: white;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.image-drop:hover .image-overlay { opacity: 1; }
 .image-drop.is-drop-over { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 
-/* Overlay 2 boutons (image déjà définie) */
-.image-overlay-actions {
-  display: flex;
-  gap: 8px;
+/* ── Adaptation à la largeur réelle de la boîte ──────────────────────────
+   Deux paliers seulement, et ils ne touchent que ce qui cesserait d'être
+   lisible : le texte du placeholder, puis la taille des cibles. L'aperçu
+   lui-même n'a aucun palier — il se contente de suivre, son ratio étant
+   garanti par construction. */
+
+/* Le placeholder perd son pavé de texte bien avant d'être illisible : à
+   cette largeur, « Cliquer pour choisir une image » sur trois lignes remplit
+   la vignette au lieu de la présenter. */
+@container image-frame (max-width: 230px) {
+  .image-placeholder { gap: 6px; }
+
+  .image-placeholder-text--strong { font-size: 12px; }
+
+  /* L'indication de format est une aide à la première pose, pas une
+     information permanente : elle sort avant le libellé d'action. */
+  .image-placeholder > .image-placeholder-text:not(.image-placeholder-text--strong) {
+    display: none;
+  }
 }
 
-.overlay-btn {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.45);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+/* **Le basculement sur deux colonnes.** Cinq boutons de 26 px plus leurs
+   écarts demandent ~124 px de haut, soit un aperçu d'environ 165 px de large.
+   En dessous, la barre se plierait ou déborderait : elle passe donc sur deux
+   colonnes, et la gouttière suit. Le seuil est exprimé sur la place offerte au
+   champ — aperçu plus barre —, c'est-à-dire 165 + 35. */
+/* ── Quand la barre se plie, et quand l'icône se réduit ──────────────────
+
+   Les deux dépendent de la **hauteur d'une rangée**, donc du nombre de gestes
+   offerts : quatre boutons tiennent en hauteur là où cinq débordent déjà. Un
+   seuil unique, calé sur cinq, repliait la barre alors qu'elle avait la place
+   — le cas courant du graphe, où l'IA est absente.
+
+   Pour n boutons sur une colonne, la rangée vaut `(hauteur - 6 - 2(n-1)) / n`,
+   et la hauteur vaut les trois quarts de la largeur de l'aperçu, elle-même la
+   largeur offerte moins la gouttière. En renversant : la barre se plie sous
+   `(24n + 4) / 0,75 + 35`, et l'icône passe à 13 px sous `(28n + 4) / 0,75 + 35`.
+
+   Une requête ne pouvant pas styler son propre conteneur, le compte est lu sur
+   `.image-slot` comme ancêtre et appliqué à ses descendants. */
+
+@container image-slot (max-width: 115px) {
+  .image-slot[data-tools="2"] .image-slot__toolbar {
+    --image-tool-icon: 13px;
+  }
 }
 
-.overlay-btn:hover {
-  background: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.7);
+@container image-slot (max-width: 104px) {
+  .image-slot[data-tools="2"]:not(.image-slot--bare) .image-drop {
+    --image-tool-gutter: 63px;
+  }
+
+  .image-slot[data-tools="2"] .image-slot__toolbar {
+    --image-tool-cols: 2;
+  }
 }
 
-.overlay-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
+@container image-slot (max-width: 152px) {
+  .image-slot[data-tools="3"] .image-slot__toolbar {
+    --image-tool-icon: 13px;
+  }
 }
 
-/* Nom du fichier sous l'image */
-.image-action-row {
-  margin-top: 8px;
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
+@container image-slot (max-width: 136px) {
+  .image-slot[data-tools="3"]:not(.image-slot--bare) .image-drop {
+    --image-tool-gutter: 63px;
+  }
+
+  .image-slot[data-tools="3"] .image-slot__toolbar {
+    --image-tool-cols: 2;
+  }
 }
 
-.image-field.is-align-start > .image-action-row,
+@container image-slot (max-width: 190px) {
+  .image-slot[data-tools="4"] .image-slot__toolbar {
+    --image-tool-icon: 13px;
+  }
+}
+
+@container image-slot (max-width: 168px) {
+  .image-slot[data-tools="4"]:not(.image-slot--bare) .image-drop {
+    --image-tool-gutter: 63px;
+  }
+
+  .image-slot[data-tools="4"] .image-slot__toolbar {
+    --image-tool-cols: 2;
+  }
+}
+
+@container image-slot (max-width: 227px) {
+  .image-slot[data-tools="5"] .image-slot__toolbar {
+    --image-tool-icon: 13px;
+  }
+}
+
+@container image-slot (max-width: 200px) {
+  .image-slot[data-tools="5"]:not(.image-slot--bare) .image-drop {
+    --image-tool-gutter: 63px;
+  }
+
+  .image-slot[data-tools="5"] .image-slot__toolbar {
+    --image-tool-cols: 2;
+  }
+}
+
+@container image-frame (max-width: 230px) {
+  .image-placeholder { gap: 6px; }
+
+  .image-placeholder-text--strong { font-size: 12px; }
+
+  /* L'indication de format est une aide à la première pose, pas une
+     information permanente : elle sort avant le libellé d'action. */
+  .image-placeholder > .image-placeholder-text:not(.image-placeholder-text--strong) {
+    display: none;
+  }
+}
+
+/* **Le basculement sur deux colonnes.** Cinq boutons de 26 px plus leurs
+   écarts demandent ~124 px de haut, soit un aperçu d'environ 165 px de large.
+   En dessous, la barre se plierait ou déborderait : elle passe donc sur deux
+   colonnes, et la gouttière suit. Le seuil est exprimé sur la place offerte au
+   champ — aperçu plus barre —, c'est-à-dire 165 + 35. */
+/* **L'icône se réduit avec la hauteur du bouton**, et non avec le nombre de
+   colonnes. Une rangée descend sous 26 px quand l'aperçu passe sous ~192 px
+   de large, soit 227 px offerts au champ.
+
+   La maquette recalcule ce seuil pour chaque disposition, ce qui fait
+   rebondir la taille — 15 px, puis 13, puis 15 de nouveau juste après le
+   passage à deux colonnes, puis 13. Ce rebond est un effet de son arithmétique,
+   pas une intention lisible : le seuil est donc tenu monotone, l'icône ne
+   regrandit jamais quand la place se réduit. */
+@container image-slot (max-width: 227px) {
+  .image-slot__toolbar {
+    --image-tool-icon: 13px;
+  }
+}
+
+@container image-slot (max-width: 200px) {
+  /* La gouttière se redéclare sur l'aperçu, et non sur le slot : une requête
+     ne peut pas styler son propre conteneur. */
+  .image-slot:not(.image-slot--bare) .image-drop {
+    --image-tool-gutter: 63px;
+  }
+
+  .image-slot__toolbar {
+    --image-tool-cols: 2;
+  }
+}
+
+@container image-slot (max-width: 160px) {
+  .image-slot .image-drop {
+    --image-field-min: 72px;
+  }
+}
+
+@container image-frame (max-width: 150px) {
+  .image-drop {
+    --image-action-size: 22px;
+    --image-action-icon: 12px;
+    --image-action-gap: 5px;
+  }
+
+  .image-placeholder-icon > svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* L'invite se raccourcit — l'infobulle du cadre porte la phrase entière.
+     **Le message d'erreur, lui, ne se raccourcit jamais** : « Image
+     introuvable » est la seule chose que cette boîte ait à dire quand le
+     fichier a disparu, et la remplacer par « Choisir » ferait passer une
+     liaison cassée pour un emplacement vide. */
+  .image-drop.empty .image-placeholder-text--strong { font-size: 0; }
+
+  .image-drop.empty .image-placeholder-text--strong::after {
+    content: 'Choisir';
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .image-drop.missing .image-placeholder-text--strong { font-size: 11px; }
+
+  .image-badge { display: none; }
+}
+
 .image-field.is-align-start > .image-sd-results {
   justify-content: flex-start;
-}
-
-.image-field.is-align-start > .image-action-row:has(> *:only-child) {
-  justify-content: center;
-}
-
-/* Bouton génération IA : .btn .btn-secondary-violet + dimensions compactes locales.
-   États (hover/focus/disabled/couleurs violet) fournis par le variant global. */
-.btn.image-gen-btn {
-  flex: 0 1 auto;
-  min-height: 30px;
-  padding: 0 10px;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.image-gen-btn-icon {
-  font-size: 11px;
-  line-height: 1;
-}
-
-.image-gen-btn.is-generating {
-  color: var(--accent-2-text);
-}
-
-.image-gen-spinner {
-  width: 12px;
-  height: 12px;
-  display: inline-block;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--accent-2) 25%, transparent);
-  border-top-color: var(--accent-2);
-  animation: image-gen-spin 0.7s linear infinite;
-}
-
-@keyframes image-gen-spin {
-  to { transform: rotate(360deg); }
 }
 
 .image-sd-results {

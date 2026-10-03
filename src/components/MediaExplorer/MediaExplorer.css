@@ -285,6 +285,14 @@
   cursor: grab;
   text-align: left;
   min-width: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.is-media-dragging,
+.is-media-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 .media-tile:focus,
@@ -370,6 +378,16 @@
   background: color-mix(in srgb, var(--bg0) 58%, transparent);
   color: var(--muted);
   border: 0.5px solid var(--border);
+}
+
+/* Usages non calculés. Distinct du zéro : le badge doit se lire comme une
+   question, pas comme un compte faible. */
+.media-usage-badge.is-unknown {
+  background: color-mix(in srgb, var(--bg0) 58%, transparent);
+  color: var(--muted);
+  border: 0.5px dashed var(--border);
+  pointer-events: auto;
+  cursor: help;
 }
 
 /* List row & header share the same 9-column template — widths driven by --me-grid */
@@ -635,6 +653,12 @@
   background: color-mix(in srgb, var(--bg0) 62%, transparent);
   color: var(--muted);
   border: 0.5px solid var(--border);
+}
+
+.me-list-row .media-usage-badge.is-unknown {
+  background: color-mix(in srgb, var(--bg0) 62%, transparent);
+  color: var(--muted);
+  border: 0.5px dashed var(--border);
 }
 
 .me-list-row .media-audio-wave {

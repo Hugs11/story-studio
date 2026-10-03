@@ -1,20 +1,32 @@
 import { useEffect, useRef } from 'react';
-import { FilePen, FolderOpen, House, Save } from '../icons/LucideLocal';
+import { FilePen, FolderOpen, House, Package, Save, Waypoints } from '../icons/LucideLocal';
 import './ProjectMenuPopover.css';
 
 function ToolbarIcon({ Icon, className = 'chrome-icon' }) {
   return <Icon className={className} aria-hidden="true" strokeWidth={2} absoluteStrokeWidth />;
 }
 
-function ProjectMenuItem({ disabled = false, onClick, children }) {
+// Une entrée du menu, pilotée par l'inventaire de la barre : libellé,
+// raccourci et disponibilité viennent de la même source que le clavier. Une
+// commande tenue par un export reste **listée** et dit pourquoi, au lieu de
+// disparaître du menu.
+function ProjectMenuItem({ entry, fallbackLabel, fallbackShortcut, Icon, onClick }) {
+  const label = entry?.label ?? fallbackLabel;
+  const available = entry ? entry.available : true;
   return (
     <button
+      data-toolbar-id={entry?.id}
       className="project-menu-item"
       role="menuitem"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
+      onClick={available ? onClick : undefined}
+      disabled={!available}
+      title={available ? undefined : entry.unavailableReason}
     >
-      {children}
+      <ToolbarIcon Icon={Icon} />
+      <span>
+        <strong>{label}</strong>
+        <small>{available ? (entry?.shortcut ?? fallbackShortcut) : entry.unavailableReason}</small>
+      </span>
     </button>
   );
 }
@@ -24,12 +36,16 @@ export function ProjectMenuPopover({
   onOpenChange,
   trigger,
   shortcutLabels,
+  // Les entrées du groupe « fichier » de l'inventaire, dans son ordre.
+  commands = [],
   onNewProject,
   onOpenProject,
+  onOpenPack,
   onSaveProject,
   onSaveProjectAs,
-  saveState,
+  onContinueInGraph,
 }) {
+  const find = (id) => commands.find((entry) => entry.id === id) ?? null;
   const wrapRef = useRef(null);
   const closeTimerRef = useRef(null);
 
@@ -88,38 +104,57 @@ export function ProjectMenuPopover({
           <div className="project-menu-bridge" aria-hidden="true" />
           <div className="project-menu" role="menu">
             <div className="project-menu-head">
+              {/* L'état d'enregistrement n'est plus dit ici : il est affiché à
+                  un seul endroit, la barre de titre, commune aux deux éditeurs. */}
               <strong>Projet</strong>
-              <span>{saveState === 'ok' ? 'Enregistré' : 'Fichier et enregistrement'}</span>
+              <span>Fichier et enregistrement</span>
             </div>
-            <ProjectMenuItem onClick={() => handleAction(onNewProject)}>
-              <ToolbarIcon Icon={House} />
-              <span>
-                <strong>Retour à l’accueil</strong>
-                <small>{shortcutLabels.newProject}</small>
-              </span>
-            </ProjectMenuItem>
-            <ProjectMenuItem onClick={() => handleAction(onOpenProject)}>
-              <ToolbarIcon Icon={FolderOpen} />
-              <span>
-                <strong>Ouvrir un projet</strong>
-                <small>{shortcutLabels.openProject}</small>
-              </span>
-            </ProjectMenuItem>
+            <ProjectMenuItem
+              entry={find('newProject')}
+              fallbackLabel="Retour à l’accueil"
+              fallbackShortcut={shortcutLabels.newProject}
+              Icon={House}
+              onClick={() => handleAction(onNewProject)}
+            />
+            <ProjectMenuItem
+              entry={find('openProject')}
+              fallbackLabel="Ouvrir un projet"
+              fallbackShortcut={shortcutLabels.openProject}
+              Icon={FolderOpen}
+              onClick={() => handleAction(onOpenProject)}
+            />
+            <ProjectMenuItem
+              entry={find('openPack')}
+              fallbackLabel="Ouvrir un pack"
+              Icon={Package}
+              onClick={() => handleAction(onOpenPack)}
+            />
             <span className="project-menu-sep" />
-            <ProjectMenuItem onClick={() => handleAction(onSaveProject)}>
-              <ToolbarIcon Icon={Save} />
-              <span>
-                <strong>Enregistrer</strong>
-                <small>{shortcutLabels.saveProject}</small>
-              </span>
-            </ProjectMenuItem>
-            <ProjectMenuItem onClick={() => handleAction(onSaveProjectAs)}>
-              <ToolbarIcon Icon={FilePen} />
-              <span>
-                <strong>Enregistrer sous...</strong>
-                <small>{shortcutLabels.saveAs}</small>
-              </span>
-            </ProjectMenuItem>
+            <ProjectMenuItem
+              entry={find('saveProject')}
+              fallbackLabel="Enregistrer"
+              fallbackShortcut={shortcutLabels.saveProject}
+              Icon={Save}
+              onClick={() => handleAction(onSaveProject)}
+            />
+            <ProjectMenuItem
+              entry={find('saveProjectAs')}
+              fallbackLabel="Enregistrer sous..."
+              fallbackShortcut={shortcutLabels.saveAs}
+              Icon={FilePen}
+              onClick={() => handleAction(onSaveProjectAs)}
+            />
+            {find('continueInGraph') ? (
+              <>
+                <span className="project-menu-sep" />
+                <ProjectMenuItem
+                  entry={find('continueInGraph')}
+                  fallbackLabel="Continuer dans l’éditeur graphe…"
+                  Icon={Waypoints}
+                  onClick={() => handleAction(onContinueInGraph)}
+                />
+              </>
+            ) : null}
           </div>
         </>
       ) : null}

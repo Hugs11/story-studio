@@ -1,0 +1,12 @@
+{
+  "name": "story-studio-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Pilotage de l'application réelle (WebView2 via CDP) pour les tests e2e Windows. Hors build.",
+  "scripts": {
+    "run": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

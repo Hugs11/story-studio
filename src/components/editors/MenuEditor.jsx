@@ -111,7 +111,6 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
                   {
                     key: 'generate-text',
                     label: 'Générer une image-titre',
-                    icon: '✦',
                     onClick: handleRegenerate,
                     title: 'Créer une image-titre à partir du nom du dossier',
                   },
@@ -219,7 +218,6 @@ export const MenuEditor = memo(function MenuEditor({ node, project, parentMenu, 
             type="button"
             onClick={onDelete}
             aria-label="Supprimer ce dossier"
-            title="Supprimer ce dossier"
           >
             <Trash2 className="card-danger-icon" />
           </button>

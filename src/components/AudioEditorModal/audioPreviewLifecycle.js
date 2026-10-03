@@ -74,6 +74,9 @@ export function createAudioPreviewLifecycle({
   }
 
   return {
+    // Un nouvel effet peut reprendre ce propriétaire après le rejeu StrictMode.
+    // La génération invalidée par dispose garde les anciennes réponses périmées.
+    activate: () => { active = true; },
     run,
     debounce,
     invalidate,

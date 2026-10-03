@@ -103,6 +103,7 @@
 
 .filter-slider {
   flex: 1;
+  min-width: 0;
   height: 3px;
   accent-color: var(--accent);
   cursor: pointer;
@@ -111,7 +112,8 @@
 .filter-value {
   font-size: 10px;
   color: var(--muted);
-  min-width: 30px;
+  flex: 0 0 34px;
+  white-space: nowrap;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

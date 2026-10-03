@@ -1,5 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { KEYS } from '../store/persistentSettings';
+import {
+  EDITOR_LAYOUT_SCOPE,
+  editorLayoutKeys,
+} from '../store/persistentSettings';
 import { collectMediaLibrary } from '../store/mediaLibrary';
 import { usePersistentState } from './usePersistentState';
 
@@ -22,6 +25,7 @@ const BOOL_CODEC = { decode: (raw) => raw === 'true', encode: (value) => String(
 // Ne pas ajouter de mémoïsation — seul le `useMemo` déjà présent
 // (`mediaLibraryCount`) est déplacé tel quel.
 export function useBottomWorkspacePanelModel({
+  editorScope,
   project,
   pathAudit,
   sdJobs,
@@ -31,11 +35,36 @@ export function useBottomWorkspacePanelModel({
   sdHasResults,
   xttsHasResults,
   mediaLibraryPaths,
+  advancedMediaUsages = null,
   mediaLibraryCountRef,
   renderQueue,
 }) {
-  const [open, setOpen] = usePersistentState(KEYS.BOTTOM_PANEL_OPEN, false, BOOL_CODEC);
-  const [activeTab, setActiveTab] = usePersistentState(KEYS.BOTTOM_PANEL_TAB, 'media');
+  const freeKeys = editorLayoutKeys(EDITOR_LAYOUT_SCOPE.FREE);
+  const advancedKeys = editorLayoutKeys(EDITOR_LAYOUT_SCOPE.ADVANCED);
+  const [freeOpen, setFreeOpen] = usePersistentState(
+    freeKeys.bottomPanelOpen,
+    false,
+    BOOL_CODEC,
+  );
+  const [freeActiveTab, setFreeActiveTab] = usePersistentState(
+    freeKeys.bottomPanelTab,
+    'media',
+  );
+  const [advancedOpen, setAdvancedOpen] = usePersistentState(
+    advancedKeys.bottomPanelOpen,
+    false,
+    BOOL_CODEC,
+  );
+  const [advancedActiveTab, setAdvancedActiveTab] = usePersistentState(
+    advancedKeys.bottomPanelTab,
+    'media',
+  );
+  const advanced = editorScope === EDITOR_LAYOUT_SCOPE.ADVANCED;
+  const open = advanced ? advancedOpen : freeOpen;
+  const setOpen = advanced ? setAdvancedOpen : setFreeOpen;
+  const activeTab = advanced ? advancedActiveTab : freeActiveTab;
+  const setActiveTab = advanced ? setAdvancedActiveTab : setFreeActiveTab;
+  const layoutKeys = advanced ? advancedKeys : freeKeys;
 
   const aiQueueActiveCount = sdPendingCount + xttsPendingCount;
   const aiQueueHasResults = sdHasResults || xttsHasResults;
@@ -49,8 +78,11 @@ export function useBottomWorkspacePanelModel({
   }, [renderQueue.panelOpen, renderQueue.setPanelOpen]);
 
   const mediaLibraryCount = useMemo(
-    () => collectMediaLibrary({ project, statusByPath: pathAudit, sdJobs, xttsJobs, extraPaths: mediaLibraryPaths }).length,
-    [project, pathAudit, sdJobs, xttsJobs, mediaLibraryPaths],
+    () => collectMediaLibrary({
+      project, statusByPath: pathAudit, sdJobs, xttsJobs,
+      extraPaths: mediaLibraryPaths, advancedUsages: advancedMediaUsages,
+    }).length,
+    [project, pathAudit, sdJobs, xttsJobs, mediaLibraryPaths, advancedMediaUsages],
   );
   mediaLibraryCountRef.current = mediaLibraryCount;
 
@@ -61,6 +93,8 @@ export function useBottomWorkspacePanelModel({
   const close = () => setOpen(false);
 
   return {
+    editorScope,
+    heightKey: layoutKeys.bottomPanelHeight,
     open,
     activeTab,
     setOpen,

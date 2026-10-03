@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(
   REPO_ROOT,
-  process.argv[2] || 'linux-0.9.6/artifacts/04-linux-ubuntu22.04',
+  process.argv[2] || 'src-tauri/target/podman-bundles/ubuntu-22.04',
 );
 const image = 'localhost/story-studio-linux-bundles:ubuntu-22.04';
 

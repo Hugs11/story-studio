@@ -2,7 +2,7 @@
 //! avec en plus la mise à jour du binaire yt-dlp. Les téléchargements lourds
 //! tournent sur `spawn_blocking` et émettent leur progression via `youtube-log`.
 
-use crate::services::youtube::{self, YoutubeAudioLanguages, YoutubeList};
+use crate::services::youtube::{self, YoutubeAudioLanguages, YoutubeError, YoutubeList};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -24,25 +24,42 @@ fn empty_to_none(value: Option<String>) -> Option<String> {
     value.filter(|s| !s.trim().is_empty())
 }
 
+/// Les erreurs typées (`{ code, message }`) permettent au funnel de reconnaître
+/// un blocage de YouTube et d'arrêter le lot.
+async fn run_blocking<T: Send + 'static>(
+    task: impl FnOnce() -> Result<T, YoutubeError> + Send + 'static,
+) -> Result<T, YoutubeError> {
+    tauri::async_runtime::spawn_blocking(task)
+        .await
+        .map_err(|e| YoutubeError::from(e.to_string()))?
+}
+
 #[tauri::command]
 pub async fn fetch_youtube_list(
     app: AppHandle,
     url: String,
     ytdlp_path: Option<String>,
     page: Option<usize>,
-) -> Result<YoutubeList, String> {
+) -> Result<YoutubeList, YoutubeError> {
     let home = youtube_home(&app)?;
+    let output_dir = youtube_output_dir(&app)?;
     let custom = empty_to_none(ytdlp_path);
     let emit_app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking(move || {
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
-        youtube::fetch_list(&home, custom.as_deref(), &url, page.unwrap_or(1), &emit)
-            .inspect_err(|err| log::error!(target: "youtube", "fetch_youtube_list failed: {}", err))
+        youtube::fetch_list(
+            &home,
+            &output_dir,
+            custom.as_deref(),
+            &url,
+            page.unwrap_or(1),
+            &emit,
+        )
+        .inspect_err(|err| log::error!(target: "youtube", "fetch_youtube_list failed: {}", err))
     })
     .await
-    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -52,12 +69,12 @@ pub async fn download_youtube_audio(
     file_name: String,
     ytdlp_path: Option<String>,
     audio_language: Option<String>,
-) -> Result<String, String> {
+) -> Result<String, YoutubeError> {
     let home = youtube_home(&app)?;
     let output_dir = youtube_output_dir(&app)?;
     let custom = empty_to_none(ytdlp_path);
     let emit_app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking(move || {
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
@@ -73,7 +90,6 @@ pub async fn download_youtube_audio(
         .inspect_err(|err| log::error!(target: "youtube", "download_youtube_audio failed: {}", err))
     })
     .await
-    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -81,35 +97,35 @@ pub async fn fetch_youtube_audio_languages(
     app: AppHandle,
     video_urls: Vec<String>,
     ytdlp_path: Option<String>,
-) -> Result<Vec<YoutubeAudioLanguages>, String> {
+) -> Result<Vec<YoutubeAudioLanguages>, YoutubeError> {
     let home = youtube_home(&app)?;
+    let output_dir = youtube_output_dir(&app)?;
     let custom = empty_to_none(ytdlp_path);
     let emit_app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking(move || {
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
-        youtube::fetch_audio_languages(&home, custom.as_deref(), &video_urls, &emit).inspect_err(
-            |err| log::error!(target: "youtube", "fetch_youtube_audio_languages failed: {}", err),
-        )
+        youtube::fetch_audio_languages(&home, &output_dir, custom.as_deref(), &video_urls, &emit)
+            .inspect_err(|err| {
+                log::error!(target: "youtube", "fetch_youtube_audio_languages failed: {}", err)
+            })
     })
     .await
-    .map_err(|e| e.to_string())?
 }
 
-/// Force le téléchargement de la dernière version de yt-dlp (action manuelle).
+/// Force la dernière version de yt-dlp et prépare le moteur JavaScript
+/// (action manuelle).
 #[tauri::command]
-pub async fn update_ytdlp(app: AppHandle) -> Result<(), String> {
+pub async fn update_ytdlp(app: AppHandle) -> Result<(), YoutubeError> {
     let home = youtube_home(&app)?;
     let emit_app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking(move || {
         let emit = |msg: &str| {
             let _ = emit_app.emit("youtube-log", msg.to_string());
         };
-        youtube::update_ytdlp_binary(&home, &emit)
-            .map(|_| ())
+        youtube::update_tools(&home, &emit)
             .inspect_err(|err| log::error!(target: "youtube", "update_ytdlp failed: {}", err))
     })
     .await
-    .map_err(|e| e.to_string())?
 }

@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::super::{validate_existing_file_path, workspace_or_project_dir};
+use super::super::{media_output_root, validate_existing_file_path};
 use super::WORKING_AUDIO_EXTENSION;
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;
@@ -205,7 +205,6 @@ pub(crate) fn run_ffmpeg_concat_audio(
 }
 
 pub fn concat_audio_files(
-    save_path: &str,
     input_paths: &[String],
     output_file_name: &str,
     silence_between_sec: f64,
@@ -223,10 +222,9 @@ pub fn concat_audio_files(
         .map(|path| validate_audio_assembly_input(path))
         .collect::<Result<Vec<_>, _>>()?;
     let output_name = validate_audio_assembly_filename(output_file_name)?;
-    let target_dir = workspace_or_project_dir(
+    let target_dir = media_output_root(
         workspace_dir,
-        Some(save_path),
-        "Enregistrez le projet avant de créer un fichier assemblé.",
+        "Aucun emplacement de travail : impossible de créer un fichier assemblé.",
     )?
     .join("fichiers-importes");
     fs::create_dir_all(&target_dir)

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   getExtractedZipsDir,
+  getWorkspaceDir,
 } from '../store/projectIO';
 import {
   sanitizeImportedEntries,
@@ -13,12 +14,20 @@ import {
   validateMenuHeightPlacement,
 } from '../store/projectModel';
 import { buildProjectAfterZipUnpack } from '../store/unpackProject';
+import { authoringWorkspaceMode } from '../store/projectWorkState';
+import {
+  MEDIA_LANDING_LIBRARY,
+  mediaToolLanding,
+  planProducedMediaLanding,
+} from '../store/mediaToolSurface';
 import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { pickFolder, pickMultipleAudioOrZip, pickMultipleMediaFiles } from './useFileDialog';
 import { importFilesToMediaLibrary } from './mediaLibraryImport';
 import { basename } from '../utils/fileUtils';
 import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
+import { errorMessage, isYoutubeBlocked, youtubeErrorCode } from '../utils/youtubeErrors.js';
+import { FREE_EDITOR_REFUSAL_MESSAGE, isFreeEditorRefusal } from '../components/EditPack/importErrorPresentation';
 
 /**
  * Construit le projet résultant d'une extraction de ZIP à partir du résultat
@@ -65,13 +74,24 @@ function projectFromUnpackResult({
       ...unresolvedTransitions,
     ],
   };
-  if (result?.autoNext) {
+  if (unpacked.promoted && result?.autoNext) {
     nextProject = {
       ...nextProject,
       globalOptions: { ...nextProject.globalOptions, autoNext: true, nightMode: false },
     };
   }
-  if (result?.nightMode && result?.nightModeAudio && !nextProject.globalOptions?.nightMode && !result?.autoNext) {
+  // Le message de fin partagé est repris même sans mode nuit : l'original le
+  // joue après chaque histoire. `nightMode` reste ce que le pack déclare.
+  // Réglage global : il n'est repris que lorsque le pack devient le projet
+  // (promotion d'un projet vierge). Extrait dans un parent non vierge, il
+  // s'appliquerait aussi aux histoires du parent, qui n'en ont jamais eu.
+  if (
+    unpacked.promoted
+    && result?.nightModeAudio
+    && !result?.autoNext
+    && !nextProject.globalOptions?.nightMode
+    && !nextProject.nightModeAudio
+  ) {
     nextProject = {
       ...nextProject,
       nightModeAudio: result.nightModeAudio,
@@ -79,7 +99,7 @@ function projectFromUnpackResult({
       nightModeHomeReturn: result.nightModeHomeReturn ?? null,
       globalOptions: {
         ...nextProject.globalOptions,
-        nightMode: true,
+        nightMode: !!result.nightMode,
         endMessageAutoplay: typeof result?.endMessageAutoplay === 'boolean'
           ? result.endMessageAutoplay
           : true,
@@ -90,6 +110,7 @@ function projectFromUnpackResult({
     project: nextProject,
     packName: unpacked.packName,
     promoted: unpacked.promoted,
+    autoNextNotAdopted: !!result?.autoNext && !unpacked.promoted,
     unresolvedTransitions,
     advancedTransitionsDetected: !!result?.advancedTransitionsDetected,
   };
@@ -108,7 +129,6 @@ export function useImportSession({
   persistProjectSnapshot,
   workspaceDirRef,
   showErrorDialog,
-  showConfirmDialog,
   getImportDisplayName,
   isImportedPackPath,
   onImportedPackPromoted,
@@ -161,7 +181,7 @@ export function useImportSession({
         });
         const embeddedImage = await extractAudioEmbeddedImage(file);
         const storyId = store.addStory(menuId, file);
-        if (embeddedImage) store.updateItem(storyId, { itemImage: embeddedImage });
+        if (embeddedImage && storyId) store.updateItem(storyId, { itemImage: embeddedImage });
       }
     }
   }, [extractAudioEmbeddedImage, getImportDisplayName, isImportedPackPath, maybeCopyToProject, setImporting, showErrorDialog, store]);
@@ -307,38 +327,15 @@ export function useImportSession({
     const currentZipItem = findEntryById(baseProject, itemId) ?? zipItem;
     if (!currentZipItem?.zipPath) return;
 
-    const wsDir = workspaceDirRef.current
-      || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' })
-      || (savePath ? savePath.replace(/[\\/][^\\/]+$/, '') : '');
+    // Hors session, l'extraction va dans l'emplacement de travail, jamais à
+    // côté du `.mbah`.
+    const wsDir = workspaceDirRef.current || await getWorkspaceDir().catch(() => '');
     if (!wsDir) {
       showErrorDialog({
         title: 'Extraction du pack',
         message: "Aucun espace de travail n'est disponible pour extraire ce pack.",
       });
       return;
-    }
-
-    let allowUnsupported = false;
-    if (readSetting(KEYS.ALLOW_UNSUPPORTED_PACK_EXTRACTION) === 'true') {
-      try {
-        const report = await invoke('classify_pack_editability', { zipPath: currentZipItem.zipPath });
-        if (!report?.authoringEditable) {
-          const confirmed = await showConfirmDialog?.({
-            title: 'Extraction non supportée',
-            message:
-              "Ce pack n’est pas éditable de manière fiable par Story Studio. L’extraction peut être incomplète et le projet obtenu peut être impossible à régénérer.\n\n"
-              + `${report?.reason || 'La structure du pack n’est pas prise en charge.'}\n\nContinuer uniquement pour récupérer des éléments.`,
-            variant: 'warning',
-            okLabel: 'Extraire quand même',
-            okKind: 'danger-outline',
-            cancelLabel: 'Annuler',
-          });
-          if (!confirmed) return;
-          allowUnsupported = true;
-        }
-      } catch (error) {
-        logger.warn(`unpack:editability-check-failed path='${currentZipItem.zipPath}' error=${error}`);
-      }
     }
 
     setUnpacking({ name: currentZipItem.name || 'ZIP en cours' });
@@ -349,7 +346,6 @@ export function useImportSession({
         zipPath: currentZipItem.zipPath,
         destDir,
         workspaceDir: wsDir,
-        allowUnsupported,
       });
       const transformed = projectFromUnpackResult({
         baseProject,
@@ -380,15 +376,28 @@ export function useImportSession({
       if (savePath) {
         await persistProjectSnapshot(transformed.project, savePath);
       }
+      const notices = [];
       if (transformed.advancedTransitionsDetected) {
         const firstWarning = transformed.unresolvedTransitions[0]?.message;
-        setImportNotice(
+        notices.push(
           "Certaines transitions du pack importé n'ont pas pu être modélisées complètement. "
           + "Story Studio a conservé la structure reconnue, mais vérifie les retours concernés avant export."
           + (firstWarning ? ` Exemple : ${firstWarning}` : '')
         );
       }
+      if (transformed.autoNextNotAdopted) {
+        notices.push("Ce pack enchaînait ses histoires ; ce réglage n'a pas été repris.");
+      }
+      if (notices.length) setImportNotice(notices.join('\n\n'));
     } catch (e) {
+      if (isFreeEditorRefusal(e)) {
+        showErrorDialog({
+          title: 'Extraction du pack',
+          message: FREE_EDITOR_REFUSAL_MESSAGE,
+          variant: 'warning',
+        });
+        return;
+      }
       showErrorDialog({
         title: e?.code === 'menu_depth_limit' ? 'Limite d’imbrication' : 'Extraction du pack',
         message: e?.code === 'menu_depth_limit'
@@ -409,7 +418,6 @@ export function useImportSession({
     zipName,
     workspaceDir,
     baseProject,
-    allowUnsupported = false,
   }) {
     const extractedDirName = sanitizeImportedName(zipName || zipPath, zipPath).replace(/[/\\:*?"<>|]/g, '_');
     const destDir = `${getExtractedZipsDir(workspaceDir)}/${extractedDirName}`;
@@ -417,7 +425,6 @@ export function useImportSession({
       zipPath,
       destDir,
       workspaceDir,
-      allowUnsupported,
     });
     return projectFromUnpackResult({
       baseProject,
@@ -503,10 +510,20 @@ export function useImportSession({
   //   - `onProgress` : reçoit la progression à la place de la modale globale
   //     `setImporting` (le funnel l'affiche dans son propre écran).
   //   - `suppressDialog` : laisse l'appelant signaler l'échec lui-même.
-  // Retourne `{ total, failures, imported }`.
+  //   - `landing` : point d'arrivée. Par défaut, celui de l'éditeur
+  //     ouvert — l'arbre côté Libre, la bibliothèque côté graphe. Les funnels
+  //     d'accueil créent une session de pack et retombent donc sur l'arbre
+  //     sans avoir à le dire.
+  // Retourne aussi les chemins réellement importés (audio et jaquette), pour
+  // que la bibliothèque puisse révéler ces fichiers sans deviner leurs noms.
+  // Un blocage YouTube interrompt le lot (`blocked`) : les vidéos restantes
+  // (`skipped`) ne sont pas tentées, chaque requête prolongeant le blocage.
   async function handleImportMediaEpisodes(episodes, feed, options = {}) {
     if (!Array.isArray(episodes) || episodes.length === 0) {
-      return { total: 0, failures: 0, imported: 0 };
+      return {
+        total: 0, failures: 0, imported: 0, skipped: 0, blocked: false,
+        firstError: null, firstErrorCode: null, importedPaths: [],
+      };
     }
 
     const {
@@ -514,29 +531,41 @@ export function useImportSession({
       targetMenuId: explicitTargetMenuId,
       onProgress = null,
       suppressDialog = false,
+      landing = mediaToolLanding(authoringWorkspaceMode(store.project)),
     } = options;
+    const toLibrary = landing === MEDIA_LANDING_LIBRARY;
     const report = onProgress ?? setImporting;
     const isYoutube = source === 'youtube';
     const itemLabel = isYoutube ? 'vidéo' : 'épisode';
 
-    let targetMenuId;
-    if (explicitTargetMenuId !== undefined) {
-      targetMenuId = explicitTargetMenuId;
-    } else {
-      const selectedId = store.selectedId;
-      const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
-      targetMenuId = selectedNode?.type === 'menu'
-        ? selectedNode.id
-        : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+    // La cible d'arbre n'est déduite que lorsqu'il y a un arbre : sur un
+    // document de graphe, la sélection courante désigne un Écran, qui n'est
+    // pas un dossier et ne doit surtout pas en tenir lieu.
+    let targetMenuId = null;
+    if (!toLibrary) {
+      if (explicitTargetMenuId !== undefined) {
+        targetMenuId = explicitTargetMenuId;
+      } else {
+        const selectedId = store.selectedId;
+        const selectedNode = selectedId ? projectIndex.entryById.get(selectedId) : null;
+        targetMenuId = selectedNode?.type === 'menu'
+          ? selectedNode.id
+          : (selectedId ? (projectIndex.parentMenuById.get(selectedId) ?? null) : null);
+      }
     }
 
     const total = episodes.length;
     const feedTitle = feed?.title || (isYoutube ? 'YouTube' : 'Podcast');
     const feedImage = feed?.imageUrl || null;
-    logger.info(`import-media:start source=${source} count=${total} target=${targetMenuId ?? 'root'}`);
+    logger.info(`import-media:start source=${source} count=${total} landing=${landing} target=${toLibrary ? 'library' : (targetMenuId ?? 'root')}`);
     report({ name: feedTitle, index: 0, total, phase: "Préparation de l'import..." });
 
     let failures = 0;
+    let skipped = 0;
+    let blocked = false;
+    let firstError = null;
+    let firstErrorCode = null;
+    const importedPaths = [];
     try {
       for (let index = 0; index < episodes.length; index += 1) {
         const episode = episodes[index];
@@ -563,11 +592,36 @@ export function useImportSession({
             itemImage = await extractAudioEmbeddedImage(audio);
           }
 
-          const storyId = store.addStory(targetMenuId, audio);
-          if (itemImage) store.updateItem(storyId, { itemImage });
+          const plan = planProducedMediaLanding({
+            landing,
+            audioPath: audio,
+            imagePath: itemImage,
+            targetMenuId,
+          });
+          if (plan.kind === MEDIA_LANDING_LIBRARY) {
+            addPathsToMediaLibrary(plan.paths);
+            importedPaths.push(...plan.paths);
+          } else {
+            const storyId = store.addStory(plan.menuId, plan.audioPath);
+            if (plan.imagePath) store.updateItem(storyId, { itemImage: plan.imagePath });
+          }
         } catch (episodeError) {
           failures += 1;
-          logger.error(`import-media:item-error source=${source} name='${displayName}' error=${episodeError}`);
+          logger.error(`import-media:item-error source=${source} name='${displayName}' error=${errorMessage(episodeError)}`);
+          if (isYoutube && isYoutubeBlocked(episodeError)) {
+            // La cause du blocage prime : elle explique aussi l'arrêt du lot.
+            blocked = true;
+            firstError = errorMessage(episodeError);
+            firstErrorCode = youtubeErrorCode(episodeError);
+            skipped = total - index - 1;
+            failures += skipped;
+            logger.warn(`import-media:blocked source=${source} skipped=${skipped}`);
+            break;
+          }
+          if (firstError === null) {
+            firstError = errorMessage(episodeError);
+            firstErrorCode = youtubeErrorCode(episodeError);
+          }
         }
       }
     } finally {
@@ -585,7 +639,10 @@ export function useImportSession({
       });
     }
 
-    return { total, failures, imported: total - failures };
+    return {
+      total, failures, imported: total - failures, skipped, blocked,
+      firstError, firstErrorCode, importedPaths,
+    };
   }
 
   return {

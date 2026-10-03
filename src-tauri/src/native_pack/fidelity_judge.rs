@@ -18,6 +18,7 @@ use serde::Serialize;
 use super::assets::pipeline::{active_native_graph, collect_asset_requests, AssetSourceKind};
 use super::canonical::CanonicalProject;
 use super::document::{ActionNode, StageNode, StoryDocument, Transition};
+use super::option_selection::OptionSelection;
 use super::stats::NativeAssetStats;
 use super::{build_canonical_story_document, NativeAssetPreparationReport, PreparedAsset};
 
@@ -149,6 +150,7 @@ fn fidelity_report_for(
         },
         notes: Vec::new(),
         warnings: Vec::new(),
+        for_simulation: false,
     }
 }
 
@@ -156,20 +158,29 @@ fn fidelity_report_for(
 /// Une forme = les contrôles/assets d'un stage + les formes de ses cibles OK/Home
 /// (arêtes à 1 niveau de profondeur). Un écart de compte révèle une structure présente
 /// d'un côté seulement (nœud/arête perdu ou ajouté). Même métrique que le harnais
-/// `assert_fidelity` éprouvé, ici promue en code de production.
-fn compare_documents_structural(
+/// `assert_fidelity` éprouvé, ici promue en code de production. La copie graphe
+/// d'un projet par menus s'en sert aussi comme garde (`graph_copy`).
+pub(crate) fn compare_documents_structural(
     generated: &StoryDocument,
     oracle: &StoryDocument,
 ) -> FidelityReport {
     let mut topology_gaps = Vec::new();
 
-    if !generated.stage_nodes.iter().any(|stage| stage.square_one) {
+    if !generated
+        .stage_nodes
+        .iter()
+        .any(|stage| stage.is_square_one())
+    {
         topology_gaps.push("stage squareOne manquant dans la génération canonique".to_string());
     }
-    if generated.night_mode_available != oracle.night_mode_available {
+    // Le juge est un oracle de **comportement runtime**, pas l'oracle d'auteur :
+    // il compare le mode nuit effectif, pour lequel absent et `false` sont
+    // équivalents. La distinction de présence reste portée par le document.
+    if generated.night_mode_available.is_true() != oracle.night_mode_available.is_true() {
         topology_gaps.push(format!(
             "nightModeAvailable : généré={} oracle={}",
-            generated.night_mode_available, oracle.night_mode_available
+            generated.night_mode_available.is_true(),
+            oracle.night_mode_available.is_true()
         ));
     }
 
@@ -235,15 +246,18 @@ struct ControlShape {
 }
 
 fn control_shape(stage: &StageNode) -> ControlShape {
+    // Empreinte de comportement runtime : `has_audio` est vrai pour une valeur,
+    // faux pour une absence comme pour un `null`. La distinction des deux reste
+    // dans le document, elle n'appartient pas à cette empreinte.
     ControlShape {
-        square_one: stage.square_one,
-        has_audio: stage.audio.is_some(),
-        has_image: stage.image.is_some(),
-        wheel: stage.control_settings.wheel,
-        ok: stage.control_settings.ok,
-        home: stage.control_settings.home,
-        pause: stage.control_settings.pause,
-        autoplay: stage.control_settings.autoplay,
+        square_one: stage.is_square_one(),
+        has_audio: stage.audio.is_value(),
+        has_image: stage.image.is_value(),
+        wheel: stage.control_settings.wheel(),
+        ok: stage.control_settings.ok(),
+        home: stage.control_settings.home(),
+        pause: stage.control_settings.pause(),
+        autoplay: stage.control_settings.autoplay(),
     }
 }
 
@@ -261,14 +275,14 @@ struct AssetPresenceShape {
 
 fn asset_presence_shape(stage: &StageNode) -> AssetPresenceShape {
     AssetPresenceShape {
-        square_one: stage.square_one,
-        wheel: stage.control_settings.wheel,
-        ok: stage.control_settings.ok,
-        home: stage.control_settings.home,
-        pause: stage.control_settings.pause,
-        autoplay: stage.control_settings.autoplay,
-        has_audio: stage.audio.is_some(),
-        has_image: stage.image.is_some(),
+        square_one: stage.is_square_one(),
+        wheel: stage.control_settings.wheel(),
+        ok: stage.control_settings.ok(),
+        home: stage.control_settings.home(),
+        pause: stage.control_settings.pause(),
+        autoplay: stage.control_settings.autoplay(),
+        has_audio: stage.audio.is_value(),
+        has_image: stage.image.is_value(),
     }
 }
 
@@ -281,7 +295,8 @@ enum TransitionKind {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum InvalidTransitionKind {
     MissingAction,
-    NegativeOptionIndex,
+    /// `Random` sur une Action sans option, ou `Fixed(i)` avec `i >= N`.
+    /// `-1` n'entre plus ici, c'est la sentinelle `Random`.
     OptionOutOfBounds,
     MissingTargetStage,
 }
@@ -290,7 +305,7 @@ enum InvalidTransitionKind {
 enum TransitionState {
     Missing,
     Selected {
-        option_index: i32,
+        selection: OptionSelection,
         option_count: usize,
     },
     OptionTarget {
@@ -300,7 +315,7 @@ enum TransitionState {
     },
     Invalid {
         reason: InvalidTransitionKind,
-        option_index: i32,
+        selection: OptionSelection,
         option_count: Option<usize>,
     },
 }
@@ -323,6 +338,7 @@ fn transition_state(
     transition: Option<&Transition>,
     actions: &HashMap<&str, &ActionNode>,
     stages: &HashMap<&str, &StageNode>,
+    indexed_router_actions: &BTreeSet<&str>,
 ) -> Vec<(TransitionState, Option<String>)> {
     let Some(transition) = transition else {
         return vec![(TransitionState::Missing, None)];
@@ -331,24 +347,11 @@ fn transition_state(
         TransitionKind::Ok => "OK",
         TransitionKind::Home => "HOME",
     };
-    if transition.option_index < 0 {
-        return vec![(
-            TransitionState::Invalid {
-                reason: InvalidTransitionKind::NegativeOptionIndex,
-                option_index: transition.option_index,
-                option_count: None,
-            },
-            Some(format!(
-                "{stage_name} {label} optionIndex {} négatif",
-                transition.option_index
-            )),
-        )];
-    }
     let Some(action) = actions.get(transition.action_node.as_str()) else {
         return vec![(
             TransitionState::Invalid {
                 reason: InvalidTransitionKind::MissingAction,
-                option_index: transition.option_index,
+                selection: transition.selection,
                 option_count: None,
             },
             Some(format!(
@@ -358,32 +361,70 @@ fn transition_state(
         )];
     };
     let option_count = action.options.len();
+    // Une sélection aléatoire ne désigne aucun indice : elle ne peut pas être
+    // aplatie comme un routeur indexé, elle garde tout son éventail.
+    let routed_index = indexed_router_actions
+        .contains(transition.action_node.as_str())
+        .then(|| transition.selection.fixed_index())
+        .flatten();
+    let is_indexed_router = routed_index.is_some();
     let mut states = vec![(
         TransitionState::Selected {
-            option_index: transition.option_index,
-            option_count,
+            selection: if is_indexed_router {
+                OptionSelection::Fixed(0)
+            } else {
+                transition.selection
+            },
+            option_count: if is_indexed_router { 1 } else { option_count },
         },
         None,
     )];
-    if transition.option_index as usize >= option_count {
+    if !transition.selection.is_within_bounds(option_count) {
         states.push((
             TransitionState::Invalid {
                 reason: InvalidTransitionKind::OptionOutOfBounds,
-                option_index: transition.option_index,
+                selection: transition.selection,
                 option_count: Some(option_count),
             },
             Some(format!(
-                "{stage_name} {label} optionIndex {} hors limites ({} option(s))",
-                transition.option_index, option_count
+                "{stage_name} {label} sélection {} hors limites ({} option(s))",
+                transition.selection, option_count
             )),
         ));
     }
-    for (option_index, stage_id) in action.options.iter().enumerate() {
-        let Some(target) = stages.get(stage_id.as_str()) else {
+    if let Some(option_index) = routed_index.filter(|index| *index < option_count) {
+        let stage_id = action.option_target(option_index).unwrap_or_default();
+        let Some(target) = stages.get(stage_id) else {
             states.push((
                 TransitionState::Invalid {
                     reason: InvalidTransitionKind::MissingTargetStage,
-                    option_index: option_index as i32,
+                    selection: transition.selection,
+                    option_count: Some(option_count),
+                },
+                Some(format!(
+                    "{stage_name} {label} option {option_index} cible stage introuvable '{}'",
+                    stage_id
+                )),
+            ));
+            return states;
+        };
+        states.push((
+            TransitionState::OptionTarget {
+                target: control_shape(target),
+                option_index: 0,
+                option_count: 1,
+            },
+            None,
+        ));
+        return states;
+    }
+    for (option_index, option) in action.options.iter().enumerate() {
+        let stage_id = option.as_deref().unwrap_or_default();
+        let Some(target) = stages.get(stage_id) else {
+            states.push((
+                TransitionState::Invalid {
+                    reason: InvalidTransitionKind::MissingTargetStage,
+                    selection: OptionSelection::Fixed(option_index),
                     option_count: Some(option_count),
                 },
                 Some(format!(
@@ -421,6 +462,39 @@ fn asset_presence_shapes(document: &StoryDocument) -> BTreeMap<AssetPresenceShap
     shapes
 }
 
+fn indexed_router_actions<'a>(
+    document: &'a StoryDocument,
+    actions: &HashMap<&'a str, &'a ActionNode>,
+    stages: &HashMap<&'a str, &'a StageNode>,
+) -> BTreeSet<&'a str> {
+    let mut option_indices: HashMap<&str, BTreeSet<usize>> = HashMap::new();
+    for stage in &document.stage_nodes {
+        if let Some(transition) = stage.ok_transition.value() {
+            // `Random` ne désigne pas un indice : il ne fait pas d'une Action un
+            // routeur indexé partagé.
+            if let Some(index) = transition.selection.fixed_index() {
+                option_indices
+                    .entry(transition.action_node.as_str())
+                    .or_default()
+                    .insert(index);
+            }
+        }
+    }
+
+    option_indices
+        .into_iter()
+        .filter_map(|(action_id, indices)| {
+            let action = actions.get(action_id)?;
+            let targets_are_non_interactive = action.named_options().all(|stage_id| {
+                stages
+                    .get(stage_id)
+                    .is_some_and(|stage| !stage.control_settings.wheel())
+            });
+            (indices.len() > 1 && targets_are_non_interactive).then_some(action_id)
+        })
+        .collect()
+}
+
 fn topology_shapes(document: &StoryDocument) -> TopologySignature {
     let actions: HashMap<&str, &ActionNode> = document
         .action_nodes
@@ -432,17 +506,23 @@ fn topology_shapes(document: &StoryDocument) -> TopologySignature {
         .iter()
         .map(|stage| (stage.uuid.as_str(), stage))
         .collect();
+    let indexed_router_actions = indexed_router_actions(document, &actions, &stages);
 
     let mut shapes = BTreeMap::new();
     let mut invalid_transitions = Vec::new();
     for stage in &document.stage_nodes {
         for (kind, transition) in [
-            (TransitionKind::Ok, stage.ok_transition.as_ref()),
-            (TransitionKind::Home, stage.home_transition.as_ref()),
+            (TransitionKind::Ok, stage.ok_transition.value()),
+            (TransitionKind::Home, stage.home_transition.value()),
         ] {
-            for (state, invalid) in
-                transition_state(&stage.name, &kind, transition, &actions, &stages)
-            {
+            for (state, invalid) in transition_state(
+                stage.label(),
+                &kind,
+                transition,
+                &actions,
+                &stages,
+                &indexed_router_actions,
+            ) {
                 if let Some(invalid) = invalid {
                     invalid_transitions.push(invalid);
                 }
@@ -511,7 +591,8 @@ fn compare_asset_presence(generated: &StoryDocument, oracle: &StoryDocument) -> 
 mod tests {
     use super::*;
     use crate::native_pack::{
-        CanonicalEntry, CanonicalMenu, CanonicalOptions, CanonicalRef, CanonicalStory,
+        named_option_targets, CanonicalEntry, CanonicalMenu, CanonicalOptions, CanonicalRef,
+        CanonicalStory, Presence,
     };
 
     fn story(id: &str, name: &str, audio: &str) -> CanonicalEntry {
@@ -566,7 +647,7 @@ mod tests {
         document
             .stage_nodes
             .iter_mut()
-            .find(|stage| stage.ok_transition.is_some())
+            .find(|stage| stage.ok_transition.is_value())
             .expect("stage with ok transition")
     }
 
@@ -574,7 +655,7 @@ mod tests {
         document
             .stage_nodes
             .iter_mut()
-            .find(|stage| stage.home_transition.is_some())
+            .find(|stage| stage.home_transition.is_value())
             .expect("stage with home transition")
     }
 
@@ -600,6 +681,84 @@ mod tests {
         assert_eq!(report.generated_stage_count, report.oracle_stage_count);
         assert_eq!(report.invalid_transition_count, 0);
         assert_eq!(report.asset_presence_gap_count, 0);
+    }
+
+    #[test]
+    fn indexed_non_interactive_router_is_behaviorally_equivalent_to_direct_transitions() {
+        let generated: StoryDocument = serde_json::from_value(serde_json::json!({
+            "title": "Generated",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "actionNodes": [
+                { "id": "entry", "name": "Entry", "options": ["source-a", "source-b"], "position": { "x": 0, "y": 0 } },
+                { "id": "direct-a", "name": "A", "options": ["target-a"], "position": { "x": 0, "y": 0 } },
+                { "id": "direct-b", "name": "B", "options": ["target-b"], "position": { "x": 0, "y": 0 } }
+            ],
+            "stageNodes": [
+                {
+                    "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                    "audio": "root.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "entry", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "source-a", "name": "Source A", "type": "stage", "squareOne": false,
+                    "audio": "a.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "direct-a", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "source-b", "name": "Source B", "type": "stage", "squareOne": false,
+                    "audio": "b.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": true, "home": false, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "direct-b", "optionIndex": 0 }, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "target-a", "name": "Target A", "type": "stage", "squareOne": false,
+                    "audio": "ta.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                    "okTransition": null, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                },
+                {
+                    "uuid": "target-b", "name": "Target B", "type": "stage", "squareOne": false,
+                    "audio": "tb.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                    "okTransition": null, "homeTransition": null,
+                    "position": { "x": 0, "y": 0 }
+                }
+            ]
+        }))
+        .expect("generated document");
+        let mut oracle = generated.clone();
+        oracle
+            .action_nodes
+            .retain(|action| action.id != "direct-a" && action.id != "direct-b");
+        oracle.action_nodes.push(ActionNode {
+            id: "indexed-router".to_string(),
+            name: Presence::Value("Indexed router".to_string()),
+            options: named_option_targets(vec!["target-a".to_string(), "target-b".to_string()]),
+            position: generated.action_nodes[0].position.clone(),
+            action_type: Presence::Absent,
+            group_id: Presence::Absent,
+        });
+        for (stage_id, option_index) in [("source-a", 0), ("source-b", 1)] {
+            oracle
+                .stage_nodes
+                .iter_mut()
+                .find(|stage| stage.uuid == stage_id)
+                .and_then(|stage| stage.ok_transition.value_mut())
+                .expect("source transition")
+                .clone_from(&Transition::fixed("indexed-router", option_index));
+        }
+
+        let report = compare_documents_structural(&generated, &oracle);
+        assert!(report.faithful, "écarts inattendus : {:?}", report.gaps);
     }
 
     /// Non fidèle : l'oracle porte une structure que l'arbre ne reproduit plus (édition
@@ -690,7 +849,7 @@ mod tests {
     fn judge_flags_missing_ok_transition() {
         let project = sample_project();
         let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
-        first_stage_with_ok(&mut oracle).ok_transition = None;
+        first_stage_with_ok(&mut oracle).ok_transition = Presence::Null;
 
         let report = judge_against_oracle(&project, oracle);
 
@@ -709,7 +868,7 @@ mod tests {
     fn judge_flags_missing_home_transition() {
         let project = sample_project();
         let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
-        first_stage_with_home(&mut oracle).home_transition = None;
+        first_stage_with_home(&mut oracle).home_transition = Presence::Null;
 
         let report = judge_against_oracle(&project, oracle);
 
@@ -732,7 +891,7 @@ mod tests {
             .stage_nodes
             .iter_mut()
             .find(|stage| {
-                stage.ok_transition.as_ref().is_some_and(|transition| {
+                stage.ok_transition.value().is_some_and(|transition| {
                     oracle
                         .action_nodes
                         .iter()
@@ -744,9 +903,9 @@ mod tests {
             .expect("stage with multi-option ok");
         stage
             .ok_transition
-            .as_mut()
+            .value_mut()
             .expect("ok transition")
-            .option_index = 1;
+            .selection = OptionSelection::Fixed(1);
 
         let report = judge_against_oracle(&project, oracle);
 
@@ -755,8 +914,8 @@ mod tests {
             report
                 .topology_gaps
                 .iter()
-                .any(|gap| gap.contains("option_index: 1")),
-            "écart optionIndex attendu : {:?}",
+                .any(|gap| gap.contains("selection: Fixed(1)")),
+            "écart de sélection attendu : {:?}",
             report.topology_gaps,
         );
     }
@@ -768,14 +927,14 @@ mod tests {
         let replacement_stage_id = oracle
             .stage_nodes
             .iter()
-            .find(|stage| stage.square_one)
+            .find(|stage| stage.is_square_one())
             .expect("squareOne stage")
             .uuid
             .clone();
         let action_id = oracle
             .stage_nodes
             .iter()
-            .filter_map(|stage| stage.ok_transition.as_ref())
+            .filter_map(|stage| stage.ok_transition.value())
             .find(|transition| {
                 oracle
                     .action_nodes
@@ -796,7 +955,7 @@ mod tests {
             action.options.len() > 1,
             "le test doit modifier une option non courante"
         );
-        action.options[1] = replacement_stage_id;
+        action.options[1] = Some(replacement_stage_id);
 
         let report = judge_against_oracle(&project, oracle);
 
@@ -818,7 +977,7 @@ mod tests {
         let mut oracle = canonical_document_for_fidelity(&project).expect("oracle builds");
         let action_id = first_stage_with_ok(&mut oracle)
             .ok_transition
-            .as_ref()
+            .value()
             .expect("ok transition")
             .action_node
             .clone();
@@ -845,9 +1004,9 @@ mod tests {
         let stage = oracle
             .stage_nodes
             .iter_mut()
-            .find(|stage| stage.audio.is_some())
+            .find(|stage| stage.audio.is_value())
             .expect("stage with audio");
-        stage.audio = None;
+        stage.audio = Presence::Null;
 
         let report = judge_against_oracle(&project, oracle);
 
@@ -889,5 +1048,125 @@ mod tests {
             error.contains("Génération bloquée"),
             "diagnostic inattendu : {error}",
         );
+    }
+
+    /// Deux documents qui ne diffèrent que par `Random` / `Fixed(0)`
+    /// ne doivent pas devenir équivalents pour le juge maintenant que `-1` n'est
+    /// plus classé invalide. C'est le contrôle négatif du retrait de
+    /// `NegativeOptionIndex`.
+    #[test]
+    fn judge_separates_a_random_selection_from_a_fixed_zero() {
+        let fixed: StoryDocument = serde_json::from_value(serde_json::json!({
+            "title": "Random", "version": 1, "description": "", "format": "v1",
+            "nightModeAvailable": false,
+            "actionNodes": [
+                { "id": "choice", "name": "Choice", "options": ["left", "right"],
+                  "position": { "x": 0, "y": 0 } }
+            ],
+            "stageNodes": [
+                { "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                  "audio": "root.mp3", "image": null,
+                  "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                  "okTransition": { "actionNode": "choice", "optionIndex": 0 }, "homeTransition": null,
+                  "position": { "x": 0, "y": 0 } },
+                { "uuid": "left", "name": "Left", "type": "stage", "squareOne": false,
+                  "audio": "l.mp3", "image": null,
+                  "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                  "okTransition": null, "homeTransition": null, "position": { "x": 0, "y": 0 } },
+                { "uuid": "right", "name": "Right", "type": "stage", "squareOne": false,
+                  "audio": "r.mp3", "image": null,
+                  "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                  "okTransition": null, "homeTransition": null, "position": { "x": 0, "y": 0 } }
+            ]
+        }))
+        .expect("document fixe");
+
+        let mut random = fixed.clone();
+        random.stage_nodes[0]
+            .ok_transition
+            .value_mut()
+            .expect("transition OK")
+            .selection = OptionSelection::Random;
+
+        // Chacun est fidèle à lui-même : la comparaison n'est pas devenue
+        // aveugle, elle distingue seulement les deux sélections.
+        assert!(compare_documents_structural(&random, &random).faithful);
+        assert!(compare_documents_structural(&fixed, &fixed).faithful);
+
+        let report = compare_documents_structural(&random, &fixed);
+        assert!(
+            !report.faithful,
+            "Random et Fixed(0) ne doivent pas être équivalents : {:?}",
+            report.gaps
+        );
+        // Et surtout : aucun des deux n'est classé « invalide » au passage.
+        assert_eq!(report.invalid_transition_count, 0, "{:?}", report.gaps);
+    }
+
+    /// La sentinelle reste une sélection valide sur les deux ports, y compris
+    /// quand le Stage est une roue ou un stage d'autoplay. Le test E2E de
+    /// référence couvre HOME ; ici on garde l'absence de classement « invalide ».
+    #[test]
+    fn judge_accepts_random_on_ok_and_home_for_wheel_and_autoplay_stages() {
+        for (wheel, autoplay) in [(true, false), (false, true)] {
+            let document: StoryDocument = serde_json::from_value(serde_json::json!({
+                "title": "Random", "version": 1, "description": "", "format": "v1",
+                "nightModeAvailable": false,
+                "actionNodes": [
+                    { "id": "choice", "name": "Choice", "options": ["left", "right"],
+                      "position": { "x": 0, "y": 0 } }
+                ],
+                "stageNodes": [
+                    { "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                      "audio": "root.mp3", "image": null,
+                      "controlSettings": { "wheel": wheel, "ok": true, "home": true, "pause": false, "autoplay": autoplay },
+                      "okTransition": { "actionNode": "choice", "optionIndex": -1 },
+                      "homeTransition": { "actionNode": "choice", "optionIndex": -1 },
+                      "position": { "x": 0, "y": 0 } },
+                    { "uuid": "left", "name": "Left", "type": "stage", "squareOne": false,
+                      "audio": "l.mp3", "image": null,
+                      "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                      "okTransition": null, "homeTransition": null, "position": { "x": 0, "y": 0 } },
+                    { "uuid": "right", "name": "Right", "type": "stage", "squareOne": false,
+                      "audio": "r.mp3", "image": null,
+                      "controlSettings": { "wheel": false, "ok": false, "home": false, "pause": true, "autoplay": true },
+                      "okTransition": null, "homeTransition": null, "position": { "x": 0, "y": 0 } }
+                ]
+            }))
+            .expect("document aléatoire");
+
+            let report = compare_documents_structural(&document, &document);
+            assert!(report.faithful, "{:?}", report.gaps);
+            assert_eq!(
+                report.invalid_transition_count, 0,
+                "`-1` ne doit plus être classé invalide (wheel={wheel}, autoplay={autoplay})"
+            );
+        }
+    }
+
+    /// `Random` sur une Action sans option reste bloquant : c'est
+    /// `OptionSelectionInvalid`, et le juge le voit aussi comme une transition
+    /// invalide.
+    #[test]
+    fn judge_still_flags_a_random_selection_on_an_empty_action() {
+        let document: StoryDocument = serde_json::from_value(serde_json::json!({
+            "title": "Random", "version": 1, "description": "", "format": "v1",
+            "nightModeAvailable": false,
+            "actionNodes": [
+                { "id": "empty", "name": "Empty", "options": [], "position": { "x": 0, "y": 0 } }
+            ],
+            "stageNodes": [
+                { "uuid": "root", "name": "Root", "type": "stage", "squareOne": true,
+                  "audio": "root.mp3", "image": null,
+                  "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                  "okTransition": { "actionNode": "empty", "optionIndex": -1 }, "homeTransition": null,
+                  "position": { "x": 0, "y": 0 } }
+            ]
+        }))
+        .expect("document aléatoire vide");
+
+        let report = compare_documents_structural(&document, &document);
+        assert!(!report.faithful);
+        assert!(report.invalid_transition_count > 0);
     }
 }

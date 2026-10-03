@@ -8,7 +8,43 @@ public version; this file stays as the concise project history.
 
 ---
 
-## [Unreleased]
+## [0.9.9] - 2026-10-03
+
+Story Studio v0.9.9 introduces the Graph Editor for branching stories and quizzes,
+and makes ZIP generation, imports and saving more reliable.
+
+### Added
+
+- Added a Graph Editor for branching stories, quizzes and shared paths, with
+  screens, choice lists, editable connections, clipboard tools and automatic layout.
+- Added a way to continue a menu project in the Graph Editor by creating a
+  separate copy, with a navigation fidelity check and the original project preserved.
+- Added a pack selector for archives containing several packs, and a choice of
+  editor when an imported pack supports both.
+
+### Changed
+
+- Renamed the Free Editor to Menu Editor. Both editors share media tools,
+  simulation, the render queue and ZIP generation checks.
+- Added blocking checks for pack structure, identity and media in both editors,
+  followed by a review of the generated ZIP.
+- Moved the catalogue thumbnail into pack metadata, with the entry image used
+  when no custom thumbnail is selected.
+- Added a short Graph Editor guide and updated the import and ZIP generation documentation.
+- Included third-party notices and license texts for Cytoscape.js, Deno and
+  the generated Rolldown runtime helpers.
+
+### Fixed
+
+- Preserved the chosen pack UUID during ZIP generation instead of generating a new one.
+- Improved YouTube imports with automatic Deno setup, more robust importing
+  and corrected language selection.
+- Fixed imported nested choices, end messages and automatic transitions.
+- Restored pack generation in the Simplified Editor and audio harmonization.
+- Fixed simulator controls, random choices and return paths. The simulator now
+  preserves its window size and position.
+- Fixed save and session recovery issues, audio previews and repeated microphone
+  recordings overwriting earlier takes with the same name.
 
 ---
 
@@ -433,7 +469,7 @@ beta releases.
   default or contextual setting actually leads.
 - The story editor's "Après la lecture" card now chains a second pill showing
   the destination reached after the end-node bridge
-  (`Passe par le nœud de fin du pack → Example project à l'école`).
+  (`Passe par le nœud de fin du pack → Exemple d'histoire`).
 - Separated the project name (local identity used for file prefixes, window
   title and the `.mbah` filename) from the published pack name (community
   convention with age, title, author, version, producer, bonus). The pack

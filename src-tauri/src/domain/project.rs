@@ -88,6 +88,17 @@ fn default_true() -> bool {
     true
 }
 
+/// Lit la présence du drapeau `importedContinuation` : `None` si le champ est
+/// absent (projet antérieur au drapeau), sinon s'il porte une valeur non nulle,
+/// comme `!!entry.importedContinuation` côté JS.
+fn deserialize_flag_presence<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<serde::de::IgnoredAny>::deserialize(deserializer)?;
+    Ok(Some(value.is_some()))
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub(crate) struct EntryControlSettings {
     pub(crate) autoplay: Option<bool>,
@@ -147,6 +158,15 @@ pub(crate) struct ProjectEntry {
     pub(crate) zip_path: Option<String>,
     #[serde(rename = "autoBlackImage", default)]
     pub(crate) auto_black_image: bool,
+    /// Dossier de continuation importé (« Suite apres … ») : le drapeau que lit
+    /// le JS. `None` quand le projet ne porte pas encore le champ.
+    #[serde(
+        rename = "importedContinuation",
+        alias = "_importedContinuation",
+        default,
+        deserialize_with = "deserialize_flag_presence"
+    )]
+    pub(crate) imported_continuation: Option<bool>,
     #[serde(rename = "controlSettings", default)]
     pub(crate) control_settings: Option<EntryControlSettings>,
     #[serde(rename = "returnAfterPlay", default)]

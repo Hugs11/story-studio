@@ -11,6 +11,7 @@ import {
 } from '../../store/xttsSettings';
 import { formatFrenchCount } from '../../utils/frenchText.js';
 import { Button } from '../common/Button';
+import { releaseTauriListener } from '../../utils/tauriListener';
 import './GenerateVoiceModal.css';
 
 const LANGUAGE_OPTIONS = [
@@ -172,10 +173,10 @@ function PiperVoiceModal({
     listen('piper-log', (event) => {
       if (!cancelled) setStatusMessage(String(event.payload));
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     }).catch(() => {});
-    return () => { cancelled = true; if (unlisten) unlisten(); };
+    return () => { cancelled = true; releaseTauriListener(unlisten); };
   }, [submitting]);
 
   useEscapeKey(true, () => { if (!submitting) onClose?.(); });

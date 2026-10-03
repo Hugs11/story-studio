@@ -4,12 +4,13 @@ import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
 import { mediaDrag } from '../../store/dragState';
 import { Tooltip } from '../common/Tooltip';
 import { ContextMenu } from '../TreePanel/ContextMenu';
-import { Copy, FilePen, FolderOpen, Link2, Scissors, Trash2 } from '../icons/LucideLocal';
+import { Copy, Eye, FilePen, FolderOpen, Link2, Scissors, Trash2 } from '../icons/LucideLocal';
 import { cleanPath, formatDate, getMetaDisplay, kindLabel, tagStyle } from './helpers';
 import { useAudioDuration } from './useAudioDuration';
 import { MediaThumb } from './MediaThumb';
 import { TagSection } from './TagSection';
 import { UsageBadge } from './UsageBadge';
+import { resolveUsageTarget } from './usageTarget';
 
 export function MediaTile({
   item, view, getMeta, markForProbe,
@@ -17,7 +18,7 @@ export function MediaTile({
   itemTags, allProjectTags, onAddMediaTag, onRemoveMediaTag,
   mediaTags, onDeleteRequest, onAssemble, onSplit, onEditImage,
   isSelected, selectedItems, selectedAudioItems, onSelect, onContextMenuSelect,
-  visibleCols, dropOnNode,
+  visibleCols, dropOnNode, onSelectNode, onRevealGraphNode,
 }) {
   const usage = item.usages[0];
   const className = view === 'list' ? 'me-list-row' : 'media-tile';
@@ -50,12 +51,17 @@ export function MediaTile({
     setCtxMenu({ x: e.clientX, y: e.clientY });
   }
 
-  const hasTagActions = onAddMediaTag && onRemoveMediaTag;
+  // Une étiquette est posée **sur un chemin**. Une référence du document sans
+  // fichier lié n'en a pas : offrir le geste le rendrait silencieusement sans
+  // effet, ce qui est pire que de ne pas l'offrir.
+  const hasTagActions = Boolean(onAddMediaTag && onRemoveMediaTag && item.path);
   const mediaClipboard = item.kind === 'audio' ? audioClipboard : item.kind === 'image' ? imageClipboard : null;
   const contextItems = isSelected && selectedItems.length > 1 ? selectedItems : [item];
   const contextAudioItems = isSelected && selectedAudioItems.length > 1 && item.kind === 'audio' ? selectedAudioItems : (item.kind === 'audio' ? [item] : []);
   const clipboardPaths = contextAudioItems.length > 1 ? contextAudioItems.map((audio) => audio.path) : [item.path];
   const tagPaths = contextItems.map((selectedItem) => selectedItem.path);
+
+  const usageTarget = resolveUsageTarget(item, { onSelectNode, onRevealGraphNode });
 
   const ctxActions = [
     ...(mediaClipboard ? [
@@ -64,6 +70,9 @@ export function MediaTile({
     ] : []),
     { icon: <FolderOpen />, label: "Révéler dans l'explorateur", fn: () => revealItemInDir(item.path) },
     { icon: <Copy />, label: 'Copier le chemin', fn: () => navigator.clipboard.writeText(item.path).catch(() => {}) },
+    ...(usageTarget ? [
+      { icon: <Eye />, label: 'Voir l’utilisation dans le projet', fn: () => usageTarget.go() },
+    ] : []),
     ...(onAssemble && contextAudioItems.length >= 2 ? [
       'sep',
       { icon: <Link2 />, label: `Assembler ${contextAudioItems.length} sons`, fn: () => onAssemble() },
@@ -115,7 +124,8 @@ export function MediaTile({
     let dragging = false;
     let ghost = null;
     let currentTarget = null;
-    let currentTargetKind = null; // 'field' | 'node' — stored from last onMove
+    let currentTargetKind = null; // 'field' | 'node' | 'graph' — stored from last onMove
+    const ghostLabel = dragPaths.length > 1 ? `${dragPaths.length} sons` : item.name;
 
     function findTarget(x, y) {
       const els = document.elementsFromPoint(x, y);
@@ -126,25 +136,45 @@ export function MediaTile({
       if (item.kind === 'audio' || item.kind === 'image') {
         const treeTarget = els.find((el) => el.dataset.mediaNodeId);
         if (treeTarget) return { el: treeTarget, kind: 'node' };
+        // Canvas de l'éditeur graphe. Il ne peint aucun nœud dans le DOM : la
+        // cible n'est donc pas l'élément survolé, mais celle que l'étage de
+        // canvas rend quand on la lui demande.
+        const graphTarget = els.find((el) => el.dataset.mediaGraphDrop);
+        if (graphTarget) return { el: graphTarget, kind: 'graph' };
       }
       return null;
+    }
+
+    // Survol du canvas du graphe : question synchrone, réponse dans le même
+    // tour de boucle. Le nom de l'Écran visé rejoint le fantôme, parce que rien
+    // sur le canvas ne peut s'éclairer à sa place.
+    function askGraphTarget(el) {
+      const detail = { kind: item.kind, target: null };
+      el.dispatchEvent(new CustomEvent('media-drag-over', { bubbles: false, detail }));
+      return detail.target?.label ?? null;
     }
 
     function onMove(ev) {
       if (!dragging) {
         if (Math.abs(ev.clientX - startX) < 6 && Math.abs(ev.clientY - startY) < 6) return;
         dragging = true;
+        window.getSelection()?.removeAllRanges();
+        document.documentElement.classList.add('is-media-dragging');
         mediaDrag.start(item.kind, item.path);
         ghost = document.createElement('div');
         ghost.className = 'media-drag-ghost';
-        ghost.textContent = dragPaths.length > 1 ? `${dragPaths.length} sons` : item.name;
+        ghost.textContent = ghostLabel;
         document.body.appendChild(ghost);
       }
       ghost.style.left = `${ev.clientX + 14}px`;
       ghost.style.top = `${ev.clientY - 14}px`;
 
       const hit = findTarget(ev.clientX, ev.clientY);
-      const newTarget = hit?.el ?? null;
+      const graphLabel = hit?.kind === 'graph' ? askGraphTarget(hit.el) : null;
+      // Sur le canvas, survoler le vide n'est pas survoler un Écran : sans nœud
+      // sous le pointeur, il n'y a pas de cible, et le fantôme le dit.
+      const newTarget = hit && (hit.kind !== 'graph' || graphLabel) ? hit.el : null;
+      ghost.textContent = graphLabel ? `${ghostLabel} → ${graphLabel}` : ghostLabel;
       if (newTarget !== currentTarget) {
         currentTarget?.classList.remove('is-drop-over');
         newTarget?.classList.add('is-drop-over');
@@ -154,12 +184,18 @@ export function MediaTile({
       }
     }
 
-    function onUp() {
+    function cleanup() {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+      window.removeEventListener('blur', onCancel);
+      document.documentElement.classList.remove('is-media-dragging');
       if (ghost) { document.body.removeChild(ghost); ghost = null; }
       currentTarget?.classList.remove('is-drop-over');
+    }
 
+    function onUp() {
+      cleanup();
       if (dragging && currentTarget && currentTargetKind) {
         if (currentTargetKind === 'field') {
           currentTarget.dispatchEvent(new CustomEvent('media-drop', {
@@ -174,13 +210,28 @@ export function MediaTile({
             paths: dragPaths,
             kind: item.kind,
           });
+        } else if (currentTargetKind === 'graph') {
+          // L'étage de canvas relit le nœud survolé au moment du relâchement :
+          // la cible n'est pas celle du dernier mouvement, mais celle que le
+          // moteur a sous le pointeur maintenant.
+          currentTarget.dispatchEvent(new CustomEvent('media-drop', {
+            bubbles: false,
+            detail: { path: item.path, paths: dragPaths, kind: item.kind },
+          }));
         }
       }
       mediaDrag.end();
     }
 
+    function onCancel() {
+      cleanup();
+      mediaDrag.end();
+    }
+
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
+    window.addEventListener('blur', onCancel);
   }
 
   async function handleOpen() {
@@ -192,7 +243,10 @@ export function MediaTile({
   }
 
   const { size: sizeDisp, dim: dimDisp, dur: durDisp, fmt: fmtDisp } = getMetaDisplay(item, m, duration);
-  const usageText = `${kindLabel(item.kind)} · ${usage?.label || item.source}${item.usedCount > 1 ? ` ×${item.usedCount}` : ''}`;
+  const usageSuffix = item.usageKnown === false
+    ? ' · usages non calculés'
+    : (item.usedCount > 1 ? ` ×${item.usedCount}` : '');
+  const usageText = `${kindLabel(item.kind)} · ${usage?.label || item.source}${usageSuffix}`;
 
   return (
     <>
@@ -206,6 +260,7 @@ export function MediaTile({
         tabIndex={0}
         onClick={(e) => onSelect?.(item, index, e)}
         onPointerDown={handlePointerDown}
+        onDragStart={(e) => e.preventDefault()}
         onDoubleClick={() => onActivate?.(index)}
         onContextMenu={handleContextMenu}
         onKeyDown={(e) => {
@@ -220,7 +275,7 @@ export function MediaTile({
       >
         <div className="media-thumb-wrap">
           <MediaThumb item={item} compact={view === 'list'} />
-          <UsageBadge count={item.projectUsedCount} />
+          <UsageBadge count={item.projectUsedCount} known={item.usageKnown !== false} />
           {!item.exists && (
             <span
               className="media-missing-badge"

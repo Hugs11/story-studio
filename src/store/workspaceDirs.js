@@ -13,6 +13,27 @@ export const EXPORTS = 'exports';
 export const SAUVEGARDES = 'sauvegardes';
 export const VERSIONS_SECURITE = 'versions-securite';
 
+// Où un outil (micro, voix, images, YouTube, podcast, retouche, découpe…)
+// écrit le média qu'il produit. Le dossier d'une session éphémère reste
+// prioritaire jusqu'au premier enregistrement : ses fichiers seront transférés
+// avec le projet. Ensuite, c'est toujours l'emplacement de travail, que
+// l'option « Utiliser un workspace pour les nouveaux projets » soit active ou
+// non : les médias d'un projet ne vont jamais à côté de son `.mbah`.
+export function mediaOutputWorkspaceDir({
+  sessionMode = null,
+  sessionWorkspaceDir = '',
+  configuredWorkspaceDir = '',
+} = {}) {
+  if (sessionMode === 'ephemeral') return String(sessionWorkspaceDir || '').trim();
+  return String(configuredWorkspaceDir || '').trim();
+}
+
+// Une session de cache n'est jamais un dossier d'export. Sans workspace choisi,
+// le sélecteur natif doit donc s'ouvrir sans chemin applicatif imposé.
+export function exportWorkspaceDir({ workspaceEnabled = false, configuredWorkspaceDir = '' } = {}) {
+  return workspaceEnabled ? String(configuredWorkspaceDir || '').trim() : '';
+}
+
 export function buildEditedImageFileName(sourcePath, collisionIndex = 1) {
   const rawStem = basenameNoExt(sourcePath)
     .trim()

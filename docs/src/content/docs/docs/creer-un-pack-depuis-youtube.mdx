@@ -11,7 +11,12 @@ Elle accepte notamment l’URL d’une **vidéo**, d’une **playlist** ou d’u
 
 Au premier usage, Story Studio affiche un rappel concernant les conditions d’utilisation de YouTube et les droits d’auteur.
 
-Il télécharge ensuite automatiquement **yt-dlp**, l’outil utilisé pour lire les vidéos et récupérer leur audio. Story Studio recherche périodiquement une mise à jour et peut aussi utiliser un exécutable personnalisé défini dans les Préférences.
+Il télécharge ensuite automatiquement **yt-dlp**, l’outil utilisé pour lire les vidéos et récupérer
+leur audio, ainsi que **Deno**, le composant nécessaire pour certaines vidéos destinées aux enfants
+et certaines pistes doublées. Aucune installation manuelle n’est nécessaire.
+
+Story Studio recherche périodiquement une mise à jour de yt-dlp. Tu peux aussi utiliser un
+exécutable yt-dlp personnalisé défini dans les Préférences.
 
 :::caution[Contenus tiers]
 Importe uniquement des contenus que tu as le droit de télécharger et d’utiliser. Cette fonction ne modifie ni les conditions de YouTube ni les droits attachés aux vidéos.
@@ -62,7 +67,7 @@ Menu racine « Les histoires de Léo »
 
 Comme pour l’import Podcast, les **Audios de sélection** des Histoires ne sont pas créés automatiquement. Pense à les enregistrer ou à les générer avant l’export.
 
-## Finaliser dans l’Éditeur libre
+## Finaliser dans l’Éditeur par menus
 
 Une fois l’import terminé, vérifie surtout les noms, les miniatures, les Audios de sélection et l’ordre des Histoires.
 
@@ -73,10 +78,10 @@ Pour une longue playlist ou une chaîne, crée des **Dossiers** par série, sais
 Une vidéo privée, supprimée, géobloquée ou dont l’audio n’est pas accessible peut échouer. Si seulement certaines vidéos échouent, les autres restent importées.
 
 :::tip[Ajouter des vidéos à un projet existant]
-L’import YouTube est également disponible depuis l’**Éditeur libre**.
+L’import YouTube est également disponible depuis l’**Éditeur par menus**.
 
 Dans ce cas, Story Studio ne crée pas un nouveau projet : les Histoires sont ajoutées au Dossier courant, ou au Menu racine si aucun Dossier n’est sélectionné.
 :::
 
-[Découvrir l’Éditeur libre](/story-studio/docs/editeur-libre/) ·
+[Découvrir l’Éditeur par menus](/story-studio/docs/editeur-libre/) ·
 [Comprendre les médias importés](/story-studio/docs/gestionnaire-de-medias/)

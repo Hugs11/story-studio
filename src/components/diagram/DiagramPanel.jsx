@@ -107,6 +107,7 @@ export function DiagramPanel({
           onOpenLocalEndSettings={onOpenLocalEndSettings}
           controlsHost={controlsHost}
           showActionsBar={showActionsBar}
+          onSearch={() => setLocalSearchFocusTrigger((value) => value + 1)}
           showHint={showHint}
         />
       </div>

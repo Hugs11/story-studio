@@ -1,7 +1,9 @@
+import { assertFreeProjectEnvelope } from './envelope.js';
 import { normalizeNavigationTarget } from '../navigationTargets.js';
 import {
   getPackAudioEdgeSilenceSettings,
   normalizePackAudioEdgeSilence,
+  PACK_SILENCE_MODES,
 } from '../../config/audioProcessing.js';
 import { getExportPackName, parseConventionName } from '../../utils/packConvention.js';
 import { basenameNoExt, normalizeWindowsPath, pathKey } from '../../utils/fileUtils.js';
@@ -14,7 +16,7 @@ import { assertProjectMenuDepth } from './menuDepth.js';
 //   les mappe vers `rootEntries` ou `children`.
 // - Les anciens `rootItems` / `menus` ne servent qu'à la migration.
 const PROJECT_SCHEMA_VERSION = 3;
-const SILENCE_MODES = Object.freeze(['off', 'add', 'normalize']);
+const SILENCE_MODES = PACK_SILENCE_MODES;
 
 export const DEFAULT_PACK_METADATA = Object.freeze({
   title: '',
@@ -189,6 +191,24 @@ function applyContinuationIdMap(entry, idMap) {
     next.items = next.items.map((child) => applyContinuationIdMap(child, idMap));
   }
   return next;
+}
+
+function applyRefTargetIdMap(entry, idMap) {
+  if (!entry || typeof entry !== 'object') return entry;
+  const next = entry.type === 'ref'
+    ? { ...entry, target: rewritePrefixedNavigationTarget(entry.target, idMap) }
+    : entry;
+  if (!Array.isArray(next.children)) return next;
+  return { ...next, children: next.children.map((child) => applyRefTargetIdMap(child, idMap)) };
+}
+
+// Réattribue les identifiants d'un sous-arbre selon `idMap` (ancien → nouveau)
+// et fait suivre les cibles de navigation qui les désignent : fins, Accueil,
+// étapes et choix d'après lecture, refs. Une cible vers un identifiant absent de
+// `idMap` reste telle quelle.
+export function remapEntryIds(entry, idMap) {
+  if (!(idMap instanceof Map) || idMap.size === 0) return entry;
+  return applyRefTargetIdMap(applyContinuationIdMap(entry, idMap), idMap);
 }
 
 function prefixImportedContinuationChildren(children, menuId) {
@@ -474,7 +494,8 @@ export function migrateProjectData(rawData = {}, {
   savePath = null,
   preserveEmptyProjectName = false,
 } = {}) {
-  const source = rawData && typeof rawData === 'object' ? rawData : {};
+  assertFreeProjectEnvelope(rawData);
+  const source = rawData;
   const hasNewMetadata = source.packMetadata && typeof source.packMetadata === 'object';
   const packMetadata = normalizePackMetadata(
     hasNewMetadata
@@ -486,6 +507,10 @@ export function migrateProjectData(rawData = {}, {
         }
       : buildPackMetadataFromLegacy(source),
   );
+  // Le writer ne doit jamais fabriquer une nouvelle identité à chaque export.
+  // Un projet chargé sans UUID la reçoit ici une seule fois, dans son payload
+  // persistant, depuis la même source aléatoire que les IDs d'authoring.
+  if (!packMetadata.uuid) packMetadata.uuid = makeId();
 
   const saveStem = basenameNoExt(savePath);
   const explicitProjectName = String(source.projectName ?? '').trim();
@@ -511,12 +536,14 @@ export function migrateProjectData(rawData = {}, {
   return {
     ...rest,
     schemaVersion: PROJECT_SCHEMA_VERSION,
+    authoringMode: 'free',
     projectName,
     packMetadata,
   };
 }
 
 export function normalizeBaseProject(project = {}) {
+  assertFreeProjectEnvelope(project);
   // Frontière de confiance partagée par le chargement, les snapshots et les
   // mutations génériques : aucun normaliseur récursif ne reçoit un niveau 62.
   assertProjectMenuDepth(project);
@@ -532,7 +559,11 @@ export function normalizeBaseProject(project = {}) {
   const nativeGraph = normalizeNativeGraph(project.nativeGraph, rootEntries, importWarnings);
   const rootImage = normalizeLocalFilePath(project.rootImage);
   const rawThumbnailImage = normalizeLocalFilePath(project.thumbnailImage ?? (nativeGraph ? project.rootImage : null));
-  const sameImage = !!project.sameImage || (!!nativeGraph && !!rootImage && rawThumbnailImage === rootImage);
+  // Sans vignette propre, le catalogue reprend l'image racine : c'est la seule
+  // lecture possible depuis que la vignette se choisit dans la fiche du pack.
+  const sameImage = !!project.sameImage
+    || !rawThumbnailImage
+    || (!!nativeGraph && !!rootImage && rawThumbnailImage === rootImage);
   const thumbnailImage = sameImage ? rootImage : rawThumbnailImage;
   const nativeTitle = nativeGraph?.document?.title;
   const endNodeName = String(project.endNodeName ?? '').trim() === 'Nœud de fin'
@@ -541,6 +572,7 @@ export function normalizeBaseProject(project = {}) {
 
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
+    authoringMode: 'free',
     version: Math.max(project.version ?? 1, rootEntries.length > 0 ? 2 : 1),
     projectName,
     packMetadata: packMetadata.title

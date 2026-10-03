@@ -25,31 +25,35 @@ impl<'a> StoryBuilder<'a> {
         let story_controls = if night_mode_active {
             playback_controls()
         } else {
-            ControlSettings {
-                wheel: story.wheel,
-                ok: story.ok,
-                home: story.home,
-                pause: story.pause,
-                autoplay: story.autoplay,
-            }
+            ControlSettings::authored(
+                story.wheel,
+                story.ok,
+                story.home,
+                story.pause,
+                story.autoplay,
+            )
         };
         let story_ok_transition = if project.night_mode_audio.is_some() && !auto_next_active {
             Some(self.build_night_bridge()?)
         } else {
             None
         };
-        self.stage_nodes.push(StageNode {
-            uuid: stage_id.clone(),
-            name: "histoire".to_string(),
-            stage_type: "stage".to_string(),
-            square_one: false,
-            audio: Some(self.asset_name(&format!("{}/storyAudio", role_prefix))?),
-            image: None,
-            control_settings: story_controls,
-            home_transition: None,
-            ok_transition: story_ok_transition,
-            position: zero_position(),
-        });
+        self.push_entry_stage(
+            &story.id,
+            StageNode {
+                uuid: stage_id.clone(),
+                name: Presence::Value("histoire".to_string()),
+                stage_type: default_stage_type(),
+                square_one: Presence::Value(false),
+                group_id: Presence::Absent,
+                audio: Presence::Value(self.asset_name(&format!("{}/storyAudio", role_prefix))?),
+                image: Presence::Null,
+                control_settings: Presence::Value(story_controls),
+                home_transition: Presence::Null,
+                ok_transition: Presence::from_nullable(story_ok_transition),
+                position: no_authored_position(),
+            },
+        );
         Ok(stage_id)
     }
 
@@ -82,7 +86,7 @@ impl<'a> StoryBuilder<'a> {
     ) -> Result<String, String> {
         match entry {
             CanonicalEntry::Story(story) => {
-                let root_transition = transition(root_action_id, root_index as i32);
+                let root_transition = transition(root_action_id, root_index);
                 let auto_next_active = self.report.project.options.auto_next;
                 let play_return_transition = if auto_next_active {
                     find_next_story_id(siblings, root_index)
@@ -144,14 +148,14 @@ impl<'a> StoryBuilder<'a> {
             CanonicalEntry::Menu(menu) => self.build_menu_branch(
                 menu,
                 &scoped_label_id("root", &menu.id, &menu.name),
-                transition(root_action_id, root_index as i32),
+                transition(root_action_id, root_index),
                 None,
                 root_has_multiple_entries || menu.children.len() > 1,
             ),
             CanonicalEntry::Zip(zip) => self.build_imported_zip_branch(
                 zip,
                 &scoped_label_id("root", &zip.id, &zip.name),
-                transition(root_action_id, root_index as i32),
+                transition(root_action_id, root_index),
                 None,
                 root_has_multiple_entries,
             ),
@@ -215,8 +219,10 @@ impl<'a> StoryBuilder<'a> {
             self.action_nodes.push(ActionNode {
                 id: approach_action_id.clone(),
                 name: action_node_name(),
-                options: vec![target.clone()],
-                position: zero_position(),
+                action_type: Presence::Absent,
+                group_id: Presence::Absent,
+                options: named_option_targets(vec![target.clone()]),
+                position: no_authored_position(),
             });
             targets.push(target);
         }
@@ -310,9 +316,17 @@ impl<'a> StoryBuilder<'a> {
             }
             CanonicalEntry::Ref(reference) => {
                 self.record_ref_option(shared_action_id, shared_index, &reference.target);
+                // La transition d'approche est construite par le builder, donc
+                // toujours `Fixed` : une sélection aléatoire n'y a pas d'indice
+                // d'option à réécrire, et l'inventer serait un rabattement.
+                let approach_option_index =
+                    approach_transition.selection.fixed_index().ok_or_else(|| {
+                        "Une transition d'approche aleatoire ne designe aucune option a reecrire."
+                            .to_string()
+                    })?;
                 self.record_ref_option(
                     &approach_transition.action_node,
-                    approach_transition.option_index as usize,
+                    approach_option_index,
                     &reference.target,
                 );
                 Ok(self.next_id())

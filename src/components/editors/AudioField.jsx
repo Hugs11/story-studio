@@ -392,7 +392,7 @@ export function AudioField({
             </span>
 
             {onClear && (
-              <Tooltip text="Retirer de ce champ">
+                <Tooltip text="Retirer de ce champ" className="audio-clear-control">
                 <button
                   className="audio-clear-btn"
                   onClick={(e) => {
@@ -515,7 +515,6 @@ export function AudioField({
       {/* Modal d'enregistrement */}
       {showRecord && (
         <RecordModal
-          savePath={generatedAudioSavePath || savePath}
           workspaceDir={workspaceDir}
           projectName={projectName}
           onSaved={handleRecorded}

@@ -1,0 +1,206 @@
+/* Le cadre commun du rapport de production, partagé par les deux éditeurs.
+   Les détails propres à chaque chaîne gardent leurs propres styles. */
+
+.production-report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.production-report__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.production-report__badge {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2, rgba(127, 127, 127, 0.14));
+}
+
+.production-report__badge.is-succeeded { color: var(--ok, #2e7d4f); }
+.production-report__badge.is-failed { color: var(--danger, #b3261e); }
+.production-report__badge.is-cancelled { color: var(--muted, #6b6b6b); }
+
+.production-report__hint,
+.production-report__note {
+  color: var(--muted, #6b6b6b);
+  font-size: 12px;
+  margin: 0;
+}
+
+.production-report__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.production-report__count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.production-report__log {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.1));
+}
+
+.production-report__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.production-report__result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.production-report__path {
+  margin: 0;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.production-report__warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.production-report__warnings-title,
+.production-report__warning,
+.production-report__warning-advice {
+  margin: 0;
+}
+
+.production-report__warnings-title {
+  font-weight: 700;
+}
+
+.production-report__warning {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.production-report__warning small,
+.production-report__warning-advice {
+  opacity: 0.82;
+}
+
+.production-report__problem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid var(--danger, #b3261e);
+  padding-left: 8px;
+}
+
+.production-report__problem-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.production-report__problem-message {
+  margin: 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* Les trois contrôles d'archive.
+   Un verdict « aurait refusé » est un avertissement, pas une erreur : la
+   production a eu lieu. Le vocabulaire visuel le dit avec le jaune des
+   avertissements, jamais avec le rouge des pannes. */
+.production-report__gates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.production-report__gates-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.production-report__gates-mode {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.production-report__gates-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.production-report__gate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.production-report__gate-name {
+  font-weight: 500;
+}
+
+.production-report__gate-verdict {
+  border-radius: 3px;
+  padding: 0 6px;
+  font-size: 11px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.15));
+}
+
+.production-report__gate-verdict.is-passed {
+  color: var(--success, #1b6b3a);
+}
+
+.production-report__gate-verdict.is-would-refuse {
+  background: var(--warning-bg, rgba(191, 140, 0, 0.16));
+  color: var(--warning, #8a6100);
+}
+
+.production-report__gate-note {
+  opacity: 0.75;
+}
+
+.production-report__gate-reasons {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.production-report__gate-path {
+  opacity: 0.8;
+  word-break: break-all;
+}

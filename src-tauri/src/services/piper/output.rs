@@ -4,7 +4,7 @@
 //! utilisateur. Piper produit un MP3 final (WAV intermédiaire converti).
 
 use super::PiperGenerateRequest;
-use crate::services::project_files::workspace_or_project_dir;
+use crate::services::project_files::media_output_root;
 use crate::support::ffmpeg::now_millis;
 use std::path::{Path, PathBuf};
 
@@ -71,10 +71,9 @@ pub(super) fn output_filename(filename_hint: Option<&str>, ext: &str) -> Result<
 }
 
 pub(super) fn generated_dir(request: &PiperGenerateRequest) -> Result<PathBuf, String> {
-    workspace_or_project_dir(
+    media_output_root(
         request.workspace_dir.as_deref(),
-        request.save_path.as_deref(),
-        "Definissez un emplacement de travail ou sauvegardez le projet avant de generer une voix.",
+        "Aucun emplacement de travail : impossible de generer une voix.",
     )
     .map(|dir| dir.join("voix-generees"))
 }

@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { sanitizeImportedName } from '../store/projectStore';
+import { MEDIA_LANDING_TREE } from '../store/mediaToolSurface';
+import { isFallbackProjectName } from '../store/projectSaveName.js';
 import { basename } from '../utils/fileUtils';
 import { formatFrenchCount } from '../utils/frenchText.js';
 import { logger } from '../utils/logger';
+import { youtubeBlockedNotice, youtubeImportFailure } from '../utils/youtubeErrors.js';
 import { useImportSession } from './useImportSession';
 import { useOsFileDrop } from './useOsFileDrop';
 
@@ -31,10 +34,15 @@ const MEDIA_FUNNEL_COPY = {
     defaultTitle: 'YouTube',
     coverFilePrefix: 'youtube',
     logPrefix: 'youtube-funnel',
-    allFailedMessage: "Aucune vidéo n'a pu être importée. Vérifie ta connexion ou l'adresse YouTube.",
+    allFailedMessage: "Aucune vidéo n'a pu être importée.",
     someFailedNotice: (failures, total) => `${formatFrenchCount(failures, 'vidéo', 'vidéos')} sur ${total} n'ont pas pu être importées. Les autres ont bien été ajoutées.`,
   },
 };
+
+function partialFailureNotice(source, copy, result) {
+  return (source === 'youtube' && youtubeBlockedNotice(result))
+    || copy.someFailedNotice(result.failures, result.total);
+}
 
 // Coordonne les funnels média d'accueil et les hooks d'import
 // (useImportSession/useOsFileDrop), puis ré-expose leurs sorties pour
@@ -59,13 +67,15 @@ export function useMediaImport({
   workspaceDirRef,
   importedPackPendingMetaRef,
   runFunnelLanding,
+  onRevealImportedMedia,
   setImportNotice,
   setActiveDropZone,
   showErrorDialog,
-  showConfirmDialog,
 }) {
   const [importing, setImporting] = useState(null);
   const [unpacking, setUnpacking] = useState(null);
+  const liveStoreRef = useRef(store);
+  liveStoreRef.current = store;
 
   const importSession = useImportSession({
     store,
@@ -80,7 +90,6 @@ export function useMediaImport({
     persistProjectSnapshot,
     workspaceDirRef,
     showErrorDialog,
-    showConfirmDialog,
     getImportDisplayName,
     isImportedPackPath,
     onImportedPackPromoted: () => { importedPackPendingMetaRef.current = true; },
@@ -124,14 +133,21 @@ export function useMediaImport({
       const result = await handleImportMediaEpisodes(items, list, {
         source,
         targetMenuId: null,
+        // Le funnel d'accueil fabrique une session de pack : son point
+        // d'arrivée est l'arbre, quel que soit l'éditeur ouvert avant lui.
+        // Dit ici plutôt que déduit, pour ne dépendre d'aucun ordre entre
+        // l'installation de la session et cet import.
+        landing: MEDIA_LANDING_TREE,
         onProgress,
         suppressDialog: true,
       });
       if (result.total > 0 && result.failures >= result.total) {
-        throw new Error(copy.allFailedMessage);
+        throw new Error(source === 'youtube'
+          ? youtubeImportFailure(result, copy.allFailedMessage)
+          : copy.allFailedMessage);
       }
       if (result.failures > 0) {
-        setImportNotice(copy.someFailedNotice(result.failures, result.total));
+        setImportNotice(partialFailureNotice(source, copy, result));
       }
       logger.info(`${copy.logPrefix}:landed count=${result.imported}`);
     }, { errorLog: `${copy.logPrefix}:import-error` });
@@ -141,27 +157,53 @@ export function useMediaImport({
     await landMediaFunnel('podcast', episodes, feed, onProgress);
   }
 
+  // Dans l'éditeur, podcast et YouTube partagent la même arrivée : histoires
+  // côté Libre, audio et jaquettes sélectionnés dans Médias côté graphe.
+  async function importIntoEditor(source, items, list, onProgress = null) {
+    const copy = MEDIA_FUNNEL_COPY[source];
+    const projectEpoch = store.workEpochRef.current;
+    const result = await handleImportMediaEpisodes(items, list, {
+      source,
+      onProgress,
+      suppressDialog: source === 'youtube',
+    });
+    const liveStore = liveStoreRef.current;
+    const sourceTitle = String(list?.title ?? '').trim();
+    if (result.imported > 0 && sourceTitle
+      && projectEpoch === liveStore.workEpochRef.current
+      && !liveStore.savePath && isFallbackProjectName(liveStore.project.projectName)) {
+      // Le premier import réussi fournit un nom local de secours, dans les
+      // deux éditeurs. Les titres d'auteur et les noms de fichiers choisis
+      // restent indépendants ; un import tardif ne nomme pas un autre projet.
+      liveStore.setProject((project) => isFallbackProjectName(project.projectName)
+        ? { ...project, projectName: sourceTitle }
+        : project);
+    }
+    if (result.importedPaths.length > 0 && projectEpoch === store.workEpochRef.current) {
+      onRevealImportedMedia?.(result.importedPaths);
+    }
+    if (source === 'youtube' && result.total > 0 && result.failures >= result.total) {
+      throw new Error(youtubeImportFailure(result, copy.allFailedMessage));
+    }
+    if (source === 'youtube' && result.failures > 0) {
+      setImportNotice(partialFailureNotice(source, copy, result));
+    }
+    logger.info(`${source}-editor:imported count=${result.imported}`);
+    return result;
+  }
+
+  async function handlePodcastEditorImport(episodes, feed) {
+    return importIntoEditor('podcast', episodes, feed);
+  }
+
   async function handleYoutubeFunnelImport(videos, list, onProgress) {
     await landMediaFunnel('youtube', videos, list, onProgress);
   }
 
-  // Import YouTube depuis l'éditeur libre : pas de nouvelle session, on
-  // insère dans le projet courant (cible déduite de la sélection comme les autres
-  // imports média). Lève en cas d'échec total → écran d'erreur du funnel.
+  // YouTube depuis l'éditeur réutilise le parcours podcast. Le funnel affiche
+  // une erreur dédiée si toutes les vidéos échouent.
   async function handleYoutubeEditorImport(videos, list, onProgress) {
-    const copy = MEDIA_FUNNEL_COPY.youtube;
-    const result = await handleImportMediaEpisodes(videos, list, {
-      source: 'youtube',
-      onProgress,
-      suppressDialog: true,
-    });
-    if (result.total > 0 && result.failures >= result.total) {
-      throw new Error(copy.allFailedMessage);
-    }
-    if (result.failures > 0) {
-      setImportNotice(copy.someFailedNotice(result.failures, result.total));
-    }
-    logger.info(`youtube-editor:imported count=${result.imported}`);
+    return importIntoEditor('youtube', videos, list, onProgress);
   }
 
   useOsFileDrop({
@@ -180,6 +222,7 @@ export function useMediaImport({
     importing,
     unpacking,
     handlePodcastFunnelImport,
+    handlePodcastEditorImport,
     handleYoutubeFunnelImport,
     handleYoutubeEditorImport,
   };

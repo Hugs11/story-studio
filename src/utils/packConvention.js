@@ -98,8 +98,36 @@ export function parseConventionName(raw) {
   };
 }
 
+/**
+ * Sépare un préfixe d'âge « N+ » en tête d'un titre (« 3+ Example »,
+ * « 6+]Titre »). Sans séparateur — « 3+5 », « 3+Titre » —, ce n'est pas un
+ * préfixe d'âge. Rend `null` quand le titre n'en porte pas.
+ */
+export function splitLeadingAge(name) {
+  const match = String(name || '').match(/^\s*(\d{1,2})\s*\+(?:\]|\s)\s*(\S.*)$/);
+  return match && match[2].trim() ? { minAge: match[1], title: match[2].trim() } : null;
+}
+
 export function generateConventionName(metadata = {}) {
-  const title = toUnderscored(metadata.title);
+  // Un titre qui porte déjà la convention complète (« 3+]Titre[by_Auteur_V5 »,
+  // repris tel quel d'un pack produit) n'est composé qu'une fois : on repart de
+  // ses champs, sans empiler l'âge, l'auteur ni la version. Les champs saisis
+  // l'emportent ; la version est toujours celle demandée.
+  const parsed = parseConventionName(metadata.title);
+  if (parsed) {
+    return generateConventionName({
+      ...metadata,
+      title: parsed.title,
+      minAge: metadata.minAge || metadata.age || parsed.minAge,
+      author: metadata.author || parsed.author,
+      producer: metadata.producer || parsed.producer,
+      bonus: metadata.bonus || parsed.bonus,
+    });
+  }
+  // Le préfixe `N+]` porte déjà l'âge : un titre qui le répète (« 3+ Example »,
+  // tel qu'un pack FS le reçoit de son nom de fichier) ne le double pas.
+  const leading = splitLeadingAge(metadata.title);
+  const title = toUnderscored(leading?.title ?? metadata.title);
   if (!title) return '';
 
   const bonus = toUnderscored(metadata.bonus);
@@ -107,7 +135,9 @@ export function generateConventionName(metadata = {}) {
   const producer = toUnderscored(metadata.producer);
   const rawProducer = String(metadata.producer || '').trim();
   const rawAuthor = String(metadata.author || '').trim();
-  const minAge = String(metadata.minAge || metadata.age || '3').replace(/\D/g, '') || '3';
+  // Sans âge saisi, celui que le titre porte en tête (« 5+ Le prince… ») :
+  // retomber sur 3 renommait « 3+] » un pack importé de 5 ans.
+  const minAge = String(metadata.minAge || metadata.age || leading?.minAge || '3').replace(/\D/g, '') || '3';
   const version = toIntVersion(metadata.version);
   const bonusPart = bonus ? `_(${bonus})` : '';
   const prefix = `${minAge}+]`;
@@ -131,6 +161,6 @@ export function bumpPackVersion(version) {
 
 export function getExportPackName(metadata = {}) {
   const legacy = String(metadata.legacyExportName || '').trim();
-  if (metadata.namingMode === 'legacy' && legacy) return legacy;
+  if (metadata.namingMode === 'legacy') return legacy || String(metadata.title || '').trim() || 'Story Studio';
   return generateConventionName(metadata) || legacy || String(metadata.title || '').trim() || 'Story Studio';
 }

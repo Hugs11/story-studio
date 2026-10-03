@@ -68,43 +68,44 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
     );
 
     let document = build_story_document(&report).expect("night mode document");
+    assert_free_document_passes_gates(&report, &document);
     let menu_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Choose a story")
+        .find(|stage| stage.label() == "Choose a story")
         .expect("menu stage");
     let play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Story Alpha" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Story Alpha" && stage.image.has_no_value())
         .expect("play stage");
     let second_play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Story Beta" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Story Beta" && stage.image.has_no_value())
         .expect("second play stage");
     let night_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "nightStage")
+        .find(|stage| stage.label() == "nightStage")
         .expect("night stage");
     let root_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![menu_stage.uuid.clone()])
+        .find(|action| action.options == vec![Some(menu_stage.uuid.clone())])
         .expect("root action");
     let night_entry_action = document
         .action_nodes
         .iter()
-        .find(|action| action.options == vec![night_stage.uuid.clone()])
+        .find(|action| action.options == vec![Some(night_stage.uuid.clone())])
         .expect("night entry action");
 
-    assert!(document.night_mode_available);
+    assert!(document.night_mode_available.is_true());
     assert_eq!(
         document
             .stage_nodes
             .iter()
-            .filter(|stage| stage.name == "nightStage")
+            .filter(|stage| stage.label() == "nightStage")
             .count(),
         1
     );
@@ -112,44 +113,44 @@ fn inserts_night_stage_between_story_end_and_next_choice() {
         document
             .action_nodes
             .iter()
-            .filter(|action| action.options == vec![night_stage.uuid.clone()])
+            .filter(|action| action.options == vec![Some(night_stage.uuid.clone())])
             .count(),
         1
     );
     assert_eq!(night_stage.audio.as_deref(), Some("night.mp3"));
-    assert!(night_stage.image.is_none());
-    assert!(!night_stage.control_settings.autoplay);
-    assert!(night_stage.control_settings.ok);
-    assert!(night_stage.control_settings.home);
+    assert!(night_stage.image.has_no_value());
+    assert!(!night_stage.control_settings.autoplay());
+    assert!(night_stage.control_settings.ok());
+    assert!(night_stage.control_settings.home());
     assert_eq!(
         play_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(night_entry_action.id.as_str())
     );
     assert_eq!(
         second_play_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(night_entry_action.id.as_str())
     );
     assert_eq!(
         night_stage
             .ok_transition
-            .as_ref()
+            .value()
             .map(|transition| transition.action_node.as_str()),
         Some(root_action.id.as_str())
     );
     assert_eq!(
         night_stage
             .ok_transition
-            .as_ref()
-            .map(|transition| transition.option_index),
-        Some(0)
+            .value()
+            .map(|transition| transition.selection),
+        Some(OptionSelection::Fixed(0))
     );
-    assert!(night_stage.home_transition.is_none());
+    assert!(night_stage.home_transition.has_no_value());
 }
 
 #[test]
@@ -242,11 +243,11 @@ fn night_stage_preserves_story_specific_return_after_play() {
     let play_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Story Alpha" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Story Alpha" && stage.image.has_no_value())
         .expect("play stage");
     let night_entry_action_id = play_stage
         .ok_transition
-        .as_ref()
+        .value()
         .map(|transition| transition.action_node.as_str())
         .expect("play night transition");
     let night_stage_id = document
@@ -258,11 +259,11 @@ fn night_stage_preserves_story_specific_return_after_play() {
     let night_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| &stage.uuid == night_stage_id)
+        .find(|stage| Some(stage.uuid.as_str()) == night_stage_id.as_deref())
         .expect("night stage");
     let return_transition = night_stage
         .ok_transition
-        .as_ref()
+        .value()
         .expect("night return transition");
     let return_action = document
         .action_nodes
@@ -271,20 +272,25 @@ fn night_stage_preserves_story_specific_return_after_play() {
         .expect("night return action");
     let return_stage_id = return_action
         .options
-        .get(return_transition.option_index as usize)
+        .get(
+            return_transition
+                .selection
+                .fixed_index()
+                .expect("sélection fixe"),
+        )
         .expect("night return target");
     let return_stage = document
         .stage_nodes
         .iter()
-        .find(|stage| &stage.uuid == return_stage_id)
+        .find(|stage| Some(stage.uuid.as_str()) == return_stage_id.as_deref())
         .expect("night return stage");
 
-    assert_eq!(return_stage.name, "Titre - Story Beta");
+    assert_eq!(return_stage.label(), "Titre - Story Beta");
     assert!(
         document
             .stage_nodes
             .iter()
-            .filter(|stage| stage.name == "nightStage")
+            .filter(|stage| stage.label() == "nightStage")
             .count()
             >= 2
     );
@@ -391,34 +397,34 @@ fn night_mode_return_next_story_creates_story_specific_night_stages() {
     let story_a_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire A" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire A" && stage.image.has_no_value())
         .expect("story A play stage");
     let story_b_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire B" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire B" && stage.image.has_no_value())
         .expect("story B play stage");
     let story_c_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire C" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire C" && stage.image.has_no_value())
         .expect("story C play stage");
 
     let a_target = resolve_night_return_stage(&document, story_a_play);
     let b_target = resolve_night_return_stage(&document, story_b_play);
     let c_target = resolve_night_return_stage(&document, story_c_play);
 
-    assert_eq!(a_target.name, "Titre - Histoire B");
-    assert_eq!(b_target.name, "Titre - Histoire C");
+    assert_eq!(a_target.label(), "Titre - Histoire B");
+    assert_eq!(b_target.label(), "Titre - Histoire C");
     // Last story has no next sibling → fallback to the menu replay (parent stage).
-    assert_eq!(c_target.name, "Choisis");
+    assert_eq!(c_target.label(), "Choisis");
 
     // next_story produces a different resolved target per story, so multiple distinct night
     // stages are emitted (one per source story).
     let night_stage_count = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.name == "nightStage")
+        .filter(|stage| stage.label() == "nightStage")
         .count();
     assert!(
         night_stage_count >= 2,
@@ -545,32 +551,32 @@ fn night_mode_return_global_menu_reuses_single_night_stage() {
     let story_a_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire A" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire A" && stage.image.has_no_value())
         .expect("story A play stage");
     let story_b_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire B" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire B" && stage.image.has_no_value())
         .expect("story B play stage");
     let story_z_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Histoire Z" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Histoire Z" && stage.image.has_no_value())
         .expect("story Z play stage");
 
     let a_target = resolve_night_return_stage(&document, story_a_play);
     let b_target = resolve_night_return_stage(&document, story_b_play);
     let z_target = resolve_night_return_stage(&document, story_z_play);
 
-    assert_eq!(a_target.name, "Final");
-    assert_eq!(b_target.name, "Final");
-    assert_eq!(z_target.name, "Final");
+    assert_eq!(a_target.label(), "Final");
+    assert_eq!(b_target.label(), "Final");
+    assert_eq!(z_target.label(), "Final");
 
     // Global destination → single shared night stage thanks to night_bridge_cache.
     let night_stage_count = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.name == "nightStage")
+        .filter(|stage| stage.label() == "nightStage")
         .count();
     assert_eq!(
         night_stage_count, 1,
@@ -662,9 +668,9 @@ fn night_mode_return_story_target_routes_to_story_title() {
     let source_play = document
         .stage_nodes
         .iter()
-        .find(|stage| stage.name == "Histoire - Source" && stage.image.is_none())
+        .find(|stage| stage.label() == "Histoire - Source" && stage.image.has_no_value())
         .expect("source play stage");
 
     let target = resolve_night_return_stage(&document, source_play);
-    assert_eq!(target.name, "Titre - Cible");
+    assert_eq!(target.label(), "Titre - Cible");
 }

@@ -34,7 +34,7 @@ impl<'a> StoryBuilder<'a> {
         for (idx, child) in menu.children.iter().enumerate() {
             if let CanonicalEntry::Story(s) = child {
                 if let Some(prealloc) = self.story_prealloc.get_mut(&s.id) {
-                    prealloc.approach_transition = Some(transition(&menu_action_id, idx as i32));
+                    prealloc.approach_transition = Some(transition(&menu_action_id, idx));
                 }
             }
         }
@@ -138,7 +138,7 @@ impl<'a> StoryBuilder<'a> {
                     option_stage_ids.push(self.build_imported_zip_branch(
                         zip,
                         &scoped_label_id(&menu_label, &zip.id, &zip.name),
-                        transition(&menu_action_id, child_index as i32),
+                        transition(&menu_action_id, child_index),
                         Some(menu_replay_transition.clone()),
                         true,
                     )?);
@@ -147,7 +147,7 @@ impl<'a> StoryBuilder<'a> {
                     option_stage_ids.push(self.build_menu_branch(
                         submenu,
                         &scoped_label_id(&menu_label, &submenu.id, &submenu.name),
-                        transition(&menu_action_id, child_index as i32),
+                        transition(&menu_action_id, child_index),
                         Some(menu_replay_transition.clone()),
                         false,
                     )?);
@@ -172,39 +172,43 @@ impl<'a> StoryBuilder<'a> {
         self.action_nodes.push(ActionNode {
             id: menu_action_id.clone(),
             name: action_node_name(),
-            options: option_stage_ids,
-            position: zero_position(),
+            action_type: Presence::Absent,
+            group_id: Presence::Absent,
+            options: named_option_targets(option_stage_ids),
+            position: no_authored_position(),
         });
 
-        self.stage_nodes.push(StageNode {
-            uuid: menu_stage_id.clone(),
-            name: display_label(&menu.name, "Menu"),
-            stage_type: "stage".to_string(),
-            square_one: false,
-            audio: menu
-                .audio
-                .as_ref()
-                .map(|_| self.asset_name(&format!("{}/menuAudio", menu_label)))
-                .transpose()?,
-            image: if menu.auto_black_image {
-                None
-            } else {
-                Some(self.asset_name(&format!("{}/menuImage", menu_label))?)
+        self.push_entry_stage(
+            &menu.id,
+            StageNode {
+                uuid: menu_stage_id.clone(),
+                name: Presence::Value(display_label(&menu.name, "Menu")),
+                stage_type: default_stage_type(),
+                square_one: Presence::Value(false),
+                group_id: Presence::Absent,
+                audio: Presence::from_nullable(
+                    menu.audio
+                        .as_ref()
+                        .map(|_| self.asset_name(&format!("{}/menuAudio", menu_label)))
+                        .transpose()?,
+                ),
+                image: if menu.auto_black_image {
+                    Presence::Null
+                } else {
+                    Presence::Value(self.asset_name(&format!("{}/menuImage", menu_label))?)
+                },
+                control_settings: Presence::Value(ControlSettings::authored(
+                    if is_choice_node { menu.wheel } else { false },
+                    menu.ok,
+                    menu.home,
+                    menu.pause,
+                    if is_choice_node { menu.autoplay } else { true },
+                )),
+                home_transition: Presence::from_nullable(explicit_menu_home_transition),
+                ok_transition: Presence::Value(Transition::fixed(menu_action_id, 0)),
+                position: no_authored_position(),
             },
-            control_settings: ControlSettings {
-                wheel: if is_choice_node { menu.wheel } else { false },
-                ok: menu.ok,
-                home: menu.home,
-                pause: menu.pause,
-                autoplay: if is_choice_node { menu.autoplay } else { true },
-            },
-            home_transition: explicit_menu_home_transition,
-            ok_transition: Some(Transition {
-                action_node: menu_action_id,
-                option_index: 0,
-            }),
-            position: zero_position(),
-        });
+        );
         Ok(menu_stage_id)
     }
 }

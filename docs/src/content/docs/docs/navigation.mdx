@@ -6,6 +6,9 @@ description: Comprendre comment la molette, OK, Accueil et les destinations font
 La **navigation** décrit le parcours de l’enfant dans le pack : l’écran sur lequel il se trouve,
 l’action qu’il effectue et l’endroit où cette action le conduit.
 
+Cette page présente surtout la navigation de l’Éditeur par menus. Pour les parcours composés
+d’Écrans, de Listes de choix et de raccords, consulte [l’Éditeur graphe](/story-studio/docs/editeur-graphe/).
+
 Pour comprendre un trajet, pose-toi toujours trois questions :
 
 1. **Où se trouve l’enfant ?**
@@ -554,9 +557,10 @@ Un élément **ZIP** conserve un pack complet à l’intérieur du projet. Lorsq
 ouvre son propre parcours avec ses choix, ses Histoires et ses retours.
 
 Lors de l’import d’un pack existant, Story Studio vérifie d’abord si sa navigation peut être
-reconstruite fidèlement avec des Dossiers et des Histoires modifiables. Si ce n’est pas le cas, le
-pack reste en lecture seule dans le Simulateur au lieu d’être présenté comme un projet éditable
-incomplet.
+reconstruite fidèlement avec des Dossiers et des Histoires modifiables dans l’Éditeur par menus.
+Une navigation plus complexe peut être ouverte dans l’Éditeur graphe sous forme d’Écrans, de Listes
+de choix et de raccords. Le pack reste en lecture seule uniquement si Story Studio sait le simuler
+sans pouvoir encore le modifier fidèlement dans l’un des deux éditeurs.
 
 Pour vérifier un ZIP inclus ou un pack importé :
 

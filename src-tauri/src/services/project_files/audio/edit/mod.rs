@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::super::{
-    absolute_path, project_dir_from_save_path, validate_existing_file_path,
-    workspace_or_project_dir, MANAGED_PROJECT_DIRS,
+    absolute_path, media_output_root, project_dir_from_save_path, validate_existing_file_path,
+    MANAGED_PROJECT_DIRS,
 };
 use crate::support::ffmpeg::{apply_no_window, get_ffmpeg_path, now_millis};
 use crate::support::paths::path_for_frontend;

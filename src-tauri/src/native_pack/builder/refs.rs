@@ -6,7 +6,6 @@
 //! cibles disponibles, y compris en avant), `resolve_pending_ref_options` réécrit chaque
 //! option vers le vrai stage natif de la cible — en réutilisant exactement le résolveur
 //! de `returnAfterPlay` (`resolve_story_return_transition` + tables préallouées).
-use super::super::Transition;
 use super::core::StoryBuilder;
 
 /// Une option de menu (ou d'entrée racine) qui doit pointer vers un nœud existant.
@@ -43,13 +42,11 @@ impl<'a> StoryBuilder<'a> {
         // Deux temps pour éviter le conflit d'emprunt : résoudre (lecture) puis appliquer (écriture).
         let mut patches: Vec<(String, usize, String)> = Vec::with_capacity(pending.len());
         for option in &pending {
-            // Sentinelle non résolue : pas de repli → on EXIGE une cible réelle (sinon erreur).
-            let unresolved = Transition {
-                action_node: String::new(),
-                option_index: -1,
-            };
+            // Aucun repli : on EXIGE une cible réelle (sinon erreur). L'absence
+            // de transition de repli remplace l'ancienne sentinelle
+            // `option_index: -1`, que le modèle réserve désormais à `Random`.
             let stage_id = self
-                .resolve_target_stage(&option.target, unresolved)
+                .resolve_target_stage(&option.target, None)
                 .ok_or_else(|| {
                     format!(
                         "Référence non résolue à l'export : cible « {} » introuvable.",
@@ -69,7 +66,7 @@ impl<'a> StoryBuilder<'a> {
             let slot = action.options.get_mut(option_index).ok_or_else(|| {
                 "Index d'option hors limites pour la résolution d'une référence.".to_string()
             })?;
-            *slot = stage_id;
+            *slot = Some(stage_id);
         }
         Ok(())
     }

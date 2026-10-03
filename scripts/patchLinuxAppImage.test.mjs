@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -7,8 +7,20 @@ import {
   APPIMAGE_RUNTIME,
   APPIMAGE_TOOL,
   resolveAppImage,
+  installDirIcon,
   XDG_OPEN_WRAPPER,
 } from './patch-linux-appimage.mjs';
+
+test('the AppDir receives the existing Story Studio PNG as a regular .DirIcon', async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), 'story-studio-diricon-test-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const expected = await readFile(new URL('../src-tauri/icons/128x128@2x.png', import.meta.url));
+  await writeFile(join(directory, '.DirIcon'), 'invalid old icon');
+  await installDirIcon(directory);
+  assert.deepEqual(await readFile(join(directory, '.DirIcon')), expected);
+  await installDirIcon(directory);
+  assert.deepEqual(await readFile(join(directory, '.DirIcon')), expected);
+});
 
 test('AppImage repacking tool is immutable and integrity-pinned', () => {
   for (const artifact of [APPIMAGE_TOOL, APPIMAGE_RUNTIME]) {

@@ -69,35 +69,18 @@ fn unpack_destination_requires_an_absolute_workspace_and_never_reuses_a_folder()
 }
 
 #[test]
-fn output_roots_require_absolute_workspace_or_project_paths() {
+fn media_output_root_requires_an_absolute_workspace() {
     let missing = "Choisissez un emplacement.";
-    assert_eq!(
-        workspace_or_project_dir(None, None, missing).unwrap_err(),
-        missing
-    );
-    assert!(workspace_or_project_dir(Some("relative-workspace"), None, missing).is_err());
-    assert!(workspace_or_project_dir(None, Some("relative/project.mbah"), missing).is_err());
+    assert_eq!(media_output_root(None, missing).unwrap_err(), missing);
+    assert_eq!(media_output_root(Some("  "), missing).unwrap_err(), missing);
+    assert!(media_output_root(Some("relative-workspace"), missing).is_err());
 
     let root = temp_project_dir("absolute_output_roots");
     let workspace = root.join("workspace");
-    let save_path = root.join("project.mbah");
     assert_eq!(
-        workspace_or_project_dir(
-            Some(workspace.to_str().expect("workspace utf8")),
-            Some(save_path.to_str().expect("save path utf8")),
-            missing,
-        )
-        .expect("absolute workspace"),
+        media_output_root(Some(workspace.to_str().expect("workspace utf8")), missing)
+            .expect("absolute workspace"),
         workspace
-    );
-    assert_eq!(
-        workspace_or_project_dir(
-            None,
-            Some(save_path.to_str().expect("save path utf8")),
-            missing,
-        )
-        .expect("absolute save path"),
-        root
     );
 }
 

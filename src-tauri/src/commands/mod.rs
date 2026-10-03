@@ -1,3 +1,5 @@
+pub mod advanced_export;
+pub mod advanced_view;
 pub mod comfyui;
 pub mod diagnostics;
 pub mod files;
@@ -6,6 +8,7 @@ pub mod media_probe;
 pub mod pack;
 pub mod piper;
 pub mod podcast;
+pub mod project_codec;
 pub mod session;
 pub mod xtts;
 pub mod youtube;

@@ -37,7 +37,6 @@ Tu peux rencontrer par exemple :
 
 - **Audio d’accueil à ajouter** sur le Menu racine ;
 - **Image de couverture à ajouter** ;
-- **Image bibliothèque à ajouter** ;
 - **Histoire à ajouter** ;
 - **Image à ajouter** ;
 - **Audio de sélection à ajouter** ;
@@ -45,11 +44,12 @@ Tu peux rencontrer par exemple :
 
 Sélectionne l’élément indiqué puis ajoute le média demandé.
 
-Pour l’image bibliothèque du Menu racine, tu peux aussi activer **Utiliser la même image pour la Lunii et la vignette catalogue**.
-
 ### Fichier introuvable
 
 Le projet référence bien un média, mais Story Studio ne le retrouve plus sur le disque.
+
+Cela peut aussi concerner une **Vignette catalogue** personnalisée. Si tu la retires dans la fenêtre
+**Métadonnées du pack**, Story Studio reprend automatiquement l’image racine à la place.
 
 Cela arrive généralement après avoir :
 
@@ -101,6 +101,14 @@ Sélectionne l’élément signalé et corrige sa destination dans les Réglages
 Si tu ne vois pas immédiatement l’origine du problème, utilise le **Diagramme** : il est souvent plus simple d’y repérer une transition cassée.
 
 Voir [Comprendre la navigation](/story-studio/docs/navigation/).
+
+### Raccord incomplet dans l’Éditeur graphe
+
+Dans l’Éditeur graphe, vérifie que chaque Liste de choix contient au moins un Écran et que les
+Écrans concernés ont une **Suite du parcours** valide. Un retour actif vers l’Écran courant ou un
+choix qui mène à l’Écran d’entrée bloque également la génération. Sélectionne l’élément signalé pour
+voir le problème dans l’Inspecteur, puis consulte [l’Éditeur graphe](/story-studio/docs/editeur-graphe/)
+pour les règles de raccord.
 
 ## Problèmes de structure plus rares
 

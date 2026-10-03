@@ -1,10 +1,54 @@
 use serde::Serialize;
 
+// Writer de production du projet avancé : il conduit le payload
+// d'auteur jusqu'à l'archive publiée, et refuse avant d'écrire tout ce qui doit
+// l'être. Il consomme la préparation, la readiness et le writer existants ; il
+// ne réimplémente aucun d'eux.
+pub(crate) mod advanced_export;
+// Relecture réelle d'une archive écrite, **partagée** par les deux writers : un
+// seul relecteur, deux appelants qui lui décrivent leurs attentes.
+pub(crate) mod archive_review;
 mod assets;
+// API headless exercée par sa suite dédiée, mais qui n'a volontairement pas
+// encore de consommateur produit.
+pub(crate) mod authoring;
 mod builder;
 mod canonical;
+mod dialect;
 mod document;
+// Gestes d'auteur du chemin de production. Ils vivent hors de
+// `authoring.rs`, qui porte les diagnostics : muter le document et le
+// diagnostiquer sont deux responsabilités, et le writer n'en porte aucune.
+pub(crate) mod editing;
 pub(crate) mod fidelity_judge;
+/// Copie graphe d'un projet par menus : la projection d'écoute devenue payload
+/// d'auteur, sous garde de fidélité.
+pub(crate) mod graph_copy;
+// Projection de lecture de l'éditeur avancé. Module frère en lecture seule : il
+// ne construit, n'écrit et ne prépare rien, et ne touche ni `builder/`, ni le
+// générateur Libre — `generatedNavigation.js` est donc hors d'atteinte de ce
+// module.
+pub(crate) mod graph_view;
+mod integrity;
+// Les trois contrôles de l'export avancé, exécutés aussi sur la chaîne Libre.
+// Observer et décider y sont séparés : `GatePolicy` dit seule ce qu'un constat
+// vaut, et elle les rend tous trois bloquants.
+pub(crate) mod observed_gates;
+mod option_selection;
+// Assemblage du ZIP local, commun au writer Libre et à l'export avancé.
+mod pack_zip;
+pub(crate) mod persistence;
+mod port_rules;
+#[allow(dead_code)] // API headless pas encore raccordée au produit.
+pub(crate) mod preparation;
+mod presence;
+/// Projection d'écoute : le graphe à plat d'un projet hiérarchique, sans
+/// production d'archive (fusion des deux simulateurs).
+pub(crate) mod simulation;
+// Point d'agrégation des diagnostics. Son exposition produit (interface) n'est
+// pas encore faite.
+#[allow(dead_code)]
+pub(crate) mod readiness;
 mod stats;
 mod writer;
 
@@ -21,7 +65,11 @@ use assets::{
 use builder::transitions::*;
 use builder::StoryBuilder;
 pub(crate) use canonical::*;
+pub(crate) use dialect::*;
 pub(crate) use document::*;
+pub(crate) use integrity::*;
+pub(crate) use option_selection::*;
+pub(crate) use presence::Presence;
 pub(crate) use stats::*;
 pub(crate) use writer::*;
 
@@ -36,6 +84,16 @@ pub(crate) struct NativeAssetPreparationReport {
     pub(crate) stats: NativeAssetStats,
     pub(crate) notes: Vec<String>,
     pub(crate) warnings: Vec<NativeGenerationWarning>,
+    /// Ce rapport sert-il une **écoute** plutôt qu'une production ?
+    ///
+    /// Un seul comportement en dépend : `StoryBuilder::asset_name` tient la
+    /// place d'un média absent au lieu de refuser. Le générateur exige que
+    /// chaque média annoncé soit préparé, et c'est juste — un pack sans son
+    /// n'est pas un pack. Mais un projet **en cours d'écriture** n'a pas
+    /// franchi cette porte, c'est son état normal, et il doit rester écoutable.
+    ///
+    /// La production ne pose jamais ce drapeau : son résultat est inchangé.
+    pub(crate) for_simulation: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

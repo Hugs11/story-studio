@@ -628,7 +628,7 @@ fn edges_unreadable_for_empty_envelope() {
 fn long_title_is_allowed_when_zip_name_matches_community_convention() {
     let dir = temp_dir("community_name");
     fs::create_dir_all(&dir).expect("create temp dir");
-    let zip_path = dir.join("2+]Example_Producer_-_Les_Histoires_good_Pack_communautaire.zip");
+    let zip_path = dir.join("2+]Example_Producer_-_Example_Stories_good_Community_Pack.zip");
     write_studio_zip(
         &zip_path,
         story_with_long_title("Un titre assez long pour dépasser quarante caractères"),
@@ -653,7 +653,7 @@ fn long_title_is_allowed_when_zip_name_matches_community_convention() {
 fn metadata_fix_uses_convention_name_for_output_zip() {
     let dir = temp_dir("metadata_name");
     fs::create_dir_all(&dir).expect("create temp dir");
-    let zip_path = dir.join("4+]Example story.zip");
+    let zip_path = dir.join("4+]Example_story.zip");
     write_studio_zip(
         &zip_path,
         story_with_long_title("Example story"),
@@ -679,7 +679,7 @@ fn metadata_fix_uses_convention_name_for_output_zip() {
     let fixed_path = PathBuf::from(&fixed.fixed_zip_path);
     assert_eq!(
         fixed_path.file_name().and_then(|value| value.to_str()),
-        Some("4+]Example story_V2.zip")
+        Some("4+]Example_story_V2.zip")
     );
     let fixed_json = zip_doc::read_pack_doc(&fixed_path)
         .expect("read fixed story")
@@ -1058,4 +1058,129 @@ fn measured_edges(ffmpeg: &Path, audio_path: &Path) -> (f64, f64) {
         EdgeMeasure::Measured { leading, trailing } => (leading, trailing),
         other => panic!("expected measured edges, got {other:?}"),
     }
+}
+
+// ── Identité du pack corrigé ───────────────────────────────────────────────
+// STUdio et Lunii.QT lisent l'identité sur l'Écran d'entrée. La plupart des
+// packs STUdio n'ont pas de `uuid` de tête.
+
+const ENTRY_ID: &str = "5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f";
+const NEW_ID: &str = "7f3d1c2b-4a5e-4f60-9b8c-0d1e2f3a4b5c";
+
+fn studio_story(root_uuid: Option<&str>) -> serde_json::Value {
+    let mut story = serde_json::json!({
+        "format": "v1",
+        "title": "Example",
+        "version": 6,
+        "stageNodes": [
+            {"uuid": ENTRY_ID, "squareOne": true, "okTransition": {"actionNode": "a1", "optionIndex": 0}},
+            {"uuid": "s2", "squareOne": false},
+            {"uuid": "s3", "squareOne": false}
+        ],
+        "actionNodes": [
+            {"id": "a1", "options": ["s2", "s3"]},
+            {"id": "a2", "options": [ENTRY_ID, "s3"]}
+        ]
+    });
+    if let Some(root) = root_uuid {
+        story["uuid"] = serde_json::json!(root);
+    }
+    story
+}
+
+fn uuid_patch(uuid: &str) -> PackMetadataPatchModel {
+    PackMetadataPatchModel {
+        uuid: Some(uuid.to_string()),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn the_report_reads_the_identity_on_the_entry_stage() {
+    assert_eq!(
+        pack_identity_from_story(&studio_story(None)).as_deref(),
+        Some(ENTRY_ID)
+    );
+    assert_eq!(
+        pack_identity_from_story(&studio_story(Some(NEW_ID))).as_deref(),
+        Some(ENTRY_ID),
+        "une tête divergente n'est pas ce que l'appareil lit"
+    );
+}
+
+#[test]
+fn a_new_identity_renames_the_entry_stage_its_references_and_the_root() {
+    let mut story = studio_story(None);
+    apply_metadata_patch(&mut story, &uuid_patch(NEW_ID)).expect("identité posée");
+
+    assert_eq!(story["stageNodes"][0]["uuid"], NEW_ID);
+    assert_eq!(story["actionNodes"][1]["options"][0], NEW_ID);
+    assert_eq!(story["actionNodes"][1]["options"][1], "s3");
+    assert_eq!(story["uuid"], NEW_ID);
+    assert!(
+        !story.to_string().contains(ENTRY_ID),
+        "plus aucune trace de l'ancienne"
+    );
+    assert_eq!(pack_identity_from_story(&story).as_deref(), Some(NEW_ID));
+}
+
+#[test]
+fn naming_metadata_names_the_file_but_never_enters_the_pack() {
+    let original = studio_story(None);
+    let mut story = original.clone();
+    let patch = PackMetadataPatchModel {
+        min_age: Some("2".to_string()),
+        author: Some("auteur".to_string()),
+        producer: Some("producteur".to_string()),
+        bonus: Some("40 épisodes".to_string()),
+        naming_mode: Some("convention".to_string()),
+        ..Default::default()
+    };
+    apply_metadata_patch(&mut story, &patch).expect("métadonnées appliquées");
+
+    // Aucun bloc à part dans le story.json : l'Éditeur graphe le prendrait
+    // pour une extension inconnue et bloquerait la génération.
+    assert_eq!(story, original);
+    assert!(story.get("storyStudioMetadata").is_none());
+}
+
+#[test]
+fn keeping_the_identity_leaves_the_story_untouched() {
+    let original = studio_story(None);
+    let mut story = original.clone();
+    apply_metadata_patch(&mut story, &uuid_patch(ENTRY_ID)).expect("identité gardée");
+    assert_eq!(story, original);
+}
+
+#[test]
+fn a_stage_already_carrying_the_chosen_identity_is_renamed_first() {
+    let mut story = studio_story(None);
+    story["stageNodes"][1]["uuid"] = serde_json::json!(NEW_ID);
+    story["actionNodes"][0]["options"][0] = serde_json::json!(NEW_ID);
+    apply_metadata_patch(&mut story, &uuid_patch(NEW_ID)).expect("identité posée");
+
+    let carrying = story["stageNodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|stage| stage["uuid"] == NEW_ID)
+        .count();
+    assert_eq!(carrying, 1, "STUdio fusionnerait deux Écrans de même UUID");
+    assert_eq!(story["stageNodes"][0]["uuid"], NEW_ID);
+    let moved = story["stageNodes"][1]["uuid"].as_str().unwrap().to_string();
+    assert_ne!(moved, NEW_ID);
+    assert_eq!(story["actionNodes"][0]["options"][0], moved.as_str());
+}
+
+#[test]
+fn an_unreadable_identity_is_refused_before_anything_changes() {
+    let original = studio_story(None);
+    let mut story = original.clone();
+    let error = apply_metadata_patch(
+        &mut story,
+        &uuid_patch("{7f3d1c2b-4a5e-4f60-9b8c-0d1e2f3a4b5c}"),
+    )
+    .expect_err("graphie refusée");
+    assert!(error.contains("n'est pas lisible"), "{error}");
+    assert_eq!(story, original);
 }

@@ -141,9 +141,13 @@ export function useStagedAudioEdit({
     return registerManagedPreview(path);
   }
 
-  useEffect(() => () => {
-    lifecycleRef.current?.dispose();
-    releaseAllManagedPreviews();
+  useEffect(() => {
+    const lifecycle = lifecycleRef.current;
+    lifecycle.activate();
+    return () => {
+      lifecycle.dispose();
+      releaseAllManagedPreviews();
+    };
   }, []);
 
   useEffect(() => {

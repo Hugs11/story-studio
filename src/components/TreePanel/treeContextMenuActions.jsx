@@ -1,6 +1,6 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { audioClipboard, imageClipboard } from '../../store/fieldClipboard';
-import { TREE_COLOR_PALETTE } from '../tree/treeOperations';
+import { NodeColorPicker } from '../tree/NodeColorPicker.jsx';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
 import {
   MENU_DEPTH_LIMIT_REACHED_MESSAGE,
@@ -9,20 +9,21 @@ import {
 import { getAssemblyReplacementEligibility, resolveAudioStoriesInProjectOrder } from '../../store/mediaToolContext';
 import { END_NODE_ID } from './treePanelConstants';
 import {
-  IconArrowUpLeft,
-  IconClipboardPaste,
-  IconCopy,
-  IconFolderOpen,
-  IconFolderPlus,
-  IconHouse,
-  IconImport,
-  IconMoon,
-  IconPen,
-  IconPlay,
-  IconScissors,
-  IconStory,
-  IconTrash,
-} from './TreeIcons';
+  ArrowUpRight,
+  ClipboardPaste,
+  Copy,
+  Download,
+  FolderOpen,
+  FolderPlus,
+  House,
+  Moon,
+  Music,
+  PenLine,
+  Play,
+  Scissors,
+  SquareStack,
+  Trash2,
+} from '../icons/LucideLocal';
 
 // Construit les actions du menu contextuel de l'arbre (pendant tree du
 // buildDiagramContextActions du diagramme).
@@ -63,6 +64,8 @@ export function buildTreeContextActions({
   onSetNodeColor,
   onOpenMediaAudioTool,
   closeContextMenu,
+  // Les libellés effectifs des raccourcis, affichés à droite des entrées.
+  shortcutLabels = {},
 }) {
   const isRootCtx = nodeType === 'root' || nodeType === 'root-bg';
   const parentMenuId = isRootCtx ? null : getParentId(nodeId);
@@ -70,7 +73,7 @@ export function buildTreeContextActions({
   const actions = [];
 
   if (nodeType === END_NODE_ID) {
-    actions.push({ icon: <IconTrash />, label: 'Supprimer le message de fin', fn: () => onRemoveEndNode?.(), danger: true });
+    actions.push({ icon: <Trash2 />, label: 'Supprimer le message de fin', fn: () => onRemoveEndNode?.(), danger: true });
     return actions;
   }
 
@@ -82,20 +85,20 @@ export function buildTreeContextActions({
       projectIndex,
     );
     actions.push({
-      icon: <IconFolderPlus />,
+      icon: <FolderPlus />,
       label: 'Créer un dossier',
       fn: () => onAddMenu(targetMenuId),
       disabledReason: addFolderDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
     });
-    actions.push({ icon: <IconStory />, label: 'Importer audio ou archive', fn: () => onAddStory(targetMenuId) });
+    actions.push({ icon: <Music />, label: 'Importer audio ou archive', fn: () => onAddStory(targetMenuId) });
     if (onImportFolder) {
-      actions.push({ icon: <IconImport />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
+      actions.push({ icon: <Download />, label: 'Importer un dossier', fn: () => onImportFolder(targetMenuId) });
     }
 
     const hasEndNode = hasVisibleEndNode(project);
     if (isRootCtx && !hasEndNode) {
       actions.push('sep');
-      actions.push({ icon: <IconMoon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
+      actions.push({ icon: <Moon />, label: 'Ajouter un message de fin', fn: () => onAddEndNode?.() });
     }
 
     if (nodeType === 'root' && onDemoteRootToMenu && (project.rootEntries ?? []).length > 0) {
@@ -107,7 +110,7 @@ export function buildTreeContextActions({
       );
       actions.push('sep');
       actions.push({
-        icon: <IconArrowUpLeft />,
+        icon: <ArrowUpRight />,
         label: 'Sortir de la racine',
         fn: onDemoteRootToMenu,
         disabledReason: demoteDepth.allowed ? null : MENU_DEPTH_LIMIT_REACHED_MESSAGE,
@@ -116,33 +119,35 @@ export function buildTreeContextActions({
 
     if (nodeType === 'menu' && onSetMenuAsRoot && project.rootEntries?.[0]?.id === nodeId) {
       actions.push('sep');
-      actions.push({ icon: <IconHouse />, label: 'Définir comme racine', fn: () => onSetMenuAsRoot(nodeId) });
+      actions.push({ icon: <House />, label: 'Définir comme racine', fn: () => onSetMenuAsRoot(nodeId) });
     }
 
     if (nodeType === 'zip') {
       const item = getEntry(nodeId);
       if (item?.zipPath) {
         actions.push('sep');
-        actions.push({ icon: <IconPlay />, label: 'Simuler ce pack…', fn: () => onSimulateZip(item.zipPath) });
-        actions.push({ icon: <IconPen />, label: "Extraire l'histoire", fn: () => onUnpackZip(nodeId) });
+        actions.push({ icon: <Play />, label: 'Simuler ce pack…', fn: () => onSimulateZip(item.zipPath) });
+        actions.push({ icon: <PenLine />, label: "Extraire l'histoire", fn: () => onUnpackZip(nodeId) });
       }
     }
 
     if (onSimulateNode && (nodeType === 'root' || nodeType === 'menu' || nodeType === 'story')) {
       actions.push('sep');
-      actions.push({ icon: <IconPlay />, label: 'Simuler depuis ici', fn: () => onSimulateNode(nodeId) });
+      actions.push({ icon: <Play />, label: 'Simuler depuis ici', fn: () => onSimulateNode(nodeId) });
     }
 
     if ((nodeType === 'zip' || nodeType === 'story' || nodeType === 'menu') && parentMenuId != null) {
       actions.push('sep');
-      actions.push({ icon: <IconArrowUpLeft />, label: 'Sortir du dossier', fn: () => onMoveToMenu(nodeId, parentMenuId, null) });
+      actions.push({ icon: <ArrowUpRight />, label: 'Sortir du dossier', fn: () => onMoveToMenu(nodeId, parentMenuId, null) });
     }
 
     if (nodeType === 'menu' || nodeType === 'story' || nodeType === 'zip') {
       actions.push('sep');
-      actions.push({ icon: <IconCopy />, label: 'Dupliquer', fn: () => onDuplicate(nodeId) });
-      actions.push({ icon: <IconClipboardPaste />, label: 'Copier', fn: () => handleCopy(nodeId) });
-      actions.push({ icon: <IconScissors />, label: 'Couper', fn: () => handleCut(nodeId) });
+      // Trois gestes, trois dessins : deux gestes distincts ne doivent pas se
+      // ressembler.
+      actions.push({ icon: <SquareStack />, label: 'Dupliquer', fn: () => onDuplicate(nodeId), shortcut: shortcutLabels.selectionDuplicate ?? null });
+      actions.push({ icon: <Copy />, label: 'Copier', fn: () => handleCopy(nodeId), shortcut: shortcutLabels.selectionCopy ?? null });
+      actions.push({ icon: <Scissors />, label: 'Couper', fn: () => handleCut(nodeId), shortcut: shortcutLabels.selectionCut ?? null });
     }
 
     if (clipboardRef.current?.entries?.length) {
@@ -156,8 +161,9 @@ export function buildTreeContextActions({
       const pasteCreatesCycle = clipboardRef.current.isCut
         && targetPath.some((entry) => clipboardRef.current.sourceIds?.includes(entry.id));
       actions.push({
-        icon: <IconClipboardPaste />,
+        icon: <ClipboardPaste />,
         label: 'Coller ici',
+        shortcut: shortcutLabels.selectionPaste ?? null,
         fn: () => handlePaste(nodeId),
         disabledReason: pasteCreatesCycle
           ? 'Un Dossier ne peut pas être déplacé dans son propre sous-arbre.'
@@ -168,7 +174,7 @@ export function buildTreeContextActions({
     if (nodeType === 'story') {
       const hasAudio = !!getEntry(nodeId)?.audio;
       actions.push({
-        icon: <IconImport />,
+        icon: <Download />,
         label: hasAudio ? 'Remplacer le fichier audio…' : 'Choisir un fichier audio…',
         fn: () => handleReplaceAudio(nodeId, nodeType),
       });
@@ -178,7 +184,7 @@ export function buildTreeContextActions({
       const audioClip = audioClipboard.getEntry();
       const audioCount = audioClip?.paths?.length ?? 1;
       actions.push({
-        icon: <IconStory />,
+        icon: <Music />,
         label: audioClip?.mode === 'cut'
           ? (audioCount > 1 ? `Déplacer ${audioCount} sons ici` : "Déplacer l'audio ici")
           : (audioCount > 1 ? `Coller ${audioCount} sons ici` : "Coller l'audio ici"),
@@ -188,7 +194,7 @@ export function buildTreeContextActions({
 
     if ((isRootCtx || nodeType === 'menu' || nodeType === 'story') && imageClipboard.get()) {
       actions.push({
-        icon: <IconImport />,
+        icon: <Download />,
         label: imageClipboard.getEntry()?.mode === 'cut' ? "Déplacer l'image ici" : "Coller l'image ici",
         fn: () => handlePasteMedia(nodeId, nodeType, 'image'),
       });
@@ -202,7 +208,7 @@ export function buildTreeContextActions({
       actions.push('sep');
       if (audioContext.stories.length === 1) {
         actions.push({
-          icon: <IconScissors />,
+          icon: <Scissors />,
           label: 'Découper l’audio dans Médias…',
           fn: () => {
             closeContextMenu();
@@ -216,7 +222,7 @@ export function buildTreeContextActions({
       } else {
         const replacementEligibility = getAssemblyReplacementEligibility(project, audioContext.entryIds);
         actions.push({
-          icon: <IconStory />,
+          icon: <Music />,
           label: replacementEligibility.valid
             ? 'Assembler et remplacer les histoires…'
             : `Assembler ${audioContext.stories.length} audios…`,
@@ -248,8 +254,9 @@ export function buildTreeContextActions({
           ? () => onDeleteMenu(nodeId)
           : () => onDeleteItem(nodeId);
       actions.push({
-        icon: <IconTrash />,
+        icon: <Trash2 />,
         label: selectedForDelete.length > 1 ? `Supprimer ${selectedForDelete.length} éléments` : 'Supprimer',
+        shortcut: shortcutLabels.selectionDelete ?? null,
         fn: deleteFn,
         danger: true,
       });
@@ -295,35 +302,14 @@ export function buildTreeContextActions({
       actions.push({
         type: 'node',
         render: () => (
-          <div className="ctx-color-section">
-            <div className="ctx-color-header">{headerLabel}</div>
-            <div className="ctx-color-row">
-              {TREE_COLOR_PALETTE.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`ctx-color-dot${currentColor === color ? ' is-active' : ''}`}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                  onClick={() => {
-                    applyColor(color);
-                    closeContextMenu();
-                  }}
-                />
-              ))}
-              <button
-                type="button"
-                className={`ctx-color-clear${currentColor === null ? ' is-active' : ''}`}
-                title={currentColor === '__mixed__' ? 'Couleurs différentes — cliquer pour effacer' : 'Aucune couleur'}
-                onClick={() => {
-                  applyColor(null);
-                  closeContextMenu();
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
+          <NodeColorPicker
+            label={headerLabel}
+            currentColor={currentColor}
+            onChange={(color) => {
+              applyColor(color);
+              closeContextMenu();
+            }}
+          />
         ),
       });
     }
@@ -339,10 +325,10 @@ export function buildTreeContextActions({
   if (revealFiles.length > 0) {
     actions.push('sep');
     if (revealFiles.length === 1) {
-      actions.push({ icon: <IconFolderOpen />, label: "Afficher dans l'explorateur", fn: () => revealItemInDir(revealFiles[0].path) });
+      actions.push({ icon: <FolderOpen />, label: "Afficher dans l'explorateur", fn: () => revealItemInDir(revealFiles[0].path) });
     } else {
       revealFiles.forEach(rf => {
-        actions.push({ icon: <IconFolderOpen />, label: `Afficher ${rf.label} dans l'explorateur`, fn: () => revealItemInDir(rf.path) });
+        actions.push({ icon: <FolderOpen />, label: `Afficher ${rf.label} dans l'explorateur`, fn: () => revealItemInDir(rf.path) });
       });
     }
   }

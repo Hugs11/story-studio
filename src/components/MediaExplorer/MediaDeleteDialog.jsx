@@ -1,5 +1,17 @@
 import { Button } from '../common/Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { isMediaHeldByProject } from '../../store/mediaLibrary';
+
+// Ce qu'on peut dire d'un média retenu par le projet, sans rien affirmer de
+// plus que ce qui est su. Trois états : des écrans nommés, un inventaire non
+// calculé, ou une liaison que le document ne cite plus.
+function holdReason(item) {
+  const labels = [...new Set((item.usages ?? []).map((usage) => usage.label).filter(Boolean))];
+  if (labels.length > 0) return labels.slice(0, 3).join(', ');
+  if (item.usageKnown === false) return 'usages non calculés';
+  if (item.projectUsedCount > 0) return `${item.projectUsedCount} usage${item.projectUsedCount > 1 ? 's' : ''}`;
+  return 'média lié au document';
+}
 
 export function MediaDeleteDialog({
   items,
@@ -13,7 +25,7 @@ export function MediaDeleteDialog({
 
   if (!items?.length) return null;
 
-  const usedItems = items.filter((item) => item.projectUsedCount > 0);
+  const usedItems = items.filter(isMediaHeldByProject);
   const usedCount = usedItems.length;
   const actionLabel = deleteDisk ? 'Supprimer définitivement' : 'Retirer';
 
@@ -38,8 +50,7 @@ export function MediaDeleteDialog({
               <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
                 {usedItems.slice(0, 5).map((item) => (
                   <li key={item.id}>
-                    {item.name} — {[...new Set(item.usages.map((usage) => usage.label).filter(Boolean))].slice(0, 3).join(', ')
-                      || `${item.projectUsedCount} usage${item.projectUsedCount > 1 ? 's' : ''}`}
+                    {item.name} — {holdReason(item)}
                   </li>
                 ))}
               </ul>

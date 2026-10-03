@@ -3,6 +3,7 @@
 
 import { Search } from '../icons/LucideLocal';
 import { NodeColorFilterChips } from '../tree/NodeColorFilterChips.jsx';
+import './TreeSearchBar.css';
 
 export function TreeSearchBar({
   searchTerm,
@@ -13,6 +14,7 @@ export function TreeSearchBar({
   selectedColors,
   onToggleColor,
   onClearSearch,
+  children = null,
 }) {
   return (
     <div
@@ -65,6 +67,7 @@ export function TreeSearchBar({
         selectedColors={selectedColors}
         onToggle={onToggleColor}
       />
+      {children}
     </div>
   );
 }

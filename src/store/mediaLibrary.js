@@ -1,20 +1,16 @@
 import { visitProjectEntries, walkProjectMediaReferences } from './projectModel/index.js';
+import { mediaBindingLabel, readMediaBindings } from './projectModel/mediaBindings.js';
+import { isAdvancedProject } from './projectModel/envelope.js';
 import { isOriginalBackup } from '../utils/mediaConventions.js';
 import { basename, pathKey, stripWindowsLongPathPrefix } from '../utils/fileUtils.js';
+import { mediaTagsFor } from './mediaTags.js';
 
 const EDITED_IMAGE_TAG = 'modifiée';
 
-function getMediaTagsForPath(mediaTags, path) {
-  if (!mediaTags || !path) return [];
-  const key = pathKey(path);
-  const matchingEntry = Object.entries(mediaTags)
-    .find(([tagPath]) => pathKey(tagPath) === key);
-  return matchingEntry?.[1] ?? [];
-}
 
 export function getEditedImageTags(mediaTags, sourcePath) {
   return [...new Set([
-    ...getMediaTagsForPath(mediaTags, sourcePath),
+    ...mediaTagsFor(mediaTags, sourcePath),
     EDITED_IMAGE_TAG,
   ])];
 }
@@ -55,11 +51,26 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
   const checkedPath = stripWindowsLongPathPrefix(path);
   const key = pathKey(checkedPath);
   const existing = map.get(key);
-  const usage = { label, source, field, ...(entryId ? { entryId } : {}) };
+  // `entryId` désigne un nœud d'arbre, `nodePath` un nœud de graphe. Les deux
+  // servent la même chose — révéler l'usage — et ne coexistent jamais sur un
+  // même projet.
+  const usage = {
+    label, source, field,
+    ...(entryId ? { entryId } : {}),
+    ...(options.nodePath ? { nodePath: options.nodePath } : {}),
+  };
   if (existing) {
     // Le catalogue durable indique seulement que Story Studio connaît le fichier.
     // Ce n'est pas un usage supplémentaire et il ne doit donc pas gonfler les badges.
     if (options.catalogOnly) return;
+    if (options.usageKnown === false) existing.usageKnown = false;
+    // Une déclaration sans usage : le projet nomme le fichier, aucun écran ne
+    // l'emploie ici. Elle protège le média de la suppression sans gonfler les
+    // badges, ce qu'un usage inventé ferait.
+    if (options.declaredOnly) {
+      existing.inProject = true;
+      return;
+    }
     existing.usages.push(usage);
     existing.usedCount = existing.usages.length;
     if (isProjectRef) {
@@ -68,6 +79,7 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
     }
     return;
   }
+  const declared = options.catalogOnly || options.declaredOnly;
   map.set(key, {
     id: key,
     path,
@@ -77,11 +89,16 @@ function addMedia(map, path, label, source, field, statusByPath = {}, isProjectR
     source,
     field,
     origin: detectOrigin(path, source),
-    usages: options.catalogOnly ? [] : [usage],
-    usedCount: options.catalogOnly ? 0 : 1,
-    projectUsedCount: isProjectRef ? 1 : 0,
+    usages: declared ? [] : [usage],
+    usedCount: declared ? 0 : 1,
+    projectUsedCount: !declared && isProjectRef ? 1 : 0,
     inProject: isProjectRef,
     exists: statusByPath[path] !== false && statusByPath[checkedPath] !== false,
+    // « Sait-on où ce média est employé ? » est une question distincte de « y
+    // est-il employé ? ». Vraie partout où l'inventaire des usages est complet
+    // par construction ; fausse pour un projet graphe dont la vue n'a pas
+    // encore été lue.
+    usageKnown: options.usageKnown !== false,
   });
 }
 
@@ -117,6 +134,127 @@ export function reconcileMediaLibraryPaths(project, mediaLibraryPaths = []) {
   return mergeMediaLibraryPaths(mediaLibraryPaths, collectProjectMediaPaths(project));
 }
 
+// Le libellé d'un usage de graphe : le nom de l'Écran, puis le champ qu'il
+// occupe. « Écran » sans nom retombe sur son chemin d'auteur, que l'index rend
+// déjà tel quel — on ne fabrique pas un nom qui n'existe pas.
+function advancedUsageLabel(usage) {
+  const field = usage?.field === 'audio' ? 'audio' : usage?.field === 'image' ? 'image' : 'média';
+  return `${usage?.label || usage?.nodePath || 'Écran'} · ${field}`;
+}
+
+// Une référence que le document cite mais qu'aucun fichier ne résout. Elle n'a
+// pas de chemin — c'est précisément son état —, donc pas de clé de chemin : sa
+// clé est bâtie sur la référence elle-même, recopiée telle quelle parce qu'elle
+// est un jeton opaque et non un chemin. La masquer laisserait croire que le
+// document n'en porte pas.
+function addUnboundAdvancedRef(map, entry) {
+  const assetRef = typeof entry?.assetRef === 'string' ? entry.assetRef : '';
+  if (assetRef === '') return;
+  const key = `advanced-ref:${assetRef}`;
+  if (map.has(key)) return;
+  const usages = (entry.usages ?? []).map((usage) => ({
+    label: advancedUsageLabel(usage),
+    source: 'Document avancé',
+    field: usage?.field ?? 'mediaBinding',
+    ...(usage?.nodePath ? { nodePath: usage.nodePath } : {}),
+  }));
+  map.set(key, {
+    id: key,
+    path: '',
+    name: assetRef,
+    kind: mediaKind(assetRef),
+    ext: extname(assetRef),
+    source: 'Document avancé',
+    field: 'mediaBinding',
+    origin: 'project',
+    usages,
+    usedCount: usages.length,
+    projectUsedCount: usages.length,
+    inProject: true,
+    // Aucun fichier n'est lié : ce n'est pas « introuvable sur le disque », c'est
+    // « sans liaison ». `unbound` sépare les deux, que `exists: false` seul
+    // confondrait.
+    exists: false,
+    usageKnown: true,
+    unbound: true,
+  });
+}
+
+// Mode Avancé : le catalogue ne voit que les liaisons déclarées et les usages
+// que la vue du graphe a rendus, jamais le payload d'auteur. Sans cette branche,
+// un média encore lié passerait pour inutilisé et `executeMediaDeletion`
+// autoriserait sa suppression disque.
+//
+// Trois états, et ils sont distincts :
+//
+// - usages **non calculés** (la vue n'a pas été lue) : la liaison protège le
+//   média, et l'inventaire des écrans est déclaré absent ;
+// - usages calculés et **vides** : la liaison existe, le document ne la cite
+//   plus. Ce zéro-là est un fait ;
+// - usages calculés et **non vides** : un usage par Écran et par champ, avec le
+//   nom de l'Écran.
+function addAdvancedMedia(map, project, statusByPath, advancedUsages) {
+  // La branche entière est fermée à un projet Libre, y compris si une liste
+  // d'usages traîne encore — elle vient d'un éditeur qui vient d'être quitté,
+  // et elle ferait apparaître des lignes fantômes dans la médiathèque du Libre.
+  if (!isAdvancedProject(project)) return;
+  const bindings = readMediaBindings(project);
+  const known = Array.isArray(advancedUsages);
+  if (bindings.length === 0 && !known) return;
+
+  const usagesByAssetRef = new Map();
+  if (known) {
+    for (const entry of advancedUsages) {
+      if (typeof entry?.assetRef === 'string') usagesByAssetRef.set(entry.assetRef, entry.usages ?? []);
+    }
+  }
+
+  const boundWithPath = new Set();
+  for (const binding of bindings) {
+    const assetRef = typeof binding?.assetRef === 'string' ? binding.assetRef : null;
+    if (!hasPath(binding?.path)) continue;
+    if (assetRef !== null) boundWithPath.add(assetRef);
+    const label = mediaBindingLabel(binding);
+    if (!known) {
+      addMedia(map, binding.path, label, 'Document avancé', 'mediaBinding', statusByPath, true, null, {
+        declaredOnly: true,
+        usageKnown: false,
+      });
+      continue;
+    }
+    const usages = usagesByAssetRef.get(assetRef) ?? [];
+    if (usages.length === 0) {
+      addMedia(map, binding.path, label, 'Document avancé', 'mediaBinding', statusByPath, true, null, {
+        declaredOnly: true,
+      });
+      continue;
+    }
+    for (const usage of usages) {
+      addMedia(
+        map, binding.path, advancedUsageLabel(usage), 'Document avancé',
+        usage?.field ?? 'mediaBinding', statusByPath, true, null,
+        { nodePath: usage?.nodePath ?? null },
+      );
+    }
+  }
+
+  if (!known) return;
+  for (const entry of advancedUsages) {
+    if (boundWithPath.has(entry?.assetRef)) continue;
+    addUnboundAdvancedRef(map, entry);
+  }
+}
+
+// Le projet retient-il ce média ? `inProject` est la réponse autoritaire — il
+// dit que le document le nomme —, et le compte d'usages n'en est que le détail.
+// Les deux surfaces qui refusent une suppression doivent poser la **même**
+// question : le dialogue ne peut pas proposer un retrait que l'exécution
+// refusera ensuite en silence, ce qui arrivait dès que le compte était à zéro
+// sans que la liaison le soit.
+export function isMediaHeldByProject(item) {
+  return !!item && (item.inProject === true || item.projectUsedCount > 0);
+}
+
 export async function executeMediaDeletion({
   item,
   deleteFromDisk = false,
@@ -126,7 +264,7 @@ export async function executeMediaDeletion({
   if (!item?.path) {
     return { removed: false, blocked: false, diskDeleted: false, diskError: null };
   }
-  if (item.inProject || item.projectUsedCount > 0) {
+  if (isMediaHeldByProject(item)) {
     return {
       removed: false,
       blocked: true,
@@ -154,7 +292,19 @@ export async function executeMediaDeletion({
   };
 }
 
-export function collectMediaLibrary({ project, statusByPath = {}, sdJobs = [], xttsJobs = [], extraPaths = [] }) {
+// `advancedUsages` vient de `describeAdvancedMediaUsages` : la liste, par
+// référence d'asset, des Écrans et des champs qui l'emploient. `null` — la
+// valeur par défaut — veut dire **non calculé**, jamais « aucun usage ». Un
+// projet Libre ne la fournit pas et n'en a pas besoin : ses usages se lisent
+// dans l'arbre, que ce module parcourt lui-même.
+export function collectMediaLibrary({
+  project,
+  statusByPath = {},
+  sdJobs = [],
+  xttsJobs = [],
+  extraPaths = [],
+  advancedUsages = null,
+}) {
   const map = new Map();
   addMedia(map, project?.rootAudio, 'Accueil', 'Projet', 'rootAudio', statusByPath, true);
   addMedia(map, project?.rootImage, 'Accueil', 'Projet', 'rootImage', statusByPath, true);
@@ -169,6 +319,8 @@ export function collectMediaLibrary({ project, statusByPath = {}, sdJobs = [], x
     }
   };
   addGraph(project?.nativeGraph, 'Racine');
+
+  addAdvancedMedia(map, project, statusByPath, advancedUsages);
 
   visitProjectEntries(project, (entry) => {
     const label = entry?.name || (entry?.type === 'menu' ? 'Menu sans titre' : entry?.type === 'zip' ? 'Archive importée' : 'Histoire sans titre');

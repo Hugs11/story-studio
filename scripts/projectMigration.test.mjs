@@ -60,11 +60,11 @@ test('migrates a legacy convention name to pack metadata', () => {
     projectType: 'pack',
     globalOptions: {},
     rootEntries: [],
-  }, { savePath: 'D:/packs/Example project.mbah' }));
+  }, { savePath: 'D:/packs/Example-project.mbah' }));
 
-  assert.equal(migrated.projectName, 'Example project');
+  assert.equal(migrated.projectName, 'Example-project');
   assert.equal(migrated.packMetadata.title, 'Example stories');
-  assert.equal(migrated.packMetadata.author, 'example_author');
+  assert.equal(migrated.packMetadata.author, 'example author');
   assert.equal(migrated.packMetadata.version, 2);
   assert.equal(migrated.packMetadata.namingMode, 'convention');
 });
@@ -125,6 +125,41 @@ test('new structure remains idempotent', () => {
   assert.equal(migrated.projectName, 'Example project');
   assert.equal(migrated.packMetadata.title, 'Example project');
   assert.equal(migrated.packMetadata.version, 2);
+  assert.match(migrated.packMetadata.uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+
+  const reopened = normalizeProjectData(migrateProjectData(migrated));
+  assert.equal(reopened.packMetadata.uuid, migrated.packMetadata.uuid, 'pack identity remains stable after persistence');
+});
+
+test('migration preserves an explicit source pack identity bit-for-bit', () => {
+  const sourceUuid = '123E4567E89B12D3A456426614174001';
+  const migrated = migrateProjectData({
+    schemaVersion: 3,
+    projectName: 'Imported',
+    packMetadata: { title: 'Imported', uuid: sourceUuid },
+    projectType: 'pack',
+    globalOptions: {},
+    rootEntries: [],
+  });
+
+  assert.equal(migrated.packMetadata.uuid, sourceUuid);
+});
+
+test('generated pack identities use independent random low 32-bit suffixes', () => {
+  const suffixes = new Set();
+  for (let index = 0; index < 128; index += 1) {
+    const migrated = migrateProjectData({
+      schemaVersion: 3,
+      projectName: `Pack ${index}`,
+      packMetadata: { title: `Pack ${index}` },
+      projectType: 'pack',
+      globalOptions: {},
+      rootEntries: [],
+    });
+    assert.match(migrated.packMetadata.uuid, /^[0-9a-f-]{36}$/i);
+    suffixes.add(migrated.packMetadata.uuid.replaceAll('-', '').slice(-8));
+  }
+  assert.equal(suffixes.size, 128, 'the folder-identity suffix is not derived from project names');
 });
 
 test('session recovery preserves an empty project name instead of deriving its technical filename', () => {
@@ -148,9 +183,9 @@ test('durable media prefixes never inherit a hidden recovery name', () => {
   assert.equal(
     getProjectFilePrefix(
       { projectName: 'Example animals' },
-      '/workspace/sauvegardes/Example animals.mbah',
+      '/workspace/sauvegardes/Example_animals.mbah',
     ),
-    'example animals',
+    'example-animals',
   );
 });
 

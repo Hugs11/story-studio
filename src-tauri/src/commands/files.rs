@@ -3,20 +3,14 @@ use crate::support::lunii_zip_validator::{validate_lunii_zip, LuniiZipValidation
 
 #[tauri::command]
 pub fn save_recording(
-    save_path: Option<String>,
     workspace_dir: Option<String>,
     filename: String,
     data: Vec<u8>,
 ) -> Result<String, String> {
     log::info!(target: "files",
         "save_recording: name='{}' size={} bytes", filename, data.len());
-    project_files::save_recording(
-        save_path.as_deref(),
-        workspace_dir.as_deref(),
-        &filename,
-        &data,
-    )
-    .inspect_err(|err| log::error!(target: "files", "save_recording failed: {}", err))
+    project_files::save_recording(workspace_dir.as_deref(), &filename, &data)
+        .inspect_err(|err| log::error!(target: "files", "save_recording failed: {}", err))
 }
 
 #[tauri::command]
@@ -44,7 +38,6 @@ pub fn delete_workspace_media_file(
 
 #[tauri::command]
 pub async fn concat_audio_files(
-    save_path: String,
     input_paths: Vec<String>,
     output_file_name: String,
     silence_between_sec: f64,
@@ -55,7 +48,6 @@ pub async fn concat_audio_files(
         input_paths.len(), output_file_name, silence_between_sec);
     tauri::async_runtime::spawn_blocking(move || {
         project_files::concat_audio_files(
-            &save_path,
             &input_paths,
             &output_file_name,
             silence_between_sec,
@@ -69,7 +61,6 @@ pub async fn concat_audio_files(
 
 #[tauri::command]
 pub async fn split_audio_segments(
-    save_path: String,
     input_path: String,
     segments: Vec<project_files::AudioSplitSegment>,
     workspace_dir: Option<String>,
@@ -79,16 +70,11 @@ pub async fn split_audio_segments(
         input_path, segments.len());
     let input_for_log = input_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        project_files::split_audio_segments(
-            &save_path,
-            &input_path,
-            &segments,
-            workspace_dir.as_deref(),
-        )
-        .inspect_err(|err| {
-            log::error!(target: "files",
+        project_files::split_audio_segments(&input_path, &segments, workspace_dir.as_deref())
+            .inspect_err(|err| {
+                log::error!(target: "files",
                 "split_audio_segments failed for '{}': {}", input_for_log, err)
-        })
+            })
     })
     .await
     .map_err(|e| format!("Tâche abandonnée : {}", e))?

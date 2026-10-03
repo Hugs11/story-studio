@@ -12,6 +12,7 @@ import {
   reportBaseName,
 } from './communityPackExports';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 const EXPORTS = {
   report: {
@@ -67,12 +68,12 @@ export function useCommunityPackChecker() {
       if (statusRef.current !== 'analyzing' && statusRef.current !== 'fixing') return;
       appendLiveLog(String(event.payload || ''));
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     });
     return () => {
       cancelled = true;
-      if (unlisten) unlisten();
+      releaseTauriListener(unlisten);
     };
   }, [appendLiveLog]);
 

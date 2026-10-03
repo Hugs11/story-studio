@@ -556,12 +556,56 @@
 }
 
 /* Media blocks */
+
+/* **Ici, c'est la colonne qui porte la proportion, pas l'aperçu.**
+   Une piste de grille figée ne suivrait jamais la carte, quelle que soit la
+   règle interne du champ : l'aperçu remplirait fidèlement une colonne qui,
+   elle, ne bouge pas. La piste est donc la même proportion bornée que le
+   champ, et le champ passe en `100%` pour la remplir sans la contraindre une
+   seconde fois.
+
+   Le seuil d'empilement plus bas répond à cette piste : « colonne image au
+   plancher + gouttière + place vitale de la colonne audio ». Bouger l'un sans
+   l'autre fait empiler trop tôt, ou déborder. */
 .media-split {
+  --media-image-col: clamp(150px, 28%, 380px);
   display: grid;
-  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-  gap: 26px;
+  grid-template-columns: minmax(0, var(--media-image-col)) minmax(0, 1fr);
+  /* Deux rangées partagées : l'en-tête, puis le contenu. Le sous-titre de
+     l'image tient souvent sur deux lignes là où celui du son en prend une, et
+     chaque colonne démarrait alors son contenu à sa propre hauteur — l'audio
+     se retrouvait en face de la légende de l'image plutôt qu'en face de
+     l'image. La rangée d'en-tête prend désormais la hauteur du plus haut des
+     deux, et les deux contenus commencent à la même ordonnée.
+
+     L'écart vertical vient de la marge de `.media-col-header`, pas d'un
+     `row-gap` : les deux colonnes doivent partager exactement les mêmes
+     gouttières, sans quoi leurs contenus se décaleraient de nouveau. */
+  grid-template-rows: auto auto;
+  column-gap: 26px;
+  row-gap: 0;
   min-width: 0;
 }
+
+.media-split > .media-split-left,
+.media-split > .media-split-right {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+}
+
+/* Ce qu'une colonne empile sous son en-tête et qui doit rester d'un bloc —
+   deux pistes audio, par exemple — tient dans **une** rangée de la subgrid.
+   Sans ce groupe, la seconde piste déborderait des rangées partagées. */
+.media-col-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
 
 /* L'empilement image/son depend de la largeur reelle du panneau central (plus
    etroit que la fenetre a cause des panneaux lateraux), pas de la fenetre. */
@@ -571,8 +615,6 @@
 
 .media-split-left {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .media-split-divider {
@@ -580,9 +622,6 @@
 }
 
 .media-split-right {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   min-width: 0;
 }
 
@@ -818,20 +857,65 @@
 @container (max-width: 380px) {
   .audio-empty-row .audio-bar {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-columns: 26px minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto auto;
     align-items: center;
-    row-gap: 8px;
-    column-gap: 11px;
+    row-gap: 6px;
+    column-gap: 7px;
     min-height: 0;
-    padding-top: 9px;
-    padding-bottom: 9px;
+    padding: 8px;
+  }
+
+  .audio-empty-row .audio-bar > .audio-label-wrap {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    max-width: 100%;
+    padding-left: 2px;
+  }
+
+  .audio-empty-row .audio-bar > .tooltip-wrap:has(> .play-btn) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .audio-empty-row .audio-bar > .audio-wave-tip {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .audio-empty-row .audio-bar > .audio-wave-tip > .wave {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .audio-empty-row .audio-bar > .audio-duration {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+    font-size: 10px;
+  }
+
+  .audio-empty-row .audio-bar > .audio-clear-control {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .audio-empty-row .audio-bar > .audio-bar-actions {
+    grid-column: 2 / -1;
+    grid-row: 3;
+    justify-self: end;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+    margin-left: 0;
+    padding: 4px 0 0;
   }
 
   .audio-empty-row .audio-label-wrap {
-    grid-column: 1 / -1;
-    order: -1;
     max-width: 100%;
-    padding-left: 2px;
   }
 
   .audio-empty-row .audio-label-wrap .tooltip-wrap {
@@ -2285,24 +2369,43 @@
 
 /* Empilement image/son quand le panneau central lui-meme devient etroit.
    Seuil sur la largeur de la carte : la colonne audio (play + waveform + duree
-   + actions) doit garder ~430px, soit carte >= ~760px en cote a cote. */
-@container media-card (max-width: 760px) {
+   + actions) doit garder ~430px. L'aperçu étant passé de 320 à 180, le côte à
+   côte tient désormais dès ~640px (180 + 26 de gouttière + 430) au lieu de
+   760 : le son reste à côté de l'image dans des panneaux où il passait
+   dessous, ce qui est le gain de hauteur visé. */
+@container media-card (max-width: 640px) {
   .media-split {
     grid-template-columns: 1fr;
+    row-gap: 0;
   }
 
+  /* Empilées, les deux colonnes ne se font plus face : il n'y a plus rien à
+     aligner, et une subgrid sur une seule colonne placerait la seconde dans
+     des rangées que le parent ne déclare pas. */
+  .media-split > .media-split-left,
+  .media-split > .media-split-right {
+    display: flex;
+    flex-direction: column;
+    grid-row: auto;
+  }
+
+  /* **Rien n'est centré par `align-items` ici.** Ce centrage mettait la
+     colonne en shrink-to-fit, et tout ce qu'elle contient avec : côté graphe,
+     un `.advanced-media-field` s'intercale et se dimensionnait alors sur son
+     contenu. La largeur de l'aperçu étant une proportion de celle du slot,
+     elle perdait sa base définie et retombait sur son plancher — d'où un
+     aperçu minuscule et une barre d'outils basculée à tort sur deux colonnes.
+
+     Le centrage appartient au slot, qui le fait par `justify-content` sans
+     jamais toucher à une largeur. Les colonnes, elles, s'étirent. */
   .media-split-left {
     min-width: 0;
-    align-items: center;
   }
 
-  /* Audio empilé sous l'image : l'image garde sa pleine taille 320x240.
-     align-items:center mettrait le champ en shrink-to-fit (largeur < 320),
-     donc on pinne explicitement la largeur (max-width:100% = filet anti-débordement). */
+  /* Empilée, la piste occupe toute la carte : sans plafond plus bas, l'aperçu
+     s'étirerait sur toute la largeur. */
   .media-split-left .image-field {
-    --image-field-width: 320px;
-    width: 320px;
-    max-width: 100%;
+    --image-field-max: 260px;
   }
 
   .media-split-divider {
@@ -2558,4 +2661,145 @@
 .settings-panel .card.card--danger {
   background: var(--danger-bg);
   border-color: var(--danger-border);
+}
+
+/* Sous 320 px, les marges des cartes prennent une part excessive de la
+   colonne. La largeur disponible reste réservée aux champs et à leurs
+   commandes. */
+@container settings-panel (max-width: 320px) {
+  .settings-panel-body {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .settings-panel-body > :not(.card) {
+    padding: 10px 8px;
+  }
+
+  .settings-panel .card {
+    padding: 12px 10px;
+  }
+}
+
+/* Les barres du lecteur audio restent intactes. Dans une colonne très étroite,
+   seule l'onde décorative du champ audio vide disparaît. */
+@container settings-panel (max-width: 280px) {
+  .audio-empty-wave {
+    display: none;
+  }
+}
+
+@container settings-panel (max-width: 320px) {
+  .media-split {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+  }
+
+  .media-split > .media-split-left,
+  .media-split > .media-split-right {
+    display: flex;
+    grid-row: auto;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .media-split-left .image-field {
+    --image-field-max: 160px;
+  }
+
+  .editor-setting-row {
+    padding: 9px;
+  }
+
+  .during-play-control-title,
+  .sequence-control-title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .during-play-home-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 6px 8px;
+    align-items: start;
+    padding: 8px;
+    white-space: normal;
+  }
+
+  .during-play-home-head > .tooltip-wrap {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .during-play-home-head > .during-play-destination-label {
+    grid-column: 2;
+    white-space: normal;
+  }
+
+  .during-play-home-select {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .menu-behavior-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .menu-behavior-copy {
+    grid-column: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .menu-behavior-copy .during-play-control-title {
+    flex: 0 1 auto;
+  }
+
+  .menu-behavior-desc {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .editor-setting-row.end-node-playback-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .end-message-playback-control {
+    width: 100%;
+    justify-items: start;
+    padding-top: 0;
+  }
+
+  .end-message-playback-choice {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 4px;
+  }
+
+  .end-message-playback-label,
+  .end-message-playback-label:first-child,
+  .end-message-playback-label:last-child {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .end-message-playback-explanation,
+  .end-message-playback-summary {
+    text-align: left;
+  }
+
+  .card--danger-compact .card-danger-title {
+    min-width: 0;
+    flex: 1 1 80px;
+    text-align: center;
+    white-space: normal;
+  }
 }

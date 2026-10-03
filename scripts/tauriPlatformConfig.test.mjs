@@ -130,6 +130,10 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     '.story-studio-image-edits',
     '.story-studio-thumbnail',
   ];
+  // Un `**` ne traverse pas un dossier caché : un dossier caché logé dans un
+  // autre doit être nommé tel quel. C'est le cas des retouches d'une vignette
+  // catalogue, dont le refus bloquait le transfert d'un « Enregistrer sous ».
+  const nestedHiddenDirectories = ['.story-studio-thumbnail/.story-studio-image-edits'];
 
   assert.equal(common.permissions.includes('fs:allow-appcache-write-recursive'), true);
   const commonFsScope = common.permissions.find(
@@ -139,7 +143,7 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     new Set(commonFsScope.allow.map(({ path }) => path)),
     new Set([
       '$APPCACHE/**/.session-recovery.mbah*',
-      ...frontendHiddenDirectories.flatMap((directory) => [
+      ...[...frontendHiddenDirectories, ...nestedHiddenDirectories].flatMap((directory) => [
         `$APPCACHE/**/${directory}`,
         `$APPCACHE/**/${directory}/**`,
       ]),
@@ -162,7 +166,7 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     (permission) => permission?.identifier === 'fs:scope',
   );
   const linuxAllowed = new Set(linuxFsScope.allow.map(({ path }) => path));
-  for (const directory of frontendHiddenDirectories) {
+  for (const directory of [...frontendHiddenDirectories, ...nestedHiddenDirectories]) {
     assert.equal(linuxAllowed.has(`**/${directory}`), true);
     assert.equal(linuxAllowed.has(`**/${directory}/**`), true);
   }
@@ -188,7 +192,7 @@ test('Tauri filesystem scopes are split by platform and preserve removable media
     (permission) => permission?.identifier === 'fs:scope',
   );
   const macosAllowed = new Set(macosFsScope.allow.map(({ path }) => path));
-  for (const directory of frontendHiddenDirectories) {
+  for (const directory of [...frontendHiddenDirectories, ...nestedHiddenDirectories]) {
     assert.equal(macosAllowed.has(`**/${directory}`), true);
     assert.equal(macosAllowed.has(`**/${directory}/**`), true);
   }

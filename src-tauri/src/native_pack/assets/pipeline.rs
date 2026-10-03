@@ -9,13 +9,15 @@ use rayon::prelude::*;
 use uuid::Uuid;
 
 use super::super::{
-    build_asset_notes, canonicalize_project, sanitize_stage_label, scoped_label_id, CanonicalEntry,
-    CanonicalProject, NativeAssetPreparationReport, NativeAssetStats, NativeGenerationWarning,
-    PreparedAsset,
+    build_asset_notes, canonicalize_project, end_home_step_is_active, end_prompt_is_active,
+    end_sequence_is_active, global_end_message_is_reached, sanitize_stage_label, scoped_label_id,
+    CanonicalEntry, CanonicalProject, NativeAssetPreparationReport, NativeAssetStats,
+    NativeGenerationWarning, PreparedAsset,
 };
 use super::audio::{prepare_audio_asset, AudioPreparation};
 use super::image::{
-    ensure_image_320x240, image_request, stage_binary_asset, stage_binary_asset_bytes,
+    ensure_image_320x240, image_request, plan_image_from_bytes, reencode_png_320x240,
+    stage_binary_asset, stage_binary_asset_as, stage_binary_asset_bytes, ImagePlan,
 };
 use super::zip_bundle::stage_imported_zip_bundle;
 use crate::domain::project::Project;
@@ -36,6 +38,14 @@ pub(crate) struct AssetRequest {
     pub(crate) source_kind: AssetSourceKind,
     pub(crate) leading_silence_sec: f64,
     pub(crate) trailing_silence_sec: f64,
+    /// L'entrée d'auteur dont ce média vient, quand il en vient une.
+    ///
+    /// La production ne s'en sert pas : elle n'a besoin que du rôle. La
+    /// **projection d'écoute** s'en sert pour que le simulateur puisse désigner
+    /// le nœud de l'arbre qui joue, comme le lecteur de projet le faisait.
+    /// Le rôle porte déjà cet identifiant, mais **assaini** ; le reconstituer
+    /// hors de Rust demanderait de réécrire cet assainissement ailleurs.
+    pub(crate) entry_id: Option<String>,
 }
 
 // Resultat du preprocess parallele d'une AssetRequest. Contient tout ce dont
@@ -56,7 +66,12 @@ enum PreprocessedAsset {
     /// + dedup) reste sequentiel via stage_imported_zip_bundle.
     Zip { canonical_zip_path: String },
     /// Image deja conforme 320x240, on staged le fichier source tel quel.
-    ImageAsIs { source_path: String },
+    /// Les octets partent tels quels, sous l'extension de leur **vrai** format —
+    /// pas sous celle que porte le fichier source.
+    ImageAsIs {
+        source_path: String,
+        extension: &'static str,
+    },
     /// Image re-encodee via image crate (resize 320x240). On a deja les
     /// bytes PNG ; la phase suivante les staged via stage_binary_asset_bytes.
     ImageResized { png_bytes: Vec<u8> },
@@ -76,6 +91,7 @@ fn preprocess_request(
     let (asset, warnings) = match request.source_kind {
         AssetSourceKind::Zip => {
             let canonical = ensure_studio_pack_zip(&request.source_path)?
+                .zip_path
                 .to_string_lossy()
                 .to_string();
             (
@@ -88,11 +104,23 @@ fn preprocess_request(
         AssetSourceKind::Image => {
             let raw = fs::read(&request.source_path)
                 .map_err(|e| format!("Lecture image '{}' : {}", request.role, e))?;
-            let asset = match ensure_image_320x240(&raw, &request.role)? {
-                None => PreprocessedAsset::ImageAsIs {
-                    source_path: request.source_path.clone(),
+            // Le sort de l'image se décide sur ses **octets**, jamais sur son
+            // nom : un JPEG appelé `.png` partait sous une extension que les
+            // passerelles figées croient, et un format hors liste fermée déjà
+            // en 320×240 disparaissait en silence.
+            let asset = match plan_image_from_bytes(&raw, &request.role)? {
+                ImagePlan::ReencodePng => PreprocessedAsset::ImageResized {
+                    png_bytes: reencode_png_320x240(&raw, &request.role)?,
                 },
-                Some(png_bytes) => PreprocessedAsset::ImageResized { png_bytes },
+                ImagePlan::Verbatim { extension } => {
+                    match ensure_image_320x240(&raw, &request.role)? {
+                        None => PreprocessedAsset::ImageAsIs {
+                            source_path: request.source_path.clone(),
+                            extension,
+                        },
+                        Some(png_bytes) => PreprocessedAsset::ImageResized { png_bytes },
+                    }
+                }
             };
             (asset, Vec::new())
         }
@@ -297,11 +325,15 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
                 imported_zips.push(bundle);
                 zip_ms += pre.preprocess_ms;
             }
-            PreprocessedAsset::ImageAsIs { source_path } => {
-                let prepared = stage_binary_asset(
+            PreprocessedAsset::ImageAsIs {
+                source_path,
+                extension,
+            } => {
+                let prepared = stage_binary_asset_as(
                     &pre.role,
                     &source_path,
                     "image",
+                    extension,
                     &assets_dir,
                     &mut seen_assets,
                     false,
@@ -406,6 +438,7 @@ pub(crate) fn prepare_native_pack_assets_report_with_cancel(
         stats,
         notes,
         warnings,
+        for_simulation: false,
     })
 }
 
@@ -427,10 +460,12 @@ pub(crate) fn collect_asset_requests(
     if let Some(path) = project.root_image.as_ref() {
         requests.push(image_request("rootImage", path));
     }
-    if let Some(path) = project.thumbnail_image.as_ref() {
-        requests.push(image_request("thumbnailImage", path));
-    }
-    if !project.options.auto_next {
+    // La vignette catalogue est écrite séparément sous `thumbnail.png` par le
+    // writer depuis `project.thumbnail_image`. La préparer comme asset ordinaire
+    // ajouterait une copie sous `assets/` qu'aucun élément du pack ne désigne.
+    // Le message de fin global n'est écrit que si une histoire l'emprunte :
+    // remplacé partout par des fins locales, son audio resterait inutilisé.
+    if global_end_message_is_reached(project) {
         if let Some(path) = project.night_mode_audio.as_ref() {
             requests.push(audio_request(
                 "nightModeAudio",
@@ -536,6 +571,19 @@ fn collect_native_graph_requests(
     }
 }
 
+/// Rattache à leur entrée d'auteur les requêtes qu'une branche vient de
+/// produire. `get_or_insert` laisse intactes celles qu'une entrée fille a déjà
+/// estampillées : une requête appartient à l'entrée la plus proche, pas au
+/// dossier qui la contient.
+fn stamp_entry_id(requests: &mut [AssetRequest], first: usize, entry_id: &str) {
+    if entry_id.is_empty() {
+        return;
+    }
+    for request in &mut requests[first..] {
+        request.entry_id.get_or_insert_with(|| entry_id.to_string());
+    }
+}
+
 fn collect_entry_requests(
     entry: &CanonicalEntry,
     prefix: &str,
@@ -547,6 +595,7 @@ fn collect_entry_requests(
     match entry {
         CanonicalEntry::Menu(menu) => {
             let label = scoped_label_id(prefix, &menu.id, &menu.name);
+            let first = requests.len();
             if let Some(path) = menu.audio.as_ref() {
                 requests.push(audio_request(
                     &format!("{}/menuAudio", label),
@@ -555,7 +604,8 @@ fn collect_entry_requests(
                     trailing_silence_sec,
                 ));
             }
-            if let Some(path) = menu.image.as_ref() {
+            // « Écran transparent » : le constructeur écrit `image: null`.
+            if let Some(path) = menu.image.as_ref().filter(|_| !menu.auto_black_image) {
                 requests.push(image_request(&format!("{}/menuImage", label), path));
             }
             for child in &menu.children {
@@ -568,9 +618,11 @@ fn collect_entry_requests(
                     trailing_silence_sec,
                 );
             }
+            stamp_entry_id(requests, first, &menu.id);
         }
         CanonicalEntry::Story(story) => {
             let label = scoped_label_id(prefix, &story.id, &story.name);
+            let first = requests.len();
             if let Some(path) = story.audio.as_ref() {
                 requests.push(audio_request(
                     &format!("{}/storyAudio", label),
@@ -587,7 +639,8 @@ fn collect_entry_requests(
                     trailing_silence_sec,
                 ));
             }
-            if !auto_next {
+            let sequence_len = story.after_playback_sequence.len();
+            if end_prompt_is_active(auto_next, sequence_len) {
                 if let Some(path) = story.after_playback_prompt_audio.as_ref() {
                     requests.push(audio_request(
                         &format!("{}/afterPlaybackPromptAudio", label),
@@ -596,6 +649,8 @@ fn collect_entry_requests(
                         trailing_silence_sec,
                     ));
                 }
+            }
+            if end_sequence_is_active(auto_next, sequence_len) {
                 for (index, step) in story.after_playback_sequence.iter().enumerate() {
                     if let Some(path) = step.audio.as_ref() {
                         requests.push(audio_request(
@@ -612,6 +667,8 @@ fn collect_entry_requests(
                         ));
                     }
                 }
+            }
+            if end_home_step_is_active(auto_next, sequence_len, story.home) {
                 if let Some(step) = story.after_playback_home_step.as_ref() {
                     if let Some(path) = step.audio.as_ref() {
                         requests.push(audio_request(
@@ -632,14 +689,17 @@ fn collect_entry_requests(
             if let Some(path) = story.item_image.as_ref() {
                 requests.push(image_request(&format!("{}/itemImage", label), path));
             }
+            stamp_entry_id(requests, first, &story.id);
         }
         CanonicalEntry::Zip(zip) => {
+            let first = requests.len();
             if let Some(path) = zip.zip_path.as_ref() {
                 requests.push(zip_request(
                     &format!("{}/zip", scoped_label_id(prefix, &zip.id, &zip.name)),
                     path,
                 ));
             }
+            stamp_entry_id(requests, first, &zip.id);
         }
         // Une référence ne porte aucun asset propre : elle réutilise ceux de sa cible.
         CanonicalEntry::Ref(_) => {}
@@ -671,6 +731,7 @@ fn audio_request(
         source_kind: AssetSourceKind::Audio,
         leading_silence_sec,
         trailing_silence_sec,
+        entry_id: None,
     }
 }
 
@@ -681,5 +742,6 @@ fn zip_request(role: &str, source_path: &str) -> AssetRequest {
         source_kind: AssetSourceKind::Zip,
         leading_silence_sec: 0.0,
         trailing_silence_sec: 0.0,
+        entry_id: None,
     }
 }

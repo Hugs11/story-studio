@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import { bumpPackVersion } from '../utils/packConvention';
+import { DEFAULT_PROJECT } from '../store/projectStore';
 
 // Grappe « cycle de vie du projet » extraite d'AppContent : retour à l'accueil
 // (reset vers l'accueil, PAS de session), choix du type (création de
@@ -55,6 +56,8 @@ export function useProjectLifecycle({
   async function handleSelectProjectType(type) {
     try {
       await prepareNewWorkSession(type);
+      // Un projet vierge n'a rien à perdre tant que l'auteur n'y touche pas.
+      store.markPristine();
     } catch (error) {
       logger.error('session:start-error', error);
       showErrorDialog({
@@ -75,14 +78,15 @@ export function useProjectLifecycle({
   // pack (décompression affichée DANS le funnel) puis atterrit dans l'éditeur.
   // Lève en cas d'échec ; la session créée est nettoyée pour revenir proprement
   // à l'accueil (le funnel ré-affiche alors la zone de dépôt).
-  async function handleLandEditablePack({ zipPath, packLabel, allowUnsupported = false }) {
+  async function handleLandEditablePack({ zipPath, packLabel }) {
     await runFunnelLanding('pack', async (workspaceDir) => {
       const transformed = await unpackZipIntoBlankProject({
         zipPath,
         zipName: packLabel,
         workspaceDir,
-        baseProject: store.project,
-        allowUnsupported,
+        // Le pack remplace le travail ouvert : il part du projet par défaut,
+        // comme depuis l'accueil, jamais du projet encore affiché.
+        baseProject: DEFAULT_PROJECT,
       });
       if (!transformed) throw new Error('Aucune histoire éditable trouvée dans ce pack.');
       // Suggérer une version incrémentée (_V2 si aucune) et forcer la modal de
@@ -96,11 +100,20 @@ export function useProjectLifecycle({
             },
           }
         : transformed.project;
-      const depthOutcome = store.setProjectWithDepthGuard(landedProject);
+      // Comme l'atterrissage graphe : nouvelle époque, rien de l'ancien projet.
+      const depthOutcome = store.loadProject(landedProject);
       if (!depthOutcome.allowed) {
         throw new Error(depthOutcome.message || 'Limite d’imbrication des Dossiers atteinte.');
       }
       store.setSelectedId('root');
+      // Comme l'atterrissage graphe : ni les étiquettes, ni la médiathèque, ni
+      // la signature d'enregistrement de l'ancien projet ne passent dans le pack.
+      store.setMediaTags({});
+      setMediaLibraryPaths([]);
+      savedSnapshotRef.current = null;
+      // Le pack d'origine reste sur le disque : tant que l'auteur n'y touche
+      // pas, en ressortir ne perd rien.
+      store.markPristine();
       importedPackPendingMetaRef.current = true;
       if (transformed.advancedTransitionsDetected) {
         const firstWarning = transformed.unresolvedTransitions[0]?.message;

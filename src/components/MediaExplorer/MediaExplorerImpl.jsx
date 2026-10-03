@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { collectMediaLibrary } from '../../store/mediaLibrary';
+import { createMediaTagLookup } from '../../store/mediaTags';
 import { audioClipboard } from '../../store/fieldClipboard';
 import { useMediaMetadata } from '../../hooks/useMediaMetadata';
 import { Tooltip } from '../common/Tooltip';
@@ -53,10 +54,12 @@ export function MediaExplorer({
   sdJobs,
   xttsJobs,
   extraPaths,
+  advancedMediaUsages = null,
   onImportStories,
   onImportMedia,
   onImportMediaFolder,
   onSelectNode,
+  onRevealGraphNode,
   mediaTags = {},
   onAddMediaTag,
   onRemoveMediaTag,
@@ -71,9 +74,11 @@ export function MediaExplorer({
   onInvalidateMediaToolRequest,
   onValidateMediaToolRequest,
   onApplyMediaToolProjectAction,
+  pendingMediaReveal = null,
+  onMediaRevealConsumed,
 }) {
   const { showErrorDialog } = useErrorDialog();
-  const { activeDropZone, dropOnNode } = useMediaTransfer();
+  const { activeDropZone, dropOnNode, graphMediaTarget } = useMediaTransfer();
   const [activeFilters, setActiveFilters] = useState(() => new Set());
   const [view, setView] = useState('list');
   const osDropHover = activeDropZone === 'mediaexplorer';
@@ -173,8 +178,11 @@ export function MediaExplorer({
   const gridCols = colsToGrid(colWidths, visibleCols);
 
   const items = useMemo(
-    () => collectMediaLibrary({ project, statusByPath, sdJobs, xttsJobs, extraPaths }),
-    [project, statusByPath, sdJobs, xttsJobs, extraPaths],
+    () => collectMediaLibrary({
+      project, statusByPath, sdJobs, xttsJobs, extraPaths,
+      advancedUsages: advancedMediaUsages,
+    }),
+    [project, statusByPath, sdJobs, xttsJobs, extraPaths, advancedMediaUsages],
   );
 
   useEffect(() => {
@@ -225,14 +233,21 @@ export function MediaExplorer({
     onValidateMediaToolRequest,
   ]);
 
+  // Les étiquettes sont indexées par chemin, et un même fichier peut être
+  // désigné sous deux formes : les champs médias racines portent des antislashs
+  // sous Windows quand les chemins résolus portent des `/`. Un accès direct
+  // `mediaTags[item.path]` perdait donc les étiquettes du média de couverture,
+  // sur cette plateforme seulement. Le lecteur compare par `pathKey`.
+  const tagsOf = useMemo(() => createMediaTagLookup(mediaTags), [mediaTags]);
+
   // All tags that appear on at least one item in the library
   const allTags = useMemo(() => {
     const set = new Set();
     for (const item of items) {
-      for (const t of (mediaTags?.[item.path] ?? [])) set.add(t);
+      for (const t of tagsOf(item.path)) set.add(t);
     }
     return [...set].sort();
-  }, [items, mediaTags]);
+  }, [items, tagsOf]);
 
   const counts = useMemo(() => ({
     all:      items.length,
@@ -264,7 +279,7 @@ export function MediaExplorer({
     if (activeFilters.has('unused') && item.inProject) return false;
 
     if (activeTags.size > 0) {
-      const itemTagList = mediaTags?.[item.path] ?? [];
+      const itemTagList = tagsOf(item.path);
       for (const t of activeTags) {
         if (!itemTagList.includes(t)) return false;
       }
@@ -298,7 +313,7 @@ export function MediaExplorer({
       case 'fmt':   return dir * (a.ext ?? '').localeCompare(b.ext ?? '', undefined, { sensitivity: 'base' });
       case 'date':  { const da = getMeta(a.path)?.modified_at ?? 0; const db = getMeta(b.path)?.modified_at ?? 0; return dir * (da - db); }
       case 'path':  return dir * a.path.localeCompare(b.path, undefined, { sensitivity: 'base' });
-      case 'tags':  { const ta = (mediaTags?.[a.path] ?? []).join(','); const tb = (mediaTags?.[b.path] ?? []).join(','); return dir * ta.localeCompare(tb, undefined, { sensitivity: 'base' }); }
+      case 'tags':  { const ta = tagsOf(a.path).join(','); const tb = tagsOf(b.path).join(','); return dir * ta.localeCompare(tb, undefined, { sensitivity: 'base' }); }
       default:      return 0;
     }
   });
@@ -307,6 +322,21 @@ export function MediaExplorer({
   const selectedAudioItems = visibleSelectedItems.filter((item) => item.kind === 'audio' && item.exists);
   const selectedNonAudioCount = visibleSelectedItems.filter((item) => item.kind !== 'audio').length;
   const selectedCount = visibleSelectedItems.length;
+  const selectedGraphMedia = selectedCount === 1 && visibleSelectedItems[0]?.exists
+    && ['audio', 'image'].includes(visibleSelectedItems[0].kind)
+    ? visibleSelectedItems[0] : null;
+
+  async function assignSelectedToGraph() {
+    if (!selectedGraphMedia || !graphMediaTarget) return;
+    try {
+      await graphMediaTarget.assign({ kind: selectedGraphMedia.kind, path: selectedGraphMedia.path });
+    } catch (error) {
+      showErrorDialog({
+        title: 'Affectation du média impossible',
+        message: String(error?.message ?? error),
+      });
+    }
+  }
 
   const isEmpty = items.length === 0;
 
@@ -357,6 +387,27 @@ export function MediaExplorer({
     setPendingRevealMediaId(createdItems[0]?.id ?? '');
     setPendingSelectPaths([]);
   }, [items, pendingSelectPaths]);
+
+  // Atteindre un média depuis l'emplacement d'un Écran du graphe.
+  //
+  // C'est le pendant exact du menu contextuel de l'arbre — « Découper l'audio
+  // dans Médias… » —, et il produit le même effet : le fichier est révélé ici,
+  // l'outil s'ouvre, et **le projet n'est pas modifié**. Aucun contexte de
+  // projet ne circule, parce qu'il n'y a rien à appliquer ensuite.
+  //
+  // La demande attend que le catalogue porte le fichier plutôt que de se perdre :
+  // le panneau peut s'ouvrir avant que la liste soit dressée.
+  useEffect(() => {
+    if (!pendingMediaReveal) return;
+    const wanted = (pendingMediaReveal.paths ?? []).map((wantedPath) => (
+      items.find((candidate) => pathKey(candidate.path) === pathKey(wantedPath)) ?? null
+    ));
+    if (wanted.length === 0 || wanted.some((item) => !item)) return;
+    setToolResult(null);
+    setPendingSelectPaths(wanted.map((item) => item.path));
+    if (pendingMediaReveal.tool === 'split') openAudioSplitter(wanted[0]);
+    onMediaRevealConsumed?.();
+  }, [items, pendingMediaReveal, onMediaRevealConsumed]);
 
   useEffect(() => {
     if (!pendingRevealMediaId) return undefined;
@@ -610,7 +661,7 @@ export function MediaExplorer({
     const createdPaths = paths.filter(Boolean);
     const request = splitterRequest;
     const sourcePath = splitterItem?.path;
-    const sourceTags = sourcePath ? (mediaTags?.[sourcePath] ?? []) : [];
+    const sourceTags = tagsOf(sourcePath);
     const tagsToCopy = new Set([...sourceTags, 'découpe']);
     for (const path of createdPaths) {
       onMediaCreated?.(path);
@@ -774,6 +825,8 @@ export function MediaExplorer({
 
       <MediaSelectionBar
         selectedCount={selectedCount}
+        graphMediaTarget={selectedGraphMedia ? graphMediaTarget : null}
+        onAssignToGraph={assignSelectedToGraph}
         selectedAudioItems={selectedAudioItems}
         onCopyAudio={() => copySelectedAudio('copy')}
         onCutAudio={() => copySelectedAudio('cut')}
@@ -790,6 +843,7 @@ export function MediaExplorer({
 
 
       <MediaExplorerContent
+        tagsOf={tagsOf}
         isEmpty={isEmpty}
         sortedVisible={sortedVisible}
         visible={visible}
@@ -826,6 +880,8 @@ export function MediaExplorer({
         selectedItems={visibleSelectedItems}
         onSelectItem={handleSelectItem}
         onContextMenuSelect={handleContextMenuSelect}
+        onSelectNode={onSelectNode}
+        onRevealGraphNode={onRevealGraphNode}
         dropOnNode={dropOnNode}
         onImportMedia={onImportMedia}
         onImportStories={onImportStories}
@@ -837,8 +893,9 @@ export function MediaExplorer({
           anchorRect={activePopover.rect}
           getMeta={getMeta}
           onSelectNode={onSelectNode}
+          onRevealGraphNode={onRevealGraphNode}
           onClose={() => setActivePopover(null)}
-          itemTags={mediaTags?.[sortedVisible[activePopover.idx]?.path] ?? []}
+          itemTags={tagsOf(sortedVisible[activePopover.idx]?.path)}
           allProjectTags={allTags}
           onAddMediaTag={onAddMediaTag}
           onRemoveMediaTag={onRemoveMediaTag}

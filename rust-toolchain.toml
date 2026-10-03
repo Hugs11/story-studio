@@ -1,0 +1,16 @@
+# Toolchain Rust du dépôt, épinglée.
+#
+# `cargo clippy --all-targets -- -D warnings` est une porte de validation : sans
+# version fixée, chaque machine rend son propre verdict et la porte ne garantit
+# plus rien de commun. Le cas s'est produit entre Fedora et Windows sur
+# `native_pack/writer.rs`, un lint que seule la version la plus récente voyait.
+#
+# Fedora, macOS et Windows doivent donc lire la même version ici. `rustup`
+# l'installe seul à la première commande lancée dans le dépôt.
+#
+# Changer ce numéro est une décision de projet : relancer `cargo test
+# --all-targets`, `cargo clippy --all-targets -- -D warnings` et
+# `cargo fmt --check` sur les trois plateformes avant de le figer à nouveau.
+[toolchain]
+channel = "1.96.0"
+components = ["clippy", "rustfmt"]

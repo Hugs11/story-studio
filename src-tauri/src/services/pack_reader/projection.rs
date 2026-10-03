@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use super::after_playback::{candidate_prompt_stage_id, detect_story_return_stage_id};
 use super::chaining::{chain_intro_entries_before_content, chase_single_chain};
-use super::graph_import::project_story_graph_values;
+use super::graph_import::{project_story_graph_values, promote_autonomous_root_ref_values};
 use super::navigation_targets::{
     assign_return_targets, build_story_stage_map, extract_auto_next_return_overrides,
     remove_night_mode_return_overrides,
@@ -345,7 +345,7 @@ fn walk_story_doc_to_entries_inner(
                     );
                     if term_audio.is_some() || term_image.is_some() {
                         // Nœud intermédiaire avec audio/image → le préserver comme entrée menu
-                        // (ex: "qui sera le héros ?" dans Example story)
+                        // (ex: "qui sera le héros ?" dans une histoire de démonstration)
                         vec![serde_json::json!({
                             "id": stage_uuid(terminal).unwrap_or(""),
                             "type": "menu",
@@ -422,33 +422,9 @@ fn walk_story_doc_to_entries_inner(
         &story_play_stage_ids,
         &existing_story_stage_ids,
     );
-    let night_mode_detection = detect_imported_night_mode(
-        night_mode_available,
-        sq_id,
-        &entries,
-        &stages,
-        &actions,
-        assets,
-    );
-    let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
-        night_mode_detection
-            .as_ref()
-            .map(|detection| {
-                (
-                    Some(detection.audio.clone()),
-                    detection.return_target.clone(),
-                    detection.home_target.clone(),
-                    detection.autoplay,
-                )
-            })
-            .unwrap_or((None, None, None, None));
+    let pre_graph_night_mode_detection =
+        detect_imported_night_mode(sq_id, &entries, &stages, &actions, assets);
     let unresolved_transitions = assign_return_targets(&mut entries, &stage_names);
-    if let Some(target) = night_mode_return.as_deref() {
-        remove_night_mode_return_overrides(&mut entries, target, None);
-    }
-    if let Some(detection) = night_mode_detection.as_ref() {
-        apply_night_fallback_overrides(&mut entries, detection);
-    }
     let unresolved_transitions_detected = !unresolved_transitions.is_empty();
     let has_branching_graph = has_interactive_branching_graph(&stages, &actions);
     let graph_import_safe_unresolved =
@@ -478,8 +454,42 @@ fn walk_story_doc_to_entries_inner(
         entries = graph_projection.root_entries;
         shared_entries = graph_projection.shared_entries;
     }
+    let night_mode_detection = if uses_graph_import_projection {
+        detect_imported_night_mode(sq_id, &entries, &stages, &actions, assets)
+            .or(pre_graph_night_mode_detection)
+    } else {
+        pre_graph_night_mode_detection
+    };
+    let (night_mode_audio, night_mode_return, night_mode_home_return, end_message_autoplay) =
+        night_mode_detection
+            .as_ref()
+            .map(|detection| {
+                (
+                    Some(detection.audio.clone()),
+                    detection.return_target.clone(),
+                    detection.home_target.clone(),
+                    detection.autoplay,
+                )
+            })
+            .unwrap_or((None, None, None, None));
+    if let Some(detection) = night_mode_detection.as_ref() {
+        if uses_graph_import_projection {
+            remove_projected_night_bridge(&mut entries, &mut shared_entries, &detection.stage_ids);
+        }
+        if let Some(target) = night_mode_return.as_deref() {
+            remove_night_mode_return_overrides(&mut entries, target, None);
+        }
+        apply_night_fallback_overrides(&mut entries, detection);
+    }
+    if uses_graph_import_projection {
+        promote_autonomous_root_ref_values(&mut entries, &mut shared_entries);
+    }
     let auto_next_detected =
         !uses_graph_import_projection && extract_auto_next_return_overrides(&mut entries);
+    if uses_graph_import_projection {
+        remove_internal_play_stage_ids(&mut entries);
+        remove_internal_play_stage_ids(&mut shared_entries);
+    }
     let reported_unresolved_transitions = if uses_graph_import_projection {
         Vec::new()
     } else {
@@ -497,7 +507,8 @@ fn walk_story_doc_to_entries_inner(
         .unwrap_or("")
         .to_string();
     let night_mode_detected = night_mode_audio.is_some();
-    let effective_night_mode_detected = night_mode_detected && !auto_next_detected;
+    let effective_night_mode_detected =
+        night_mode_detected && night_mode_available && !auto_next_detected;
 
     Ok(serde_json::json!({
         "rootId": format!("import-root:{}", sq_id),
@@ -519,6 +530,61 @@ fn walk_story_doc_to_entries_inner(
         "sharedEntries": shared_entries,
         "entries": entries
     }))
+}
+
+fn remove_projected_night_bridge(
+    entries: &mut [serde_json::Value],
+    shared_entries: &mut Vec<serde_json::Value>,
+    night_stage_ids: &HashSet<String>,
+) {
+    shared_entries.retain(|entry| {
+        entry
+            .get("nativeStageId")
+            .or_else(|| entry.get("id"))
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(|id| !night_stage_ids.contains(id))
+    });
+    remove_projected_night_returns(entries, night_stage_ids);
+    remove_projected_night_returns(shared_entries, night_stage_ids);
+}
+
+fn remove_projected_night_returns(
+    entries: &mut [serde_json::Value],
+    night_stage_ids: &HashSet<String>,
+) {
+    for entry in entries {
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            remove_projected_night_returns(children, night_stage_ids);
+        }
+
+        let targets_night_stage = entry
+            .get("returnAfterPlay")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|target| target.split_once(':').map(|(_, id)| id))
+            .is_some_and(|id| night_stage_ids.contains(id));
+        if targets_night_stage {
+            if let Some(object) = entry.as_object_mut() {
+                object.remove("returnAfterPlay");
+            }
+        }
+    }
+}
+
+fn remove_internal_play_stage_ids(entries: &mut [serde_json::Value]) {
+    for entry in entries {
+        if let Some(object) = entry.as_object_mut() {
+            object.remove("_playStageId");
+        }
+        if let Some(children) = entry
+            .get_mut("children")
+            .and_then(serde_json::Value::as_array_mut)
+        {
+            remove_internal_play_stage_ids(children);
+        }
+    }
 }
 
 /// Un `audio: null` explicite sur le stage de titre d'un pack importé est une
@@ -959,7 +1025,7 @@ pub(super) fn walk_entry(
                 }
                 1 => {
                     // Cas spécial : terminal autoplay avec 1 seule cible étant un nœud de navigation
-                    // (wheel=true, N≥2 options) — ex: Contemporaine-sélecteur → Example (5 films).
+                    // (wheel=true, N≥2 options) — ex: Sélecteur contemporain → Exemple (5 choix).
                     // Créer un menu au lieu d'une histoire pour conserver la structure complète.
                     if is_stage_autoplay(terminal) {
                         let single_next_id = term_opts[0];
@@ -1210,7 +1276,7 @@ pub(super) fn walk_entry(
                     let term_image =
                         resolve_asset(terminal.get("image").and_then(|v| v.as_str()), assets);
                     // Si le terminal a un audio propre, c'est un vrai nœud de sélection
-                    // (ex: "qui Example va-t-elle rencontrer ?") → sous-menu imbriqué.
+                    // (ex: "qui le héros va-t-il rencontrer ?") → sous-menu imbriqué.
                     if term_audio.is_some() {
                         let sub = serde_json::json!({
                             "id": stage_uuid(terminal).unwrap_or(""),
@@ -1275,5 +1341,59 @@ pub(super) fn walk_entry(
                 "children": children
             }))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use std::collections::HashSet;
+
+    use super::super::graph_import::promote_autonomous_root_ref_values;
+    use super::remove_projected_night_bridge;
+
+    #[test]
+    fn night_bridge_returns_are_cleaned_before_root_ref_promotion() {
+        let mut roots = vec![json!({
+            "id": "root-ref",
+            "type": "ref",
+            "name": "Root reference",
+            "target": "menu:shared-menu",
+            "refKind": "continue",
+            "returnAfterPlay": "story:night-bridge"
+        })];
+        let mut shared = vec![
+            json!({
+                "id": "night-bridge",
+                "type": "story",
+                "name": "Night bridge",
+                "nativeStageId": "night-bridge"
+            }),
+            json!({
+                "id": "shared-menu",
+                "type": "menu",
+                "name": "Shared menu",
+                "nativeStageId": "shared-menu",
+                "children": [{
+                    "id": "story",
+                    "type": "story",
+                    "name": "Story",
+                    "returnAfterPlay": "story:night-bridge"
+                }]
+            }),
+        ];
+        let night_stage_ids = HashSet::from(["night-bridge".to_string()]);
+
+        remove_projected_night_bridge(&mut roots, &mut shared, &night_stage_ids);
+
+        assert_eq!(shared.len(), 1);
+        assert_eq!(shared[0]["id"], "shared-menu");
+        assert!(roots[0].get("returnAfterPlay").is_none());
+        assert!(shared[0]["children"][0].get("returnAfterPlay").is_none());
+
+        assert!(promote_autonomous_root_ref_values(&mut roots, &mut shared));
+        assert_eq!(roots[0]["type"], "menu");
+        assert_eq!(roots[0]["id"], "shared-menu");
+        assert!(shared.is_empty());
     }
 }

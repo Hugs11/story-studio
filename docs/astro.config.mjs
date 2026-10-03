@@ -29,12 +29,17 @@ export default defineConfig({
         src: './public/logostory.svg',
         alt: 'Story Studio',
       },
-      favicon: '/logostory.svg',
+      favicon: '/favicon.svg',
       social: [
         {
           icon: 'github',
           label: 'Dépôt GitHub de Story Studio',
           href: 'https://github.com/Hugs11/story-studio',
+        },
+        {
+          icon: 'discord',
+          label: 'Discord de Story Studio',
+          href: 'https://discord.gg/jztpQz5Ad',
         },
       ],
       editLink: {
@@ -58,6 +63,7 @@ export default defineConfig({
           label: 'Créer, importer ou reprendre',
           items: [
             { slug: 'docs/editeur-libre' },
+            { slug: 'docs/editeur-graphe' },
             { slug: 'docs/editeur-simplifie' },
             { slug: 'docs/creer-un-pack-depuis-un-podcast' },
             { slug: 'docs/creer-un-pack-depuis-youtube' },

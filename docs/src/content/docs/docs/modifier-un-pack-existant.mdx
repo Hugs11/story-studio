@@ -15,19 +15,29 @@ Tu peux sélectionner :
 
 Story Studio analyse d’abord le pack avant de l’ouvrir.
 
-## Trois résultats possibles
+## Quatre résultats possibles
 
 Selon sa structure, un pack peut être :
 
 | Résultat | Ce que tu peux faire |
 |---|---|
-| **Éditable** | ouvrir le pack dans l’éditeur, le modifier puis le générer à nouveau |
-| **Lecture seule** | le parcourir dans le Simulateur ou, si l’option avancée est active, tenter une extraction partielle |
-| **Non supporté** | choisir une autre source ou, si l’option avancée est active, tenter une extraction partielle |
+| **Éditable dans les deux éditeurs** | choisir entre une structure de Dossiers et d’Histoires ou le graphe complet du pack |
+| **Éditable uniquement dans l’Éditeur graphe** | travailler directement sur ses Écrans, ses Listes de choix et ses raccords |
+| **Lecture seule** | le parcourir dans le Simulateur |
+| **Non supporté** | choisir une autre source |
 
-Story Studio ne se contente pas de vérifier que l’archive est valide. Il contrôle aussi que la navigation du pack peut être reconstruite de manière suffisamment fidèle pour être modifiée puis générée à nouveau.
+Story Studio ne se contente pas de vérifier que l’archive est valide. Il contrôle aussi comment sa
+navigation peut être reprise fidèlement.
 
-Un pack comportant des parcours complexes, des étapes partagées ou certaines transitions particulières peut donc rester uniquement simulable.
+Une structure classique peut être reconstruite dans l’Éditeur par menus. Un pack comportant des
+parcours complexes, des étapes partagées ou des transitions particulières peut être ouvert dans
+l’Éditeur graphe. La lecture seule reste réservée aux packs que Story Studio sait simuler sans
+pouvoir encore les modifier de façon fiable.
+
+:::note[Depuis la version 0.9.9]
+Grâce à l’Éditeur graphe, Story Studio peut reprendre la quasi-totalité des packs dont il sait lire
+la structure. Les résultats **Lecture seule** et **Non supporté** devraient donc rester rares.
+:::
 
 ## Modifier un pack depuis l’accueil
 
@@ -35,8 +45,9 @@ Le parcours normal est le suivant :
 
 1. clique sur **Modifier un pack existant** ;
 2. choisis ou dépose le ZIP, le 7z ou le dossier ;
-3. laisse Story Studio vérifier son éditabilité ;
-4. si le pack est éditable, il s’ouvre dans l’éditeur ;
+3. laisse Story Studio examiner sa structure ;
+4. s’il convient aux deux éditeurs, choisis **Éditeur par menus** ou **Éditeur graphe** ; si sa
+   navigation exige le graphe, Story Studio l’y ouvre directement ;
 5. vérifie sa navigation avant d’effectuer des modifications importantes.
 
 Le pack importé commence comme un nouveau travail. Si tu souhaites le conserver, utilise ensuite **Projet → Enregistrer** pour créer un fichier `.mbah`.
@@ -57,9 +68,23 @@ En résumé :
 Le ZIP sauvegarde la **version publiée** ; le `.mbah` sauvegarde le **travail de création**.
 :::
 
+## Archive contenant plusieurs packs
+
+Une même archive peut contenir plusieurs packs. Story Studio les examine alors séparément et
+affiche l’étape **Cette archive contient plusieurs packs**.
+
+Choisis le pack que tu souhaites ouvrir. Son état indique s’il peut être repris dans l’un des
+éditeurs ou seulement simulé. La suite se déroule ensuite comme pour une archive qui ne contient
+qu’un seul pack.
+
+Cette sélection ouvre un pack à la fois : elle ne fusionne pas automatiquement le contenu de
+l’archive. Pour réunir plusieurs packs dans un nouveau projet, utilise plutôt
+[**Agréger des packs**](/story-studio/docs/agreger-des-packs/).
+
 ## Pack non éditable mais simulable
 
-Lorsqu’un pack ne peut pas être reconstruit de manière suffisamment fiable, Story Studio peut proposer **Simuler le pack**.
+Lorsqu’un pack ne peut être repris fidèlement ni dans l’Éditeur par menus ni dans l’Éditeur graphe,
+Story Studio peut proposer **Simuler le pack**.
 
 Le Simulateur lit alors la navigation réelle du pack sans prétendre la convertir en structure modifiable.
 
@@ -70,25 +95,18 @@ Cette possibilité est utile pour :
 - comparer son comportement avec une nouvelle version ;
 - retrouver une Histoire ou un média avant de recréer manuellement une partie du pack.
 
-## Tenter une extraction d’un pack non supporté
+## Un pack que l’éditeur par menus ne sait pas reprendre
 
-Une option avancée permet d’autoriser une tentative d’extraction même lorsque Story Studio considère le pack comme non éditable.
+L’éditeur par menus n’extrait que les packs qu’il sait reconstruire fidèlement. Pour les autres, Story Studio affiche :
 
-Elle se trouve dans :
+> Ce pack n’est pas compatible avec l’éditeur par menus. Pour le modifier, ouvre-le dans l’éditeur graphe : Projet → Ouvrir un pack.
 
-**Préférences → Avancé → Import et audio → Autoriser l’extraction des packs non supportés**
-
-Cette extraction sert surtout à récupérer des éléments ou des médias.
-
-:::caution[Résultat potentiellement incomplet]
-Un pack extrait de force peut perdre une partie de sa navigation ou produire un projet impossible à générer tel quel.
-
-Conserve toujours le pack d’origine et vérifie soigneusement le résultat avant de republier quoi que ce soit.
-:::
+L’Éditeur graphe sait reconstruire leur navigation sous forme d’Écrans, de Listes de choix et de
+raccords, tout en récupérant leurs médias.
 
 ## Extraire un pack déjà présent dans l’Arbre
 
-Dans l’Éditeur libre, un élément **ZIP** peut représenter un pack inclus dans ton projet.
+Dans l’Éditeur par menus, un élément **ZIP** peut représenter un pack inclus dans ton projet.
 
 Un clic droit sur cet élément propose notamment :
 

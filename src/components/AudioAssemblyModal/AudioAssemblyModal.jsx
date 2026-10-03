@@ -17,7 +17,6 @@ function formatDuration(value) {
 export function AudioAssemblyModal({
   items,
   ignoredCount = 0,
-  savePath,
   projectName = '',
   onClose,
   onCreated,
@@ -148,8 +147,8 @@ export function AudioAssemblyModal({
 
   async function handleSubmit() {
     setError('');
-    if (!savePath && !workspaceDir) {
-      setError('Enregistrez le projet avant de créer un fichier assemblé.');
+    if (!workspaceDir) {
+      setError('Aucun emplacement de travail : impossible de créer un fichier assemblé.');
       return;
     }
     if (orderedItems.length < 2) {
@@ -169,7 +168,6 @@ export function AudioAssemblyModal({
       // que le radical, en retirant une extension audio éventuellement saisie.
       const rawName = hasProjectPrefix || !projectPrefix ? logicalStem : `${projectPrefix}__${logicalStem}`;
       const outputPath = await invoke('concat_audio_files', {
-        savePath: savePath || '',
         inputPaths,
         outputFileName: rawName,
         silenceBetweenSec: silence,

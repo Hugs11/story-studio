@@ -1,0 +1,24 @@
+{
+  "corpusDir": "C:\\chemin\\vers\\le\\corpus\\d-archives",
+  "studioDir": "C:\\chemin\\vers\\studio-web-ui-0.5.4",
+  "javaHome": "C:\\chemin\\vers\\un\\jdk-11",
+  "workDir": "C:\\chemin\\vers\\un\\dossier\\temporaire\\ss-e2e",
+  "luniiqtDir": "C:\\chemin\\vers\\ss-e2e\\luniiqt",
+  "xttsDir": "C:\\chemin\\vers\\l-installation\\XTTS",
+  "comfyuiDir": "C:\\chemin\\vers\\l-installation\\ComfyUI",
+  "reducedCorpusFile": "C:\\chemin\\vers\\corpus-reduit.json",
+  "userProjects": [
+    "Nom du projet 1",
+    "Nom du projet 2"
+  ],
+  "c3bUserProjects": [
+    "Nom du projet 1"
+  ],
+  "tauriDriver": "/chemin/vers/tauri-driver",
+  "webkitWebDriver": "/chemin/vers/WebKitWebDriver",
+  "c3aReportDir": "e2e/artifacts/corpus",
+  "c3cReportDir": "e2e/artifacts/corpus-complet",
+  "c3aSuspectsReportDir": "e2e/artifacts/suspects",
+  "c3bReportDir": "e2e/artifacts/parity",
+  "entrySourceReportDir": "e2e/artifacts/entry-source"
+}

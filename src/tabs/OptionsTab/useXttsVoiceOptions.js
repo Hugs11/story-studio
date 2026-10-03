@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { isTauriRuntime } from '../../utils/tauriRuntime';
 import { formatFrenchCount } from '../../utils/frenchText.js';
+import { releaseTauriListener } from '../../utils/tauriListener';
 
 export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
   const [xttsProbe, setXttsProbe] = useState({ state: 'idle', message: '' });
@@ -21,12 +22,12 @@ export function useXttsVoiceOptions({ xttsSettings, onUpdateXttsSettings }) {
       if (cancelled) return;
       setXttsLogs((prev) => [...prev, String(event.payload)].slice(-60));
     }).then((fn) => {
-      if (cancelled) fn();
+      if (cancelled) releaseTauriListener(fn);
       else unlisten = fn;
     }).catch(() => {});
     return () => {
       cancelled = true;
-      if (unlisten) unlisten();
+      releaseTauriListener(unlisten);
     };
   }, []);
 

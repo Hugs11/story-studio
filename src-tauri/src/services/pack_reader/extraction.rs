@@ -6,44 +6,153 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use unicode_normalization::UnicodeNormalization;
 
+use super::after_playback::is_named_night_bridge_stage;
 use super::projection::walk_story_doc_to_entries;
 use super::stage::{is_stage_autoplay, stage_action_options, stage_control_bool, stage_uuid};
 use super::validation::*;
 use crate::domain::project::{GlobalOptions, Project, ProjectEntry};
 use crate::domain::validation::validate_project_structure_for_generation;
 use crate::native_pack::fidelity_judge::{canonical_roundtrip_is_faithful, FidelityReport};
-use crate::native_pack::{canonicalize_project, StoryDocument};
-use crate::support::imported_pack::ensure_studio_pack_zip;
+use crate::native_pack::persistence::{
+    initialize_advanced_document, media_bindings_for_document, system_pack_identity,
+    AdvancedAcquisition, AssetLocation, PackIdentitySource,
+};
+use crate::native_pack::{
+    canonicalize_project, decode_story_document, graph_integrity_import_diagnostics,
+    pack_identity_from_story, DecodedStoryDocument, ImportDiagnostic, StoryDecodeError,
+};
+use crate::support::imported_pack::{ensure_studio_pack_zip, ImportedStudioPack};
+use crate::support::paths::path_for_frontend;
 
 const ROOT_REF_RATIO_LIMIT: f64 = 0.5;
 const PACK_EDITABILITY_STACK_BYTES: usize = 32 * 1024 * 1024;
 
-fn pack_uuid_from_doc(doc: &serde_json::Value) -> Option<&str> {
-    let root_uuid = doc
-        .get("uuid")
-        .and_then(|value| value.as_str())
-        .map(str::trim)
-        .filter(|value| !value.is_empty());
-    if root_uuid.is_some() {
-        return root_uuid;
-    }
+/// Lit le `story.json` d'un pack importé et le décode **avec** le contexte de sa
+/// conversion.
+///
+/// La provenance d'une projection FS n'est pas dans les octets relus : sans ce
+/// raccord, tout pack converti repartirait en `imported-studio`, sans quadrillage
+/// d'éditeur, sans provenance native et sans qualification d'export. Le cache de
+/// conversion la restitue à l'identique, y compris sur une relecture qui ne
+/// reconvertit rien.
+fn decode_imported_pack(
+    imported: &ImportedStudioPack,
+    story_json: &str,
+) -> Result<DecodedStoryDocument, StoryDecodeError> {
+    let decoded = decode_story_document(story_json)?;
+    let context = imported.conversion_context(&decoded.document);
+    Ok(decoded.with_conversion_context(context))
+}
 
-    doc.get("stageNodes")
-        .and_then(|value| value.as_array())?
-        .iter()
-        .find(|stage| stage.get("squareOne").and_then(|value| value.as_bool()) == Some(true))
-        .and_then(stage_uuid)
-        .map(str::trim)
-        .filter(|value| uuid::Uuid::parse_str(value).is_ok())
+/// Acquisition d'un projet avancé depuis un pack importé.
+///
+/// Elle passe par la frontière de conversion réelle, jamais par une relecture
+/// nue de la copie JSON : sans `decode_imported_pack`, un pack FS repartirait en
+/// `imported-studio` et perdrait sa provenance native, son quadrillage
+/// d'éditeur séparé et la qualification `UNTESTED` de sa `version`.
+///
+/// Le payload rendu est la **chaîne** du codec : aucun code JavaScript ne lit
+/// à l'intérieur, et aucun arbre hiérarchique n'est projeté ici. Les assets du
+/// pack sont déposés dans `assets_dir`, et l'acquisition rend en même temps les
+/// liaisons qui les rattachent aux références du document : sans elles, le
+/// projet acquis désignerait des médias que personne ne saurait retrouver.
+pub(crate) fn import_pack_as_advanced_document(
+    pack_path: &str,
+    assets_dir: &str,
+) -> Result<AdvancedAcquisition, String> {
+    let imported = ensure_studio_pack_zip(pack_path)?;
+    advanced_document_from_imported_pack(
+        &imported,
+        Path::new(assets_dir),
+        &mut system_pack_identity,
+    )
+}
+
+/// Le corps de l'acquisition, séparé pour que la source d'identité et le cache
+/// de conversion restent injectables : une preuve d'unicité de génération ne
+/// peut pas dépendre du CSPRNG du système.
+///
+/// Les liaisons sont produites **avant** l'encodage, depuis le document qui va
+/// être persisté — c'est ce qui garantit qu'aucune référence ne manque et
+/// qu'aucune n'est inventée. Deux Stages qui partagent une image n'ont qu'une
+/// liaison ; deux fichiers homonymes venus de dossiers distincts en ont deux.
+pub(crate) fn advanced_document_from_imported_pack(
+    imported: &ImportedStudioPack,
+    assets_dir: &Path,
+    identities: PackIdentitySource<'_>,
+) -> Result<AdvancedAcquisition, String> {
+    let story_json = read_story_json_from_zip(&imported.zip_path)?;
+    let decoded = decode_imported_pack(imported, &story_json)
+        .map_err(|error| format!("story.json invalide : {error}"))?;
+    decoded.context.log_warnings();
+    fs::create_dir_all(assets_dir)
+        .map_err(|e| format!("Impossible de créer le dossier des médias : {}", e))?;
+    let extracted = extract_all_zip_assets(&imported.zip_path, assets_dir)?;
+    let media_bindings = media_bindings_for_document(&decoded.document, |asset_ref| {
+        let short = asset_ref.strip_prefix("assets/").unwrap_or(asset_ref);
+        if let Some(path) = extracted.get(short) {
+            return AssetLocation::present(path_for_frontend(path));
+        }
+        // Référencé mais absent de l'archive : la liaison garde le chemin que le
+        // fichier aurait eu, pour rester réparable, et son statut dit qu'il n'y
+        // est pas. Le nom passe par la **même** garde que les entrées réelles du
+        // ZIP : une référence de dialecte est une donnée du pack, et une qui
+        // remonterait hors du dossier d'extraction sort sans chemin plutôt
+        // qu'avec un chemin qui désigne ailleurs.
+        AssetLocation::absent(
+            validate_pack_asset_name(&format!("assets/{short}"))
+                .ok()
+                .map(|_| path_for_frontend(assets_dir.join(short))),
+        )
+    });
+    let payload =
+        initialize_advanced_document(decoded, identities).map_err(|error| error.to_string())?;
+    // La vignette catalogue voyage hors du document, par le même extracteur que
+    // l'import hiérarchique. Son absence n'est pas une faute : un pack sans
+    // `thumbnail.png` s'acquiert comme avant.
+    let thumbnail_image =
+        extract_zip_thumbnail(&imported.zip_path, assets_dir)?.map(|path| path_for_frontend(&path));
+    Ok(AdvancedAcquisition {
+        payload,
+        media_bindings,
+        thumbnail_image,
+    })
 }
 
 pub fn load_pack_zip(zip_path: &str) -> Result<String, String> {
-    let zip_path = ensure_studio_pack_zip(zip_path)?;
-    read_story_json_from_zip(&zip_path)
+    load_pack_zip_with_policy(zip_path, false)
+}
+
+pub fn load_pack_zip_for_simulation(zip_path: &str) -> Result<String, String> {
+    load_pack_zip_with_policy(zip_path, true)
+}
+
+fn load_pack_zip_with_policy(zip_path: &str, for_simulation: bool) -> Result<String, String> {
+    let imported = ensure_studio_pack_zip(zip_path)?;
+    let story_json = read_story_json_from_zip(&imported.zip_path)?;
+    let decoded = decode_imported_pack(&imported, &story_json)
+        .map_err(|error| format!("story.json invalide : {error}"))?;
+    if for_simulation {
+        let incomplete = decoded
+            .context
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == "control-settings-incomplete")
+            .map(|diagnostic| format!("{} : {}", diagnostic.path, diagnostic.message))
+            .collect::<Vec<_>>();
+        if !incomplete.is_empty() {
+            return Err(format!(
+                "Simulation indisponible : renseignez explicitement les contrôles manquants. {}",
+                incomplete.join(" ; ")
+            ));
+        }
+    }
+    decoded.context.log_warnings();
+    Ok(story_json)
 }
 
 pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, String> {
-    let zip_path = ensure_studio_pack_zip(zip_path)?;
+    let zip_path = ensure_studio_pack_zip(zip_path)?.zip_path;
     let asset_name = validate_pack_asset_name(asset_name)?;
     let file =
         fs::File::open(&zip_path).map_err(|e| format!("Impossible d'ouvrir le ZIP : {}", e))?;
@@ -60,18 +169,9 @@ pub fn get_pack_asset(zip_path: &str, asset_name: &str) -> Result<Vec<u8>, Strin
 
 /// Dézipe un ZIP/7z Lunii et retourne `{ rootAudio, rootImage, entries }`.
 /// Les fichiers audio et image sont copiés dans `dest_dir`.
+/// Refuse un pack que l'éditeur par menus ne sait pas reprendre : le préfixe
+/// « Pack non éditable » est reconnu par l'interface, qui renvoie vers le graphe.
 pub fn unpack_zip_to_entries(zip_path: &str, dest_dir: &str) -> Result<serde_json::Value, String> {
-    unpack_zip_to_entries_with_policy(zip_path, dest_dir, false)
-}
-
-pub fn unpack_zip_to_entries_with_policy(
-    zip_path: &str,
-    dest_dir: &str,
-    allow_unsupported: bool,
-) -> Result<serde_json::Value, String> {
-    if allow_unsupported {
-        return unpack_zip_to_entries_unchecked(zip_path, dest_dir);
-    }
     let editability = classify_pack_editability(zip_path)?;
     if !editability.authoring_editable {
         return Err(format!(
@@ -89,25 +189,29 @@ pub(crate) fn unpack_zip_to_entries_unchecked(
     zip_path: &str,
     dest_dir: &str,
 ) -> Result<serde_json::Value, String> {
-    let zip_path = ensure_studio_pack_zip(zip_path)?;
+    let imported = ensure_studio_pack_zip(zip_path)?;
+    let zip_path = imported.zip_path.clone();
     let dest = Path::new(dest_dir);
     fs::create_dir_all(dest)
         .map_err(|e| format!("Impossible de créer le dossier de destination : {}", e))?;
 
     let story_json = read_story_json_from_zip(&zip_path)?;
-    let doc: serde_json::Value =
-        serde_json::from_str(&story_json).map_err(|e| format!("story.json invalide : {}", e))?;
+    let decoded = decode_imported_pack(&imported, &story_json)
+        .map_err(|error| format!("story.json invalide : {error}"))?;
+    decoded.context.log_warnings();
+    let doc = &decoded.source_value;
 
     let asset_map = extract_all_zip_assets(&zip_path, dest)?;
     let thumbnail_path = extract_zip_thumbnail(&zip_path, dest)?;
 
-    let mut result = walk_story_doc_to_entries(&doc, &asset_map)?;
-    if let Some(uuid) = pack_uuid_from_doc(&doc) {
-        result["uuid"] = serde_json::Value::String(uuid.to_string());
+    let mut result = walk_story_doc_to_entries(doc, &asset_map)?;
+    result["importDiagnostics"] = serde_json::to_value(&decoded.context.diagnostics)
+        .map_err(|error| format!("Diagnostics d'import non sérialisables : {error}"))?;
+    if let Some(uuid) = pack_identity_from_story(doc) {
+        result["uuid"] = serde_json::Value::String(uuid);
     }
     if let Some(thumb) = thumbnail_path {
-        result["thumbnailImage"] =
-            serde_json::Value::String(crate::support::paths::path_for_frontend(&thumb));
+        result["thumbnailImage"] = serde_json::Value::String(path_for_frontend(&thumb));
     }
     Ok(result)
 }
@@ -129,6 +233,7 @@ pub struct PackEditabilityReport {
     pub root_ref_only: bool,
     pub shared_entry_ratio: f64,
     pub has_unmodeled_wheel: bool,
+    pub(crate) import_diagnostics: Vec<ImportDiagnostic>,
 }
 
 impl PackEditabilityReport {
@@ -148,13 +253,25 @@ impl PackEditabilityReport {
             root_ref_only: false,
             shared_entry_ratio: 0.0,
             has_unmodeled_wheel: false,
+            import_diagnostics: Vec::new(),
         }
     }
 
-    fn read_only_unprojected(reason: String) -> Self {
+    fn unsupported_with_diagnostics(
+        reason: String,
+        import_diagnostics: Vec<ImportDiagnostic>,
+    ) -> Self {
+        Self {
+            import_diagnostics,
+            ..Self::unsupported(reason)
+        }
+    }
+
+    fn read_only_unprojected(reason: String, import_diagnostics: Vec<ImportDiagnostic>) -> Self {
         Self {
             read_only_inspectable: true,
             reason,
+            import_diagnostics,
             ..Self::unsupported(String::new())
         }
     }
@@ -176,16 +293,47 @@ pub fn classify_pack_editability(zip_path: &str) -> Result<PackEditabilityReport
 }
 
 fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityReport, String> {
-    let zip_path = ensure_studio_pack_zip(zip_path)?;
+    let imported = ensure_studio_pack_zip(zip_path)?;
+    let zip_path = imported.zip_path.clone();
     let story_json = read_story_json_from_zip(&zip_path)?;
-    let doc: serde_json::Value =
-        serde_json::from_str(&story_json).map_err(|e| format!("story.json invalide : {}", e))?;
-    let story_document_is_simulable = serde_json::from_value::<StoryDocument>(doc.clone()).is_ok();
-    if !story_document_is_simulable {
-        return Ok(PackEditabilityReport::unsupported(
-            "story.json non simulable par Story Studio.".to_string(),
+    let decoded = match decode_imported_pack(&imported, &story_json) {
+        Ok(decoded) => decoded,
+        Err(error) => {
+            return Ok(PackEditabilityReport::unsupported_with_diagnostics(
+                format!("story.json non simulable par Story Studio ({error})."),
+                error.diagnostics,
+            ));
+        }
+    };
+    decoded.context.log_warnings();
+    let story_document_is_simulable = true;
+    // Clause d'entrée : le décodeur conserve un `controlSettings` incomplet,
+    // mais aucun consommateur ne doit lui donner un sens implicite. La
+    // projection d'authoring et la simulation supposeraient toutes deux un
+    // booléen ; le pack est donc refusé ici, avec le diagnostic exact, jusqu'à
+    // ce que les cinq valeurs soient explicitement renseignées.
+    let incomplete_controls = decoded
+        .document
+        .stage_nodes
+        .iter()
+        .filter(|stage| !stage.control_settings.is_complete())
+        .map(|stage| format!("'{}' ({})", stage.label(), stage.uuid))
+        .collect::<Vec<_>>();
+    if !incomplete_controls.is_empty() {
+        return Ok(PackEditabilityReport::unsupported_with_diagnostics(
+            format!(
+                "Contrôles incomplets, conservés mais non interprétés : {}. Les cinq valeurs (wheel, ok, home, pause, autoplay) doivent être renseignées explicitement.",
+                incomplete_controls.join(", ")
+            ),
+            decoded.context.diagnostics,
         ));
     }
+    let mut import_diagnostics = decoded.context.diagnostics;
+    // L'intégrité abstraite du graphe est mesurée à l'entrée et exposée, sans
+    // rendre le pack non éditable : elle bloque la préparation d'export et la
+    // readiness, pas la lecture.
+    import_diagnostics.extend(graph_integrity_import_diagnostics(&decoded.document));
+    let doc = decoded.source_value;
     let missing_assets = missing_referenced_assets(&zip_path, &doc)?;
     if !missing_assets.is_empty() {
         let rendered = missing_assets
@@ -193,17 +341,21 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
             .map(|name| format!("assets/{name}"))
             .collect::<Vec<_>>()
             .join(", ");
-        return Ok(PackEditabilityReport::unsupported(format!(
-            "Asset(s) référencé(s) absent(s) du ZIP : {rendered}"
-        )));
+        return Ok(PackEditabilityReport::unsupported_with_diagnostics(
+            format!("Asset(s) référencé(s) absent(s) du ZIP : {rendered}"),
+            import_diagnostics,
+        ));
     }
     let assets = presence_faithful_asset_map(&doc);
     let imported = match walk_story_doc_to_entries(&doc, &assets) {
         Ok(imported) => imported,
         Err(error) => {
-            return Ok(PackEditabilityReport::read_only_unprojected(format!(
-                "Lecture seule : simulation native possible, projection authoring impossible ({error})."
-            )))
+            return Ok(PackEditabilityReport::read_only_unprojected(
+                format!(
+                    "Lecture seule : simulation native possible, projection authoring impossible ({error})."
+                ),
+                import_diagnostics,
+            ))
         }
     };
 
@@ -222,6 +374,8 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let root_entry_count = count_project_entries(&project.root_entries);
     let shared_entry_count = count_project_entries(&project.shared_entries);
     let projected_entry_count = root_entry_count + shared_entry_count;
+    let projected_ref_count = count_project_entries_of_type(&project.root_entries, "ref")
+        + count_project_entries_of_type(&project.shared_entries, "ref");
     let root_ref_count = project
         .root_entries
         .iter()
@@ -239,6 +393,11 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         .get("usesGraphProjection")
         .and_then(|value| value.as_bool())
         .unwrap_or(false);
+    let graph_projection_is_authoring_compatible = graph_projection_is_authoring_compatible(
+        uses_graph_projection,
+        shared_entry_count,
+        projected_ref_count,
+    );
     let has_unmodeled_wheel = has_unmodeled_wheel(&doc);
     let structural_validation = validate_project_structure_for_generation(&project);
     let structural_validation_ok = structural_validation.is_ok();
@@ -260,12 +419,15 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     let canonical_round_trip_faithful = fidelity.faithful;
     let round_trip_faithful = canonical_round_trip_faithful;
     let aggregate_wrapper_count = story_studio_aggregation_wrapper_count(&doc);
-    let aggregate_end_gap_tolerated =
-        aggregate_end_gap_is_tolerated(aggregate_wrapper_count, &fidelity);
+    let aggregate_end_gap_tolerated = aggregate_end_gap_is_tolerated(
+        aggregate_wrapper_count,
+        named_night_bridge_count(&doc),
+        &fidelity,
+    );
     let end_home_or_night_gap_tolerated = end_home_or_night_gap_is_tolerated(&fidelity);
     let authoring_editable = projected_entry_count > 0
         && structural_validation_ok
-        && !uses_graph_projection
+        && graph_projection_is_authoring_compatible
         && root_ref_ratio < ROOT_REF_RATIO_LIMIT
         && shared_entry_count == 0
         && !has_unmodeled_wheel
@@ -289,8 +451,8 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
     } else if shared_entry_count > 0 {
         "Lecture seule : projection hors arbre avec éléments partagés non prise en charge en authoring."
             .to_string()
-    } else if uses_graph_projection {
-        "Lecture seule : graph_import a produit une projection fidèle mais non authoring."
+    } else if uses_graph_projection && !graph_projection_is_authoring_compatible {
+        "Lecture seule : graph_import a produit une projection avec des éléments hors hiérarchie."
             .to_string()
     } else if root_ref_only {
         "Lecture seule : la racine importée est uniquement composée de références.".to_string()
@@ -318,7 +480,44 @@ fn classify_pack_editability_inner(zip_path: &str) -> Result<PackEditabilityRepo
         root_ref_only,
         shared_entry_ratio,
         has_unmodeled_wheel,
+        import_diagnostics,
     })
+}
+
+/// Reproduit, pour les bancs de mesure, l'affectation exacte du document brut
+/// dans `Project.native_graph` effectuée par `classify_pack_editability_inner`.
+///
+/// Cette fonction n'existe qu'en test : elle permet aux tests de comparaison
+/// structurelle (famille A) de prouver par égalité de `serde_json::Value` que
+/// le `story.json` soumis aux passerelles est bien le document conservé à
+/// l'import, sans exposer ce parachute dans un chemin de production.
+#[cfg(test)]
+pub(crate) fn imported_native_graph_document_for_test(
+    zip_path: &str,
+) -> Result<serde_json::Value, String> {
+    let imported = ensure_studio_pack_zip(zip_path)?;
+    let story_json = read_story_json_from_zip(&imported.zip_path)?;
+    let decoded = decode_imported_pack(&imported, &story_json)
+        .map_err(|error| format!("story.json invalide : {error}"))?;
+    let doc = decoded.source_value;
+    let assets = presence_faithful_asset_map(&doc);
+    let imported = walk_story_doc_to_entries(&doc, &assets)?;
+    let title = doc
+        .get("title")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("Pack importé");
+    let mut project = project_from_imported_entries(&imported, title)?;
+    project.native_graph = Some(serde_json::json!({
+        "preserveForRoundTrip": true,
+        "document": doc,
+    }));
+    project
+        .native_graph
+        .as_ref()
+        .and_then(|value| value.get("document"))
+        .cloned()
+        .ok_or_else(|| "nativeGraph.document absent après import de test".to_string())
 }
 
 fn story_studio_aggregation_wrapper_count(doc: &serde_json::Value) -> usize {
@@ -472,7 +671,30 @@ fn is_aggregation_intro_stage(stage: &serde_json::Value) -> bool {
     is_stage_autoplay(stage) && stage_control_bool(stage, "ok", false)
 }
 
-fn aggregate_end_gap_is_tolerated(wrapper_count: usize, fidelity: &FidelityReport) -> bool {
+/// Les ponts nuit que Story Studio pose sur chaque sous-pack d'un agrégat.
+fn named_night_bridge_count(doc: &serde_json::Value) -> usize {
+    doc.get("stageNodes")
+        .and_then(|value| value.as_array())
+        .map(|stages| {
+            stages
+                .iter()
+                .filter(|stage| is_named_night_bridge_stage(stage))
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// Un agrégat Story Studio perd, en Libre, ses retours de fin par sous-pack :
+/// des Écrans sans média, et les ponts nuit `nightStage` de ses enfants. Un
+/// Écran perdu qui porte un média n'est toléré que s'il est l'un de ces ponts.
+/// Un message de fin partagé qui n'en est pas un (un « menu de sous-menus »
+/// quelconque, reconnu à tort comme agrégat) serait une perte de contenu : le
+/// pack reste alors fidèle dans le Graphe.
+fn aggregate_end_gap_is_tolerated(
+    wrapper_count: usize,
+    night_bridge_count: usize,
+    fidelity: &FidelityReport,
+) -> bool {
     if wrapper_count < 2
         || fidelity.faithful
         || fidelity.invalid_transition_count != 0
@@ -483,6 +705,7 @@ fn aggregate_end_gap_is_tolerated(wrapper_count: usize, fidelity: &FidelityRepor
     let missing_stage_count = fidelity.oracle_stage_count - fidelity.generated_stage_count;
     missing_stage_count <= wrapper_count
         && fidelity.asset_presence_gap_count <= missing_stage_count
+        && fidelity.asset_presence_gap_count <= night_bridge_count
         && !fidelity.topology_gaps.iter().any(|gap| {
             gap.contains("nightModeAvailable")
                 || gap.contains("squareOne manquant")
@@ -681,13 +904,12 @@ fn project_from_imported_entries(
         root_audio: root_audio.clone(),
         root_image: root_image.clone(),
         thumbnail_image: root_image,
-        night_mode_audio: if night_mode { night_mode_audio } else { None },
-        night_mode_return: if night_mode { night_mode_return } else { None },
-        night_mode_home_return: if night_mode {
-            night_mode_home_return
-        } else {
-            None
-        },
+        // Le message de fin ne dépend pas du mode nuit : un pack sans mode nuit
+        // peut jouer un message partagé après chaque histoire. `nightMode`
+        // reste ce que l'original déclare, et gouverne seul `nightModeAvailable`.
+        night_mode_audio,
+        night_mode_return,
+        night_mode_home_return,
         native_graph: imported
             .get("nativeGraph")
             .filter(|value| !value.is_null())
@@ -725,6 +947,31 @@ fn project_from_imported_entries(
             harmonize_loudness: true,
         },
     })
+}
+
+/// Ouvre un pack de la bibliothèque comme le mode Libre l'ouvre, et rend le
+/// projet éditable correspondant.
+///
+/// Réservée aux bancs de mesure : le parcours d'import produit met le même
+/// projet entre les mains de l'auteur, mais il passe par l'interface, qui ne
+/// s'automatise pas. Mesurer la chaîne de production Libre sur le corpus exige
+/// d'obtenir ce projet sans écran ; c'est tout ce que cette fonction fait, et
+/// elle n'ajoute aucune étape que l'import produit n'effectue pas.
+///
+/// Les médias sont extraits dans `dest_dir`, dont l'appelant a la charge.
+#[cfg(test)]
+pub(crate) fn import_pack_as_free_project(
+    zip_path: &str,
+    dest_dir: &str,
+) -> Result<Project, String> {
+    let imported = unpack_zip_to_entries_unchecked(zip_path, dest_dir)?;
+    let title = imported
+        .get("title")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("Pack importé")
+        .to_string();
+    project_from_imported_entries(&imported, &title)
 }
 
 fn allow_missing_selection_audio_for_import_validation(entries: &mut [ProjectEntry]) {
@@ -799,6 +1046,24 @@ fn count_project_entries(entries: &[ProjectEntry]) -> usize {
         .sum()
 }
 
+fn count_project_entries_of_type(entries: &[ProjectEntry], entry_type: &str) -> usize {
+    entries
+        .iter()
+        .map(|entry| {
+            usize::from(entry.entry_type == entry_type)
+                + count_project_entries_of_type(&entry.children, entry_type)
+        })
+        .sum()
+}
+
+fn graph_projection_is_authoring_compatible(
+    uses_graph_projection: bool,
+    shared_entry_count: usize,
+    projected_ref_count: usize,
+) -> bool {
+    !uses_graph_projection || (shared_entry_count == 0 && projected_ref_count == 0)
+}
+
 fn ratio(part: usize, total: usize) -> f64 {
     if total == 0 {
         0.0
@@ -842,31 +1107,13 @@ fn story_doc_indexes(
     (stages, actions)
 }
 
-fn ok_path_reaches_stage(
-    current_id: &str,
-    target_id: &str,
-    stages: &HashMap<&str, &serde_json::Value>,
-    actions: &HashMap<&str, &serde_json::Value>,
-    visited: &mut HashSet<String>,
-    depth: usize,
-) -> bool {
-    if depth > 32 || !visited.insert(current_id.to_string()) {
-        return false;
-    }
-    let Some(stage) = stages.get(current_id) else {
-        return false;
-    };
-    for next_id in stage_action_options(stage, actions) {
-        if next_id == target_id {
-            return true;
-        }
-        if ok_path_reaches_stage(next_id, target_id, stages, actions, visited, depth + 1) {
-            return true;
-        }
-    }
-    false
-}
-
+/// Un carrousel natif — une roue en lecture automatique qui se propose
+/// elle-même parmi ses choix — n'a pas d'équivalent dans le Libre.
+///
+/// Seule l'auto-référence directe compte. Un menu Libre en lecture automatique
+/// voit ses histoires revenir à lui par le chemin OK : c'est son retour de fin,
+/// que le Libre modélise, pas un carrousel. Suivre ce chemin rendait un pack
+/// produit par le Libre lui-même non éditable dans le Libre.
 fn has_unmodeled_wheel(doc: &serde_json::Value) -> bool {
     let (stages, actions) = story_doc_indexes(doc);
     stages.iter().any(|(stage_id, stage)| {
@@ -876,20 +1123,7 @@ fn has_unmodeled_wheel(doc: &serde_json::Value) -> bool {
             return false;
         }
         let targets = stage_action_options(stage, &actions);
-        if targets.len() < 2 {
-            return false;
-        }
-        targets.contains(stage_id)
-            || targets.iter().any(|target_id| {
-                ok_path_reaches_stage(
-                    target_id,
-                    stage_id,
-                    &stages,
-                    &actions,
-                    &mut HashSet::new(),
-                    0,
-                )
-            })
+        targets.len() >= 2 && targets.contains(stage_id)
     })
 }
 
@@ -1000,13 +1234,128 @@ fn extract_zip_thumbnail(zip_path: &Path, dest: &Path) -> Result<Option<PathBuf>
 #[cfg(test)]
 mod tests {
     use super::{
-        check_pack_editability, classify_pack_editability, extract_all_zip_assets,
-        extract_zip_thumbnail, project_from_imported_entries, unpack_zip_to_entries,
-        unpack_zip_to_entries_unchecked, unpack_zip_to_entries_with_policy,
+        check_pack_editability, classify_pack_editability, decode_imported_pack,
+        extract_all_zip_assets, extract_zip_thumbnail, graph_projection_is_authoring_compatible,
+        project_from_imported_entries, read_story_json_from_zip, unpack_zip_to_entries,
+        unpack_zip_to_entries_unchecked,
     };
     use std::fs;
     use std::io::Write;
     use std::path::{Path, PathBuf};
+
+    /// La frontière d'import rend le document **et** le contexte de sa
+    /// conversion, y compris quand le ZIP vient du cache.
+    ///
+    /// Sans ce raccord, la relecture du ZIP produit par une projection FS
+    /// reclassait le pack en `imported-studio` : plus de quadrillage d'éditeur,
+    /// plus de provenance native, et la qualification `UNTESTED` de
+    /// `version:256` disparaissait alors que la valeur, elle, restait intacte.
+    #[test]
+    fn a_cached_fs_conversion_still_delivers_its_context_at_the_import_frontier() {
+        use crate::native_pack::{
+            DocumentOrigin, InteroperabilityStatus, PackIdentityOrigin, ValueOrigin,
+        };
+        use crate::support::fs_pack_reader::fs_fixtures::{
+            write_dialect_fixture_pack, DIALECT_PACK_UUID,
+        };
+        use crate::support::imported_pack::ensure_studio_pack_zip_from_dir;
+
+        let dir = temp_dir("fs_conversion_context_frontier");
+        let pack_dir = dir.join(DIALECT_PACK_UUID);
+        let cache_dir = dir.join(crate::support::imported_pack::IMPORTED_PACK_CACHE_DIR);
+        write_dialect_fixture_pack(&pack_dir);
+        let ni_path = pack_dir.join("ni");
+        let mut ni = fs::read(&ni_path).expect("read node index");
+        ni[2..4].copy_from_slice(&256_i16.to_le_bytes());
+        fs::write(&ni_path, ni).expect("write node index version");
+
+        let mut contexts = Vec::new();
+        for pass in ["conversion", "cache", "frontend-path"] {
+            let imported = ensure_studio_pack_zip_from_dir(
+                pack_dir.to_str().expect("pack path utf8"),
+                &cache_dir,
+            )
+            .unwrap_or_else(|error| panic!("{pass} : {error}"));
+            // La commande Tauri rend uniquement un chemin à l'interface.
+            let imported = if pass == "frontend-path" {
+                super::ensure_studio_pack_zip(imported.zip_path.to_str().expect("zip path utf8"))
+                    .expect("réouverture du chemin transmis par l'interface")
+            } else {
+                imported
+            };
+            let story_json = read_story_json_from_zip(&imported.zip_path)
+                .unwrap_or_else(|error| panic!("{pass} : {error}"));
+            let decoded = decode_imported_pack(&imported, &story_json)
+                .unwrap_or_else(|error| panic!("{pass} : {error}"));
+
+            assert_eq!(
+                decoded.context.document_origin,
+                DocumentOrigin::ImportedFs,
+                "{pass}"
+            );
+            assert_eq!(
+                decoded.context.default_value_origin,
+                ValueOrigin::SourceNativeDerived,
+                "{pass}"
+            );
+            assert_eq!(
+                decoded.document.version.value().copied(),
+                Some(256),
+                "{pass}"
+            );
+            assert!(
+                !decoded.context.editor_positions.is_empty(),
+                "{pass} : le quadrillage de projection doit rester disponible"
+            );
+            assert!(
+                decoded
+                    .context
+                    .editor_positions
+                    .iter()
+                    .all(|position| { position.origin == ValueOrigin::ProjectionDerived }),
+                "{pass}"
+            );
+            assert!(
+                decoded
+                    .context
+                    .export_qualifications
+                    .iter()
+                    .any(|qualification| {
+                        qualification.dimension == "studio-export-version"
+                            && qualification.path == "/version"
+                            && qualification.status == InteroperabilityStatus::Untested
+                    }),
+                "{pass} : version:256 reste UNTESTED en sortie Studio"
+            );
+            assert_eq!(
+                decoded.context.pack_identity.origin,
+                PackIdentityOrigin::FsEntryStage,
+                "{pass}"
+            );
+            assert_eq!(
+                decoded.context.pack_identity.value.as_deref(),
+                Some(DIALECT_PACK_UUID),
+                "{pass}"
+            );
+            contexts.push(decoded.context);
+        }
+
+        // Les chemins d'ancrage portent les UUID tirés à la conversion : deux
+        // contextes égaux prouvent que la seconde passe a bien relu le cache
+        // sans reconvertir, et qu'elle en restitue exactement le contexte.
+        assert_eq!(contexts[0], contexts[1]);
+        assert_eq!(contexts[0], contexts[2]);
+
+        fs::remove_dir_all(dir).expect("cleanup frontier fixture");
+    }
+
+    #[test]
+    fn hierarchical_graph_projection_is_authoring_compatible() {
+        assert!(graph_projection_is_authoring_compatible(true, 0, 0));
+        assert!(!graph_projection_is_authoring_compatible(true, 1, 0));
+        assert!(!graph_projection_is_authoring_compatible(true, 0, 1));
+        assert!(graph_projection_is_authoring_compatible(false, 1, 1));
+    }
 
     fn temp_dir(name: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()
@@ -1050,6 +1399,283 @@ mod tests {
                 ("assets/extra.mp3", b"extra"),
             ],
         );
+    }
+
+    /// L'acquisition avancée traverse la **vraie** frontière de
+    /// conversion, pour les deux provenances.
+    ///
+    /// Un pack FS relu comme une simple copie JSON repartirait en
+    /// `imported-studio` : le test compare donc le payload acquis au contexte
+    /// que la frontière produit avant initialisation, et vérifie que seule
+    /// l'identité peut différer. Le ZIP STUdio, lui, garde son identité source
+    /// bit-à-bit et ne fait tirer aucun UUID.
+    #[test]
+    fn advanced_acquisition_keeps_each_provenance_and_generates_at_most_once() {
+        use crate::native_pack::persistence::decode_authoring_payload;
+        use crate::native_pack::{DocumentOrigin, PackIdentityOrigin, ValueOrigin};
+        use crate::support::fs_pack_reader::fs_fixtures::{
+            write_dialect_fixture_pack, DIALECT_PACK_UUID,
+        };
+        use crate::support::imported_pack::ensure_studio_pack_zip_from_dir;
+
+        let dir = temp_dir("advanced_acquisition_frontier");
+        let cache_dir = dir.join(crate::support::imported_pack::IMPORTED_PACK_CACHE_DIR);
+        let pack_dir = dir.join(DIALECT_PACK_UUID);
+        write_dialect_fixture_pack(&pack_dir);
+
+        let mut drawn = Vec::new();
+        let mut identities = || {
+            let value = uuid::Uuid::from_u128(
+                0xd1_0000_0000_4000_8000_0000_0000_0000 | drawn.len() as u128,
+            );
+            drawn.push(value);
+            value
+        };
+
+        // Pack FS : deux passes, dont une servie par le cache de conversion.
+        let mut acquired = Vec::new();
+        for pass in ["conversion", "cache"] {
+            let imported = ensure_studio_pack_zip_from_dir(
+                pack_dir.to_str().expect("pack path utf8"),
+                &cache_dir,
+            )
+            .unwrap_or_else(|error| panic!("{pass} : {error}"));
+            let story_json = read_story_json_from_zip(&imported.zip_path)
+                .unwrap_or_else(|error| panic!("{pass} : {error}"));
+            let before = decode_imported_pack(&imported, &story_json)
+                .unwrap_or_else(|error| panic!("{pass} : {error}"));
+
+            let acquisition = super::advanced_document_from_imported_pack(
+                &imported,
+                &dir.join(format!("assets-{pass}")),
+                &mut identities,
+            )
+            .unwrap_or_else(|error| panic!("{pass} : {error}"));
+            let payload = acquisition.payload;
+            let reopened = decode_authoring_payload(&payload)
+                .unwrap_or_else(|error| panic!("{pass} : {error}"));
+
+            assert_eq!(
+                reopened.context.document_origin,
+                DocumentOrigin::ImportedFs,
+                "{pass}"
+            );
+            assert_eq!(
+                reopened.context.pack_identity.origin,
+                PackIdentityOrigin::FsEntryStage,
+                "{pass} : l'entrée FS reste l'identité, sans génération"
+            );
+            assert_eq!(
+                reopened.context.pack_identity.value.as_deref(),
+                Some(DIALECT_PACK_UUID),
+                "{pass}"
+            );
+            // Provenance et layout séparé identiques à l'avant-initialisation.
+            assert_eq!(reopened.context, before.context, "{pass}");
+            assert!(
+                reopened
+                    .context
+                    .editor_positions
+                    .iter()
+                    .all(|position| position.origin == ValueOrigin::ProjectionDerived),
+                "{pass} : le quadrillage reste hors du document"
+            );
+            assert!(
+                reopened
+                    .document
+                    .stage_nodes
+                    .iter()
+                    .all(|stage| stage.position.is_absent()),
+                "{pass}"
+            );
+            acquired.push(payload);
+        }
+        assert_eq!(
+            acquired[0], acquired[1],
+            "cache et conversion : même payload"
+        );
+        assert!(drawn.is_empty(), "aucune identité générée pour un pack FS");
+
+        // ZIP STUdio : identité source bridge-compatible, conservée telle quelle.
+        let entry = "0F9C2A411D3E4A8B9C772F5B6E10AB34";
+        let zip_path = dir.join("studio.zip");
+        write_story_zip(
+            &zip_path,
+            &serde_json::json!({
+                "format": "v1", "version": 1, "title": "Pack STUdio",
+                "stageNodes": [{
+                    "uuid": entry, "squareOne": true,
+                    "audio": "story.mp3", "image": "cover.png",
+                    "controlSettings": {"wheel": false, "ok": true, "home": false,
+                        "pause": false, "autoplay": false},
+                    "okTransition": {"actionNode": "menu", "optionIndex": 0},
+                    "homeTransition": null
+                }],
+                "actionNodes": [{"id": "menu", "options": [entry]}]
+            }),
+        );
+        let acquired = super::import_pack_as_advanced_document(
+            zip_path.to_str().expect("zip utf8"),
+            dir.join("assets-studio")
+                .to_str()
+                .expect("assets path utf8"),
+        )
+        .expect("acquisition STUdio");
+        let studio = decode_authoring_payload(&acquired.payload).expect("réouverture STUdio");
+        assert_eq!(
+            studio.context.document_origin,
+            DocumentOrigin::ImportedStudio
+        );
+        assert_eq!(
+            studio.context.pack_identity.origin,
+            PackIdentityOrigin::SquareOneStage
+        );
+        assert_eq!(studio.context.pack_identity.value.as_deref(), Some(entry));
+        assert_eq!(studio.document.stage_nodes[0].uuid, entry);
+
+        fs::remove_dir_all(dir).expect("cleanup advanced acquisition fixture");
+    }
+
+    /// L'acquisition produit **toutes** les liaisons du document, et
+    /// seulement elles.
+    ///
+    /// Le pack porte trois cas à distinguer : deux audios homonymes
+    /// par leur rôle mais distincts par leurs octets, une image partagée par
+    /// deux Stages, et une référence dont l'archive ne contient pas le fichier.
+    /// Un quatrième asset présent dans le ZIP mais référencé par personne ne
+    /// doit produire aucune liaison : la liste vient du document, pas du
+    /// dossier. Le média absent garde son chemin — sans lui, il ne serait ni
+    /// retrouvable ni remplaçable — mais une référence qui remonterait hors du
+    /// dossier d'extraction reste liée **sans** chemin : la référence d'un pack
+    /// est une donnée, jamais une autorisation de désigner ailleurs.
+    #[test]
+    fn advanced_acquisition_binds_every_referenced_asset_and_only_those() {
+        use crate::native_pack::persistence::MediaBindingStatus;
+
+        let dir = temp_dir("advanced_acquisition_bindings");
+        let zip_path = dir.join("medias.zip");
+        let assets_dir = dir.join("assets");
+        let stage_a = "1A9C2A411D3E4A8B9C772F5B6E10AB34";
+        let stage_b = "2B9C2A411D3E4A8B9C772F5B6E10AB34";
+        let stage_c = "3C9C2A411D3E4A8B9C772F5B6E10AB34";
+        let stage_d = "4D9C2A411D3E4A8B9C772F5B6E10AB34";
+        write_zip(
+            &zip_path,
+            &[
+                (
+                    "story.json",
+                    serde_json::to_vec(&serde_json::json!({
+                        "format": "v1", "version": 1, "title": "Pack médias",
+                        "stageNodes": [
+                            {"uuid": stage_a, "squareOne": true,
+                             "audio": "voix-a.mp3", "image": "commune.png",
+                             "controlSettings": {"wheel": false, "ok": true, "home": false,
+                                 "pause": false, "autoplay": false},
+                             "okTransition": {"actionNode": "menu", "optionIndex": 0},
+                             "homeTransition": null},
+                            {"uuid": stage_b,
+                             "audio": "voix-b.mp3", "image": "commune.png",
+                             "controlSettings": {"wheel": false, "ok": true, "home": false,
+                                 "pause": false, "autoplay": false},
+                             "okTransition": {"actionNode": "menu", "optionIndex": 0},
+                             "homeTransition": null},
+                            {"uuid": stage_c,
+                             "audio": "absent.mp3",
+                             "controlSettings": {"wheel": false, "ok": true, "home": false,
+                                 "pause": false, "autoplay": false},
+                             "okTransition": {"actionNode": "menu", "optionIndex": 0},
+                             "homeTransition": null},
+                            {"uuid": stage_d,
+                             "audio": "../evasion.mp3",
+                             "controlSettings": {"wheel": false, "ok": true, "home": false,
+                                 "pause": false, "autoplay": false},
+                             "okTransition": {"actionNode": "menu", "optionIndex": 0},
+                             "homeTransition": null}
+                        ],
+                        "actionNodes": [
+                            {"id": "menu", "options": [stage_a, stage_b, stage_c, stage_d]}
+                        ]
+                    }))
+                    .expect("serialize story")
+                    .as_slice(),
+                ),
+                ("assets/voix-a.mp3", b"octets de A"),
+                ("assets/voix-b.mp3", b"octets de B, differents"),
+                ("assets/commune.png", b"image partagee"),
+                ("assets/inutilise.mp3", b"jamais reference"),
+            ],
+        );
+
+        let acquired = super::import_pack_as_advanced_document(
+            zip_path.to_str().expect("zip utf8"),
+            assets_dir.to_str().expect("assets utf8"),
+        )
+        .expect("acquisition du pack média");
+
+        assert_eq!(
+            acquired
+                .media_bindings
+                .iter()
+                .map(|binding| (binding.asset_ref.as_str(), binding.status))
+                .collect::<Vec<_>>(),
+            vec![
+                ("voix-a.mp3", MediaBindingStatus::Resolved),
+                ("commune.png", MediaBindingStatus::Resolved),
+                ("voix-b.mp3", MediaBindingStatus::Resolved),
+                ("absent.mp3", MediaBindingStatus::Missing),
+                ("../evasion.mp3", MediaBindingStatus::Missing),
+            ],
+            "ordre du document, image partagée liée une fois, asset inutilisé absent"
+        );
+
+        for (asset_ref, bytes) in [
+            ("voix-a.mp3", b"octets de A".as_slice()),
+            ("voix-b.mp3", b"octets de B, differents".as_slice()),
+            ("commune.png", b"image partagee".as_slice()),
+        ] {
+            let binding = acquired
+                .media_bindings
+                .iter()
+                .find(|binding| binding.asset_ref == asset_ref)
+                .expect("liaison présente");
+            let path = binding.path.as_deref().expect("chemin résolu");
+            assert_eq!(
+                fs::read(path).expect("média lisible"),
+                bytes,
+                "{asset_ref} : les octets du pack sont ceux du disque"
+            );
+        }
+
+        let missing = acquired
+            .media_bindings
+            .iter()
+            .find(|binding| binding.asset_ref == "absent.mp3")
+            .expect("liaison du média absent");
+        assert_eq!(
+            missing.path.as_deref(),
+            Some(crate::support::paths::path_for_frontend(assets_dir.join("absent.mp3")).as_str()),
+            "un média absent garde le chemin qu'il aurait eu"
+        );
+        assert!(
+            !assets_dir.join("absent.mp3").exists(),
+            "et ce chemin ne fabrique aucun fichier"
+        );
+        assert!(
+            assets_dir.join("inutilise.mp3").exists(),
+            "l'asset non référencé est extrait mais reste sans liaison"
+        );
+
+        let escaping = acquired
+            .media_bindings
+            .iter()
+            .find(|binding| binding.asset_ref == "../evasion.mp3")
+            .expect("liaison de la référence hors dossier");
+        assert_eq!(
+            escaping.path, None,
+            "une référence qui remonterait hors du dossier reste liée, sans chemin"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup advanced bindings fixture");
     }
 
     #[test]
@@ -1128,6 +1754,27 @@ mod tests {
         writer.finish().expect("finish zip");
     }
 
+    fn write_story_zip_raw_with_assets(path: &Path, story: &str, assets: &[&str]) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("create zip parent");
+        }
+        let file = fs::File::create(path).expect("create zip");
+        let mut writer = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        writer
+            .start_file("story.json", options)
+            .expect("start story");
+        writer.write_all(story.as_bytes()).expect("write story");
+        for asset in assets {
+            writer
+                .start_file(format!("assets/{asset}"), options)
+                .expect("start asset");
+            writer.write_all(asset.as_bytes()).expect("write asset");
+        }
+        writer.finish().expect("finish zip");
+    }
+
     fn editable_story_json() -> serde_json::Value {
         serde_json::json!({
             "title": "Pack editable",
@@ -1163,6 +1810,79 @@ mod tests {
                 { "id": "play-action", "name": "Play", "options": ["play"] }
             ]
         })
+    }
+
+    #[test]
+    fn product_import_observes_duplicate_root_members_before_value_parsing() {
+        let dir = temp_dir("duplicate_root_product_path");
+        let zip_path = dir.join("pack.zip");
+        let output_dir = dir.join("out");
+        let raw = serde_json::to_string(&editable_story_json()).expect("serialize fixture");
+        let raw = raw.replacen(
+            r#""title":"Pack editable""#,
+            r#""title":"écartée","title":"retenue""#,
+            1,
+        );
+        assert!(raw.contains(r#""title":"écartée","title":"retenue""#));
+        write_story_zip_raw_with_assets(
+            &zip_path,
+            &raw,
+            &["root.mp3", "cover.png", "item.mp3", "item.png", "story.mp3"],
+        );
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("report");
+        let diagnostic = report
+            .import_diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.path == "/title")
+            .expect("duplicate warning in product report");
+        assert_eq!(
+            diagnostic.retained,
+            crate::native_pack::Presence::from_json(serde_json::json!("retenue"))
+        );
+        assert_eq!(diagnostic.discarded, vec![serde_json::json!("écartée")]);
+
+        let unpacked = unpack_zip_to_entries_unchecked(
+            zip_path.to_str().expect("utf8"),
+            output_dir.to_str().expect("utf8"),
+        )
+        .expect("product unpack");
+        assert_eq!(unpacked["title"], serde_json::json!("retenue"));
+        assert!(unpacked["importDiagnostics"]
+            .as_array()
+            .is_some_and(|items| items.iter().any(|item| item["path"] == "/title")));
+
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn product_import_rejects_an_incomplete_transition_with_a_precise_diagnostic() {
+        let dir = temp_dir("incomplete_transition_product_path");
+        let zip_path = dir.join("pack.zip");
+        let mut story = editable_story_json();
+        story["stageNodes"][0]["okTransition"] = serde_json::json!({ "actionNode": "root-action" });
+        write_story_zip_with_assets(
+            &zip_path,
+            &story,
+            &["root.mp3", "cover.png", "item.mp3", "item.png", "story.mp3"],
+        );
+
+        let report = classify_pack_editability(zip_path.to_str().expect("utf8")).expect("report");
+        assert!(!report.authoring_editable);
+        assert!(!report.read_only_inspectable);
+        assert!(report.import_diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "transition-missing-option-index"
+                && diagnostic.path.contains("/okTransition")
+        }));
+
+        let error = unpack_zip_to_entries_unchecked(
+            zip_path.to_str().expect("utf8"),
+            dir.join("out").to_str().expect("utf8"),
+        )
+        .expect_err("incomplete transition must be rejected before projection");
+        assert!(error.contains("transition-missing-option-index"), "{error}");
+
+        fs::remove_dir_all(dir).ok();
     }
 
     fn nested_menu_story_json(depth: usize) -> serde_json::Value {
@@ -1433,7 +2153,7 @@ mod tests {
 
     fn example_shared_entry_story_json() -> serde_json::Value {
         serde_json::json!({
-            "title": "Example-shared-entry synthetic",
+            "title": "Example shared-entry synthetic",
             "version": 1,
             "description": "",
             "format": "v1",
@@ -1685,6 +2405,164 @@ mod tests {
         })
     }
 
+    /// La forme de C3a-02 : une couverture, une question principale, deux menus
+    /// qui ont chacun leur question puis deux titres, et des histoires qui
+    /// finissent sur un Écran de fin, avec son, qui n'est pas un pont nuit
+    /// Story Studio, avant de revenir à la question principale. Les deux menus
+    /// y ressemblent aux enveloppes d'un agrégat.
+    ///
+    /// `per_menu_end` donne à chaque menu son propre message de fin (packs
+    /// bilingues du corpus) ; sinon un seul message est partagé par toutes les
+    /// histoires (packs officiels du corpus).
+    fn end_message_story(per_menu_end: bool) -> (serde_json::Value, Vec<String>) {
+        let end_of = |menu: usize| {
+            if per_menu_end {
+                format!("end-{menu}")
+            } else {
+                "end".to_string()
+            }
+        };
+        let controls = |wheel: bool, ok: bool, home: bool, autoplay: bool| serde_json::json!({ "wheel": wheel, "ok": ok, "home": home, "pause": false, "autoplay": autoplay });
+        let to = |action: &str| serde_json::json!({ "actionNode": action, "optionIndex": 0 });
+        let mut stages = vec![
+            serde_json::json!({
+                "uuid": "cover", "squareOne": true, "audio": "cover.mp3", "image": "cover.png",
+                "controlSettings": controls(true, true, false, false),
+                "okTransition": to("to-main"), "homeTransition": null
+            }),
+            serde_json::json!({
+                "uuid": "main", "squareOne": false, "audio": "main.mp3", "image": null,
+                "controlSettings": controls(false, true, true, true),
+                "okTransition": to("menus"), "homeTransition": null
+            }),
+        ];
+        let mut actions = vec![serde_json::json!({ "id": "to-main", "options": ["main"] })];
+        let mut assets: Vec<String> = ["cover.mp3", "cover.png", "main.mp3", "question.mp3"]
+            .iter()
+            .map(|name| name.to_string())
+            .collect();
+        let mut menus = Vec::new();
+        for menu in 0..2 {
+            menus.push(format!("menu-{menu}"));
+            stages.push(serde_json::json!({
+                "uuid": format!("menu-{menu}"), "squareOne": false,
+                "audio": format!("menu-{menu}.mp3"), "image": format!("menu-{menu}.png"),
+                "controlSettings": controls(true, true, true, false),
+                "okTransition": to(&format!("to-question-{menu}")), "homeTransition": null
+            }));
+            stages.push(serde_json::json!({
+                "uuid": format!("question-{menu}"), "squareOne": false, "audio": "question.mp3", "image": null,
+                "controlSettings": controls(false, true, true, true),
+                "okTransition": to(&format!("titles-{menu}")), "homeTransition": to("to-main")
+            }));
+            actions.push(serde_json::json!({ "id": format!("to-question-{menu}"), "options": [format!("question-{menu}")] }));
+            assets.extend([format!("menu-{menu}.mp3"), format!("menu-{menu}.png")]);
+            let mut titles = Vec::new();
+            for story in 0..2 {
+                let key = format!("{menu}-{story}");
+                titles.push(format!("title-{key}"));
+                stages.push(serde_json::json!({
+                    "uuid": format!("title-{key}"), "squareOne": false,
+                    "audio": format!("title-{key}.mp3"), "image": format!("title-{key}.png"),
+                    "controlSettings": controls(true, true, true, false),
+                    "okTransition": to(&format!("to-story-{key}")), "homeTransition": to("to-main")
+                }));
+                stages.push(serde_json::json!({
+                    "uuid": format!("story-{key}"), "squareOne": false,
+                    "audio": format!("story-{key}.mp3"), "image": null,
+                    "controlSettings": controls(false, false, true, true),
+                    "okTransition": to(&format!("to-{}", end_of(menu))), "homeTransition": to("to-main")
+                }));
+                actions.push(serde_json::json!({ "id": format!("to-story-{key}"), "options": [format!("story-{key}")] }));
+                assets.extend([
+                    format!("title-{key}.mp3"),
+                    format!("title-{key}.png"),
+                    format!("story-{key}.mp3"),
+                ]);
+            }
+            actions.push(serde_json::json!({ "id": format!("titles-{menu}"), "options": titles }));
+        }
+        actions.push(serde_json::json!({ "id": "menus", "options": menus }));
+        let ends: std::collections::BTreeSet<String> = (0..2).map(end_of).collect();
+        for end in ends {
+            stages.push(serde_json::json!({
+                "uuid": end, "squareOne": false, "audio": format!("{end}.mp3"), "image": null,
+                "controlSettings": controls(false, true, true, true),
+                "okTransition": to("to-main"), "homeTransition": to("to-main")
+            }));
+            actions.push(serde_json::json!({ "id": format!("to-{end}"), "options": [end] }));
+            assets.push(format!("{end}.mp3"));
+        }
+        let story = serde_json::json!({
+            "format": "v1", "version": 1, "title": "Message de fin",
+            "nightModeAvailable": false, "stageNodes": stages, "actionNodes": actions
+        });
+        (story, assets)
+    }
+
+    fn classify_end_message_story(
+        label: &str,
+        per_menu_end: bool,
+    ) -> (super::PackEditabilityReport, serde_json::Value) {
+        let dir = temp_dir(label);
+        let zip_path = dir.join("pack.zip");
+        let (story, assets) = end_message_story(per_menu_end);
+        assert_eq!(super::story_studio_aggregation_wrapper_count(&story), 2);
+        let asset_names: Vec<&str> = assets.iter().map(String::as_str).collect();
+        write_story_zip_with_assets(&zip_path, &story, &asset_names);
+        let zip = zip_path.to_str().expect("utf8");
+        let report = classify_pack_editability(zip).expect("verdict");
+        let imported =
+            unpack_zip_to_entries_unchecked(zip, dir.join("imported").to_str().expect("utf8"))
+                .expect("import");
+        fs::remove_dir_all(dir).expect("cleanup");
+        (report, imported)
+    }
+
+    #[test]
+    fn a_shared_end_message_without_night_mode_is_kept_in_the_free_editor() {
+        let (report, imported) = classify_end_message_story("shared_end_message", false);
+
+        assert!(
+            report.round_trip_faithful,
+            "{} | {:?}",
+            report.reason, report.fidelity
+        );
+        assert!(report.authoring_editable, "{}", report.reason);
+        // Le message devient le message de fin du projet, sans activer le mode
+        // nuit que l'original ne déclare pas.
+        assert!(imported["nightModeAudio"]
+            .as_str()
+            .is_some_and(|audio| audio.ends_with("end.mp3")));
+        assert_eq!(imported["nightMode"].as_bool(), Some(false));
+    }
+
+    #[test]
+    fn a_lost_end_message_is_not_tolerated_as_an_aggregate_gap() {
+        // Un message de fin par menu : il n'est pas repris comme message
+        // partagé, et le juge voit les deux Écrans perdus.
+        let (report, _) = classify_end_message_story("per_menu_end_message", true);
+
+        let fidelity = report.fidelity.as_ref().expect("verdict du juge");
+        assert_eq!(
+            fidelity.oracle_stage_count - fidelity.generated_stage_count,
+            2
+        );
+        assert_eq!(fidelity.asset_presence_gap_count, 2);
+        // Sans la borne des ponts nuit, la tolérance d'agrégat l'aurait laissé
+        // passer en Libre, message de fin perdu.
+        assert!(
+            !report.authoring_editable,
+            "un message de fin perdu n'est pas un retour d'agrégat : {}",
+            report.reason
+        );
+        assert!(
+            !report.reason.contains("agrégat Story Studio"),
+            "{}",
+            report.reason
+        );
+    }
+
     fn aggregate_night_bridge_assets() -> Vec<&'static str> {
         vec![
             "root.mp3",
@@ -1749,49 +2627,146 @@ mod tests {
         story
     }
 
+    /// Un menu Libre en roue et lecture automatique : ses deux histoires
+    /// reviennent à lui à la fin. C'est le retour du Libre, pas un carrousel.
+    #[test]
+    fn libre_autoplay_menu_returning_from_its_stories_is_not_unmodeled() {
+        let story = serde_json::json!({
+            "title": "Menu Libre en lecture automatique",
+            "version": 1,
+            "description": "",
+            "format": "v1",
+            "nightModeAvailable": false,
+            "stageNodes": [
+                {
+                    "uuid": "cover", "name": "Cover", "type": "stage", "squareOne": true,
+                    "audio": "cover.mp3", "image": "cover.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": false, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "cover-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "menu", "name": "Menu", "type": "stage", "squareOne": false,
+                    "audio": "menu.mp3", "image": null,
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": true },
+                    "okTransition": { "actionNode": "menu-action", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "a", "name": "A", "type": "stage", "squareOne": false,
+                    "audio": "a.mp3", "image": "a.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "a-play", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "a-story", "name": "A story", "type": "stage", "squareOne": false,
+                    "audio": "a-story.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "back-to-menu", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "b", "name": "B", "type": "stage", "squareOne": false,
+                    "audio": "b.mp3", "image": "b.png",
+                    "controlSettings": { "wheel": true, "ok": true, "home": true, "pause": false, "autoplay": false },
+                    "okTransition": { "actionNode": "b-play", "optionIndex": 0 },
+                    "homeTransition": null
+                },
+                {
+                    "uuid": "b-story", "name": "B story", "type": "stage", "squareOne": false,
+                    "audio": "b-story.mp3", "image": null,
+                    "controlSettings": { "wheel": false, "ok": false, "home": true, "pause": true, "autoplay": true },
+                    "okTransition": { "actionNode": "back-to-menu", "optionIndex": 0 },
+                    "homeTransition": null
+                }
+            ],
+            "actionNodes": [
+                { "id": "cover-action", "name": "Cover", "options": ["menu"] },
+                { "id": "menu-action", "name": "Menu", "options": ["a", "b"] },
+                { "id": "a-play", "name": "A", "options": ["a-story"] },
+                { "id": "b-play", "name": "B", "options": ["b-story"] },
+                { "id": "back-to-menu", "name": "Back", "options": ["menu"] }
+            ]
+        });
+        assert!(!super::has_unmodeled_wheel(&story));
+    }
+
     #[test]
     fn wheel_autoplay_cycle_is_unmodeled() {
         assert!(super::has_unmodeled_wheel(&unmodeled_wheel_story_json()));
     }
 
-    #[test]
-    fn pack_uuid_prefers_root_metadata() {
-        let doc = serde_json::json!({
-            "uuid": "11111111-2222-4333-8444-555555555555",
+    /// L'identité que le Libre récupère, depuis un `story.json` décodé comme à
+    /// l'import réel.
+    fn libre_identity(root_uuid: Option<&str>, entry_uuid: &str) -> Option<String> {
+        let mut story = serde_json::json!({
+            "format": "v1",
+            "version": 1,
+            "title": "Identité",
             "stageNodes": [{
-                "uuid": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-                "squareOne": true
-            }]
+                "uuid": entry_uuid,
+                "type": "stage",
+                "squareOne": true,
+                "audio": null,
+                "image": null,
+                "okTransition": null,
+                "homeTransition": null,
+                "controlSettings": {
+                    "wheel": false, "ok": false, "home": false,
+                    "pause": false, "autoplay": false
+                }
+            }],
+            "actionNodes": []
         });
+        if let Some(root) = root_uuid {
+            story["uuid"] = serde_json::json!(root);
+        }
+        let decoded =
+            super::decode_story_document(&story.to_string()).expect("story.json décodable");
+        crate::native_pack::pack_identity_from_story(&decoded.source_value)
+    }
 
+    const ENTRY: &str = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    const ROOT: &str = "11111111-2222-4333-8444-555555555555";
+
+    #[test]
+    fn pack_uuid_reads_the_entry_stage_of_a_studio_pack_without_root_uuid() {
+        assert_eq!(libre_identity(None, ENTRY).as_deref(), Some(ENTRY));
+    }
+
+    /// Un pack Libre exporté avant la réparation porte l'identité choisie en
+    /// tête et un UUID aléatoire sur l'Écran d'entrée : c'est ce dernier que
+    /// l'appareil connaît, c'est lui qui est récupéré.
+    #[test]
+    fn pack_uuid_prefers_the_entry_stage_to_a_diverging_root_uuid() {
+        assert_eq!(libre_identity(Some(ROOT), ENTRY).as_deref(), Some(ENTRY));
+    }
+
+    #[test]
+    fn pack_uuid_keeps_a_hyphenless_entry_stage_as_written() {
+        let hyphenless = "AAAAAAAABBBB4CCC8DDDEEEEEEEEEEEE";
         assert_eq!(
-            super::pack_uuid_from_doc(&doc),
-            Some("11111111-2222-4333-8444-555555555555")
+            libre_identity(Some(ROOT), hyphenless).as_deref(),
+            Some(hyphenless)
         );
     }
 
     #[test]
-    fn pack_uuid_falls_back_to_legacy_square_one_uuid() {
-        let doc = serde_json::json!({
-            "stageNodes": [{
-                "uuid": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-                "squareOne": true
-            }]
-        });
-
-        assert_eq!(
-            super::pack_uuid_from_doc(&doc),
-            Some("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
-        );
+    fn pack_uuid_falls_back_to_a_readable_root_uuid_when_the_entry_is_textual() {
+        assert_eq!(libre_identity(Some(ROOT), "cover").as_deref(), Some(ROOT));
+        let braced = "{aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee}";
+        assert_eq!(libre_identity(Some(ROOT), braced).as_deref(), Some(ROOT));
     }
 
     #[test]
-    fn pack_uuid_does_not_treat_an_arbitrary_stage_id_as_pack_identity() {
-        let doc = serde_json::json!({
-            "stageNodes": [{ "uuid": "cover", "squareOne": true }]
-        });
-
-        assert_eq!(super::pack_uuid_from_doc(&doc), None);
+    fn pack_uuid_is_absent_when_neither_entry_nor_root_is_readable() {
+        assert_eq!(libre_identity(None, "cover"), None);
+        assert_eq!(libre_identity(Some("mon pack"), "cover"), None);
+        assert_eq!(
+            libre_identity(Some("{11111111-2222-4333-8444-555555555555}"), "cover"),
+            None
+        );
     }
 
     #[test]
@@ -1799,6 +2774,94 @@ mod tests {
         assert!(!super::has_unmodeled_wheel(
             &autoplay_multi_ok_without_wheel_story_json()
         ));
+    }
+
+    /// Clause d'entrée : le décodeur conserve un `controlSettings` incomplet,
+    /// mais aucun consommateur ne lui donne un sens implicite. Le pack n'est ni
+    /// éditable ni simulé tant que les cinq valeurs ne sont pas explicites, et
+    /// le diagnostic exact remonte avec le verdict.
+    #[test]
+    fn a_pack_with_incomplete_controls_is_preserved_but_never_interpreted() {
+        let dir = temp_dir("incomplete_controls");
+        let zip_path = dir.join("pack.zip");
+        let mut story = editable_story_json();
+        story["stageNodes"][2]["controlSettings"] = serde_json::json!({
+            "wheel": false, "ok": false, "home": true, "pause": null
+        });
+        write_story_zip(&zip_path, &story);
+
+        let report =
+            classify_pack_editability(zip_path.to_str().expect("utf8")).expect("verdict d'import");
+        assert!(!report.authoring_editable);
+        assert!(!report.read_only_inspectable);
+        assert!(
+            report.reason.contains("Contrôles incomplets") && report.reason.contains("Lecture"),
+            "{}",
+            report.reason
+        );
+        assert!(report.import_diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "control-settings-incomplete"
+                && diagnostic.path.ends_with("/controlSettings")
+        }));
+
+        // Le document reste lisible : la clause conserve, elle ne détruit pas.
+        let raw = super::load_pack_zip(zip_path.to_str().expect("utf8"))
+            .expect("story.json toujours décodable");
+        let reread: serde_json::Value = serde_json::from_str(&raw).expect("story.json valide");
+        assert!(reread["stageNodes"][2]["controlSettings"]["pause"].is_null());
+        assert!(reread["stageNodes"][2]["controlSettings"]
+            .get("autoplay")
+            .is_none());
+
+        let error = super::load_pack_zip_for_simulation(zip_path.to_str().expect("utf8"))
+            .expect_err("la simulation directe ne contourne pas CTL-004");
+        assert!(error.contains("Simulation indisponible"), "{error}");
+        assert!(error.contains("/controlSettings"), "{error}");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn simulation_requires_complete_controls_even_on_unreachable_stages() {
+        let dir = temp_dir("simulation_controls");
+        let zip_path = dir.join("pack.zip");
+        let original = editable_story_json();
+        write_story_zip(&zip_path, &original);
+        assert!(super::load_pack_zip_for_simulation(zip_path.to_str().unwrap()).is_ok());
+        for shape in ["absent", "null", "partial", "null-member"] {
+            let mut story = original.clone();
+            // Inaccessible dans le graphe : aucun chemin ne doit lui inventer de contrôles.
+            let mut stage = story["stageNodes"][2].clone();
+            stage["uuid"] = serde_json::json!("unreachable");
+            match shape {
+                "absent" => {
+                    stage.as_object_mut().unwrap().remove("controlSettings");
+                }
+                "null" => stage["controlSettings"] = serde_json::Value::Null,
+                "partial" => {
+                    stage["controlSettings"]
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("ok");
+                }
+                "null-member" => stage["controlSettings"]["ok"] = serde_json::Value::Null,
+                _ => unreachable!(),
+            }
+            story["stageNodes"].as_array_mut().unwrap().push(stage);
+            write_story_zip(&zip_path, &story);
+            let raw = super::load_pack_zip(zip_path.to_str().unwrap()).expect("lecture conservée");
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&raw).unwrap(),
+                story
+            );
+            let error =
+                super::load_pack_zip_for_simulation(zip_path.to_str().unwrap()).expect_err(shape);
+            assert!(
+                error.contains("unreachable") && error.contains("/controlSettings"),
+                "{shape}: {error}"
+            );
+        }
+        fs::remove_dir_all(dir).expect("cleanup");
     }
 
     #[test]
@@ -2314,7 +3377,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires STORY_STUDIO_GRAPH_PACK"]
-    fn plan16_graph_pack_from_env_is_read_only_without_native_graph() {
+    fn graph_pack_from_env_is_read_only_without_native_graph() {
         let zip_path = std::env::var_os("STORY_STUDIO_GRAPH_PACK")
             .expect("STORY_STUDIO_GRAPH_PACK must point to a graph ZIP");
         let zip_path = PathBuf::from(zip_path);
@@ -2433,17 +3496,10 @@ mod tests {
         .expect_err("public extraction must enforce editability");
 
         assert!(
-            error.contains("Pack non éditable"),
+            // Préfixe reconnu par l’interface (isFreeEditorRefusal) pour renvoyer vers le graphe.
+            error.starts_with("Pack non éditable dans Story Studio"),
             "diagnostic inattendu : {error}",
         );
-
-        let forced = unpack_zip_to_entries_with_policy(
-            zip_path.to_str().expect("utf8"),
-            dir.join("forced-out").to_str().expect("utf8"),
-            true,
-        )
-        .expect("explicit unsafe extraction should bypass editability only");
-        assert!(forced["entries"].is_array());
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

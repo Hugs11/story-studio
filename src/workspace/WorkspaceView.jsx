@@ -1,13 +1,23 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { DiagramPanel } from '../components/diagram/DiagramPanel';
 import { FloatingSimulator } from '../components/FloatingSimulator/FloatingSimulator';
+import { EDITOR_LAYOUT_SCOPE } from '../store/persistentSettings';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { StructurePanel } from '../components/structure/StructurePanel';
 import {
   LEFT_PANEL_MIN_WIDTH,
 } from '../components/structure/panelResize';
 import { PanelResizeHandle } from '../components/structure/PanelResizeHandle';
+import { startStageForEntry, useProjectedSimulation } from '../hooks/useProjectedSimulation';
 import { useProjectActions } from '../store/ProjectActionsContext';
+import { shouldOpenSettingsForSelection } from '../store/selectionOpensSettings';
+import {
+  WORKSPACE_MODE_ADVANCED,
+  WORKSPACE_MODE_HOME,
+  authoringWorkspaceMode,
+  hasProjectTree,
+  hierarchicalProjectType,
+} from '../store/projectWorkState';
 import {
   getTreePanelMaxWidth,
   SETTINGS_PANEL_WIDTH_DEFAULT,
@@ -31,11 +41,18 @@ import {
 } from './selectionSync';
 import { WorkspaceEmptyState } from './WorkspaceEmptyState';
 
+// L'espace avancé est chargé à la demande : le moteur d'affichage et ses
+// dépendances n'entrent dans le bundle que lorsqu'un projet avancé est ouvert.
+const AdvancedWorkspace = lazy(() => import('../components/AdvancedWorkspace/AdvancedWorkspace')
+  .then((module) => ({ default: module.AdvancedWorkspace })));
+
 export function WorkspaceView({
   project,
+  projectEpoch = null,
   node,
   selectedId,
   onSetProjectType,
+  onStartAdvancedProject,
   onEditPack,
   onPodcastFunnel,
   onYoutubeFunnel,
@@ -57,13 +74,28 @@ export function WorkspaceView({
   onFocusTreeSearch,
   diagramSearchFocusTrigger,
   workspaceViewState,
+  advanced = null,
 }) {
   const { onSelect } = useProjectActions();
-  const { projectType } = project;
+  // Seul point de montage de l'espace de travail hiérarchique : un projet avancé
+  // n'en monte aucun composant. Le mode d'auteur,
+  // lui, décide **quel** espace monter — et un projet avancé ouvert n'est plus
+  // renvoyé à l'accueil du seul fait que son type hiérarchique est `null`.
+  const projectType = hierarchicalProjectType(project);
+  const workspaceMode = authoringWorkspaceMode(project);
+  const hasTree = hasProjectTree(project);
   const [selectedIds, setSelectedIds] = useState(() => new Set([selectedId]));
   const [afterPlayFocus, setAfterPlayFocus] = useState(null);
   const [simulatorAnchorId, setSimulatorAnchorId] = useState(null);
   const [simulatorZipPath, setSimulatorZipPath] = useState(null);
+  // Le jeton de lancement d'une écoute. Il change à chaque demande, et c'est lui
+  // — jamais le projet — qui déclenche une projection : le générateur rend des
+  // identifiants neufs à chaque appel, donc reprojeter en cours d'écoute
+  // téléporterait l'auditeur au lieu de le suivre.
+  const [simulationLaunch, setSimulationLaunch] = useState(null);
+  const simulationEpochRef = useRef(projectEpoch);
+  const projectEpochRef = useRef(projectEpoch);
+  projectEpochRef.current = projectEpoch;
   const [expandedDiagramStoryGroupIds, setExpandedDiagramStoryGroupIds] = useState(() => new Set());
   const [hoveredStructureNodeId, setHoveredStructureNodeId] = useState(null);
   const [treeRevealRequest, setTreeRevealRequest] = useState(null);
@@ -78,9 +110,9 @@ export function WorkspaceView({
   // groupes ouverts dans le projet précédent peuvent se rouvrir dans un pack
   // fraîchement extrait lorsque celui-ci réutilise les mêmes ids importés.
   useEffect(() => {
-    if (projectType !== null) return;
+    if (hasTree) return;
     setExpandedDiagramStoryGroupIds((current) => (current.size > 0 ? new Set() : current));
-  }, [projectType]);
+  }, [hasTree]);
 
   const {
     showTree,
@@ -100,6 +132,8 @@ export function WorkspaceView({
     setTreePanelWidth,
   } = workspaceViewState;
 
+  // Dépendances inchangées : `projectType` est ici une identité de surface, pas
+  // une capacité — passer de 'pack' à 'simple' doit continuer à purger le survol.
   useEffect(() => {
     setHoveredStructureNodeId(null);
   }, [projectType, showDiagram, showTree]);
@@ -112,23 +146,38 @@ export function WorkspaceView({
   }, []);
 
   const handleSimulateNode = useCallback((nodeId) => {
+    simulationEpochRef.current = projectEpoch;
     setSimulatorZipPath(null);
     setSimulatorAnchorId(nodeId);
-  }, []);
+    setSimulationLaunch({ nodeId, at: Date.now() });
+  }, [projectEpoch]);
 
   const handleSimulateRoot = useCallback(() => {
     handleSimulateNode('root');
   }, [handleSimulateNode]);
 
   const handleSimulateZip = useCallback((zipPath) => {
+    simulationEpochRef.current = projectEpoch;
     setSimulatorAnchorId(null);
     setSimulatorZipPath(zipPath);
-  }, []);
+    setSimulationLaunch(null);
+  }, [projectEpoch]);
 
   const handleCloseSimulator = useCallback(() => {
     setSimulatorAnchorId(null);
     setSimulatorZipPath(null);
+    setSimulationLaunch(null);
   }, []);
+
+  useEffect(() => {
+    handleCloseSimulator();
+  }, [projectEpoch, handleCloseSimulator]);
+
+  // L'écoute du projet en cours, projetée par le générateur. Elle ne part que
+  // sur une demande explicite, et le graphe qu'elle rend est figé jusqu'à la
+  // suivante.
+  const simulation = useProjectedSimulation({ project, projectEpoch, launch: simulationLaunch });
+  const simulationForCurrentProject = simulationEpochRef.current === projectEpoch;
 
   useEffect(() => {
     if (!pendingSimulateZipPath || projectType == null) return;
@@ -143,16 +192,23 @@ export function WorkspaceView({
     setSelectedIds(nextIds);
   }, []);
 
-  const handleTreeSelectionChange = commitSelectionChange;
+  // Une sélection choisie dans l'arbre ou le diagramme rouvre les Réglages
+  // fermés, pour éditer ce qui vient d'être désigné — sauf si la préférence
+  // commune aux deux éditeurs le refuse. L'arbre signale ce qui vient de
+  // l'auteur : le recalage sur la racine après une suppression n'ouvre rien.
+  const handleTreeSelectionChange = useCallback((ids, origin) => {
+    commitSelectionChange(ids);
+    if (origin?.byAuthor && shouldOpenSettingsForSelection(ids?.size ?? 0, { panelOpen: showSettings })) {
+      restoreSettings();
+    }
+  }, [commitSelectionChange, restoreSettings, showSettings]);
 
   const handleDiagramSelectionChange = useCallback((ids) => {
     commitSelectionChange(ids);
-    // En « plein » (diagramme seul), une sélection venue du diagramme réaffiche les
-    // réglages pour éditer l'élément cliqué.
-    if (isPlein && ids?.size > 0) {
+    if (shouldOpenSettingsForSelection(ids?.size ?? 0, { panelOpen: showSettings })) {
       restoreSettings();
     }
-  }, [commitSelectionChange, isPlein, restoreSettings]);
+  }, [commitSelectionChange, restoreSettings, showSettings]);
 
   const handleTreeNodeSelect = useCallback((id) => {
     pendingInternalSelectedIdRef.current = getPendingInternalSelectedId({
@@ -185,6 +241,18 @@ export function WorkspaceView({
     setDiagramRevealRequest(sync.revealRequest);
   }, [commitSelectionChange, onSelect]);
 
+  // L'Écran qui joue désigne le nœud d'auteur dont il vient. Un Écran qui n'en
+  // désigne aucun — le générateur en produit qui n'appartiennent à aucune
+  // entrée — laisse la sélection de l'auteur où elle est plutôt que de la
+  // déplacer au hasard.
+  const handleSimulatorActiveNode = useCallback((stageId) => {
+    // Un dernier événement du lecteur quitté ne sélectionne rien dans le
+    // nouveau projet, même si les identifiants importés y sont les mêmes.
+    if (projectEpochRef.current !== projectEpoch) return;
+    const entryId = simulation.graph?.entryIdByStage?.get(stageId) ?? null;
+    if (entryId) handleSimulatorActiveNodeChange(entryId);
+  }, [projectEpoch, simulation.graph, handleSimulatorActiveNodeChange]);
+
   const handleOpenLocalEndSettings = useCallback((storyId) => {
     commitSelectionChange(new Set([storyId]));
     handleDiagramNodeSelect(storyId);
@@ -215,6 +283,7 @@ export function WorkspaceView({
 
   const renderStructurePanel = (headerDragHandleProps) => (
     <StructurePanel
+      canvasActionsAvailable={showDiagram}
       project={project}
       projectType={projectType}
       selectedId={selectedId}
@@ -279,7 +348,7 @@ export function WorkspaceView({
       expandedStoryGroupIds={expandedDiagramStoryGroupIds}
       onExpandedStoryGroupIdsChange={setExpandedDiagramStoryGroupIds}
       variant={variant}
-      showActionsBar={showDiagram && !showTree}
+      showActionsBar={showDiagram}
       showHint={showDiagram && !showSettings}
       onClose={closeDiagram}
       onPreview={handleSimulateNode}
@@ -290,12 +359,27 @@ export function WorkspaceView({
     />
   );
 
-  if (projectType === null) {
+  if (workspaceMode === WORKSPACE_MODE_ADVANCED) {
+    return (
+      <div className="screen visible">
+        <div className="workspace workspace--advanced">
+          <Suspense fallback={<p className="workspace-advanced-loading">Ouverture de l'Éditeur graphe…</p>}>
+            <AdvancedWorkspace {...advanced} project={project} />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
+  // Après le retour avancé ci-dessus, « pas d'arbre » et « aucun projet ouvert »
+  // coïncident : c'est bien la seconde question que l'accueil pose.
+  if (workspaceMode === WORKSPACE_MODE_HOME) {
     return (
       <div className="screen visible">
         <div className="workspace workspace--home">
           <ModeSelector
             onSelect={onSetProjectType}
+            onSelectGraph={onStartAdvancedProject}
             onEditPack={onEditPack}
             onPodcastFunnel={onPodcastFunnel}
             onYoutubeFunnel={onYoutubeFunnel}
@@ -411,11 +495,17 @@ export function WorkspaceView({
         ) : null}
 
         <FloatingSimulator
-          project={project}
-          anchorId={simulatorAnchorId}
-          zipPath={simulatorZipPath}
+          anchorId={simulationForCurrentProject ? simulatorAnchorId : null}
+          zipPath={simulationForCurrentProject ? simulatorZipPath : null}
+          documentGraph={simulation.graph}
+          documentStartId={startStageForEntry(simulation.graph, simulatorAnchorId)}
+          documentStatus={simulation.status}
+          documentError={simulation.error}
           hostSelector=".workspace"
-          onActiveNodeChange={handleSimulatorActiveNodeChange}
+          layoutScope={EDITOR_LAYOUT_SCOPE.FREE}
+          // Le simulateur désigne l'Écran qui joue ; l'arbre et le diagramme
+          // attendent le nœud d'auteur. La projection porte la correspondance.
+          onActiveNodeChange={handleSimulatorActiveNode}
           onClose={handleCloseSimulator}
         />
       </div>

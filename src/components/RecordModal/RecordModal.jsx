@@ -9,11 +9,14 @@ import './RecordModal.css';
 
 const COUNTDOWN_SECONDS = 3;
 
-export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved, onClose }) {
+export function RecordModal({ workspaceDir, projectName = '', onSaved, onClose }) {
   const [phase, setPhase] = useState('countdown'); // countdown | recording | preview | saving | error
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(null);
+  const [previewStatus, setPreviewStatus] = useState('idle');
+  const [previewPosition, setPreviewPosition] = useState(0);
+  const [previewError, setPreviewError] = useState(null);
   const [recordingName, setRecordingName] = useState(() => {
     const prefix = sanitizeProjectPrefix(projectName);
     const stamp = Date.now();
@@ -24,7 +27,6 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
   const chunksRef = useRef([]);
   const blobRef = useRef(null);
   const audioRef = useRef(null);
-  const previewUrlRef = useRef(null);
   const timerRef = useRef(null);
   const closedRef = useRef(false);
 
@@ -113,40 +115,71 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
 
   function playPreview() {
     if (!blobRef.current) return;
-    stopPreview();
-    const url = URL.createObjectURL(blobRef.current);
-    const a = createAudioPlayer(url, { revokeSourceOnDestroy: true });
-    previewUrlRef.current = url;
-    a.onended = () => {
-      if (audioRef.current === a) disposeAudioPlayerRef(audioRef);
-      if (previewUrlRef.current === url) previewUrlRef.current = null;
-    };
-    audioRef.current = a;
-    a.play().catch(() => stopPreview());
+    setPreviewError(null);
+    try {
+      let a = audioRef.current;
+      if (!a) {
+        const url = URL.createObjectURL(blobRef.current);
+        try {
+          a = createAudioPlayer(url, { revokeSourceOnDestroy: true });
+        } catch (e) {
+          URL.revokeObjectURL(url);
+          throw e;
+        }
+        a.onplay = () => setPreviewStatus('playing');
+        a.onpause = () => setPreviewStatus('paused');
+        a.ontimeupdate = () => setPreviewPosition(a.currentTime);
+        a.onended = () => {
+          if (audioRef.current !== a) return;
+          stopPreview();
+          setPreviewPosition(duration);
+          setPreviewStatus('ended');
+        };
+        audioRef.current = a;
+      }
+      setPreviewStatus('loading');
+      a.play().catch(e => {
+        if (audioRef.current !== a) return;
+        stopPreview();
+        setPreviewStatus('error');
+        setPreviewError(`Lecture impossible : ${e.message}`);
+      });
+    } catch (e) {
+      stopPreview();
+      setPreviewStatus('error');
+      setPreviewError(`Lecture impossible : ${e.message}`);
+    }
+  }
+
+  function pausePreview() {
+    audioRef.current?.pause();
   }
 
   function stopPreview() {
     disposeAudioPlayerRef(audioRef);
-    previewUrlRef.current = null;
   }
 
   function retry() {
     stopPreview();
     blobRef.current = null;
     setDuration(0);
+    setPreviewPosition(0);
+    setPreviewStatus('idle');
+    setPreviewError(null);
     setCountdown(COUNTDOWN_SECONDS);
     setPhase('countdown');
   }
 
   async function confirm() {
     if (!blobRef.current) return;
+    stopPreview();
     setPhase('saving');
     try {
       const safeName = recordingName.trim().replace(/[<>:"/\\|?*\[\]+]/g, '_') || `rec_${Date.now()}`;
       const filename = safeName.endsWith('.webm') ? safeName : `${safeName}.webm`;
       const arrayBuffer = await blobRef.current.arrayBuffer();
       const data = Array.from(new Uint8Array(arrayBuffer));
-      const path = await invoke('save_recording', { savePath, workspaceDir, filename, data });
+      const path = await invoke('save_recording', { workspaceDir, filename, data });
       onSaved?.(path);
     } catch (e) {
       setError(`Écriture du fichier impossible : ${e}`);
@@ -188,6 +221,15 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
                 <Mic className="record-preview-icon-svg" strokeWidth={2} absoluteStrokeWidth />
               </div>
               <div className="record-hint">Durée : {formatDuration(duration)}</div>
+              {previewStatus !== 'idle' && previewStatus !== 'error' && (
+                <div className="record-hint" role="status">
+                  {previewStatus === 'loading' && 'Chargement de l’aperçu…'}
+                  {previewStatus === 'playing' && `Lecture : ${formatDuration(Math.floor(previewPosition))} / ${formatDuration(duration)}`}
+                  {previewStatus === 'paused' && `En pause à ${formatDuration(Math.floor(previewPosition))}`}
+                  {previewStatus === 'ended' && 'Lecture terminée'}
+                </div>
+              )}
+              {previewError && <div className="record-hint" role="alert" style={{ color: '#E24B4A' }}>{previewError}</div>}
               <div className="record-name-field">
                 <input
                   className="record-name-input"
@@ -199,8 +241,10 @@ export function RecordModal({ savePath, workspaceDir, projectName = '', onSaved,
                 <span className="record-name-ext">.webm</span>
               </div>
               <div className="record-actions">
-                <Button onClick={playPreview}>▶ Écouter</Button>
-                <Button onClick={stopPreview}>⏸ Pause</Button>
+                <Button onClick={playPreview} disabled={previewStatus === 'loading' || previewStatus === 'playing'}>
+                  {previewStatus === 'paused' ? '▶ Reprendre' : '▶ Écouter'}
+                </Button>
+                <Button onClick={pausePreview} disabled={previewStatus !== 'playing'}>⏸ Pause</Button>
                 <Button onClick={retry}>↺ Recommencer</Button>
                 <Button variant="primary" onClick={confirm}>✓ Utiliser</Button>
               </div>

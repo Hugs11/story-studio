@@ -2,11 +2,6 @@
 // Rust remains the final generation contract and may reject additional cases.
 // All helpers below use a unified em-dash separator and consistent French wording.
 
-export {
-  MENU_DEPTH_LIMIT_REACHED_MESSAGE,
-  formatProjectMenuDepthError,
-} from './projectModel/menuDepth.js';
-
 const SEPARATOR = ' — ';
 
 const FIELD_LABELS = Object.freeze({
@@ -51,6 +46,7 @@ export const VALIDATION_MESSAGES = Object.freeze({
   reservedIdInvalid: (label) => `${label}${SEPARATOR}Identifiant réservé à corriger`,
   duplicateId: (count, entryId) => `Identifiant dupliqué${SEPARATOR}${count} éléments partagent l'id ${entryId}`,
   storyReturnLost: (label) => `${label}${SEPARATOR}Retour de fin introuvable`,
+  storyWithoutExit: (label) => `${label}${SEPARATOR}Fin sans sortie : activez le bouton Accueil de cette histoire, ou choisissez « Enchaîner » dans « Après la lecture »`,
   emptyMenu: (label) => `${label}${SEPARATOR}Histoire à ajouter`,
   emptyPack: 'Histoire à ajouter dans le pack.',
 });

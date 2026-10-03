@@ -140,14 +140,14 @@ struct FidelityStageShape {
 
 fn fidelity_target_shape(stage: &StageNode) -> FidelityStageTargetShape {
     FidelityStageTargetShape {
-        square_one: stage.square_one,
-        has_audio: stage.audio.is_some(),
-        has_image: stage.image.is_some(),
-        wheel: stage.control_settings.wheel,
-        ok: stage.control_settings.ok,
-        home: stage.control_settings.home,
-        pause: stage.control_settings.pause,
-        autoplay: stage.control_settings.autoplay,
+        square_one: stage.is_square_one(),
+        has_audio: stage.audio.is_value(),
+        has_image: stage.image.is_value(),
+        wheel: stage.control_settings.wheel(),
+        ok: stage.control_settings.ok(),
+        home: stage.control_settings.home(),
+        pause: stage.control_settings.pause(),
+        autoplay: stage.control_settings.autoplay(),
     }
 }
 
@@ -157,12 +157,12 @@ fn fidelity_transition_target<'a>(
     stages: &HashMap<&'a str, &'a StageNode>,
 ) -> Option<&'a StageNode> {
     let transition = transition?;
-    if transition.option_index < 0 {
-        return None;
-    }
+    // Une sélection aléatoire ne désigne pas une cible unique : la forme de
+    // fidélité n'en invente pas une.
+    let option_index = transition.selection.fixed_index()?;
     let action = actions.get(transition.action_node.as_str())?;
-    let stage_id = action.options.get(transition.option_index as usize)?;
-    stages.get(stage_id.as_str()).copied()
+    let stage_id = action.options.get(option_index)?;
+    stages.get(stage_id.as_deref()?).copied()
 }
 
 fn fidelity_stage_shapes(
@@ -189,33 +189,33 @@ fn fidelity_stage_shape_names(
         .collect();
     let mut shapes = std::collections::BTreeMap::new();
     for stage in &document.stage_nodes {
-        let ok_target = fidelity_transition_target(stage.ok_transition.as_ref(), &actions, &stages)
+        let ok_target = fidelity_transition_target(stage.ok_transition.value(), &actions, &stages)
             .map(fidelity_target_shape);
         let home_target =
-            fidelity_transition_target(stage.home_transition.as_ref(), &actions, &stages)
+            fidelity_transition_target(stage.home_transition.value(), &actions, &stages)
                 .map(fidelity_target_shape);
         let shape = FidelityStageShape {
-            square_one: stage.square_one,
-            has_audio: stage.audio.is_some(),
-            has_image: stage.image.is_some(),
-            wheel: stage.control_settings.wheel,
-            ok: stage.control_settings.ok,
-            home: stage.control_settings.home,
-            pause: stage.control_settings.pause,
-            autoplay: stage.control_settings.autoplay,
-            has_ok_transition: stage.ok_transition.is_some(),
-            has_home_transition: stage.home_transition.is_some(),
+            square_one: stage.is_square_one(),
+            has_audio: stage.audio.is_value(),
+            has_image: stage.image.is_value(),
+            wheel: stage.control_settings.wheel(),
+            ok: stage.control_settings.ok(),
+            home: stage.control_settings.home(),
+            pause: stage.control_settings.pause(),
+            autoplay: stage.control_settings.autoplay(),
+            has_ok_transition: stage.ok_transition.is_value(),
+            has_home_transition: stage.home_transition.is_value(),
             ok_target,
             home_target,
         };
         shapes.entry(shape).or_insert_with(Vec::new).push(format!(
             "{} | ok={} | home={}",
-            stage.name,
-            fidelity_transition_target(stage.ok_transition.as_ref(), &actions, &stages)
-                .map(|target| target.name.as_str())
+            stage.label(),
+            fidelity_transition_target(stage.ok_transition.value(), &actions, &stages)
+                .map(|target| target.label())
                 .unwrap_or("-"),
-            fidelity_transition_target(stage.home_transition.as_ref(), &actions, &stages)
-                .map(|target| target.name.as_str())
+            fidelity_transition_target(stage.home_transition.value(), &actions, &stages)
+                .map(|target| target.label())
                 .unwrap_or("-")
         ));
     }
@@ -327,17 +327,17 @@ fn fidelity_stage_count_summary(document: &StoryDocument) -> (usize, usize, usiz
     let wheel = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.control_settings.wheel)
+        .filter(|stage| stage.control_settings.wheel())
         .count();
     let autoplay = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.control_settings.autoplay)
+        .filter(|stage| stage.control_settings.autoplay())
         .count();
     let wheel_autoplay = document
         .stage_nodes
         .iter()
-        .filter(|stage| stage.control_settings.wheel && stage.control_settings.autoplay)
+        .filter(|stage| stage.control_settings.wheel() && stage.control_settings.autoplay())
         .count();
     (total, wheel, autoplay, wheel_autoplay)
 }
@@ -396,10 +396,10 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
     )
     .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
 
-    let pack_title = if orig.title.trim().is_empty() {
+    let pack_title = if orig.title.as_str_or("").trim().is_empty() {
         "Pack importé".to_string()
     } else {
-        orig.title.clone()
+        orig.title.as_str_or("").to_string()
     };
     let project = fidelity_project(&extracted, &pack_title);
     if std::env::var_os("LUNII_FIDELITY_DUMP_PROJECT").is_some() {
@@ -439,22 +439,22 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
     let orig_wheel = orig
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.wheel)
+        .filter(|s| s.control_settings.wheel())
         .count();
     let gen_wheel = gen
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.wheel)
+        .filter(|s| s.control_settings.wheel())
         .count();
     let orig_auto = orig
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.autoplay)
+        .filter(|s| s.control_settings.autoplay())
         .count();
     let gen_auto = gen
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.autoplay)
+        .filter(|s| s.control_settings.autoplay())
         .count();
 
     if std::env::var_os("LUNII_FIDELITY_REPORT").is_some() {
@@ -462,7 +462,7 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
     }
 
     assert!(
-        gen.stage_nodes.iter().any(|s| s.square_one),
+        gen.stage_nodes.iter().any(|s| s.is_square_one()),
         "[{pack_id}] squareOne stage manquant",
     );
     assert_eq!(
@@ -478,9 +478,11 @@ fn assert_fidelity(zip_path: Option<String>, pack_id: &str) {
         "[{pack_id}] autoplay stages : généré={gen_auto} original={orig_auto}",
     );
     assert_eq!(
-        gen.night_mode_available, orig.night_mode_available,
+        gen.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
         "[{pack_id}] nightModeAvailable : généré={} original={}",
-        gen.night_mode_available, orig.night_mode_available,
+        gen.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
     );
     validate_document_for_studio_compat(&gen)
         .unwrap_or_else(|e| panic!("[{pack_id}] validation STUdio : {e}"));
@@ -518,10 +520,10 @@ fn assert_fidelity_structural(zip_path: Option<String>, pack_id: &str) {
     )
     .unwrap_or_else(|e| panic!("[{pack_id}] unpack_zip_to_entries: {e}"));
 
-    let pack_title = if orig.title.trim().is_empty() {
+    let pack_title = if orig.title.as_str_or("").trim().is_empty() {
         "Pack importé".to_string()
     } else {
-        orig.title.clone()
+        orig.title.as_str_or("").to_string()
     };
     let project = fidelity_project(&extracted, &pack_title);
     let canonical = canonicalize_project(&project);
@@ -536,13 +538,15 @@ fn assert_fidelity_structural(zip_path: Option<String>, pack_id: &str) {
     }
 
     assert!(
-        gen.stage_nodes.iter().any(|s| s.square_one),
+        gen.stage_nodes.iter().any(|s| s.is_square_one()),
         "[{pack_id}] squareOne stage manquant",
     );
     assert_eq!(
-        gen.night_mode_available, orig.night_mode_available,
+        gen.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
         "[{pack_id}] nightModeAvailable : généré={} original={}",
-        gen.night_mode_available, orig.night_mode_available,
+        gen.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
     );
     validate_document_for_studio_compat(&gen)
         .unwrap_or_else(|e| panic!("[{pack_id}] validation STUdio : {e}"));
@@ -608,12 +612,67 @@ fn fidelity_external_packs_from_env() {
 
     let structural_only = std::env::var_os("LUNII_FIDELITY_STRUCTURAL").is_some();
     for (pack_id, path) in packs {
-        if structural_only {
+        // L'aiguillage de l'app : un pack que le juge refuse pour le Libre
+        // s'ouvre dans le Graphe. Forcer ici la chaîne Libre mesurait un refus
+        // que l'auteur ne rencontre jamais.
+        let editability = crate::services::pack_reader::classify_pack_editability(&path)
+            .unwrap_or_else(|error| panic!("[{pack_id}] classement : {error}"));
+        if !editability.authoring_editable {
+            eprintln!("[{pack_id}] chaîne Graphe : {}", editability.reason);
+            assert_graph_chain_fidelity(&path, &pack_id);
+        } else if structural_only {
             assert_fidelity_structural(Some(path), &pack_id);
         } else {
             assert_fidelity(Some(path), &pack_id);
         }
     }
+}
+
+/// La chaîne Graphe, telle que l'app l'emprunte : acquisition du document,
+/// puis préparation d'export. Le Graphe garde la structure d'origine ; la copie
+/// préparée doit donc avoir ses Écrans, son entrée et son mode nuit.
+fn assert_graph_chain_fidelity(zip_path: &str, pack_id: &str) {
+    let tmp = std::env::temp_dir().join(format!("fidelity_graph_{}_{}", pack_id, now_millis()));
+    let orig_str = crate::services::pack_reader::load_pack_zip(zip_path)
+        .unwrap_or_else(|e| panic!("[{pack_id}] load_pack_zip: {e}"));
+    let orig: StoryDocument = serde_json::from_str(&orig_str)
+        .unwrap_or_else(|e| panic!("[{pack_id}] parse orig story.json: {e}"));
+    let acquired = crate::services::pack_reader::import_pack_as_advanced_document(
+        zip_path,
+        tmp.to_str().expect("tmp utf8"),
+    )
+    .unwrap_or_else(|e| panic!("[{pack_id}] acquisition Graphe : {e}"));
+    let decoded = crate::native_pack::persistence::decode_authoring_payload(&acquired.payload)
+        .unwrap_or_else(|e| panic!("[{pack_id}] payload Graphe : {e:?}"));
+    let prepared = crate::native_pack::preparation::prepare_graph_document_for_export(&decoded)
+        .unwrap_or_else(|e| panic!("[{pack_id}] préparation Graphe : {e:?}"));
+    let generated = &prepared.document;
+
+    assert_eq!(
+        generated.stage_nodes.len(),
+        orig.stage_nodes.len(),
+        "[{pack_id}] Écrans : Graphe={} original={}",
+        generated.stage_nodes.len(),
+        orig.stage_nodes.len(),
+    );
+    assert!(
+        generated.stage_nodes.iter().any(|s| s.is_square_one()),
+        "[{pack_id}] squareOne stage manquant",
+    );
+    assert_eq!(
+        generated.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
+        "[{pack_id}] nightModeAvailable : Graphe={} original={}",
+        generated.night_mode_available.is_true(),
+        orig.night_mode_available.is_true(),
+    );
+    // Pas de `validate_document_for_studio_compat` ici : cette garde protège le
+    // document que la chaîne Libre **génère**. Le Graphe reprend le document
+    // d'origine, dont certains packs Lunii portent déjà un Écran à retours OK et
+    // Maison confondus, et que STUdio relit sans erreur. La porte du Graphe est
+    // la préparation ci-dessus ; la relecture STUdio est prouvée dans l'app.
+
+    let _ = std::fs::remove_dir_all(&tmp);
 }
 
 // ── Classement des packs réels par le juge de fidélité ───
@@ -795,7 +854,7 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
                 report.reason,
             );
             let lower = pack_id.to_ascii_lowercase();
-            if lower.contains("best") || lower.contains("external-authoring") {
+            if lower.contains("editable-sample") {
                 assert!(
                     report.authoring_editable,
                     "[{pack_id}] doit rester authoringEditable=true : {}",
@@ -806,7 +865,7 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
                     "[{pack_id}] ne doit pas etre detourne vers graph_import"
                 );
             }
-            if lower.contains("example") {
+            if lower.contains("read-only-sample") {
                 assert!(
                     report.round_trip_faithful,
                     "[{pack_id}] doit rester faithful"
@@ -820,7 +879,7 @@ fn classify_story_json(story_path: &std::path::Path, pack_id: &str) {
                     "[{pack_id}] doit rester inspectable en lecture seule"
                 );
             }
-            if lower.contains("ders") {
+            if lower.contains("nonfaithful-sample") {
                 assert!(
                     !report.round_trip_faithful,
                     "[{pack_id}] doit rester non faithful sans parachute"
@@ -979,15 +1038,15 @@ fn autoplay_intro_chain_before_menu_roundtrips() {
     let wheel = gen
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.wheel)
+        .filter(|s| s.control_settings.wheel())
         .count();
     let autoplay = gen
         .stage_nodes
         .iter()
-        .filter(|s| s.control_settings.autoplay)
+        .filter(|s| s.control_settings.autoplay())
         .count();
     assert!(
-        gen.stage_nodes.iter().any(|s| s.square_one),
+        gen.stage_nodes.iter().any(|s| s.is_square_one()),
         "squareOne présent après round-trip",
     );
     assert_eq!(gen.stage_nodes.len(), 7, "round-trip : nombre de stages");

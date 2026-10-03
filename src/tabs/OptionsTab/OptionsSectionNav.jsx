@@ -17,7 +17,7 @@ const OPTION_GROUPS = [
   {
     label: 'Avancé',
     items: [
-      { id: 'advanced', label: 'Import et audio' },
+      { id: 'advanced', label: 'Silences audio' },
       { id: 'youtube', label: 'YouTube (yt-dlp)' },
       { id: 'diagnostic', label: 'Diagnostic' },
     ],

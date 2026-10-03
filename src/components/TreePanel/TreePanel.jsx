@@ -21,6 +21,8 @@ import { END_NODE_ID, EMPTY_BADGES } from './treePanelConstants';
 import { canInlineRenameTreeNode, getInlineRenameFields } from './treeInlineRename';
 import { useMediaTransfer } from '../../store/MediaTransferContext';
 import { findShortcutAction, getCurrentShortcuts } from '../../store/keyboardShortcuts';
+import { isEditableTarget } from '../../utils/shortcutTarget';
+import { useShortcutLabels } from '../../store/ShortcutLabelsContext';
 import {
   countDescendants,
   resolveDropTargetForNode,
@@ -28,6 +30,9 @@ import {
 import { buildRefDisplay } from '../tree/refDisplay';
 import { hasVisibleEndNode } from '../../store/generatedNavigation';
 import './TreePanel.css';
+
+// Les natures qu'on duplique, comme le menu contextuel de l'arbre.
+const DUPLICABLE_TREE_TYPES = Object.freeze(['menu', 'story', 'zip']);
 
 export { END_NODE_ID };
 
@@ -60,6 +65,7 @@ export function TreePanel({
   const [hoverScopeParentId, setHoverScopeParentId] = useState(null);
   const [hoverGuide, setHoverGuide] = useState(null);
   const [inlineRename, setInlineRename] = useState(null);
+  const shortcutLabels = useShortcutLabels();
   const osDropHover = activeDropZone === 'treepanel';
 
   const isExpanded = useCallback((id) => !collapsedIds.has(id), [collapsedIds]);
@@ -326,14 +332,32 @@ export function TreePanel({
       return;
     }
 
-    // Raccourcis configurables (scope 'tree').
-    const actionId = findShortcutAction(e, getCurrentShortcuts(), 'tree');
+    // Les commandes de sélection, partagées avec le diagramme et le graphe :
+    // une touche reconfigurée l'est pour les trois surfaces. Un champ ouvert
+    // dans l'arbre — le renommage en place — garde ses frappes.
+    if (isEditableTarget(e.target)) return;
+    const actionId = findShortcutAction(e, getCurrentShortcuts(), 'selection');
     if (!actionId) return;
+    const entry = getEntry(selectedId);
+    // Dupliquer et renommer visent un seul nœud, comme leurs entrées du menu
+    // contextuel : sans nœud nommable ou duplicable, la touche reste libre.
+    if (actionId === 'selectionDuplicate') {
+      if (!onDuplicate || selectedIds.size !== 1 || !DUPLICABLE_TREE_TYPES.includes(entry?.type)) return;
+      e.preventDefault();
+      onDuplicate(selectedId);
+      return;
+    }
+    if (actionId === 'selectionRename') {
+      if (selectedIds.size !== 1 || !entry || !canInlineRenameTreeNode(entry.type)) return;
+      e.preventDefault();
+      handleStartRename(entry.id, entry.type, entry.name);
+      return;
+    }
     e.preventDefault();
-    if (actionId === 'treeCopy') handleCopy();
-    else if (actionId === 'treeCut') handleCut();
-    else if (actionId === 'treePaste') handlePaste();
-    else if (actionId === 'treeDelete') void deleteSelectedNodes();
+    if (actionId === 'selectionCopy') handleCopy();
+    else if (actionId === 'selectionCut') handleCut();
+    else if (actionId === 'selectionPaste') handlePaste();
+    else if (actionId === 'selectionDelete') void deleteSelectedNodes();
   }
 
   const handleContextMenu = useCallback((e, nodeId, nodeType) => {
@@ -507,7 +531,7 @@ export function TreePanel({
                 <TreeNode
                   id={END_NODE_ID}
                   type="end-node"
-                  icon={nightModeActive ? 'moon' : 'stop'}
+                  night={nightModeActive}
                   label={`${project.endNodeName || 'Message de fin'}${nightModeActive ? ' (mode nuit)' : ''}`}
                   level={0}
                   selected={selectedIds.has(END_NODE_ID)}
@@ -541,6 +565,7 @@ export function TreePanel({
           y={ctxMenu.y}
           onClose={() => setCtxMenu(null)}
           actions={buildTreeContextActions({
+            shortcutLabels,
             nodeId: ctxMenu.nodeId,
             nodeType: ctxMenu.nodeType,
             project,

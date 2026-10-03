@@ -6,7 +6,7 @@ use super::navigation_targets::{
     build_story_stage_map, collect_menu_ids_from_entry, collect_story_navigation_contexts,
     resolve_navigation_target_for_stage,
 };
-use super::stage::{is_stage_autoplay, resolve_asset, stage_action_options};
+use super::stage::{is_stage_autoplay, resolve_asset};
 use super::transitions::transition_target_stage_id;
 
 pub(super) struct NightBridgeDetection {
@@ -14,6 +14,7 @@ pub(super) struct NightBridgeDetection {
     pub(super) return_target: Option<String>,
     pub(super) home_target: Option<String>,
     pub(super) autoplay: Option<bool>,
+    pub(super) stage_ids: HashSet<String>,
     fallback_overrides: Vec<NightFallbackOverride>,
 }
 
@@ -158,18 +159,17 @@ pub(super) fn apply_night_fallback_overrides(
     }
 }
 
+/// Le message de fin partagé que les histoires jouent avant leur retour. Il
+/// est cherché que le pack déclare ou non le mode nuit : ce drapeau ne dit que
+/// si l'appareil propose le mode nuit, et beaucoup de packs officiels jouent ce
+/// message sans lui. Le perdre à l'import retirait un Écran avec son.
 pub(super) fn detect_imported_night_mode(
-    night_mode_available: bool,
     root_stage_id: &str,
     entries: &[serde_json::Value],
     stages: &HashMap<&str, &serde_json::Value>,
     actions: &HashMap<&str, &serde_json::Value>,
     assets: &HashMap<String, PathBuf>,
 ) -> Option<NightBridgeDetection> {
-    if !night_mode_available {
-        return None;
-    }
-
     let menu_ids: HashSet<String> = entries
         .iter()
         .flat_map(collect_menu_ids_from_entry)
@@ -187,11 +187,11 @@ pub(super) fn detect_imported_night_mode(
         if !is_stage_autoplay(play_stage) {
             continue;
         }
-        let opts = stage_action_options(play_stage, actions);
-        if opts.len() != 1 {
+        let Some(night_stage_id) =
+            transition_target_stage_id(play_stage.get("okTransition"), actions)
+        else {
             continue;
-        }
-        let night_stage_id = opts[0];
+        };
         let Some(night_stage) = stages.get(night_stage_id) else {
             continue;
         };
@@ -229,9 +229,9 @@ pub(super) fn detect_imported_night_mode(
         return None;
     }
 
-    let distinct_night_stages: HashSet<&str> = instances
+    let distinct_night_stages: HashSet<String> = instances
         .iter()
-        .map(|instance| instance.night_stage_id.as_str())
+        .map(|instance| instance.night_stage_id.clone())
         .collect();
     let (return_target, fallback_overrides) =
         infer_night_return(&instances, root_stage_id, &menu_ids, &story_stage_map)?;
@@ -256,6 +256,7 @@ pub(super) fn detect_imported_night_mode(
         return_target: Some(return_target),
         home_target,
         autoplay,
+        stage_ids: distinct_night_stages,
         fallback_overrides,
     })
 }

@@ -23,13 +23,6 @@ import {
   updateProjectRootEntries,
 } from '../src/store/projectModel/operations.js';
 import { getStructureLevelLayout } from '../src/components/diagram/diagram/structureLevelLayout.js';
-import {
-  findEntryLocation,
-  getMenuBrowseState,
-  resolveStoryHomeTarget,
-  resolveStoryReturnTarget,
-  resolveStoryTitleHomeTarget,
-} from '../src/tabs/EmulatorTab/navigationResolvers.js';
 import { getTreeGuideStyleVars, getTreeIndent } from '../src/components/TreePanel/treeGuides.js';
 import { makeDepthProject, makeNestedMenuChain } from './fixtures/projectDepthFixtures.js';
 
@@ -211,25 +204,21 @@ test('JSON save/load shape and Rust export retain every level at 61', () => {
   assert.equal(JSON.stringify(exported).includes('folder-61'), true);
 });
 
-test('index and simulator traverse all 61 Dossiers and resolve Home/return to root', () => {
+// La moitié « simulateur » de ce test a disparu avec le lecteur d'arbre : le
+// simulateur ne parcourt plus l'arbre, il joue le graphe que le générateur
+// produit. La traversée de 61 Dossiers et la résolution des retours sont donc
+// éprouvées là où elles vivent désormais — côté Rust,
+// `builds_the_supported_maximum_menu_depth` et l'aller-retour ZIP en
+// profondeur 61 — et ne peuvent plus l'être ici sans réécrire le générateur.
+//
+// Ce qui reste ici est ce qui reste en JavaScript : l'index de projet, que
+// l'arbre et le diagramme consomment.
+test('the project index traverses all 61 Dossiers', () => {
   const project = makeDepthProject(61);
   const index = buildProjectIndex(project);
   assert.equal(index.pathById.get('folder-61').length, 61);
   assert.equal(index.parentMenuById.get('folder-61'), 'folder-60');
-
-  for (let level = 1; level <= 61; level += 1) {
-    const browseState = getMenuBrowseState(project.rootEntries, `folder-${level}`);
-    assert.ok(browseState);
-    assert.equal(browseState.menuPath.length, level - 1);
-  }
-
-  const location = findEntryLocation(project.rootEntries, 'depth-story');
-  assert.equal(location.menuPath.length, 61);
-  assert.equal(location.menuPath.at(-1), 'folder-61');
-  const parentMenu = index.entryById.get('folder-61');
-  assert.equal(resolveStoryReturnTarget(location.entry, parentMenu, project), 'root');
-  assert.equal(resolveStoryHomeTarget(location.entry, parentMenu, project), 'root');
-  assert.equal(resolveStoryTitleHomeTarget(location.entry, parentMenu, project.rootEntries), 'root');
+  assert.equal(index.entryById.get('folder-61').name, 'Dossier 61');
 });
 
 test('diagram layout stays finite and keeps N61 selectable', () => {

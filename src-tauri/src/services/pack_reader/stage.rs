@@ -83,6 +83,21 @@ pub(super) fn action_options(action: &serde_json::Value) -> Vec<&str> {
         .unwrap_or_default()
 }
 
+/// Les emplacements d'options **dans l'ordre du document**, une cible nulle
+/// restant un emplacement occupé.
+///
+/// `action_options` ne rend que les cibles nommées : c'est ce qu'il faut pour
+/// énumérer des destinations, mais pas pour résoudre un `optionIndex`, qui
+/// compte les emplacements. Une option `null` décalerait sinon
+/// silencieusement toutes les sélections suivantes.
+pub(super) fn action_option_slots(action: &serde_json::Value) -> Vec<Option<&str>> {
+    action
+        .get("options")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().map(|v| v.as_str()).collect())
+        .unwrap_or_default()
+}
+
 /// Options de l'action liée au okTransition d'un stage.
 pub(super) fn stage_action_options<'a>(
     stage: &serde_json::Value,

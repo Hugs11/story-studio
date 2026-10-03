@@ -55,14 +55,19 @@ function ChevronIcon() {
   );
 }
 
-export function TitleBar({ projectName, packMetadata = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null }) {
+// `packRecap` remplace la lecture directe de `packMetadata` : le
+// bandeau est commun aux deux éditeurs, et ceux-ci ne portent pas les mêmes
+// champs. Composer la ligne ici obligerait à replier l'âge minimum sur « 3+ »
+// pour un projet graphe, qui n'en a pas — une valeur d'auteur inventée. La
+// ligne est donc calculée par l'appelant, qui sait ce que sa structure porte.
+export function TitleBar({ projectName, packRecap = null, packCoverImage = null, isDirty, hasSavePath = false, saveState = null, showProjectMeta = true, onOpenPackMetadata = null, onOpenCredits = null }) {
   const currentWindow = useMemo(() => (isTauriRuntime() ? getCurrentWindow() : null), []);
   const [isMaximizing, setIsMaximizing] = useState(false);
   const packCoverUrl = useLocalFile(packCoverImage);
   const displayProjectName = hasSavePath ? (projectName || 'Nouveau projet') : 'Projet non enregistré';
-  const packStoryName = packMetadata?.title || '';
+  const packStoryName = packRecap?.title || '';
   const packDisplayName = packStoryName || 'Métadonnées du pack';
-  const packMetaLine = `${packMetadata?.minAge || '3'}+ · v${packMetadata?.version || 1}`;
+  const packMetaLine = packRecap?.line ?? '';
   const projectTooltip = `Nom du projet : « ${displayProjectName} »`;
   const packTooltip = packStoryName
     ? `« ${packStoryName} » — Modifier le nom et les métadonnées du pack`
@@ -107,7 +112,7 @@ export function TitleBar({ projectName, packMetadata = null, packCoverImage = nu
             </>
           ) : null}
         </div>
-        {showProjectMeta && packMetadata ? (
+        {showProjectMeta && packRecap ? (
           <>
             <span className="chrome-titlebar-chevron chrome-titlebar-pack-chevron" aria-hidden="true"><ChevronIcon /></span>
             <Tooltip text={packTooltip} className="chrome-titlebar-pack-tip">

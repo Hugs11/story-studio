@@ -21,6 +21,63 @@
   background: transparent;
 }
 
+/* La rangée du L reprend le cadre et les états des contrôles de caméra du
+   graphe. Sa première cellule rejoint la colonne verticale juste dessous. */
+.structure-actions-bar--canvas {
+  position: absolute;
+  z-index: 15;
+  top: 12px;
+  left: 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  height: 38px;
+  min-height: 38px;
+  gap: 0;
+  padding: 0;
+  border-color: var(--borderLt);
+  border-radius: 8px 8px 8px 0;
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
+  color: var(--text-secondary);
+}
+
+.structure-actions-bar--canvas .structure-actions-btn,
+.structure-actions-bar--canvas .tree-search-trigger {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 0;
+  border-radius: 0;
+}
+
+.structure-actions-bar--canvas .structure-actions-btn:hover:not(:disabled),
+.structure-actions-bar--canvas .tree-search-trigger:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.structure-actions-bar--canvas .structure-actions-icon,
+.structure-actions-bar--canvas .tree-display-trigger-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.structure-actions-bar--canvas .structure-actions-trailing {
+  margin-left: 0;
+  padding-left: 0;
+  gap: 0;
+  border-left-color: var(--border);
+}
+
+.structure-actions-bar--canvas > .tooltip-wrap + .tooltip-wrap,
+.structure-actions-bar--canvas > .tooltip-wrap + .structure-actions-trailing,
+.structure-actions-bar--canvas > .structure-actions-trailing {
+  border-left: 1px solid var(--border);
+}
+
+.structure-actions-bar--canvas > :last-child button {
+  border-radius: 0 7px 7px 0;
+}
+
 .structure-actions-label {
   margin: 0 4px 0 2px;
   color: var(--text-secondary);
@@ -83,6 +140,12 @@
   margin-left: 3px;
   padding-left: 6px;
   border-left: 1px solid color-mix(in srgb, var(--borderLt) 62%, transparent);
+}
+
+.structure-actions-leading {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 4px;
 }
 
 .structure-actions-bar--panel .structure-actions-trailing {

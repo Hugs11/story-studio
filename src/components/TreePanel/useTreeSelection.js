@@ -54,6 +54,11 @@ export function rangeTreeSelection({
   return next;
 }
 
+// Ce qui distingue une sélection choisie par l'auteur — un clic, une flèche —
+// d'une sélection que l'arbre recale seul après une suppression ou un collage.
+// Seule la première ouvre les réglages.
+const BY_AUTHOR = Object.freeze({ byAuthor: true });
+
 export function useTreeSelection({
   selectedIds,
   selectedId,
@@ -88,7 +93,7 @@ export function useTreeSelection({
 
     if (id === END_NODE_ID && !isCtrl && !isShift) {
       anchorIdRef.current = END_NODE_ID;
-      onSelectionChange?.(new Set([END_NODE_ID]));
+      onSelectionChange?.(new Set([END_NODE_ID]), BY_AUTHOR);
       callOnSelect(END_NODE_ID);
       return;
     }
@@ -96,7 +101,7 @@ export function useTreeSelection({
     if (isCtrl && !isShift) {
       const { next, nextSelectedId, nextAnchorId } = toggleTreeSelection({ id, selectedIds, selectedId });
       if (nextAnchorId) anchorIdRef.current = nextAnchorId;
-      onSelectionChange?.(next);
+      onSelectionChange?.(next, BY_AUTHOR);
       if (nextSelectedId) callOnSelect(nextSelectedId);
     } else if (isShift && anchorIdRef.current) {
       const next = rangeTreeSelection({
@@ -109,15 +114,15 @@ export function useTreeSelection({
       });
       if (!next) {
         anchorIdRef.current = id;
-        onSelectionChange?.(new Set([id]));
+        onSelectionChange?.(new Set([id]), BY_AUTHOR);
         callOnSelect(id);
         return;
       }
-      onSelectionChange?.(next);
+      onSelectionChange?.(next, BY_AUTHOR);
       callOnSelect(id);
     } else {
       anchorIdRef.current = id;
-      onSelectionChange?.(new Set([id]));
+      onSelectionChange?.(new Set([id]), BY_AUTHOR);
       callOnSelect(id);
     }
   }, [callOnSelect, flatNodeIndexById, flatNodes, onSelectionChange, selectedId, selectedIds]);

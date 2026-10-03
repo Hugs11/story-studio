@@ -1,23 +1,18 @@
-import { X } from '../components/icons/LucideLocal';
-import {
-  IconArchive,
-  IconArrowRight,
-  IconFolderOpen,
-  IconHouse,
-  IconMoon,
-  IconStop,
-  IconStory,
-} from '../components/TreePanel/TreeIcons';
+import { ArrowRight, X } from '../components/icons/LucideLocal';
+import { NodeIcon } from '../components/icons/NodeIcon.jsx';
+import { hierarchicalNatureOf } from '../store/nodeIconVocabulary.js';
+import { WORKSPACE_MODE_HIERARCHICAL } from '../store/projectWorkState.js';
 import { END_NODE_ID, TYPE_LABELS } from '../components/diagram/flowDiagramLayout';
 
 function NodeTypeIcon({ type, icon }) {
-  if (type === 'root') return <IconHouse />;
-  if (type === 'menu') return <IconFolderOpen />;
-  if (type === 'story') return <IconStory />;
-  if (type === 'zip') return <IconArchive />;
-  if (type === 'ref') return <IconArrowRight />;
-  if (type === END_NODE_ID || type === 'end-node') return icon === 'moon' ? <IconMoon /> : <IconStop />;
-  return <IconHouse />;
+  // L'en-tete nomme toujours l'entree a cote de son dessin. Le repli est
+  // l'accueil.
+  return (
+    <NodeIcon
+      workspaceMode={WORKSPACE_MODE_HIERARCHICAL}
+      nature={hierarchicalNatureOf(type, { night: icon === 'moon' }) ?? 'root'}
+    />
+  );
 }
 
 function getHeaderData({ node, selectedId, selectedIds, project }) {
@@ -74,7 +69,7 @@ export function SettingsPanelHeader({
   return (
     <div className="settings-panel-header" {...dragHandleProps}>
       <div className="settings-panel-header-icon" aria-hidden="true">
-        {data.type === 'multi' ? <IconArrowRight /> : <NodeTypeIcon type={data.type} icon={data.icon} />}
+        {data.type === 'multi' ? <ArrowRight /> : <NodeTypeIcon type={data.type} icon={data.icon} />}
       </div>
       <div className="settings-panel-header-main">
         <div className="settings-panel-header-title" title={data.title}>{data.title}</div>

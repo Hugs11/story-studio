@@ -18,7 +18,8 @@ impl<'a> StoryBuilder<'a> {
         simple_leaf_playback: bool,
         nav: EndNavContext<'_>,
     ) -> Result<String, String> {
-        let mut effective_play_home_transition = play_home_transition.clone();
+        let mut effective_play_home_transition =
+            play_home_transition.clone().filter(|_| story.home);
         let title_stage_id = self.next_id();
         let prealloc = self.story_prealloc.get(&story.id);
         let play_stage_id = prealloc
@@ -42,13 +43,13 @@ impl<'a> StoryBuilder<'a> {
                 .unwrap_or(false)
             || has_effective_night_mode
             || (simple_leaf_playback && !story.ok && !story.autoplay);
-        let play_controls = ControlSettings {
-            wheel: story.wheel,
-            ok: story.ok,
-            home: story.home,
-            pause: story.pause,
-            autoplay: force_autoplay || story.autoplay,
-        };
+        let play_controls = ControlSettings::authored(
+            story.wheel,
+            story.ok,
+            story.home,
+            story.pause,
+            force_autoplay || story.autoplay,
+        );
         let play_ok_transition = if auto_next_active {
             Some(play_return_transition.clone())
         } else if !story.after_playback_sequence.is_empty() {
@@ -88,62 +89,83 @@ impl<'a> StoryBuilder<'a> {
             self.action_nodes.push(ActionNode {
                 id: prompt_action_id.clone(),
                 name: action_node_name(),
-                options: vec![prompt_stage_id.clone()],
-                position: zero_position(),
+                action_type: Presence::Absent,
+                group_id: Presence::Absent,
+                options: named_option_targets(vec![prompt_stage_id.clone()]),
+                position: no_authored_position(),
             });
 
-            self.stage_nodes.push(StageNode {
-                uuid: prompt_stage_id,
-                name: format!("Fin - {}", base_story_name),
-                stage_type: "stage".to_string(),
-                square_one: false,
-                audio: Some(self.asset_name(&format!("{}/afterPlaybackPromptAudio", role_prefix))?),
-                image: None,
-                control_settings: prompt_controls_from_settings(
-                    story.after_playback_prompt_control_settings.as_ref(),
-                ),
-                home_transition: prompt_home_transition,
-                ok_transition: Some(prompt_ok_transition),
-                position: zero_position(),
-            });
+            self.push_entry_stage(
+                &story.id,
+                StageNode {
+                    uuid: prompt_stage_id,
+                    name: Presence::Value(format!("Fin - {}", base_story_name)),
+                    stage_type: default_stage_type(),
+                    square_one: Presence::Value(false),
+                    group_id: Presence::Absent,
+                    audio: Presence::Value(
+                        self.asset_name(&format!("{}/afterPlaybackPromptAudio", role_prefix))?,
+                    ),
+                    image: Presence::Null,
+                    control_settings: Presence::Value(prompt_controls_from_settings(
+                        story.after_playback_prompt_control_settings.as_ref(),
+                    )),
+                    home_transition: Presence::from_nullable(prompt_home_transition),
+                    ok_transition: Presence::Value(prompt_ok_transition),
+                    position: no_authored_position(),
+                },
+            );
 
             Some(transition(&prompt_action_id, 0))
         } else if has_effective_night_mode
-            && (!should_emit_combined_story_stage(story, true) || story.return_after_play.is_none())
+            && story_reaches_global_end_message(story, auto_next_active)
         {
             Some(
                 self.build_night_bridge_to(night_bridge_return.clone(), night_bridge_home.clone())?,
             )
-        } else if play_controls.ok || play_controls.autoplay {
+        } else if play_controls.ok() || play_controls.autoplay() {
             Some(play_return_transition.clone())
         } else {
             None
         };
 
         if should_emit_combined_story_stage(story, has_effective_night_mode) {
+            // Gardée seulement si une transition la référence (`story_play:`),
+            // voir `drop_unreferenced_combined_play_actions`.
+            self.combined_play_action_ids.push(play_action_id.clone());
             self.action_nodes.push(ActionNode {
                 id: play_action_id,
                 name: action_node_name(),
-                options: vec![play_stage_id.clone()],
-                position: zero_position(),
+                action_type: Presence::Absent,
+                group_id: Presence::Absent,
+                options: named_option_targets(vec![play_stage_id.clone()]),
+                position: no_authored_position(),
             });
 
-            self.stage_nodes.push(StageNode {
-                uuid: play_stage_id.clone(),
-                name: base_story_name,
-                stage_type: "stage".to_string(),
-                square_one: false,
-                audio: Some(self.asset_name(&format!("{}/storyAudio", role_prefix))?),
-                image: story
-                    .item_image
-                    .as_ref()
-                    .map(|_| self.asset_name(&format!("{}/itemImage", role_prefix)))
-                    .transpose()?,
-                control_settings: play_controls,
-                home_transition: effective_play_home_transition,
-                ok_transition: play_ok_transition,
-                position: zero_position(),
-            });
+            self.push_entry_stage(
+                &story.id,
+                StageNode {
+                    uuid: play_stage_id.clone(),
+                    name: Presence::Value(base_story_name),
+                    stage_type: default_stage_type(),
+                    square_one: Presence::Value(false),
+                    group_id: Presence::Absent,
+                    audio: Presence::Value(
+                        self.asset_name(&format!("{}/storyAudio", role_prefix))?,
+                    ),
+                    image: Presence::from_nullable(
+                        story
+                            .item_image
+                            .as_ref()
+                            .map(|_| self.asset_name(&format!("{}/itemImage", role_prefix)))
+                            .transpose()?,
+                    ),
+                    control_settings: Presence::Value(play_controls),
+                    home_transition: Presence::from_nullable(effective_play_home_transition),
+                    ok_transition: Presence::from_nullable(play_ok_transition),
+                    position: no_authored_position(),
+                },
+            );
 
             return Ok(play_stage_id);
         }
@@ -151,46 +173,59 @@ impl<'a> StoryBuilder<'a> {
         self.action_nodes.push(ActionNode {
             id: play_action_id.clone(),
             name: action_node_name(),
-            options: vec![play_stage_id.clone()],
-            position: zero_position(),
+            action_type: Presence::Absent,
+            group_id: Presence::Absent,
+            options: named_option_targets(vec![play_stage_id.clone()]),
+            position: no_authored_position(),
         });
 
-        self.stage_nodes.push(StageNode {
-            uuid: title_stage_id.clone(),
-            name: format!("Titre - {}", base_story_name),
-            stage_type: "stage".to_string(),
-            square_one: false,
-            audio: story
-                .item_audio
-                .as_ref()
-                .map(|_| self.asset_name(&format!("{}/itemAudio", role_prefix)))
-                .transpose()?,
-            image: story
-                .item_image
-                .as_ref()
-                .map(|_| self.asset_name(&format!("{}/itemImage", role_prefix)))
-                .transpose()?,
-            control_settings: title_controls_from_settings(story.title_control_settings.as_ref()),
-            home_transition: title_home_transition,
-            ok_transition: Some(Transition {
-                action_node: play_action_id,
-                option_index: 0,
-            }),
-            position: zero_position(),
-        });
+        self.push_entry_stage(
+            &story.id,
+            StageNode {
+                uuid: title_stage_id.clone(),
+                name: Presence::Value(format!("Titre - {}", base_story_name)),
+                stage_type: default_stage_type(),
+                square_one: Presence::Value(false),
+                group_id: Presence::Absent,
+                audio: Presence::from_nullable(
+                    story
+                        .item_audio
+                        .as_ref()
+                        .map(|_| self.asset_name(&format!("{}/itemAudio", role_prefix)))
+                        .transpose()?,
+                ),
+                image: Presence::from_nullable(
+                    story
+                        .item_image
+                        .as_ref()
+                        .map(|_| self.asset_name(&format!("{}/itemImage", role_prefix)))
+                        .transpose()?,
+                ),
+                control_settings: Presence::Value(title_controls_from_settings(
+                    story.title_control_settings.as_ref(),
+                )),
+                home_transition: Presence::from_nullable(title_home_transition),
+                ok_transition: Presence::Value(Transition::fixed(play_action_id, 0)),
+                position: no_authored_position(),
+            },
+        );
 
-        self.stage_nodes.push(StageNode {
-            uuid: play_stage_id,
-            name: format!("Histoire - {}", base_story_name),
-            stage_type: "stage".to_string(),
-            square_one: false,
-            audio: Some(self.asset_name(&format!("{}/storyAudio", role_prefix))?),
-            image: None,
-            control_settings: play_controls,
-            home_transition: effective_play_home_transition,
-            ok_transition: play_ok_transition,
-            position: zero_position(),
-        });
+        self.push_entry_stage(
+            &story.id,
+            StageNode {
+                uuid: play_stage_id,
+                name: Presence::Value(format!("Histoire - {}", base_story_name)),
+                stage_type: default_stage_type(),
+                square_one: Presence::Value(false),
+                group_id: Presence::Absent,
+                audio: Presence::Value(self.asset_name(&format!("{}/storyAudio", role_prefix))?),
+                image: Presence::Null,
+                control_settings: Presence::Value(play_controls),
+                home_transition: Presence::from_nullable(effective_play_home_transition),
+                ok_transition: Presence::from_nullable(play_ok_transition),
+                position: no_authored_position(),
+            },
+        );
 
         Ok(title_stage_id)
     }

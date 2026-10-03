@@ -1,7 +1,7 @@
 {
   "name": "story-studio",
   "private": true,
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "Open-source desktop editor for creating Lunii-compatible story packs",
   "license": "MIT",
   "type": "module",
@@ -56,11 +56,13 @@
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-log": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2",
+    "cytoscape": "^3.34.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "wavesurfer.js": "^7.12.6"
   },
   "devDependencies": {
+    "@antv/g6": "^5.1.1",
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-react": "^6.0.1",
     "cross-env": "^10.1.0",
@@ -71,7 +73,9 @@
     "globals": "^17.7.0",
     "knip": "^6.23.0",
     "purgecss": "^8.0.0",
+    "rolldown": "1.0.0-rc.17",
     "rollup-plugin-visualizer": "^7.0.1",
+    "vis-network": "^10.1.2",
     "vite": "^8.0.10"
   },
   "engines": {

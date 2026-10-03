@@ -107,7 +107,10 @@ test('returnOnHomeNone with disabled Home is a visible disabled behavior', () =>
   assert.equal(nav.storyHome.effectiveTargetId, null);
 });
 
-test('returnOnHomeNone with active Home exposes the effective destination', () => {
+// Le moteur n'écrit aucune transition Accueil : la Lunii revient à l'Écran
+// d'entrée, pas au dossier (`document_builder.rs`,
+// `active_home_without_destination_writes_no_home_transition`).
+test('returnOnHomeNone with active Home returns to the pack start', () => {
   const menu = { id: 'menu-1', type: 'menu', name: 'Menu', children: [] };
   const a = story('a', { returnOnHomeNone: true, controlSettings: { home: true } });
   menu.children = [a];
@@ -115,8 +118,9 @@ test('returnOnHomeNone with active Home exposes the effective destination', () =
 
   assert.equal(nav.storyHome.isNone, false);
   assert.equal(nav.storyHome.isImplicit, true);
+  assert.equal(nav.storyHome.isPackStart, true);
   assert.equal(nav.storyHome.targetId, null);
-  assert.equal(nav.storyHome.effectiveTargetId, 'menu-1');
+  assert.equal(nav.storyHome.effectiveTargetId, null);
 });
 
 test('nightModeReturn next_story resolves by source story and stays contextual globally', () => {

@@ -141,6 +141,7 @@ export function StructureActionsOverflow({ actions }) {
               key={action.id}
               type="button"
               className="structure-actions-overflow-item"
+              data-media-tool={action.id}
               role="menuitem"
               disabled={action.disabled}
               title={action.title}

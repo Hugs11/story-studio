@@ -20,7 +20,7 @@ import {
 } from '../src/components/CommunityPackChecker/packCheckerIssueClassification.js';
 
 const report = {
-  packName: 'Example journey.zip',
+  packName: 'Example pack.zip',
   verdict: 'needsFix',
   summary: { errors: 1, warnings: 2, infos: 1, ok: 4 },
   correctionsAvailable: 2,
@@ -56,12 +56,12 @@ const report = {
 };
 
 test('reportBaseName removes zip extension and dangerous filename characters', () => {
-  assert.equal(reportBaseName({ packName: 'Example: forêt.zip' }), 'Example_ forêt');
+  assert.equal(reportBaseName({ packName: 'Example: forest.zip' }), 'Example_ forest');
 });
 
 test('formatReadableReport includes verdict, issues and technical log', () => {
   const text = formatReadableReport(report);
-  assert.match(text, /Pack analysé : Example journey\.zip/);
+  assert.match(text, /Pack analysé : Example pack\.zip/);
   assert.match(text, /Verdict : Pack à corriger avant validation/);
   assert.match(text, /Introduction : Le silence au début est trop court/);
   assert.match(text, /Suggestions facultatives : 1/);
@@ -74,7 +74,7 @@ test('formatTechnicalLog keeps one log line per line', () => {
 });
 
 test('formatDiagnosticJson serializes the structured report', () => {
-  assert.equal(JSON.parse(formatDiagnosticJson(report)).packName, 'Example journey.zip');
+  assert.equal(JSON.parse(formatDiagnosticJson(report)).packName, 'Example pack.zip');
 });
 
 test('formatHtmlReport builds a standalone browser document', () => {
@@ -82,7 +82,7 @@ test('formatHtmlReport builds a standalone browser document', () => {
   assert.match(text, /<!doctype html>/i);
   assert.match(text, /<style>/);
   assert.match(text, /Vérifier un pack/);
-  assert.match(text, /Example journey\.zip/);
+  assert.match(text, /Example pack\.zip/);
   assert.match(text, /Imprimer \/ PDF/);
   assert.match(text, /Suggestions facultatives/);
   assert.match(text, /<strong>1<\/strong> facultatives/);

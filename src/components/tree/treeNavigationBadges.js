@@ -152,6 +152,15 @@ export function computeBadgesData(entry, parentMenu, issuesById, project, rootEn
       status: homeStatus,
       isDefault: false,
     });
+  } else if (navigation.storyHome.isEndHomeStep) {
+    // La réaction Accueil de fin remplace la destination Accueil réglée.
+    out.push({
+      kind: 'home',
+      status: homeStatus,
+      targetId: navigation.storyHome.effectiveTargetId,
+      isEndHomeStep: true,
+      isDefault: false,
+    });
   } else if (navigation.storyHome.isImplicit) {
     out.push({
       kind: 'home-implicit',
@@ -238,6 +247,16 @@ export function formatBadgeTitle(data, projectIndex) {
         title: 'Bouton Accueil désactivé pendant la lecture',
       };
     case 'home-implicit': {
+      if (!data.targetId) {
+        // Accueil sans destination : la Lunii revient d'elle-même à l'Écran d'entrée.
+        return {
+          key: 'home:implicit:pack-start',
+          kind: 'home-implicit',
+          status: data.status,
+          label: '⌂',
+          title: 'Appuie sur le bouton Accueil pendant la lecture → retour à la couverture du pack (retour par défaut de la Lunii)',
+        };
+      }
       const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `home:implicit:${data.targetId}:${homeName}`,
@@ -248,6 +267,16 @@ export function formatBadgeTitle(data, projectIndex) {
       };
     }
     case 'home': {
+      if (data.isEndHomeStep) {
+        // La réaction appartient à l'histoire qui porte la pastille.
+        return {
+          key: `home:${data.targetId}`,
+          kind: 'home',
+          status: data.status,
+          label: '⌂',
+          title: 'Appuie sur le bouton Accueil pendant la lecture → réaction Accueil de fin de cette histoire',
+        };
+      }
       const homeName = getGeneratedNavigationTargetName(data.targetId, projectIndex);
       return {
         key: `home:${data.targetId}:${homeName}`,

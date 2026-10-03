@@ -10,7 +10,6 @@ import {
 } from '../store/projectIO';
 import { findEntryById } from '../store/projectModel';
 import { pathKey } from '../utils/fileUtils';
-import { KEYS, read as readSetting } from '../store/persistentSettings';
 import { FICHIERS_IMPORTES } from '../store/workspaceDirs';
 import { buildTransferPromptSignature } from '../store/projectHelpers';
 import { getProjectFilePrefix } from '../utils/projectPrefix';
@@ -32,14 +31,23 @@ export function useMediaTransferHandlers({
   showErrorDialog,
   addPathsToMediaLibrary,
 }) {
-  const maybeCopyToProject = useCallback(async (filePath) => {
+  // `artifactCopies` reçoit les copies annexes — la source d'une image éditée —
+  // pour qu'un appelant dont le geste échoue puisse tout retirer
+  // (`discardMediaCopies`). La copie principale est le chemin rendu.
+  const maybeCopyToProject = useCallback(async (filePath, { artifactCopies = null } = {}) => {
     if (!copyImportedFilesEnabled) return filePath;
-    const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
+    const ws = workspaceDirRef.current;
     if (isAlreadyManagedFile(filePath, ws, savePathRef.current)) return filePath;
     try {
       const targetWorkspace = ws || await getWorkspaceDir();
       if (!workspaceDir) setWorkspaceDirState(targetWorkspace);
-      return await copyMediaToWorkspace(filePath, targetWorkspace, FICHIERS_IMPORTES, getProjectFilePrefix(store.project, savePathRef.current));
+      return await copyMediaToWorkspace(
+        filePath,
+        targetWorkspace,
+        FICHIERS_IMPORTES,
+        getProjectFilePrefix(store.project, savePathRef.current),
+        { artifactCopies },
+      );
     } catch (e) {
       logger.error('media-transfer:copy-to-project-error', e);
       setSaveToast?.('error');
@@ -49,7 +57,7 @@ export function useMediaTransferHandlers({
   }, [copyImportedFilesEnabled, savePathRef, setSaveToast, setWorkspaceDirState, store, workspaceDir, workspaceDirRef]);
 
   const copyGeneratedMediaToProject = useCallback(async (filePath) => {
-    const ws = workspaceDirRef.current || readSetting(KEYS.WORKSPACE_DIR, { defaultValue: '' });
+    const ws = workspaceDirRef.current;
     if (isAlreadyManagedFile(filePath, ws, savePathRef.current)) return filePath;
     try {
       const targetWorkspace = ws || await getWorkspaceDir();

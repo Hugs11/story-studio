@@ -256,6 +256,11 @@ export function EndSequenceEditor({
           <div className="end-summary-copy">
             Étape jouée si l'enfant appuie sur le bouton Accueil pendant l'histoire, avant qu'elle ne se termine.
           </div>
+          {homeStep && node.controlSettings?.home === false && (
+            <div className="end-summary-copy">
+              Accueil est désactivé : cette réaction ne sera pas jouée.
+            </div>
+          )}
         </div>
         {homeStep ? (
           <Tooltip text="Retirer la réaction Accueil">

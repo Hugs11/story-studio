@@ -4,22 +4,24 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
 use serde_json::Value;
 
+use super::error::{classify_failure, YoutubeError};
+use super::info_cache;
 use super::process::run_command_with_timeout;
-use super::provision::ensure_ytdlp;
+use super::tool::{pace_analysis, Ytdlp, SLEEP_REQUESTS};
 use super::{YoutubeAudioLanguages, YoutubeList, YoutubeVideo};
-use crate::support::ffmpeg::apply_no_window;
 
 /// Taille fixe d'une page. La borne protège chaque appel sans imposer de
 /// plafond global : l'UI peut demander autant de pages que nécessaire.
 pub(super) const LIST_PAGE_SIZE: usize = 400;
 const LIST_TIMEOUT: Duration = Duration::from_secs(120);
 const AUDIO_LANGUAGE_TIMEOUT: Duration = Duration::from_secs(5 * 60);
-const AUDIO_LANGUAGE_CHUNK_SIZE: usize = 25;
+/// Lots courts : chaque vidéo coûte plusieurs requêtes espacées de
+/// `SLEEP_REQUESTS`, et un blocage doit interrompre l'analyse au plus tôt.
+const AUDIO_LANGUAGE_CHUNK_SIZE: usize = 10;
 
 /// Valide qu'une URL est bien une URL YouTube (HTTP/HTTPS sur un domaine YouTube).
 /// Évite d'utiliser yt-dlp comme téléchargeur générique d'un site arbitraire.
@@ -43,24 +45,22 @@ pub(super) fn validate_youtube_url(url: &str) -> Result<(), String> {
 
 pub fn fetch_list(
     home: &Path,
+    output_dir: &Path,
     custom: Option<&str>,
     url: &str,
     page: usize,
     emit: &dyn Fn(&str),
-) -> Result<YoutubeList, String> {
+) -> Result<YoutubeList, YoutubeError> {
     let natural_series_order = is_channel_source(url)?;
     let listing_url = normalize_listing_url(url)?;
     let (start, end_with_sentinel) = page_window(page, LIST_PAGE_SIZE)?;
-    let exe = ensure_ytdlp(home, custom, emit)?;
+    let ytdlp = Ytdlp::prepare(home, custom, emit)?;
 
     emit(&format!("Lecture des vidéos — page {}…", page));
-    let mut cmd = Command::new(&exe);
-    apply_no_window(&mut cmd);
+    let mut cmd = ytdlp.command();
     cmd.args([
         "-J",
         "--flat-playlist",
-        "--no-warnings",
-        "--ignore-config",
         "--playlist-items",
         &format!("{}:{}", start, end_with_sentinel),
         &listing_url,
@@ -68,13 +68,15 @@ pub fn fetch_list(
 
     let output = run_command_with_timeout(cmd, LIST_TIMEOUT, "Lecture YouTube")?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!(
-            "yt-dlp n'a pas pu lire cette URL : {}",
-            stderr.trim().lines().last().unwrap_or("erreur inconnue")
+        return Err(classify_failure(
+            &String::from_utf8_lossy(&output.stderr),
+            "yt-dlp n'a pas pu lire cette URL",
         ));
     }
 
+    // Une vidéo seule est déjà analysée en entier : son téléchargement pourra
+    // réutiliser cette analyse.
+    info_cache::store(&info_cache::info_dir(output_dir), &output.stdout);
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| "Réponse yt-dlp illisible (JSON invalide).".to_string())?;
     let mut list = parse_list_json(value, page, LIST_PAGE_SIZE);
@@ -87,7 +89,9 @@ pub fn fetch_list(
         assign_selection_keys(&mut list.videos, first_source_index);
     }
     if list.videos.is_empty() {
-        return Err("Aucune vidéo exploitable trouvée pour cette URL.".to_string());
+        return Err("Aucune vidéo exploitable trouvée pour cette URL."
+            .to_string()
+            .into());
     }
     Ok(list)
 }
@@ -96,12 +100,17 @@ pub fn fetch_list(
 /// Le listing initial reste ainsi plat et rapide, même pour une grosse chaîne.
 /// Plusieurs URL sont traitées par un même processus yt-dlp pour amortir son
 /// démarrage, avec des lots bornés pour éviter une ligne de commande excessive.
+///
+/// Chaque analyse est conservée pour le téléchargement qui suit
+/// (`info_cache`). Un blocage de YouTube interrompt l'analyse aussitôt : les
+/// lots suivants ne feraient que le prolonger.
 pub fn fetch_audio_languages(
     home: &Path,
+    output_dir: &Path,
     custom: Option<&str>,
     video_urls: &[String],
     emit: &dyn Fn(&str),
-) -> Result<Vec<YoutubeAudioLanguages>, String> {
+) -> Result<Vec<YoutubeAudioLanguages>, YoutubeError> {
     let mut seen_urls = HashSet::new();
     let mut urls = Vec::new();
     for url in video_urls {
@@ -115,37 +124,52 @@ pub fn fetch_audio_languages(
         return Ok(Vec::new());
     }
 
-    let exe = ensure_ytdlp(home, custom, emit)?;
-    emit("Analyse des pistes audio…");
+    let ytdlp = Ytdlp::prepare(home, custom, emit)?;
+    let info_dir = info_cache::info_dir(output_dir);
     let mut resolved = Vec::new();
     let mut last_error = None;
+    let mut analyzed = 0;
 
     for chunk in urls.chunks(AUDIO_LANGUAGE_CHUNK_SIZE) {
-        let mut cmd = Command::new(&exe);
-        apply_no_window(&mut cmd);
+        emit(&format!(
+            "Analyse des pistes audio ({}/{})…",
+            analyzed,
+            urls.len()
+        ));
+        pace_analysis();
+        let mut cmd = ytdlp.command();
         cmd.args([
             "--dump-json",
             "--no-playlist",
-            "--no-warnings",
-            "--ignore-config",
             "--ignore-errors",
+            "--sleep-requests",
+            SLEEP_REQUESTS,
             "--",
         ]);
         cmd.args(chunk);
+        analyzed += chunk.len();
 
         match run_command_with_timeout(cmd, AUDIO_LANGUAGE_TIMEOUT, "Analyse audio YouTube") {
             Ok(output) => {
+                for line in output.stdout.split(|byte| *byte == b'\n') {
+                    info_cache::store(&info_dir, line);
+                }
                 let mut parsed = parse_audio_language_lines(&output.stdout);
-                if !output.status.success() && parsed.is_empty() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    last_error = Some(format!(
-                        "Analyse des pistes audio impossible : {}",
-                        stderr.trim().lines().last().unwrap_or("erreur inconnue")
-                    ));
+                if !output.status.success() {
+                    let failure = classify_failure(
+                        &String::from_utf8_lossy(&output.stderr),
+                        "Analyse des pistes audio impossible",
+                    );
+                    if failure.is_blocked() {
+                        return Err(failure);
+                    }
+                    if parsed.is_empty() {
+                        last_error = Some(failure);
+                    }
                 }
                 resolved.append(&mut parsed);
             }
-            Err(error) => last_error = Some(error),
+            Err(error) => last_error = Some(error.into()),
         }
     }
 

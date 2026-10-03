@@ -331,24 +331,6 @@
   text-align: center;
 }
 
-.fd-complete-topbar {
-  position: absolute;
-  top: 14px;
-  left: 72px;
-  z-index: 7;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-width: calc(100% - 28px);
-  padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--borderLt) 70%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg1) 88%, black 12%);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-}
-
 .fd-complete-viewbar {
   display: inline-flex;
   align-items: center;
@@ -379,21 +361,6 @@
   .fd-ctrl-label--short {
     display: inline;
   }
-}
-
-.fd-complete-topbar .structure-actions-bar {
-  height: 28px;
-  min-height: 28px;
-  padding: 0 6px;
-  border-radius: 7px;
-  background: transparent;
-  border-color: transparent;
-}
-
-.fd-complete-topbar .structure-actions-btn {
-  width: 24px;
-  height: 24px;
-  flex-basis: 24px;
 }
 
 .fd-diagram-option {
@@ -570,37 +537,30 @@
 
 .fd-complete-zoom {
   position: absolute;
-  left: 14px;
-  top: 14px;
-  transform: none;
-  z-index: 6;
-  width: auto;
+  left: 12px;
+  top: 49px;
+  z-index: 14;
+  width: 38px;
   display: flex;
-  align-items: center;
-}
-
-.fd-complete-zoom > * {
-  transform: none;
+  flex-direction: column;
+  overflow: visible;
+  border: 1px solid var(--borderLt);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: color-mix(in srgb, var(--bg1) 94%, transparent);
 }
 
 .fd-complete-zoom-btn,
 .fd-complete-zoom-value {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--borderLt);
-  background: color-mix(in srgb, var(--bg1) 92%, black 8%);
-  color: var(--text);
-  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(6px);
-}
-
-.fd-complete-zoom {
-  gap: 8px;
-  flex-direction: column;
+  width: 100%;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
 }
 
 .fd-complete-zoom-btn {
@@ -609,20 +569,23 @@
 }
 
 .fd-complete-zoom-btn:hover {
-  border-color: var(--borderLt);
   background: var(--bg3);
+  color: var(--text);
 }
 
 .fd-complete-zoom-btn:focus-visible {
-  outline: 1px solid var(--focus-ring);
-  outline-offset: 2px;
-  box-shadow: var(--ring);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
 }
 
 .fd-complete-zoom-value {
-  width: 42px;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 12px;
+}
+
+.fd-complete-zoom-fit {
+  border-bottom: 0;
+  border-radius: 0 0 7px 7px;
+  font-size: 15px;
 }
 
 .fd-diagram-hint {
@@ -1242,6 +1205,14 @@
   background: color-mix(in srgb, var(--cat-night) 22%, var(--bg2));
 }
 
+/* Le jeu partagé dessine sur une grille de 24 : chaque emplacement donne sa
+   taille au dessin, comme le rail de type et la fin d'histoire juste au-dessus
+   le font déjà. */
+.fd-local-end-node-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 .fd-local-end-node-text {
   overflow: hidden;
   display: -webkit-box;
@@ -1813,17 +1784,6 @@
   .fd-panel-header {
     gap: 6px;
     padding-inline: 8px;
-  }
-
-  .fd-complete-zoom {
-    left: 10px;
-    top: 10px;
-  }
-
-  .fd-complete-topbar {
-    left: 62px;
-    right: 10px;
-    max-width: none;
   }
 
   .fd-stage-legend {

@@ -186,11 +186,6 @@
   background: var(--bg2);
 }
 
-.pack-options-control-row.is-disabled {
-  color: var(--muted);
-}
-
-.pack-options-control-row.is-disabled:hover,
 .pack-options-control-row--stack:hover {
   background: transparent;
 }
