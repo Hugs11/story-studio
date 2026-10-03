@@ -270,9 +270,9 @@ mod tests {
         write_child(&root, "Ét\u{00e9}.zip", b"a");
         write_child(&root, "E\u{0301}t\u{00e9}.zip", b"b");
         write_child(&root, "Second.zip", b"c");
-        let composed = root.join("Ét\u{00e9}.zip");
-        let decomposed = root.join("E\u{0301}t\u{00e9}.zip");
-        if composed.exists() && decomposed.exists() && composed != decomposed {
+        // Un volume qui normalise les noms (APFS) n'aurait gardé qu'un seul
+        // des deux fichiers ; ce test ne vaut donc que là où ils coexistent.
+        if fs::read_dir(&root).expect("lecture du dossier").count() == 3 {
             let error = collect_bundle_children(&root).expect_err("collision refusée");
             assert!(error.contains("ne distinguent pas"), "{error}");
         }
